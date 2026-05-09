@@ -1,0 +1,51 @@
+[project]
+name = "quant-trading-system"
+version = "0.1.0"
+description = "Python-first quantitative trading system"
+requires-python = ">=3.11"
+dependencies = [
+    "exchange-calendars",
+    "pandas",
+    "pydantic",
+    "pyyaml",
+]
+
+[dependency-groups]
+api = [
+    "fastapi",
+    "uvicorn",
+]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+    "httpx>=0.28.1",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_configs = true
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+mypy_path = "backend/src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+pythonpath = ["backend/src"]
+markers = [
+    "unit: fast unit tests",
+    "integration: multi-module integration tests",
+    "anchor: domain correctness invariant tests",
+    "slow: slow tests not required for quick local feedback",
+]

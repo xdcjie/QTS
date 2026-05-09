@@ -1,0 +1,5 @@
+mode: backtest
+strategy: moving_average_cross
+start: "2020-01-01"
+end: "2024-12-31"
+capital: 100000

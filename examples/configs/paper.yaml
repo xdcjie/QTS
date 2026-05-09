@@ -1,0 +1,3 @@
+mode: paper
+strategy: moving_average_cross
+capital: 100000
