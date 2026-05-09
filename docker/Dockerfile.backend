@@ -1,2 +1,7 @@
 FROM python:3.11-slim
 WORKDIR /app
+COPY pyproject.toml uv.lock /app/
+RUN pip install --no-cache-dir uv && uv sync --frozen --no-dev --group api
+COPY backend /app/backend
+ENV PYTHONPATH=/app/backend/src
+CMD ["uv", "run", "python", "-m", "qts.api.app"]

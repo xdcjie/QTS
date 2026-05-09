@@ -265,7 +265,7 @@ make test-integration
 ```
 
 ### Acceptance Criteria
-- [ ] Replayed events reconstruct expected order and position state.
+- [√] Replayed events reconstruct expected order and position state.
 
 ---
 
@@ -783,7 +783,7 @@ make test-integration
 ```
 
 ### Acceptance Criteria
-- [ ] A fill event can be transformed into stream DTO and delivered.
+- [√] A fill event can be transformed into stream DTO and delivered.
 
 ---
 
@@ -973,7 +973,7 @@ docker build -f docker/Dockerfile.backend .
 ```
 
 ### Acceptance Criteria
-- [ ] Build succeeds in local environment.
+- [√] Build succeeds in local environment.
 
 ## S2-11-T03 — Add Docker Compose Local Environment
 
@@ -993,7 +993,7 @@ docker compose -f docker/docker-compose.local.yml config
 ```
 
 ### Acceptance Criteria
-- [ ] Compose config validates without secrets.
+- [√] Compose config validates without secrets.
 
 ---
 
