@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-background text-foreground text-sm antialiased selection:bg-accent/30;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: radial-gradient(circle at top right, #1a0b2e 0%, #030305 40%, #030305 100%);
+  min-height: 100vh;
+}
+
+@layer components {
+  .card {
+    @apply bg-white/[0.02] backdrop-blur-2xl border border-white/10 rounded-2xl p-4 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)];
+  }
+
+  .btn-primary {
+    @apply bg-accent/10 hover:bg-accent hover:text-black text-accent border border-accent/50 px-5 py-2.5 rounded-full transition-all duration-300 font-medium disabled:opacity-50 hover:shadow-[0_0_15px_rgba(0,240,255,0.6)];
+  }
+
+  .btn-ghost {
+    @apply hover:bg-white/5 text-muted hover:text-foreground px-4 py-2 rounded-full transition-all border border-transparent hover:border-white/10;
+  }
+
+  .status-dot {
+    @apply w-2 h-2 rounded-full inline-block mr-2 shadow-[0_0_8px_currentColor];
+  }
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-white/10 rounded-full hover:bg-accent/50 transition-colors;
+}
