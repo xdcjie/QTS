@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 
 
@@ -21,13 +22,27 @@ class RiskDecision:
     status: RiskDecisionStatus
     reason_code: str | None = None
     reason: str | None = None
+    rule_id: str | None = None
+    checked_at: datetime | None = None
 
     @classmethod
-    def approve(cls) -> RiskDecision:
-        return cls(status=RiskDecisionStatus.APPROVED)
+    def approve(
+        cls,
+        *,
+        rule_id: str | None = None,
+        checked_at: datetime | None = None,
+    ) -> RiskDecision:
+        return cls(status=RiskDecisionStatus.APPROVED, rule_id=rule_id, checked_at=checked_at)
 
     @classmethod
-    def rejected(cls, reason_code: str, reason: str) -> RiskDecision:
+    def rejected(
+        cls,
+        reason_code: str,
+        reason: str,
+        *,
+        rule_id: str | None = None,
+        checked_at: datetime | None = None,
+    ) -> RiskDecision:
         if not reason_code.strip():
             raise ValueError("reason_code must not be empty")
         if not reason.strip():
@@ -36,11 +51,17 @@ class RiskDecision:
             status=RiskDecisionStatus.REJECTED,
             reason_code=reason_code,
             reason=reason,
+            rule_id=rule_id,
+            checked_at=checked_at,
         )
 
     @property
     def approved(self) -> bool:
         return self.status is RiskDecisionStatus.APPROVED
+
+    @property
+    def reason_text(self) -> str | None:
+        return self.reason
 
 
 __all__ = ["RiskDecision", "RiskDecisionStatus"]

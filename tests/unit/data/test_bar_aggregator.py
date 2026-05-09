@@ -188,9 +188,7 @@ def test_bar_aggregator_completes_previous_bucket_when_next_bucket_starts() -> N
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     aggregator = BarAggregator(target_timeframe=Timeframe.parse("5m"), exchange_timezone=UTC)
 
-    aggregator.update(
-        _bar(start, open_price="100", high="101", low="99", close="100", volume="10")
-    )
+    aggregator.update(_bar(start, open_price="100", high="101", low="99", close="100", volume="10"))
     result = aggregator.update(
         _bar(
             start + timedelta(minutes=5),

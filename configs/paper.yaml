@@ -1,0 +1,5 @@
+mode: paper
+account_id: paper-local
+initial_cash: "100000"
+data_source: replay
+simulated_broker: true

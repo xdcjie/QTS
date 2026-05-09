@@ -187,9 +187,7 @@ def _aggregate_state(state: AggregationState) -> Bar:
 
 def _aggregate_vwap(bars: tuple[Bar, ...], total_volume: Decimal) -> Decimal | None:
     weighted = [
-        bar.vwap * bar.volume
-        for bar in bars
-        if bar.vwap is not None and bar.volume > Decimal("0")
+        bar.vwap * bar.volume for bar in bars if bar.vwap is not None and bar.volume > Decimal("0")
     ]
     if not weighted or total_volume <= Decimal("0"):
         return None

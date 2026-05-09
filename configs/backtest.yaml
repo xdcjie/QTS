@@ -1,1 +1,16 @@
 mode: backtest
+strategies:
+  - strategy_id: strategy-a
+    class_path: examples.strategies.moving_average_cross.MovingAverageCrossStrategy
+    account_id: backtest-account
+    allocation: "0.50"
+    enabled: true
+    params:
+      symbol: AAPL
+  - strategy_id: strategy-b
+    class_path: examples.strategies.moving_average_cross.MovingAverageCrossStrategy
+    account_id: backtest-account
+    allocation: "0.50"
+    enabled: true
+    params:
+      symbol: MSFT

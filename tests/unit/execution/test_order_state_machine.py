@@ -37,3 +37,22 @@ def test_duplicate_terminal_broker_report_does_not_corrupt_state() -> None:
     machine.apply(OrderEvent.FILLED)
 
     assert machine.apply(OrderEvent.FILLED) is OrderState.FILLED
+
+
+def test_order_state_machine_handles_cancel_replace_and_late_fill_paths() -> None:
+    from qts.execution.order_state_machine import OrderEvent, OrderState, OrderStateMachine
+
+    replace_machine = OrderStateMachine()
+    replace_machine.apply(OrderEvent.SENT)
+    replace_machine.apply(OrderEvent.ACCEPTED)
+
+    assert replace_machine.apply(OrderEvent.REPLACE_REQUESTED) is OrderState.REPLACE_REQUESTED
+    assert replace_machine.apply(OrderEvent.ACCEPTED) is OrderState.ACCEPTED
+
+    cancel_machine = OrderStateMachine()
+    cancel_machine.apply(OrderEvent.SENT)
+    cancel_machine.apply(OrderEvent.ACCEPTED)
+    cancel_machine.apply(OrderEvent.CANCEL_REQUESTED)
+    cancel_machine.apply(OrderEvent.CANCELLED)
+
+    assert cancel_machine.apply(OrderEvent.PARTIALLY_FILLED) is OrderState.PARTIALLY_FILLED

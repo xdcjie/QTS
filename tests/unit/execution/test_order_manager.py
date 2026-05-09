@@ -86,3 +86,47 @@ def test_order_manager_processes_normalized_fill_report_once() -> None:
     assert first.fills[0].instrument_id == InstrumentId("EQUITY.US.NASDAQ.AAPL")
     assert first.fills[0].quantity == Decimal("10")
     assert second.fills == ()
+
+
+def test_order_manager_cancel_and_replace_intents_remain_manager_owned() -> None:
+    from qts.core.ids import InstrumentId, OrderId
+    from qts.domain.risk import RiskDecision
+    from qts.execution.order_manager import (
+        CancelIntent,
+        ExecutionReport,
+        ExecutionReportStatus,
+        OrderIntent,
+        OrderManager,
+        OrderSide,
+        ReplaceIntent,
+    )
+    from qts.execution.order_state_machine import OrderState
+
+    manager = OrderManager()
+    order = manager.create_order(
+        OrderIntent(
+            order_id=OrderId("ord-001"),
+            instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+            side=OrderSide.BUY,
+            quantity=Decimal("10"),
+        ),
+        risk_decision=RiskDecision.approve(),
+    )
+    manager.mark_sent(order.order_id, broker_order_id="broker-001")
+
+    replaced = manager.request_replace(
+        ReplaceIntent(order_id=order.order_id, new_quantity=Decimal("5")),
+        risk_decision=RiskDecision.approve(),
+    )
+    assert replaced.state is OrderState.REPLACE_REQUESTED
+    assert replaced.intent.quantity == Decimal("5")
+
+    manager.process_report(
+        ExecutionReport(
+            report_id="rpt-accepted",
+            broker_order_id="broker-001",
+            status=ExecutionReportStatus.ACCEPTED,
+        )
+    )
+    cancelled = manager.request_cancel(CancelIntent(order_id=order.order_id))
+    assert cancelled.state is OrderState.CANCEL_REQUESTED

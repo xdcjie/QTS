@@ -4,6 +4,9 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
+from qts.core.ids import InstrumentId
+from qts.core.time import TimeInterval
+from qts.data.sessions.filter import filter_session_bars
 from qts.domain.market_data import Bar
 from qts.registry.calendar_registry import MarketSession
 
@@ -16,11 +19,6 @@ class _FakeCalendarRegistry:
         assert calendar_id == "XNYS"
         assert session_date == date(2026, 1, 2)
         return self.session
-
-
-from qts.core.ids import InstrumentId
-from qts.core.time import TimeInterval
-from qts.data.sessions.filter import filter_session_bars
 
 
 def _bar(start: datetime, end: datetime) -> Bar:

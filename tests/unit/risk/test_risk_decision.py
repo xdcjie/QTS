@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import FrozenInstanceError
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -18,8 +19,24 @@ def test_risk_decision_approved_and_rejected_are_explicit() -> None:
     assert not rejected.approved
     assert rejected.reason_code == "MAX_QTY_EXCEEDED"
     assert rejected.reason == "order quantity exceeds limit"
+    assert rejected.reason_text == "order quantity exceeds limit"
     with pytest.raises(FrozenInstanceError):
         rejected.reason = "changed"  # type: ignore[misc]
+
+
+def test_risk_decision_carries_audit_fields() -> None:
+    from qts.domain.risk import RiskDecision
+
+    checked_at = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    decision = RiskDecision.rejected(
+        "BLOCKED",
+        "blocked by test",
+        rule_id="rule-001",
+        checked_at=checked_at,
+    )
+
+    assert decision.rule_id == "rule-001"
+    assert decision.checked_at == checked_at
 
 
 def test_risk_engine_returns_first_rejection_without_silent_failure() -> None:

@@ -15,6 +15,7 @@ class OrderState(StrEnum):
     PARTIALLY_FILLED = "partially_filled"
     FILLED = "filled"
     CANCEL_REQUESTED = "cancel_requested"
+    REPLACE_REQUESTED = "replace_requested"
     CANCELLED = "cancelled"
     REJECTED = "rejected"
 
@@ -27,6 +28,7 @@ class OrderEvent(StrEnum):
     PARTIALLY_FILLED = "partially_filled"
     FILLED = "filled"
     CANCEL_REQUESTED = "cancel_requested"
+    REPLACE_REQUESTED = "replace_requested"
     CANCELLED = "cancelled"
     REJECTED = "rejected"
 
@@ -46,6 +48,7 @@ _TRANSITIONS: dict[OrderState, dict[OrderEvent, OrderState]] = {
         OrderEvent.FILLED: OrderState.FILLED,
         OrderEvent.REJECTED: OrderState.REJECTED,
         OrderEvent.CANCEL_REQUESTED: OrderState.CANCEL_REQUESTED,
+        OrderEvent.REPLACE_REQUESTED: OrderState.REPLACE_REQUESTED,
     },
     OrderState.ACCEPTED: {
         OrderEvent.PARTIALLY_FILLED: OrderState.PARTIALLY_FILLED,
@@ -53,17 +56,29 @@ _TRANSITIONS: dict[OrderState, dict[OrderEvent, OrderState]] = {
         OrderEvent.CANCEL_REQUESTED: OrderState.CANCEL_REQUESTED,
         OrderEvent.CANCELLED: OrderState.CANCELLED,
         OrderEvent.REJECTED: OrderState.REJECTED,
+        OrderEvent.REPLACE_REQUESTED: OrderState.REPLACE_REQUESTED,
     },
     OrderState.PARTIALLY_FILLED: {
         OrderEvent.PARTIALLY_FILLED: OrderState.PARTIALLY_FILLED,
         OrderEvent.FILLED: OrderState.FILLED,
         OrderEvent.CANCEL_REQUESTED: OrderState.CANCEL_REQUESTED,
         OrderEvent.CANCELLED: OrderState.CANCELLED,
+        OrderEvent.REPLACE_REQUESTED: OrderState.REPLACE_REQUESTED,
     },
     OrderState.CANCEL_REQUESTED: {
         OrderEvent.CANCELLED: OrderState.CANCELLED,
         OrderEvent.FILLED: OrderState.FILLED,
         OrderEvent.PARTIALLY_FILLED: OrderState.PARTIALLY_FILLED,
+    },
+    OrderState.REPLACE_REQUESTED: {
+        OrderEvent.ACCEPTED: OrderState.ACCEPTED,
+        OrderEvent.PARTIALLY_FILLED: OrderState.PARTIALLY_FILLED,
+        OrderEvent.FILLED: OrderState.FILLED,
+        OrderEvent.REJECTED: OrderState.REJECTED,
+    },
+    OrderState.CANCELLED: {
+        OrderEvent.PARTIALLY_FILLED: OrderState.PARTIALLY_FILLED,
+        OrderEvent.FILLED: OrderState.FILLED,
     },
 }
 

@@ -34,6 +34,26 @@ class OrderIntent:
 
 
 @dataclass(frozen=True, slots=True)
+class CancelIntent:
+    """Intent to cancel an order through OrderManager."""
+
+    order_id: OrderId
+    reason: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ReplaceIntent:
+    """Intent to replace an order through OrderManager."""
+
+    order_id: OrderId
+    new_quantity: Decimal
+
+    def __post_init__(self) -> None:
+        if self.new_quantity <= Decimal("0"):
+            raise ValueError("new_quantity must be positive")
+
+
+@dataclass(frozen=True, slots=True)
 class Order:
     """Order snapshot owned by OrderManager."""
 
@@ -129,6 +149,30 @@ class OrderManager:
         self._broker_to_order[broker_order_id] = order_id
         return order
 
+    def request_cancel(self, intent: CancelIntent) -> Order:
+        state = self._machines[intent.order_id].apply(OrderEvent.CANCEL_REQUESTED)
+        return self._replace_order(intent.order_id, state=state)
+
+    def request_replace(self, intent: ReplaceIntent, *, risk_decision: RiskDecision) -> Order:
+        if not risk_decision.approved:
+            raise ValueError("risk decision is not approved")
+        state = self._machines[intent.order_id].apply(OrderEvent.REPLACE_REQUESTED)
+        current = self._orders[intent.order_id]
+        replaced_intent = OrderIntent(
+            order_id=current.intent.order_id,
+            instrument_id=current.intent.instrument_id,
+            side=current.intent.side,
+            quantity=intent.new_quantity,
+        )
+        order = Order(
+            order_id=current.order_id,
+            intent=replaced_intent,
+            state=state,
+            broker_order_id=current.broker_order_id,
+        )
+        self._orders[intent.order_id] = order
+        return order
+
     def process_report(self, report: ExecutionReport) -> OrderManagerResult:
         order_id = self._broker_to_order[report.broker_order_id]
         state = self._machines[order_id].apply(_event_for_report(report.status))
@@ -206,6 +250,7 @@ def _event_for_report(status: ExecutionReportStatus) -> OrderEvent:
 
 
 __all__ = [
+    "CancelIntent",
     "ExecutionReport",
     "ExecutionReportStatus",
     "Order",
@@ -215,4 +260,5 @@ __all__ = [
     "OrderManagerResult",
     "OrderManagerSnapshot",
     "OrderSide",
+    "ReplaceIntent",
 ]
