@@ -54,3 +54,29 @@ def test_backtest_engine_runs_strategy_through_execution_flow() -> None:
     assert result.final_account.cash["USD"] == Decimal("9000")
     assert result.orders[0].state.value == "filled"
     assert result.processed_bars == 2
+
+
+def test_backtest_engine_target_intents_must_pass_pre_trade_risk_before_order_manager() -> None:
+    from qts.backtest.engine import BacktestEngine
+    from qts.risk.risk_engine import RiskEngine
+    from qts.risk.rules.max_notional import MaxNotionalRule
+    from qts.strategy_sdk import Strategy
+
+    class OversizedOrderStrategy(Strategy):
+        def initialize(self, ctx: Any) -> None:
+            self.asset = ctx.symbol("AAPL")
+
+        def on_bar(self, ctx: Any, bar: object) -> None:
+            ctx.target_quantity(self.asset, Decimal("10"))
+
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    result = BacktestEngine(
+        strategy=OversizedOrderStrategy(),
+        bars=[_bar(start, "100")],
+        initial_cash=Decimal("10000"),
+        risk_engine=RiskEngine([MaxNotionalRule(max_notional=Decimal("999"))]),
+    ).run()
+
+    assert result.orders == ()
+    assert result.final_account.cash["USD"] == Decimal("10000")
+    assert result.final_account.positions == {}

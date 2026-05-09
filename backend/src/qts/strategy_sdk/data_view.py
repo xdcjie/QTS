@@ -35,7 +35,10 @@ class DataView:
         visible = [
             bar
             for bar in values
-            if bar.end_time <= self.as_of and (timeframe is None or bar.timeframe == timeframe)
+            if bar.end_time <= self.as_of
+            and bar.is_complete
+            and not bar.is_partial
+            and (timeframe is None or bar.timeframe == timeframe)
         ]
         return tuple(visible[-bars:])
 
