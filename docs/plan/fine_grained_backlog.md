@@ -756,7 +756,7 @@ Implement:
 
 - [√] Calls produce intents.
 - [√] Calls do not mutate portfolio directly.
-- [ ] Calls do not bypass risk/order manager.
+- [√] Calls do not bypass risk/order manager.
 - [√] Anchor test protects SDK boundary.
 
 ---
@@ -781,7 +781,7 @@ Implement:
 - [√] No future data can be read.
 - [√] DataView returns user-safe data objects.
 - [√] Tests cover `as_of` behavior.
-- [ ] DataView does not expose in-progress aggregation state.
+- [√] DataView does not expose in-progress aggregation state.
 
 ---
 
@@ -954,9 +954,9 @@ Goal: make account state updates deterministic and financially correct.
 ### Acceptance Criteria
 
 - [√] Equity cash/position update is correct.
-- [ ] Future PnL formula uses multiplier.
-- [ ] Option premium value uses multiplier.
-- [ ] Anchor tests cover accounting invariants.
+- [√] Future PnL formula uses multiplier.
+- [√] Option premium value uses multiplier.
+- [√] Anchor tests cover accounting invariants.
 
 ---
 
@@ -1183,7 +1183,7 @@ Goal: wire modules through Actor + Queue while preserving state ownership.
 - [√] Routes by `account_id`, `strategy_id`, `broker_id`, `market_data_source_id`, or configured key.
 - [√] Unknown route is explicit error.
 - [√] Per-key routing is deterministic.
-- [ ] Market data messages and order execution messages route to different actor types.
+- [√] Market data messages and order execution messages route to different actor types.
 
 ---
 
@@ -1508,7 +1508,7 @@ Goal: run strategy against IBKR paper market data and an IBKR paper account whil
 ### Acceptance Criteria
 
 - [√] Adapter maps configured IBKR market data connection settings to internal subscription requests.
-- [ ] Adapter emits normalized tick, quote, and bar events.
+- [√] Adapter emits normalized tick, quote, and bar events.
 - [√] Adapter uses `InstrumentId` and boundary symbol mapping rather than broker symbols as internal IDs.
 - [√] Adapter has no submit, cancel, replace, or order reconciliation methods.
 
