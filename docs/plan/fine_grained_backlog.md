@@ -193,9 +193,9 @@ make typecheck
 
 ### Acceptance Criteria
 
-- [ ] `backend/src/qts` is importable.
-- [ ] `docs/README.md` describes reading order.
-- [ ] `MANIFEST.md` reflects actual project structure.
+- [√] `backend/src/qts` is importable.
+- [√] `docs/README.md` describes reading order.
+- [√] `MANIFEST.md` reflects actual project structure.
 
 ---
 
@@ -229,10 +229,10 @@ make test-unit
 
 ### Acceptance Criteria
 
-- [ ] `make format` passes.
-- [ ] `make lint` passes.
-- [ ] `make typecheck` passes.
-- [ ] `make test-unit` passes.
+- [√] `make format` passes.
+- [√] `make lint` passes.
+- [√] `make typecheck` passes.
+- [√] `make test-unit` passes.
 
 ---
 
@@ -265,9 +265,9 @@ make test-anchor
 
 ### Acceptance Criteria
 
-- [ ] All three test categories run independently.
-- [ ] Pytest markers work.
-- [ ] Smoke tests do not depend on external services.
+- [√] All three test categories run independently.
+- [√] Pytest markers work.
+- [√] Smoke tests do not depend on external services.
 
 ---
 
@@ -297,10 +297,10 @@ Implement immutable value objects:
 
 ### Acceptance Criteria
 
-- [ ] IDs are immutable.
-- [ ] IDs compare by value.
-- [ ] Empty IDs are rejected or explicitly allowed by documented factory behavior.
-- [ ] Tests cover equality, hashing, and string conversion.
+- [√] IDs are immutable.
+- [√] IDs compare by value.
+- [√] Empty IDs are rejected or explicitly allowed by documented factory behavior.
+- [√] Tests cover equality, hashing, and string conversion.
 
 ---
 
@@ -321,9 +321,9 @@ Implement immutable value objects:
 
 ### Acceptance Criteria
 
-- [ ] Timestamp exactly equal to `start` is included.
-- [ ] Timestamp exactly equal to `end` is excluded.
-- [ ] Anchor test documents half-open semantics.
+- [√] Timestamp exactly equal to `start` is included.
+- [√] Timestamp exactly equal to `end` is excluded.
+- [√] Anchor test documents half-open semantics.
 
 ---
 
@@ -347,10 +347,10 @@ Implement immutable value objects:
 
 ### Acceptance Criteria
 
-- [ ] Stocks, futures, and options can be represented.
-- [ ] Option requires underlying, expiry, strike, and right.
-- [ ] Future requires expiry/root metadata where relevant.
-- [ ] Broker symbols are not part of core identity.
+- [√] Stocks, futures, and options can be represented.
+- [√] Option requires underlying, expiry, strike, and right.
+- [√] Future requires expiry/root metadata where relevant.
+- [√] Broker symbols are not part of core identity.
 
 ---
 
@@ -372,9 +372,9 @@ Implement immutable value objects:
 
 ### Acceptance Criteria
 
-- [ ] No ambiguous single `timestamp` model.
-- [ ] Invalid OHLC interval is rejected if domain validation is implemented.
-- [ ] Anchor tests document start/end semantics.
+- [√] No ambiguous single `timestamp` model.
+- [√] Invalid OHLC interval is rejected if domain validation is implemented.
+- [√] Anchor tests document start/end semantics.
 
 ---
 
@@ -399,9 +399,9 @@ Events must support:
 
 ### Acceptance Criteria
 
-- [ ] Events are immutable.
-- [ ] Correlation/causation can trace event chains.
-- [ ] Partition key is explicit.
+- [√] Events are immutable.
+- [√] Correlation/causation can trace event chains.
+- [√] Partition key is explicit.
 
 ---
 
@@ -438,9 +438,9 @@ Rules:
 
 ### Acceptance Criteria
 
-- [ ] `Timeframe.parse("1d")` is session-based.
-- [ ] `Timeframe.parse("4h")` is clock-based.
-- [ ] Anchor test asserts `1d != 24h`.
+- [√] `Timeframe.parse("1d")` is session-based.
+- [√] `Timeframe.parse("4h")` is clock-based.
+- [√] Anchor test asserts `1d != 24h`.
 
 ---
 
@@ -461,9 +461,9 @@ Rules:
 
 ### Acceptance Criteria
 
-- [ ] `09:30` belongs to `[09:30, 09:35)`.
-- [ ] `09:35` belongs to `[09:35, 09:40)`.
-- [ ] Cross-hour bucket is `[09:55, 10:00)`.
+- [√] `09:30` belongs to `[09:30, 09:35)`.
+- [√] `09:35` belongs to `[09:35, 09:40)`.
+- [√] Cross-hour bucket is `[09:55, 10:00)`.
 
 ---
 
@@ -483,9 +483,9 @@ Rules:
 
 ### Acceptance Criteria
 
-- [ ] Calendar lookup returns internal session objects.
-- [ ] Third-party types do not leak into domain models.
-- [ ] Tests use deterministic dates.
+- [√] Calendar lookup returns internal session objects.
+- [√] Third-party types do not leak into domain models.
+- [√] Tests use deterministic dates.
 
 ---
 
@@ -504,9 +504,9 @@ Rules:
 
 ### Acceptance Criteria
 
-- [ ] Session-outside bar is excluded.
-- [ ] Session-inside bar is included.
-- [ ] Boundary `session_close` is excluded.
+- [√] Session-outside bar is excluded.
+- [√] Session-inside bar is included.
+- [√] Boundary `session_close` is excluded.
 
 ---
 
@@ -536,14 +536,14 @@ Rules:
 
 ### Acceptance Criteria
 
-- [ ] 5 one-minute bars aggregate into one 5-minute bar.
-- [ ] OHLCV is correct.
-- [ ] Partial intraday session bars are marked.
-- [ ] Aggregator does not aggregate session-outside bars.
-- [ ] Incremental `update(bar)` returns completed bars through `AggregationResult`.
-- [ ] Current bucket state is represented by `AggregationState`.
-- [ ] Aggregator state is keyed by `(instrument_id, timeframe, session_id)` at runtime.
-- [ ] `AggregationState` is not exposed to Strategy SDK or `DataView`.
+- [√] 5 one-minute bars aggregate into one 5-minute bar.
+- [√] OHLCV is correct.
+- [√] Partial intraday session bars are marked.
+- [√] Aggregator does not aggregate session-outside bars.
+- [√] Incremental `update(bar)` returns completed bars through `AggregationResult`.
+- [√] Current bucket state is represented by `AggregationState`.
+- [√] Aggregator state is keyed by `(instrument_id, timeframe, session_id)` at runtime.
+- [√] `AggregationState` is not exposed to Strategy SDK or `DataView`.
 
 ---
 
@@ -565,9 +565,9 @@ Document and test:
 
 ### Acceptance Criteria
 
-- [ ] Anchor test documents the expected `1380` count.
-- [ ] The test is deterministic.
-- [ ] Any library mismatch is handled by an adapter/override, not silently accepted.
+- [√] Anchor test documents the expected `1380` count.
+- [√] The test is deterministic.
+- [√] Any library mismatch is handled by an adapter/override, not silently accepted.
 
 ---
 
@@ -590,9 +590,9 @@ Goal: ensure internal identity is stable and broker/data-source symbols stay at 
 
 ### Acceptance Criteria
 
-- [ ] Registry returns internal IDs.
-- [ ] Registry has no broker-specific dependency.
-- [ ] Tests cover stock, future, option.
+- [√] Registry returns internal IDs.
+- [√] Registry has no broker-specific dependency.
+- [√] Tests cover stock, future, option.
 
 ---
 
@@ -611,9 +611,9 @@ Goal: ensure internal identity is stable and broker/data-source symbols stay at 
 
 ### Acceptance Criteria
 
-- [ ] Domain model does not contain broker symbol.
-- [ ] Mapping errors are explicit.
-- [ ] Tests cover round-trip mapping.
+- [√] Domain model does not contain broker symbol.
+- [√] Mapping errors are explicit.
+- [√] Tests cover round-trip mapping.
 
 ---
 
@@ -633,9 +633,9 @@ Goal: ensure internal identity is stable and broker/data-source symbols stay at 
 
 ### Acceptance Criteria
 
-- [ ] Tradable future contract resolves to concrete `InstrumentId`.
-- [ ] Continuous future is rejected for direct order submission.
-- [ ] Anchor test protects this rule.
+- [√] Tradable future contract resolves to concrete `InstrumentId`.
+- [√] Continuous future is rejected for direct order submission.
+- [√] Anchor test protects this rule.
 
 ---
 
@@ -654,9 +654,9 @@ Goal: ensure internal identity is stable and broker/data-source symbols stay at 
 
 ### Acceptance Criteria
 
-- [ ] Option chain returns option instruments.
-- [ ] Missing underlying is explicit error.
-- [ ] Tests cover call/put selection.
+- [√] Option chain returns option instruments.
+- [√] Missing underlying is explicit error.
+- [√] Tests cover call/put selection.
 
 ---
 
@@ -679,9 +679,9 @@ Goal: let users write strategies without seeing internal trading complexity.
 
 ### Acceptance Criteria
 
-- [ ] `AssetRef` is safe for user strategies.
-- [ ] It can represent stock/future/option references.
-- [ ] It does not leak internal registry objects.
+- [√] `AssetRef` is safe for user strategies.
+- [√] It can represent stock/future/option references.
+- [√] It does not leak internal registry objects.
 
 ---
 
@@ -705,9 +705,9 @@ Define lifecycle hooks:
 
 ### Acceptance Criteria
 
-- [ ] Strategy can override hooks.
-- [ ] Default hooks are no-op.
-- [ ] No dependency on runtime actors.
+- [√] Strategy can override hooks.
+- [√] Default hooks are no-op.
+- [√] No dependency on runtime actors.
 
 ---
 
@@ -727,9 +727,9 @@ Define lifecycle hooks:
 
 ### Acceptance Criteria
 
-- [ ] User receives `AssetRef`.
-- [ ] Registry details are hidden.
-- [ ] Invalid symbol errors are clear.
+- [√] User receives `AssetRef`.
+- [√] Registry details are hidden.
+- [√] Invalid symbol errors are clear.
 
 ---
 
@@ -754,10 +754,10 @@ Implement:
 
 ### Acceptance Criteria
 
-- [ ] Calls produce intents.
-- [ ] Calls do not mutate portfolio directly.
+- [√] Calls produce intents.
+- [√] Calls do not mutate portfolio directly.
 - [ ] Calls do not bypass risk/order manager.
-- [ ] Anchor test protects SDK boundary.
+- [√] Anchor test protects SDK boundary.
 
 ---
 
@@ -778,9 +778,9 @@ Implement:
 
 ### Acceptance Criteria
 
-- [ ] No future data can be read.
-- [ ] DataView returns user-safe data objects.
-- [ ] Tests cover `as_of` behavior.
+- [√] No future data can be read.
+- [√] DataView returns user-safe data objects.
+- [√] Tests cover `as_of` behavior.
 - [ ] DataView does not expose in-progress aggregation state.
 
 ---
@@ -799,9 +799,9 @@ Implement:
 
 ### Acceptance Criteria
 
-- [ ] PortfolioView is immutable/read-only.
-- [ ] Attempts to mutate state are impossible or blocked.
-- [ ] Tests cover position lookup.
+- [√] PortfolioView is immutable/read-only.
+- [√] Attempts to mutate state are impossible or blocked.
+- [√] Tests cover position lookup.
 
 ---
 
@@ -824,9 +824,9 @@ Goal: support user research and strategy writing.
 
 ### Acceptance Criteria
 
-- [ ] Window maintains max length.
-- [ ] `ready` semantics are correct.
-- [ ] Tests cover append and restore.
+- [√] Window maintains max length.
+- [√] `ready` semantics are correct.
+- [√] Tests cover append and restore.
 
 ---
 
@@ -845,9 +845,9 @@ Goal: support user research and strategy writing.
 
 ### Acceptance Criteria
 
-- [ ] SMA is not ready before warmup.
-- [ ] SMA value is correct after warmup.
-- [ ] Strategy SDK wrapper hides implementation.
+- [√] SMA is not ready before warmup.
+- [√] SMA value is correct after warmup.
+- [√] Strategy SDK wrapper hides implementation.
 
 ---
 
@@ -864,9 +864,9 @@ Goal: support user research and strategy writing.
 
 ### Acceptance Criteria
 
-- [ ] Indicator follows common interface.
-- [ ] Warmup behavior is documented.
-- [ ] Tests cover incremental updates.
+- [√] Indicator follows common interface.
+- [√] Warmup behavior is documented.
+- [√] Tests cover incremental updates.
 
 ---
 
@@ -885,9 +885,9 @@ Goal: support user research and strategy writing.
 
 ### Acceptance Criteria
 
-- [ ] Factor supports a universe of assets.
-- [ ] Ranking is deterministic.
-- [ ] Strategy SDK wrapper is simple.
+- [√] Factor supports a universe of assets.
+- [√] Ranking is deterministic.
+- [√] Strategy SDK wrapper is simple.
 
 ---
 
@@ -910,9 +910,9 @@ Goal: make account state updates deterministic and financially correct.
 
 ### Acceptance Criteria
 
-- [ ] Position quantity updates correctly.
-- [ ] Unknown position returns zero/empty view.
-- [ ] Tests cover long and short positions.
+- [√] Position quantity updates correctly.
+- [√] Unknown position returns zero/empty view.
+- [√] Tests cover long and short positions.
 
 ---
 
@@ -932,9 +932,9 @@ Goal: make account state updates deterministic and financially correct.
 
 ### Acceptance Criteria
 
-- [ ] Available cash = cash - reserved.
-- [ ] Reservations are idempotent by ID.
-- [ ] Releasing unknown reservation is explicit behavior.
+- [√] Available cash = cash - reserved.
+- [√] Reservations are idempotent by ID.
+- [√] Releasing unknown reservation is explicit behavior.
 
 ---
 
@@ -953,7 +953,7 @@ Goal: make account state updates deterministic and financially correct.
 
 ### Acceptance Criteria
 
-- [ ] Equity cash/position update is correct.
+- [√] Equity cash/position update is correct.
 - [ ] Future PnL formula uses multiplier.
 - [ ] Option premium value uses multiplier.
 - [ ] Anchor tests cover accounting invariants.
@@ -976,10 +976,10 @@ Goal: make account state updates deterministic and financially correct.
 
 ### Acceptance Criteria
 
-- [ ] Equity notional = qty * price.
-- [ ] Future PnL = contracts * price_diff * multiplier.
-- [ ] Option value = contracts * option_price * multiplier.
-- [ ] Anchor tests pass.
+- [√] Equity notional = qty * price.
+- [√] Future PnL = contracts * price_diff * multiplier.
+- [√] Option value = contracts * option_price * multiplier.
+- [√] Anchor tests pass.
 
 ---
 
@@ -1004,9 +1004,9 @@ Goal: create explicit pre-trade risk decisions.
 
 ### Acceptance Criteria
 
-- [ ] Every check returns explicit decision.
-- [ ] Rejections contain reason codes.
-- [ ] Tests cover approved/rejected paths.
+- [√] Every check returns explicit decision.
+- [√] Rejections contain reason codes.
+- [√] Tests cover approved/rejected paths.
 
 ---
 
@@ -1019,9 +1019,9 @@ Goal: create explicit pre-trade risk decisions.
 
 ### Acceptance Criteria
 
-- [ ] Orders within limit pass.
-- [ ] Orders above limit reject.
-- [ ] Decision reason is explicit.
+- [√] Orders within limit pass.
+- [√] Orders above limit reject.
+- [√] Decision reason is explicit.
 
 ---
 
@@ -1034,9 +1034,9 @@ Goal: create explicit pre-trade risk decisions.
 
 ### Acceptance Criteria
 
-- [ ] Uses instrument multiplier.
-- [ ] Rejects excessive notional.
-- [ ] Tests cover stock/future/option examples.
+- [√] Uses instrument multiplier.
+- [√] Rejects excessive notional.
+- [√] Tests cover stock/future/option examples.
 
 ---
 
@@ -1050,9 +1050,9 @@ Goal: create explicit pre-trade risk decisions.
 
 ### Acceptance Criteria
 
-- [ ] Orders outside session reject.
-- [ ] Orders inside session pass.
-- [ ] Uses calendar service, not local machine time.
+- [√] Orders outside session reject.
+- [√] Orders inside session pass.
+- [√] Uses calendar service, not local machine time.
 
 ---
 
@@ -1083,10 +1083,10 @@ States:
 
 ### Acceptance Criteria
 
-- [ ] Valid transitions pass.
-- [ ] Invalid transitions reject.
-- [ ] Late/duplicate broker reports do not corrupt state.
-- [ ] Anchor tests cover core lifecycle.
+- [√] Valid transitions pass.
+- [√] Invalid transitions reject.
+- [√] Late/duplicate broker reports do not corrupt state.
+- [√] Anchor tests cover core lifecycle.
 
 ---
 
@@ -1099,9 +1099,9 @@ States:
 
 ### Acceptance Criteria
 
-- [ ] Duplicate fill ID is ignored.
-- [ ] Distinct fill IDs apply once.
-- [ ] Behavior is deterministic.
+- [√] Duplicate fill ID is ignored.
+- [√] Distinct fill IDs apply once.
+- [√] Behavior is deterministic.
 
 ---
 
@@ -1121,9 +1121,9 @@ States:
 
 ### Acceptance Criteria
 
-- [ ] Broker report does not directly mutate portfolio.
-- [ ] Fill must pass through OrderManager.
-- [ ] Order state is queryable.
+- [√] Broker report does not directly mutate portfolio.
+- [√] Fill must pass through OrderManager.
+- [√] Order state is queryable.
 
 ---
 
@@ -1143,9 +1143,9 @@ States:
 
 ### Acceptance Criteria
 
-- [ ] Simulated fill event is valid.
-- [ ] Fill price comes from provided market data.
-- [ ] Tests are deterministic.
+- [√] Simulated fill event is valid.
+- [√] Fill price comes from provided market data.
+- [√] Tests are deterministic.
 
 ---
 
@@ -1164,9 +1164,9 @@ Goal: wire modules through Actor + Queue while preserving state ownership.
 
 ### Acceptance Criteria
 
-- [ ] Actor processes mailbox serially.
-- [ ] `tell` enqueues messages.
-- [ ] No direct business method cross-call required.
+- [√] Actor processes mailbox serially.
+- [√] `tell` enqueues messages.
+- [√] No direct business method cross-call required.
 
 ---
 
@@ -1180,9 +1180,9 @@ Goal: wire modules through Actor + Queue while preserving state ownership.
 
 ### Acceptance Criteria
 
-- [ ] Routes by `account_id`, `strategy_id`, `broker_id`, `market_data_source_id`, or configured key.
-- [ ] Unknown route is explicit error.
-- [ ] Per-key routing is deterministic.
+- [√] Routes by `account_id`, `strategy_id`, `broker_id`, `market_data_source_id`, or configured key.
+- [√] Unknown route is explicit error.
+- [√] Per-key routing is deterministic.
 - [ ] Market data messages and order execution messages route to different actor types.
 
 ---
@@ -1202,9 +1202,9 @@ Goal: wire modules through Actor + Queue while preserving state ownership.
 
 ### Acceptance Criteria
 
-- [ ] Account state mutated only inside AccountActor.
-- [ ] Fill updates position/cash once.
-- [ ] Duplicate fill remains idempotent.
+- [√] Account state mutated only inside AccountActor.
+- [√] Fill updates position/cash once.
+- [√] Duplicate fill remains idempotent.
 
 ---
 
@@ -1217,9 +1217,9 @@ Goal: wire modules through Actor + Queue while preserving state ownership.
 
 ### Acceptance Criteria
 
-- [ ] Owns order state.
-- [ ] Sends order execution requests.
-- [ ] Receives execution reports and emits validated fills.
+- [√] Owns order state.
+- [√] Sends order execution requests.
+- [√] Receives execution reports and emits validated fills.
 
 ---
 
@@ -1232,10 +1232,10 @@ Goal: wire modules through Actor + Queue while preserving state ownership.
 
 ### Acceptance Criteria
 
-- [ ] Wraps order execution adapter or simulator.
-- [ ] Emits normalized execution reports.
-- [ ] Does not mutate account/portfolio.
-- [ ] Does not handle ticks, quotes, bars, or market data subscriptions.
+- [√] Wraps order execution adapter or simulator.
+- [√] Emits normalized execution reports.
+- [√] Does not mutate account/portfolio.
+- [√] Does not handle ticks, quotes, bars, or market data subscriptions.
 
 ---
 
@@ -1248,10 +1248,10 @@ Goal: wire modules through Actor + Queue while preserving state ownership.
 
 ### Acceptance Criteria
 
-- [ ] Owns market data subscription and aggregation stream state.
-- [ ] Emits normalized ticks, quotes, and finalized bars.
-- [ ] Does not submit, cancel, replace, or reconcile orders.
-- [ ] Does not mutate account/portfolio.
+- [√] Owns market data subscription and aggregation stream state.
+- [√] Emits normalized ticks, quotes, and finalized bars.
+- [√] Does not submit, cancel, replace, or reconcile orders.
+- [√] Does not mutate account/portfolio.
 
 ---
 
@@ -1281,10 +1281,10 @@ Bar
 
 ### Acceptance Criteria
 
-- [ ] Full flow completes.
-- [ ] Account position updates.
-- [ ] Order state is final.
-- [ ] Risk path is exercised.
+- [√] Full flow completes.
+- [√] Account position updates.
+- [√] Order state is final.
+- [√] Risk path is exercised.
 
 ---
 
@@ -1301,9 +1301,9 @@ Goal: run a simple user strategy on historical bars.
 
 ### Acceptance Criteria
 
-- [ ] Clock advances deterministically.
-- [ ] No wall-clock dependency.
-- [ ] Tests cover ordered time events.
+- [√] Clock advances deterministically.
+- [√] No wall-clock dependency.
+- [√] Tests cover ordered time events.
 
 ---
 
@@ -1316,9 +1316,9 @@ Goal: run a simple user strategy on historical bars.
 
 ### Acceptance Criteria
 
-- [ ] Returns bars as of current time only.
-- [ ] Does not expose future bars.
-- [ ] Supports basic history request.
+- [√] Returns bars as of current time only.
+- [√] Does not expose future bars.
+- [√] Supports basic history request.
 
 ---
 
@@ -1339,10 +1339,10 @@ Goal: run a simple user strategy on historical bars.
 
 ### Acceptance Criteria
 
-- [ ] Example moving average strategy runs.
-- [ ] No future data is visible.
-- [ ] Orders/fills go through execution flow.
-- [ ] Integration test passes.
+- [√] Example moving average strategy runs.
+- [√] No future data is visible.
+- [√] Orders/fills go through execution flow.
+- [√] Integration test passes.
 
 ---
 
@@ -1356,9 +1356,9 @@ Goal: run a simple user strategy on historical bars.
 
 ### Acceptance Criteria
 
-- [ ] Strategy imports only from Strategy SDK.
-- [ ] Strategy does not import runtime/risk/execution internals.
-- [ ] Example can run in backtest mode.
+- [√] Strategy imports only from Strategy SDK.
+- [√] Strategy does not import runtime/risk/execution internals.
+- [√] Example can run in backtest mode.
 
 ---
 
@@ -1375,9 +1375,9 @@ Goal: expose backend use cases safely to frontend and external clients.
 
 ### Acceptance Criteria
 
-- [ ] Services wrap use cases.
-- [ ] API can call services.
-- [ ] Services do not leak actor internals.
+- [√] Services wrap use cases.
+- [√] API can call services.
+- [√] Services do not leak actor internals.
 
 ---
 
@@ -1392,9 +1392,9 @@ Goal: expose backend use cases safely to frontend and external clients.
 
 ### Acceptance Criteria
 
-- [ ] App starts in test mode.
-- [ ] Health endpoint works.
-- [ ] Schemas do not expose actor internals.
+- [√] App starts in test mode.
+- [√] Health endpoint works.
+- [√] Schemas do not expose actor internals.
 
 ---
 
@@ -1408,9 +1408,9 @@ Goal: expose backend use cases safely to frontend and external clients.
 
 ### Acceptance Criteria
 
-- [ ] Can submit backtest request.
-- [ ] Request maps to application service.
-- [ ] Response is stable DTO.
+- [√] Can submit backtest request.
+- [√] Request maps to application service.
+- [√] Response is stable DTO.
 
 ---
 
@@ -1423,9 +1423,9 @@ Goal: expose backend use cases safely to frontend and external clients.
 
 ### Acceptance Criteria
 
-- [ ] Can connect in test.
-- [ ] Can stream synthetic event.
-- [ ] Does not expose raw actor mailboxes.
+- [√] Can connect in test.
+- [√] Can stream synthetic event.
+- [√] Does not expose raw actor mailboxes.
 
 ---
 
@@ -1442,9 +1442,9 @@ Goal: create a frontend shell that consumes backend APIs without duplicating tra
 
 ### Acceptance Criteria
 
-- [ ] Project installs.
+- [√] Project installs.
 - [ ] Basic app renders.
-- [ ] No trading logic duplicated.
+- [√] No trading logic duplicated.
 
 ---
 
@@ -1459,7 +1459,7 @@ Goal: create a frontend shell that consumes backend APIs without duplicating tra
 
 - [ ] API client calls backend health endpoint.
 - [ ] Shared DTO types are explicit.
-- [ ] No direct backend internals.
+- [√] No direct backend internals.
 
 ---
 
@@ -1491,10 +1491,10 @@ Goal: run strategy against IBKR paper market data and an IBKR paper account whil
 
 ### Acceptance Criteria
 
-- [ ] Paper config loads without committing real credentials.
-- [ ] Config has separate market data and order execution connection sections.
-- [ ] Config requires paper account identity and paper permissions.
-- [ ] Runtime fails safely if required IBKR paper settings are missing.
+- [√] Paper config loads without committing real credentials.
+- [√] Config has separate market data and order execution connection sections.
+- [√] Config requires paper account identity and paper permissions.
+- [√] Runtime fails safely if required IBKR paper settings are missing.
 
 ---
 
@@ -1507,10 +1507,10 @@ Goal: run strategy against IBKR paper market data and an IBKR paper account whil
 
 ### Acceptance Criteria
 
-- [ ] Adapter maps configured IBKR market data connection settings to internal subscription requests.
+- [√] Adapter maps configured IBKR market data connection settings to internal subscription requests.
 - [ ] Adapter emits normalized tick, quote, and bar events.
-- [ ] Adapter uses `InstrumentId` and boundary symbol mapping rather than broker symbols as internal IDs.
-- [ ] Adapter has no submit, cancel, replace, or order reconciliation methods.
+- [√] Adapter uses `InstrumentId` and boundary symbol mapping rather than broker symbols as internal IDs.
+- [√] Adapter has no submit, cancel, replace, or order reconciliation methods.
 
 ---
 
@@ -1523,10 +1523,10 @@ Goal: run strategy against IBKR paper market data and an IBKR paper account whil
 
 ### Acceptance Criteria
 
-- [ ] Adapter maps internal orders to IBKR paper order requests at the boundary.
-- [ ] Adapter emits normalized execution reports and fills.
-- [ ] Adapter has no market data subscription or bar aggregation methods.
-- [ ] Adapter cannot directly mutate account or portfolio state.
+- [√] Adapter maps internal orders to IBKR paper order requests at the boundary.
+- [√] Adapter emits normalized execution reports and fills.
+- [√] Adapter has no market data subscription or bar aggregation methods.
+- [√] Adapter cannot directly mutate account or portfolio state.
 
 ---
 
@@ -1538,11 +1538,11 @@ Goal: run strategy against IBKR paper market data and an IBKR paper account whil
 
 ### Acceptance Criteria
 
-- [ ] Fake IBKR market data transport emits ticks/quotes/bars through MarketDataActor.
-- [ ] Fake IBKR order transport receives approved orders from ExecutionActor only.
-- [ ] Orders flow through Risk and OrderManager before reaching IBKR paper execution.
-- [ ] Paper fills return through OrderManager before affecting AccountActor.
-- [ ] Market data and order execution tests can run without network access.
+- [√] Fake IBKR market data transport emits ticks/quotes/bars through MarketDataActor.
+- [√] Fake IBKR order transport receives approved orders from ExecutionActor only.
+- [√] Orders flow through Risk and OrderManager before reaching IBKR paper execution.
+- [√] Paper fills return through OrderManager before affecting AccountActor.
+- [√] Market data and order execution tests can run without network access.
 
 ---
 
@@ -1558,9 +1558,9 @@ Goal: make runtime debuggable, auditable, and recoverable.
 
 ### Acceptance Criteria
 
-- [ ] Logs include correlation_id where available.
-- [ ] Logs are structured.
-- [ ] No secrets in logs.
+- [√] Logs include correlation_id where available.
+- [√] Logs are structured.
+- [√] No secrets in logs.
 
 ---
 
@@ -1573,9 +1573,9 @@ Goal: make runtime debuggable, auditable, and recoverable.
 
 ### Acceptance Criteria
 
-- [ ] Event append API exists.
-- [ ] Event replay API exists.
-- [ ] In-memory implementation is deterministic.
+- [√] Event append API exists.
+- [√] Event replay API exists.
+- [√] In-memory implementation is deterministic.
 
 ---
 
@@ -1588,9 +1588,9 @@ Goal: make runtime debuggable, auditable, and recoverable.
 
 ### Acceptance Criteria
 
-- [ ] Actor state can snapshot.
-- [ ] Actor state can restore.
-- [ ] Indicator state can be included later.
+- [√] Actor state can snapshot.
+- [√] Actor state can restore.
+- [√] Indicator state can be included later.
 
 ---
 
@@ -1608,10 +1608,10 @@ Goal: promote the tested IBKR paper path to live trading readiness with explicit
 
 ### Acceptance Criteria
 
-- [ ] Real secrets are not committed.
-- [ ] Example config documents separate market data and order execution connection settings.
-- [ ] Example config documents live account identity and permissions.
-- [ ] Runtime fails safely if required IBKR live settings are missing.
+- [√] Real secrets are not committed.
+- [√] Example config documents separate market data and order execution connection settings.
+- [√] Example config documents live account identity and permissions.
+- [√] Runtime fails safely if required IBKR live settings are missing.
 
 ---
 
@@ -1624,10 +1624,10 @@ Goal: promote the tested IBKR paper path to live trading readiness with explicit
 
 ### Acceptance Criteria
 
-- [ ] Live mode cannot load paper account IDs by accident.
-- [ ] Live mode cannot reuse paper client IDs or credentials by accident.
-- [ ] Paper and live risk limit profiles are explicitly selected.
-- [ ] Error messages identify the misconfigured environment without printing secrets.
+- [√] Live mode cannot load paper account IDs by accident.
+- [√] Live mode cannot reuse paper client IDs or credentials by accident.
+- [√] Paper and live risk limit profiles are explicitly selected.
+- [√] Error messages identify the misconfigured environment without printing secrets.
 
 ---
 
@@ -1640,10 +1640,10 @@ Goal: promote the tested IBKR paper path to live trading readiness with explicit
 
 ### Acceptance Criteria
 
-- [ ] Reconnect behavior preserves pending order state.
-- [ ] Broker order IDs reconcile to internal order IDs.
-- [ ] Duplicate or late execution reports remain idempotent.
-- [ ] Manual cutover and rollback checklist is documented.
+- [√] Reconnect behavior preserves pending order state.
+- [√] Broker order IDs reconcile to internal order IDs.
+- [√] Duplicate or late execution reports remain idempotent.
+- [√] Manual cutover and rollback checklist is documented.
 
 ---
 
@@ -1659,10 +1659,10 @@ Goal: keep implementation aligned with design.
 
 ### Acceptance Criteria
 
-- [ ] Checklist covers dependency rules.
-- [ ] Checklist covers actor boundaries.
-- [ ] Checklist covers Strategy SDK boundaries.
-- [ ] Checklist covers anchor tests.
+- [√] Checklist covers dependency rules.
+- [√] Checklist covers actor boundaries.
+- [√] Checklist covers Strategy SDK boundaries.
+- [√] Checklist covers anchor tests.
 
 ---
 
@@ -1674,10 +1674,10 @@ Goal: keep implementation aligned with design.
 
 ### Acceptance Criteria
 
-- [ ] Captures completed tasks.
-- [ ] Captures checks run.
-- [ ] Captures known limitations.
-- [ ] Captures next milestone.
+- [√] Captures completed tasks.
+- [√] Captures checks run.
+- [√] Captures known limitations.
+- [√] Captures next milestone.
 
 ---
 
