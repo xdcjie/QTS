@@ -8,6 +8,7 @@ from qts.api.routes import (
     accounts_router,
     backtests_router,
     health_router,
+    operations_router,
     orders_router,
     strategies_router,
 )
@@ -21,6 +22,7 @@ def create_app() -> FastAPI:
     app.include_router(strategies_router)
     app.include_router(accounts_router)
     app.include_router(orders_router)
+    app.include_router(operations_router)
     app.include_router(events_router)
     return app
 

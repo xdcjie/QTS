@@ -25,8 +25,26 @@ class RiskRuleSchema(BaseModel):
     name: str
 
 
+class OperationalErrorSchema(BaseModel):
+    code: str
+    message: str
+    detail: str | None = None
+
+    @classmethod
+    def from_exception(
+        cls,
+        *,
+        code: str,
+        message: str,
+        exc: Exception,
+    ) -> OperationalErrorSchema:
+        del exc
+        return cls(code=code, message=message, detail=None)
+
+
 __all__ = [
     "AccountSnapshotSchema",
+    "OperationalErrorSchema",
     "OrderStatusSchema",
     "RiskRuleSchema",
     "StrategyStatusSchema",

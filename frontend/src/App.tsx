@@ -12,6 +12,7 @@ import {
   Bell,
   X,
   ClipboardList,
+  SlidersHorizontal,
 } from 'lucide-react'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
@@ -22,6 +23,7 @@ import { MarketData } from './components/MarketData'
 import { BacktestLab } from './components/BacktestLab'
 import { RiskControl } from './components/RiskControl'
 import { Orders } from './components/Orders'
+import { Operations } from './components/Operations'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -54,6 +56,7 @@ export default function App() {
     { id: 'market', label: 'Market Data', icon: Activity },
     { id: 'backtest', label: 'Backtest Lab', icon: History },
     { id: 'risk', label: 'Risk Control', icon: ShieldCheck },
+    { id: 'operations', label: 'Operations', icon: SlidersHorizontal },
   ]
 
   return (
@@ -190,6 +193,7 @@ export default function App() {
           {activeTab === 'market' && <MarketData />}
           {activeTab === 'backtest' && <BacktestLab />}
           {activeTab === 'risk' && <RiskControl />}
+          {activeTab === 'operations' && <Operations />}
           {activeTab === 'settings' && <SettingsView />}
         </section>
 
