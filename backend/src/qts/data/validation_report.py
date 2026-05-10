@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import timedelta
 from enum import StrEnum
 
 from qts.core.time import TimeInterval
@@ -12,9 +13,22 @@ from qts.domain.market_data import Bar
 class DataValidationIssueCode(StrEnum):
     """Known market data validation issue codes."""
 
+    MISSING_BAR = "missing_bar"
+    DUPLICATE_BAR = "duplicate_bar"
     NON_MONOTONIC = "non_monotonic"
     OVERLAPPING_BARS = "overlapping_bars"
     OUTSIDE_SESSION = "outside_session"
+    INVALID_OHLC = "invalid_ohlc"
+    UNEXPECTED_GAP = "unexpected_gap"
+    EXCLUDED_SPREAD = "excluded_spread"
+
+
+class DataValidationSeverity(StrEnum):
+    """Severity for data validation issues."""
+
+    INFO = "info"
+    WARNING = "warning"
+    ERROR = "error"
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,6 +37,7 @@ class DataValidationIssue:
 
     code: DataValidationIssueCode
     message: str
+    severity: DataValidationSeverity = DataValidationSeverity.ERROR
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,17 +48,31 @@ class DataValidationReport:
 
     @property
     def valid(self) -> bool:
-        return not self.issues
+        return not any(issue.severity is DataValidationSeverity.ERROR for issue in self.issues)
+
+    @property
+    def max_severity(self) -> DataValidationSeverity | None:
+        if not self.issues:
+            return None
+        rank = {
+            DataValidationSeverity.INFO: 0,
+            DataValidationSeverity.WARNING: 1,
+            DataValidationSeverity.ERROR: 2,
+        }
+        return max((issue.severity for issue in self.issues), key=lambda severity: rank[severity])
 
 
 def validate_bars(
     bars: tuple[Bar, ...],
     *,
     session_interval: TimeInterval | None = None,
+    expected_interval: timedelta | None = None,
 ) -> DataValidationReport:
     """Validate bar ordering, overlap, and optional session containment."""
 
     issues: list[DataValidationIssue] = []
+    if expected_interval is not None and expected_interval <= timedelta(0):
+        raise ValueError("expected_interval must be positive")
     ordered = sorted(bars, key=lambda bar: (bar.start_time, bar.end_time))
     if tuple(ordered) != bars:
         issues.append(
@@ -54,13 +83,49 @@ def validate_bars(
         )
     previous: Bar | None = None
     for bar in ordered:
-        if previous is not None and bar.start_time < previous.end_time:
+        _append_ohlc_issue(issues, bar)
+        if (
+            previous is not None
+            and bar.start_time == previous.start_time
+            and bar.end_time == previous.end_time
+        ):
             issues.append(
                 DataValidationIssue(
-                    code=DataValidationIssueCode.OVERLAPPING_BARS,
-                    message=f"bar {bar.start_time.isoformat()} overlaps previous bar",
+                    code=DataValidationIssueCode.DUPLICATE_BAR,
+                    message=f"bar {bar.start_time.isoformat()} duplicates previous bar",
                 )
             )
+        elif previous is not None:
+            if bar.start_time < previous.end_time:
+                issues.append(
+                    DataValidationIssue(
+                        code=DataValidationIssueCode.OVERLAPPING_BARS,
+                        message=f"bar {bar.start_time.isoformat()} overlaps previous bar",
+                    )
+                )
+            if expected_interval is not None and bar.start_time > previous.end_time:
+                missing = int((bar.start_time - previous.end_time) / expected_interval)
+                issues.append(
+                    DataValidationIssue(
+                        code=DataValidationIssueCode.UNEXPECTED_GAP,
+                        message=(
+                            f"gap from {previous.end_time.isoformat()} "
+                            f"to {bar.start_time.isoformat()}"
+                        ),
+                        severity=DataValidationSeverity.WARNING,
+                    )
+                )
+                if missing > 0:
+                    issues.append(
+                        DataValidationIssue(
+                            code=DataValidationIssueCode.MISSING_BAR,
+                            message=(
+                                f"{missing} expected bar(s) missing before "
+                                f"{bar.start_time.isoformat()}"
+                            ),
+                            severity=DataValidationSeverity.WARNING,
+                        )
+                    )
         if session_interval is not None and (
             not session_interval.contains(bar.start_time) or bar.end_time > session_interval.end
         ):
@@ -74,9 +139,24 @@ def validate_bars(
     return DataValidationReport(issues=tuple(issues))
 
 
+def _append_ohlc_issue(issues: list[DataValidationIssue], bar: Bar) -> None:
+    if (
+        bar.low > bar.high
+        or bar.high < max(bar.open, bar.close)
+        or bar.low > min(bar.open, bar.close)
+    ):
+        issues.append(
+            DataValidationIssue(
+                code=DataValidationIssueCode.INVALID_OHLC,
+                message=f"bar {bar.start_time.isoformat()} has invalid OHLC values",
+            )
+        )
+
+
 __all__ = [
     "DataValidationIssue",
     "DataValidationIssueCode",
     "DataValidationReport",
+    "DataValidationSeverity",
     "validate_bars",
 ]

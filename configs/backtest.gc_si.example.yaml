@@ -1,0 +1,22 @@
+dataset_root: historical
+roots:
+  - GC
+  - SI
+symbols:
+  - GCQ0
+  - SIN0
+start: "2010-06-06T22:00:00Z"
+end: "2010-06-06T22:05:00Z"
+timeframe: 1m
+initial_cash: "1000000"
+strategy_class: "examples.strategies.gc_si_momentum:GcSiMomentumStrategy"
+strategy_params:
+  symbols:
+    - GCQ0
+    - SIN0
+cost_model:
+  fixed_commission_per_contract: "0"
+  slippage_bps: "0"
+risk_config:
+  max_notional: "100000000"
+warmup_bars: 0

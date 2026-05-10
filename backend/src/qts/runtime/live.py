@@ -17,6 +17,56 @@ class LiveRuntimeState(StrEnum):
     DEGRADED = "degraded"
 
 
+class LiveMode(StrEnum):
+    """Runtime mode with explicit live-trading permissions."""
+
+    PAPER = "paper"
+    OBSERVATION = "observation"
+    LIVE = "live"
+
+
+@dataclass(frozen=True, slots=True)
+class LiveStartupConfig:
+    """Startup guard inputs for live-capable runtime."""
+
+    mode: LiveMode
+    broker_configured: bool
+    account_configured: bool
+    risk_configured: bool
+    calendar_configured: bool
+    kill_switch_configured: bool
+
+
+@dataclass(frozen=True, slots=True)
+class LiveStartupDecision:
+    """Result of startup guard validation."""
+
+    mode: LiveMode
+    real_order_submission_enabled: bool
+
+
+def validate_live_startup(config: LiveStartupConfig) -> LiveStartupDecision:
+    """Fail closed unless all live safety prerequisites are explicit."""
+
+    missing = [
+        field_name
+        for field_name, configured in (
+            ("broker_configured", config.broker_configured),
+            ("account_configured", config.account_configured),
+            ("risk_configured", config.risk_configured),
+            ("calendar_configured", config.calendar_configured),
+            ("kill_switch_configured", config.kill_switch_configured),
+        )
+        if not configured
+    ]
+    if missing:
+        raise ValueError("live startup missing required config: " + ", ".join(missing))
+    return LiveStartupDecision(
+        mode=config.mode,
+        real_order_submission_enabled=config.mode is LiveMode.LIVE,
+    )
+
+
 _TRANSITIONS: dict[LiveRuntimeState, dict[str, LiveRuntimeState]] = {
     LiveRuntimeState.STOPPED: {"start": LiveRuntimeState.STARTING},
     LiveRuntimeState.STARTING: {
@@ -108,4 +158,13 @@ class LiveRuntime:
         )
 
 
-__all__ = ["LiveRuntime", "LiveRuntimeState", "LiveRuntimeStateMachine", "RuntimeOrderResult"]
+__all__ = [
+    "LiveMode",
+    "LiveRuntime",
+    "LiveRuntimeState",
+    "LiveRuntimeStateMachine",
+    "LiveStartupConfig",
+    "LiveStartupDecision",
+    "RuntimeOrderResult",
+    "validate_live_startup",
+]

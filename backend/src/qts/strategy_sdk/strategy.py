@@ -24,5 +24,8 @@ class Strategy:
     def on_fill(self, ctx: object, fill: object) -> None:
         return None
 
+    def finalize(self, ctx: object) -> None:
+        return None
+
 
 __all__ = ["Strategy"]

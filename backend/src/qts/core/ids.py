@@ -46,6 +46,10 @@ class EventId(_StringId):
     """Stable internal event identifier."""
 
 
+class BacktestRunId(_StringId):
+    """Stable identifier for a backtest run."""
+
+
 class CorrelationId(_StringId):
     """Identifier grouping events in one business workflow."""
 
@@ -56,6 +60,7 @@ class CausationId(_StringId):
 
 __all__ = [
     "AccountId",
+    "BacktestRunId",
     "BrokerId",
     "CausationId",
     "CorrelationId",

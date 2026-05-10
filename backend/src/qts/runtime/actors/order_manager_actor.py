@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import Decimal
 
-from qts.core.ids import OrderId
+from qts.core.ids import InstrumentId, OrderId
 from qts.domain.risk import RiskDecision
-from qts.execution.order_manager import ExecutionReport, Order, OrderIntent, OrderManager
+from qts.execution.order_manager import ExecutionReport, Order, OrderFill, OrderIntent, OrderManager
 from qts.runtime.actor import Actor
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.account_actor import ApplyFill
@@ -27,10 +28,18 @@ class SubmitOrder:
 class OrderManagerActor(Actor):
     """Actor-owned OrderManager wrapper."""
 
-    def __init__(self, *, execution_ref: ActorRef, account_ref: ActorRef) -> None:
+    def __init__(
+        self,
+        *,
+        execution_ref: ActorRef,
+        account_ref: ActorRef,
+        multiplier_by_instrument: Mapping[InstrumentId, Decimal] | None = None,
+    ) -> None:
         self._manager = OrderManager()
         self._execution_ref = execution_ref
         self._account_ref = account_ref
+        self._multiplier_by_instrument = dict(multiplier_by_instrument or {})
+        self._fills: list[OrderFill] = []
 
     def handle(self, message: object) -> None:
         if isinstance(message, SubmitOrder):
@@ -43,6 +52,10 @@ class OrderManagerActor(Actor):
 
     def get_order(self, order_id: OrderId) -> Order:
         return self._manager.get_order(order_id)
+
+    @property
+    def fills(self) -> tuple[OrderFill, ...]:
+        return tuple(self._fills)
 
     def _handle_submit(self, message: SubmitOrder) -> None:
         order = self._manager.create_order(message.intent, risk_decision=message.risk_decision)
@@ -58,7 +71,14 @@ class OrderManagerActor(Actor):
     def _handle_report(self, message: ExecutionReport) -> None:
         result = self._manager.process_report(message)
         for fill in result.fills:
-            self._account_ref.tell(ApplyFill(fill=fill, currency="USD", multiplier=Decimal("1")))
+            self._fills.append(fill)
+            self._account_ref.tell(
+                ApplyFill(
+                    fill=fill,
+                    currency="USD",
+                    multiplier=self._multiplier_by_instrument.get(fill.instrument_id, Decimal("1")),
+                )
+            )
 
 
 __all__ = ["OrderManagerActor", "SubmitOrder"]

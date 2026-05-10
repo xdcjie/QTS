@@ -20,6 +20,21 @@ from qts.strategy_sdk.target import TargetIntent, TargetIntentType
 
 
 @dataclass(slots=True)
+class DataSubscription:
+    """Strategy-declared market data requirement."""
+
+    asset: AssetRef
+    timeframe: str
+    warmup: int
+
+    def __post_init__(self) -> None:
+        if not self.timeframe.strip():
+            raise ValueError("timeframe must not be empty")
+        if self.warmup <= 0:
+            raise ValueError("warmup must be positive")
+
+
+@dataclass(slots=True)
 class StrategyContext:
     """User-facing strategy context."""
 
@@ -31,10 +46,15 @@ class StrategyContext:
     indicator: IndicatorFactory = field(default_factory=IndicatorFactory)
     factor: FactorFactory = field(default_factory=FactorFactory)
     _intents: list[TargetIntent] = field(default_factory=list, init=False)
+    _subscriptions: list[DataSubscription] = field(default_factory=list, init=False)
 
     @property
     def intents(self) -> tuple[TargetIntent, ...]:
         return tuple(self._intents)
+
+    @property
+    def subscriptions(self) -> tuple[DataSubscription, ...]:
+        return tuple(self._subscriptions)
 
     def symbol(self, user_symbol: str) -> AssetRef:
         if self.instrument_registry is None:
@@ -96,9 +116,14 @@ class StrategyContext:
     def rebalance(self, weights: dict[AssetRef, Decimal]) -> tuple[TargetIntent, ...]:
         return tuple(self.target_percent(asset, weight) for asset, weight in weights.items())
 
+    def subscribe(self, asset: AssetRef, *, timeframe: str, warmup: int = 1) -> DataSubscription:
+        subscription = DataSubscription(asset=asset, timeframe=timeframe, warmup=warmup)
+        self._subscriptions.append(subscription)
+        return subscription
+
     def _emit(self, intent: TargetIntent) -> TargetIntent:
         self._intents.append(intent)
         return intent
 
 
-__all__ = ["StrategyContext"]
+__all__ = ["DataSubscription", "StrategyContext"]

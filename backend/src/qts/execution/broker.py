@@ -18,10 +18,15 @@ class BrokerCapabilities:
     broker_id: BrokerId
     supports_market_orders: bool = True
     supports_limit_orders: bool = True
+    supports_stop_orders: bool = False
     supports_cancel: bool = True
     supports_replace: bool = False
+    supports_fractional: bool = False
+    supports_short: bool = False
     max_order_quantity: Decimal | None = None
     supported_asset_classes: frozenset[str] = frozenset()
+    supported_order_types: frozenset[BrokerOrderType] = frozenset()
+    supported_time_in_force: frozenset[TimeInForce] = frozenset()
 
     def __post_init__(self) -> None:
         if self.max_order_quantity is not None and self.max_order_quantity <= Decimal("0"):
@@ -33,6 +38,34 @@ class BrokerCapabilities:
         if not asset_class.strip():
             raise ValueError("asset_class must not be empty")
         return not self.supported_asset_classes or asset_class in self.supported_asset_classes
+
+    def supports_order_type(self, order_type: BrokerOrderType) -> bool:
+        if self.supported_order_types:
+            return order_type in self.supported_order_types
+        return {
+            BrokerOrderType.MARKET: self.supports_market_orders,
+            BrokerOrderType.LIMIT: self.supports_limit_orders,
+            BrokerOrderType.STOP: self.supports_stop_orders,
+        }[order_type]
+
+    def supports_tif(self, time_in_force: TimeInForce) -> bool:
+        return not self.supported_time_in_force or time_in_force in self.supported_time_in_force
+
+
+class BrokerOrderType(StrEnum):
+    """Order types modeled before broker submission."""
+
+    MARKET = "market"
+    LIMIT = "limit"
+    STOP = "stop"
+
+
+class TimeInForce(StrEnum):
+    """Time-in-force values modeled at the execution boundary."""
+
+    DAY = "day"
+    GTC = "gtc"
+    IOC = "ioc"
 
 
 @dataclass(frozen=True, slots=True)
@@ -204,7 +237,9 @@ __all__ = [
     "BrokerCapabilities",
     "BrokerExecutionReport",
     "BrokerExecutionReportStatus",
+    "BrokerOrderType",
     "BrokerOrderRequest",
     "FakeBrokerAdapter",
+    "TimeInForce",
     "normalize_broker_execution_report",
 ]

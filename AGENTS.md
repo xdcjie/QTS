@@ -13,6 +13,14 @@ The system must support:
 - A user-facing Strategy SDK that hides internal trading complexity
 - Unit, integration, and anchor verification
 
+## Quant system abstraction rules
+
+- Instrument-specific behavior belongs in `InstrumentRegistry`, `ContractSpec`, calendar/session definitions, or product-specific risk/valuation models.
+- Broker-specific behavior belongs in broker adapters.
+- Strategy-specific behavior belongs in user strategy code, not in runtime, portfolio, risk, or execution core.
+- Timeframe/session-specific behavior belongs in `qts/data/bars` and calendar/session services.
+- Financial correctness rules must be expressed as reusable domain rules and protected by tests.
+
 ## Required design documents
 
 Before implementing or modifying core behavior, read the relevant documents under `docs/`, especially:
@@ -141,6 +149,20 @@ make check
 ```
 
 If a check cannot be run, explain why and do not claim full verification.
+
+## File and module granularity
+
+Organize code by cohesive concepts, not by one function per file.
+
+Rules:
+
+- Do not create a new file for every small helper function.
+- A file should represent a stable concept, component, adapter, model, policy, or algorithm.
+- Group tightly related helper functions in the same module.
+- Keep files small enough to understand, but not so small that navigation becomes fragmented.
+- Prefer names like `timeframe.py`, `alignment.py`, `aggregator.py`, `validation.py`, and `order_state_machine.py` over names like `get_x.py`, `calculate_y.py`, or `handle_z.py`.
+- A single-function file is acceptable only when that function is a standalone command, adapter entrypoint, algorithm, or clearly reusable public API.
+- Do not create artificial abstractions just to avoid putting related functions in the same file.
 
 <!-- code-review-graph MCP tools -->
 ## MCP Tools: code-review-graph

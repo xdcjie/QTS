@@ -58,7 +58,7 @@ class AccountActor(Actor):
             return
         signed_quantity = fill.quantity if fill.side is OrderSide.BUY else -fill.quantity
         self._positions.apply_delta(fill.instrument_id, signed_quantity)
-        cash_delta = -signed_quantity * fill.price * message.multiplier
+        cash_delta = (-signed_quantity * fill.price * message.multiplier) - fill.commission
         self._cash.apply_delta(message.currency, cash_delta)
 
 

@@ -8,6 +8,7 @@ from qts.data.live_feed import (
     LiveFeedSubscribed,
     ReconnectPolicy,
 )
+from qts.data.provenance import DatasetMetadata
 from qts.data.validation_report import DataValidationIssue, DataValidationReport
 
 __all__ = [
@@ -21,4 +22,5 @@ __all__ = [
     "ReconnectPolicy",
     "DataValidationIssue",
     "DataValidationReport",
+    "DatasetMetadata",
 ]

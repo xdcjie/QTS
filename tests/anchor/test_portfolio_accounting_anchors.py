@@ -20,6 +20,23 @@ def test_portfolio_accounting_anchor_formulas() -> None:
     ) == Decimal("425.00")
 
 
+def test_gc_and_si_futures_pnl_use_contract_multipliers() -> None:
+    from qts.portfolio.valuation.models import future_pnl
+
+    assert future_pnl(
+        contracts=Decimal("1"),
+        entry_price=Decimal("2000.0"),
+        exit_price=Decimal("2001.0"),
+        multiplier=Decimal("100"),
+    ) == Decimal("100.0")
+    assert future_pnl(
+        contracts=Decimal("1"),
+        entry_price=Decimal("25.000"),
+        exit_price=Decimal("25.005"),
+        multiplier=Decimal("5000"),
+    ) == Decimal("25.000")
+
+
 def test_fill_accounting_anchor_uses_contract_multiplier_for_futures_and_options() -> None:
     from qts.core.ids import InstrumentId, OrderId
     from qts.portfolio.accounting.fill_accounting import Fill, FillAccounting, TradeSide

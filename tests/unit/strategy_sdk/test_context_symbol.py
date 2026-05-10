@@ -106,3 +106,23 @@ def test_context_resolves_option_selection_when_registry_is_available() -> None:
     )
 
     assert asset.instrument_id == option.instrument_id
+
+
+def test_context_records_data_subscriptions() -> None:
+    import pytest
+    from qts.core.ids import InstrumentId
+    from qts.strategy_sdk import AssetRef, StrategyContext
+
+    ctx = StrategyContext()
+    asset = AssetRef(InstrumentId("FUTURE.CME.GC.GCQ0"), "GCQ0")
+
+    subscription = ctx.subscribe(asset, timeframe="1m", warmup=60)
+
+    assert subscription.asset == asset
+    assert subscription.timeframe == "1m"
+    assert subscription.warmup == 60
+    assert ctx.subscriptions == (subscription,)
+    with pytest.raises(ValueError, match="warmup"):
+        ctx.subscribe(asset, timeframe="1m", warmup=0)
+    with pytest.raises(ValueError, match="timeframe"):
+        ctx.subscribe(asset, timeframe=" ", warmup=1)

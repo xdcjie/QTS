@@ -83,6 +83,8 @@ class ExecutionReport:
     filled_quantity: Decimal = Decimal("0")
     fill_price: Decimal | None = None
     fill_id: str | None = None
+    commission: Decimal = Decimal("0")
+    slippage: Decimal = Decimal("0")
 
     def __post_init__(self) -> None:
         if not self.report_id.strip():
@@ -91,6 +93,10 @@ class ExecutionReport:
             raise ValueError("broker_order_id must not be empty")
         if self.filled_quantity < Decimal("0"):
             raise ValueError("filled_quantity must be non-negative")
+        if self.commission < Decimal("0"):
+            raise ValueError("commission must be non-negative")
+        if self.slippage < Decimal("0"):
+            raise ValueError("slippage must be non-negative")
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,6 +109,8 @@ class OrderFill:
     side: OrderSide
     quantity: Decimal
     price: Decimal
+    commission: Decimal = Decimal("0")
+    slippage: Decimal = Decimal("0")
 
 
 @dataclass(frozen=True, slots=True)
@@ -235,6 +243,8 @@ class OrderManager:
                 side=order.intent.side,
                 quantity=report.filled_quantity,
                 price=report.fill_price,
+                commission=report.commission,
+                slippage=report.slippage,
             ),
         )
 

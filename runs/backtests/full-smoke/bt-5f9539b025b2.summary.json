@@ -1,0 +1,8 @@
+{
+  "elapsed_seconds": 0.0060691670078085735,
+  "emitted_bars": 15,
+  "excluded_spreads": 5,
+  "processed_rows": 22,
+  "report_hash": "sha256:65416292ccc4baa6e39a71f75873a655159b53a1aa3beb1e5ba1f1acabae34c5",
+  "report_path": "runs/backtests/full-smoke/bt-5f9539b025b2.json"
+}

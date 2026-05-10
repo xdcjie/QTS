@@ -76,3 +76,21 @@ def test_data_view_only_exposes_complete_non_partial_bars() -> None:
 
     assert [bar.close for bar in history] == [Decimal("100")]
     assert data.close(asset) == Decimal("100")
+
+
+def test_indicator_updates_after_exactly_window_visible_bars() -> None:
+    from qts.core.ids import InstrumentId
+    from qts.strategy_sdk import AssetRef
+    from qts.strategy_sdk.indicators import IndicatorFactory
+
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    asset = AssetRef(InstrumentId("EQUITY.US.NASDAQ.AAPL"), "AAPL")
+    indicators = IndicatorFactory()
+    sma = indicators.sma(asset, window=2)
+
+    indicators.update_from_bar(_bar(start, "100"))
+    assert sma.ready is False
+    indicators.update_from_bar(_bar(start + timedelta(minutes=1), "102"))
+
+    assert sma.ready is True
+    assert sma.value == Decimal("101")

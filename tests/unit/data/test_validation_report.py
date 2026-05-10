@@ -24,7 +24,11 @@ def _bar(start: datetime, minutes: int = 1) -> Bar:
 
 def test_validation_report_detects_ordering_overlap_and_session_outside() -> None:
     from qts.core.time import TimeInterval
-    from qts.data.validation_report import DataValidationIssueCode, validate_bars
+    from qts.data.validation_report import (
+        DataValidationIssueCode,
+        DataValidationSeverity,
+        validate_bars,
+    )
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     report = validate_bars(
@@ -40,4 +44,34 @@ def test_validation_report_detects_ordering_overlap_and_session_outside() -> Non
         DataValidationIssueCode.NON_MONOTONIC,
         DataValidationIssueCode.OVERLAPPING_BARS,
         DataValidationIssueCode.OUTSIDE_SESSION,
+    }
+    assert report.valid is False
+    assert report.max_severity is DataValidationSeverity.ERROR
+
+
+def test_validation_report_classifies_duplicates_missing_bars_and_gaps() -> None:
+    from qts.data.validation_report import (
+        DataValidationIssueCode,
+        DataValidationSeverity,
+        validate_bars,
+    )
+
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    report = validate_bars(
+        (
+            _bar(start),
+            _bar(start),
+            _bar(start + timedelta(minutes=3)),
+        ),
+        expected_interval=timedelta(minutes=1),
+    )
+
+    assert {issue.code for issue in report.issues} == {
+        DataValidationIssueCode.DUPLICATE_BAR,
+        DataValidationIssueCode.UNEXPECTED_GAP,
+        DataValidationIssueCode.MISSING_BAR,
+    }
+    assert {issue.severity for issue in report.issues} == {
+        DataValidationSeverity.ERROR,
+        DataValidationSeverity.WARNING,
     }

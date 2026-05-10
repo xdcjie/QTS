@@ -93,6 +93,27 @@ class ReconciliationReport:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class StartupReconciliationDecision:
+    """Startup gate result derived from reconciliation drift."""
+
+    trading_enabled: bool
+    report: ReconciliationReport
+    reason_code: str | None = None
+
+
+def startup_reconciliation_gate(report: ReconciliationReport) -> StartupReconciliationDecision:
+    """Block trading on startup when reconciliation contains critical drift."""
+
+    if report.has_drift:
+        return StartupReconciliationDecision(
+            trading_enabled=False,
+            report=report,
+            reason_code="RECONCILIATION_DRIFT",
+        )
+    return StartupReconciliationDecision(trading_enabled=True, report=report)
+
+
 def reconcile_snapshots(
     *,
     internal: ReconciliationSnapshot,
@@ -231,5 +252,7 @@ __all__ = [
     "PositionSnapshot",
     "ReconciliationReport",
     "ReconciliationSnapshot",
+    "StartupReconciliationDecision",
     "reconcile_snapshots",
+    "startup_reconciliation_gate",
 ]

@@ -1,5 +1,5 @@
 from qts.strategy_sdk.asset_ref import AssetRef
-from qts.strategy_sdk.context import StrategyContext
+from qts.strategy_sdk.context import DataSubscription, StrategyContext
 from qts.strategy_sdk.data_view import DataView
 from qts.strategy_sdk.factors import FactorFactory
 from qts.strategy_sdk.indicators import IndicatorFactory
@@ -10,6 +10,7 @@ from qts.strategy_sdk.target import TargetIntent, TargetIntentType
 __all__ = [
     "AssetRef",
     "DataView",
+    "DataSubscription",
     "FactorFactory",
     "IndicatorFactory",
     "PortfolioPosition",

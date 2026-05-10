@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from decimal import Decimal
 
+from qts.domain.market_data import Bar
 from qts.indicators.price.sma import SMA
 from qts.strategy_sdk.asset_ref import AssetRef
 
@@ -38,6 +39,11 @@ class IndicatorFactory:
         indicator = AssetIndicator(asset=asset, indicator=SMA(window=window))
         self._created.append(indicator)
         return indicator
+
+    def update_from_bar(self, bar: Bar) -> None:
+        for item in self._created:
+            if item.asset.instrument_id == bar.instrument_id:
+                item.update(bar.close)
 
 
 __all__ = ["AssetIndicator", "IndicatorFactory"]
