@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import ast
 from decimal import Decimal
+from pathlib import Path
 
 from qts.core.ids import AccountId, BrokerId, InstrumentId, StrategyId
 from qts.domain.risk import OrderRiskRequest
@@ -36,3 +38,15 @@ def test_kill_switch_rejects_only_matching_scope_with_explicit_reason_code() -> 
 
     assert rejected.reason_code == "KILL_SWITCH_ACCOUNT"
     assert approved.approved
+
+
+def test_kill_switch_registry_keeps_scope_matching_inside_the_registry() -> None:
+    tree = ast.parse(Path("backend/src/qts/risk/kill_switch.py").read_text(encoding="utf-8"))
+
+    private_functions = {
+        node.name
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name.startswith("_")
+    }
+
+    assert "_matching_scopes" not in private_functions

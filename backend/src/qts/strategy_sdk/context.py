@@ -2,21 +2,52 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
+from typing import Protocol
 
 from qts.core.ids import InstrumentId
 from qts.domain.instruments import OptionRight
-from qts.registry.future_chain_registry import FutureChainRegistry
-from qts.registry.instrument_registry import InstrumentRegistry
-from qts.registry.option_chain_registry import OptionChainRegistry
 from qts.strategy_sdk.asset_ref import AssetRef
 from qts.strategy_sdk.data_view import DataView
 from qts.strategy_sdk.factors import FactorFactory
 from qts.strategy_sdk.indicators import IndicatorFactory
 from qts.strategy_sdk.portfolio_view import PortfolioView
 from qts.strategy_sdk.target import TargetIntent, TargetIntentType
+
+
+class SymbolResolver(Protocol):
+    """Platform-provided symbol resolution boundary."""
+
+    def resolve(self, user_symbol: str) -> InstrumentId: ...
+
+
+class FutureContractResolver(Protocol):
+    """Platform-provided future chain resolution boundary."""
+
+    def resolve_contract(self, root_symbol: str, *, offset: int = 0) -> InstrumentId: ...
+
+
+class OptionContractRef(Protocol):
+    """Read-only option contract reference returned by the platform."""
+
+    @property
+    def instrument_id(self) -> InstrumentId: ...
+
+
+class OptionContractResolver(Protocol):
+    """Platform-provided option chain resolution boundary."""
+
+    def find(
+        self,
+        *,
+        underlying: InstrumentId,
+        expiry: date | None = None,
+        strike: Decimal | None = None,
+        right: OptionRight | None = None,
+    ) -> Sequence[OptionContractRef]: ...
 
 
 @dataclass(slots=True)
@@ -38,9 +69,9 @@ class DataSubscription:
 class StrategyContext:
     """User-facing strategy context."""
 
-    instrument_registry: InstrumentRegistry | None = None
-    future_chain_registry: FutureChainRegistry | None = None
-    option_chain_registry: OptionChainRegistry | None = None
+    instrument_registry: SymbolResolver | None = None
+    future_chain_registry: FutureContractResolver | None = None
+    option_chain_registry: OptionContractResolver | None = None
     data: DataView | None = None
     portfolio: PortfolioView | None = None
     indicator: IndicatorFactory = field(default_factory=IndicatorFactory)
@@ -126,4 +157,11 @@ class StrategyContext:
         return intent
 
 
-__all__ = ["DataSubscription", "StrategyContext"]
+__all__ = [
+    "DataSubscription",
+    "FutureContractResolver",
+    "OptionContractRef",
+    "OptionContractResolver",
+    "StrategyContext",
+    "SymbolResolver",
+]

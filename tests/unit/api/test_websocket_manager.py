@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import ast
 import asyncio
+from pathlib import Path
 
 
 class _Socket:
@@ -52,14 +54,13 @@ def test_order_fill_to_stream_dto_converts_fill_fields() -> None:
     from decimal import Decimal
 
     from qts.api.websocket.fill_adapter import order_fill_to_stream_dto
-    from qts.core.ids import InstrumentId, OrderId
-    from qts.execution.order_manager import OrderFill, OrderSide
+    from qts.application.dto import OrderFillDTO
 
-    fill = OrderFill(
+    fill = OrderFillDTO(
         fill_id="fill-001",
-        order_id=OrderId("ord-001"),
-        instrument_id=InstrumentId("AAPL"),
-        side=OrderSide.BUY,
+        order_id="ord-001",
+        instrument_id="AAPL",
+        side="buy",
         quantity=Decimal("10"),
         price=Decimal("150.00"),
     )
@@ -74,3 +75,21 @@ def test_order_fill_to_stream_dto_converts_fill_fields() -> None:
     assert dto.payload["side"] == "buy"
     assert dto.payload["quantity"] == "10"
     assert dto.payload["price"] == "150.00"
+
+
+def test_websocket_fill_adapter_does_not_import_execution_internals() -> None:
+    tree = ast.parse(
+        Path("backend/src/qts/api/websocket/fill_adapter.py").read_text(encoding="utf-8")
+    )
+
+    forbidden = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module is not None:
+            if node.module.startswith("qts.execution"):
+                forbidden.append(node.module)
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.startswith("qts.execution"):
+                    forbidden.append(alias.name)
+
+    assert forbidden == []

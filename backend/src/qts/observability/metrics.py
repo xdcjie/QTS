@@ -20,13 +20,13 @@ class MetricsRegistry:
         amount: int = 1,
         tags: Mapping[str, str] | None = None,
     ) -> None:
-        key = _metric_key(name, tags)
+        key = self._metric_key(name, tags)
         self._values[key] = int(self._values.get(key, 0)) + amount
 
     def gauge(
         self, name: str, value: int | float, *, tags: Mapping[str, str] | None = None
     ) -> None:
-        self._values[_metric_key(name, tags)] = value
+        self._values[self._metric_key(name, tags)] = value
 
     def observe_queue(
         self,
@@ -45,14 +45,14 @@ class MetricsRegistry:
     def snapshot(self) -> dict[str, int | float]:
         return dict(sorted(self._values.items()))
 
-
-def _metric_key(name: str, tags: Mapping[str, str] | None) -> str:
-    if not name.strip():
-        raise ValueError("metric name must not be empty")
-    if not tags:
-        return name
-    tag_text = ",".join(f"{key}={tags[key]}" for key in sorted(tags))
-    return f"{name}{{{tag_text}}}"
+    @staticmethod
+    def _metric_key(name: str, tags: Mapping[str, str] | None) -> str:
+        if not name.strip():
+            raise ValueError("metric name must not be empty")
+        if not tags:
+            return name
+        tag_text = ",".join(f"{key}={tags[key]}" for key in sorted(tags))
+        return f"{name}{{{tag_text}}}"
 
 
 __all__ = ["MetricsRegistry"]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -83,8 +84,21 @@ def test_replay_feed_preserves_deterministic_bar_events() -> None:
     )
 
     assert first == second
-    assert all(isinstance(event.payload, Bar) for event in first)
-    assert [event.payload.timeframe for event in first if isinstance(event.payload, Bar)] == [
-        "1m",
-        "1m",
-    ]
+    assert all(isinstance(bar, Bar) for bar in first)
+    assert [bar.timeframe for bar in first] == ["1m", "1m"]
+
+
+def test_replay_feed_module_does_not_depend_on_runtime() -> None:
+    tree = ast.parse(Path("backend/src/qts/data/feeds/replay_feed.py").read_text(encoding="utf-8"))
+
+    forbidden = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module is not None:
+            if node.module.startswith("qts.runtime"):
+                forbidden.append(node.module)
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.startswith("qts.runtime"):
+                    forbidden.append(alias.name)
+
+    assert forbidden == []

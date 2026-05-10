@@ -42,17 +42,22 @@ class Bar:
             raise ValueError("low must be less than or equal to open and close")
         if self.low > self.high:
             raise ValueError("low must be less than or equal to high")
-        _require_non_negative(self.volume, "volume")
+        self._require_non_negative(self.volume, "volume")
         if self.vwap is not None:
-            _require_non_negative(self.vwap, "vwap")
+            self._require_non_negative(self.vwap, "vwap")
         if self.open_interest is not None:
-            _require_non_negative(self.open_interest, "open_interest")
+            self._require_non_negative(self.open_interest, "open_interest")
         if self.trade_count is not None and self.trade_count < 0:
             raise ValueError("trade_count must be non-negative")
 
     @property
     def interval(self) -> TimeInterval:
         return TimeInterval(start=self.start_time, end=self.end_time)
+
+    @staticmethod
+    def _require_non_negative(value: Decimal, name: str) -> None:
+        if value < Decimal("0"):
+            raise ValueError(f"{name} must be non-negative")
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,8 +75,8 @@ class Quote:
         require_aware_datetime(self.time, name="time")
         if self.bid_price > self.ask_price:
             raise ValueError("bid_price must be less than or equal to ask_price")
-        _require_non_negative(self.bid_size, "bid_size")
-        _require_non_negative(self.ask_size, "ask_size")
+        Bar._require_non_negative(self.bid_size, "bid_size")
+        Bar._require_non_negative(self.ask_size, "ask_size")
 
     @property
     def spread(self) -> Decimal:
@@ -89,12 +94,7 @@ class Tick:
 
     def __post_init__(self) -> None:
         require_aware_datetime(self.time, name="time")
-        _require_non_negative(self.size, "size")
-
-
-def _require_non_negative(value: Decimal, name: str) -> None:
-    if value < Decimal("0"):
-        raise ValueError(f"{name} must be non-negative")
+        Bar._require_non_negative(self.size, "size")
 
 
 __all__ = ["Bar", "Quote", "Tick"]

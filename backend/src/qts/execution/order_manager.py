@@ -183,7 +183,7 @@ class OrderManager:
 
     def process_report(self, report: ExecutionReport) -> OrderManagerResult:
         order_id = self._broker_to_order[report.broker_order_id]
-        state = self._machines[order_id].apply(_event_for_report(report.status))
+        state = self._machines[order_id].apply(self._event_for_report(report.status))
         order = self._replace_order(order_id, state=state)
         fills = self._fills_for_report(order, report)
         return OrderManagerResult(order=order, fills=fills)
@@ -248,15 +248,15 @@ class OrderManager:
             ),
         )
 
-
-def _event_for_report(status: ExecutionReportStatus) -> OrderEvent:
-    return {
-        ExecutionReportStatus.ACCEPTED: OrderEvent.ACCEPTED,
-        ExecutionReportStatus.PARTIALLY_FILLED: OrderEvent.PARTIALLY_FILLED,
-        ExecutionReportStatus.FILLED: OrderEvent.FILLED,
-        ExecutionReportStatus.CANCELLED: OrderEvent.CANCELLED,
-        ExecutionReportStatus.REJECTED: OrderEvent.REJECTED,
-    }[status]
+    @staticmethod
+    def _event_for_report(status: ExecutionReportStatus) -> OrderEvent:
+        return {
+            ExecutionReportStatus.ACCEPTED: OrderEvent.ACCEPTED,
+            ExecutionReportStatus.PARTIALLY_FILLED: OrderEvent.PARTIALLY_FILLED,
+            ExecutionReportStatus.FILLED: OrderEvent.FILLED,
+            ExecutionReportStatus.CANCELLED: OrderEvent.CANCELLED,
+            ExecutionReportStatus.REJECTED: OrderEvent.REJECTED,
+        }[status]
 
 
 __all__ = [

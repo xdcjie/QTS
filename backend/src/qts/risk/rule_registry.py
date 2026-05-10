@@ -15,17 +15,17 @@ class RiskRuleRegistry:
 
     def build(self, config: RiskRuleConfig) -> RiskRule:
         if config.name == "max_notional":
-            return MaxNotionalRule(max_notional=_param(config, "max_notional"))
+            return MaxNotionalRule(max_notional=self._param(config, "max_notional"))
         if config.name == "max_order_quantity":
-            return MaxOrderQuantityRule(max_quantity=_param(config, "max_quantity"))
+            return MaxOrderQuantityRule(max_quantity=self._param(config, "max_quantity"))
         raise KeyError(f"unknown risk rule: {config.name}")
 
-
-def _param(config: RiskRuleConfig, name: str) -> Decimal:
-    try:
-        return config.params[name]
-    except KeyError as exc:
-        raise KeyError(f"missing risk rule param: {name}") from exc
+    @staticmethod
+    def _param(config: RiskRuleConfig, name: str) -> Decimal:
+        try:
+            return config.params[name]
+        except KeyError as exc:
+            raise KeyError(f"missing risk rule param: {name}") from exc
 
 
 __all__ = ["RiskRuleRegistry"]

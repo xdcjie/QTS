@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import ast
+from pathlib import Path
+
 
 def test_api_strategy_account_order_routes_return_public_dtos() -> None:
     from fastapi.testclient import TestClient
@@ -23,3 +26,33 @@ def test_api_strategy_account_order_routes_return_public_dtos() -> None:
         "order_id": "ord-001",
         "status": "unknown",
     }
+
+
+def test_operational_routes_validate_non_global_scope_id() -> None:
+    from fastapi.testclient import TestClient
+    from qts.api.app import create_app
+
+    client = TestClient(create_app())
+    response = client.post(
+        "/operations/kill-switches",
+        json={"scope": "account", "reason": "halt"},
+        headers={"X-QTS-Operator": "tester"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_operational_routes_do_not_import_runtime_internals() -> None:
+    tree = ast.parse(Path("backend/src/qts/api/routes/operations.py").read_text(encoding="utf-8"))
+
+    forbidden = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module is not None:
+            if node.module.startswith(("qts.runtime", "qts.risk")):
+                forbidden.append(node.module)
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.startswith(("qts.runtime", "qts.risk")):
+                    forbidden.append(alias.name)
+
+    assert forbidden == []

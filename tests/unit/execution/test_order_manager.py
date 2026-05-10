@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import ast
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
@@ -130,3 +132,15 @@ def test_order_manager_cancel_and_replace_intents_remain_manager_owned() -> None
     )
     cancelled = manager.request_cancel(CancelIntent(order_id=order.order_id))
     assert cancelled.state is OrderState.CANCEL_REQUESTED
+
+
+def test_order_manager_keeps_report_event_mapping_inside_the_manager() -> None:
+    tree = ast.parse(Path("backend/src/qts/execution/order_manager.py").read_text(encoding="utf-8"))
+
+    private_functions = {
+        node.name
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name.startswith("_")
+    }
+
+    assert "_event_for_report" not in private_functions

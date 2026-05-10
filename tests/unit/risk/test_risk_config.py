@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import ast
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
@@ -49,3 +51,15 @@ def test_risk_rule_registry_builds_rules_and_rejects_unknown_names() -> None:
     ).approved
     with pytest.raises(KeyError, match="unknown risk rule"):
         registry.build(RiskRuleConfig(rule_id="rule-002", name="unknown", params={}))
+
+
+def test_risk_rule_registry_keeps_param_lookup_inside_the_registry() -> None:
+    tree = ast.parse(Path("backend/src/qts/risk/rule_registry.py").read_text(encoding="utf-8"))
+
+    private_functions = {
+        node.name
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name.startswith("_")
+    }
+
+    assert "_param" not in private_functions

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import ast
+from pathlib import Path
+
 
 def test_application_services_return_stable_dtos_without_actor_internals() -> None:
     from qts.application.dto.backtest import BacktestRequestDTO
@@ -13,3 +16,17 @@ def test_application_services_return_stable_dtos_without_actor_internals() -> No
     assert result.run_id.startswith("bt-")
     assert not hasattr(result, "actor_ref")
     assert not hasattr(result, "mailbox")
+
+
+def test_operations_service_keeps_private_mapping_logic_inside_the_service() -> None:
+    tree = ast.parse(
+        Path("backend/src/qts/application/services/operations.py").read_text(encoding="utf-8")
+    )
+
+    private_functions = {
+        node.name
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name.startswith("_")
+    }
+
+    assert "_scope_from_command" not in private_functions

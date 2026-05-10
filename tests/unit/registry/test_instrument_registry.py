@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import ast
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
 from qts.domain.instruments import ContractSpec, SettlementType
 
@@ -62,3 +64,17 @@ def test_instrument_registry_resolves_symbols_and_metadata_for_supported_assets(
     assert registry.resolve("AAPL") == equity.instrument_id
     assert registry.get_instrument(future.instrument_id) == future
     assert registry.get_contract_spec(option.instrument_id) == option.contract_spec
+
+
+def test_instrument_registry_keeps_symbol_normalization_inside_the_registry() -> None:
+    tree = ast.parse(
+        Path("backend/src/qts/registry/instrument_registry.py").read_text(encoding="utf-8")
+    )
+
+    private_functions = {
+        node.name
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name.startswith("_")
+    }
+
+    assert "_normalize_symbol" not in private_functions

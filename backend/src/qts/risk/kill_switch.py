@@ -77,7 +77,7 @@ class KillSwitchRegistry:
         broker_id: BrokerId,
     ) -> RiskDecision:
         del request
-        for scope in _matching_scopes(account_id, strategy_id, broker_id):
+        for scope in self._matching_scopes(account_id, strategy_id, broker_id):
             state = self._states.get(scope)
             if state is not None and state.active:
                 return RiskDecision.rejected(
@@ -87,20 +87,20 @@ class KillSwitchRegistry:
                 )
         return RiskDecision.approve(rule_id="kill_switch")
 
-
-def _matching_scopes(
-    account_id: AccountId,
-    strategy_id: StrategyId | None,
-    broker_id: BrokerId,
-) -> tuple[KillSwitchScope, ...]:
-    scopes = [
-        KillSwitchScope.global_scope(),
-        KillSwitchScope.account(account_id),
-        KillSwitchScope.broker(broker_id),
-    ]
-    if strategy_id is not None:
-        scopes.append(KillSwitchScope.strategy(strategy_id))
-    return tuple(scopes)
+    @staticmethod
+    def _matching_scopes(
+        account_id: AccountId,
+        strategy_id: StrategyId | None,
+        broker_id: BrokerId,
+    ) -> tuple[KillSwitchScope, ...]:
+        scopes = [
+            KillSwitchScope.global_scope(),
+            KillSwitchScope.account(account_id),
+            KillSwitchScope.broker(broker_id),
+        ]
+        if strategy_id is not None:
+            scopes.append(KillSwitchScope.strategy(strategy_id))
+        return tuple(scopes)
 
 
 __all__ = [

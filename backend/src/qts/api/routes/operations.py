@@ -2,29 +2,46 @@
 
 from __future__ import annotations
 
+from enum import StrEnum
 from typing import Annotated
 
 from fastapi import APIRouter, Header, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from qts.api.services import CommandIdempotencyStore
-from qts.risk.kill_switch import KillSwitchRegistry, KillSwitchScope, KillSwitchScopeType
-from qts.runtime.live import LiveRuntimeState
+from qts.application.dto import KillSwitchCommandDTO
+from qts.application.services import OperationsService
 
 router = APIRouter(prefix="/operations")
 _idempotency = CommandIdempotencyStore()
-_kill_switches = KillSwitchRegistry()
-_runtime_state = LiveRuntimeState.RUNNING
+_operations = OperationsService()
 
 
 class RuntimeCommandResponse(BaseModel):
     state: str
 
 
+class KillSwitchScopeSchema(StrEnum):
+    GLOBAL = "global"
+    ACCOUNT = "account"
+    STRATEGY = "strategy"
+    INSTRUMENT = "instrument"
+
+
 class KillSwitchCommand(BaseModel):
-    scope: KillSwitchScopeType
+    scope: KillSwitchScopeSchema
     scope_id: str | None = None
     reason: str
+
+    @model_validator(mode="after")
+    def validate_scope(self) -> KillSwitchCommand:
+        if not self.reason.strip():
+            raise ValueError("reason must not be empty")
+        if self.scope is not KillSwitchScopeSchema.GLOBAL and (
+            self.scope_id is None or not self.scope_id.strip()
+        ):
+            raise ValueError("scope_id is required for non-global scope")
+        return self
 
 
 class KillSwitchResponse(BaseModel):
@@ -47,9 +64,8 @@ def pause_runtime(
     _require_operator(operator)
 
     def command() -> RuntimeCommandResponse:
-        global _runtime_state
-        _runtime_state = LiveRuntimeState.PAUSED
-        return RuntimeCommandResponse(state=_runtime_state.value)
+        state = _operations.pause_runtime()
+        return RuntimeCommandResponse(state=state.state)
 
     if idempotency_key is None:
         return command()
@@ -64,9 +80,8 @@ def resume_runtime(
     _require_operator(operator)
 
     def command() -> RuntimeCommandResponse:
-        global _runtime_state
-        _runtime_state = LiveRuntimeState.RUNNING
-        return RuntimeCommandResponse(state=_runtime_state.value)
+        state = _operations.resume_runtime()
+        return RuntimeCommandResponse(state=state.state)
 
     if idempotency_key is None:
         return command()
@@ -79,22 +94,19 @@ def activate_kill_switch(
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
 ) -> KillSwitchResponse:
     _require_operator(operator)
-    scope = _scope_from_command(command)
-    state = _kill_switches.activate(scope, reason=command.reason)
+    state = _operations.activate_kill_switch(
+        KillSwitchCommandDTO(
+            scope=command.scope.value,
+            scope_id=command.scope_id,
+            reason=command.reason,
+        )
+    )
     return KillSwitchResponse(
-        scope=state.scope.scope_type.value,
-        scope_id=state.scope.scope_id,
+        scope=state.scope,
+        scope_id=state.scope_id,
         active=state.active,
         reason=state.reason,
     )
-
-
-def _scope_from_command(command: KillSwitchCommand) -> KillSwitchScope:
-    if command.scope is KillSwitchScopeType.GLOBAL:
-        return KillSwitchScope.global_scope()
-    if command.scope_id is None or not command.scope_id.strip():
-        raise HTTPException(status_code=422, detail="scope_id is required for non-global scope")
-    return KillSwitchScope(command.scope, command.scope_id)
 
 
 __all__ = ["router"]

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import ast
 from dataclasses import FrozenInstanceError
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -96,6 +98,29 @@ def test_instrument_contract_and_derivative_specs_are_pure_domain_objects() -> N
             settlement=SettlementType.CASH,
             calendar_id="XNYS",
         )
+
+
+def test_contract_and_market_data_models_keep_scalar_validation_inside_the_models() -> None:
+    contract_tree = ast.parse(
+        Path("backend/src/qts/domain/instruments/contract_spec.py").read_text(encoding="utf-8")
+    )
+    market_data_tree = ast.parse(
+        Path("backend/src/qts/domain/market_data/bar.py").read_text(encoding="utf-8")
+    )
+
+    contract_private_functions = {
+        node.name
+        for node in contract_tree.body
+        if isinstance(node, ast.FunctionDef) and node.name.startswith("_")
+    }
+    market_data_private_functions = {
+        node.name
+        for node in market_data_tree.body
+        if isinstance(node, ast.FunctionDef) and node.name.startswith("_")
+    }
+
+    assert "_require_positive" not in contract_private_functions
+    assert "_require_non_negative" not in market_data_private_functions
 
 
 def test_bar_quote_and_tick_validate_market_data_invariants() -> None:

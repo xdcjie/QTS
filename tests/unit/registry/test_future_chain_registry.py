@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import ast
+from pathlib import Path
+
 import pytest
 
 
@@ -23,3 +26,17 @@ def test_continuous_future_reference_is_rejected_for_direct_trading() -> None:
 
     with pytest.raises(ValueError, match="continuous future references are not directly tradable"):
         registry.require_tradable(ContinuousFutureRef(root_symbol="GC", offset=0))
+
+
+def test_future_chain_registry_keeps_root_normalization_inside_the_registry() -> None:
+    tree = ast.parse(
+        Path("backend/src/qts/registry/future_chain_registry.py").read_text(encoding="utf-8")
+    )
+
+    private_functions = {
+        node.name
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name.startswith("_")
+    }
+
+    assert "_normalize_root" not in private_functions

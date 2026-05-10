@@ -14,7 +14,7 @@ class BrokerSymbolMapping:
         self._to_instrument: dict[str, InstrumentId] = {}
 
     def register(self, instrument_id: InstrumentId, broker_symbol: str) -> None:
-        symbol = _normalize_broker_symbol(broker_symbol)
+        symbol = self._normalize_broker_symbol(broker_symbol)
         existing = self._to_instrument.get(symbol)
         if existing is not None and existing != instrument_id:
             raise ValueError(f"broker symbol already mapped: {broker_symbol}")
@@ -28,7 +28,7 @@ class BrokerSymbolMapping:
             raise KeyError(f"missing broker symbol for instrument: {instrument_id}") from exc
 
     def to_instrument_id(self, broker_symbol: str) -> InstrumentId:
-        symbol = _normalize_broker_symbol(broker_symbol)
+        symbol = self._normalize_broker_symbol(broker_symbol)
         try:
             return self._to_instrument[symbol]
         except KeyError as exc:
@@ -36,12 +36,12 @@ class BrokerSymbolMapping:
                 f"missing instrument mapping for broker symbol: {broker_symbol}"
             ) from exc
 
-
-def _normalize_broker_symbol(broker_symbol: str) -> str:
-    normalized = broker_symbol.strip()
-    if not normalized:
-        raise ValueError("broker_symbol must not be empty")
-    return normalized
+    @staticmethod
+    def _normalize_broker_symbol(broker_symbol: str) -> str:
+        normalized = broker_symbol.strip()
+        if not normalized:
+            raise ValueError("broker_symbol must not be empty")
+        return normalized
 
 
 __all__ = ["BrokerSymbolMapping"]

@@ -28,7 +28,7 @@ class ReservationBook:
             raise ValueError("amount must be non-negative")
         if reservation_id in self._reservations:
             return
-        normalized = _normalize_currency(currency)
+        normalized = self._normalize_currency(currency)
         self._reservations[reservation_id] = Reservation(
             reservation_id=reservation_id,
             currency=normalized,
@@ -39,7 +39,7 @@ class ReservationBook:
         self._reservations.pop(reservation_id, None)
 
     def reserved(self, currency: str) -> Decimal:
-        normalized = _normalize_currency(currency)
+        normalized = self._normalize_currency(currency)
         return sum(
             (
                 reservation.amount
@@ -49,12 +49,12 @@ class ReservationBook:
             Decimal("0"),
         )
 
-
-def _normalize_currency(currency: str) -> str:
-    normalized = currency.strip().upper()
-    if not normalized:
-        raise ValueError("currency must not be empty")
-    return normalized
+    @staticmethod
+    def _normalize_currency(currency: str) -> str:
+        normalized = currency.strip().upper()
+        if not normalized:
+            raise ValueError("currency must not be empty")
+        return normalized
 
 
 __all__ = ["Reservation", "ReservationBook"]

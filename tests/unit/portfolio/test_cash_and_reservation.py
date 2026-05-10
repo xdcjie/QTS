@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import ast
 from decimal import Decimal
+from pathlib import Path
 
 
 def test_cash_book_tracks_balances_and_available_cash_after_reservations() -> None:
@@ -32,3 +34,26 @@ def test_releasing_unknown_reservation_is_explicit_noop() -> None:
     reservations.release(OrderId("missing"))
 
     assert reservations.reserved("USD") == Decimal("0")
+
+
+def test_cash_and_reservation_books_keep_currency_normalization_inside_the_books() -> None:
+    cash_tree = ast.parse(
+        Path("backend/src/qts/portfolio/cash_book.py").read_text(encoding="utf-8")
+    )
+    reservation_tree = ast.parse(
+        Path("backend/src/qts/portfolio/reservation_book.py").read_text(encoding="utf-8")
+    )
+
+    cash_private_functions = {
+        node.name
+        for node in cash_tree.body
+        if isinstance(node, ast.FunctionDef) and node.name.startswith("_")
+    }
+    reservation_private_functions = {
+        node.name
+        for node in reservation_tree.body
+        if isinstance(node, ast.FunctionDef) and node.name.startswith("_")
+    }
+
+    assert "_normalize_currency" not in cash_private_functions
+    assert "_normalize_currency" not in reservation_private_functions

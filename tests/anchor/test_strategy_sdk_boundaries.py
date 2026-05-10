@@ -19,6 +19,22 @@ def test_strategy_sdk_target_api_does_not_expose_risk_order_or_broker_internals(
     assert not hasattr(intent, "contract_spec")
 
 
+def test_strategy_sdk_context_does_not_import_internal_registries() -> None:
+    tree = ast.parse(Path("backend/src/qts/strategy_sdk/context.py").read_text(encoding="utf-8"))
+    forbidden = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.module is not None:
+            module = node.module
+            if module.startswith("qts.registry"):
+                forbidden.append(module)
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name.startswith("qts.registry"):
+                    forbidden.append(alias.name)
+
+    assert forbidden == []
+
+
 def test_gc_si_example_strategy_imports_only_strategy_sdk_and_standard_library() -> None:
     tree = ast.parse(Path("examples/strategies/gc_si_momentum.py").read_text(encoding="utf-8"))
     forbidden = []

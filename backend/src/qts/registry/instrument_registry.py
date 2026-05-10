@@ -14,12 +14,12 @@ class InstrumentRegistry:
         self._instruments: dict[InstrumentId, Instrument] = {}
 
     def register(self, user_symbol: str, instrument: Instrument) -> None:
-        symbol = _normalize_symbol(user_symbol)
+        symbol = self._normalize_symbol(user_symbol)
         self._symbols[symbol] = instrument.instrument_id
         self._instruments[instrument.instrument_id] = instrument
 
     def resolve(self, user_symbol: str) -> InstrumentId:
-        symbol = _normalize_symbol(user_symbol)
+        symbol = self._normalize_symbol(user_symbol)
         try:
             return self._symbols[symbol]
         except KeyError as exc:
@@ -34,12 +34,12 @@ class InstrumentRegistry:
     def get_contract_spec(self, instrument_id: InstrumentId) -> ContractSpec:
         return self.get_instrument(instrument_id).contract_spec
 
-
-def _normalize_symbol(user_symbol: str) -> str:
-    normalized = user_symbol.strip().upper()
-    if not normalized:
-        raise ValueError("user_symbol must not be empty")
-    return normalized
+    @staticmethod
+    def _normalize_symbol(user_symbol: str) -> str:
+        normalized = user_symbol.strip().upper()
+        if not normalized:
+            raise ValueError("user_symbol must not be empty")
+        return normalized
 
 
 __all__ = ["InstrumentRegistry"]

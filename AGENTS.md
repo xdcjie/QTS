@@ -150,19 +150,26 @@ make check
 
 If a check cannot be run, explain why and do not claim full verification.
 
+
 ## File and module granularity
 
-Organize code by cohesive concepts, not by one function per file.
+Organize code by cohesive concepts, not by one function per file and not by forcing every helper into a class.
 
 Rules:
 
+- A file should represent a stable concept, component, adapter, model, policy, algorithm, command, or framework entrypoint.
 - Do not create a new file for every small helper function.
-- A file should represent a stable concept, component, adapter, model, policy, or algorithm.
-- Group tightly related helper functions in the same module.
+- Group tightly related helper functions in the same module when they belong to the same concept.
 - Keep files small enough to understand, but not so small that navigation becomes fragmented.
 - Prefer names like `timeframe.py`, `alignment.py`, `aggregator.py`, `validation.py`, and `order_state_machine.py` over names like `get_x.py`, `calculate_y.py`, or `handle_z.py`.
-- A single-function file is acceptable only when that function is a standalone command, adapter entrypoint, algorithm, or clearly reusable public API.
+- A single-function file is acceptable only when the function is a standalone command, adapter entrypoint, algorithm, framework route/handler entrypoint, or clearly reusable public API.
 - Do not create artificial abstractions just to avoid putting related functions in the same file.
+- Do not introduce a class just to wrap a stateless function. Prefer a class only when the object owns state, configuration, strategy, lifecycle, dependencies, or a coherent public interface.
+- In class-centric modules, private helpers that only serve one class should live on that class as private instance, class, or static methods.
+- Do not leave a module-level private helper next to a class when the helper only implements that class's validation, normalization, mapping, serialization, or state transition logic.
+- Keep module-level functions when they are public convenience APIs, function-oriented framework entrypoints, shared algorithm steps, or pure transformations that are not owned by one class.
+- For paired APIs, it is acceptable to expose both a stateful class and a stateless convenience function when they serve different workflows. For example, a streaming `BarAggregator` can coexist with an
+`aggregate_bars(...)` batch helper.
 
 <!-- code-review-graph MCP tools -->
 ## MCP Tools: code-review-graph

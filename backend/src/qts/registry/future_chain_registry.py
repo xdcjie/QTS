@@ -42,7 +42,7 @@ class FutureChainRegistry:
         self._chains: dict[str, FutureChain] = {}
 
     def register(self, chain: FutureChain) -> None:
-        self._chains[_normalize_root(chain.root_symbol)] = chain
+        self._chains[self._normalize_root(chain.root_symbol)] = chain
 
     def resolve_contract(self, root_symbol: str, *, offset: int = 0) -> InstrumentId:
         chain = self._get_chain(root_symbol)
@@ -59,18 +59,18 @@ class FutureChainRegistry:
         return reference
 
     def _get_chain(self, root_symbol: str) -> FutureChain:
-        root = _normalize_root(root_symbol)
+        root = self._normalize_root(root_symbol)
         try:
             return self._chains[root]
         except KeyError as exc:
             raise KeyError(f"missing future chain: {root_symbol}") from exc
 
-
-def _normalize_root(root_symbol: str) -> str:
-    normalized = root_symbol.strip().upper()
-    if not normalized:
-        raise ValueError("root_symbol must not be empty")
-    return normalized
+    @staticmethod
+    def _normalize_root(root_symbol: str) -> str:
+        normalized = root_symbol.strip().upper()
+        if not normalized:
+            raise ValueError("root_symbol must not be empty")
+        return normalized
 
 
 __all__ = ["ContinuousFutureRef", "FutureChain", "FutureChainRegistry"]

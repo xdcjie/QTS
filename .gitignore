@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+
+# Env / secrets
+.env
+*.secret.*
+configs/live.yaml
+configs/live.ibkr.yaml
+configs/paper.ibkr.yaml
+broker_credentials.yaml
+
+.claude/
+.codex/
+.cursor/
+.cursorrules
+.env.example
+.qoder/
+.kiro/
+.mcp.json
+.opencode.json
+.pip-cache/
+.windsurfrules
+uv.lock
+
+# Data artifacts
+historical/
+*.parquet
+*.sqlite
+*.db
+evidence/
+runs/
+
+# Frontend
+node_modules/
+dist/
+build/
+
+# IDE
+.DS_Store
+.idea/
+.vscode/
+# Added by code-review-graph
+.code-review-graph/

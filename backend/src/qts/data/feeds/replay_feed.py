@@ -6,7 +6,7 @@ from datetime import datetime
 
 from qts.core.ids import InstrumentId
 from qts.data.stores.base import MarketDataStore
-from qts.runtime.actors.market_data_actor import MarketDataEvent
+from qts.domain.market_data import Bar
 
 
 class ReplayFeed:
@@ -22,14 +22,13 @@ class ReplayFeed:
         timeframe: str,
         start: datetime,
         end: datetime,
-    ) -> tuple[MarketDataEvent, ...]:
-        bars = self._store.read_bars(
+    ) -> tuple[Bar, ...]:
+        return self._store.read_bars(
             instrument_id=instrument_id,
             timeframe=timeframe,
             start=start,
             end=end,
         )
-        return tuple(MarketDataEvent(payload=bar) for bar in bars)
 
 
 __all__ = ["ReplayFeed"]
