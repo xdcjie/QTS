@@ -26,7 +26,11 @@ from qts.risk.rules.max_notional import MaxNotionalRule
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.account_actor import AccountActor
 from qts.runtime.actors.execution_actor import ExecutionActor
-from qts.runtime.actors.market_data_actor import MarketDataActor, MarketDataEvent
+from qts.runtime.actors.market_data_actor import (
+    MarketDataActor,
+    MarketDataEvent,
+    MarketDataPayload,
+)
 from qts.runtime.actors.order_manager_actor import OrderManagerActor, SubmitOrder
 from qts.runtime.mailbox import Mailbox
 from qts.strategy_sdk import Strategy
@@ -183,9 +187,7 @@ def test_historical_and_fake_live_market_data_use_same_actor_event_contract(
     historical_source.subscribe(FeedSubscription("hist-1", instrument_id, timeframe="1m"))
 
     live_payload = _route_market_data_event(live_source.emit(live_bar).payload)
-    historical_payload = _route_market_data_event(
-        next(historical_source.events("hist-1")).payload
-    )
+    historical_payload = _route_market_data_event(next(historical_source.events("hist-1")).payload)
 
     assert isinstance(live_payload, Bar)
     assert isinstance(historical_payload, Bar)
@@ -195,7 +197,7 @@ def test_historical_and_fake_live_market_data_use_same_actor_event_contract(
     assert not hasattr(historical_payload, "symbol")
 
 
-def _route_market_data_event(payload: object) -> object:
+def _route_market_data_event(payload: MarketDataPayload) -> object:
     mailbox = Mailbox()
     actor = MarketDataActor(subscribers=(ActorRef(mailbox=mailbox),))
     actor.handle(MarketDataEvent(payload=payload))

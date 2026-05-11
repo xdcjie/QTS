@@ -67,7 +67,7 @@ class MarketDataActor(Actor):
             raise ValueError("exchange_timezone is required when aggregate_timeframe is set")
         self._exchange_timezone = exchange_timezone
         self._feed = feed
-        self._aggregators: dict[tuple[object, str, str], BarAggregator] = {}
+        self._aggregators: dict[tuple[object, ...], BarAggregator] = {}
         self._logical_subscribers: dict[LogicalSubscriptionKey, dict[str, ActorRef]] = {}
         self._source_timeframe_by_logical: dict[LogicalSubscriptionKey, str] = {}
         self._physical_subscriptions: set[PhysicalSubscriptionKey] = set()
