@@ -28,11 +28,9 @@ The project installs, imports, and runs all baseline checks.
   - `tests/unit`
   - `tests/integration`
   - `tests/anchor`
-- Confirm Codex guidance exists:
+- Confirm agent guidance exists:
   - root `AGENTS.md`
   - module-level `AGENTS.md`
-  - `.codex/config.toml`
-  - `.codex/prompts/`
 
 ### Out of scope
 

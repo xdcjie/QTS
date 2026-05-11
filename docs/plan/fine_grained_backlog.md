@@ -2,7 +2,7 @@
 
 This document decomposes the quantitative trading system roadmap into small, concrete, verifiable implementation units.
 
-The goal is to make each task suitable for Codex CLI or a human engineer:
+The goal is to make each task suitable for an implementation worker or a human engineer:
 
 - Small enough to implement and review independently.
 - Clear enough to avoid ambiguous architecture choices.
@@ -93,7 +93,7 @@ docs/plan/
 ├── implementation_plan.md              # High-level phase roadmap
 ├── milestones_and_acceptance.md         # Milestone-level acceptance criteria
 ├── fine_grained_backlog.md              # This document
-└── task_template.md                     # Reusable task template for Codex/humans
+└── task_template.md                     # Reusable task template for workers/humans
 ```
 
 The existing `implementation_plan.md` should stay high-level.  
@@ -103,7 +103,7 @@ This file should become the task backlog used for daily implementation.
 
 ## 3. Task Template
 
-Use this template for each Codex task:
+Use this template for each implementation task:
 
 ```md
 ## Task ID: P{phase}-T{number}
@@ -162,7 +162,7 @@ Also run `make test-integration` or `make test-anchor` when relevant.
 
 # Phase 0 — Repository Bootstrap
 
-Goal: make the repository installable, testable, and Codex-ready.
+Goal: make the repository installable, testable, and ready for guided implementation.
 
 ## P0-T01 — Verify Project Skeleton
 
@@ -1709,24 +1709,28 @@ Do not start API/frontend before Strategy SDK, portfolio, risk, execution, and r
 
 ---
 
-# 5. Codex CLI Usage Pattern
+# 5. Worker Usage Pattern
 
 For each task:
 
-```bash
-codex "Read AGENTS.md, the relevant module AGENTS.md, and docs/plan/fine_grained_backlog.md. Implement P2-T02 only. Add tests and run the required checks."
+```text
+Read AGENTS.md, the relevant module AGENTS.md, and docs/plan/fine_grained_backlog.md.
+Implement P2-T02 only. Add tests and run the required checks.
 ```
 
 For milestone review:
 
-```bash
-codex "Review completed work for Phase 2 against docs/plan/fine_grained_backlog.md, docs/testing/anchor_tests.md, and module AGENTS files. Report gaps before changing code."
+```text
+Review completed work for Phase 2 against docs/plan/fine_grained_backlog.md,
+docs/testing/anchor_tests.md, and module AGENTS files. Report gaps before
+changing code.
 ```
 
 For architecture review:
 
-```bash
-codex "Review the repository against docs/architecture/dependency_rules.md and all AGENTS.md files. Identify dependency violations and risky abstractions."
+```text
+Review the repository against docs/architecture/dependency_rules.md and all
+AGENTS.md files. Identify dependency violations and risky abstractions.
 ```
 
 ---

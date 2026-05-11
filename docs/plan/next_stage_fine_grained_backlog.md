@@ -12,10 +12,12 @@ Each task includes:
 - Verification
 - Acceptance Criteria
 
-Suggested Codex command pattern:
+Suggested worker prompt pattern:
 
-```bash
-codex "Read AGENTS.md, relevant module AGENTS.md files, and docs/plan/next_stage_fine_grained_backlog.md. Implement TASK_ID only. Add tests and run required checks."
+```text
+Read AGENTS.md, relevant module AGENTS.md files, and
+docs/plan/next_stage_fine_grained_backlog.md. Implement TASK_ID only.
+Add tests and run required checks.
 ```
 
 ---

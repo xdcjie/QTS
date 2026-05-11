@@ -4,7 +4,7 @@
 
 This backlog starts after `next_stage_fine_grained_backlog.md` is complete.
 
-It is designed for Codex CLI execution: one task per run.
+It is designed for one task per worker run.
 
 ## Naming
 
@@ -22,8 +22,9 @@ YYYY-MM-DD_<STAGE-ID>-<DOC-ID>_<name>.md
 
 ## How to execute
 
-```bash
-codex "Read AGENTS.md and docs/plan/2026-05-10_S3-02_live_beta_fine_grained_backlog.md. Implement S3-00-T01 only. Add tests and run required checks."
+```text
+Read AGENTS.md and docs/plan/2026-05-10_S3-02_live_beta_fine_grained_backlog.md.
+Implement S3-00-T01 only. Add tests and run required checks.
 ```
 
 ## Verification rules

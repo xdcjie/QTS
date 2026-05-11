@@ -38,6 +38,26 @@ Before implementing or modifying core behavior, read the relevant documents unde
 
 If implementation conflicts with these documents, stop and propose a design update first.
 
+## Documentation governance
+
+Before adding or moving project documentation, read `docs/README.md` and use
+the existing documentation directory boundaries.
+
+Rules:
+
+- Do not add a new top-level `docs/` directory unless the content represents a
+  stable project concept, does not fit an existing directory, is expected to
+  hold more than one document over time, and is documented in `docs/README.md`.
+- Do not add agent/tool/workflow-specific directories under `docs/`.
+- Architecture, runtime, domain, strategy SDK, testing, operations, API,
+  infrastructure, and plan material must live in the corresponding existing
+  `docs/` directory.
+- Temporary agent plans, scratch specs, and tool-specific execution notes must
+  not be committed under `docs/` unless they are rewritten as project-level
+  long-lived documentation.
+- When changing a durable rule, update the authoritative long-lived document
+  instead of creating a parallel spec.
+
 ## Architecture rules
 
 - Use Actor + Queue as the orchestration model.

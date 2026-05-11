@@ -52,7 +52,7 @@ make check
 - `Makefile` targets exist.
 - `pyproject.toml` contains ruff, mypy, pytest configuration.
 - Test directories exist.
-- Codex instructions exist at root and module levels.
+- Agent instructions exist at root and module levels.
 
 ### Acceptance criteria
 

@@ -14,7 +14,7 @@ Confirm that the completed initial backlog is stable enough for next-stage work.
 ### Acceptance Criteria
 - `make check` passes or every failure is documented with an owner task.
 - No known dependency-rule violation is left undocumented.
-- Codex can identify the next task from `next_stage_fine_grained_backlog.md`.
+- An implementation worker can identify the next task from `next_stage_fine_grained_backlog.md`.
 
 ---
 
