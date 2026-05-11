@@ -49,7 +49,7 @@ soak-test:
 readiness-check: check test-replay test-reconciliation test-soak
 
 validate-historical-sample:
-	PYTHONPATH=backend/src uv run python scripts/validate_historical_gc_si.py --root historical --sample-rows 1000
+	PYTHONPATH=backend/src uv run python scripts/validate_historical.py --root historical --roots GC SI --sample-rows 1000
 
 research-full-smoke:
 	PYTHONPATH=backend/src uv run python scripts/run_research_backtest.py --config configs/backtest.gc_si.example.yaml --output-dir runs/backtests/full-smoke

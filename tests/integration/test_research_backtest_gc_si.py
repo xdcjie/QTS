@@ -63,6 +63,17 @@ class BuyOneGcStrategy(Strategy):
             self.done = True
 
 
+class BuyOneAaplStrategy(Strategy):
+    def initialize(self, ctx: Any) -> None:
+        self.asset = ctx.symbol("AAPL")
+        self.done = False
+
+    def on_bar(self, ctx: Any, bar: object) -> None:
+        if not self.done:
+            ctx.target_quantity(self.asset, Decimal("1"))
+            self.done = True
+
+
 def test_backtest_engine_runs_from_config_with_deterministic_run_id() -> None:
     from qts.backtest.engine import BacktestEngine
 
@@ -75,6 +86,46 @@ def test_backtest_engine_runs_from_config_with_deterministic_run_id() -> None:
     assert left.config_hash == _config().config_hash
     assert left.run_id == right.run_id
     assert left.report.config_hash == _config().config_hash
+
+
+def test_backtest_engine_from_config_does_not_require_chain_for_static_instrument_ids() -> None:
+    from qts.backtest.engine import BacktestEngine
+
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    config = BacktestRunConfig(
+        dataset_root=Path("historical"),
+        roots=("EQUITY",),
+        symbols=("AAPL",),
+        instrument_ids={"AAPL": InstrumentId("EQUITY.US.NASDAQ.AAPL")},
+        start=start,
+        end=start + timedelta(minutes=1),
+        timeframe="1m",
+        initial_cash=Decimal("100000"),
+        strategy_class="tests.integration.test_research_backtest_gc_si:BuyOneAaplStrategy",
+        risk_config=RiskConfig(max_notional=Decimal("100000000")),
+    )
+    bar = Bar(
+        instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+        start_time=start,
+        end_time=start + timedelta(minutes=1),
+        timeframe="1m",
+        session_id="2026-01-02",
+        open=Decimal("150"),
+        high=Decimal("150"),
+        low=Decimal("150"),
+        close=Decimal("150"),
+        volume=Decimal("100"),
+        is_complete=True,
+    )
+
+    result = BacktestEngine.from_config(
+        config,
+        bars=[bar],
+        strategy=BuyOneAaplStrategy(),
+    ).run()
+
+    assert result.fills[0].instrument_id == InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    assert result.final_account.cash["USD"] == Decimal("99850")
 
 
 def test_warmup_bars_call_strategy_but_do_not_place_orders() -> None:
@@ -243,6 +294,39 @@ warmup_bars: 0
 """,
         encoding="utf-8",
     )
+
+
+def test_research_backtest_runner_supports_non_chain_static_symbol_dataset(
+    tmp_path: Path,
+) -> None:
+    from qts.backtest.research_runner import run_research_backtest
+
+    historical_root = tmp_path / "historical"
+    (historical_root / "data").mkdir(parents=True)
+    _write_fixture_csv(historical_root / "data" / "equity.csv", "AAPL", ["150.0"])
+    config_path = tmp_path / "backtest.yaml"
+    config_path.write_text(
+        f"""
+dataset_root: {historical_root}
+roots: [EQUITY]
+symbols: [AAPL]
+instrument_ids:
+  AAPL: EQUITY.US.NASDAQ.AAPL
+start: "2010-06-06T22:00:00Z"
+end: "2010-06-06T22:01:00Z"
+timeframe: 1m
+initial_cash: "100000"
+strategy_class: "tests.integration.test_research_backtest_gc_si:BuyOneAaplStrategy"
+risk_config:
+  max_notional: "100000000"
+""",
+        encoding="utf-8",
+    )
+
+    run = run_research_backtest(config_path, output_dir=tmp_path / "runs")
+
+    assert run.result.fills[0].instrument_id == InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    assert run.dataset_stats["EQUITY"]["bars_emitted"] == 1
 
 
 def test_research_backtest_runner_writes_report_from_fixture_config(tmp_path: Path) -> None:

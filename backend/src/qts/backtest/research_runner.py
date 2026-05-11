@@ -1,4 +1,4 @@
-"""Research backtest runner for config-driven GC/SI runs."""
+"""Research backtest runner for config-driven historical runs."""
 
 from __future__ import annotations
 
@@ -11,10 +11,11 @@ from typing import Any, cast
 from qts.backtest.config import BacktestRunConfig
 from qts.backtest.engine import BacktestEngine, BacktestResult
 from qts.core.ids import InstrumentId
+from qts.data.historical.catalog import load_historical_catalog
 from qts.data.historical.csv_dataset import iter_historical_bars
-from qts.data.historical.gc_si import load_gc_si_catalog
 from qts.data.provenance import DatasetMetadata
 from qts.domain.market_data import Bar
+from qts.registry.symbol_resolution import StaticSymbolResolver
 from qts.strategy_sdk import Strategy
 
 
@@ -35,7 +36,11 @@ def run_research_backtest(
     """Run a research backtest from YAML config and write a report JSON artifact."""
 
     config = BacktestRunConfig.from_yaml(config_path)
-    catalog = load_gc_si_catalog(config.dataset_root)
+    catalog = load_historical_catalog(
+        config.dataset_root,
+        roots=config.roots,
+        symbol_resolvers=_symbol_resolvers_from_config(config),
+    )
     bars, dataset_stats = _load_configured_bars(config, catalog)
     strategy = _load_strategy(config.strategy_class, config.strategy_params)
     metadata = _dataset_metadata(config)
@@ -62,7 +67,7 @@ def _load_configured_bars(
         dataset = catalog.datasets[root]
         stream = iter_historical_bars(
             dataset.csv_path,
-            dataset.chain,
+            dataset.symbol_resolver,
             timeframe=config.timeframe,
             start=config.start,
             end=config.end,
@@ -93,6 +98,18 @@ def _load_strategy(strategy_class: str, params: dict[str, Any]) -> Strategy:
         spec.loader.exec_module(module)
     strategy_type = getattr(module, class_name)
     return cast(Strategy, strategy_type(**params))
+
+
+def _symbol_resolvers_from_config(
+    config: BacktestRunConfig,
+) -> dict[str, StaticSymbolResolver]:
+    if not config.instrument_ids:
+        return {}
+    return {
+        root: StaticSymbolResolver(config.instrument_ids)
+        for root in config.roots
+        if not (config.dataset_root / "chains" / f"{root}.json").exists()
+    }
 
 
 def _dataset_metadata(config: BacktestRunConfig) -> tuple[DatasetMetadata, ...]:

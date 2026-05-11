@@ -17,6 +17,8 @@ def test_broker_symbol_mapping_round_trips_at_boundary() -> None:
 
     assert mapping.to_broker_symbol(instrument_id) == "GCM6"
     assert mapping.to_instrument_id("GCM6") == instrument_id
+    assert mapping.is_supported_symbol("GCM6") is True
+    assert mapping.instrument_id_for_symbol("GCM6") == instrument_id
 
 
 def test_broker_symbol_mapping_errors_are_explicit() -> None:

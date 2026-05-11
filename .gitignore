@@ -31,7 +31,7 @@ broker_credentials.yaml
 uv.lock
 
 # Data artifacts
-historical/
+/historical/
 *.parquet
 *.sqlite
 *.db

@@ -12,6 +12,8 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
+from qts.core.ids import InstrumentId
+
 
 @dataclass(frozen=True, slots=True)
 class CostModelConfig:
@@ -67,6 +69,7 @@ class BacktestRunConfig:
     initial_cash: Decimal
     strategy_class: str
     strategy_params: dict[str, Any] = field(default_factory=dict)
+    instrument_ids: dict[str, InstrumentId] = field(default_factory=dict)
     cost_model: CostModelConfig = field(default_factory=CostModelConfig)
     risk_config: RiskConfig = field(default_factory=lambda: RiskConfig(max_notional=Decimal("1")))
     warmup_bars: int = 0
@@ -75,6 +78,18 @@ class BacktestRunConfig:
         object.__setattr__(self, "roots", tuple(self.roots))
         object.__setattr__(self, "symbols", tuple(self.symbols))
         object.__setattr__(self, "initial_cash", Decimal(str(self.initial_cash)))
+        object.__setattr__(
+            self,
+            "instrument_ids",
+            {
+                _normalize_symbol(symbol): (
+                    instrument_id
+                    if isinstance(instrument_id, InstrumentId)
+                    else InstrumentId(str(instrument_id))
+                )
+                for symbol, instrument_id in self.instrument_ids.items()
+            },
+        )
         if not self.roots:
             raise ValueError("roots must not be empty")
         if not all(root.strip() for root in self.roots):
@@ -104,8 +119,11 @@ class BacktestRunConfig:
         if not isinstance(risk_payload, dict):
             raise ValueError("risk_config must be a mapping")
         strategy_params = payload.get("strategy_params", {})
+        instrument_ids_payload = payload.get("instrument_ids", {})
         if not isinstance(strategy_params, dict):
             raise ValueError("strategy_params must be a mapping")
+        if not isinstance(instrument_ids_payload, dict):
+            raise ValueError("instrument_ids must be a mapping")
         return cls(
             dataset_root=Path(str(payload["dataset_root"])),
             roots=tuple(payload["roots"]),
@@ -116,6 +134,10 @@ class BacktestRunConfig:
             initial_cash=Decimal(str(payload["initial_cash"])),
             strategy_class=payload["strategy_class"],
             strategy_params=strategy_params,
+            instrument_ids={
+                str(symbol): InstrumentId(str(instrument_id))
+                for symbol, instrument_id in instrument_ids_payload.items()
+            },
             cost_model=CostModelConfig(
                 fixed_commission_per_contract=Decimal(
                     str(cost_payload.get("fixed_commission_per_contract", "0"))
@@ -143,6 +165,10 @@ class BacktestRunConfig:
             "initial_cash": str(self.initial_cash),
             "strategy_class": self.strategy_class,
             "strategy_params": self.strategy_params,
+            "instrument_ids": {
+                symbol: instrument_id.value
+                for symbol, instrument_id in sorted(self.instrument_ids.items())
+            },
             "cost_model": self.cost_model.to_payload(),
             "risk_config": self.risk_config.to_payload(),
             "warmup_bars": self.warmup_bars,
@@ -157,6 +183,13 @@ def _parse_datetime(value: datetime | str) -> datetime:
     if parsed.tzinfo is None:
         raise ValueError("datetime values must be timezone-aware")
     return parsed.astimezone(UTC)
+
+
+def _normalize_symbol(symbol: str) -> str:
+    normalized = symbol.strip().upper()
+    if not normalized:
+        raise ValueError("instrument_ids must not contain empty symbols")
+    return normalized
 
 
 def _stable_hash(payload: Any) -> str:

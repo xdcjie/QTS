@@ -6,6 +6,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
+from qts.core.ids import InstrumentId
 from qts.data.historical.chains import load_historical_chain
 from qts.data.historical.csv_dataset import (
     EXPECTED_HISTORICAL_COLUMNS,
@@ -14,6 +15,7 @@ from qts.data.historical.csv_dataset import (
     validate_historical_sample,
 )
 from qts.data.validation_report import DataValidationIssueCode, DataValidationSeverity
+from qts.registry.symbol_resolution import StaticSymbolResolver
 
 
 def _write_rows(path: Path, rows: list[dict[str, str]]) -> None:
@@ -95,6 +97,23 @@ def test_iter_historical_bars_streams_outrights_and_excludes_spreads(tmp_path: P
     assert stream.stats.rows_seen == 3
     assert stream.stats.bars_emitted == 2
     assert stream.stats.spreads_excluded == 1
+
+
+def test_iter_historical_bars_accepts_static_symbol_resolver_without_chain(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "equity.csv"
+    _write_rows(path, [_row("AAPL", 30), _row("MSFT", 31)])
+    resolver = StaticSymbolResolver({"AAPL": InstrumentId("EQUITY.US.NASDAQ.AAPL")})
+
+    stream = iter_historical_bars(path, resolver, timeframe="1m")
+    bars = tuple(stream)
+
+    assert [bar.instrument_id for bar in bars] == [InstrumentId("EQUITY.US.NASDAQ.AAPL")]
+    assert stream.stats.rows_seen == 2
+    assert stream.stats.bars_emitted == 1
+    assert stream.stats.symbols_excluded == 1
+    assert stream.stats.spreads_excluded == 0
 
 
 def test_validate_historical_sample_reports_invalid_ohlc_and_spread_exclusion(

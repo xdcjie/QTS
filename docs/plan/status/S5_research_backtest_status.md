@@ -57,9 +57,9 @@ or excluded before outright futures backtests:
 | S5-01-T02 | Complete | Outright historical symbols map to `InstrumentId`; spread symbols are rejected. |
 | S5-02-T01 | Complete | CSV dataset descriptions read headers cheaply and count rows only when requested. |
 | S5-02-T02 | Complete | CSV rows stream lazily into complete one-minute `Bar` objects; spread rows are excluded and counted. |
-| S5-02-T03 | Complete | GC/SI catalog loader uses explicit historical paths without row counting by default. |
+| S5-02-T03 | Complete | Generic historical catalog loader uses requested roots and symbol resolver boundaries without row counting by default. |
 | S5-03-T01 | Complete | Sample validation reports invalid OHLC as errors and spread exclusions as visible info issues. |
-| S5-03-T02 | Complete | `scripts/validate_historical_gc_si.py` writes JSON sample/full validation evidence; `make validate-historical-sample` added. |
+| S5-03-T02 | Complete | `scripts/validate_historical.py --roots ...` writes JSON sample/full validation evidence; `make validate-historical-sample` added. |
 | S5-04-T01 | Complete | `BacktestRunConfig` loads YAML, validates material run fields, and computes a stable config hash. |
 | S5-04-T02 | Complete | `BacktestEngine.from_config` runs from full config and preserves existing constructor behavior. |
 | S5-05-T01 | Complete | Backtest market data events order by end time, instrument ID, and source sequence. |
@@ -89,7 +89,7 @@ Final verification:
 
 ```text
 make validate-historical-sample
-evidence/historical/gc_si_validation_sample_1000.json
+evidence/historical/historical_validation_sample_1000.json
 
 make test-research-replay
 1 passed

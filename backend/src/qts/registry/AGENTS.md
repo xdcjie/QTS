@@ -6,6 +6,8 @@ Rules:
 
 - InstrumentRegistry is the source of truth for instrument metadata.
 - Broker symbols and market-data symbols must be mapped at system boundaries.
+- Shared source-symbol resolver abstractions belong here, not in historical,
+  broker, or live-specific packages.
 - Internal modules must use InstrumentId.
 - Continuous futures are research/data references and must not be directly tradable.
 - Option contracts must include underlying, expiry, strike, and right.

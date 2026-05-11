@@ -501,6 +501,10 @@ def _contract_multipliers_from_config(config: BacktestRunConfig) -> dict[Instrum
     multipliers: dict[InstrumentId, Decimal] = {}
     for root in config.roots:
         chain_path = config.dataset_root / "chains" / f"{root}.json"
+        if not chain_path.exists():
+            if config.instrument_ids:
+                continue
+            raise FileNotFoundError(f"required historical chain file is missing: {chain_path}")
         chain = load_historical_chain(chain_path)
         for contract in chain.contracts:
             multipliers[chain.instrument_id_for_symbol(contract.symbol)] = contract.multiplier

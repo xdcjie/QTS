@@ -3,6 +3,7 @@ from qts.registry.calendar_registry import CalendarProvider, CalendarRegistry, M
 from qts.registry.future_chain_registry import ContinuousFutureRef, FutureChain, FutureChainRegistry
 from qts.registry.instrument_registry import InstrumentRegistry
 from qts.registry.option_chain_registry import OptionChainRegistry
+from qts.registry.symbol_resolution import SourceSymbolResolver, StaticSymbolResolver
 
 __all__ = [
     "BrokerSymbolMapping",
@@ -14,4 +15,6 @@ __all__ = [
     "InstrumentRegistry",
     "MarketSession",
     "OptionChainRegistry",
+    "SourceSymbolResolver",
+    "StaticSymbolResolver",
 ]

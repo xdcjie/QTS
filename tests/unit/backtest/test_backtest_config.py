@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 from qts.backtest.config import BacktestRunConfig
+from qts.core.ids import InstrumentId
 
 
 def test_backtest_run_config_loads_example_yaml_with_stable_hash() -> None:
@@ -15,6 +16,7 @@ def test_backtest_run_config_loads_example_yaml_with_stable_hash() -> None:
     assert config.dataset_root == Path("historical")
     assert config.roots == ("GC", "SI")
     assert config.symbols == ("GCQ0", "SIN0")
+    assert config.instrument_ids == {}
     assert config.start == datetime(2010, 6, 6, 22, 0, tzinfo=UTC)
     assert config.end == datetime(2010, 6, 6, 22, 5, tzinfo=UTC)
     assert config.timeframe == "1m"
@@ -31,6 +33,31 @@ def test_backtest_run_config_loads_example_yaml_with_stable_hash() -> None:
 
     changed = replace(config, initial_cash=Decimal("2000000"))
     assert changed.config_hash != config.config_hash
+
+
+def test_backtest_run_config_accepts_explicit_instrument_ids_for_non_chain_datasets(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "backtest.yaml"
+    config_path.write_text(
+        """
+dataset_root: historical
+roots: [EQUITY]
+symbols: [AAPL]
+instrument_ids:
+  AAPL: EQUITY.US.NASDAQ.AAPL
+start: "2026-01-02T14:30:00Z"
+end: "2026-01-02T14:31:00Z"
+timeframe: 1m
+initial_cash: "100000"
+strategy_class: "tests.integration.test_research_backtest_gc_si:BuyOneGcStrategy"
+""",
+        encoding="utf-8",
+    )
+
+    config = BacktestRunConfig.from_yaml(config_path)
+
+    assert config.instrument_ids == {"AAPL": InstrumentId("EQUITY.US.NASDAQ.AAPL")}
 
 
 def test_backtest_run_config_validates_material_fields() -> None:

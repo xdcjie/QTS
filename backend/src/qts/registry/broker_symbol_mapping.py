@@ -36,6 +36,12 @@ class BrokerSymbolMapping:
                 f"missing instrument mapping for broker symbol: {broker_symbol}"
             ) from exc
 
+    def is_supported_symbol(self, symbol: str) -> bool:
+        return self._normalize_broker_symbol(symbol) in self._to_instrument
+
+    def instrument_id_for_symbol(self, symbol: str) -> InstrumentId:
+        return self.to_instrument_id(symbol)
+
     @staticmethod
     def _normalize_broker_symbol(broker_symbol: str) -> str:
         normalized = broker_symbol.strip()

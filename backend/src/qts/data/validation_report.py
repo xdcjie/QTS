@@ -20,6 +20,7 @@ class DataValidationIssueCode(StrEnum):
     OUTSIDE_SESSION = "outside_session"
     INVALID_OHLC = "invalid_ohlc"
     UNEXPECTED_GAP = "unexpected_gap"
+    EXCLUDED_SYMBOL = "excluded_symbol"
     EXCLUDED_SPREAD = "excluded_spread"
 
 

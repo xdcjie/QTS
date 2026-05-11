@@ -34,7 +34,8 @@ Create:
 - `backend/src/qts/data/historical/__init__.py`
 - `backend/src/qts/data/historical/chains.py`
 - `backend/src/qts/data/historical/csv_dataset.py`
-- `backend/src/qts/data/historical/gc_si.py`
+- `backend/src/qts/data/historical/catalog.py`
+- `backend/src/qts/data/historical/symbols.py`
 - `backend/src/qts/backtest/config.py`
 - `backend/src/qts/backtest/report.py`
 - `backend/src/qts/backtest/metrics.py`
@@ -221,19 +222,19 @@ PY
 - Outright-only default is enforced.
 - Spread rows are counted in reader stats but not emitted as outright bars.
 
-### S5-02-T03 Add GC/SI Dataset Convenience Loader
+### S5-02-T03 Add Historical Dataset Catalog
 
 **Invariant:** Research code should not know the physical historical file layout.
 
 **Files:**
-- Create: `backend/src/qts/data/historical/gc_si.py`
+- Create: `backend/src/qts/data/historical/catalog.py`
 - Test: `tests/integration/test_gc_si_historical_loading.py`
 
 **Steps:**
 
-- [ ] Add failing test for `load_gc_si_catalog(Path("historical"))`.
+- [ ] Add failing test for `load_historical_catalog(Path("historical"), roots=("GC", "SI"))`.
 - [ ] Assert catalog has roots `GC` and `SI`.
-- [ ] Assert each root has chain path, CSV path, row count disabled by default, and dataset metadata.
+- [ ] Assert each root has symbol resolver, optional chain path, CSV path, row count disabled by default, and dataset metadata.
 - [ ] Implement catalog loader with explicit paths.
 - [ ] Run `uv run pytest tests/integration/test_gc_si_historical_loading.py`.
 
@@ -268,14 +269,14 @@ PY
 **Invariant:** Full dataset validation is an explicit operator/research action because GC/SI files are large.
 
 **Files:**
-- Create: `scripts/validate_historical_gc_si.py`
+- Create: `scripts/validate_historical.py`
 - Test: `tests/integration/test_gc_si_historical_loading.py`
 - Modify: `Makefile`
 
 **Steps:**
 
 - [ ] Add failing CLI smoke test that runs validation with `--sample-rows 1000`.
-- [ ] Implement `scripts/validate_historical_gc_si.py --root historical --sample-rows 1000`.
+- [ ] Implement `scripts/validate_historical.py --root historical --roots GC SI --sample-rows 1000`.
 - [ ] Write JSON validation output to `evidence/historical/`.
 - [ ] Add `make validate-historical-sample`.
 - [ ] Run `uv run pytest tests/integration/test_gc_si_historical_loading.py`.
@@ -686,4 +687,3 @@ S5 is complete when:
 - Reports include provenance, trade ledger, equity curve, metrics, and stable hashes.
 - A fixture-based GC/SI research backtest passes in CI.
 - A bounded full-data historical smoke command exists for manual use.
-
