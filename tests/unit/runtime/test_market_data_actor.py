@@ -94,3 +94,112 @@ def test_market_data_actor_owns_bar_aggregation_state_and_emits_completed_bars()
     assert completed.volume == Decimal("50")
     assert completed.is_complete
     assert subscriber.empty()
+
+
+def test_market_data_actor_deduplicates_physical_subscription_and_fans_out() -> None:
+    from qts.core.ids import InstrumentId
+    from qts.data.live_feed import FakeLiveFeedAdapter, FeedCapabilities
+    from qts.runtime.actor_ref import ActorRef
+    from qts.runtime.actors.market_data_actor import MarketDataActor, SubscribeMarketData
+    from qts.runtime.mailbox import Mailbox
+
+    source = FakeLiveFeedAdapter(
+        source_id="ibkr-live-md",
+        capabilities=FeedCapabilities(
+            source_id="ibkr-live-md",
+            supported_timeframes=frozenset({"5s"}),
+        ),
+    )
+    left = Mailbox()
+    right = Mailbox()
+    instrument_id = InstrumentId("FUTURE.CME.GC.GCQ0")
+    actor = MarketDataActor(feed=source, exchange_timezone=UTC)
+
+    actor.handle(
+        SubscribeMarketData(
+            subscriber_id="strategy-a",
+            subscriber_ref=ActorRef(mailbox=left),
+            instrument_id=instrument_id,
+            timeframe="1m",
+        )
+    )
+    actor.handle(
+        SubscribeMarketData(
+            subscriber_id="strategy-b",
+            subscriber_ref=ActorRef(mailbox=right),
+            instrument_id=instrument_id,
+            timeframe="1m",
+        )
+    )
+
+    assert source.subscription_count == 1
+    assert actor.logical_subscription_count == 1
+
+
+def test_market_data_actor_aggregates_one_source_stream_once_and_fans_out_to_strategies() -> None:
+    from qts.core.ids import InstrumentId
+    from qts.data.live_feed import FakeLiveFeedAdapter, FeedCapabilities
+    from qts.domain.market_data import Bar
+    from qts.runtime.actor_ref import ActorRef
+    from qts.runtime.actors.market_data_actor import (
+        MarketDataActor,
+        MarketDataEvent,
+        SubscribeMarketData,
+    )
+    from qts.runtime.mailbox import Mailbox
+
+    source = FakeLiveFeedAdapter(
+        source_id="ibkr-live-md",
+        capabilities=FeedCapabilities(
+            source_id="ibkr-live-md",
+            supported_timeframes=frozenset({"5s"}),
+        ),
+    )
+    left = Mailbox()
+    right = Mailbox()
+    instrument_id = InstrumentId("FUTURE.CME.GC.GCQ0")
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    actor = MarketDataActor(feed=source, exchange_timezone=UTC)
+
+    for subscriber_id, mailbox in (("strategy-a", left), ("strategy-b", right)):
+        actor.handle(
+            SubscribeMarketData(
+                subscriber_id=subscriber_id,
+                subscriber_ref=ActorRef(mailbox=mailbox),
+                instrument_id=instrument_id,
+                timeframe="1m",
+            )
+        )
+
+    for offset in range(12):
+        value = Decimal(str(100 + offset))
+        actor.handle(
+            MarketDataEvent(
+                payload=Bar(
+                    instrument_id=instrument_id,
+                    start_time=start + timedelta(seconds=5 * offset),
+                    end_time=start + timedelta(seconds=5 * (offset + 1)),
+                    timeframe="5s",
+                    session_id="2026-01-02",
+                    open=value,
+                    high=value,
+                    low=value,
+                    close=value,
+                    volume=Decimal("1"),
+                    is_complete=True,
+                )
+            )
+        )
+
+    left_bar = left.get()
+    right_bar = right.get()
+    assert isinstance(left_bar, Bar)
+    assert isinstance(right_bar, Bar)
+    assert left_bar == right_bar
+    assert left_bar.start_time == start
+    assert left_bar.end_time == start + timedelta(minutes=1)
+    assert left_bar.timeframe == "1m"
+    assert left_bar.close == Decimal("111")
+    assert left_bar.volume == Decimal("12")
+    assert left.empty()
+    assert right.empty()
