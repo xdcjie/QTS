@@ -6,13 +6,22 @@ import csv
 from collections import defaultdict
 from collections.abc import Iterator
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 
 from qts.core.ids import InstrumentId
 from qts.data.historical.chains import HistoricalChain
+from qts.data.historical.csv_format import (
+    DEFAULT_HISTORICAL_CSV_SCHEMA,
+    EXPECTED_HISTORICAL_COLUMNS,
+    HistoricalCsvSchema,
+    historical_timeframe_delta,
+    parse_historical_ts_event,
+    validate_historical_csv_columns,
+)
 from qts.data.historical.symbols import HistoricalFutureChainSymbolResolver
+from qts.data.sessions import RegularSessionWindow
 from qts.data.validation_report import (
     DataValidationIssue,
     DataValidationIssueCode,
@@ -27,19 +36,6 @@ from qts.registry.future_roll import (
     FutureRollSelection,
 )
 from qts.registry.symbol_resolution import SourceSymbolResolver
-
-EXPECTED_HISTORICAL_COLUMNS = (
-    "ts_event",
-    "rtype",
-    "publisher_id",
-    "instrument_id",
-    "open",
-    "high",
-    "low",
-    "close",
-    "volume",
-    "symbol",
-)
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,6 +83,53 @@ class HistoricalValidationSample:
     bars: tuple[Bar, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class HistoricalSessionRollSelection:
+    """Session-level selected contract summary for a historical rolling dataset."""
+
+    session_id: str
+    selected_symbol: str
+    selected_instrument_id: InstrumentId
+    selected_volume: Decimal
+    selected_bar_count: int
+
+
+@dataclass(slots=True)
+class HistoricalSessionRollStats:
+    """Counters for session-level historical roll summarization."""
+
+    rows_seen: int = 0
+    spreads_excluded: int = 0
+    unsupported_contracts_excluded: int = 0
+    outside_session_rows_excluded: int = 0
+
+    def to_payload(self) -> dict[str, int]:
+        return {
+            "rows_seen": self.rows_seen,
+            "spreads_excluded": self.spreads_excluded,
+            "unsupported_contracts_excluded": self.unsupported_contracts_excluded,
+            "outside_session_rows_excluded": self.outside_session_rows_excluded,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class HistoricalSessionRollSummary:
+    """Session-level selected contract summary plus source counters."""
+
+    rows: tuple[HistoricalSessionRollSelection, ...]
+    stats: HistoricalSessionRollStats
+
+
+@dataclass(slots=True)
+class _SessionContractRollStats:
+    symbol: str
+    instrument_id: InstrumentId
+    volume: Decimal = Decimal("0")
+    bar_count: int = 0
+    latest_as_of: datetime | None = None
+    latest_close: Decimal | None = None
+
+
 class HistoricalBarStream:
     """Lazy iterable over historical bars with side-channel reader stats."""
 
@@ -100,6 +143,8 @@ class HistoricalBarStream:
         end: datetime | None = None,
         contract_selector: FutureContractSelector | None = None,
         continuous_instrument_id: InstrumentId | None = None,
+        session_window: RegularSessionWindow | None = None,
+        schema: HistoricalCsvSchema = DEFAULT_HISTORICAL_CSV_SCHEMA,
     ) -> None:
         self._csv_path = csv_path
         self._symbol_resolver = symbol_resolver
@@ -108,26 +153,30 @@ class HistoricalBarStream:
         self._end = end
         self._contract_selector = contract_selector
         self._continuous_instrument_id = continuous_instrument_id
+        self._session_window = session_window
+        self._schema = schema
         self.stats = HistoricalCsvStats()
         self.roll_selections: list[FutureRollSelection] = []
 
     def __iter__(self) -> Iterator[Bar]:
         with self._csv_path.open(encoding="utf-8", newline="") as handle:
             reader = csv.DictReader(handle)
-            _validate_columns(tuple(reader.fieldnames or ()))
+            validate_historical_csv_columns(tuple(reader.fieldnames or ()), schema=self._schema)
             if self._contract_selector is None:
                 yield from self._iter_all_supported_rows(reader)
+            elif self._session_window is not None:
+                yield from self._iter_session_selected_contract_rows(reader)
             else:
                 yield from self._iter_selected_contract_rows(reader)
 
     def _iter_all_supported_rows(self, reader: csv.DictReader[str]) -> Iterator[Bar]:
         for row in reader:
             self.stats.rows_seen += 1
-            symbol = row["symbol"]
+            symbol = self._field(row, "symbol")
             if not self._symbol_resolver.is_supported_symbol(symbol):
                 self._count_excluded_symbol(symbol)
                 continue
-            timestamp = _parse_ts_event(row["ts_event"])
+            timestamp = self._timestamp(row)
             if self._start is not None and timestamp < self._start:
                 continue
             if self._end is not None and timestamp >= self._end:
@@ -137,6 +186,7 @@ class HistoricalBarStream:
                     row,
                     symbol_resolver=self._symbol_resolver,
                     timeframe=self._timeframe,
+                    schema=self._schema,
                 )
             except ValueError:
                 self.stats.invalid_rows += 1
@@ -156,7 +206,7 @@ class HistoricalBarStream:
             candidates: list[FutureContractCandidate] = []
             bars_by_instrument: dict[InstrumentId, Bar] = {}
             for row in rows:
-                symbol = row["symbol"]
+                symbol = self._field(row, "symbol")
                 if not self._symbol_resolver.is_supported_symbol(symbol):
                     self._count_excluded_symbol(symbol)
                     continue
@@ -165,6 +215,7 @@ class HistoricalBarStream:
                         row,
                         symbol_resolver=self._symbol_resolver,
                         timeframe=self._timeframe,
+                        schema=self._schema,
                     )
                 except ValueError:
                     self.stats.invalid_rows += 1
@@ -206,6 +257,141 @@ class HistoricalBarStream:
             self.stats.bars_emitted += 1
             yield output_bar
 
+    def _iter_session_selected_contract_rows(
+        self,
+        reader: csv.DictReader[str],
+    ) -> Iterator[Bar]:
+        contract_selector = self._contract_selector
+        session_window = self._session_window
+        if contract_selector is None:
+            raise RuntimeError("contract selector is not configured")
+        if session_window is None:
+            raise RuntimeError("session window is not configured")
+
+        current_session_id: str | None = None
+        current_groups: list[tuple[datetime, list[dict[str, str]]]] = []
+        for timestamp, rows in self._timestamp_groups(reader):
+            if self._start is not None and timestamp < self._start:
+                continue
+            if self._end is not None and timestamp >= self._end:
+                break
+            session_id = session_window.session_id_for_timestamp(timestamp)
+            if session_id is None:
+                if current_session_id is not None:
+                    yield from self._emit_selected_session_rows(
+                        current_session_id,
+                        current_groups,
+                        contract_selector=contract_selector,
+                    )
+                    current_session_id = None
+                    current_groups = []
+                continue
+            if current_session_id is not None and session_id != current_session_id:
+                yield from self._emit_selected_session_rows(
+                    current_session_id,
+                    current_groups,
+                    contract_selector=contract_selector,
+                )
+                current_groups = []
+            current_session_id = session_id
+            current_groups.append((timestamp, rows))
+
+        if current_session_id is not None:
+            yield from self._emit_selected_session_rows(
+                current_session_id,
+                current_groups,
+                contract_selector=contract_selector,
+            )
+
+    def _emit_selected_session_rows(
+        self,
+        session_id: str,
+        groups: list[tuple[datetime, list[dict[str, str]]]],
+        *,
+        contract_selector: FutureContractSelector,
+    ) -> Iterator[Bar]:
+        rows_by_timestamp: list[dict[InstrumentId, dict[str, str]]] = []
+        closes_by_timestamp: list[dict[InstrumentId, Decimal]] = []
+        total_volume_by_instrument: dict[InstrumentId, Decimal] = defaultdict(lambda: Decimal("0"))
+        latest_as_of_by_instrument: dict[InstrumentId, datetime] = {}
+        latest_close_by_instrument: dict[InstrumentId, Decimal] = {}
+        symbol_by_instrument: dict[InstrumentId, str] = {}
+        timeframe_delta = historical_timeframe_delta(self._timeframe)
+
+        for timestamp, rows in groups:
+            rows_by_instrument: dict[InstrumentId, dict[str, str]] = {}
+            closes_by_instrument: dict[InstrumentId, Decimal] = {}
+            for row in rows:
+                symbol = self._field(row, "symbol")
+                if not self._symbol_resolver.is_supported_symbol(symbol):
+                    self._count_excluded_symbol(symbol)
+                    continue
+                try:
+                    _, _, _, close, volume = _row_ohlcv(row, schema=self._schema)
+                except ValueError:
+                    self.stats.invalid_rows += 1
+                    continue
+                instrument_id = self._symbol_resolver.instrument_id_for_symbol(symbol)
+                rows_by_instrument[instrument_id] = row
+                closes_by_instrument[instrument_id] = close
+                total_volume_by_instrument[instrument_id] += volume
+                latest_as_of_by_instrument[instrument_id] = timestamp + timeframe_delta
+                latest_close_by_instrument[instrument_id] = close
+                symbol_by_instrument[instrument_id] = symbol
+            if rows_by_instrument:
+                rows_by_timestamp.append(rows_by_instrument)
+                closes_by_timestamp.append(closes_by_instrument)
+
+        if not total_volume_by_instrument:
+            return
+
+        candidates = tuple(
+            FutureContractCandidate(
+                root_symbol=self._resolver_root(),
+                symbol=symbol_by_instrument[instrument_id],
+                instrument_id=instrument_id,
+                as_of=latest_as_of_by_instrument[instrument_id],
+                close=latest_close_by_instrument[instrument_id],
+                volume=volume,
+            )
+            for instrument_id, volume in total_volume_by_instrument.items()
+        )
+        selected = contract_selector.select(candidates)
+
+        for rows_by_instrument, closes_by_instrument in zip(
+            rows_by_timestamp,
+            closes_by_timestamp,
+            strict=True,
+        ):
+            selected_row = rows_by_instrument.get(selected.instrument_id)
+            if selected_row is None:
+                continue
+            selected_bar = _row_to_bar(
+                selected_row,
+                symbol_resolver=self._symbol_resolver,
+                timeframe=self._timeframe,
+                schema=self._schema,
+            )
+            output_instrument_id = self._continuous_instrument_id or selected.instrument_id
+            output_bar = replace(
+                selected_bar,
+                instrument_id=output_instrument_id,
+                session_id=session_id,
+            )
+            self.roll_selections.append(
+                FutureRollSelection(
+                    continuous_instrument_id=output_instrument_id,
+                    root_symbol=selected.root_symbol,
+                    as_of=output_bar.end_time,
+                    concrete_instrument_id=selected.instrument_id,
+                    source_symbol=selected.symbol,
+                    prices_by_instrument=closes_by_instrument,
+                )
+            )
+            self.stats.contracts_excluded += len(rows_by_instrument) - 1
+            self.stats.bars_emitted += 1
+            yield output_bar
+
     def _timestamp_groups(
         self,
         reader: csv.DictReader[str],
@@ -214,14 +400,14 @@ class HistoricalBarStream:
         current_rows: list[dict[str, str]] = []
         for row in reader:
             self.stats.rows_seen += 1
-            timestamp_text = row["ts_event"]
+            timestamp_text = self._field(row, "timestamp")
             if current_timestamp is not None and timestamp_text != current_timestamp:
-                yield _parse_ts_event(current_timestamp), current_rows
+                yield parse_historical_ts_event(current_timestamp), current_rows
                 current_rows = []
             current_timestamp = timestamp_text
             current_rows.append(row)
         if current_timestamp is not None:
-            yield _parse_ts_event(current_timestamp), current_rows
+            yield parse_historical_ts_event(current_timestamp), current_rows
 
     def _count_excluded_symbol(self, symbol: str) -> None:
         self.stats.symbols_excluded += 1
@@ -229,10 +415,13 @@ class HistoricalBarStream:
             self.stats.spreads_excluded += 1
 
     def _resolver_root(self) -> str:
-        root = getattr(self._symbol_resolver, "root", "")
-        if not isinstance(root, str) or not root.strip():
-            raise ValueError("rolling historical streams require a root-aware symbol resolver")
-        return root
+        return _resolver_root(self._symbol_resolver)
+
+    def _field(self, row: dict[str, str], semantic_name: str) -> str:
+        return row[getattr(self._schema, semantic_name)]
+
+    def _timestamp(self, row: dict[str, str]) -> datetime:
+        return parse_historical_ts_event(self._field(row, "timestamp"))
 
 
 def describe_csv_dataset(
@@ -241,13 +430,14 @@ def describe_csv_dataset(
     root: str,
     timeframe: str = "1m",
     count_rows: bool = False,
+    schema: HistoricalCsvSchema = DEFAULT_HISTORICAL_CSV_SCHEMA,
 ) -> CsvDatasetDescription:
     """Read historical CSV identity metadata without materializing row data."""
 
     with path.open(encoding="utf-8", newline="") as handle:
         reader = csv.reader(handle)
         columns = tuple(next(reader))
-        _validate_columns(columns)
+        validate_historical_csv_columns(columns, schema=schema)
         row_count = sum(1 for _ in reader) if count_rows else None
     return CsvDatasetDescription(
         root=root,
@@ -270,6 +460,8 @@ def iter_historical_bars(
     end: datetime | None = None,
     contract_selector: FutureContractSelector | None = None,
     continuous_instrument_id: InstrumentId | None = None,
+    session_window: RegularSessionWindow | None = None,
+    schema: HistoricalCsvSchema = DEFAULT_HISTORICAL_CSV_SCHEMA,
 ) -> HistoricalBarStream:
     """Return a lazy stream of outright historical bars."""
 
@@ -281,7 +473,115 @@ def iter_historical_bars(
         end=end,
         contract_selector=contract_selector,
         continuous_instrument_id=continuous_instrument_id,
+        session_window=session_window,
+        schema=schema,
     )
+
+
+def summarize_historical_session_rolls(
+    csv_path: Path,
+    symbol_resolver: SourceSymbolResolver | HistoricalChain,
+    *,
+    session_window: RegularSessionWindow,
+    contract_selector: FutureContractSelector,
+    timeframe: str = "1m",
+    schema: HistoricalCsvSchema = DEFAULT_HISTORICAL_CSV_SCHEMA,
+) -> HistoricalSessionRollSummary:
+    """Summarize the session-level contract selection a historical roll reader should use."""
+
+    resolver = _as_symbol_resolver(symbol_resolver)
+    root = _resolver_root(resolver)
+    timeframe_delta = historical_timeframe_delta(timeframe)
+    sessions: dict[str, dict[InstrumentId, _SessionContractRollStats]] = {}
+    build_stats = HistoricalSessionRollStats()
+    current_timestamp: str | None = None
+    current_timestamp_value: datetime | None = None
+    current_session_id: str | None = None
+
+    with csv_path.open(encoding="utf-8", newline="") as handle:
+        reader = csv.reader(handle)
+        columns = tuple(next(reader))
+        validate_historical_csv_columns(columns, schema=schema)
+        column_index = schema.column_indices(columns)
+        timestamp_index = column_index["timestamp"]
+        open_index = column_index["open"]
+        high_index = column_index["high"]
+        low_index = column_index["low"]
+        close_index = column_index["close"]
+        volume_index = column_index["volume"]
+        symbol_index = column_index["symbol"]
+
+        for row in reader:
+            build_stats.rows_seen += 1
+            symbol = row[symbol_index]
+            if not resolver.is_supported_symbol(symbol):
+                if _is_spread_symbol(symbol):
+                    build_stats.spreads_excluded += 1
+                else:
+                    build_stats.unsupported_contracts_excluded += 1
+                continue
+
+            timestamp_text = row[timestamp_index]
+            if timestamp_text != current_timestamp:
+                current_timestamp = timestamp_text
+                current_timestamp_value = parse_historical_ts_event(timestamp_text)
+                current_session_id = session_window.session_id_for_timestamp(
+                    current_timestamp_value
+                )
+            if current_session_id is None:
+                build_stats.outside_session_rows_excluded += 1
+                continue
+            if current_timestamp_value is None:
+                raise RuntimeError("timestamp was not parsed before session roll aggregation")
+
+            try:
+                _, _, _, close, volume = _parse_ohlcv_values(
+                    open_value=row[open_index],
+                    high_value=row[high_index],
+                    low_value=row[low_index],
+                    close_value=row[close_index],
+                    volume_value=row[volume_index],
+                )
+            except ValueError:
+                continue
+
+            instrument_id = resolver.instrument_id_for_symbol(symbol)
+            per_contract = sessions.setdefault(current_session_id, {})
+            contract_stats = per_contract.setdefault(
+                instrument_id,
+                _SessionContractRollStats(symbol=symbol, instrument_id=instrument_id),
+            )
+            contract_stats.volume += volume
+            contract_stats.bar_count += 1
+            contract_stats.latest_as_of = current_timestamp_value + timeframe_delta
+            contract_stats.latest_close = close
+
+    rows: list[HistoricalSessionRollSelection] = []
+    for session_id in sorted(sessions):
+        candidates = tuple(
+            FutureContractCandidate(
+                root_symbol=root,
+                symbol=contract_stats.symbol,
+                instrument_id=contract_stats.instrument_id,
+                as_of=_required_as_of(contract_stats),
+                close=_required_close(contract_stats),
+                volume=contract_stats.volume,
+            )
+            for contract_stats in sessions[session_id].values()
+        )
+        selected = contract_selector.select(candidates)
+        selected_stats = sessions[session_id][selected.instrument_id]
+        rows.append(
+            HistoricalSessionRollSelection(
+                session_id=session_id,
+                selected_symbol=selected.symbol,
+                selected_instrument_id=selected.instrument_id,
+                selected_volume=selected_stats.volume,
+                selected_bar_count=selected_stats.bar_count,
+            )
+        )
+
+    return HistoricalSessionRollSummary(rows=tuple(rows), stats=build_stats)
 
 
 def validate_historical_sample(
@@ -290,6 +590,7 @@ def validate_historical_sample(
     *,
     sample_rows: int | None,
     timeframe: str = "1m",
+    schema: HistoricalCsvSchema = DEFAULT_HISTORICAL_CSV_SCHEMA,
 ) -> HistoricalValidationSample:
     """Validate a bounded sample or full CSV when `sample_rows` is None."""
 
@@ -301,12 +602,12 @@ def validate_historical_sample(
     bars: list[Bar] = []
     with csv_path.open(encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
-        _validate_columns(tuple(reader.fieldnames or ()))
+        validate_historical_csv_columns(tuple(reader.fieldnames or ()), schema=schema)
         for row in reader:
             if sample_rows is not None and stats.rows_seen >= sample_rows:
                 break
             stats.rows_seen += 1
-            symbol = row["symbol"]
+            symbol = row[schema.symbol]
             if not resolver.is_supported_symbol(symbol):
                 stats.symbols_excluded += 1
                 is_spread = _is_spread_symbol(symbol)
@@ -325,7 +626,12 @@ def validate_historical_sample(
                 )
                 continue
             try:
-                bar = _row_to_bar(row, symbol_resolver=resolver, timeframe=timeframe)
+                bar = _row_to_bar(
+                    row,
+                    symbol_resolver=resolver,
+                    timeframe=timeframe,
+                    schema=schema,
+                )
             except ValueError as exc:
                 stats.invalid_rows += 1
                 issues.append(
@@ -343,7 +649,7 @@ def validate_historical_sample(
         issues.extend(
             validate_bars(
                 tuple(instrument_bars),
-                expected_interval=_timeframe_delta(timeframe),
+                expected_interval=historical_timeframe_delta(timeframe),
             ).issues
         )
     return HistoricalValidationSample(
@@ -358,56 +664,82 @@ def _row_to_bar(
     *,
     symbol_resolver: SourceSymbolResolver,
     timeframe: str,
+    schema: HistoricalCsvSchema = DEFAULT_HISTORICAL_CSV_SCHEMA,
 ) -> Bar:
-    start_time = _parse_ts_event(row["ts_event"])
-    end_time = start_time + _timeframe_delta(timeframe)
-    symbol = row["symbol"]
+    start_time = parse_historical_ts_event(row[schema.timestamp])
+    end_time = start_time + historical_timeframe_delta(timeframe)
+    symbol = row[schema.symbol]
+    open_, high, low, close, volume = _row_ohlcv(row, schema=schema)
     return Bar(
         instrument_id=symbol_resolver.instrument_id_for_symbol(symbol),
         start_time=start_time,
         end_time=end_time,
         timeframe=timeframe,
         session_id=start_time.astimezone(UTC).date().isoformat(),
-        open=Decimal(row["open"]),
-        high=Decimal(row["high"]),
-        low=Decimal(row["low"]),
-        close=Decimal(row["close"]),
-        volume=Decimal(row["volume"]),
+        open=open_,
+        high=high,
+        low=low,
+        close=close,
+        volume=volume,
         is_complete=True,
     )
 
 
-def _validate_columns(columns: tuple[str, ...]) -> None:
-    if columns != EXPECTED_HISTORICAL_COLUMNS:
-        raise ValueError(
-            "historical CSV columns must be "
-            f"{','.join(EXPECTED_HISTORICAL_COLUMNS)}; got {','.join(columns)}"
-        )
+def _row_ohlcv(
+    row: dict[str, str],
+    *,
+    schema: HistoricalCsvSchema = DEFAULT_HISTORICAL_CSV_SCHEMA,
+) -> tuple[Decimal, Decimal, Decimal, Decimal, Decimal]:
+    return _parse_ohlcv_values(
+        open_value=row[schema.open],
+        high_value=row[schema.high],
+        low_value=row[schema.low],
+        close_value=row[schema.close],
+        volume_value=row[schema.volume],
+    )
 
 
-def _parse_ts_event(value: str) -> datetime:
-    text = value.removesuffix("Z")
-    suffix = "+00:00" if value.endswith("Z") else ""
-    if "." in text:
-        prefix, rest = text.split(".", maxsplit=1)
-        fraction = rest[:6].ljust(6, "0")
-        text = f"{prefix}.{fraction}"
-    parsed = datetime.fromisoformat(f"{text}{suffix}")
-    if parsed.tzinfo is None:
-        raise ValueError("ts_event must be timezone-aware")
-    return parsed.astimezone(UTC)
+def _parse_ohlcv_values(
+    *,
+    open_value: str,
+    high_value: str,
+    low_value: str,
+    close_value: str,
+    volume_value: str,
+) -> tuple[Decimal, Decimal, Decimal, Decimal, Decimal]:
+    open_ = Decimal(open_value)
+    high = Decimal(high_value)
+    low = Decimal(low_value)
+    close = Decimal(close_value)
+    volume = Decimal(volume_value)
+    if high < max(open_, close):
+        raise ValueError("high must be greater than or equal to open and close")
+    if low > min(open_, close):
+        raise ValueError("low must be less than or equal to open and close")
+    if low > high:
+        raise ValueError("low must be less than or equal to high")
+    if volume < Decimal("0"):
+        raise ValueError("volume must be non-negative")
+    return open_, high, low, close, volume
 
 
-def _timeframe_delta(timeframe: str) -> timedelta:
-    if timeframe == "1m":
-        return timedelta(minutes=1)
-    if timeframe.endswith("m"):
-        return timedelta(minutes=int(timeframe[:-1]))
-    if timeframe.endswith("s"):
-        return timedelta(seconds=int(timeframe[:-1]))
-    if timeframe.endswith("h"):
-        return timedelta(hours=int(timeframe[:-1]))
-    raise ValueError(f"unsupported historical timeframe: {timeframe}")
+def _resolver_root(symbol_resolver: SourceSymbolResolver) -> str:
+    root = getattr(symbol_resolver, "root", "")
+    if not isinstance(root, str) or not root.strip():
+        raise ValueError("rolling historical streams require a root-aware symbol resolver")
+    return root
+
+
+def _required_as_of(stats: _SessionContractRollStats) -> datetime:
+    if stats.latest_as_of is None:
+        raise ValueError(f"missing latest timestamp for {stats.symbol}")
+    return stats.latest_as_of
+
+
+def _required_close(stats: _SessionContractRollStats) -> Decimal:
+    if stats.latest_close is None:
+        raise ValueError(f"missing latest close for {stats.symbol}")
+    return stats.latest_close
 
 
 def _group_bars(bars: list[Bar]) -> dict[InstrumentId, list[Bar]]:
@@ -434,8 +766,12 @@ __all__ = [
     "CsvDatasetDescription",
     "HistoricalBarStream",
     "HistoricalCsvStats",
+    "HistoricalSessionRollSelection",
+    "HistoricalSessionRollStats",
+    "HistoricalSessionRollSummary",
     "HistoricalValidationSample",
     "describe_csv_dataset",
     "iter_historical_bars",
+    "summarize_historical_session_rolls",
     "validate_historical_sample",
 ]

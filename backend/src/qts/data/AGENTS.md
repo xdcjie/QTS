@@ -10,6 +10,9 @@ Rules:
 - Bar generation must respect holidays, early closes, and late opens.
 - Session-outside data must not enter aggregated bars.
 - Use `exchange-calendars` as preferred base calendar implementation when supported, wrapped behind internal services.
+- Source-specific packages such as `historical` may adapt source data into
+  shared contracts, but they must not own shared live/backtest semantics such as
+  futures roll resolution.
 
 ## Bar aggregation rules
 

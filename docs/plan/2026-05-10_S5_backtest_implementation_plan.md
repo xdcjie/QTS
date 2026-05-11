@@ -1,14 +1,14 @@
-# S5 Research-Grade Backtest Implementation Plan
+# S5 Backtest Implementation Plan
 
 > **For implementation workers:** implement this plan task-by-task. Read
 > `AGENTS.md`, relevant module `AGENTS.md` files, and the referenced docs before
 > each task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a complete research-grade backtest system over the local GC and SI historical futures datasets.
+**Goal:** Build a complete backtest system over the local GC and SI historical futures datasets.
 
 **Architecture:** Keep historical data, Strategy SDK, backtest simulation, portfolio accounting, risk, and reporting as separate boundaries. Historical files under `historical/` become reproducible datasets with explicit provenance and validation before the backtest engine consumes them. The engine remains deterministic and uses the same Strategy SDK intent path as paper/live simulation where practical.
 
-**Tech Stack:** Python 3.11+, pandas where useful for research-facing tabular work, existing qts domain/runtime modules, pytest, ruff, mypy, exchange-calendars behind project interfaces.
+**Tech Stack:** Python 3.11+, pandas where useful for analysis-facing tabular work, existing qts domain/runtime modules, pytest, ruff, mypy, exchange-calendars behind project interfaces.
 
 ---
 
@@ -42,17 +42,17 @@ Create:
 - `backend/src/qts/backtest/report.py`
 - `backend/src/qts/backtest/metrics.py`
 - `backend/src/qts/backtest/events.py`
-- `backend/src/qts/backtest/research_runner.py`
+- `backend/src/qts/backtest/runner.py`
 - `configs/backtest.gc_si.example.yaml`
-- `scripts/run_research_backtest.py`
-- `docs/plan/status/S5_research_backtest_status.md`
+- `scripts/run_backtest.py`
+- `docs/plan/status/S5_backtest_status.md`
 - `tests/unit/data/test_historical_chains.py`
 - `tests/unit/data/test_historical_csv_dataset.py`
 - `tests/integration/test_gc_si_historical_loading.py`
 - `tests/unit/backtest/test_backtest_config.py`
 - `tests/unit/backtest/test_backtest_report_metrics.py`
-- `tests/integration/test_research_backtest_gc_si.py`
-- `tests/replay/test_research_backtest_determinism.py`
+- `tests/integration/test_backtest_gc_si.py`
+- `tests/replay/test_backtest_determinism.py`
 
 Modify:
 
@@ -78,7 +78,7 @@ For every task:
 4. Implement the minimum code.
 5. Run focused checks.
 6. Run wider checks when the task touches shared behavior.
-7. Update `docs/plan/status/S5_research_backtest_status.md`.
+7. Update `docs/plan/status/S5_backtest_status.md`.
 
 Default focused checks:
 
@@ -106,10 +106,10 @@ make test-replay
 
 ### S5-00-T01 Record Historical Inventory
 
-**Invariant:** Full GC/SI datasets are external research inputs; backtest behavior must reference them through metadata, not hidden file assumptions.
+**Invariant:** Full GC/SI datasets are external historical inputs; backtest behavior must reference them through metadata, not hidden file assumptions.
 
 **Files:**
-- Create: `docs/plan/status/S5_research_backtest_status.md`
+- Create: `docs/plan/status/S5_backtest_status.md`
 
 **Steps:**
 
@@ -226,7 +226,7 @@ PY
 
 ### S5-02-T03 Add Historical Dataset Catalog
 
-**Invariant:** Research code should not know the physical historical file layout.
+**Invariant:** Backtest code should not know the physical historical file layout.
 
 **Files:**
 - Create: `backend/src/qts/data/historical/catalog.py`
@@ -248,7 +248,7 @@ PY
 
 ### S5-03-T01 Validate Sampled GC/SI Bars
 
-**Invariant:** Invalid OHLC, duplicate intervals, non-monotonic bars, and spread rows must not silently enter research backtests.
+**Invariant:** Invalid OHLC, duplicate intervals, non-monotonic bars, and spread rows must not silently enter backtests.
 
 **Files:**
 - Modify: `backend/src/qts/data/historical/csv_dataset.py`
@@ -268,7 +268,7 @@ PY
 
 ### S5-03-T02 Add Full Dataset Validation CLI
 
-**Invariant:** Full dataset validation is an explicit operator/research action because GC/SI files are large.
+**Invariant:** Full dataset validation is an explicit operator action because GC/SI files are large.
 
 **Files:**
 - Create: `scripts/validate_historical.py`
@@ -292,7 +292,7 @@ PY
 
 ### S5-04-T01 Add BacktestRunConfig
 
-**Invariant:** A research run is defined by explicit config, not by ad hoc constructor arguments.
+**Invariant:** A backtest run is defined by explicit config, not by ad hoc constructor arguments.
 
 **Files:**
 - Create: `backend/src/qts/backtest/config.py`
@@ -313,12 +313,12 @@ PY
 
 ### S5-04-T02 Wire BacktestEngine To BacktestRunConfig
 
-**Invariant:** The existing `BacktestEngine` API can remain, but research entrypoints should run from a full config object.
+**Invariant:** The existing `BacktestEngine` API can remain, but backtest entrypoints should run from a full config object.
 
 **Files:**
 - Modify: `backend/src/qts/backtest/engine.py`
 - Modify: `backend/src/qts/backtest/__init__.py`
-- Test: `tests/integration/test_research_backtest_gc_si.py`
+- Test: `tests/integration/test_backtest_gc_si.py`
 
 **Steps:**
 
@@ -326,13 +326,13 @@ PY
 - [ ] Implement `BacktestEngine.from_config(config, bars, strategy)`.
 - [ ] Preserve existing constructor behavior.
 - [ ] Ensure report includes `config_hash`.
-- [ ] Run `uv run pytest tests/integration/test_research_backtest_gc_si.py`.
+- [ ] Run `uv run pytest tests/integration/test_backtest_gc_si.py`.
 
 **Acceptance:**
 - Existing backtest tests keep passing.
 - Config-driven backtest produces deterministic run ID.
 
-## S5-05 Research Event Loop Hardening
+## S5-05 Backtest Event Loop Hardening
 
 ### S5-05-T01 Add Backtest Event Ordering
 
@@ -361,7 +361,7 @@ PY
 **Files:**
 - Modify: `backend/src/qts/backtest/config.py`
 - Modify: `backend/src/qts/backtest/engine.py`
-- Test: `tests/integration/test_research_backtest_gc_si.py`
+- Test: `tests/integration/test_backtest_gc_si.py`
 
 **Steps:**
 
@@ -369,7 +369,7 @@ PY
 - [ ] Add `warmup_bars` to config.
 - [ ] During warmup, set `ctx.data` and call `on_bar`, but discard trading intents.
 - [ ] After warmup, process intents normally.
-- [ ] Run `uv run pytest tests/integration/test_research_backtest_gc_si.py`.
+- [ ] Run `uv run pytest tests/integration/test_backtest_gc_si.py`.
 
 **Acceptance:**
 - Warmup is deterministic.
@@ -377,12 +377,12 @@ PY
 
 ### S5-05-T03 Add Strategy Finalize Hook
 
-**Invariant:** Strategies need a deterministic end-of-run hook for research summaries without mutating portfolio state after the clock stops.
+**Invariant:** Strategies need a deterministic end-of-run hook for run summaries without mutating portfolio state after the clock stops.
 
 **Files:**
 - Modify: `backend/src/qts/strategy_sdk/strategy.py`
 - Modify: `backend/src/qts/backtest/engine.py`
-- Test: `tests/integration/test_research_backtest_gc_si.py`
+- Test: `tests/integration/test_backtest_gc_si.py`
 
 **Steps:**
 
@@ -390,7 +390,7 @@ PY
 - [ ] Add no-op `Strategy.finalize(ctx)`.
 - [ ] Call finalize once after the last replay event.
 - [ ] Assert no new target intents are processed after finalize.
-- [ ] Run `uv run pytest tests/integration/test_research_backtest_gc_si.py`.
+- [ ] Run `uv run pytest tests/integration/test_backtest_gc_si.py`.
 
 **Acceptance:**
 - Finalize runs exactly once.
@@ -421,7 +421,7 @@ PY
 
 ### S5-06-T02 Add Explicit Commission And Slippage Models
 
-**Invariant:** Research results must include the cost model that produced them, and changing costs must change fills and report hash.
+**Invariant:** Backtest results must include the cost model that produced them, and changing costs must change fills and report hash.
 
 **Files:**
 - Modify: `backend/src/qts/backtest/config.py`
@@ -440,11 +440,11 @@ PY
 - Cost model is explicit in config and report.
 - Report hash changes when cost settings change.
 
-## S5-07 Research Report And Metrics
+## S5-07 Backtest Report And Metrics
 
 ### S5-07-T01 Add BacktestReport Model
 
-**Invariant:** A research report is a stable artifact containing inputs, events, orders, fills, portfolio snapshots, metrics, and hashes.
+**Invariant:** A backtest report is a stable artifact containing inputs, events, orders, fills, portfolio snapshots, metrics, and hashes.
 
 **Files:**
 - Create: `backend/src/qts/backtest/report.py`
@@ -463,7 +463,7 @@ PY
 
 ### S5-07-T02 Add Equity Curve And Drawdown Metrics
 
-**Invariant:** Research-grade reports must quantify performance from portfolio state, not from final cash only.
+**Invariant:** Backtest reports must quantify performance from portfolio state, not from final cash only.
 
 **Files:**
 - Create: `backend/src/qts/backtest/metrics.py`
@@ -487,24 +487,24 @@ PY
 **Files:**
 - Modify: `backend/src/qts/backtest/report.py`
 - Modify: `backend/src/qts/backtest/engine.py`
-- Test: `tests/integration/test_research_backtest_gc_si.py`
+- Test: `tests/integration/test_backtest_gc_si.py`
 
 **Steps:**
 
 - [ ] Add failing integration test that a one-order strategy produces one trade ledger row.
 - [ ] Include order ID, instrument ID, side, quantity, fill price, commission, slippage, fill time, and source bar time.
 - [ ] Populate ledger from normalized execution reports.
-- [ ] Run `uv run pytest tests/integration/test_research_backtest_gc_si.py`.
+- [ ] Run `uv run pytest tests/integration/test_backtest_gc_si.py`.
 
 **Acceptance:**
 - Trade ledger row count equals accepted fill count.
 - Duplicate fill IDs do not duplicate ledger entries.
 
-## S5-08 Strategy Research SDK Improvements
+## S5-08 Strategy SDK Improvements
 
 ### S5-08-T01 Add Strategy Data Subscription Declaration
 
-**Invariant:** Research runs should know required assets/timeframes before replay starts.
+**Invariant:** Backtest runs should know required assets/timeframes before replay starts.
 
 **Files:**
 - Modify: `backend/src/qts/strategy_sdk/context.py`
@@ -529,37 +529,37 @@ PY
 - Modify: `backend/src/qts/strategy_sdk/indicators.py`
 - Modify: `backend/src/qts/backtest/engine.py`
 - Test: `tests/unit/strategy_sdk/test_data_view.py`
-- Test: `tests/integration/test_research_backtest_gc_si.py`
+- Test: `tests/integration/test_backtest_gc_si.py`
 
 **Steps:**
 
 - [ ] Add failing test for SMA value after exactly `window` visible bars.
 - [ ] Add failing integration test that warmup produces ready indicators before trading starts.
 - [ ] Implement explicit indicator update from completed bars.
-- [ ] Run focused Strategy SDK and research backtest tests.
+- [ ] Run focused Strategy SDK and backtest tests.
 
 **Acceptance:**
 - Indicator warmup is deterministic.
 - Indicators do not see future bars.
 
-## S5-09 GC/SI End-To-End Research Runner
+## S5-09 GC/SI End-To-End Backtest Runner
 
-### S5-09-T01 Add Research Backtest Runner
+### S5-09-T01 Add Backtest Runner
 
-**Invariant:** Research users should run a GC/SI backtest from config without importing internals.
+**Invariant:** Users should run a GC/SI backtest from config without importing internals.
 
 **Files:**
-- Create: `backend/src/qts/backtest/research_runner.py`
-- Create: `scripts/run_research_backtest.py`
-- Test: `tests/integration/test_research_backtest_gc_si.py`
+- Create: `backend/src/qts/backtest/runner.py`
+- Create: `scripts/run_backtest.py`
+- Test: `tests/integration/test_backtest_gc_si.py`
 
 **Steps:**
 
 - [ ] Add failing integration test using a small temporary GC/SI CSV fixture.
-- [ ] Implement `run_research_backtest(config_path)`.
-- [ ] Implement CLI: `python scripts/run_research_backtest.py --config configs/backtest.gc_si.example.yaml --output-dir runs/backtests`.
+- [ ] Implement `run_backtest(config_path)`.
+- [ ] Implement CLI: `python scripts/run_backtest.py --config configs/backtest.gc_si.example.yaml --output-dir runs/backtests`.
 - [ ] Write report JSON to output directory.
-- [ ] Run `uv run pytest tests/integration/test_research_backtest_gc_si.py`.
+- [ ] Run `uv run pytest tests/integration/test_backtest_gc_si.py`.
 
 **Acceptance:**
 - CLI runs on fixture data in tests.
@@ -572,35 +572,35 @@ PY
 **Files:**
 - Create: `examples/strategies/gc_si_momentum.py`
 - Test: `tests/anchor/test_strategy_sdk_boundaries.py`
-- Test: `tests/integration/test_research_backtest_gc_si.py`
+- Test: `tests/integration/test_backtest_gc_si.py`
 
 **Steps:**
 
 - [ ] Add boundary test that the example imports only `qts.strategy_sdk` and standard library.
 - [ ] Implement a simple GC/SI momentum or moving-average strategy.
 - [ ] Run the strategy over fixture data.
-- [ ] Run `uv run pytest tests/anchor/test_strategy_sdk_boundaries.py tests/integration/test_research_backtest_gc_si.py`.
+- [ ] Run `uv run pytest tests/anchor/test_strategy_sdk_boundaries.py tests/integration/test_backtest_gc_si.py`.
 
 **Acceptance:**
-- Example strategy works unchanged through the research runner.
+- Example strategy works unchanged through the backtest runner.
 - No runtime, broker, risk, or order manager imports appear in the example.
 
 ## S5-10 Determinism, Performance, And Full-Data Gates
 
-### S5-10-T01 Add Research Replay Determinism Test
+### S5-10-T01 Add Backtest Replay Determinism Test
 
 **Invariant:** Same config, data, strategy code, and cost model must produce the same report hash.
 
 **Files:**
-- Create: `tests/replay/test_research_backtest_determinism.py`
+- Create: `tests/replay/test_backtest_determinism.py`
 - Modify: `Makefile`
 
 **Steps:**
 
 - [ ] Add failing replay test running the same fixture config twice.
 - [ ] Assert report hashes are equal.
-- [ ] Add `make test-research-replay`.
-- [ ] Run `make test-research-replay`.
+- [ ] Add `make test-backtest-replay`.
+- [ ] Run `make test-backtest-replay`.
 
 **Acceptance:**
 - Replay determinism is verified independently from unit tests.
@@ -611,14 +611,14 @@ PY
 **Invariant:** Full GC/SI historical runs are expensive and must be explicit, observable, and resumable enough for operator use.
 
 **Files:**
-- Modify: `scripts/run_research_backtest.py`
-- Create: `tests/soak/test_research_full_data_marker.py`
+- Modify: `scripts/run_backtest.py`
+- Create: `tests/soak/test_backtest_full_data_marker.py`
 - Modify: `Makefile`
 
 **Steps:**
 
 - [ ] Add soak marker test documenting the manual full-data command.
-- [ ] Add `make research-full-smoke` that runs a bounded date range over real `historical/`.
+- [ ] Add `make backtest-full-smoke` that runs a bounded date range over real `historical/`.
 - [ ] Record elapsed time, processed rows, emitted bars, excluded spreads, and output report path.
 - [ ] Run `make test-soak`.
 
@@ -687,5 +687,5 @@ S5 is complete when:
 - Futures contract multipliers affect valuation and PnL correctly.
 - Cost assumptions affect fills and reports.
 - Reports include provenance, trade ledger, equity curve, metrics, and stable hashes.
-- A fixture-based GC/SI research backtest passes in CI.
+- A fixture-based GC/SI backtest passes in CI.
 - A bounded full-data historical smoke command exists for manual use.

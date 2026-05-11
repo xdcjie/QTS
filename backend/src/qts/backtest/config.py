@@ -17,7 +17,7 @@ from qts.core.ids import InstrumentId
 
 @dataclass(frozen=True, slots=True)
 class CostModelConfig:
-    """Explicit research cost model settings."""
+    """Explicit backtest cost model settings."""
 
     fixed_commission_per_contract: Decimal = Decimal("0")
     slippage_bps: Decimal = Decimal("0")
@@ -58,7 +58,7 @@ class RiskConfig:
 
 @dataclass(frozen=True, slots=True)
 class RollPolicyConfig:
-    """Continuous futures roll policy for config-driven research runs."""
+    """Continuous futures roll policy for config-driven backtest runs."""
 
     enabled: bool = False
     method: str = "highest_volume"
@@ -170,7 +170,7 @@ class BacktestStrategyConfig:
 
 @dataclass(frozen=True, slots=True)
 class BacktestRunConfig:
-    """Complete identity for a research backtest run."""
+    """Complete identity for a backtest run."""
 
     roots: tuple[str, ...]
     symbols: tuple[str, ...]

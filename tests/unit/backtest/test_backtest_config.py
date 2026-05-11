@@ -39,6 +39,28 @@ def test_backtest_run_config_loads_example_yaml_with_stable_hash() -> None:
     assert changed.config_hash != config.config_hash
 
 
+def test_backtest_run_config_loads_gc_full_example_yaml() -> None:
+    config = BacktestRunConfig.from_yaml(Path("configs/backtest.gc.full.example.yaml"))
+
+    assert config.market_data.config_path == Path("configs/data/historical.local.yaml")
+    assert config.market_data.catalog == "research_futures"
+    assert config.dataset_root is None
+    assert config.roots == ("GC",)
+    assert config.symbols == ("GC",)
+    assert config.roll_policy.enabled is True
+    assert config.roll_policy.method == "highest_volume"
+    assert config.start == datetime(2010, 6, 6, 22, 0, tzinfo=UTC)
+    assert config.end == datetime(2026, 4, 10, 0, 0, tzinfo=UTC)
+    assert config.timeframe == "1m"
+    assert config.strategy_config_path == Path("configs/strategies/gc_momentum.yaml")
+    assert config.strategy_class == "examples.strategies.gc_si_momentum:GcSiMomentumStrategy"
+    assert config.strategy_params == {
+        "symbols": ["GC"],
+        "short_window": 1,
+        "long_window": 2,
+    }
+
+
 def test_backtest_run_config_can_reference_project_historical_catalog(tmp_path: Path) -> None:
     config_path = tmp_path / "backtest.yaml"
     config_path.write_text(
@@ -53,7 +75,7 @@ start: "2026-01-02T14:30:00Z"
 end: "2026-01-02T14:31:00Z"
 timeframe: 1m
 initial_cash: "100000"
-strategy_class: "tests.integration.test_research_backtest_gc_si:RollingGcStrategy"
+strategy_class: "tests.integration.test_backtest_gc_si:RollingGcStrategy"
 """,
         encoding="utf-8",
     )
@@ -130,7 +152,7 @@ start: "2026-01-02T14:30:00Z"
 end: "2026-01-02T14:31:00Z"
 timeframe: 1m
 initial_cash: "100000"
-strategy_class: "tests.integration.test_research_backtest_gc_si:BuyOneGcStrategy"
+strategy_class: "tests.integration.test_backtest_gc_si:BuyOneGcStrategy"
 """,
         encoding="utf-8",
     )
@@ -151,7 +173,7 @@ start: "2026-01-02T14:30:00Z"
 end: "2026-01-02T14:31:00Z"
 timeframe: 1m
 initial_cash: "100000"
-strategy_class: "tests.integration.test_research_backtest_gc_si:RollingGcStrategy"
+strategy_class: "tests.integration.test_backtest_gc_si:RollingGcStrategy"
 roll_policy:
   enabled: true
   method: highest_volume

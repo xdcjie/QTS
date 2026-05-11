@@ -19,6 +19,7 @@ Anchor Tests
 make test-unit
 make test-integration
 make test-anchor
+make guardrails
 make check
 ```
 
@@ -29,6 +30,46 @@ make check
 - IBKR paper/live adapter flows require fake-transport integration tests.
 - Market sessions, bar aggregation, portfolio accounting, and order state invariants require anchor tests.
 - Market data subscription deduplication and provider source timeframe semantics require anchor tests.
+- Domain-sensitive implementation must pass `make guardrails`; these checks
+  enforce architecture boundaries that tests alone do not prove.
+
+## Domain-sensitive change gate
+
+Before changing sessions, bar generation, instrument identity, broker adapters,
+strategy SDK boundaries, risk, order flow, portfolio/accounting, or backtest/live
+runtime parity, write down the gate in the implementation notes or PR:
+
+```text
+Domain fact:
+Correct abstraction boundary:
+Forbidden shortcut:
+Verification:
+```
+
+The change should not proceed until the abstraction boundary is explicit. If a
+rule is product-, broker-, strategy-, or environment-specific, it must enter the
+system through the right boundary: registry/spec/session data, broker adapters,
+strategy code, configuration, or documented policy objects.
+
+## Guardrail checks
+
+`make guardrails` runs `scripts/verify_guardrails.py`. It blocks common cases
+where written standards are otherwise easy to miss:
+
+- product-specific symbols such as `GC` or `SI` in shared core implementation
+  instead of registry/provider/session/risk data boundaries;
+- broker-specific identifiers such as `IBKR` outside config or adapter
+  boundaries;
+- `domain` importing runtime, execution, data, API, or other upper layers;
+- `strategy_sdk` importing runtime, execution, risk, registry, data, backtest,
+  application, API, or workers;
+- market-data adapters importing execution/risk/portfolio/runtime;
+- order-execution adapters importing data.
+- shared roll/session/resolution modules placed under source-specific
+  boundaries such as `qts.backtest` or `qts.data.historical`.
+
+Guardrail exceptions must be narrow and expressed in `scripts/verify_guardrails.py`
+with tests that prove both the allowed boundary and the forbidden shortcut.
 
 ## Bar aggregation test expectations
 

@@ -43,18 +43,69 @@ Use a project-level historical data config such as
 `configs/data/historical.local.yaml` to define:
 
 - stores: physical layout, including root directory, bars directory, chain
-  directory, filename templates, source timeframe, exchange timezone, timezone
-  policy, and normalization policy
+  directory, filename templates, and default schema/timezone/normalization
+  metadata
+- schemas: framework semantic fields mapped to concrete CSV column names
 - catalogs: logical dataset groups backed by a store
 - datasets: product entries such as `GC` or `SI`, with asset class, exchange,
-  and only product-specific file overrides when the store template is not enough
+  chain file, and concrete bar files
 
 Do not put `data_dir`, `chain_dir`, `bars_dir`, `chains_dir`, or other storage
 paths under product entries such as `GC` or `SI`. Those paths belong to the
 store. Product entries may describe product identity and may override
-`bars_file`, `chain_file`, `source_timeframe`, or `exchange_timezone` only when
-a specific product does not follow the store's default metadata or filename
-template.
+`chain_file` when a specific product does not follow the store's default
+metadata or filename template.
+
+Historical source timeframe is a property of a concrete bar file, not a global
+property of the whole historical project. Configure it under each dataset's
+`bars` list:
+
+```yaml
+historical_data:
+  stores:
+    local_csv:
+      type: local_csv
+      root_dir: historical
+      bars_dir: data
+      chains_dir: chains
+      defaults:
+        schema: databento_ohlcv
+        exchange_timezone: US/Eastern
+        timezone_policy: source_utc_exchange_sessions
+        normalization: raw
+  schemas:
+    databento_ohlcv:
+      timestamp: ts_event
+      symbol: symbol
+      instrument_id: instrument_id
+      open: open
+      high: high
+      low: low
+      close: close
+      volume: volume
+  catalogs:
+    research_futures:
+      store: local_csv
+      datasets:
+        GC:
+          asset_class: future
+          exchange: CME
+          chain_file: GC.json
+          bars:
+            - file: gc.csv
+              timeframe: 1m
+        SI:
+          asset_class: future
+          exchange: CME
+          chain_file: SI.json
+          bars:
+            - file: si.csv
+              timeframe: 1m
+```
+
+Legacy configs may still contain `source_timeframe` and `bars_file` at store or
+dataset level for migration compatibility. New configs should use `bars[]` so
+each concrete file declares its own source timeframe.
 
 Backtest run configs should reference a market data source by config path and
 catalog name, then define the run-specific universe and time window:

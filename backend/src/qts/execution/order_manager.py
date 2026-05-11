@@ -138,6 +138,7 @@ class OrderManager:
         self._machines: dict[OrderId, OrderStateMachine] = {}
         self._broker_to_order: dict[str, OrderId] = {}
         self._fill_ids = FillIdempotencyStore()
+        self._fill_ids_by_order: dict[OrderId, set[str]] = {}
 
     def create_order(self, intent: OrderIntent, *, risk_decision: RiskDecision) -> Order:
         if not risk_decision.approved:
@@ -191,6 +192,14 @@ class OrderManager:
     def get_order(self, order_id: OrderId) -> Order:
         return self._orders[order_id]
 
+    def discard_order(self, order_id: OrderId) -> None:
+        order = self._orders.pop(order_id)
+        self._machines.pop(order_id, None)
+        if order.broker_order_id is not None:
+            self._broker_to_order.pop(order.broker_order_id, None)
+        for fill_id in self._fill_ids_by_order.pop(order_id, set()):
+            self._fill_ids.discard(fill_id)
+
     def snapshot(self) -> OrderManagerSnapshot:
         return OrderManagerSnapshot(
             orders=tuple(self._orders.values()),
@@ -207,6 +216,7 @@ class OrderManager:
         }
         manager._broker_to_order = dict(snapshot.broker_to_order)
         manager._fill_ids = FillIdempotencyStore.restore(snapshot.seen_fill_ids)
+        manager._fill_ids_by_order = {}
         return manager
 
     def _replace_order(
@@ -235,6 +245,7 @@ class OrderManager:
             raise ValueError("fill_price is required when filled_quantity is positive")
         if not self._fill_ids.mark_seen(report.fill_id):
             return ()
+        self._fill_ids_by_order.setdefault(order.order_id, set()).add(report.fill_id)
         return (
             OrderFill(
                 fill_id=report.fill_id,

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from decimal import Decimal
 from typing import Protocol
@@ -80,11 +80,13 @@ class FutureRollSelection:
 class FutureRollRegistry:
     """Resolve continuous futures to concrete contracts over time."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, retain_history: bool = True) -> None:
+        self._retain_history = retain_history
         self._continuous_by_root: dict[str, InstrumentId] = {}
         self._root_by_continuous: dict[InstrumentId, str] = {}
         self._contracts_by_continuous: dict[InstrumentId, tuple[InstrumentId, ...]] = {}
         self._selections_by_continuous: dict[InstrumentId, list[FutureRollSelection]] = {}
+        self._latest_prices_by_continuous: dict[InstrumentId, dict[InstrumentId, Decimal]] = {}
 
     def register_root(
         self,
@@ -104,6 +106,7 @@ class FutureRollRegistry:
         self._root_by_continuous[continuous_id] = root
         self._contracts_by_continuous[continuous_id] = unique_contracts
         self._selections_by_continuous.setdefault(continuous_id, [])
+        self._latest_prices_by_continuous.setdefault(continuous_id, {})
         return continuous_id
 
     def continuous_instrument_id(self, root_symbol: str, *, offset: int = 0) -> InstrumentId:
@@ -118,7 +121,13 @@ class FutureRollRegistry:
     def record_selection(self, selection: FutureRollSelection) -> None:
         if selection.continuous_instrument_id not in self._root_by_continuous:
             raise KeyError(f"unknown continuous future: {selection.continuous_instrument_id}")
+        latest_prices = self._latest_prices_by_continuous[selection.continuous_instrument_id]
+        latest_prices.update(selection.prices_by_instrument)
+        selection = replace(selection, prices_by_instrument=dict(latest_prices))
         selections = self._selections_by_continuous[selection.continuous_instrument_id]
+        if not self._retain_history:
+            selections[:] = [selection]
+            return
         selections.append(selection)
         selections.sort(key=lambda item: item.as_of)
 

@@ -8,14 +8,15 @@ Recommended reading order:
 4. `plan/milestones_and_acceptance.md`
 5. `architecture/system_overview.md`
 6. `architecture/dependency_rules.md`
-7. `domain/instrument_model.md`
-8. `domain/market_calendar_and_sessions.md`
-9. `domain/bar_timeframe_model.md`
-10. `runtime/actor_model.md`
-11. `strategy_sdk/strategy_api.md`
-12. `testing/testing_strategy.md`
-13. `testing/domain_invariants.md`
-14. ADRs under `adr/`
+7. `architecture/module_boundaries.md`
+8. `domain/instrument_model.md`
+9. `domain/market_calendar_and_sessions.md`
+10. `domain/bar_timeframe_model.md`
+11. `runtime/actor_model.md`
+12. `strategy_sdk/strategy_api.md`
+13. `testing/testing_strategy.md`
+14. `testing/domain_invariants.md`
+15. ADRs under `adr/`
 
 ## Planning documents
 

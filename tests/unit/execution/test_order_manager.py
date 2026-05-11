@@ -90,6 +90,48 @@ def test_order_manager_processes_normalized_fill_report_once() -> None:
     assert second.fills == ()
 
 
+def test_order_manager_can_discard_terminal_order_state_for_streaming_backtests() -> None:
+    from qts.core.ids import InstrumentId, OrderId
+    from qts.domain.risk import RiskDecision
+    from qts.execution.order_manager import (
+        ExecutionReport,
+        ExecutionReportStatus,
+        OrderIntent,
+        OrderManager,
+        OrderSide,
+    )
+
+    manager = OrderManager()
+    order = manager.create_order(
+        OrderIntent(
+            order_id=OrderId("ord-001"),
+            instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+            side=OrderSide.BUY,
+            quantity=Decimal("10"),
+        ),
+        risk_decision=RiskDecision.approve(),
+    )
+    manager.mark_sent(order.order_id, broker_order_id="broker-001")
+    manager.process_report(
+        ExecutionReport(
+            report_id="rpt-001",
+            broker_order_id="broker-001",
+            status=ExecutionReportStatus.FILLED,
+            filled_quantity=Decimal("10"),
+            fill_price=Decimal("101.25"),
+            fill_id="fill-001",
+        )
+    )
+
+    manager.discard_order(order.order_id)
+
+    assert manager.snapshot().orders == ()
+    assert manager.snapshot().broker_to_order == ()
+    assert manager.snapshot().seen_fill_ids == ()
+    with pytest.raises(KeyError):
+        manager.get_order(order.order_id)
+
+
 def test_order_manager_cancel_and_replace_intents_remain_manager_owned() -> None:
     from qts.core.ids import InstrumentId, OrderId
     from qts.domain.risk import RiskDecision

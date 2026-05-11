@@ -1,8 +1,8 @@
-# S5 Research Backtest Status
+# S5 Backtest Status
 
 ## Scope
 
-S5 builds a research-grade backtest path over local GC and SI historical futures
+S5 builds a backtest path over local GC and SI historical futures
 datasets. Live trading, real IBKR SDK order submission, frontend research UI,
 distributed runtime work, and new storage dependencies are out of scope.
 
@@ -10,7 +10,7 @@ distributed runtime work, and new storage dependencies are out of scope.
 
 Status: complete
 
-Invariant: full GC/SI datasets are external research inputs; backtest behavior
+Invariant: full GC/SI datasets are external historical inputs; backtest behavior
 must reference them through metadata, not hidden file assumptions.
 
 Observed commands:
@@ -72,10 +72,10 @@ or excluded before outright futures backtests:
 | S5-07-T03 | Complete | Trade ledger rows are populated from idempotent validated fills. |
 | S5-08-T01 | Complete | `StrategyContext.subscribe` records strategy data needs without exposing market data internals. |
 | S5-08-T02 | Complete | Indicator warmup updates from completed visible bars before strategy callbacks. |
-| S5-09-T01 | Complete | `run_research_backtest` and CLI run config-driven fixture and historical GC/SI backtests and write report JSON. |
+| S5-09-T01 | Complete | `run_backtest` and CLI run config-driven fixture and historical GC/SI backtests and write report JSON. |
 | S5-09-T02 | Complete | `examples/strategies/gc_si_momentum.py` uses only Strategy SDK and standard library imports. |
-| S5-10-T01 | Complete | Research replay determinism test and `make test-research-replay` added. |
-| S5-10-T02 | Complete | `research-full-smoke` Make target is explicit and CLI writes elapsed/row/bar/spread/report summary evidence. |
+| S5-10-T01 | Complete | Backtest replay determinism test and `make test-backtest-replay` added. |
+| S5-10-T02 | Complete | `backtest-full-smoke` Make target is explicit and CLI writes elapsed/row/bar/spread/report summary evidence. |
 | S5-10-T03 | Complete | Storage benchmark recorded in `docs/decision/2026-05-10_research_storage_decision.md`; no new dependency added for S5. |
 | S5-11-T01 | Complete | Continuous futures roll selection uses shared `FutureRollRegistry`; historical GC/SI root runs select one concrete contract per timestamp and roll positions through the backtest order path. |
 
@@ -92,7 +92,7 @@ Final verification:
 make validate-historical-sample
 evidence/historical/historical_validation_sample_1000.json
 
-make test-research-replay
+make test-backtest-replay
 1 passed
 
 make test-soak
@@ -101,7 +101,7 @@ make test-soak
 make test-reconciliation
 1 passed
 
-make research-full-smoke
+make backtest-full-smoke
 report: runs/backtests/full-smoke/bt-6c6b18bf51f4.json
 summary: runs/backtests/full-smoke/bt-6c6b18bf51f4.summary.json
 elapsed_seconds=0.008212

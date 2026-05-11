@@ -2,6 +2,10 @@
 
 ## Allowed direction
 
+See `module_boundaries.md` for ownership rules at the package and subpackage
+level. Dependency direction alone is not enough: a module can import only
+allowed dependencies and still be in the wrong owner package.
+
 ```text
 core
   <- domain
@@ -44,6 +48,24 @@ mutable trading state.
 - `strategy_sdk -> actor internals`
 - `api -> actor internals`
 - `frontend -> trading logic`
+
+## Automated guardrails
+
+`make guardrails` enforces the high-risk subset of these rules with static
+checks:
+
+- `core` may not import any upper QTS layer.
+- `domain` may import only `qts.core` and `qts.domain`.
+- `strategy_sdk` may not import runtime, execution, risk, registry, data,
+  backtest, application, API, or workers.
+- API code may not import actor internals or `OrderManager` internals directly.
+- Market-data adapters may not import execution, risk, portfolio, or runtime.
+- Order-execution adapters may not import data.
+- Shared roll/session/resolution modules may not live under source-specific
+  packages such as `qts.backtest` or `qts.data.historical`.
+
+When a new valid boundary is introduced, update this document, the guardrail
+script, and the guardrail tests in the same change.
 
 ## Rationale
 

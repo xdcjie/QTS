@@ -63,11 +63,11 @@ def _write_csv(path: Path, symbol: str, closes: list[str]) -> None:
 
 
 def test_same_research_config_data_and_strategy_produce_same_report_hash(tmp_path: Path) -> None:
-    from qts.backtest.research_runner import run_research_backtest
+    from qts.backtest.runner import run_backtest
 
     config_path = _write_fixture(tmp_path)
 
-    left = run_research_backtest(config_path, output_dir=tmp_path / "left")
-    right = run_research_backtest(config_path, output_dir=tmp_path / "right")
+    left = run_backtest(config_path, output_dir=tmp_path / "left")
+    right = run_backtest(config_path, output_dir=tmp_path / "right")
 
     assert left.result.report_hash == right.result.report_hash

@@ -1,0 +1,10 @@
+strategy_id: gc-momentum
+class_path: examples.strategies.gc_si_momentum:GcSiMomentumStrategy
+account_id: backtest-account
+allocation: "1.0"
+enabled: true
+params:
+  symbols:
+    - GC
+  short_window: 1
+  long_window: 2

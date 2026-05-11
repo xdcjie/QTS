@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml  # type: ignore[import-untyped]
+
+from qts.data.historical.csv_format import DEFAULT_HISTORICAL_CSV_SCHEMA, HistoricalCsvSchema
+from qts.data.live_feed import FeedCapabilities
 
 _DATASET_STORAGE_PATH_KEYS = frozenset(
     {
@@ -17,6 +20,26 @@ _DATASET_STORAGE_PATH_KEYS = frozenset(
         "chains_dir",
     }
 )
+
+
+@dataclass(frozen=True, slots=True)
+class HistoricalDataStoreDefaults:
+    """Default metadata applied to datasets and bars in one historical store."""
+
+    schema: str | None = None
+    exchange_timezone: str | None = None
+    timezone_policy: str = "source_utc_exchange_sessions"
+    normalization: str = "raw"
+
+    def __post_init__(self) -> None:
+        if self.schema is not None and not self.schema.strip():
+            raise ValueError("historical data store default schema must not be empty")
+        if self.exchange_timezone is not None and not self.exchange_timezone.strip():
+            raise ValueError("historical data store default exchange_timezone must not be empty")
+        if not self.timezone_policy.strip():
+            raise ValueError("historical data store default timezone_policy must not be empty")
+        if not self.normalization.strip():
+            raise ValueError("historical data store default normalization must not be empty")
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,6 +57,7 @@ class HistoricalDataStoreConfig:
     exchange_timezone: str | None = None
     timezone_policy: str = "source_utc_exchange_sessions"
     normalization: str = "raw"
+    defaults: HistoricalDataStoreDefaults = field(default_factory=HistoricalDataStoreDefaults)
 
     def __post_init__(self) -> None:
         if not self.name.strip():
@@ -68,6 +92,32 @@ class HistoricalDataStoreConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class HistoricalBarFileConfig:
+    """One physical bar file for a dataset."""
+
+    file: str | None = None
+    timeframe: str | None = None
+    schema: str | None = None
+    exchange_timezone: str | None = None
+    timezone_policy: str | None = None
+    normalization: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.file is not None and not self.file.strip():
+            raise ValueError("historical bars file must not be empty")
+        if self.timeframe is not None and not self.timeframe.strip():
+            raise ValueError("historical bars timeframe must not be empty")
+        if self.schema is not None and not self.schema.strip():
+            raise ValueError("historical bars schema must not be empty")
+        if self.exchange_timezone is not None and not self.exchange_timezone.strip():
+            raise ValueError("historical bars exchange_timezone must not be empty")
+        if self.timezone_policy is not None and not self.timezone_policy.strip():
+            raise ValueError("historical bars timezone_policy must not be empty")
+        if self.normalization is not None and not self.normalization.strip():
+            raise ValueError("historical bars normalization must not be empty")
+
+
+@dataclass(frozen=True, slots=True)
 class HistoricalDatasetConfig:
     """One product/data entry inside a historical data catalog."""
 
@@ -77,7 +127,9 @@ class HistoricalDatasetConfig:
     bars_file: str | None = None
     chain_file: str | None = None
     source_timeframe: str | None = None
+    schema: str | None = None
     exchange_timezone: str | None = None
+    bars: tuple[HistoricalBarFileConfig, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.root.strip():
@@ -92,6 +144,8 @@ class HistoricalDatasetConfig:
             raise ValueError("historical dataset chain_file must not be empty")
         if self.source_timeframe is not None and not self.source_timeframe.strip():
             raise ValueError("historical dataset source_timeframe must not be empty")
+        if self.schema is not None and not self.schema.strip():
+            raise ValueError("historical dataset schema must not be empty")
         if self.exchange_timezone is not None and not self.exchange_timezone.strip():
             raise ValueError("historical dataset exchange_timezone must not be empty")
 
@@ -126,6 +180,9 @@ class HistoricalDatasetLocation:
     chain_path: Path | None
     source_timeframe: str | None
     exchange_timezone: str | None
+    schema_name: str | None
+    csv_schema: HistoricalCsvSchema
+    bar: HistoricalBarFileConfig
     dataset: HistoricalDatasetConfig
     store: HistoricalDataStoreConfig
 
@@ -136,6 +193,7 @@ class HistoricalDataConfig:
 
     stores: Mapping[str, HistoricalDataStoreConfig]
     catalogs: Mapping[str, HistoricalDataCatalogConfig]
+    schemas: Mapping[str, HistoricalCsvSchema] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.stores:
@@ -157,6 +215,7 @@ class HistoricalDataConfig:
         return cls(
             stores=_parse_stores(raw_config.get("stores")),
             catalogs=_parse_catalogs(raw_config.get("catalogs")),
+            schemas=_parse_schemas(raw_config.get("schemas")),
         )
 
     def catalog(self, name: str) -> HistoricalDataCatalogConfig:
@@ -171,7 +230,13 @@ class HistoricalDataConfig:
         except KeyError as exc:
             raise KeyError(f"unknown historical data store: {name}") from exc
 
-    def resolve_dataset(self, catalog_name: str, root: str) -> HistoricalDatasetLocation:
+    def resolve_dataset(
+        self,
+        catalog_name: str,
+        root: str,
+        *,
+        requested_timeframe: str | None = None,
+    ) -> HistoricalDatasetLocation:
         normalized_root = _normalize_root(root)
         catalog = self.catalog(catalog_name)
         try:
@@ -181,19 +246,43 @@ class HistoricalDataConfig:
                 f"unknown historical dataset root {normalized_root} in catalog {catalog_name}"
             ) from exc
         store = self.store(catalog.store)
+        bar = _select_bar_file(
+            catalog_name=catalog_name,
+            root=normalized_root,
+            dataset=dataset,
+            store=store,
+            requested_timeframe=requested_timeframe,
+        )
+        schema_name = bar.schema or dataset.schema or store.defaults.schema
         return HistoricalDatasetLocation(
             root=normalized_root,
-            csv_path=store.bars_path(normalized_root, override=dataset.bars_file),
+            csv_path=store.bars_path(normalized_root, override=bar.file),
             chain_path=(
                 store.chain_path(normalized_root, override=dataset.chain_file)
                 if dataset.requires_chain
                 else None
             ),
-            source_timeframe=dataset.source_timeframe or store.source_timeframe,
-            exchange_timezone=dataset.exchange_timezone or store.exchange_timezone,
+            source_timeframe=bar.timeframe,
+            exchange_timezone=(
+                bar.exchange_timezone
+                or dataset.exchange_timezone
+                or store.defaults.exchange_timezone
+                or store.exchange_timezone
+            ),
+            schema_name=schema_name,
+            csv_schema=self._csv_schema(schema_name),
+            bar=bar,
             dataset=dataset,
             store=store,
         )
+
+    def _csv_schema(self, name: str | None) -> HistoricalCsvSchema:
+        if name is None:
+            return DEFAULT_HISTORICAL_CSV_SCHEMA
+        try:
+            return self.schemas[name]
+        except KeyError as exc:
+            raise KeyError(f"unknown historical CSV schema: {name}") from exc
 
 
 def _parse_stores(payload: object) -> dict[str, HistoricalDataStoreConfig]:
@@ -205,6 +294,7 @@ def _parse_stores(payload: object) -> dict[str, HistoricalDataStoreConfig]:
             raise ValueError("historical data store names must be strings")
         if not isinstance(raw_store, dict):
             raise ValueError(f"historical data store {name} must be a mapping")
+        defaults = _parse_store_defaults(raw_store)
         stores[name] = HistoricalDataStoreConfig(
             name=name,
             type=str(raw_store.get("type", "local_csv")),
@@ -225,8 +315,36 @@ def _parse_stores(payload: object) -> dict[str, HistoricalDataStoreConfig]:
             ),
             timezone_policy=str(raw_store.get("timezone_policy", "source_utc_exchange_sessions")),
             normalization=str(raw_store.get("normalization", "raw")),
+            defaults=defaults,
         )
     return stores
+
+
+def _parse_store_defaults(raw_store: Mapping[str, object]) -> HistoricalDataStoreDefaults:
+    raw_defaults = raw_store.get("defaults", {})
+    if raw_defaults is None:
+        raw_defaults = {}
+    if not isinstance(raw_defaults, dict):
+        raise ValueError("historical data store defaults must be a mapping")
+    return HistoricalDataStoreDefaults(
+        schema=(str(raw_defaults["schema"]) if raw_defaults.get("schema") is not None else None),
+        exchange_timezone=(
+            str(raw_defaults["exchange_timezone"])
+            if raw_defaults.get("exchange_timezone") is not None
+            else (
+                str(raw_store["exchange_timezone"])
+                if raw_store.get("exchange_timezone") is not None
+                else None
+            )
+        ),
+        timezone_policy=str(
+            raw_defaults.get(
+                "timezone_policy",
+                raw_store.get("timezone_policy", "source_utc_exchange_sessions"),
+            )
+        ),
+        normalization=str(raw_defaults.get("normalization", raw_store.get("normalization", "raw"))),
+    )
 
 
 def _parse_catalogs(payload: object) -> dict[str, HistoricalDataCatalogConfig]:
@@ -280,13 +398,118 @@ def _parse_datasets(payload: Mapping[object, object]) -> dict[str, HistoricalDat
                 if raw_dataset.get("source_timeframe") is not None
                 else None
             ),
+            schema=(str(raw_dataset["schema"]) if raw_dataset.get("schema") is not None else None),
             exchange_timezone=(
                 str(raw_dataset["exchange_timezone"])
                 if raw_dataset.get("exchange_timezone") is not None
                 else None
             ),
+            bars=_parse_bar_files(raw_dataset.get("bars")),
         )
     return datasets
+
+
+def _parse_bar_files(payload: object) -> tuple[HistoricalBarFileConfig, ...]:
+    if payload is None:
+        return ()
+    if not isinstance(payload, list):
+        raise ValueError("historical dataset bars must be a list")
+    bars: list[HistoricalBarFileConfig] = []
+    for raw_bar in payload:
+        if not isinstance(raw_bar, dict):
+            raise ValueError("historical dataset bars entries must be mappings")
+        bars.append(
+            HistoricalBarFileConfig(
+                file=str(raw_bar["file"]) if raw_bar.get("file") is not None else None,
+                timeframe=(
+                    str(raw_bar["timeframe"]) if raw_bar.get("timeframe") is not None else None
+                ),
+                schema=str(raw_bar["schema"]) if raw_bar.get("schema") is not None else None,
+                exchange_timezone=(
+                    str(raw_bar["exchange_timezone"])
+                    if raw_bar.get("exchange_timezone") is not None
+                    else None
+                ),
+                timezone_policy=(
+                    str(raw_bar["timezone_policy"])
+                    if raw_bar.get("timezone_policy") is not None
+                    else None
+                ),
+                normalization=(
+                    str(raw_bar["normalization"])
+                    if raw_bar.get("normalization") is not None
+                    else None
+                ),
+            )
+        )
+    return tuple(bars)
+
+
+def _parse_schemas(payload: object) -> dict[str, HistoricalCsvSchema]:
+    if payload is None:
+        return {}
+    if not isinstance(payload, dict):
+        raise ValueError("historical_data.schemas must be a mapping")
+    schemas: dict[str, HistoricalCsvSchema] = {}
+    for name, raw_schema in payload.items():
+        if not isinstance(name, str):
+            raise ValueError("historical CSV schema names must be strings")
+        if not isinstance(raw_schema, dict):
+            raise ValueError(f"historical CSV schema {name} must be a mapping")
+        schemas[name] = HistoricalCsvSchema(
+            timestamp=str(raw_schema["timestamp"]),
+            symbol=str(raw_schema["symbol"]),
+            instrument_id=(
+                str(raw_schema["instrument_id"])
+                if raw_schema.get("instrument_id") is not None
+                else None
+            ),
+            open=str(raw_schema["open"]),
+            high=str(raw_schema["high"]),
+            low=str(raw_schema["low"]),
+            close=str(raw_schema["close"]),
+            volume=str(raw_schema["volume"]),
+        )
+    return schemas
+
+
+def _select_bar_file(
+    *,
+    catalog_name: str,
+    root: str,
+    dataset: HistoricalDatasetConfig,
+    store: HistoricalDataStoreConfig,
+    requested_timeframe: str | None,
+) -> HistoricalBarFileConfig:
+    bars = dataset.bars or (
+        HistoricalBarFileConfig(
+            file=dataset.bars_file,
+            timeframe=dataset.source_timeframe or store.source_timeframe,
+            schema=dataset.schema,
+            exchange_timezone=dataset.exchange_timezone,
+        ),
+    )
+    if requested_timeframe is None:
+        if len(bars) > 1:
+            raise ValueError(
+                "requested_timeframe is required to choose historical bars for "
+                f"{catalog_name}:{root}"
+            )
+        return bars[0]
+    timeframes = frozenset(bar.timeframe for bar in bars if bar.timeframe is not None)
+    if not timeframes:
+        return bars[0]
+    source_timeframe = FeedCapabilities(
+        source_id=f"{catalog_name}:{root}",
+        supports_ticks=False,
+        supports_quotes=False,
+        supports_bars=True,
+        supported_timeframes=timeframes,
+    ).source_timeframe_for(requested_timeframe)
+    for bar in bars:
+        if bar.timeframe == source_timeframe:
+            return bar
+    raise RuntimeError("selected historical timeframe was not present in bars")
 
 
 def _normalize_root(root: str) -> str:
@@ -304,6 +527,8 @@ def _render_template(template: str, root: str) -> str:
 __all__ = [
     "HistoricalDataCatalogConfig",
     "HistoricalDataConfig",
+    "HistoricalDataStoreDefaults",
+    "HistoricalBarFileConfig",
     "HistoricalDatasetConfig",
     "HistoricalDatasetLocation",
     "HistoricalDataStoreConfig",

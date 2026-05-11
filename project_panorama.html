@@ -1,0 +1,1060 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>QTS Actor-Centric Project Panorama</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f6f7f4;
+        --panel: #ffffff;
+        --ink: #172026;
+        --muted: #64717a;
+        --line: #d7dbd2;
+        --actor: #245c9a;
+        --source: #28745f;
+        --service: #7657a6;
+        --order: #a56516;
+        --state: #9f3d3d;
+        --soft-actor: #eaf2fb;
+        --soft-source: #eaf6f1;
+        --soft-service: #f0ecf8;
+        --soft-order: #fbf0e3;
+        --soft-state: #faecec;
+        --shadow: 0 1px 3px rgba(23, 32, 38, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        line-height: 1.45;
+      }
+
+      code {
+        padding: 0.08rem 0.28rem;
+        border: 1px solid #dfe2db;
+        border-radius: 4px;
+        background: #f1f3ef;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 0.9em;
+      }
+
+      .shell {
+        width: min(1500px, calc(100% - 36px));
+        margin: 0 auto;
+      }
+
+      header {
+        border-bottom: 1px solid var(--line);
+        background: #fbfbf8;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 410px;
+        gap: 28px;
+        padding: 34px 0 28px;
+        align-items: end;
+      }
+
+      .eyebrow {
+        margin: 0 0 8px;
+        color: var(--muted);
+        font-size: 0.82rem;
+        font-weight: 800;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        letter-spacing: 0;
+      }
+
+      h1 {
+        max-width: 920px;
+        font-size: 3.8rem;
+        line-height: 0.98;
+      }
+
+      h2 {
+        font-size: 1.75rem;
+        line-height: 1.12;
+      }
+
+      h3 {
+        font-size: 1rem;
+        line-height: 1.2;
+      }
+
+      p {
+        margin: 0;
+      }
+
+      .intro {
+        max-width: 900px;
+        margin-top: 16px;
+        color: var(--muted);
+        font-size: 1rem;
+      }
+
+      .legend,
+      .panel,
+      .module-card,
+      .message-card,
+      .note-card,
+      .file-card {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .legend {
+        display: grid;
+        gap: 9px;
+        padding: 14px;
+      }
+
+      .legend-item {
+        display: grid;
+        grid-template-columns: 14px 1fr;
+        gap: 9px;
+        align-items: center;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .dot {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        background: var(--actor);
+      }
+
+      .dot.source {
+        background: var(--source);
+      }
+
+      .dot.service {
+        background: var(--service);
+      }
+
+      .dot.order {
+        background: var(--order);
+      }
+
+      .dot.state {
+        background: var(--state);
+      }
+
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        border-bottom: 1px solid var(--line);
+        background: rgba(246, 247, 244, 0.96);
+        backdrop-filter: blur(8px);
+      }
+
+      .nav-row {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding: 10px 0;
+      }
+
+      .nav-row a {
+        flex: 0 0 auto;
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--panel);
+        color: var(--muted);
+        font-size: 0.9rem;
+        text-decoration: none;
+      }
+
+      main {
+        padding: 24px 0 44px;
+      }
+
+      section {
+        margin-bottom: 30px;
+      }
+
+      .section-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        align-items: end;
+        margin-bottom: 14px;
+      }
+
+      .section-note {
+        max-width: 850px;
+        margin-top: 8px;
+        color: var(--muted);
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .note-card {
+        padding: 14px;
+      }
+
+      .note-card strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .note-card p {
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+
+      .panorama {
+        overflow-x: auto;
+        padding: 16px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfcfa;
+        box-shadow: var(--shadow);
+      }
+
+      .layered-map {
+        min-width: 1180px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .layer-row {
+        display: grid;
+        grid-template-columns: 170px minmax(0, 1fr);
+        gap: 12px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .layer-row[data-layer="source"] {
+        border-color: #cfe4d9;
+        background: #f3faf6;
+      }
+
+      .layer-row[data-layer="actor"] {
+        border-color: #cbddec;
+        background: #f4f8fc;
+      }
+
+      .layer-row[data-layer="order-state"] {
+        border-color: #ead3ad;
+        background: #fff8ed;
+      }
+
+      .layer-row[data-layer="service"] {
+        border-color: #d9cee9;
+        background: #faf7ff;
+      }
+
+      .layer-row[data-layer="output"] {
+        border-color: #e6c8c8;
+        background: #fff7f7;
+      }
+
+      .layer-label {
+        display: grid;
+        align-content: start;
+        gap: 6px;
+        padding-top: 4px;
+      }
+
+      .layer-label strong {
+        font-size: 0.8rem;
+        line-height: 1.25;
+        text-transform: uppercase;
+      }
+
+      .layer-label span {
+        color: var(--muted);
+        font-size: 0.8rem;
+      }
+
+      .layer-body {
+        display: grid;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .layer-cells {
+        display: grid;
+        gap: 12px;
+        align-items: stretch;
+      }
+
+      .layer-cells.cols-1 {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .layer-cells.cols-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .layer-cells.cols-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .layer-cells.cols-4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .module-card {
+        min-height: 118px;
+        padding: 12px;
+      }
+
+      .module-card.actor {
+        border-color: #b9cce0;
+        background: var(--soft-actor);
+      }
+
+      .module-card.source {
+        border-color: #bad7ca;
+        background: var(--soft-source);
+      }
+
+      .module-card.service {
+        border-color: #d0c4e6;
+        background: var(--soft-service);
+      }
+
+      .module-card.order {
+        border-color: #e2c89f;
+        background: var(--soft-order);
+      }
+
+      .module-card.state,
+      .module-card.output {
+        border-color: #e1bcbc;
+        background: var(--soft-state);
+      }
+
+      .module-card .tag {
+        display: inline-block;
+        margin-bottom: 7px;
+        padding: 2px 6px;
+        border-radius: 999px;
+        color: #fff;
+        background: var(--actor);
+        font-size: 0.7rem;
+        font-weight: 800;
+      }
+
+      .module-card.source .tag {
+        background: var(--source);
+      }
+
+      .module-card.service .tag {
+        background: var(--service);
+      }
+
+      .module-card.order .tag {
+        background: var(--order);
+      }
+
+      .module-card.state .tag,
+      .module-card.output .tag {
+        background: var(--state);
+      }
+
+      .module-card p {
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+
+      .route-strip {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .route-chip {
+        padding: 9px 10px;
+        border: 1px solid #dfe3dc;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--muted);
+        font-size: 0.78rem;
+        line-height: 1.35;
+      }
+
+      .route-chip b {
+        display: block;
+        margin-bottom: 3px;
+        color: var(--text);
+        font-size: 0.76rem;
+      }
+
+      .route-chip code {
+        color: #25313a;
+      }
+
+      .flow-line {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .flow-step {
+        padding: 6px 8px;
+        border: 1px solid #dfe3dc;
+        border-radius: 8px;
+        background: #fff;
+        color: #34424c;
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+
+      .flow-arrow {
+        color: var(--muted);
+        font-size: 0.8rem;
+        font-weight: 800;
+      }
+
+      .mode-grid,
+      .message-grid,
+      .file-grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .mode-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .message-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .file-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .panel,
+      .message-card,
+      .file-card {
+        padding: 14px;
+      }
+
+      .panel ul,
+      .message-card ul,
+      .file-card ul {
+        margin: 10px 0 0;
+        padding-left: 18px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .panel li,
+      .message-card li,
+      .file-card li {
+        margin: 4px 0;
+      }
+
+      .message-card h3,
+      .file-card h3 {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .badge {
+        display: inline-block;
+        min-width: 54px;
+        padding: 2px 7px;
+        border-radius: 999px;
+        color: #fff;
+        background: var(--actor);
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-align: center;
+      }
+
+      .badge.source {
+        background: var(--source);
+      }
+
+      .badge.service {
+        background: var(--service);
+      }
+
+      .badge.order {
+        background: var(--order);
+      }
+
+      .badge.state {
+        background: var(--state);
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      table {
+        width: 100%;
+        min-width: 980px;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 11px 12px;
+        border-bottom: 1px solid #e6e8e1;
+        text-align: left;
+        vertical-align: top;
+        font-size: 0.9rem;
+      }
+
+      th {
+        background: #f4f6f1;
+        color: #34404a;
+        font-size: 0.78rem;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+
+      td {
+        color: var(--muted);
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .callout {
+        border-left: 4px solid var(--actor);
+        padding: 12px 14px;
+        border-radius: 6px;
+        background: #eef4fb;
+        color: #334352;
+      }
+
+      @media (max-width: 980px) {
+        .hero,
+        .summary-grid,
+        .mode-grid,
+        .message-grid,
+        .file-grid {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 2.35rem;
+        }
+
+        .shell {
+          width: min(100% - 24px, 1500px);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="shell hero">
+        <div>
+          <p class="eyebrow">QTS Project Panorama</p>
+          <h1>以 Actor 为边界的运行时全景图</h1>
+          <p class="intro">
+            QTS 的配置、数据读取、registry、risk、reporting 不是 Actor；真正的运行时通信主干从
+            <code>MarketDataActor</code> 开始，通过 <code>ActorRef</code> 和
+            <code>Mailbox</code> 串起策略、信号、订单、执行和账户状态。
+          </p>
+        </div>
+        <div class="legend" aria-label="legend">
+          <div class="legend-item"><span class="dot source"></span><span>Source / Adapter：数据源、配置、CSV、live feed</span></div>
+          <div class="legend-item"><span class="dot"></span><span>Actor：通过消息通信的运行时边界</span></div>
+          <div class="legend-item"><span class="dot service"></span><span>Service / Registry：同步调用的领域服务</span></div>
+          <div class="legend-item"><span class="dot order"></span><span>Order / Execution：订单执行链路</span></div>
+          <div class="legend-item"><span class="dot state"></span><span>State / Output：账户状态和报告输出</span></div>
+        </div>
+      </div>
+    </header>
+
+    <nav>
+      <div class="shell nav-row">
+        <a href="#summary">边界结论</a>
+        <a href="#actor-map">Actor 主图</a>
+        <a href="#mode-entry">Backtest / Live 入口</a>
+        <a href="#messages">消息契约</a>
+        <a href="#files">代码索引</a>
+      </div>
+    </nav>
+
+    <main class="shell">
+      <section id="summary">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Boundary Answer</p>
+            <h2>现在是不是所有模块都通过 Actor 通信？</h2>
+            <p class="section-note">
+              不是。Actor 是运行时状态和消息边界；配置解析、历史数据读取、symbol/roll resolution、risk
+              check、DataView 和 report writer 仍是同步服务或值对象。
+            </p>
+          </div>
+        </div>
+        <div class="summary-grid">
+          <div class="note-card">
+            <strong>Actor 主干</strong>
+            <p>
+              <code>MarketDataActor</code>、<code>StrategyActor</code>、<code>SignalAggregatorActor</code>、
+              <code>OrderManagerActor</code>、<code>ExecutionActor</code>、<code>AccountActor</code>
+              是运行时消息边界。
+            </p>
+          </div>
+          <div class="note-card">
+            <strong>Backtest 特点</strong>
+            <p>
+              Backtest 由 <code>BacktestEngine</code> 同步驱动 Actor：它读取 replay 事件，向 ActorRef
+              发消息，再调用 <code>process_all()</code> 推进 mailbox。
+            </p>
+          </div>
+          <div class="note-card">
+            <strong>Live 特点</strong>
+            <p>
+              Live 的 market data 从 adapter / feed 进入 <code>MarketDataActor</code>；进入
+              <code>MarketDataActor</code> 之后，和 backtest 的策略侧数据路径一致。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="actor-map">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Runtime Map</p>
+            <h2>Actor 边界与通信关系</h2>
+            <p class="section-note">
+              每一行是一个明确层级；模块卡片必须落在本层内，消息路由条描述跨层或同层通信。Backtest 和 live 在
+              <code>MarketDataActor</code> 处汇合，策略之后的 intent/order/account 路径共用同一套 Actor。
+            </p>
+          </div>
+        </div>
+
+        <div class="panorama">
+          <div class="layered-map" id="actor-layered-map">
+            <div class="layer-row" data-layer="source">
+              <div class="layer-label">
+                <strong>Market Data Feeds</strong>
+                <span>Backtest 和 live 都先通过 feed 边界，把历史或外部行情变成内部行情事件。</span>
+              </div>
+              <div class="layer-body">
+                <div class="layer-cells cols-2">
+                  <article class="module-card source" data-layer="source">
+                    <span class="tag">BACKTEST FEED</span>
+                    <h3>Historical Feed Adapter</h3>
+                    <p>历史 CSV / chain replay feed。<code>run_streaming_backtest</code> -> <code>iter_historical_bars</code> 读取、过滤、换约。</p>
+                  </article>
+                  <article class="module-card source" data-layer="source">
+                    <span class="tag">LIVE FEED</span>
+                    <h3>Live Feed Adapter</h3>
+                    <p>IBKR / paper feed 将外部行情规范化为内部 <code>Bar</code>、<code>Quote</code>、<code>Tick</code>。</p>
+                  </article>
+                </div>
+                <div class="flow-line" aria-label="source-to-market-data">
+                  <span class="flow-step">Historical Feed Adapter</span>
+                  <span class="flow-arrow">-></span>
+                  <span class="flow-step">MarketDataEvent</span>
+                  <span class="flow-arrow">-></span>
+                  <span class="flow-step">MarketDataActor</span>
+                  <span class="flow-step">Live Feed Adapter</span>
+                  <span class="flow-arrow">-></span>
+                  <span class="flow-step">MarketDataEvent</span>
+                  <span class="flow-arrow">-></span>
+                  <span class="flow-step">MarketDataActor</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="layer-row" data-layer="actor">
+              <div class="layer-label">
+                <strong>Actor Runtime</strong>
+                <span>跨模块通信通过 Actor message；Actor 内部拥有自己的运行状态。</span>
+              </div>
+              <div class="layer-body">
+                <div class="layer-cells cols-4">
+                  <article class="module-card actor" data-layer="actor">
+                    <span class="tag">ACTOR</span>
+                    <h3>MarketDataActor</h3>
+                    <p>行情统一出口。接收 <code>MarketDataEvent</code>，必要时聚合，发布 completed bar。</p>
+                  </article>
+                  <article class="module-card actor" data-layer="actor">
+                    <span class="tag">ACTOR</span>
+                    <h3>StrategyActor</h3>
+                    <p>持有策略实例和 <code>StrategyContext</code>，调用 <code>strategy.on_bar</code>。</p>
+                  </article>
+                  <article class="module-card actor" data-layer="actor">
+                    <span class="tag">ACTOR</span>
+                    <h3>SignalAggregatorActor</h3>
+                    <p>将策略产生的 <code>TargetIntent</code> 汇总为订单流输入。</p>
+                  </article>
+                  <article class="module-card actor" data-layer="actor">
+                    <span class="tag">ACTOR</span>
+                    <h3>ExecutionActor</h3>
+                    <p>只接收 <code>OrderManagerActor</code> 发来的 <code>OrderExecutionRequest</code>，调用模拟成交或 broker adapter。</p>
+                  </article>
+                </div>
+                <div class="route-strip">
+                  <div class="route-chip"><b>行情发布</b><code>MarketDataActor</code> -> <code>StrategyActor</code><br />Bar / Quote / Tick</div>
+                  <div class="route-chip"><b>策略输出</b><code>StrategyActor</code> -> <code>SignalAggregatorActor</code><br />StrategyBarResult / TargetIntent</div>
+                  <div class="route-chip"><b>订单输入</b><code>SignalAggregatorActor</code> -> <code>OrderManagerActor</code><br />AggregatedSignalBatch</div>
+                  <div class="route-chip"><b>成交回报</b><code>ExecutionActor</code> -> <code>OrderManagerActor</code><br />ExecutionReport</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="layer-row" data-layer="order-state">
+              <div class="layer-label">
+                <strong>Order / Account State</strong>
+                <span>订单和账户状态只由各自 Actor 修改。</span>
+              </div>
+              <div class="layer-body">
+                <div class="layer-cells cols-2">
+                  <article class="module-card order" data-layer="order-state">
+                    <span class="tag">ORDER</span>
+                    <h3>OrderManagerActor</h3>
+                    <p>拥有订单状态机。接收已过 risk 的 <code>SubmitOrder</code> 和 execution report。</p>
+                  </article>
+                  <article class="module-card state" data-layer="order-state">
+                    <span class="tag">STATE</span>
+                    <h3>AccountActor</h3>
+                    <p>唯一拥有 cash / positions 的 Actor。只通过 <code>ApplyFill</code> 修改账户状态。</p>
+                  </article>
+                </div>
+                <div class="route-strip">
+                  <div class="route-chip"><b>风控后提交</b><code>SignalAggregatorActor</code> -> <code>OrderManagerActor</code><br />SubmitOrder</div>
+                  <div class="route-chip"><b>执行请求</b><code>OrderManagerActor</code> -> <code>ExecutionActor</code><br />OrderExecutionRequest</div>
+                  <div class="route-chip"><b>账户变更</b><code>OrderManagerActor</code> -> <code>AccountActor</code><br />ApplyFill</div>
+                  <div class="route-chip"><b>策略只读视图</b><code>AccountActor</code> -> <code>StrategyContext</code><br />PortfolioView / AccountSnapshot</div>
+                </div>
+                <div class="flow-line" aria-label="order-execution-loop">
+                  <span class="flow-step">OrderManagerActor</span>
+                  <span class="flow-arrow">-></span>
+                  <span class="flow-step">OrderExecutionRequest</span>
+                  <span class="flow-arrow">-></span>
+                  <span class="flow-step">ExecutionActor</span>
+                  <span class="flow-arrow">-></span>
+                  <span class="flow-step">ExecutionReport</span>
+                  <span class="flow-arrow">-></span>
+                  <span class="flow-step">OrderManagerActor</span>
+                  <span class="flow-arrow">-></span>
+                  <span class="flow-step">ApplyFill</span>
+                  <span class="flow-arrow">-></span>
+                  <span class="flow-step">AccountActor</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="layer-row" data-layer="service">
+              <div class="layer-label">
+                <strong>Domain Services</strong>
+                <span>同步服务不拥有 Actor 状态；由 Actor 或 runner 在边界处调用。</span>
+              </div>
+              <div class="layer-body">
+                <div class="layer-cells cols-3">
+                  <article class="module-card service" data-layer="service">
+                    <span class="tag">SERVICE</span>
+                    <h3>BarAggregator</h3>
+                    <p>按 exchange timezone 和 timeframe 生成 completed aggregate bars。</p>
+                  </article>
+                  <article class="module-card service" data-layer="service">
+                    <span class="tag">SERVICE</span>
+                    <h3>HistoricalDataPortal / DataView</h3>
+                    <p>按 <code>as_of</code> 暴露策略可见历史，过滤 incomplete / partial bars。</p>
+                  </article>
+                  <article class="module-card service" data-layer="service">
+                    <span class="tag">SERVICE</span>
+                    <h3>Registry / RiskEngine</h3>
+                    <p>symbol、continuous future、contract resolution 和 order risk check。</p>
+                  </article>
+                </div>
+                <div class="route-strip">
+                  <div class="route-chip"><b>聚合规则</b><code>MarketDataActor</code> -> <code>BarAggregator</code><br />completed aggregate bars</div>
+                  <div class="route-chip"><b>策略数据</b><code>StrategyContext</code> -> <code>DataView</code><br />as_of 可见历史</div>
+                  <div class="route-chip"><b>标的解析</b>source / strategy -> registry<br />InstrumentId / concrete contract</div>
+                  <div class="route-chip"><b>风险检查</b><code>SignalAggregatorActor</code> -> <code>RiskEngine</code><br />checked order intent</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="layer-row" data-layer="output">
+              <div class="layer-label">
+                <strong>Output / Artifacts</strong>
+                <span>由 runtime 状态和事件日志生成，可复核回测结果。</span>
+              </div>
+              <div class="layer-body">
+                <div class="layer-cells cols-1">
+                  <article class="module-card output" data-layer="output">
+                    <span class="tag">OUTPUT</span>
+                    <h3>BacktestReport / Artifacts</h3>
+                    <p>orders、fills、trade ledger、equity curve、manifest、summary。</p>
+                  </article>
+                </div>
+                <div class="flow-line" aria-label="state-to-report">
+                  <span class="flow-step">OrderManagerActor</span>
+                  <span class="flow-arrow">-></span>
+                  <span class="flow-step">orders / fills</span>
+                  <span class="flow-arrow">-></span>
+                  <span class="flow-step">BacktestReport</span>
+                  <span class="flow-step">AccountActor</span>
+                  <span class="flow-arrow">-></span>
+                  <span class="flow-step">positions / equity curve</span>
+                  <span class="flow-arrow">-></span>
+                  <span class="flow-step">Artifacts</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="mode-entry">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Mode Entry</p>
+            <h2>Backtest 和 Live 怎样进入 Actor 主干</h2>
+          </div>
+        </div>
+
+        <div class="mode-grid">
+          <div class="panel">
+            <h3><span class="badge source">BACKTEST</span> 历史行情 Feed 入口</h3>
+            <ul>
+              <li><code>BacktestRunConfig.from_yaml</code> 解析 run config。</li>
+              <li><code>HistoricalDataConfig</code> + <code>HistoricalCatalog</code> 定位 CSV / chain。</li>
+              <li><code>HistoricalBarStream</code> 作为 historical feed 产出 source <code>Bar</code>，连续合约记录 <code>FutureRollSelection</code>。</li>
+              <li><code>BacktestEngine</code> 把 source bar 包成 <code>MarketDataEvent</code>，同步投递给 <code>MarketDataActor</code>。</li>
+              <li>从 <code>MarketDataActor</code> 发布出的 completed bar 开始，策略路径和 live 对齐。</li>
+            </ul>
+          </div>
+
+          <div class="panel">
+            <h3><span class="badge source">LIVE</span> 实时行情 Feed 入口</h3>
+            <ul>
+              <li><code>LiveFeedAdapter</code> 或 broker market data adapter 对接外部行情。</li>
+              <li><code>SubscribeMarketData</code> 由策略/运行时声明逻辑订阅。</li>
+              <li><code>MarketDataActor</code> 规划 physical subscription，接收规范化 payload。</li>
+              <li>如果 source timeframe 与 requested timeframe 不同，<code>MarketDataActor</code> 内部聚合。</li>
+              <li>发布给订阅者的 payload 是策略侧统一数据产品。</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="messages">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Message Contracts</p>
+            <h2>每个 Actor 的输入和输出</h2>
+          </div>
+        </div>
+
+        <div class="message-grid">
+          <div class="message-card">
+            <h3><span class="badge">ACTOR</span> MarketDataActor</h3>
+            <ul>
+              <li>输入：<code>SubscribeMarketData</code>、<code>MarketDataEvent</code></li>
+              <li>输出：<code>Bar</code>、<code>Quote</code>、<code>Tick</code></li>
+              <li>职责：订阅规划、fan-out、bar aggregation、completed bar gating。</li>
+            </ul>
+          </div>
+
+          <div class="message-card">
+            <h3><span class="badge">ACTOR</span> StrategyActor</h3>
+            <ul>
+              <li>输入：<code>StrategyBarEvent</code>、<code>StrategyFinalize</code></li>
+              <li>输出：<code>StrategyBarResult</code>、<code>StrategyFinalized</code></li>
+              <li>职责：更新 <code>ctx.data</code>、<code>ctx.portfolio</code>、indicator，然后调用策略。</li>
+            </ul>
+          </div>
+
+          <div class="message-card">
+            <h3><span class="badge">ACTOR</span> SignalAggregatorActor</h3>
+            <ul>
+              <li>输入：<code>StrategySignalEvent</code></li>
+              <li>输出：<code>AggregatedSignalBatch</code></li>
+              <li>职责：策略 intent 到订单流前的聚合边界。</li>
+            </ul>
+          </div>
+
+          <div class="message-card">
+            <h3><span class="badge order">ORDER</span> OrderManagerActor</h3>
+            <ul>
+              <li>输入：<code>SubmitOrder</code>、<code>ExecutionReport</code></li>
+              <li>输出：<code>OrderExecutionRequest</code>、<code>ApplyFill</code></li>
+              <li>职责：订单状态机、成交归档、将 fill 发给账户。</li>
+            </ul>
+          </div>
+
+          <div class="message-card">
+            <h3><span class="badge order">EXEC</span> ExecutionActor</h3>
+            <ul>
+              <li>输入：<code>OrderExecutionRequest</code></li>
+              <li>输出：<code>ExecutionReport</code></li>
+              <li>职责：调用 backtest simulator、paper adapter 或 live broker adapter。</li>
+            </ul>
+          </div>
+
+          <div class="message-card">
+            <h3><span class="badge state">STATE</span> AccountActor</h3>
+            <ul>
+              <li>输入：<code>ApplyFill</code></li>
+              <li>输出：<code>AccountSnapshot</code> 只读查询</li>
+              <li>职责：唯一持有 cash、positions 和 fill idempotency。</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">What Is Not An Actor</p>
+            <h2>同步服务和 Actor 的关系</h2>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>模块 / 类</th>
+                <th>是不是 Actor</th>
+                <th>作用</th>
+                <th>接入位置</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>BacktestRunConfig</code></td>
+                <td>否</td>
+                <td>解析 backtest run identity、时间范围、策略配置、market data reference。</td>
+                <td>运行前配置阶段。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalCatalog</code> / <code>HistoricalBarStream</code></td>
+                <td>否</td>
+                <td>定位历史数据文件，读取 CSV，转换为 <code>Bar</code>，处理历史链和 roll selections。</td>
+                <td>Backtest feed adapter 阶段，进入 <code>MarketDataActor</code> 之前。</td>
+              </tr>
+              <tr>
+                <td><code>FutureRollRegistry</code> / <code>InstrumentRegistry</code></td>
+                <td>否</td>
+                <td>symbol、continuous future、concrete contract 和 execution price resolution。</td>
+                <td><code>StrategyContext</code> 和 order intent 处理阶段同步调用。</td>
+              </tr>
+              <tr>
+                <td><code>RiskEngine</code></td>
+                <td>否</td>
+                <td>对 order request 做同步 risk decision。</td>
+                <td><code>OrderManagerActor</code> 收到 <code>SubmitOrder</code> 之前。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalDataPortal</code> / <code>DataView</code></td>
+                <td>否</td>
+                <td>构造策略在当前 <code>as_of</code> 可见的数据切片。</td>
+                <td><code>StrategyBarEvent</code> 的 payload。</td>
+              </tr>
+              <tr>
+                <td><code>StreamingBacktestArtifactWriter</code></td>
+                <td>否</td>
+                <td>写 orders、fills、trade ledger、equity curve、manifest 和 summary。</td>
+                <td>Backtest output 阶段。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="files">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Source Index</p>
+            <h2>代码位置索引</h2>
+          </div>
+        </div>
+
+        <div class="file-grid">
+          <div class="file-card">
+            <h3><span class="badge source">DATA</span> Backtest feed</h3>
+            <ul>
+              <li><code>qts.backtest.runner</code></li>
+              <li><code>qts.data.historical.catalog</code></li>
+              <li><code>qts.data.historical.csv_dataset</code></li>
+              <li><code>qts.registry.future_roll</code></li>
+            </ul>
+          </div>
+
+          <div class="file-card">
+            <h3><span class="badge">ACTOR</span> Runtime actors</h3>
+            <ul>
+              <li><code>qts.runtime.actors.market_data_actor</code></li>
+              <li><code>qts.runtime.actors.strategy_actor</code></li>
+              <li><code>qts.runtime.actors.signal_aggregator_actor</code></li>
+              <li><code>qts.runtime.actors.order_manager_actor</code></li>
+              <li><code>qts.runtime.actors.execution_actor</code></li>
+              <li><code>qts.runtime.actors.account_actor</code></li>
+            </ul>
+          </div>
+
+          <div class="file-card">
+            <h3><span class="badge service">SDK</span> Strategy view</h3>
+            <ul>
+              <li><code>qts.strategy_sdk.context</code></li>
+              <li><code>qts.strategy_sdk.data_view</code></li>
+              <li><code>qts.backtest.historical_data_portal</code></li>
+              <li><code>qts.data.bars.aggregator</code></li>
+            </ul>
+          </div>
+
+          <div class="file-card">
+            <h3><span class="badge state">OUTPUT</span> State / report</h3>
+            <ul>
+              <li><code>qts.backtest.engine</code></li>
+              <li><code>qts.backtest.report</code></li>
+              <li><code>qts.execution.order_manager</code></li>
+              <li><code>qts.portfolio.cash_book</code></li>
+              <li><code>qts.portfolio.position_book</code></li>
+            </ul>
+          </div>
+        </div>
+
+        <p class="callout" style="margin-top: 14px">
+          当前目标状态应继续推进到：backtest / paper / live 都从各自 market data feed adapter 进入
+          <code>MarketDataActor</code>，之后统一走 Strategy -> Signal -> Risk -> OrderManager -> Execution ->
+          Account 的 Actor 主链路；配置、registry、risk、portal、reporting 作为显式同步边界存在。
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

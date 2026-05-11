@@ -7,10 +7,21 @@ historical_data:
       chains_dir: chains
       bars_file_template: "{root_lower}.csv"
       chain_file_template: "{root}.json"
-      source_timeframe: 1m
-      exchange_timezone: US/Eastern
-      timezone_policy: source_utc_exchange_sessions
-      normalization: raw
+      defaults:
+        schema: databento_ohlcv
+        exchange_timezone: US/Eastern
+        timezone_policy: source_utc_exchange_sessions
+        normalization: raw
+  schemas:
+    databento_ohlcv:
+      timestamp: ts_event
+      symbol: symbol
+      instrument_id: instrument_id
+      open: open
+      high: high
+      low: low
+      close: close
+      volume: volume
   catalogs:
     research_futures:
       store: local_csv
@@ -18,6 +29,14 @@ historical_data:
         GC:
           asset_class: future
           exchange: CME
+          chain_file: GC.json
+          bars:
+            - file: gc.csv
+              timeframe: 1m
         SI:
           asset_class: future
           exchange: CME
+          chain_file: SI.json
+          bars:
+            - file: si.csv
+              timeframe: 1m

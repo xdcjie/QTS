@@ -2,6 +2,18 @@
 
 Anchor tests should protect these invariants.
 
+Implementation guardrails should protect the abstraction boundaries that anchor
+tests cannot prove from output alone. Domain-sensitive changes must define:
+
+```text
+Domain fact:
+Correct abstraction boundary:
+Forbidden shortcut:
+Verification:
+```
+
+`make guardrails` must pass before claiming a domain-sensitive change is ready.
+
 ## Calendar/session
 
 - Sessions use `[start, end)`.
@@ -30,6 +42,9 @@ Anchor tests should protect these invariants.
 - Domain uses `InstrumentId`.
 - Broker symbols do not leak into domain models.
 - Continuous futures are not directly tradable.
+- Product-specific facts do not appear as shared implementation branches such as
+  `if root == "GC"` or `gc_*` helpers. They belong in registry/spec/session data
+  boundaries, product-specific providers, or documented risk/valuation models.
 
 ## Order lifecycle
 
@@ -38,6 +53,8 @@ Anchor tests should protect these invariants.
 - Out-of-order broker reports do not corrupt state.
 - Market data adapters do not submit or reconcile orders.
 - Order execution adapters do not own market data subscriptions or bar aggregation.
+- Broker-specific behavior belongs in config or broker/data-source adapters, not
+  shared runtime, domain, portfolio, risk, or strategy SDK code.
 
 ## Portfolio accounting
 

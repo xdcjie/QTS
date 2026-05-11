@@ -21,12 +21,42 @@ The system must support:
 - Timeframe/session-specific behavior belongs in `qts/data/bars` and calendar/session services.
 - Financial correctness rules must be expressed as reusable domain rules and protected by tests.
 
+## Domain-sensitive implementation gate
+
+Before changing sessions, bar generation, instrument identity, broker/data
+adapters, strategy SDK boundaries, risk, order flow, portfolio/accounting, or
+backtest/live parity, state this gate before editing code:
+
+```text
+Domain fact:
+Correct abstraction boundary:
+Forbidden shortcut:
+Verification:
+```
+
+If the correct abstraction boundary is unclear, stop and clarify the design
+before implementation.
+
+Rules:
+
+- Product-specific facts such as `GC`, `SI`, trading hours, roll behavior, margin,
+  or valuation overrides must not enter shared implementation as product-named
+  functions, constants, or `if root == "..."` branches. Put them in registry,
+  contract spec, calendar/session provider, configuration/data, or documented
+  product-specific risk/valuation boundaries.
+- Broker-specific facts such as IBKR host/port/client IDs, broker symbols, order
+  capabilities, and protocol behavior must stay in config or adapter boundaries.
+- Passing behavioral tests does not prove the abstraction boundary is correct.
+  Run `make guardrails` and inspect any intentional exception before claiming
+  the change is ready.
+
 ## Required design documents
 
 Before implementing or modifying core behavior, read the relevant documents under `docs/`, especially:
 
 - `docs/architecture/system_overview.md`
 - `docs/architecture/dependency_rules.md`
+- `docs/architecture/module_boundaries.md`
 - `docs/architecture/backtest_live_parity.md`
 - `docs/runtime/actor_model.md`
 - `docs/domain/instrument_model.md`
@@ -37,6 +67,11 @@ Before implementing or modifying core behavior, read the relevant documents unde
 - `docs/testing/domain_invariants.md`
 
 If implementation conflicts with these documents, stop and propose a design update first.
+
+Before creating a new module, check `docs/architecture/module_boundaries.md`.
+Allowed import direction is not enough; the module must live in the package that
+owns the concept. Shared roll/session/resolution behavior used by both backtest
+and live must not be placed under `qts.backtest` or `qts.data.historical`.
 
 ## Documentation governance
 
@@ -187,6 +222,7 @@ Required for normal code tasks:
 ```bash
 make format
 make lint
+make guardrails
 make typecheck
 make test-unit
 ```
@@ -292,7 +328,18 @@ Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
 
 ### Workflow
 
-1. The graph auto-updates on file changes (via hooks).
-2. Use `detect_changes` for code review.
-3. Use `get_affected_flows` to understand impact.
-4. Use `query_graph` pattern="tests_for" to check coverage.
+1. Treat graph refresh as a hard tool-use hook: after any successful file
+   modification (`apply_patch`, refactor tools, formatters, generated outputs,
+   or test fixture rewrites), immediately call
+   `build_or_update_graph_tool(repo_root=<repo>, full_rebuild=False,
+   postprocess="minimal")` before further code exploration, impact analysis, or
+   final review.
+2. If a batch operation modifies many files, refresh once after the batch
+   completes. Use `full_rebuild=True` only after broad file moves/deletes,
+   parser-impacting changes, or when incremental update reports errors.
+3. Do not expose graph refresh as a user-facing Make target or checklist item;
+   it is an internal maintenance hook that keeps subsequent graph queries
+   trustworthy.
+4. Use `detect_changes` for code review.
+5. Use `get_affected_flows` to understand impact.
+6. Use `query_graph` pattern="tests_for" to check coverage.

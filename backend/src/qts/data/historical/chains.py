@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -39,15 +39,26 @@ class HistoricalChain:
     multiplier: Decimal
     trading_calendar: str
     contracts: tuple[HistoricalContract, ...]
+    _contracts_by_symbol: dict[str, HistoricalContract] = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        contracts_by_symbol: dict[str, HistoricalContract] = {}
+        for contract in self.contracts:
+            contracts_by_symbol.setdefault(contract.symbol, contract)
+        object.__setattr__(
+            self,
+            "_contracts_by_symbol",
+            contracts_by_symbol,
+        )
 
     def contract_for_symbol(self, symbol: str) -> HistoricalContract:
-        for contract in self.contracts:
-            if contract.symbol == symbol:
-                return contract
-        raise KeyError(f"unknown historical contract symbol: {symbol}")
+        try:
+            return self._contracts_by_symbol[symbol]
+        except KeyError as exc:
+            raise KeyError(f"unknown historical contract symbol: {symbol}") from exc
 
     def is_outright_symbol(self, symbol: str) -> bool:
-        return "-" not in symbol and any(contract.symbol == symbol for contract in self.contracts)
+        return "-" not in symbol and symbol in self._contracts_by_symbol
 
     def instrument_id_for_symbol(self, symbol: str) -> InstrumentId:
         if not self.is_outright_symbol(symbol):

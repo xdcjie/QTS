@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal
 
@@ -56,6 +56,18 @@ class OrderManagerActor(Actor):
     @property
     def fills(self) -> tuple[OrderFill, ...]:
         return tuple(self._fills)
+
+    @property
+    def fill_count(self) -> int:
+        return len(self._fills)
+
+    def fills_since(self, index: int) -> tuple[OrderFill, ...]:
+        return tuple(self._fills[index:])
+
+    def compact_for_streaming(self, order_ids: Iterable[OrderId]) -> None:
+        for order_id in order_ids:
+            self._manager.discard_order(order_id)
+        self._fills.clear()
 
     def _handle_submit(self, message: SubmitOrder) -> None:
         order = self._manager.create_order(message.intent, risk_decision=message.risk_decision)

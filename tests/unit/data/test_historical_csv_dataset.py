@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import csv
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, time, timedelta
 from decimal import Decimal
 from pathlib import Path
 
@@ -14,6 +14,8 @@ from qts.data.historical.csv_dataset import (
     iter_historical_bars,
     validate_historical_sample,
 )
+from qts.data.historical.csv_format import HistoricalCsvSchema
+from qts.data.sessions import RegularSessionWindow
 from qts.data.validation_report import DataValidationIssueCode, DataValidationSeverity
 from qts.registry.future_roll import HighestVolumeFutureContractSelector
 from qts.registry.symbol_resolution import StaticSymbolResolver
@@ -34,6 +36,7 @@ def _row(
     high: str = "2000.0",
     low: str = "2000.0",
     close: str = "2000.0",
+    volume: str = "2",
 ) -> dict[str, str]:
     return {
         "ts_event": f"2026-01-02T14:{minute:02d}:00.000000000Z",
@@ -44,7 +47,7 @@ def _row(
         "high": high,
         "low": low,
         "close": close,
-        "volume": "2",
+        "volume": volume,
         "symbol": symbol,
     }
 
@@ -117,6 +120,46 @@ def test_iter_historical_bars_accepts_static_symbol_resolver_without_chain(
     assert stream.stats.spreads_excluded == 0
 
 
+def test_iter_historical_bars_uses_configured_csv_schema_mapping(tmp_path: Path) -> None:
+    path = tmp_path / "equity_alt_schema.csv"
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=("event_time", "ticker", "o", "h", "l", "c", "qty"),
+        )
+        writer.writeheader()
+        writer.writerow(
+            {
+                "event_time": "2026-01-02T14:30:00.000000000Z",
+                "ticker": "AAPL",
+                "o": "100",
+                "h": "101",
+                "l": "99",
+                "c": "100.5",
+                "qty": "42",
+            }
+        )
+    schema = HistoricalCsvSchema(
+        timestamp="event_time",
+        symbol="ticker",
+        open="o",
+        high="h",
+        low="l",
+        close="c",
+        volume="qty",
+    )
+    resolver = StaticSymbolResolver({"AAPL": InstrumentId("EQUITY.US.NASDAQ.AAPL")})
+
+    stream = iter_historical_bars(path, resolver, timeframe="1m", schema=schema)
+    bars = tuple(stream)
+
+    assert len(bars) == 1
+    assert bars[0].instrument_id == InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    assert bars[0].open == Decimal("100")
+    assert bars[0].close == Decimal("100.5")
+    assert bars[0].volume == Decimal("42")
+
+
 def test_iter_historical_bars_can_emit_one_rolling_bar_per_timestamp(
     tmp_path: Path,
 ) -> None:
@@ -147,6 +190,43 @@ def test_iter_historical_bars_can_emit_one_rolling_bar_per_timestamp(
     assert stream.stats.bars_emitted == 1
     assert stream.stats.contracts_excluded == 1
     assert stream.stats.spreads_excluded == 1
+
+
+def test_iter_historical_bars_can_roll_once_per_exchange_session_by_total_volume(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "gc.csv"
+    _write_rows(
+        path,
+        [
+            _row("GCN0", 30, open_="100", high="100", low="100", close="100", volume="100"),
+            _row("GCQ0", 30, open_="110", high="110", low="110", close="110", volume="1"),
+            _row("GCN0", 31, open_="101", high="101", low="101", close="101", volume="1"),
+            _row("GCQ0", 31, open_="111", high="111", low="111", close="111", volume="100"),
+        ],
+    )
+    chain = load_historical_chain(Path("historical/chains/GC.json"))
+    continuous_id = InstrumentId("CONTINUOUS_FUTURE.CME.GC")
+    session_window = RegularSessionWindow(
+        exchange_timezone="US/Eastern",
+        open_time=time(18, 0),
+        close_time=time(17, 0),
+    )
+
+    stream = iter_historical_bars(
+        path,
+        chain,
+        timeframe="1m",
+        contract_selector=HighestVolumeFutureContractSelector(),
+        continuous_instrument_id=continuous_id,
+        session_window=session_window,
+    )
+    bars = tuple(stream)
+
+    assert [bar.close for bar in bars] == [Decimal("110"), Decimal("111")]
+    assert [selection.source_symbol for selection in stream.roll_selections] == ["GCQ0", "GCQ0"]
+    assert stream.stats.bars_emitted == 2
+    assert stream.stats.contracts_excluded == 2
 
 
 def test_validate_historical_sample_reports_invalid_ohlc_and_spread_exclusion(

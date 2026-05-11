@@ -9,6 +9,7 @@ from pathlib import Path
 from qts.data.historical.chains import HistoricalChain, load_historical_chain
 from qts.data.historical.config import HistoricalDataConfig
 from qts.data.historical.csv_dataset import CsvDatasetDescription, describe_csv_dataset
+from qts.data.historical.csv_format import DEFAULT_HISTORICAL_CSV_SCHEMA, HistoricalCsvSchema
 from qts.data.historical.symbols import HistoricalFutureChainSymbolResolver
 from qts.registry.symbol_resolution import SourceSymbolResolver
 
@@ -25,6 +26,8 @@ class HistoricalDataset:
     dataset: CsvDatasetDescription
     source_timeframe: str | None = None
     exchange_timezone: str | None = None
+    csv_schema: HistoricalCsvSchema = DEFAULT_HISTORICAL_CSV_SCHEMA
+    schema_name: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,6 +88,7 @@ def load_historical_catalog_from_config(
     roots: tuple[str, ...],
     symbol_resolvers: Mapping[str, SourceSymbolResolver] | None = None,
     count_rows: bool = False,
+    requested_timeframe: str | None = None,
 ) -> HistoricalCatalog:
     """Load requested roots from a project-level historical data catalog."""
 
@@ -99,7 +103,11 @@ def load_historical_catalog_from_config(
 
     datasets: dict[str, HistoricalDataset] = {}
     for root in normalized_roots:
-        location = config.resolve_dataset(catalog, root)
+        location = config.resolve_dataset(
+            catalog,
+            root,
+            requested_timeframe=requested_timeframe,
+        )
         _require_file(location.csv_path, store.root_dir)
         chain_path = location.chain_path
         chain: HistoricalChain | None = None
@@ -110,7 +118,13 @@ def load_historical_catalog_from_config(
             _require_file(chain_path, store.root_dir)
             chain = load_historical_chain(chain_path)
             resolver = HistoricalFutureChainSymbolResolver(chain)
-        dataset = describe_csv_dataset(location.csv_path, root=root, count_rows=count_rows)
+        dataset = describe_csv_dataset(
+            location.csv_path,
+            root=root,
+            timeframe=location.source_timeframe or "1m",
+            count_rows=count_rows,
+            schema=location.csv_schema,
+        )
         datasets[root] = HistoricalDataset(
             root=root,
             chain_path=chain_path,
@@ -121,6 +135,8 @@ def load_historical_catalog_from_config(
             source_timeframe=location.source_timeframe,
             exchange_timezone=location.exchange_timezone
             or (chain.timezone if chain is not None else None),
+            csv_schema=location.csv_schema,
+            schema_name=location.schema_name,
         )
     return HistoricalCatalog(root_path=store.root_dir, roots=normalized_roots, datasets=datasets)
 

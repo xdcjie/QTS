@@ -17,6 +17,9 @@ class FillIdempotencyStore:
         self._seen.add(fill_id)
         return True
 
+    def discard(self, fill_id: str) -> None:
+        self._seen.discard(fill_id)
+
     def snapshot(self) -> tuple[str, ...]:
         return tuple(sorted(self._seen))
 

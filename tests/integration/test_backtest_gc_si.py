@@ -27,7 +27,7 @@ def _config(*, warmup_bars: int = 0) -> BacktestRunConfig:
         end=datetime(2026, 1, 2, 14, 35, tzinfo=UTC),
         timeframe="1m",
         initial_cash=Decimal("1000000"),
-        strategy_class="tests.integration.test_research_backtest_gc_si:BuyOneGcStrategy",
+        strategy_class="tests.integration.test_backtest_gc_si:BuyOneGcStrategy",
         strategy_params={},
         cost_model=CostModelConfig(),
         risk_config=RiskConfig(max_notional=Decimal("100000000")),
@@ -109,7 +109,7 @@ def test_backtest_engine_from_config_does_not_require_chain_for_static_instrumen
         end=start + timedelta(minutes=1),
         timeframe="1m",
         initial_cash=Decimal("100000"),
-        strategy_class="tests.integration.test_research_backtest_gc_si:BuyOneAaplStrategy",
+        strategy_class="tests.integration.test_backtest_gc_si:BuyOneAaplStrategy",
         risk_config=RiskConfig(max_notional=Decimal("100000000")),
     )
     bar = Bar(
@@ -239,8 +239,8 @@ def test_warmup_updates_indicators_before_trading_starts() -> None:
 
 
 def _load_runner_script() -> ModuleType:
-    module_path = Path("scripts/run_research_backtest.py")
-    spec = importlib.util.spec_from_file_location("run_research_backtest_script", module_path)
+    module_path = Path("scripts/run_backtest.py")
+    spec = importlib.util.spec_from_file_location("run_backtest_script", module_path)
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
@@ -393,10 +393,10 @@ warmup_bars: 0
     )
 
 
-def test_research_backtest_runner_supports_non_chain_static_symbol_dataset(
+def test_backtest_runner_supports_non_chain_static_symbol_dataset(
     tmp_path: Path,
 ) -> None:
-    from qts.backtest.research_runner import run_research_backtest
+    from qts.backtest.runner import run_backtest
 
     historical_root = tmp_path / "historical"
     (historical_root / "data").mkdir(parents=True)
@@ -413,23 +413,23 @@ start: "2010-06-06T22:00:00Z"
 end: "2010-06-06T22:01:00Z"
 timeframe: 1m
 initial_cash: "100000"
-strategy_class: "tests.integration.test_research_backtest_gc_si:BuyOneAaplStrategy"
+strategy_class: "tests.integration.test_backtest_gc_si:BuyOneAaplStrategy"
 risk_config:
   max_notional: "100000000"
 """,
         encoding="utf-8",
     )
 
-    run = run_research_backtest(config_path, output_dir=tmp_path / "runs")
+    run = run_backtest(config_path, output_dir=tmp_path / "runs")
 
     assert run.result.fills[0].instrument_id == InstrumentId("EQUITY.US.NASDAQ.AAPL")
     assert run.dataset_stats["EQUITY"]["bars_emitted"] == 1
 
 
-def test_research_backtest_runner_uses_project_historical_data_catalog(
+def test_backtest_runner_uses_project_historical_data_catalog(
     tmp_path: Path,
 ) -> None:
-    from qts.backtest.research_runner import run_research_backtest
+    from qts.backtest.runner import run_backtest
 
     historical_root = tmp_path / "historical"
     data_config_path = tmp_path / "configs" / "data" / "historical.local.yaml"
@@ -438,7 +438,7 @@ def test_research_backtest_runner_uses_project_historical_data_catalog(
     _write_project_historical_config(data_config_path, historical_root)
     _write_catalog_backtest_config(config_path, data_config_path)
 
-    run = run_research_backtest(config_path, output_dir=tmp_path / "runs")
+    run = run_backtest(config_path, output_dir=tmp_path / "runs")
 
     assert run.dataset_stats["GC"]["bars_emitted"] == 3
     assert run.dataset_stats["SI"]["bars_emitted"] == 3
@@ -447,10 +447,10 @@ def test_research_backtest_runner_uses_project_historical_data_catalog(
     )
 
 
-def test_research_backtest_replays_historical_bars_through_market_data_actor(
+def test_backtest_replays_historical_bars_through_market_data_actor(
     tmp_path: Path,
 ) -> None:
-    from qts.backtest.research_runner import run_research_backtest
+    from qts.backtest.runner import run_backtest
 
     historical_root = tmp_path / "historical"
     (historical_root / "data").mkdir(parents=True)
@@ -476,14 +476,14 @@ start: "2010-06-06T22:00:00Z"
 end: "2010-06-06T22:05:00Z"
 timeframe: 5m
 initial_cash: "1000000"
-strategy_class: "tests.integration.test_research_backtest_gc_si:BuyOneGcStrategy"
+strategy_class: "tests.integration.test_backtest_gc_si:BuyOneGcStrategy"
 risk_config:
   max_notional: "100000000"
 """,
         encoding="utf-8",
     )
 
-    run = run_research_backtest(config_path, output_dir=tmp_path / "runs")
+    run = run_backtest(config_path, output_dir=tmp_path / "runs")
 
     assert run.dataset_stats["GC"]["bars_emitted"] == 5
     assert run.result.processed_bars == 1
@@ -494,19 +494,19 @@ risk_config:
     assert run.result.fills[0].price == Decimal("2004.0")
 
 
-def test_research_backtest_runner_leaves_market_data_aggregation_to_engine(
+def test_backtest_runner_leaves_market_data_aggregation_to_engine(
     tmp_path: Path,
     monkeypatch: Any,
 ) -> None:
-    from qts.backtest import research_runner
-    from qts.backtest.research_runner import run_research_backtest
+    from qts.backtest import runner
+    from qts.backtest.runner import run_backtest
 
     class ForbiddenRunnerMarketDataActor:
         def __init__(self, *args: object, **kwargs: object) -> None:
-            raise AssertionError("research_runner must not aggregate market data")
+            raise AssertionError("runner must not aggregate market data")
 
     monkeypatch.setattr(
-        research_runner,
+        runner,
         "MarketDataActor",
         ForbiddenRunnerMarketDataActor,
         raising=False,
@@ -536,23 +536,23 @@ start: "2010-06-06T22:00:00Z"
 end: "2010-06-06T22:05:00Z"
 timeframe: 5m
 initial_cash: "1000000"
-strategy_class: "tests.integration.test_research_backtest_gc_si:BuyOneGcStrategy"
+strategy_class: "tests.integration.test_backtest_gc_si:BuyOneGcStrategy"
 risk_config:
   max_notional: "100000000"
 """,
         encoding="utf-8",
     )
 
-    run = run_research_backtest(config_path, output_dir=tmp_path / "runs")
+    run = run_backtest(config_path, output_dir=tmp_path / "runs")
 
     assert run.dataset_stats["GC"]["bars_emitted"] == 5
     assert run.result.processed_bars == 1
 
 
-def test_research_backtest_runner_rolls_continuous_future_positions(
+def test_backtest_runner_rolls_continuous_future_positions(
     tmp_path: Path,
 ) -> None:
-    from qts.backtest.research_runner import run_research_backtest
+    from qts.backtest.runner import run_backtest
     from qts.execution.order_manager import OrderSide
 
     historical_root = tmp_path / "historical"
@@ -578,7 +578,7 @@ start: "2010-06-06T22:00:00Z"
 end: "2010-06-06T22:02:00Z"
 timeframe: 1m
 initial_cash: "1000000"
-strategy_class: "tests.integration.test_research_backtest_gc_si:RollingGcStrategy"
+strategy_class: "tests.integration.test_backtest_gc_si:RollingGcStrategy"
 roll_policy:
   enabled: true
   method: highest_volume
@@ -588,7 +588,7 @@ risk_config:
         encoding="utf-8",
     )
 
-    run = run_research_backtest(config_path, output_dir=tmp_path / "runs")
+    run = run_backtest(config_path, output_dir=tmp_path / "runs")
 
     assert [fill.instrument_id for fill in run.result.fills] == [
         InstrumentId("FUTURE.CME.GC.GCN0"),
@@ -615,8 +615,8 @@ risk_config:
     assert run.dataset_stats["GC"]["contracts_excluded"] == 2
 
 
-def test_research_backtest_runner_writes_report_from_fixture_config(tmp_path: Path) -> None:
-    from qts.backtest.research_runner import run_research_backtest
+def test_backtest_runner_writes_report_from_fixture_config(tmp_path: Path) -> None:
+    from qts.backtest.runner import run_backtest
 
     historical_root = tmp_path / "historical"
     config_path = tmp_path / "backtest.yaml"
@@ -624,7 +624,7 @@ def test_research_backtest_runner_writes_report_from_fixture_config(tmp_path: Pa
     _write_fixture_historical(historical_root)
     _write_fixture_config(config_path, historical_root)
 
-    run = run_research_backtest(config_path, output_dir=output_dir)
+    run = run_backtest(config_path, output_dir=output_dir)
 
     payload = json.loads(run.report_path.read_text(encoding="utf-8"))
     assert run.report_path.parent == output_dir
@@ -633,7 +633,7 @@ def test_research_backtest_runner_writes_report_from_fixture_config(tmp_path: Pa
     assert payload["trade_ledger"]
 
 
-def test_research_backtest_cli_runs_fixture_config(tmp_path: Path) -> None:
+def test_backtest_cli_runs_fixture_config(tmp_path: Path) -> None:
     historical_root = tmp_path / "historical"
     config_path = tmp_path / "backtest.yaml"
     output_dir = tmp_path / "runs"
@@ -648,3 +648,55 @@ def test_research_backtest_cli_runs_fixture_config(tmp_path: Path) -> None:
     json_files = list(output_dir.glob("bt-*.json"))
     assert len([path for path in json_files if not path.name.endswith(".summary.json")]) == 1
     assert len([path for path in json_files if path.name.endswith(".summary.json")]) == 1
+
+
+def test_streaming_backtest_writes_partitioned_artifacts(tmp_path: Path) -> None:
+    from qts.backtest.runner import run_streaming_backtest
+
+    historical_root = tmp_path / "historical"
+    config_path = tmp_path / "backtest.yaml"
+    output_dir = tmp_path / "runs"
+    _write_fixture_historical(historical_root)
+    _write_fixture_config(config_path, historical_root)
+
+    run = run_streaming_backtest(config_path, output_dir=output_dir)
+
+    manifest = json.loads(run.manifest_path.read_text(encoding="utf-8"))
+    summary = json.loads(run.summary_path.read_text(encoding="utf-8"))
+    assert run.processed_bars == 6
+    assert manifest["processed_bars"] == 6
+    assert summary["processed_bars"] == 6
+    assert manifest["report_hash"] == run.report_hash
+    assert summary["report_hash"] == run.report_hash
+    assert set(run.artifact_paths) == {"orders", "fills", "trade_ledger", "equity_curve"}
+    assert manifest["artifacts"]["equity_curve"]["rows"] == 6
+    assert manifest["artifacts"]["orders"]["rows"] == manifest["artifacts"]["fills"]["rows"]
+    assert manifest["artifacts"]["fills"]["rows"] == manifest["artifacts"]["trade_ledger"]["rows"]
+    for artifact in manifest["artifacts"].values():
+        assert Path(artifact["path"]).exists()
+        assert artifact["sha256"].startswith("sha256:")
+
+
+def test_streaming_backtest_cli_runs_fixture_config(tmp_path: Path) -> None:
+    historical_root = tmp_path / "historical"
+    config_path = tmp_path / "backtest.yaml"
+    output_dir = tmp_path / "runs"
+    _write_fixture_historical(historical_root)
+    _write_fixture_config(config_path, historical_root)
+    module = _load_runner_script()
+    main = cast(Any, module).main
+
+    exit_code = main(
+        [
+            "--config",
+            str(config_path),
+            "--output-dir",
+            str(output_dir),
+            "--streaming",
+        ]
+    )
+
+    assert exit_code == 0
+    assert len(list(output_dir.glob("bt-*.manifest.json"))) == 1
+    assert len(list(output_dir.glob("bt-*.summary.json"))) == 1
+    assert len(list(output_dir.glob("bt-*.equity_curve.ndjson"))) == 1

@@ -24,6 +24,11 @@ from qts.data.historical.csv_dataset import (
     iter_historical_bars,
     validate_historical_sample,
 )
+from qts.data.historical.csv_format import (
+    historical_timeframe_delta,
+    parse_historical_ts_event,
+    validate_historical_csv_columns,
+)
 from qts.data.historical.service import HistoricalMarketDataService
 from qts.data.historical.symbols import HistoricalFutureChainSymbolResolver
 from qts.registry.symbol_resolution import SourceSymbolResolver, StaticSymbolResolver
@@ -48,9 +53,12 @@ __all__ = [
     "SourceSymbolResolver",
     "StaticSymbolResolver",
     "describe_csv_dataset",
+    "historical_timeframe_delta",
     "iter_historical_bars",
     "load_historical_catalog",
     "load_historical_catalog_from_config",
     "load_historical_chain",
+    "parse_historical_ts_event",
+    "validate_historical_csv_columns",
     "validate_historical_sample",
 ]
