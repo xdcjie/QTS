@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import csv
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 from qts.backtest.engine import BacktestEngine
 from qts.core.ids import InstrumentId, OrderId
+from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
+from qts.data.historical.service import HistoricalMarketDataService
+from qts.data.live_feed import FakeLiveFeedAdapter, FeedSubscription
 from qts.domain.market_data import Bar
 from qts.domain.risk import RiskDecision
 from qts.execution.order_manager import (
@@ -15,11 +20,13 @@ from qts.execution.order_manager import (
     OrderIntent,
     OrderSide,
 )
+from qts.registry.symbol_resolution import StaticSymbolResolver
 from qts.risk.risk_engine import RiskEngine
 from qts.risk.rules.max_notional import MaxNotionalRule
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.account_actor import AccountActor
 from qts.runtime.actors.execution_actor import ExecutionActor
+from qts.runtime.actors.market_data_actor import MarketDataActor, MarketDataEvent
 from qts.runtime.actors.order_manager_actor import OrderManagerActor, SubmitOrder
 from qts.runtime.mailbox import Mailbox
 from qts.strategy_sdk import Strategy
@@ -124,3 +131,79 @@ def test_backtest_risk_rejection_does_not_submit_order_or_mutate_account() -> No
     assert result.fills == ()
     assert result.final_account.cash["USD"] == Decimal("1000")
     assert result.final_account.positions == {}
+
+
+def test_historical_and_fake_live_market_data_use_same_actor_event_contract(
+    tmp_path: Path,
+) -> None:
+    instrument_id = InstrumentId("FUTURE.CME.GC.GCQ0")
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    live_bar = Bar(
+        instrument_id=instrument_id,
+        start_time=start,
+        end_time=start + timedelta(minutes=1),
+        timeframe="1m",
+        session_id="2026-01-02",
+        open=Decimal("2000"),
+        high=Decimal("2000"),
+        low=Decimal("2000"),
+        close=Decimal("2000"),
+        volume=Decimal("1"),
+        is_complete=True,
+    )
+    live_source = FakeLiveFeedAdapter(source_id="fake-live")
+    live_source.subscribe(FeedSubscription("live-1", instrument_id, timeframe="1m"))
+
+    csv_path = tmp_path / "gc.csv"
+    _write_historical_rows(
+        csv_path,
+        [
+            {
+                "ts_event": "2026-01-02T14:30:00.000000000Z",
+                "rtype": "33",
+                "publisher_id": "1",
+                "instrument_id": "GCQ0",
+                "open": "2000",
+                "high": "2000",
+                "low": "2000",
+                "close": "2000",
+                "volume": "1",
+                "symbol": "GCQ0",
+            }
+        ],
+    )
+    historical_source = HistoricalMarketDataService(
+        source_id="historical-gc",
+        csv_path=csv_path,
+        symbol_resolver=StaticSymbolResolver({"GCQ0": instrument_id}),
+        source_timeframe="1m",
+        start=start,
+        end=start + timedelta(minutes=1),
+    )
+    historical_source.subscribe(FeedSubscription("hist-1", instrument_id, timeframe="1m"))
+
+    live_payload = _route_market_data_event(live_source.emit(live_bar).payload)
+    historical_payload = _route_market_data_event(
+        next(historical_source.events("hist-1")).payload
+    )
+
+    assert isinstance(live_payload, Bar)
+    assert isinstance(historical_payload, Bar)
+    assert live_payload.instrument_id == historical_payload.instrument_id == instrument_id
+    assert live_payload.close == historical_payload.close == Decimal("2000")
+    assert not hasattr(live_payload, "symbol")
+    assert not hasattr(historical_payload, "symbol")
+
+
+def _route_market_data_event(payload: object) -> object:
+    mailbox = Mailbox()
+    actor = MarketDataActor(subscribers=(ActorRef(mailbox=mailbox),))
+    actor.handle(MarketDataEvent(payload=payload))
+    return mailbox.get()
+
+
+def _write_historical_rows(path: Path, rows: list[dict[str, str]]) -> None:
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=EXPECTED_HISTORICAL_COLUMNS)
+        writer.writeheader()
+        writer.writerows(rows)
