@@ -25,6 +25,21 @@ qts/data/bars/validation.py    data quality and interval validation
 - `1d` must not be treated as 24 hours.
 - All intervals use `[start, end)`.
 
+## Requested and source timeframes
+
+Requested timeframe is strategy intent. Source timeframe is provider capability.
+
+Provider limitations must not redefine bar semantics. If a provider such as IBKR
+can supply only `5s` realtime bars for a symbol, requests for `1m`, `5m`, or
+larger supported bars must be produced by the internal aggregation chain. The
+physical provider subscription should be deduplicated at the source timeframe,
+while strategy subscribers receive the requested timeframe.
+
+Historical sources follow the same rule. A `5s` source can satisfy `1m` and
+larger compatible requests through aggregation. A `1m` source can satisfy `1m`
+and larger compatible requests, but it must reject `5s` requests explicitly
+rather than fabricating finer bars.
+
 ## Clock-aligned examples
 
 For 1m -> 5m:
@@ -67,3 +82,4 @@ Add anchor tests for:
 - Daily session boundaries
 - COMEX Gold 1m session count = 1380
 - Partial intraday bar marking
+- Provider source timeframe capability cannot change requested timeframe semantics

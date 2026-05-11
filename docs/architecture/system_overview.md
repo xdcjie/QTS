@@ -38,7 +38,16 @@ provider such as IBKR may supply both, but the system models them as separate
 adapters, workers, actor mailboxes, configuration, and event streams.
 
 ```text
-IBKR / Data Source
+StrategyContext.subscribe(asset, timeframe)
+  -> logical market data subscription
+  -> MarketDataActor
+  -> one physical source subscription per provider capability
+  -> MarketDataAdapter / HistoricalDataService
+  -> normalized Tick / Quote / Bar events
+  -> MarketDataActor aggregation and fan-out
+  -> StrategyActor subscribers
+
+IBKR / Historical Data Source
   -> MarketDataAdapter
   -> normalized Tick / Quote / Bar events
   -> MarketDataActor

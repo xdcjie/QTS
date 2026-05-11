@@ -14,6 +14,16 @@ Anchor tests should protect these invariants.
 - `1d` bars are session-aligned.
 - 1m -> 5m uses `[00m, 05m)`, `[05m, 10m)`, ..., `[55m, next hour 00m)`.
 - `1d != 24h`.
+- Requested timeframe is strategy intent; source timeframe is provider capability.
+- A provider that supplies `5s` bars must not redefine `1m` or `5m` requested bar semantics.
+- A coarse historical source must reject requests for finer bars instead of fabricating them.
+
+## Market data subscriptions
+
+- Multiple logical subscribers for the same instrument and derived timeframe share one derived stream.
+- Multiple derived timeframes for the same instrument share one physical source subscription when provider capability permits.
+- `MarketDataActor` owns subscription deduplication, aggregation state, and fan-out state.
+- Market data source adapters do not own strategy subscriber lists.
 
 ## Instrument identity
 

@@ -30,6 +30,18 @@ Use Actor as the architectural abstraction and Queue as the mailbox implementati
 - market_data_source_id / instrument_id -> MarketDataActor
 - broker_id / account_id -> ExecutionActor
 
+## Market data actor ownership
+
+`MarketDataActor` owns market data subscription state:
+
+- logical subscribers keyed by `InstrumentId` and requested timeframe
+- deduplicated physical source subscriptions keyed by source capability
+- bar aggregation state keyed by instrument, source timeframe, target timeframe, and session
+- fan-out state from completed bars, ticks, and quotes to strategy subscribers
+
+Strategies do not subscribe directly to provider adapters. Provider adapters do
+not own strategy subscriber lists or aggregation state.
+
 ## External adapter boundaries
 
 Market data and order execution must be separate actor-facing boundaries. Even

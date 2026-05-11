@@ -28,6 +28,7 @@ make check
 - Actor/order/account flows require integration tests.
 - IBKR paper/live adapter flows require fake-transport integration tests.
 - Market sessions, bar aggregation, portfolio accounting, and order state invariants require anchor tests.
+- Market data subscription deduplication and provider source timeframe semantics require anchor tests.
 
 ## Bar aggregation test expectations
 
@@ -49,3 +50,12 @@ Because `BarAggregator` is a stateful streaming component, test coverage must in
 - Unit tests cover order execution adapter normalization without market data methods.
 - Integration tests use separate fake transports for IBKR market data and IBKR order execution.
 - Anchor tests protect the rule that market data events cannot mutate order/account state directly.
+
+## Market data subscription test expectations
+
+- Unit tests cover logical-to-physical subscription planning and fan-out bookkeeping.
+- Unit tests cover historical data source capability checks and deterministic replay events.
+- Integration tests prove historical and live/fake market data sources use the same
+  actor-facing message contract.
+- Anchor tests protect the rule that provider source timeframe capability cannot
+  redefine requested bar semantics.

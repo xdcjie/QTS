@@ -11,5 +11,7 @@ Examples:
 - Portfolio accounting formulas
 - Strategy SDK boundary rules
 - IBKR adapter boundary rules for separating market data from order execution
+- Market data subscription rules, including physical subscription deduplication
+  and provider source timeframe capability
 
 Anchor tests are expected to be stable, explicit, and tied to domain facts.

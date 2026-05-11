@@ -38,7 +38,7 @@ flowchart LR
 | Execution actor | `ExecutionActor` | same | same | same |
 | Execution adapter | `ExecutionAdapter` protocol | simulated/backtest adapter | paper broker adapter | live broker adapter |
 | Account mutation | `AccountActor` only | same | same | same |
-| Market data | `Bar`/`Tick`/`Quote` domain models | historical/replay source | paper source | live source |
+| Market data | logical subscriptions, physical source subscriptions, `Bar`/`Tick`/`Quote`, aggregation, fan-out | historical/replay source | paper source | live source |
 | Clock | runtime time source | replay clock | paper clock | live clock |
 
 ## Required Invariants
@@ -49,6 +49,9 @@ flowchart LR
 - Account cash and positions are owned by `AccountActor` in every mode.
 - Broker/data-source symbols stay at adapter boundaries.
 - Core runtime uses `InstrumentId`, never broker symbols.
+- Strategy-requested market data timeframes are logical subscriptions.
+- Provider-supported source timeframes are physical subscription capabilities and must not redefine strategy-facing bar semantics.
+- Market data aggregation and fan-out semantics are shared across backtest, paper, and live modes.
 - Continuous futures are not directly tradable.
 - Continuous futures must resolve to concrete contracts before order creation.
 - Backtest cannot use a shortcut path that live cannot use.
@@ -76,6 +79,8 @@ environment-specific.
 - Creating fills outside normalized `ExecutionReport` handling.
 - Having a `BacktestOrderManager` with different lifecycle semantics.
 - Having live-only risk logic that backtest skips.
+- Creating a backtest-only or live-only market data aggregation path.
+- Letting provider bar limitations change requested timeframe semantics.
 - Resolving futures roll in `qts.data.historical` only.
 - Passing broker symbols through portfolio, risk, order, or strategy internals.
 - Using concrete historical fixtures to hardcode product behavior.
@@ -89,6 +94,8 @@ must answer:
   ExecutionActor -> AccountActor path?
 - If not, is the difference strictly at an adapter boundary?
 - Does every external symbol become InstrumentId before entering core logic?
+- Do logical market data subscriptions map to deduplicated physical source subscriptions?
+- Are requested bars produced through shared aggregation semantics rather than provider-specific shortcuts?
 - Are continuous futures resolved to concrete contracts before order creation?
 - Are risk and order-state transitions covered by tests?
 - Is there an integration or anchor test protecting parity?
@@ -101,10 +108,12 @@ Anchor tests protect domain invariants:
 - Continuous futures resolve to concrete contracts before order creation.
 - Risk cannot be bypassed.
 - Account state only changes from validated fills.
+- Provider source timeframe capability cannot redefine requested bar semantics.
 
 Integration tests protect flow parity:
 
 - Backtest order flow goes through `RiskEngine`, `OrderManagerActor`,
   `ExecutionActor`, and `AccountActor`.
 - Paper/live adapter tests use the same message contracts.
+- Historical and live market data sources use the same actor-facing subscription and event contracts.
 - Futures roll changes concrete contracts without changing strategy API.
