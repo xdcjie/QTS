@@ -27,6 +27,7 @@ Before implementing or modifying core behavior, read the relevant documents unde
 
 - `docs/architecture/system_overview.md`
 - `docs/architecture/dependency_rules.md`
+- `docs/architecture/backtest_live_parity.md`
 - `docs/runtime/actor_model.md`
 - `docs/domain/instrument_model.md`
 - `docs/domain/market_calendar_and_sessions.md`
@@ -49,6 +50,46 @@ If implementation conflicts with these documents, stop and propose a design upda
 - Market data and order execution must be separated into different adapters, actor boundaries, configuration sections, and event streams, even when both use IBKR.
 - Risk checks must never be bypassed.
 - User strategies must not directly access Broker, RiskEngine, OrderManager, AccountActor, ContractSpec, or BrokerSymbolMapping.
+
+## Backtest and live parity rules
+
+Backtest, paper, and live are execution modes of the same trading system. They
+must share the same core domain and runtime path unless a documented adapter
+boundary requires different behavior.
+
+Required shared path:
+
+Strategy SDK -> StrategyContext -> AssetRef/TargetIntent -> Instrument/Symbol/Roll
+resolution -> RiskEngine -> OrderManagerActor -> ExecutionActor -> AccountActor
+-> Portfolio/account state -> reporting/observability.
+
+Allowed differences are limited to boundary adapters:
+
+- Market data source: historical CSV/replay, paper feed, live market data adapter.
+- Execution adapter: simulated/backtest fill adapter, paper broker adapter, live broker adapter.
+- Clock/source timing: replay clock, paper clock, live runtime clock.
+- Environment concerns: credentials, broker connectivity, persistence, latency model,
+  and external broker capabilities.
+
+Rules:
+
+- Do not create a backtest-only business path that bypasses RiskEngine,
+  OrderManagerActor, ExecutionActor, or AccountActor.
+- Do not create a live-only business path for behavior that should be testable in
+  backtest.
+- Symbol, instrument, and continuous-future roll resolution must use shared
+  registry-level abstractions where possible.
+- Broker/data-source symbols must stay at adapter boundaries and resolve to
+  InstrumentId before entering core runtime logic.
+- Continuous futures are research/data references and must resolve to concrete
+  tradable contracts before order creation in both backtest and live.
+- Strategy code must not branch on execution mode except through documented
+  Strategy SDK capabilities.
+- If a feature touches one mode, the implementation must either reuse the shared
+  path for all modes or document why it is adapter-specific.
+- Any intentional divergence between backtest and live must be documented in
+  `docs/architecture/backtest_live_parity.md` and covered by a test.
+
 
 ## Instrument and market data rules
 
