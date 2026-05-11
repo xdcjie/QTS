@@ -31,6 +31,33 @@ def test_feed_capabilities_are_typed_and_validate_limits() -> None:
         FeedCapabilities(source_id="bad", max_subscriptions=0)
 
 
+def test_feed_capabilities_choose_source_timeframe_for_derived_bar_request() -> None:
+    capabilities = FeedCapabilities(
+        source_id="ibkr-live",
+        supported_timeframes=frozenset({"5s"}),
+    )
+
+    assert capabilities.source_timeframe_for("1m") == "5s"
+    assert capabilities.source_timeframe_for("5m") == "5s"
+
+
+def test_fake_live_feed_exposes_configured_capabilities_and_subscription_count() -> None:
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    adapter = FakeLiveFeedAdapter(
+        source_id="fake-live",
+        capabilities=FeedCapabilities(
+            source_id="fake-live",
+            supported_timeframes=frozenset({"5s"}),
+        ),
+    )
+
+    adapter.subscribe(FeedSubscription("sub-1", instrument_id, timeframe="5s"))
+    adapter.subscribe(FeedSubscription("sub-1", instrument_id, timeframe="5s"))
+
+    assert adapter.capabilities.source_timeframe_for("1m") == "5s"
+    assert adapter.subscription_count == 1
+
+
 def test_fake_live_feed_subscribe_emit_and_failure_contract() -> None:
     adapter = FakeLiveFeedAdapter(source_id="fake-live")
     subscription = FeedSubscription(

@@ -37,6 +37,37 @@ class FeedCapabilities:
             raise ValueError("timeframe must not be empty")
         return not self.supported_timeframes or timeframe in self.supported_timeframes
 
+    def source_timeframe_for(self, requested_timeframe: str) -> str:
+        """Return the provider timeframe needed to satisfy a requested bar stream."""
+
+        requested = requested_timeframe.strip()
+        if not requested:
+            raise ValueError("requested_timeframe must not be empty")
+        if not self.supports_bars:
+            raise ValueError(f"source {self.source_id} does not support bars")
+        if self.supports_timeframe(requested):
+            return requested
+        if "5s" in self.supported_timeframes and requested in {
+            "1m",
+            "5m",
+            "15m",
+            "30m",
+            "1h",
+            "4h",
+        }:
+            return "5s"
+        if "1m" in self.supported_timeframes and requested in {
+            "5m",
+            "15m",
+            "30m",
+            "1h",
+            "4h",
+        }:
+            return "1m"
+        raise ValueError(
+            f"requested timeframe {requested} cannot be derived from source {self.source_id}"
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class FeedSubscription:
@@ -114,15 +145,27 @@ class LiveFeedAdapter(Protocol):
 class FakeLiveFeedAdapter:
     """Deterministic fake live market data feed."""
 
-    def __init__(self, *, source_id: str) -> None:
+    def __init__(
+        self,
+        *,
+        source_id: str,
+        capabilities: FeedCapabilities | None = None,
+    ) -> None:
         if not source_id.strip():
             raise ValueError("source_id must not be empty")
+        if capabilities is not None and capabilities.source_id != source_id:
+            raise ValueError("capabilities source_id must match adapter source_id")
         self._source_id = source_id
+        self._capabilities = capabilities
         self._subscriptions: dict[str, FeedSubscription] = {}
 
     @property
     def capabilities(self) -> FeedCapabilities:
-        return FeedCapabilities(source_id=self._source_id)
+        return self._capabilities or FeedCapabilities(source_id=self._source_id)
+
+    @property
+    def subscription_count(self) -> int:
+        return len(self._subscriptions)
 
     def subscribe(self, subscription: FeedSubscription) -> LiveFeedSubscribed:
         self._subscriptions[subscription.subscription_id] = subscription
