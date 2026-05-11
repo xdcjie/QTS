@@ -332,6 +332,67 @@ warmup_bars: 0
     )
 
 
+def _write_project_historical_config(path: Path, historical_root: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        f"""
+historical_data:
+  stores:
+    local_csv:
+      type: local_csv
+      root_dir: {historical_root}
+      bars_dir: data
+      chains_dir: chains
+      bars_file_template: "{{root_lower}}.csv"
+      chain_file_template: "{{root}}.json"
+      source_timeframe: 1m
+      exchange_timezone: US/Eastern
+      timezone_policy: source_utc_exchange_sessions
+      normalization: raw
+  catalogs:
+    research_futures:
+      store: local_csv
+      datasets:
+        GC:
+          asset_class: future
+          exchange: CME
+        SI:
+          asset_class: future
+          exchange: CME
+""",
+        encoding="utf-8",
+    )
+
+
+def _write_catalog_backtest_config(path: Path, data_config_path: Path) -> None:
+    path.write_text(
+        f"""
+market_data:
+  source: local_historical
+  config: {data_config_path}
+  catalog: research_futures
+roots: [GC, SI]
+symbols: [GCQ0, SIN0]
+start: "2010-06-06T22:00:00Z"
+end: "2010-06-06T22:03:00Z"
+timeframe: 1m
+initial_cash: "1000000"
+strategy_class: "examples.strategies.gc_si_momentum:GcSiMomentumStrategy"
+strategy_params:
+  symbols: [GCQ0, SIN0]
+  short_window: 1
+  long_window: 2
+cost_model:
+  fixed_commission_per_contract: "0"
+  slippage_bps: "0"
+risk_config:
+  max_notional: "100000000"
+warmup_bars: 0
+""",
+        encoding="utf-8",
+    )
+
+
 def test_research_backtest_runner_supports_non_chain_static_symbol_dataset(
     tmp_path: Path,
 ) -> None:
@@ -363,6 +424,129 @@ risk_config:
 
     assert run.result.fills[0].instrument_id == InstrumentId("EQUITY.US.NASDAQ.AAPL")
     assert run.dataset_stats["EQUITY"]["bars_emitted"] == 1
+
+
+def test_research_backtest_runner_uses_project_historical_data_catalog(
+    tmp_path: Path,
+) -> None:
+    from qts.backtest.research_runner import run_research_backtest
+
+    historical_root = tmp_path / "historical"
+    data_config_path = tmp_path / "configs" / "data" / "historical.local.yaml"
+    config_path = tmp_path / "backtest.yaml"
+    _write_fixture_historical(historical_root)
+    _write_project_historical_config(data_config_path, historical_root)
+    _write_catalog_backtest_config(config_path, data_config_path)
+
+    run = run_research_backtest(config_path, output_dir=tmp_path / "runs")
+
+    assert run.dataset_stats["GC"]["bars_emitted"] == 3
+    assert run.dataset_stats["SI"]["bars_emitted"] == 3
+    assert run.result.report.dataset_metadata[0]["source"] == str(
+        historical_root / "data" / "gc.csv"
+    )
+
+
+def test_research_backtest_replays_historical_bars_through_market_data_actor(
+    tmp_path: Path,
+) -> None:
+    from qts.backtest.research_runner import run_research_backtest
+
+    historical_root = tmp_path / "historical"
+    (historical_root / "data").mkdir(parents=True)
+    (historical_root / "chains").mkdir()
+    shutil.copyfile(Path("historical/chains/GC.json"), historical_root / "chains" / "GC.json")
+    _write_fixture_csv(
+        historical_root / "data" / "gc.csv",
+        "GCQ0",
+        ["2000.0", "2001.0", "2002.0", "2003.0", "2004.0"],
+    )
+    data_config_path = tmp_path / "configs" / "data" / "historical.local.yaml"
+    _write_project_historical_config(data_config_path, historical_root)
+    config_path = tmp_path / "backtest.yaml"
+    config_path.write_text(
+        f"""
+market_data:
+  source: local_historical
+  config: {data_config_path}
+  catalog: research_futures
+roots: [GC]
+symbols: [GCQ0]
+start: "2010-06-06T22:00:00Z"
+end: "2010-06-06T22:05:00Z"
+timeframe: 5m
+initial_cash: "1000000"
+strategy_class: "tests.integration.test_research_backtest_gc_si:BuyOneGcStrategy"
+risk_config:
+  max_notional: "100000000"
+""",
+        encoding="utf-8",
+    )
+
+    run = run_research_backtest(config_path, output_dir=tmp_path / "runs")
+
+    assert run.dataset_stats["GC"]["bars_emitted"] == 5
+    assert run.result.processed_bars == 1
+    assert run.result.report.processed_bars == 1
+    assert run.result.report.trade_ledger[0].source_bar_time == datetime(
+        2010, 6, 6, 22, 0, tzinfo=UTC
+    )
+    assert run.result.fills[0].price == Decimal("2004.0")
+
+
+def test_research_backtest_runner_leaves_market_data_aggregation_to_engine(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    from qts.backtest import research_runner
+    from qts.backtest.research_runner import run_research_backtest
+
+    class ForbiddenRunnerMarketDataActor:
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            raise AssertionError("research_runner must not aggregate market data")
+
+    monkeypatch.setattr(
+        research_runner,
+        "MarketDataActor",
+        ForbiddenRunnerMarketDataActor,
+        raising=False,
+    )
+
+    historical_root = tmp_path / "historical"
+    (historical_root / "data").mkdir(parents=True)
+    (historical_root / "chains").mkdir()
+    shutil.copyfile(Path("historical/chains/GC.json"), historical_root / "chains" / "GC.json")
+    _write_fixture_csv(
+        historical_root / "data" / "gc.csv",
+        "GCQ0",
+        ["2000.0", "2001.0", "2002.0", "2003.0", "2004.0"],
+    )
+    data_config_path = tmp_path / "configs" / "data" / "historical.local.yaml"
+    _write_project_historical_config(data_config_path, historical_root)
+    config_path = tmp_path / "backtest.yaml"
+    config_path.write_text(
+        f"""
+market_data:
+  source: local_historical
+  config: {data_config_path}
+  catalog: research_futures
+roots: [GC]
+symbols: [GCQ0]
+start: "2010-06-06T22:00:00Z"
+end: "2010-06-06T22:05:00Z"
+timeframe: 5m
+initial_cash: "1000000"
+strategy_class: "tests.integration.test_research_backtest_gc_si:BuyOneGcStrategy"
+risk_config:
+  max_notional: "100000000"
+""",
+        encoding="utf-8",
+    )
+
+    run = run_research_backtest(config_path, output_dir=tmp_path / "runs")
+
+    assert run.dataset_stats["GC"]["bars_emitted"] == 5
+    assert run.result.processed_bars == 1
 
 
 def test_research_backtest_runner_rolls_continuous_future_positions(

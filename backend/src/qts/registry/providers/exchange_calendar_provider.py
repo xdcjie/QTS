@@ -22,23 +22,23 @@ class ExchangeCalendarProvider:
 
     def session_for(self, session_date: date) -> MarketSession:
         session_label = session_date.isoformat()
-        open_time = _to_datetime(self._calendar.session_open(session_label))
-        close_time = _to_datetime(self._calendar.session_close(session_label))
+        open_time = self._to_datetime(self._calendar.session_open(session_label))
+        close_time = self._to_datetime(self._calendar.session_close(session_label))
         return MarketSession(
             calendar_id=self._calendar_id,
             session_id=session_label,
             interval=TimeInterval(start=open_time, end=close_time),
         )
 
-
-def _to_datetime(value: Any) -> datetime:
-    if hasattr(value, "to_pydatetime"):
-        converted = value.to_pydatetime()
-        if isinstance(converted, datetime):
-            return converted
-    if isinstance(value, datetime):
-        return value
-    raise TypeError(f"expected datetime-like calendar value, got {type(value).__name__}")
+    @staticmethod
+    def _to_datetime(value: Any) -> datetime:
+        if hasattr(value, "to_pydatetime"):
+            converted = value.to_pydatetime()
+            if isinstance(converted, datetime):
+                return converted
+        if isinstance(value, datetime):
+            return value
+        raise TypeError(f"expected datetime-like calendar value, got {type(value).__name__}")
 
 
 __all__ = ["ExchangeCalendarProvider"]

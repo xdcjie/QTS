@@ -22,10 +22,8 @@ def test_backtest_live_parity_document_renders_core_flow_as_mermaid() -> None:
 def test_backtest_engine_order_path_uses_shared_actor_chain() -> None:
     from qts.backtest import engine
 
+    engine_source = inspect.getsource(engine.BacktestEngine)
     run_source = inspect.getsource(engine.BacktestEngine.run)
-    process_source = inspect.getsource(engine._process_intent)
-    resolve_source = inspect.getsource(engine._order_instrument_for_intent)
-    order_source = inspect.getsource(engine._process_order_delta)
 
     for required in (
         "StrategyContext",
@@ -35,8 +33,8 @@ def test_backtest_engine_order_path_uses_shared_actor_chain() -> None:
         "_BacktestExecutionAdapter",
     ):
         assert required in run_source
-    assert "risk_engine.check" in order_source
-    assert "SubmitOrder" in order_source
-    assert "_order_instrument_for_intent" in process_source
-    assert "future_roll_registry.resolve_contract" in resolve_source
-    assert "ApplyFill" not in process_source
+    assert "OrderRiskRequest" in engine_source
+    assert ".check(" in engine_source
+    assert "SubmitOrder" in engine_source
+    assert "resolve_contract" in engine_source
+    assert "ApplyFill" not in engine_source

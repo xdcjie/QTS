@@ -1,0 +1,1401 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QTS Backtest 完整链路图</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f6f2;
+      --panel: #ffffff;
+      --panel-soft: #fbfaf6;
+      --ink: #202124;
+      --muted: #656b73;
+      --subtle: #8a9098;
+      --line: #d9ded7;
+      --line-strong: #bac4bd;
+      --config: #315c72;
+      --data: #2f7d57;
+      --roll: #a15d1f;
+      --runtime: #5f4b8b;
+      --risk: #9a3d3d;
+      --exec: #3f6f3b;
+      --report: #2f5f9f;
+      --target: #6f6f76;
+      --shadow: 0 12px 30px rgba(31, 35, 40, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+
+    main {
+      width: min(1540px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 24px;
+      align-items: end;
+      margin-bottom: 20px;
+    }
+
+    h1,
+    h2,
+    h3 {
+      letter-spacing: 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(30px, 3.4vw, 50px);
+      line-height: 1.05;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: clamp(22px, 2.2vw, 30px);
+      line-height: 1.18;
+    }
+
+    h3 {
+      margin: 0;
+      font-size: 16px;
+      line-height: 1.25;
+    }
+
+    p {
+      margin: 0;
+    }
+
+    code {
+      padding: 1px 5px;
+      border-radius: 5px;
+      background: #eef1ed;
+      color: #24323a;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 0.92em;
+    }
+
+    pre {
+      margin: 0;
+      padding: 14px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #182027;
+      color: #edf2f4;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      white-space: pre;
+    }
+
+    .subtitle {
+      max-width: 980px;
+      margin-top: 12px;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .status-card {
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-left: 6px solid var(--config);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .status-card strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+
+    .status-card p {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .quick-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 18px 0 24px;
+    }
+
+    .quick-nav a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--panel);
+      color: var(--ink);
+      text-decoration: none;
+      font-size: 13px;
+    }
+
+    section {
+      margin-top: 24px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: end;
+      margin-bottom: 12px;
+    }
+
+    .section-note {
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .boundary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .boundary-item {
+      min-height: 132px;
+      padding: 14px;
+      border-top: 5px solid var(--config);
+    }
+
+    .boundary-item[data-kind="data"] {
+      border-top-color: var(--data);
+    }
+
+    .boundary-item[data-kind="strategy"] {
+      border-top-color: var(--runtime);
+    }
+
+    .boundary-item[data-kind="runtime"] {
+      border-top-color: var(--risk);
+    }
+
+    .boundary-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: #edf1f4;
+      color: #3b4a55;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .boundary-item p {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .config-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.18fr) minmax(0, 1.18fr) minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .config-card {
+      overflow: hidden;
+    }
+
+    .config-card header {
+      display: block;
+      margin: 0;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel-soft);
+    }
+
+    .path {
+      display: inline-flex;
+      margin-bottom: 8px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: #eef1ed;
+      color: #35424b;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+    }
+
+    .config-card header p {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .field-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .field-table th,
+    .field-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .field-table th {
+      width: 38%;
+      color: #2d3740;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .field-table td {
+      color: var(--muted);
+    }
+
+    .field-table tr:last-child th,
+    .field-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .diagram-wrap {
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .flow-board {
+      min-width: 1180px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .lane {
+      display: grid;
+      grid-template-columns: 118px minmax(0, 1fr);
+      gap: 14px;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .lane:last-child {
+      border-bottom: 0;
+    }
+
+    .lane-label {
+      position: sticky;
+      left: 0;
+      align-self: stretch;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 12px;
+      border-left: 5px solid var(--config);
+      border-radius: 8px;
+      background: #f8faf7;
+      z-index: 1;
+    }
+
+    .lane[data-lane="data"] .lane-label {
+      border-left-color: var(--data);
+    }
+
+    .lane[data-lane="runtime"] .lane-label {
+      border-left-color: var(--runtime);
+    }
+
+    .lane[data-lane="order"] .lane-label {
+      border-left-color: var(--risk);
+    }
+
+    .lane[data-lane="report"] .lane-label {
+      border-left-color: var(--report);
+    }
+
+    .lane-label strong {
+      font-size: 14px;
+    }
+
+    .lane-label span {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .node-row {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(174px, 1fr);
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .flow-node {
+      position: relative;
+      min-height: 142px;
+      padding: 12px;
+      border: 1px solid var(--line-strong);
+      border-top: 5px solid var(--config);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+
+    .flow-node::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -20px;
+      width: 15px;
+      height: 10px;
+      border-top: 2px solid var(--line-strong);
+      border-right: 2px solid var(--line-strong);
+      transform: translateY(-50%) rotate(45deg);
+    }
+
+    .flow-node:last-child::after {
+      display: none;
+    }
+
+    .flow-node[data-kind="data"] {
+      border-top-color: var(--data);
+    }
+
+    .flow-node[data-kind="roll"] {
+      border-top-color: var(--roll);
+    }
+
+    .flow-node[data-kind="runtime"] {
+      border-top-color: var(--runtime);
+    }
+
+    .flow-node[data-kind="risk"] {
+      border-top-color: var(--risk);
+    }
+
+    .flow-node[data-kind="exec"] {
+      border-top-color: var(--exec);
+    }
+
+    .flow-node[data-kind="report"] {
+      border-top-color: var(--report);
+    }
+
+    .node-index {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      margin-bottom: 8px;
+      border-radius: 50%;
+      background: #eef1ed;
+      color: #38424a;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .node-title {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 14px;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+
+    .node-code {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--subtle);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      font-size: 11px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .node-desc {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.42;
+    }
+
+    .split-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .subpanel {
+      padding: 16px;
+      border-top: 5px solid var(--target);
+    }
+
+    .subpanel[data-kind="implemented"] {
+      border-top-color: var(--data);
+    }
+
+    .subpanel[data-kind="target"] {
+      border-top-color: var(--runtime);
+    }
+
+    .subpanel[data-kind="roll"] {
+      border-top-color: var(--roll);
+    }
+
+    .subpanel[data-kind="risk"] {
+      border-top-color: var(--risk);
+    }
+
+    .subpanel p {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .mini-flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 14px;
+    }
+
+    .mini-step {
+      position: relative;
+      min-height: 104px;
+      padding: 11px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-soft);
+    }
+
+    .mini-step::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      right: -15px;
+      width: 12px;
+      height: 8px;
+      border-top: 2px solid var(--line-strong);
+      border-right: 2px solid var(--line-strong);
+      transform: translateY(-50%) rotate(45deg);
+    }
+
+    .mini-step:last-child::after {
+      display: none;
+    }
+
+    .mini-step strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+
+    .mini-step span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 190px minmax(0, 1fr) minmax(0, 1fr);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      font-size: 13px;
+    }
+
+    .compare-grid > div {
+      padding: 12px;
+      border-right: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .compare-grid > div:nth-child(3n) {
+      border-right: 0;
+    }
+
+    .compare-grid > div:nth-last-child(-n + 3) {
+      border-bottom: 0;
+    }
+
+    .compare-head {
+      background: var(--panel-soft);
+      color: #2d3740;
+      font-weight: 800;
+    }
+
+    .compare-topic {
+      color: #2d3740;
+      font-weight: 700;
+    }
+
+    .compare-grid p {
+      color: var(--muted);
+    }
+
+    .callout {
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      padding: 14px;
+      border: 1px solid #d7c7a6;
+      border-left: 5px solid var(--roll);
+      border-radius: 8px;
+      background: #fffaf0;
+    }
+
+    .callout mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      border-radius: 50%;
+      background: #f2dfbd;
+      color: #6b4317;
+      font-weight: 800;
+    }
+
+    .callout p {
+      color: #684b28;
+      font-size: 13px;
+    }
+
+    .snippet-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+      gap: 14px;
+    }
+
+    .snippet-card {
+      overflow: hidden;
+    }
+
+    .snippet-card h3 {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel-soft);
+    }
+
+    footer {
+      margin-top: 24px;
+      padding: 14px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 1180px) {
+      header,
+      .boundary-grid,
+      .config-grid,
+      .split-grid,
+      .snippet-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .status-card {
+        width: auto;
+      }
+
+      .mini-flow {
+        grid-template-columns: 1fr;
+      }
+
+      .mini-step::after {
+        top: auto;
+        right: 50%;
+        bottom: -14px;
+        transform: translateX(50%) rotate(135deg);
+      }
+
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .compare-grid > div,
+      .compare-grid > div:nth-child(3n),
+      .compare-grid > div:nth-last-child(-n + 3) {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .compare-grid > div:last-child {
+        border-bottom: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>QTS Backtest 完整链路图</h1>
+        <p class="subtitle">
+          从配置到加载、读历史数据、连续合约换约、数据视图、策略处理、风险检查、订单执行、账户更新和报告输出。
+          这张图按当前实现描述，同时标出 bar aggregation 与共享运行时的目标边界。
+        </p>
+      </div>
+      <aside class="status-card">
+        <strong>核心原则</strong>
+        <p>
+          live 通过 gateway/adapters 指定实时数据从哪里来；backtest 通过
+          <code>market_data.config</code> 和 <code>catalog</code> 指定历史数据从哪里来。
+          数据源配置是项目级，策略配置是策略实例级，二者不应混在一起。
+        </p>
+      </aside>
+    </header>
+
+    <nav class="quick-nav" aria-label="页面导航">
+      <a href="#boundaries">配置边界</a>
+      <a href="#configs">配置字段</a>
+      <a href="#chain">完整链路</a>
+      <a href="#bars">Bar Aggregation</a>
+      <a href="#roll">换约</a>
+      <a href="#current-target">当前实现 vs 目标</a>
+      <a href="#snippets">YAML 示例</a>
+    </nav>
+
+    <section id="boundaries">
+      <div class="section-head">
+        <div>
+          <h2>1. 配置责任边界</h2>
+          <p class="section-note">
+            回测配置只引用数据源和策略实例；项目级历史数据配置负责物理目录和 catalog；策略配置只描述策略类和参数。
+          </p>
+        </div>
+      </div>
+      <div class="boundary-grid">
+        <article class="panel boundary-item" data-kind="runtime">
+          <div class="boundary-title">
+            <h3>Backtest Run Config</h3>
+            <span class="tag">一次回测场景</span>
+          </div>
+          <p>
+            选择数据源 catalog、回测时间段、timeframe、初始资金、成本模型、风险参数、roll policy 和 warmup。
+            它不拥有历史数据目录细节，也不拥有策略内部参数。
+          </p>
+        </article>
+
+        <article class="panel boundary-item" data-kind="data">
+          <div class="boundary-title">
+            <h3>Historical Data Config</h3>
+            <span class="tag">项目级数据源</span>
+          </div>
+          <p>
+            定义本项目有哪些历史数据 store、每个 store 的根目录、bars 目录、chain 目录、文件模板、时区策略和 normalization。
+            <code>data_dir</code> / <code>chain_dir</code> 属于 store，不属于 GC/SI 这种商品条目。
+          </p>
+        </article>
+
+        <article class="panel boundary-item" data-kind="data">
+          <div class="boundary-title">
+            <h3>Catalog / Dataset</h3>
+            <span class="tag">逻辑数据集</span>
+          </div>
+          <p>
+            catalog 说明这次可用的数据集合，例如 <code>research_futures</code>。
+            dataset 只描述 <code>GC</code>、<code>SI</code> 的资产类型、交易所和可选文件覆盖项。
+          </p>
+        </article>
+
+        <article class="panel boundary-item" data-kind="strategy">
+          <div class="boundary-title">
+            <h3>Strategy Config</h3>
+            <span class="tag">策略实例</span>
+          </div>
+          <p>
+            描述策略 ID、class path、account、allocation、enabled 和策略自己的 params。
+            策略参数不应该知道历史数据目录，也不应该直接接触 broker / account / risk core。
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section id="configs">
+      <div class="section-head">
+        <div>
+          <h2>2. 要配置什么，每个配置什么意思</h2>
+          <p class="section-note">
+            三类配置共同组成一次回测：run manifest 决定“怎么跑”，historical data config 决定“数据从哪里来”，strategy config 决定“跑哪个策略以及策略参数”。
+          </p>
+        </div>
+      </div>
+
+      <div class="config-grid">
+        <article class="panel config-card">
+          <header>
+            <span class="path">configs/backtest.gc_si.example.yaml</span>
+            <h3>Backtest Run Manifest</h3>
+            <p>一次回测任务的入口配置，由 <code>BacktestRunConfig.from_yaml</code> 读取。</p>
+          </header>
+          <table class="field-table">
+            <tbody>
+              <tr>
+                <th>market_data.source</th>
+                <td>数据源类型。当前示例是 <code>local_historical</code>，语义等价于 live 中的 gateway/adapters 类型。</td>
+              </tr>
+              <tr>
+                <th>market_data.config</th>
+                <td>项目级历史数据配置文件路径，例如 <code>configs/data/historical.local.yaml</code>。</td>
+              </tr>
+              <tr>
+                <th>market_data.catalog</th>
+                <td>从历史数据配置中选择哪个 catalog，例如 <code>research_futures</code>。</td>
+              </tr>
+              <tr>
+                <th>roots</th>
+                <td>需要加载的商品根，例如 <code>GC</code>、<code>SI</code>。runner 用它解析 CSV 和 chain。</td>
+              </tr>
+              <tr>
+                <th>symbols</th>
+                <td>策略可见/回测关注的符号集合。启用换约时，<code>GC</code>、<code>SI</code> 可作为连续期货 research symbol。</td>
+              </tr>
+              <tr>
+                <th>start / end</th>
+                <td>回测时间窗口，按半开区间 <code>[start, end)</code> 过滤历史 bars。</td>
+              </tr>
+              <tr>
+                <th>timeframe</th>
+                <td>策略请求的 bar 周期。它和历史源 <code>source_timeframe</code> 分离；二者不同时由 <code>MarketDataActor</code> / <code>BarAggregator</code> 生成策略周期。</td>
+              </tr>
+              <tr>
+                <th>initial_cash</th>
+                <td>账户初始资金，用于初始化 <code>AccountActor</code>。</td>
+              </tr>
+              <tr>
+                <th>strategy_config</th>
+                <td>策略实例配置文件路径。旧字段 <code>strategy_class</code> / <code>strategy_params</code> 仍可兼容。</td>
+              </tr>
+              <tr>
+                <th>cost_model</th>
+                <td>回测成交成本，例如每张固定佣金、滑点 bps，由回测执行适配器使用。</td>
+              </tr>
+              <tr>
+                <th>risk_config</th>
+                <td>风险规则配置，例如 <code>max_notional</code>，由 <code>RiskEngine</code> 检查。</td>
+              </tr>
+              <tr>
+                <th>roll_policy</th>
+                <td>连续期货换约规则，例如 <code>enabled: true</code>、<code>method: highest_volume</code>。</td>
+              </tr>
+              <tr>
+                <th>warmup_bars</th>
+                <td>预热 bar 数。策略可接收数据更新指标，但 warmup 期间新增交易意图不会下单。</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="panel config-card">
+          <header>
+            <span class="path">configs/data/historical.local.yaml</span>
+            <h3>Historical Data Source</h3>
+            <p>项目级数据源配置，由 <code>HistoricalDataConfig.from_yaml</code> 读取。</p>
+          </header>
+          <table class="field-table">
+            <tbody>
+              <tr>
+                <th>stores.local_csv.type</th>
+                <td>物理 store 类型。当前是 <code>local_csv</code>，表示从本地 CSV/JSON 读取。</td>
+              </tr>
+              <tr>
+                <th>root_dir</th>
+                <td>历史数据根目录，例如 <code>historical</code>。</td>
+              </tr>
+              <tr>
+                <th>bars_dir</th>
+                <td>bar CSV 子目录，例如 <code>data</code>，最终路径会拼成 <code>historical/data/gc.csv</code>。</td>
+              </tr>
+              <tr>
+                <th>chains_dir</th>
+                <td>期货 chain JSON 子目录，例如 <code>chains</code>，最终路径会拼成 <code>historical/chains/GC.json</code>。</td>
+              </tr>
+              <tr>
+                <th>bars_file_template</th>
+                <td>bar 文件命名模板，例如 <code>{root_lower}.csv</code>。</td>
+              </tr>
+              <tr>
+                <th>chain_file_template</th>
+                <td>chain 文件命名模板，例如 <code>{root}.json</code>。</td>
+              </tr>
+              <tr>
+                <th>source_timeframe</th>
+                <td>物理 CSV 数据源的 bar 周期，例如 <code>1m</code>。这是数据源能力，不是策略请求。</td>
+              </tr>
+              <tr>
+                <th>exchange_timezone</th>
+                <td>聚合 bar 时使用的交易所时区，例如 <code>US/Eastern</code>。用于 clock-aligned timeframe 边界。</td>
+              </tr>
+              <tr>
+                <th>timezone_policy</th>
+                <td>源数据时间解释策略。当前示例为 <code>source_utc_exchange_sessions</code>。</td>
+              </tr>
+              <tr>
+                <th>normalization</th>
+                <td>价格/成交量 normalization 策略。当前示例为 <code>raw</code>。</td>
+              </tr>
+              <tr>
+                <th>catalogs.*.store</th>
+                <td>catalog 使用哪个 store，例如 <code>research_futures</code> 使用 <code>local_csv</code>。</td>
+              </tr>
+              <tr>
+                <th>datasets.GC / SI</th>
+                <td>逻辑商品条目，描述资产类型、交易所和可选文件覆盖项；不放公共数据目录。</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="panel config-card">
+          <header>
+            <span class="path">configs/strategies/gc_si_momentum.yaml</span>
+            <h3>Strategy Instance</h3>
+            <p>策略实例配置，由 runner 加载后实例化策略类。</p>
+          </header>
+          <table class="field-table">
+            <tbody>
+              <tr>
+                <th>strategy_id</th>
+                <td>策略实例 ID，用于日志、报告和后续多策略区分。</td>
+              </tr>
+              <tr>
+                <th>class_path</th>
+                <td>策略类导入路径，例如 <code>examples.strategies.gc_si_momentum:GcSiMomentumStrategy</code>。</td>
+              </tr>
+              <tr>
+                <th>account_id</th>
+                <td>策略绑定账户。当前 research backtest 用它关联初始账户。</td>
+              </tr>
+              <tr>
+                <th>allocation</th>
+                <td>策略资金分配比例，为后续多策略/多账户管理保留边界。</td>
+              </tr>
+              <tr>
+                <th>enabled</th>
+                <td>是否启用该策略实例。</td>
+              </tr>
+              <tr>
+                <th>params</th>
+                <td>策略自己的参数，例如关注哪些 symbols。这里不放数据目录、chain 目录或风险核心配置。</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+      </div>
+    </section>
+
+    <section id="chain">
+      <div class="section-head">
+        <div>
+          <h2>3. 完整回测链路</h2>
+          <p class="section-note">
+            每一行是一段职责边界。箭头表示主数据/控制流；actor 内部仍通过 mailbox/message 传递事件，不由策略直接改账户或订单状态。
+          </p>
+        </div>
+      </div>
+
+      <div class="diagram-wrap">
+        <div class="flow-board">
+          <div class="lane" data-lane="config">
+            <div class="lane-label">
+              <strong>启动与配置</strong>
+              <span>入口、解析、装配</span>
+            </div>
+            <div class="node-row">
+              <article class="flow-node">
+                <span class="node-index">1</span>
+                <span class="node-title">CLI 启动回测</span>
+                <span class="node-code">scripts/run_research_backtest.py</span>
+                <p class="node-desc">读取 <code>--config</code> 和 <code>--output-dir</code>，调用 <code>run_research_backtest</code>。</p>
+              </article>
+              <article class="flow-node">
+                <span class="node-index">2</span>
+                <span class="node-title">加载 Run Config</span>
+                <span class="node-code">BacktestRunConfig.from_yaml</span>
+                <p class="node-desc">解析 market data 引用、回测窗口、timeframe、资金、成本、风险、roll policy、strategy config。</p>
+              </article>
+              <article class="flow-node">
+                <span class="node-index">3</span>
+                <span class="node-title">加载项目级数据源</span>
+                <span class="node-code">HistoricalDataConfig.from_yaml</span>
+                <p class="node-desc">读取 stores/catalogs/datasets，校验目录职责不下沉到 GC/SI 商品条目。</p>
+              </article>
+              <article class="flow-node">
+                <span class="node-index">4</span>
+                <span class="node-title">加载策略实例</span>
+                <span class="node-code">strategy_config -> class_path</span>
+                <p class="node-desc">导入策略类，用 params 创建策略对象；策略只拿自己的参数，不拿 runtime 内部对象。</p>
+              </article>
+            </div>
+          </div>
+
+          <div class="lane" data-lane="data">
+            <div class="lane-label">
+              <strong>历史数据与换约</strong>
+              <span>source、catalog、bar、roll</span>
+            </div>
+            <div class="node-row">
+              <article class="flow-node" data-kind="data">
+                <span class="node-index">5</span>
+                <span class="node-title">解析 Catalog</span>
+                <span class="node-code">load_historical_catalog_from_config</span>
+                <p class="node-desc">把 <code>research_futures + GC/SI</code> 解析成具体 CSV 路径、chain JSON 路径和 symbol resolver。</p>
+              </article>
+              <article class="flow-node" data-kind="data">
+                <span class="node-index">6</span>
+                <span class="node-title">读取历史 Bar</span>
+                <span class="node-code">iter_historical_bars</span>
+                <p class="node-desc">逐行读取 CSV，构造已完成的 <code>Bar</code>，按 <code>[start, end)</code> 时间窗口过滤，统计 rows/bars/spreads。</p>
+              </article>
+              <article class="flow-node" data-kind="roll">
+                <span class="node-index">7</span>
+                <span class="node-title">连续合约换约选择</span>
+                <span class="node-code">HighestVolumeFutureContractSelector</span>
+                <p class="node-desc">启用 roll 时，按 timestamp 聚合同一 root 的候选合约，过滤 spread，选择成交量最高的具体合约。</p>
+              </article>
+              <article class="flow-node" data-kind="roll">
+                <span class="node-index">8</span>
+                <span class="node-title">登记 Roll Selection</span>
+                <span class="node-code">FutureRollRegistry</span>
+                <p class="node-desc">记录连续 symbol 在每个时间点对应的具体合约和执行价格，用于后续意图转订单与换约平旧仓。</p>
+              </article>
+              <article class="flow-node" data-kind="data">
+                <span class="node-index">9</span>
+                <span class="node-title">准备 Source Events</span>
+                <span class="node-code">BacktestMarketDataEvent</span>
+                <p class="node-desc">runner 保留 source timeframe bars；排序和 replay 驱动交给 BacktestEngine runtime。</p>
+              </article>
+            </div>
+          </div>
+
+          <div class="lane" data-lane="runtime">
+            <div class="lane-label">
+              <strong>策略数据流</strong>
+              <span>portal、StrategyActor、context</span>
+            </div>
+            <div class="node-row">
+              <article class="flow-node" data-kind="runtime">
+                <span class="node-index">10</span>
+                <span class="node-title">装配 BacktestEngine</span>
+                <span class="node-code">BacktestEngine.from_config</span>
+                <p class="node-desc">用配置创建成本模型、风险引擎、合约乘数、InstrumentRegistry、MarketDataActor、StrategyActor、SignalAggregatorActor 和执行 actors。</p>
+              </article>
+              <article class="flow-node" data-kind="runtime">
+                <span class="node-index">11</span>
+                <span class="node-title">推进回测时钟</span>
+                <span class="node-code">ReplayClock -> BacktestEngine.run</span>
+                <p class="node-desc">ReplayClock 按 source event 时间推进；engine 将 source bars 发送给 MarketDataActor。</p>
+              </article>
+              <article class="flow-node" data-kind="runtime">
+                <span class="node-index">12</span>
+                <span class="node-title">MarketDataActor / BarAggregator</span>
+                <span class="node-code">MarketDataEvent -> completed Bar</span>
+                <p class="node-desc">runtime actor 持有 aggregation state；只把 completed requested timeframe bars fan-out 给策略链路。</p>
+              </article>
+              <article class="flow-node" data-kind="runtime">
+                <span class="node-index">13</span>
+                <span class="node-title">StrategyActor</span>
+                <span class="node-code">StrategyBarEvent -> StrategyBarResult</span>
+                <p class="node-desc">Actor 拥有 strategy 和 StrategyContext，收到 completed bar 后用 DataView 更新 data、portfolio、indicator。</p>
+              </article>
+              <article class="flow-node" data-kind="runtime">
+                <span class="node-index">14</span>
+                <span class="node-title">策略处理 Bar</span>
+                <span class="node-code">StrategyActor calls strategy.on_bar</span>
+                <p class="node-desc">策略基于 DataView 和 PortfolioView 产生 <code>TargetIntent</code>；StrategyActor 只返回本 bar 新产生的 intents。</p>
+              </article>
+            </div>
+          </div>
+
+          <div class="lane" data-lane="order">
+            <div class="lane-label">
+              <strong>意图、风控与执行</strong>
+              <span>shared business path</span>
+            </div>
+            <div class="node-row">
+              <article class="flow-node" data-kind="risk">
+                <span class="node-index">15</span>
+                <span class="node-title">Warmup Gate</span>
+                <span class="node-code">warmup_bars</span>
+                <p class="node-desc">预热期仍更新数据和指标，但新增交易意图不进入下单链路。</p>
+              </article>
+              <article class="flow-node" data-kind="risk">
+                <span class="node-index">16</span>
+                <span class="node-title">SignalAggregatorActor</span>
+                <span class="node-code">StrategySignalEvent -> AggregatedSignalBatch</span>
+                <p class="node-desc">非预热 bar 的 strategy intents 先进入信号聚合边界；当前单策略为 pass-through，后续可承载多策略合并。</p>
+              </article>
+              <article class="flow-node" data-kind="roll">
+                <span class="node-index">17</span>
+                <span class="node-title">意图解析到可交易合约</span>
+                <span class="node-code">continuous future -> concrete contract</span>
+                <p class="node-desc">连续合约 research symbol 会通过 roll registry 转成具体合约；若换约，先平旧相关合约，再开新目标仓位。</p>
+              </article>
+              <article class="flow-node" data-kind="risk">
+                <span class="node-index">18</span>
+                <span class="node-title">风险检查</span>
+                <span class="node-code">RiskEngine.check</span>
+                <p class="node-desc">用价格、数量、乘数和账户状态检查 <code>MaxNotionalRule</code> 等规则；拒绝则不产生订单。</p>
+              </article>
+              <article class="flow-node" data-kind="exec">
+                <span class="node-index">19</span>
+                <span class="node-title">订单状态管理</span>
+                <span class="node-code">SubmitOrder -> OrderManagerActor</span>
+                <p class="node-desc">订单进入统一状态机，由 OrderManagerActor 拥有订单状态；策略不直接改订单。</p>
+              </article>
+              <article class="flow-node" data-kind="exec">
+                <span class="node-index">20</span>
+                <span class="node-title">回测成交适配器</span>
+                <span class="node-code">ExecutionActor -> BacktestExecutionAdapter</span>
+                <p class="node-desc">按 bar/roll execution price、滑点和佣金模拟立即成交，生成 ExecutionReport。</p>
+              </article>
+              <article class="flow-node" data-kind="exec">
+                <span class="node-index">21</span>
+                <span class="node-title">账户更新</span>
+                <span class="node-code">OrderFill -> AccountActor</span>
+                <p class="node-desc">AccountActor 独占账户状态，应用 fill 后更新现金、持仓、成本和 realized PnL。</p>
+              </article>
+            </div>
+          </div>
+
+          <div class="lane" data-lane="report">
+            <div class="lane-label">
+              <strong>输出</strong>
+              <span>ledger、equity、report</span>
+            </div>
+            <div class="node-row">
+              <article class="flow-node" data-kind="report">
+                <span class="node-index">22</span>
+                <span class="node-title">交易流水</span>
+                <span class="node-code">TradeLedger</span>
+                <p class="node-desc">从 fills 生成交易记录，保留 instrument、side、qty、price、commission、order id 等。</p>
+              </article>
+              <article class="flow-node" data-kind="report">
+                <span class="node-index">23</span>
+                <span class="node-title">权益曲线</span>
+                <span class="node-code">equity_curve</span>
+                <p class="node-desc">每个 bar 后按最新价格和乘数 mark-to-market，记录 cash、positions value、equity。</p>
+              </article>
+              <article class="flow-node" data-kind="report">
+                <span class="node-index">24</span>
+                <span class="node-title">指标与哈希</span>
+                <span class="node-code">metrics / config_hash / report_hash</span>
+                <p class="node-desc">计算 total return、max drawdown 等，同时记录配置和报告哈希，支撑可追溯。</p>
+              </article>
+              <article class="flow-node" data-kind="report">
+                <span class="node-index">25</span>
+                <span class="node-title">写入结果文件</span>
+                <span class="node-code">report.json / summary.json</span>
+                <p class="node-desc">CLI 将完整报告和摘要写到 output directory，供后续分析或前端展示。</p>
+              </article>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="bars">
+      <div class="section-head">
+        <div>
+          <h2>4. 数据流转与 Bar Aggregation</h2>
+          <p class="section-note">
+            这里必须区分当前 research backtest 已实现路径和目标共享 runtime 路径。
+          </p>
+        </div>
+      </div>
+
+      <div class="split-grid">
+        <article class="panel subpanel" data-kind="implemented">
+          <h3>当前 research backtest 路径</h3>
+          <div class="mini-flow">
+            <div class="mini-step">
+              <strong>CSV Source Bar</strong>
+              <span>源文件是 source timeframe OHLCV bar，例如 1m。</span>
+            </div>
+            <div class="mini-step">
+              <strong>iter_historical_bars</strong>
+              <span>按 <code>source_timeframe</code> 构造 complete source bars。</span>
+            </div>
+            <div class="mini-step">
+              <strong>MarketDataActor</strong>
+              <span>历史 bars 先进入 runtime market data actor。</span>
+            </div>
+            <div class="mini-step">
+              <strong>BarAggregator</strong>
+              <span>source timeframe 和 requested timeframe 不同时聚合。</span>
+            </div>
+            <div class="mini-step">
+              <strong>DataView</strong>
+              <span>策略只看到 actor 输出的 completed requested bars。</span>
+            </div>
+          </div>
+          <p>
+            当前已经收敛到目标 runtime 形态：research runner 只加载 source bars 和 metadata；
+            <code>BacktestEngine</code> 用 <code>ReplayClock</code> 驱动 source bars 进入
+            <code>MarketDataActor</code>，由 <code>BarAggregator</code> 输出 completed strategy bars，
+            再通过 <code>StrategyActor</code> 调用策略，并把非预热 intents 送入 <code>SignalAggregatorActor</code> 后进入订单链路。
+          </p>
+        </article>
+
+        <article class="panel subpanel" data-kind="target">
+          <h3>目标共享 runtime 路径</h3>
+          <div class="mini-flow">
+            <div class="mini-step">
+              <strong>Source Events</strong>
+              <span>tick、quote、trade 或 source timeframe bars。</span>
+            </div>
+            <div class="mini-step">
+              <strong>MarketDataActor</strong>
+              <span>统一接入 live/paper/backtest 数据源。</span>
+            </div>
+            <div class="mini-step">
+              <strong>BarAggregator</strong>
+              <span>按 instrument、timeframe、exchange session 聚合。</span>
+            </div>
+            <div class="mini-step">
+              <strong>Completed Bar</strong>
+              <span>只发布完整 bar，遵守 <code>[start, end)</code>。</span>
+            </div>
+            <div class="mini-step">
+              <strong>StrategyActor</strong>
+              <span>策略收到统一格式 bar，路径与 live/paper 对齐。</span>
+            </div>
+            <div class="mini-step">
+              <strong>SignalAggregatorActor</strong>
+              <span>合并策略 signals，输出进入风控的目标批次。</span>
+            </div>
+          </div>
+          <p>
+            这条路径是 backtest/live parity 的目标：差异只在数据源、执行适配器和时钟，market data、strategy、signal、风控、订单、账户链路共享。
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section id="roll">
+      <div class="section-head">
+        <div>
+          <h2>5. 连续期货换约链路</h2>
+          <p class="section-note">
+            连续合约是研究/数据引用，不是最终可交易合约。下单前必须解析到具体合约。
+          </p>
+        </div>
+      </div>
+
+      <article class="panel subpanel" data-kind="roll">
+        <h3>Roll Policy: highest_volume</h3>
+        <div class="mini-flow">
+          <div class="mini-step">
+            <strong>按 root 加载</strong>
+            <span><code>roots: GC/SI</code> 决定读取哪些商品历史文件和 chain。</span>
+          </div>
+          <div class="mini-step">
+            <strong>同时间分组</strong>
+            <span>同一 timestamp 下收集可交易候选合约，排除 spread/非目标数据。</span>
+          </div>
+          <div class="mini-step">
+            <strong>选择主力</strong>
+            <span><code>HighestVolumeFutureContractSelector</code> 选择成交量最高合约。</span>
+          </div>
+          <div class="mini-step">
+            <strong>发连续 Bar</strong>
+            <span>策略看到的是 root/continuous symbol 对应的研究 bar。</span>
+          </div>
+          <div class="mini-step">
+            <strong>下单前解析</strong>
+            <span>意图转订单时解析为具体合约，并处理旧合约平仓。</span>
+          </div>
+        </div>
+        <p>
+          这能保证策略逻辑可以基于 <code>GC</code> / <code>SI</code> 这种连续研究符号运行，
+          但订单、持仓、成交和账户永远落在具体合约上。
+        </p>
+      </article>
+    </section>
+
+    <section id="current-target">
+      <div class="section-head">
+        <div>
+          <h2>6. 当前实现 vs 目标架构</h2>
+          <p class="section-note">
+            这部分用来防止误解：当前 research backtest 已经按 actor + market data runtime 主链路收敛，剩余主要是工程化抽取和更丰富的多策略语义。
+          </p>
+        </div>
+      </div>
+
+      <div class="compare-grid">
+        <div class="compare-head">主题</div>
+        <div class="compare-head">当前实现</div>
+        <div class="compare-head">状态 / 剩余边界</div>
+
+        <div class="compare-topic">数据源配置</div>
+        <div><p><code>market_data.config</code> 指向项目级 <code>historical_data</code>，catalog 决定使用的数据集合。</p></div>
+        <div><p>保持该边界，并让 live/paper/backtest 都用“source/adapters + catalog/universe”的同构模型。</p></div>
+
+        <div class="compare-topic">历史目录归属</div>
+        <div><p><code>root_dir</code>、<code>bars_dir</code>、<code>chains_dir</code> 位于 store 级别，不在 GC/SI 下。</p></div>
+        <div><p>继续禁止把公共物理目录下沉到商品条目；商品条目只保留逻辑元数据和必要覆盖项。</p></div>
+
+        <div class="compare-topic">Bar Aggregation</div>
+        <div><p><code>BacktestEngine</code> 已用 <code>ReplayClock</code> 驱动 historical source bars 进入 <code>MarketDataActor</code>；当 source/requested timeframe 不同时由 <code>BarAggregator</code> 输出 completed bars。</p></div>
+        <div><p>已达成目标链路。后续只剩工程化拆分：可把 engine 内部 orchestration 提取成复用 runtime service。</p></div>
+
+        <div class="compare-topic">策略处理</div>
+        <div><p><code>StrategyActor</code> 拥有 strategy 和 <code>StrategyContext</code>，通过 <code>StrategyBarEvent</code> 处理 completed bars 并返回新 intents；非预热 intents 进入 <code>SignalAggregatorActor</code>。</p></div>
+        <div><p>已达成 actor 边界；当前 signal aggregation 是单策略 pass-through，后续多策略组合可在该边界扩展。</p></div>
+
+        <div class="compare-topic">订单/账户</div>
+        <div><p>聚合后的意图通过 RiskEngine、OrderManagerActor、ExecutionActor、AccountActor 形成统一链路。</p></div>
+        <div><p>live/paper/backtest 共享 business path，只替换执行适配器、数据适配器和 clock。</p></div>
+      </div>
+    </section>
+
+    <section id="snippets">
+      <div class="section-head">
+        <div>
+          <h2>7. 当前推荐 YAML 形态</h2>
+          <p class="section-note">
+            关键是 backtest 配置只引用数据源和策略配置；历史数据目录在项目级 store 下；策略参数独立。
+          </p>
+        </div>
+      </div>
+
+      <div class="snippet-grid">
+        <article class="panel snippet-card">
+          <h3>Backtest Run Config</h3>
+          <pre><code>market_data:
+  source: local_historical
+  config: configs/data/historical.local.yaml
+  catalog: research_futures
+
+roots:
+  - GC
+  - SI
+symbols:
+  - GC
+  - SI
+start: "2010-06-06T22:00:00Z"
+end: "2010-06-06T22:05:00Z"
+timeframe: 1m
+initial_cash: "1000000"
+
+strategy_config: configs/strategies/gc_si_momentum.yaml
+
+cost_model:
+  fixed_commission_per_contract: "0"
+  slippage_bps: "0"
+
+risk_config:
+  max_notional: "100000000"
+
+roll_policy:
+  enabled: true
+  method: highest_volume
+
+warmup_bars: 0</code></pre>
+        </article>
+
+        <article class="panel snippet-card">
+          <h3>Historical Data + Strategy Config</h3>
+          <pre><code># configs/data/historical.local.yaml
+historical_data:
+  stores:
+    local_csv:
+      type: local_csv
+      root_dir: historical
+      bars_dir: data
+      chains_dir: chains
+      bars_file_template: "{root_lower}.csv"
+      chain_file_template: "{root}.json"
+      source_timeframe: 1m
+      exchange_timezone: US/Eastern
+      timezone_policy: source_utc_exchange_sessions
+      normalization: raw
+  catalogs:
+    research_futures:
+      store: local_csv
+      datasets:
+        GC:
+          asset_class: future
+          exchange: CME
+        SI:
+          asset_class: future
+          exchange: CME
+
+# configs/strategies/gc_si_momentum.yaml
+strategy_id: gc-si-momentum
+class_path: examples.strategies.gc_si_momentum:GcSiMomentumStrategy
+account_id: backtest-account
+allocation: "1.0"
+enabled: true
+params:
+  symbols:
+    - GC
+    - SI</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section>
+      <div class="callout">
+        <mark>!</mark>
+        <p>
+          设计判断：backtest 的 <code>market_data</code> 应像 live 的 gateway 一样表达“数据从哪里来”。
+          对本地历史回测来说，这个来源不是网络地址，而是项目级 <code>historical_data</code> store/catalog。
+          策略配置只表达策略实例，不表达历史数据目录。
+        </p>
+      </div>
+    </section>
+
+    <footer>
+      文件为独立 HTML，可直接在浏览器打开。图中的“当前实现”基于当前 repository 的 research backtest runtime 链路。
+    </footer>
+  </main>
+</body>
+</html>

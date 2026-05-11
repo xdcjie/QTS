@@ -11,7 +11,13 @@ from typing import Any, cast
 from qts.backtest.config import BacktestRunConfig
 from qts.backtest.engine import BacktestEngine, BacktestResult
 from qts.core.ids import InstrumentId
-from qts.data.historical.catalog import load_historical_catalog
+from qts.data.historical.catalog import (
+    HistoricalCatalog,
+    HistoricalDataset,
+    load_historical_catalog,
+    load_historical_catalog_from_config,
+)
+from qts.data.historical.config import HistoricalDataConfig
 from qts.data.historical.csv_dataset import iter_historical_bars
 from qts.data.provenance import DatasetMetadata
 from qts.domain.market_data import Bar
@@ -37,20 +43,18 @@ def run_research_backtest(
     """Run a research backtest from YAML config and write a report JSON artifact."""
 
     config = BacktestRunConfig.from_yaml(config_path)
-    catalog = load_historical_catalog(
-        config.dataset_root,
-        roots=config.roots,
-        symbol_resolvers=_symbol_resolvers_from_config(config),
-    )
-    bars, dataset_stats, roll_registry = _load_configured_bars(config, catalog)
+    historical_data_config = _historical_data_config_for(config)
+    catalog = _load_catalog(config, historical_data_config=historical_data_config)
+    bars, dataset_stats, roll_registry, exchange_timezones = _load_configured_bars(config, catalog)
     strategy = _load_strategy(config.strategy_class, config.strategy_params)
-    metadata = _dataset_metadata(config)
+    metadata = _dataset_metadata(config, catalog)
     result = BacktestEngine.from_config(
         config,
         bars=bars,
         strategy=strategy,
         dataset_metadata=metadata,
         future_roll_registry=roll_registry,
+        exchange_timezone_by_instrument=exchange_timezones,
     ).run()
     output_dir.mkdir(parents=True, exist_ok=True)
     report_path = output_dir / f"{result.run_id.value}.json"
@@ -58,13 +62,54 @@ def run_research_backtest(
     return ResearchBacktestRun(result=result, report_path=report_path, dataset_stats=dataset_stats)
 
 
+def _historical_data_config_for(config: BacktestRunConfig) -> HistoricalDataConfig | None:
+    if not config.market_data.is_configured:
+        return None
+    if config.market_data.config_path is None:
+        raise RuntimeError("market data config path is not configured")
+    return HistoricalDataConfig.from_yaml(config.market_data.config_path)
+
+
+def _load_catalog(
+    config: BacktestRunConfig,
+    *,
+    historical_data_config: HistoricalDataConfig | None,
+) -> HistoricalCatalog:
+    symbol_resolvers = _symbol_resolvers_from_config(
+        config,
+        historical_data_config=historical_data_config,
+    )
+    if historical_data_config is not None:
+        if config.market_data.catalog is None:
+            raise RuntimeError("market data catalog is not configured")
+        return load_historical_catalog_from_config(
+            historical_data_config,
+            catalog=config.market_data.catalog,
+            roots=config.roots,
+            symbol_resolvers=symbol_resolvers,
+        )
+    if config.dataset_root is None:
+        raise RuntimeError("legacy dataset_root is not configured")
+    return load_historical_catalog(
+        config.dataset_root,
+        roots=config.roots,
+        symbol_resolvers=symbol_resolvers,
+    )
+
+
 def _load_configured_bars(
     config: BacktestRunConfig,
-    catalog: Any,
-) -> tuple[tuple[Bar, ...], dict[str, dict[str, int]], FutureRollRegistry | None]:
+    catalog: HistoricalCatalog,
+) -> tuple[
+    tuple[Bar, ...],
+    dict[str, dict[str, int]],
+    FutureRollRegistry | None,
+    dict[InstrumentId, str],
+]:
     requested = set(config.symbols)
     bars: list[Bar] = []
     stats: dict[str, dict[str, int]] = {}
+    exchange_timezones: dict[InstrumentId, str] = {}
     roll_registry = FutureRollRegistry() if config.roll_policy.enabled else None
     for root in config.roots:
         dataset = catalog.datasets[root]
@@ -84,26 +129,59 @@ def _load_configured_bars(
                 ),
             )
             contract_selector = HighestVolumeFutureContractSelector()
+        source_timeframe = dataset.source_timeframe or config.timeframe
         stream = iter_historical_bars(
             dataset.csv_path,
             dataset.symbol_resolver,
-            timeframe=config.timeframe,
+            timeframe=source_timeframe,
             start=config.start,
             end=config.end,
             contract_selector=contract_selector,
             continuous_instrument_id=continuous_id,
         )
         if rolling_root:
-            bars.extend(stream)
+            source_bars = tuple(stream)
             assert roll_registry is not None
             for selection in stream.roll_selections:
                 roll_registry.record_selection(selection)
+            bars.extend(source_bars)
+            _record_exchange_timezones(
+                source_bars,
+                exchange_timezones=exchange_timezones,
+                exchange_timezone=_exchange_timezone_for(dataset),
+            )
         else:
-            bars.extend(
+            source_bars = tuple(
                 bar for bar in stream if bar.instrument_id.value.rsplit(".", 1)[-1] in requested
             )
+            bars.extend(source_bars)
+            _record_exchange_timezones(
+                source_bars,
+                exchange_timezones=exchange_timezones,
+                exchange_timezone=_exchange_timezone_for(dataset),
+            )
         stats[root] = stream.stats.as_dict()
-    return tuple(bars), stats, roll_registry
+    return tuple(bars), stats, roll_registry, exchange_timezones
+
+
+def _record_exchange_timezones(
+    source_bars: tuple[Bar, ...],
+    *,
+    exchange_timezones: dict[InstrumentId, str],
+    exchange_timezone: str | None,
+) -> None:
+    if exchange_timezone is None:
+        return
+    for bar in source_bars:
+        exchange_timezones.setdefault(bar.instrument_id, exchange_timezone)
+
+
+def _exchange_timezone_for(dataset: HistoricalDataset) -> str | None:
+    if dataset.exchange_timezone is not None:
+        return dataset.exchange_timezone
+    if dataset.chain is not None:
+        return dataset.chain.timezone
+    return None
 
 
 def _load_strategy(strategy_class: str, params: dict[str, Any]) -> Strategy:
@@ -129,21 +207,49 @@ def _load_strategy(strategy_class: str, params: dict[str, Any]) -> Strategy:
 
 def _symbol_resolvers_from_config(
     config: BacktestRunConfig,
+    *,
+    historical_data_config: HistoricalDataConfig | None = None,
 ) -> dict[str, StaticSymbolResolver]:
     if not config.instrument_ids:
         return {}
     return {
         root: StaticSymbolResolver(config.instrument_ids)
         for root in config.roots
-        if not (config.dataset_root / "chains" / f"{root}.json").exists()
+        if not _chain_path_exists(
+            config,
+            root,
+            historical_data_config=historical_data_config,
+        )
     }
 
 
-def _dataset_metadata(config: BacktestRunConfig) -> tuple[DatasetMetadata, ...]:
+def _chain_path_exists(
+    config: BacktestRunConfig,
+    root: str,
+    *,
+    historical_data_config: HistoricalDataConfig | None,
+) -> bool:
+    if historical_data_config is not None:
+        if config.market_data.catalog is None:
+            raise RuntimeError("market data catalog is not configured")
+        chain_path = historical_data_config.resolve_dataset(
+            config.market_data.catalog,
+            root,
+        ).chain_path
+        return chain_path is not None and chain_path.exists()
+    if config.dataset_root is None:
+        return False
+    return (config.dataset_root / "chains" / f"{root}.json").exists()
+
+
+def _dataset_metadata(
+    config: BacktestRunConfig,
+    catalog: HistoricalCatalog,
+) -> tuple[DatasetMetadata, ...]:
     return tuple(
         DatasetMetadata(
             dataset_id=f"{root}-{config.timeframe}-{config.start.isoformat()}-{config.end.isoformat()}",
-            source=str(config.dataset_root / "data" / f"{root.lower()}.csv"),
+            source=str(catalog.datasets[root].csv_path),
             instrument_id=InstrumentId(f"FUTURE.CME.{root}.DATASET"),
             timeframe=config.timeframe,
             timezone_policy="source UTC timestamps; exchange session semantics",

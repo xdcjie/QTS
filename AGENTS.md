@@ -232,6 +232,32 @@ Rules:
 - For paired APIs, it is acceptable to expose both a stateful class and a stateless convenience function when they serve different workflows. For example, a streaming `BarAggregator` can coexist with an
 `aggregate_bars(...)` batch helper.
 
+### Private helper ownership review
+
+Before finalizing code changes, inspect changed Python files for newly added
+module-private helpers:
+
+```bash
+rg -n "^def _|^class _" <changed-python-files>
+```
+
+For each new private helper, explicitly decide its owner:
+
+- If it only serves one class in a class-centric module, move it onto that class
+  as a private instance, class, or static method.
+- If it is a shared algorithm step, pure transformation, function-oriented
+  framework entrypoint, or stable module concept, keep it module-private.
+- If it is meant to be used by other modules, make it an explicit public API
+  instead of relying on a leading underscore.
+
+Do not rely on nearby legacy style to override this ownership check.
+
+Tests must not depend on module-private helpers as stable integration points.
+When testing architecture or flow, prefer public behavior, public classes, or the
+owning class boundary. If a test must inspect source for an architectural anchor,
+inspect the owning public class or module-level public API instead of importing
+or referencing private helper functions directly.
+
 <!-- code-review-graph MCP tools -->
 ## MCP Tools: code-review-graph
 

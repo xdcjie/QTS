@@ -1,0 +1,23 @@
+historical_data:
+  stores:
+    local_csv:
+      type: local_csv
+      root_dir: historical
+      bars_dir: data
+      chains_dir: chains
+      bars_file_template: "{root_lower}.csv"
+      chain_file_template: "{root}.json"
+      source_timeframe: 1m
+      exchange_timezone: US/Eastern
+      timezone_policy: source_utc_exchange_sessions
+      normalization: raw
+  catalogs:
+    research_futures:
+      store: local_csv
+      datasets:
+        GC:
+          asset_class: future
+          exchange: CME
+        SI:
+          asset_class: future
+          exchange: CME

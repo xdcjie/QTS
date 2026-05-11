@@ -37,7 +37,7 @@ class ParquetMarketDataStore:
             )
             with path.open("w", encoding="utf-8") as handle:
                 for bar in merged:
-                    handle.write(json.dumps(_bar_to_json(bar), sort_keys=True))
+                    handle.write(json.dumps(self._bar_to_json(bar), sort_keys=True))
                     handle.write("\n")
 
     def read_bars(
@@ -70,49 +70,49 @@ class ParquetMarketDataStore:
 
     def _read_file(self, path: Path) -> tuple[Bar, ...]:
         with path.open(encoding="utf-8") as handle:
-            return tuple(_bar_from_json(json.loads(line)) for line in handle if line.strip())
+            return tuple(self._bar_from_json(json.loads(line)) for line in handle if line.strip())
 
+    @staticmethod
+    def _bar_to_json(bar: Bar) -> dict[str, Any]:
+        return {
+            "instrument_id": bar.instrument_id.value,
+            "start_time": bar.start_time.isoformat(),
+            "end_time": bar.end_time.isoformat(),
+            "timeframe": bar.timeframe,
+            "session_id": bar.session_id,
+            "open": str(bar.open),
+            "high": str(bar.high),
+            "low": str(bar.low),
+            "close": str(bar.close),
+            "volume": str(bar.volume),
+            "vwap": None if bar.vwap is None else str(bar.vwap),
+            "open_interest": None if bar.open_interest is None else str(bar.open_interest),
+            "trade_count": bar.trade_count,
+            "is_complete": bar.is_complete,
+            "is_partial": bar.is_partial,
+        }
 
-def _bar_to_json(bar: Bar) -> dict[str, Any]:
-    return {
-        "instrument_id": bar.instrument_id.value,
-        "start_time": bar.start_time.isoformat(),
-        "end_time": bar.end_time.isoformat(),
-        "timeframe": bar.timeframe,
-        "session_id": bar.session_id,
-        "open": str(bar.open),
-        "high": str(bar.high),
-        "low": str(bar.low),
-        "close": str(bar.close),
-        "volume": str(bar.volume),
-        "vwap": None if bar.vwap is None else str(bar.vwap),
-        "open_interest": None if bar.open_interest is None else str(bar.open_interest),
-        "trade_count": bar.trade_count,
-        "is_complete": bar.is_complete,
-        "is_partial": bar.is_partial,
-    }
-
-
-def _bar_from_json(payload: dict[str, Any]) -> Bar:
-    return Bar(
-        instrument_id=InstrumentId(str(payload["instrument_id"])),
-        start_time=datetime.fromisoformat(str(payload["start_time"])),
-        end_time=datetime.fromisoformat(str(payload["end_time"])),
-        timeframe=str(payload["timeframe"]),
-        session_id=str(payload["session_id"]),
-        open=Decimal(str(payload["open"])),
-        high=Decimal(str(payload["high"])),
-        low=Decimal(str(payload["low"])),
-        close=Decimal(str(payload["close"])),
-        volume=Decimal(str(payload["volume"])),
-        vwap=None if payload["vwap"] is None else Decimal(str(payload["vwap"])),
-        open_interest=(
-            None if payload["open_interest"] is None else Decimal(str(payload["open_interest"]))
-        ),
-        trade_count=None if payload["trade_count"] is None else int(payload["trade_count"]),
-        is_complete=bool(payload["is_complete"]),
-        is_partial=bool(payload["is_partial"]),
-    )
+    @staticmethod
+    def _bar_from_json(payload: dict[str, Any]) -> Bar:
+        return Bar(
+            instrument_id=InstrumentId(str(payload["instrument_id"])),
+            start_time=datetime.fromisoformat(str(payload["start_time"])),
+            end_time=datetime.fromisoformat(str(payload["end_time"])),
+            timeframe=str(payload["timeframe"]),
+            session_id=str(payload["session_id"]),
+            open=Decimal(str(payload["open"])),
+            high=Decimal(str(payload["high"])),
+            low=Decimal(str(payload["low"])),
+            close=Decimal(str(payload["close"])),
+            volume=Decimal(str(payload["volume"])),
+            vwap=None if payload["vwap"] is None else Decimal(str(payload["vwap"])),
+            open_interest=(
+                None if payload["open_interest"] is None else Decimal(str(payload["open_interest"]))
+            ),
+            trade_count=None if payload["trade_count"] is None else int(payload["trade_count"]),
+            is_complete=bool(payload["is_complete"]),
+            is_partial=bool(payload["is_partial"]),
+        )
 
 
 __all__ = ["ParquetMarketDataStore"]

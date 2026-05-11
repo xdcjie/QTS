@@ -121,7 +121,7 @@ class MarketDataActor(Actor):
             return
         self._feed.subscribe(
             FeedSubscription(
-                subscription_id=_subscription_id(physical_key),
+                subscription_id=self._subscription_id(physical_key),
                 instrument_id=physical_key.instrument_id,
                 timeframe=physical_key.source_timeframe,
             )
@@ -140,7 +140,7 @@ class MarketDataActor(Actor):
                 continue
             source_timeframe = self._source_timeframe_by_logical[key]
             if key.requested_timeframe == payload.timeframe:
-                _publish_to(subscribers.values(), payload)
+                self._publish_to(subscribers.values(), payload)
                 continue
             if source_timeframe != payload.timeframe:
                 continue
@@ -151,7 +151,7 @@ class MarketDataActor(Actor):
             )
             result = aggregator.update(payload)
             for completed in result.completed:
-                _publish_to(subscribers.values(), completed)
+                self._publish_to(subscribers.values(), completed)
 
     def _aggregator_for(self, bar: Bar) -> BarAggregator:
         if self._target_timeframe is None or self._exchange_timezone is None:
@@ -189,21 +189,21 @@ class MarketDataActor(Actor):
         for subscriber in self._subscribers:
             subscriber.tell(payload)
 
+    @staticmethod
+    def _publish_to(subscribers: Iterable[ActorRef], payload: MarketDataPayload) -> None:
+        for subscriber in subscribers:
+            subscriber.tell(payload)
 
-def _publish_to(subscribers: Iterable[ActorRef], payload: MarketDataPayload) -> None:
-    for subscriber in subscribers:
-        subscriber.tell(payload)
-
-
-def _subscription_id(key: PhysicalSubscriptionKey) -> str:
-    return ":".join(
-        (
-            key.source_id,
-            key.instrument_id.value,
-            key.stream_type.value,
-            key.source_timeframe,
+    @staticmethod
+    def _subscription_id(key: PhysicalSubscriptionKey) -> str:
+        return ":".join(
+            (
+                key.source_id,
+                key.instrument_id.value,
+                key.stream_type.value,
+                key.source_timeframe,
+            )
         )
-    )
 
 
 __all__ = [

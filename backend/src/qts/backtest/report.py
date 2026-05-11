@@ -54,12 +54,16 @@ class BacktestReport:
     report_hash: str = field(init=False)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "report_hash", _stable_hash(self._payload(include_hash=False)))
+        object.__setattr__(
+            self,
+            "report_hash",
+            self._stable_hash(self._payload(include_hash=False)),
+        )
 
     def to_json(self) -> str:
         return json.dumps(
             self._payload(include_hash=True),
-            default=_json_default,
+            default=self._json_default,
             sort_keys=True,
             separators=(",", ":"),
         )
@@ -101,20 +105,25 @@ class BacktestReport:
             payload["report_hash"] = self.report_hash
         return payload
 
+    @classmethod
+    def _stable_hash(cls, payload: Any) -> str:
+        encoded = json.dumps(
+            payload,
+            default=cls._json_default,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        return f"sha256:{hashlib.sha256(encoded.encode()).hexdigest()}"
 
-def _stable_hash(payload: Any) -> str:
-    encoded = json.dumps(payload, default=_json_default, sort_keys=True, separators=(",", ":"))
-    return f"sha256:{hashlib.sha256(encoded.encode()).hexdigest()}"
-
-
-def _json_default(value: object) -> object:
-    if isinstance(value, Decimal):
-        return str(value)
-    if isinstance(value, datetime):
-        return value.isoformat()
-    if hasattr(value, "value") and isinstance(value.value, str):
-        return value.value
-    raise TypeError(f"object of type {type(value).__name__} is not JSON serializable")
+    @staticmethod
+    def _json_default(value: object) -> object:
+        if isinstance(value, Decimal):
+            return str(value)
+        if isinstance(value, datetime):
+            return value.isoformat()
+        if hasattr(value, "value") and isinstance(value.value, str):
+            return value.value
+        raise TypeError(f"object of type {type(value).__name__} is not JSON serializable")
 
 
 __all__ = ["BacktestReport", "EquityCurvePoint", "TradeLedgerEntry"]

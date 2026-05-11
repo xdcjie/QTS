@@ -1,4 +1,7 @@
-dataset_root: historical
+market_data:
+  source: local_historical
+  config: configs/data/historical.local.yaml
+  catalog: research_futures
 roots:
   - GC
   - SI
@@ -9,11 +12,7 @@ start: "2010-06-06T22:00:00Z"
 end: "2010-06-06T22:05:00Z"
 timeframe: 1m
 initial_cash: "1000000"
-strategy_class: "examples.strategies.gc_si_momentum:GcSiMomentumStrategy"
-strategy_params:
-  symbols:
-    - GC
-    - SI
+strategy_config: configs/strategies/gc_si_momentum.yaml
 cost_model:
   fixed_commission_per_contract: "0"
   slippage_bps: "0"
