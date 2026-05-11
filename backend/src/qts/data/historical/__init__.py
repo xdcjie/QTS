@@ -16,6 +16,7 @@ from qts.data.historical.csv_dataset import (
     iter_historical_bars,
     validate_historical_sample,
 )
+from qts.data.historical.service import HistoricalMarketDataService
 from qts.data.historical.symbols import HistoricalFutureChainSymbolResolver
 from qts.registry.symbol_resolution import SourceSymbolResolver, StaticSymbolResolver
 
@@ -28,6 +29,7 @@ __all__ = [
     "HistoricalContract",
     "HistoricalCsvStats",
     "HistoricalDataset",
+    "HistoricalMarketDataService",
     "HistoricalFutureChainSymbolResolver",
     "HistoricalValidationSample",
     "SourceSymbolResolver",
