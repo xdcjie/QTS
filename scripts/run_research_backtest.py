@@ -24,9 +24,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     processed_rows = sum(item["rows_seen"] for item in run.dataset_stats.values())
     emitted_bars = sum(item["bars_emitted"] for item in run.dataset_stats.values())
     excluded_spreads = sum(item["spreads_excluded"] for item in run.dataset_stats.values())
+    contracts_excluded = sum(
+        item.get("contracts_excluded", 0) for item in run.dataset_stats.values()
+    )
     summary_path.write_text(
         json.dumps(
             {
+                "contracts_excluded": contracts_excluded,
                 "elapsed_seconds": elapsed_seconds,
                 "processed_rows": processed_rows,
                 "emitted_bars": emitted_bars,
@@ -45,6 +49,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(f"processed_rows={processed_rows}")
     print(f"emitted_bars={emitted_bars}")
     print(f"excluded_spreads={excluded_spreads}")
+    print(f"contracts_excluded={contracts_excluded}")
     print(f"processed_bars={run.result.processed_bars}")
     print(f"warmup_bars={run.result.warmup_bars}")
     print(f"trading_bars={run.result.trading_bars}")

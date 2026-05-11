@@ -30,6 +30,7 @@ from qts.execution.order_manager import (
     OrderSide,
 )
 from qts.portfolio.position_book import Position
+from qts.registry.future_roll import FutureRollRegistry
 from qts.registry.instrument_registry import InstrumentRegistry
 from qts.risk.risk_engine import RiskEngine
 from qts.risk.rules.max_notional import MaxNotionalRule
@@ -103,7 +104,7 @@ class BacktestResult:
 
 @dataclass(frozen=True, slots=True)
 class _ProcessedIntent:
-    order: Order | None
+    orders: tuple[Order, ...]
     fills: tuple[OrderFill, ...]
 
 
@@ -122,6 +123,7 @@ class BacktestEngine:
         strategy_version: str | None = None,
         cost_model: BacktestCostModel | None = None,
         contract_multipliers: Mapping[InstrumentId, Decimal] | None = None,
+        future_roll_registry: FutureRollRegistry | None = None,
         warmup_bars: int = 0,
     ) -> None:
         self._strategy = strategy
@@ -136,6 +138,7 @@ class BacktestEngine:
         self._strategy_version = strategy_version or strategy.__class__.__qualname__
         self._cost_model = cost_model or BacktestCostModel()
         self._contract_multipliers = dict(contract_multipliers or {})
+        self._future_roll_registry = future_roll_registry
         self._warmup_bars = warmup_bars
         self._risk_engine = risk_engine or RiskEngine(
             [MaxNotionalRule(max_notional=initial_cash * Decimal("100"))]
@@ -149,6 +152,7 @@ class BacktestEngine:
         bars: Iterable[Bar],
         strategy: Strategy,
         dataset_metadata: Iterable[DatasetMetadata] = (),
+        future_roll_registry: FutureRollRegistry | None = None,
     ) -> BacktestEngine:
         cost_model = BacktestCostModel(
             fixed_commission_per_contract=config.cost_model.fixed_commission_per_contract,
@@ -165,6 +169,7 @@ class BacktestEngine:
             strategy_version=config.strategy_class,
             cost_model=cost_model,
             contract_multipliers=_contract_multipliers_from_config(config),
+            future_roll_registry=future_roll_registry,
             warmup_bars=config.warmup_bars,
         )
 
@@ -196,7 +201,10 @@ class BacktestEngine:
             mailbox=execution_mailbox,
         )
 
-        ctx = StrategyContext(instrument_registry=instrument_registry)
+        ctx = StrategyContext(
+            instrument_registry=instrument_registry,
+            future_chain_registry=self._future_roll_registry,
+        )
         self._strategy.initialize(ctx)
 
         orders: list[Order] = []
@@ -210,6 +218,11 @@ class BacktestEngine:
         for event_index, event in enumerate(self._events):
             bar = event.bar
             latest_prices[bar.instrument_id] = bar.close
+            _update_rolling_prices(
+                bar,
+                latest_prices=latest_prices,
+                future_roll_registry=self._future_roll_registry,
+            )
             ctx.data = portal.data_view(as_of=bar.end_time)
             ctx.portfolio = _portfolio_view(
                 account_actor.snapshot(),
@@ -242,13 +255,10 @@ class BacktestEngine:
                     account_ref=account_ref,
                     risk_engine=self._risk_engine,
                     order_number=len(orders) + 1,
-                    multiplier=_multiplier_for(
-                        intent.asset.instrument_id,
-                        self._contract_multipliers,
-                    ),
+                    multipliers=self._contract_multipliers,
+                    future_roll_registry=self._future_roll_registry,
                 )
-                if processed.order is not None:
-                    orders.append(processed.order)
+                orders.extend(processed.orders)
                 fills.extend(processed.fills)
                 trade_ledger.extend(_ledger_rows(processed.fills, bar=bar))
             trading_processed += 1
@@ -358,40 +368,118 @@ def _process_intent(
     account_ref: ActorRef,
     risk_engine: RiskEngine,
     order_number: int,
-    multiplier: Decimal,
+    multipliers: Mapping[InstrumentId, Decimal],
+    future_roll_registry: FutureRollRegistry | None,
 ) -> _ProcessedIntent:
-    current_quantity = (
-        account_actor.snapshot()
-        .positions.get(
-            intent.asset.instrument_id,
-            Position(instrument_id=intent.asset.instrument_id, quantity=Decimal("0")),
-        )
-        .quantity
+    snapshot = account_actor.snapshot()
+    target_instrument = _order_instrument_for_intent(
+        intent,
+        bar=bar,
+        future_roll_registry=future_roll_registry,
     )
+    order_requests: list[tuple[InstrumentId, Decimal, Decimal]] = []
+    if future_roll_registry is not None and future_roll_registry.is_continuous(
+        intent.asset.instrument_id
+    ):
+        for instrument_id in future_roll_registry.related_contracts(intent.asset.instrument_id):
+            if instrument_id == target_instrument:
+                continue
+            quantity = snapshot.positions.get(
+                instrument_id,
+                Position(instrument_id=instrument_id, quantity=Decimal("0")),
+            ).quantity
+            if quantity != Decimal("0"):
+                order_requests.append(
+                    (
+                        instrument_id,
+                        -quantity,
+                        future_roll_registry.execution_price(
+                            intent.asset.instrument_id,
+                            instrument_id,
+                            as_of=bar.end_time,
+                        ),
+                    )
+                )
+
+    current_quantity = snapshot.positions.get(
+        target_instrument,
+        Position(instrument_id=target_instrument, quantity=Decimal("0")),
+    ).quantity
     desired_quantity = _desired_quantity(intent, current_quantity=current_quantity, bar=bar)
     quantity_delta = desired_quantity - current_quantity
+    if quantity_delta != Decimal("0"):
+        order_requests.append(
+            (
+                target_instrument,
+                quantity_delta,
+                _market_price_for_intent(
+                    intent,
+                    instrument_id=target_instrument,
+                    bar=bar,
+                    future_roll_registry=future_roll_registry,
+                ),
+            )
+        )
+    if not order_requests:
+        return _ProcessedIntent(orders=(), fills=())
+
+    orders: list[Order] = []
+    fills: list[OrderFill] = []
+    for index, (instrument_id, delta, market_price) in enumerate(order_requests):
+        processed = _process_order_delta(
+            instrument_id=instrument_id,
+            quantity_delta=delta,
+            market_price=market_price,
+            order_time=bar.end_time,
+            order_manager_actor=order_manager_actor,
+            order_manager_ref=order_manager_ref,
+            execution_ref=execution_ref,
+            account_ref=account_ref,
+            risk_engine=risk_engine,
+            order_number=order_number + index,
+            multiplier=_multiplier_for(instrument_id, multipliers),
+        )
+        orders.extend(processed.orders)
+        fills.extend(processed.fills)
+    return _ProcessedIntent(orders=tuple(orders), fills=tuple(fills))
+
+
+def _process_order_delta(
+    *,
+    instrument_id: InstrumentId,
+    quantity_delta: Decimal,
+    market_price: Decimal,
+    order_time: Any,
+    order_manager_actor: OrderManagerActor,
+    order_manager_ref: ActorRef,
+    execution_ref: ActorRef,
+    account_ref: ActorRef,
+    risk_engine: RiskEngine,
+    order_number: int,
+    multiplier: Decimal,
+) -> _ProcessedIntent:
     if quantity_delta == Decimal("0"):
-        return _ProcessedIntent(order=None, fills=())
+        return _ProcessedIntent(orders=(), fills=())
 
     side = OrderSide.BUY if quantity_delta > Decimal("0") else OrderSide.SELL
     quantity = abs(quantity_delta)
     risk_decision = risk_engine.check(
         OrderRiskRequest(
-            instrument_id=intent.asset.instrument_id,
+            instrument_id=instrument_id,
             quantity=quantity,
-            price=bar.close,
+            price=market_price,
             multiplier=multiplier,
-            order_time=bar.end_time,
+            order_time=order_time,
         )
     )
     if not risk_decision.approved:
-        return _ProcessedIntent(order=None, fills=())
+        return _ProcessedIntent(orders=(), fills=())
 
     before_fill_count = len(order_manager_actor.fills)
     order_id = OrderId(f"bt-{order_number:06d}")
     order_intent = OrderIntent(
         order_id=order_id,
-        instrument_id=intent.asset.instrument_id,
+        instrument_id=instrument_id,
         side=side,
         quantity=quantity,
     )
@@ -400,7 +488,7 @@ def _process_intent(
             intent=order_intent,
             risk_decision=risk_decision,
             broker_order_id=f"sim-{order_number:06d}",
-            market_price=bar.close,
+            market_price=market_price,
         )
     )
     order_manager_ref.process_all()
@@ -408,7 +496,38 @@ def _process_intent(
     order_manager_ref.process_all()
     account_ref.process_all()
     fills = order_manager_actor.fills[before_fill_count:]
-    return _ProcessedIntent(order=order_manager_actor.get_order(order_id), fills=fills)
+    return _ProcessedIntent(orders=(order_manager_actor.get_order(order_id),), fills=fills)
+
+
+def _order_instrument_for_intent(
+    intent: TargetIntent,
+    *,
+    bar: Bar,
+    future_roll_registry: FutureRollRegistry | None,
+) -> InstrumentId:
+    if future_roll_registry is not None and future_roll_registry.is_continuous(
+        intent.asset.instrument_id
+    ):
+        return future_roll_registry.resolve_contract(intent.asset.instrument_id, as_of=bar.end_time)
+    return intent.asset.instrument_id
+
+
+def _market_price_for_intent(
+    intent: TargetIntent,
+    *,
+    instrument_id: InstrumentId,
+    bar: Bar,
+    future_roll_registry: FutureRollRegistry | None,
+) -> Decimal:
+    if future_roll_registry is not None and future_roll_registry.is_continuous(
+        intent.asset.instrument_id
+    ):
+        return future_roll_registry.execution_price(
+            intent.asset.instrument_id,
+            instrument_id,
+            as_of=bar.end_time,
+        )
+    return bar.close
 
 
 def _desired_quantity(intent: TargetIntent, *, current_quantity: Decimal, bar: Bar) -> Decimal:
@@ -425,6 +544,25 @@ def _desired_quantity(intent: TargetIntent, *, current_quantity: Decimal, bar: B
         target_value = max(current_value, bar.close) * intent.value
         return target_value / bar.close
     raise ValueError(f"unsupported target intent type: {intent.intent_type}")
+
+
+def _update_rolling_prices(
+    bar: Bar,
+    *,
+    latest_prices: dict[InstrumentId, Decimal],
+    future_roll_registry: FutureRollRegistry | None,
+) -> None:
+    if future_roll_registry is None or not future_roll_registry.is_continuous(bar.instrument_id):
+        return
+    for instrument_id in future_roll_registry.related_contracts(bar.instrument_id):
+        try:
+            latest_prices[instrument_id] = future_roll_registry.execution_price(
+                bar.instrument_id,
+                instrument_id,
+                as_of=bar.end_time,
+            )
+        except KeyError:
+            continue
 
 
 def _portfolio_view(

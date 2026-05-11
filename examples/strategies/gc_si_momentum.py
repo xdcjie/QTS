@@ -15,7 +15,7 @@ class GcSiMomentumStrategy(Strategy):
     def __init__(
         self,
         *,
-        symbols: Iterable[str] = ("GCQ0", "SIN0"),
+        symbols: Iterable[str] = ("GC", "SI"),
         short_window: int = 1,
         long_window: int = 2,
     ) -> None:
@@ -31,7 +31,7 @@ class GcSiMomentumStrategy(Strategy):
         self._assets: tuple[AssetRef, ...] = ()
 
     def initialize(self, ctx: StrategyContext) -> None:
-        self._assets = tuple(ctx.symbol(symbol) for symbol in self._symbols)
+        self._assets = tuple(_asset_for_symbol(ctx, symbol) for symbol in self._symbols)
         for asset in self._assets:
             ctx.subscribe(asset, timeframe="1m", warmup=self._long_window)
 
@@ -55,6 +55,13 @@ class GcSiMomentumStrategy(Strategy):
 def _average(values: Iterable[Decimal]) -> Decimal:
     items = tuple(values)
     return sum(items, Decimal("0")) / Decimal(len(items))
+
+
+def _asset_for_symbol(ctx: StrategyContext, symbol: str) -> AssetRef:
+    try:
+        return ctx.future(symbol)
+    except (KeyError, RuntimeError):
+        return ctx.symbol(symbol)
 
 
 __all__ = ["GcSiMomentumStrategy"]

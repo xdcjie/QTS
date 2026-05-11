@@ -32,3 +32,11 @@ OPTION.US.AAPL.20260619.C.200
 ## Continuous futures
 
 Continuous futures are research/data references, not directly tradable instruments. They must resolve to a concrete tradable future contract before order creation.
+
+The shared futures roll boundary is `FutureRollRegistry`. Backtest and live
+adapters should both use it, or an equivalent implementation of the same
+contract, to resolve a continuous root such as `GC` to the concrete contract
+selected at a specific time. Historical CSV loading may build the selection from
+same-timestamp candidates, while live adapters may build it from live market
+data or a precomputed schedule. In both cases, the order path must receive a
+concrete `InstrumentId`.

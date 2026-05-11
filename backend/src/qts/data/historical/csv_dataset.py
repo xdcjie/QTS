@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 from collections import defaultdict
 from collections.abc import Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -21,6 +21,11 @@ from qts.data.validation_report import (
     validate_bars,
 )
 from qts.domain.market_data import Bar
+from qts.registry.future_roll import (
+    FutureContractCandidate,
+    FutureContractSelector,
+    FutureRollSelection,
+)
 from qts.registry.symbol_resolution import SourceSymbolResolver
 
 EXPECTED_HISTORICAL_COLUMNS = (
@@ -59,6 +64,7 @@ class HistoricalCsvStats:
     bars_emitted: int = 0
     symbols_excluded: int = 0
     spreads_excluded: int = 0
+    contracts_excluded: int = 0
     invalid_rows: int = 0
 
     def as_dict(self) -> dict[str, int]:
@@ -67,6 +73,7 @@ class HistoricalCsvStats:
             "bars_emitted": self.bars_emitted,
             "symbols_excluded": self.symbols_excluded,
             "spreads_excluded": self.spreads_excluded,
+            "contracts_excluded": self.contracts_excluded,
             "invalid_rows": self.invalid_rows,
         }
 
@@ -91,31 +98,68 @@ class HistoricalBarStream:
         timeframe: str,
         start: datetime | None = None,
         end: datetime | None = None,
+        contract_selector: FutureContractSelector | None = None,
+        continuous_instrument_id: InstrumentId | None = None,
     ) -> None:
         self._csv_path = csv_path
         self._symbol_resolver = symbol_resolver
         self._timeframe = timeframe
         self._start = start
         self._end = end
+        self._contract_selector = contract_selector
+        self._continuous_instrument_id = continuous_instrument_id
         self.stats = HistoricalCsvStats()
+        self.roll_selections: list[FutureRollSelection] = []
 
     def __iter__(self) -> Iterator[Bar]:
         with self._csv_path.open(encoding="utf-8", newline="") as handle:
             reader = csv.DictReader(handle)
             _validate_columns(tuple(reader.fieldnames or ()))
-            for row in reader:
-                self.stats.rows_seen += 1
+            if self._contract_selector is None:
+                yield from self._iter_all_supported_rows(reader)
+            else:
+                yield from self._iter_selected_contract_rows(reader)
+
+    def _iter_all_supported_rows(self, reader: csv.DictReader[str]) -> Iterator[Bar]:
+        for row in reader:
+            self.stats.rows_seen += 1
+            symbol = row["symbol"]
+            if not self._symbol_resolver.is_supported_symbol(symbol):
+                self._count_excluded_symbol(symbol)
+                continue
+            timestamp = _parse_ts_event(row["ts_event"])
+            if self._start is not None and timestamp < self._start:
+                continue
+            if self._end is not None and timestamp >= self._end:
+                break
+            try:
+                bar = _row_to_bar(
+                    row,
+                    symbol_resolver=self._symbol_resolver,
+                    timeframe=self._timeframe,
+                )
+            except ValueError:
+                self.stats.invalid_rows += 1
+                continue
+            self.stats.bars_emitted += 1
+            yield bar
+
+    def _iter_selected_contract_rows(self, reader: csv.DictReader[str]) -> Iterator[Bar]:
+        contract_selector = self._contract_selector
+        if contract_selector is None:
+            raise RuntimeError("contract selector is not configured")
+        for timestamp, rows in self._timestamp_groups(reader):
+            if self._start is not None and timestamp < self._start:
+                continue
+            if self._end is not None and timestamp >= self._end:
+                break
+            candidates: list[FutureContractCandidate] = []
+            bars_by_instrument: dict[InstrumentId, Bar] = {}
+            for row in rows:
                 symbol = row["symbol"]
                 if not self._symbol_resolver.is_supported_symbol(symbol):
-                    self.stats.symbols_excluded += 1
-                    if _is_spread_symbol(symbol):
-                        self.stats.spreads_excluded += 1
+                    self._count_excluded_symbol(symbol)
                     continue
-                timestamp = _parse_ts_event(row["ts_event"])
-                if self._start is not None and timestamp < self._start:
-                    continue
-                if self._end is not None and timestamp >= self._end:
-                    break
                 try:
                     bar = _row_to_bar(
                         row,
@@ -125,8 +169,70 @@ class HistoricalBarStream:
                 except ValueError:
                     self.stats.invalid_rows += 1
                     continue
-                self.stats.bars_emitted += 1
-                yield bar
+                bars_by_instrument[bar.instrument_id] = bar
+                candidates.append(
+                    FutureContractCandidate(
+                        root_symbol=self._resolver_root(),
+                        symbol=symbol,
+                        instrument_id=bar.instrument_id,
+                        as_of=bar.end_time,
+                        close=bar.close,
+                        volume=bar.volume,
+                    )
+                )
+            if not candidates:
+                continue
+            selected = contract_selector.select(tuple(candidates))
+            selected_bar = bars_by_instrument[selected.instrument_id]
+            output_instrument_id = self._continuous_instrument_id or selected.instrument_id
+            output_bar = (
+                selected_bar
+                if output_instrument_id == selected.instrument_id
+                else replace(selected_bar, instrument_id=output_instrument_id)
+            )
+            self.roll_selections.append(
+                FutureRollSelection(
+                    continuous_instrument_id=output_instrument_id,
+                    root_symbol=selected.root_symbol,
+                    as_of=output_bar.end_time,
+                    concrete_instrument_id=selected.instrument_id,
+                    source_symbol=selected.symbol,
+                    prices_by_instrument={
+                        candidate.instrument_id: candidate.close for candidate in candidates
+                    },
+                )
+            )
+            self.stats.contracts_excluded += len(candidates) - 1
+            self.stats.bars_emitted += 1
+            yield output_bar
+
+    def _timestamp_groups(
+        self,
+        reader: csv.DictReader[str],
+    ) -> Iterator[tuple[datetime, list[dict[str, str]]]]:
+        current_timestamp: str | None = None
+        current_rows: list[dict[str, str]] = []
+        for row in reader:
+            self.stats.rows_seen += 1
+            timestamp_text = row["ts_event"]
+            if current_timestamp is not None and timestamp_text != current_timestamp:
+                yield _parse_ts_event(current_timestamp), current_rows
+                current_rows = []
+            current_timestamp = timestamp_text
+            current_rows.append(row)
+        if current_timestamp is not None:
+            yield _parse_ts_event(current_timestamp), current_rows
+
+    def _count_excluded_symbol(self, symbol: str) -> None:
+        self.stats.symbols_excluded += 1
+        if _is_spread_symbol(symbol):
+            self.stats.spreads_excluded += 1
+
+    def _resolver_root(self) -> str:
+        root = getattr(self._symbol_resolver, "root", "")
+        if not isinstance(root, str) or not root.strip():
+            raise ValueError("rolling historical streams require a root-aware symbol resolver")
+        return root
 
 
 def describe_csv_dataset(
@@ -162,6 +268,8 @@ def iter_historical_bars(
     timeframe: str = "1m",
     start: datetime | None = None,
     end: datetime | None = None,
+    contract_selector: FutureContractSelector | None = None,
+    continuous_instrument_id: InstrumentId | None = None,
 ) -> HistoricalBarStream:
     """Return a lazy stream of outright historical bars."""
 
@@ -171,6 +279,8 @@ def iter_historical_bars(
         timeframe=timeframe,
         start=start,
         end=end,
+        contract_selector=contract_selector,
+        continuous_instrument_id=continuous_instrument_id,
     )
 
 

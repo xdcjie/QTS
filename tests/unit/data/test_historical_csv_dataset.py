@@ -15,6 +15,7 @@ from qts.data.historical.csv_dataset import (
     validate_historical_sample,
 )
 from qts.data.validation_report import DataValidationIssueCode, DataValidationSeverity
+from qts.registry.future_roll import HighestVolumeFutureContractSelector
 from qts.registry.symbol_resolution import StaticSymbolResolver
 
 
@@ -114,6 +115,38 @@ def test_iter_historical_bars_accepts_static_symbol_resolver_without_chain(
     assert stream.stats.bars_emitted == 1
     assert stream.stats.symbols_excluded == 1
     assert stream.stats.spreads_excluded == 0
+
+
+def test_iter_historical_bars_can_emit_one_rolling_bar_per_timestamp(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "gc.csv"
+    _write_rows(
+        path,
+        [
+            _row("GCN0", 30, open_="1220.2", high="1220.2", low="1220.2", close="1220.2"),
+            _row("GCQ0", 30, open_="1221.6", high="1221.6", low="1221.6", close="1221.6"),
+            _row("GCN0-GCQ0", 30, open_="-1.4", high="-1.4", low="-1.4", close="-1.4"),
+        ],
+    )
+    chain = load_historical_chain(Path("historical/chains/GC.json"))
+    continuous_id = InstrumentId("CONTINUOUS_FUTURE.CME.GC")
+
+    stream = iter_historical_bars(
+        path,
+        chain,
+        timeframe="1m",
+        contract_selector=HighestVolumeFutureContractSelector(),
+        continuous_instrument_id=continuous_id,
+    )
+    bars = tuple(stream)
+
+    assert [bar.instrument_id for bar in bars] == [continuous_id]
+    assert bars[0].close == Decimal("1221.6")
+    assert stream.roll_selections[0].concrete_instrument_id == InstrumentId("FUTURE.CME.GC.GCQ0")
+    assert stream.stats.bars_emitted == 1
+    assert stream.stats.contracts_excluded == 1
+    assert stream.stats.spreads_excluded == 1
 
 
 def test_validate_historical_sample_reports_invalid_ohlc_and_spread_exclusion(

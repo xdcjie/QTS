@@ -77,6 +77,7 @@ or excluded before outright futures backtests:
 | S5-10-T01 | Complete | Research replay determinism test and `make test-research-replay` added. |
 | S5-10-T02 | Complete | `research-full-smoke` Make target is explicit and CLI writes elapsed/row/bar/spread/report summary evidence. |
 | S5-10-T03 | Complete | Storage benchmark recorded in `docs/decision/2026-05-10_research_storage_decision.md`; no new dependency added for S5. |
+| S5-11-T01 | Complete | Continuous futures roll selection uses shared `FutureRollRegistry`; historical GC/SI root runs select one concrete contract per timestamp and roll positions through the backtest order path. |
 
 Focused verification:
 
@@ -101,21 +102,23 @@ make test-reconciliation
 1 passed
 
 make research-full-smoke
-report: runs/backtests/full-smoke/bt-5f9539b025b2.json
-summary: runs/backtests/full-smoke/bt-5f9539b025b2.summary.json
-elapsed_seconds=0.006069
-processed_rows=22
-emitted_bars=15
+report: runs/backtests/full-smoke/bt-6c6b18bf51f4.json
+summary: runs/backtests/full-smoke/bt-6c6b18bf51f4.summary.json
+elapsed_seconds=0.008212
+processed_rows=26
+emitted_bars=10
 excluded_spreads=5
+contracts_excluded=5
 processed_bars=10
+report_hash=sha256:ca24c027a541423aed5bb32637c21c4b671027e389bbdb8d3df7d3abf40a706f
 
 make check
-format: 290 files left unchanged
+format: 302 files left unchanged
 lint: All checks passed
-mypy: Success, no issues in 278 source files
-unit: 165 passed
-integration: 31 passed
-anchor: 21 passed
+mypy: Success, no issues in 286 source files
+unit: 190 passed
+integration: 35 passed
+anchor: 23 passed
 ```
 
 Storage decision:

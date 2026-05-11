@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
-from typing import Protocol
+from typing import Protocol, cast
 
 from qts.core.ids import InstrumentId
 from qts.domain.instruments import OptionRight
@@ -28,6 +28,12 @@ class FutureContractResolver(Protocol):
     """Platform-provided future chain resolution boundary."""
 
     def resolve_contract(self, root_symbol: str, *, offset: int = 0) -> InstrumentId: ...
+
+
+class ContinuousFutureResolver(Protocol):
+    """Platform-provided rolling future reference boundary."""
+
+    def continuous_instrument_id(self, root_symbol: str, *, offset: int = 0) -> InstrumentId: ...
 
 
 class OptionContractRef(Protocol):
@@ -70,7 +76,7 @@ class StrategyContext:
     """User-facing strategy context."""
 
     instrument_registry: SymbolResolver | None = None
-    future_chain_registry: FutureContractResolver | None = None
+    future_chain_registry: FutureContractResolver | ContinuousFutureResolver | None = None
     option_chain_registry: OptionContractResolver | None = None
     data: DataView | None = None
     portfolio: PortfolioView | None = None
@@ -98,7 +104,15 @@ class StrategyContext:
             raise RuntimeError("future chain registry is not configured")
         if contract != "front":
             raise ValueError("only front future contract selection is supported")
-        instrument_id = self.future_chain_registry.resolve_contract(root_symbol, offset=0)
+        continuous_id = getattr(self.future_chain_registry, "continuous_instrument_id", None)
+        instrument_id = (
+            continuous_id(root_symbol, offset=0)
+            if callable(continuous_id)
+            else cast(FutureContractResolver, self.future_chain_registry).resolve_contract(
+                root_symbol,
+                offset=0,
+            )
+        )
         return AssetRef(
             instrument_id=instrument_id,
             symbol=root_symbol,
@@ -159,6 +173,7 @@ class StrategyContext:
 
 __all__ = [
     "DataSubscription",
+    "ContinuousFutureResolver",
     "FutureContractResolver",
     "OptionContractRef",
     "OptionContractResolver",

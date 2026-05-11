@@ -15,6 +15,7 @@ from qts.data.historical.catalog import load_historical_catalog
 from qts.data.historical.csv_dataset import iter_historical_bars
 from qts.data.provenance import DatasetMetadata
 from qts.domain.market_data import Bar
+from qts.registry.future_roll import FutureRollRegistry, HighestVolumeFutureContractSelector
 from qts.registry.symbol_resolution import StaticSymbolResolver
 from qts.strategy_sdk import Strategy
 
@@ -41,7 +42,7 @@ def run_research_backtest(
         roots=config.roots,
         symbol_resolvers=_symbol_resolvers_from_config(config),
     )
-    bars, dataset_stats = _load_configured_bars(config, catalog)
+    bars, dataset_stats, roll_registry = _load_configured_bars(config, catalog)
     strategy = _load_strategy(config.strategy_class, config.strategy_params)
     metadata = _dataset_metadata(config)
     result = BacktestEngine.from_config(
@@ -49,6 +50,7 @@ def run_research_backtest(
         bars=bars,
         strategy=strategy,
         dataset_metadata=metadata,
+        future_roll_registry=roll_registry,
     ).run()
     output_dir.mkdir(parents=True, exist_ok=True)
     report_path = output_dir / f"{result.run_id.value}.json"
@@ -59,24 +61,49 @@ def run_research_backtest(
 def _load_configured_bars(
     config: BacktestRunConfig,
     catalog: Any,
-) -> tuple[tuple[Bar, ...], dict[str, dict[str, int]]]:
+) -> tuple[tuple[Bar, ...], dict[str, dict[str, int]], FutureRollRegistry | None]:
     requested = set(config.symbols)
     bars: list[Bar] = []
     stats: dict[str, dict[str, int]] = {}
+    roll_registry = FutureRollRegistry() if config.roll_policy.enabled else None
     for root in config.roots:
         dataset = catalog.datasets[root]
+        rolling_root = config.roll_policy.enabled and root in requested
+        continuous_id: InstrumentId | None = None
+        contract_selector = None
+        if rolling_root:
+            if dataset.chain is None:
+                raise ValueError(f"rolling futures require chain metadata for root: {root}")
+            assert roll_registry is not None
+            continuous_id = roll_registry.register_root(
+                root_symbol=root,
+                exchange=dataset.chain.exchange,
+                contracts=tuple(
+                    dataset.chain.instrument_id_for_symbol(contract.symbol)
+                    for contract in dataset.chain.contracts
+                ),
+            )
+            contract_selector = HighestVolumeFutureContractSelector()
         stream = iter_historical_bars(
             dataset.csv_path,
             dataset.symbol_resolver,
             timeframe=config.timeframe,
             start=config.start,
             end=config.end,
+            contract_selector=contract_selector,
+            continuous_instrument_id=continuous_id,
         )
-        bars.extend(
-            bar for bar in stream if bar.instrument_id.value.rsplit(".", 1)[-1] in requested
-        )
+        if rolling_root:
+            bars.extend(stream)
+            assert roll_registry is not None
+            for selection in stream.roll_selections:
+                roll_registry.record_selection(selection)
+        else:
+            bars.extend(
+                bar for bar in stream if bar.instrument_id.value.rsplit(".", 1)[-1] in requested
+            )
         stats[root] = stream.stats.as_dict()
-    return tuple(bars), stats
+    return tuple(bars), stats, roll_registry
 
 
 def _load_strategy(strategy_class: str, params: dict[str, Any]) -> Strategy:

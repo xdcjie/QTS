@@ -57,6 +57,23 @@ class RiskConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class RollPolicyConfig:
+    """Continuous futures roll policy for config-driven research runs."""
+
+    enabled: bool = False
+    method: str = "highest_volume"
+
+    def __post_init__(self) -> None:
+        normalized = self.method.strip().lower()
+        if normalized != "highest_volume":
+            raise ValueError("roll_policy.method must be highest_volume")
+        object.__setattr__(self, "method", normalized)
+
+    def to_payload(self) -> dict[str, object]:
+        return {"enabled": self.enabled, "method": self.method}
+
+
+@dataclass(frozen=True, slots=True)
 class BacktestRunConfig:
     """Complete identity for a research backtest run."""
 
@@ -72,6 +89,7 @@ class BacktestRunConfig:
     instrument_ids: dict[str, InstrumentId] = field(default_factory=dict)
     cost_model: CostModelConfig = field(default_factory=CostModelConfig)
     risk_config: RiskConfig = field(default_factory=lambda: RiskConfig(max_notional=Decimal("1")))
+    roll_policy: RollPolicyConfig = field(default_factory=RollPolicyConfig)
     warmup_bars: int = 0
 
     def __post_init__(self) -> None:
@@ -118,6 +136,9 @@ class BacktestRunConfig:
             raise ValueError("cost_model must be a mapping")
         if not isinstance(risk_payload, dict):
             raise ValueError("risk_config must be a mapping")
+        roll_payload = payload.get("roll_policy", {})
+        if not isinstance(roll_payload, dict):
+            raise ValueError("roll_policy must be a mapping")
         strategy_params = payload.get("strategy_params", {})
         instrument_ids_payload = payload.get("instrument_ids", {})
         if not isinstance(strategy_params, dict):
@@ -147,6 +168,10 @@ class BacktestRunConfig:
             risk_config=RiskConfig(
                 max_notional=Decimal(str(risk_payload.get("max_notional", "1")))
             ),
+            roll_policy=RollPolicyConfig(
+                enabled=bool(roll_payload.get("enabled", False)),
+                method=str(roll_payload.get("method", "highest_volume")),
+            ),
             warmup_bars=int(payload.get("warmup_bars", 0)),
         )
 
@@ -171,6 +196,7 @@ class BacktestRunConfig:
             },
             "cost_model": self.cost_model.to_payload(),
             "risk_config": self.risk_config.to_payload(),
+            "roll_policy": self.roll_policy.to_payload(),
             "warmup_bars": self.warmup_bars,
         }
 
@@ -197,4 +223,4 @@ def _stable_hash(payload: Any) -> str:
     return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
 
-__all__ = ["BacktestRunConfig", "CostModelConfig", "RiskConfig"]
+__all__ = ["BacktestRunConfig", "CostModelConfig", "RiskConfig", "RollPolicyConfig"]

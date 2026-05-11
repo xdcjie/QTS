@@ -74,6 +74,14 @@ class BuyOneAaplStrategy(Strategy):
             self.done = True
 
 
+class RollingGcStrategy(Strategy):
+    def initialize(self, ctx: Any) -> None:
+        self.asset = ctx.future("GC")
+
+    def on_bar(self, ctx: Any, bar: object) -> None:
+        ctx.target_quantity(self.asset, Decimal("1"))
+
+
 def test_backtest_engine_runs_from_config_with_deterministic_run_id() -> None:
     from qts.backtest.engine import BacktestEngine
 
@@ -270,6 +278,34 @@ def _write_fixture_csv(path: Path, symbol: str, closes: list[str]) -> None:
             )
 
 
+def _write_rows(path: Path, rows: list[dict[str, str]]) -> None:
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=EXPECTED_HISTORICAL_COLUMNS)
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def _fixture_row(
+    ts_event: str,
+    symbol: str,
+    close: str,
+    *,
+    volume: str,
+) -> dict[str, str]:
+    return {
+        "ts_event": ts_event,
+        "rtype": "33",
+        "publisher_id": "1",
+        "instrument_id": symbol,
+        "open": close,
+        "high": close,
+        "low": close,
+        "close": close,
+        "volume": volume,
+        "symbol": symbol,
+    }
+
+
 def _write_fixture_config(path: Path, historical_root: Path) -> None:
     path.write_text(
         f"""
@@ -327,6 +363,72 @@ risk_config:
 
     assert run.result.fills[0].instrument_id == InstrumentId("EQUITY.US.NASDAQ.AAPL")
     assert run.dataset_stats["EQUITY"]["bars_emitted"] == 1
+
+
+def test_research_backtest_runner_rolls_continuous_future_positions(
+    tmp_path: Path,
+) -> None:
+    from qts.backtest.research_runner import run_research_backtest
+    from qts.execution.order_manager import OrderSide
+
+    historical_root = tmp_path / "historical"
+    (historical_root / "data").mkdir(parents=True)
+    (historical_root / "chains").mkdir()
+    shutil.copyfile(Path("historical/chains/GC.json"), historical_root / "chains" / "GC.json")
+    _write_rows(
+        historical_root / "data" / "gc.csv",
+        [
+            _fixture_row("2010-06-06T22:00:00.000000000Z", "GCN0", "100", volume="100"),
+            _fixture_row("2010-06-06T22:00:00.000000000Z", "GCQ0", "110", volume="1"),
+            _fixture_row("2010-06-06T22:01:00.000000000Z", "GCN0", "101", volume="1"),
+            _fixture_row("2010-06-06T22:01:00.000000000Z", "GCQ0", "111", volume="100"),
+        ],
+    )
+    config_path = tmp_path / "backtest.yaml"
+    config_path.write_text(
+        f"""
+dataset_root: {historical_root}
+roots: [GC]
+symbols: [GC]
+start: "2010-06-06T22:00:00Z"
+end: "2010-06-06T22:02:00Z"
+timeframe: 1m
+initial_cash: "1000000"
+strategy_class: "tests.integration.test_research_backtest_gc_si:RollingGcStrategy"
+roll_policy:
+  enabled: true
+  method: highest_volume
+risk_config:
+  max_notional: "100000000"
+""",
+        encoding="utf-8",
+    )
+
+    run = run_research_backtest(config_path, output_dir=tmp_path / "runs")
+
+    assert [fill.instrument_id for fill in run.result.fills] == [
+        InstrumentId("FUTURE.CME.GC.GCN0"),
+        InstrumentId("FUTURE.CME.GC.GCN0"),
+        InstrumentId("FUTURE.CME.GC.GCQ0"),
+    ]
+    assert [fill.side for fill in run.result.fills] == [
+        OrderSide.BUY,
+        OrderSide.SELL,
+        OrderSide.BUY,
+    ]
+    assert [fill.price for fill in run.result.fills] == [
+        Decimal("100"),
+        Decimal("101"),
+        Decimal("111"),
+    ]
+    assert run.result.final_account.positions[
+        InstrumentId("FUTURE.CME.GC.GCN0")
+    ].quantity == Decimal("0")
+    assert run.result.final_account.positions[
+        InstrumentId("FUTURE.CME.GC.GCQ0")
+    ].quantity == Decimal("1")
+    assert run.dataset_stats["GC"]["bars_emitted"] == 2
+    assert run.dataset_stats["GC"]["contracts_excluded"] == 2
 
 
 def test_research_backtest_runner_writes_report_from_fixture_config(tmp_path: Path) -> None:
