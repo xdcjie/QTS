@@ -1,4 +1,9 @@
-"""Live broker execution boundary contracts and fake adapter."""
+"""Live broker execution boundary contracts and fake adapter.
+
+This module intentionally remains a single cohesive boundary for all broker-level
+request/adapter/report types. Splitting is unnecessary while the surface remains
+stable and small.
+"""
 
 from __future__ import annotations
 
