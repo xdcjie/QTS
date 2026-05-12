@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 from qts.core.ids import InstrumentId
+from qts.data.historical.adapter import HistoricalMarketDataAdapter
 from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
 from qts.data.historical.service import HistoricalMarketDataService
 from qts.data.live_feed import FeedSubscription
@@ -14,7 +15,37 @@ from qts.domain.market_data import Bar
 from qts.registry.symbol_resolution import StaticSymbolResolver
 
 
-def test_historical_market_data_service_replays_normalized_bars_for_subscription(
+def test_historical_market_data_adapter_is_primary_historical_source_name(
+    tmp_path: Path,
+) -> None:
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    instrument_id = InstrumentId("FUTURE.CME.GC.GCQ0")
+    csv_path = tmp_path / "gc.csv"
+    _write_rows(csv_path, [_row("2026-01-02T14:30:00.000000000Z", "GCQ0", "2000")])
+    adapter = HistoricalMarketDataAdapter(
+        source_id="historical-gc",
+        csv_path=csv_path,
+        symbol_resolver=StaticSymbolResolver({"GCQ0": instrument_id}),
+        source_timeframe="1m",
+        start=start,
+        end=start + timedelta(minutes=1),
+    )
+    subscription = FeedSubscription(
+        subscription_id="hist-1",
+        instrument_id=instrument_id,
+        timeframe="1m",
+    )
+
+    adapter.subscribe(subscription)
+
+    assert tuple(adapter.events(subscription.subscription_id))[0].source_id == "historical-gc"
+
+
+def test_historical_market_data_service_name_remains_compatibility_alias() -> None:
+    assert HistoricalMarketDataService is HistoricalMarketDataAdapter
+
+
+def test_historical_market_data_adapter_replays_normalized_bars_for_subscription(
     tmp_path: Path,
 ) -> None:
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
@@ -28,7 +59,7 @@ def test_historical_market_data_service_replays_normalized_bars_for_subscription
             _row("2026-01-02T14:32:00.000000000Z", "GCN0", "1999"),
         ],
     )
-    service = HistoricalMarketDataService(
+    adapter = HistoricalMarketDataAdapter(
         source_id="historical-gc",
         csv_path=csv_path,
         symbol_resolver=StaticSymbolResolver({"GCQ0": instrument_id}),
@@ -42,8 +73,8 @@ def test_historical_market_data_service_replays_normalized_bars_for_subscription
         timeframe="1m",
     )
 
-    subscribed = service.subscribe(subscription)
-    events = tuple(service.events(subscription.subscription_id))
+    subscribed = adapter.subscribe(subscription)
+    events = tuple(adapter.events(subscription.subscription_id))
 
     assert subscribed.source_id == "historical-gc"
     assert [event.source_id for event in events] == ["historical-gc", "historical-gc"]
@@ -59,14 +90,14 @@ def test_historical_market_data_service_replays_normalized_bars_for_subscription
     ]
 
 
-def test_historical_market_data_service_rejects_finer_than_source_request(
+def test_historical_market_data_adapter_rejects_finer_than_source_request(
     tmp_path: Path,
 ) -> None:
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     instrument_id = InstrumentId("FUTURE.CME.GC.GCQ0")
     csv_path = tmp_path / "gc.csv"
     _write_rows(csv_path, [_row("2026-01-02T14:30:00.000000000Z", "GCQ0", "2000")])
-    service = HistoricalMarketDataService(
+    adapter = HistoricalMarketDataAdapter(
         source_id="historical-gc",
         csv_path=csv_path,
         symbol_resolver=StaticSymbolResolver({"GCQ0": instrument_id}),
@@ -76,7 +107,7 @@ def test_historical_market_data_service_rejects_finer_than_source_request(
     )
 
     with pytest.raises(ValueError, match="cannot be derived"):
-        service.subscribe(FeedSubscription("hist-5s", instrument_id, timeframe="5s"))
+        adapter.subscribe(FeedSubscription("hist-5s", instrument_id, timeframe="5s"))
 
 
 def _write_rows(path: Path, rows: list[dict[str, str]]) -> None:

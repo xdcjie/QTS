@@ -1,5 +1,6 @@
 """Historical research data loaders."""
 
+from qts.data.historical.adapter import HistoricalMarketDataAdapter
 from qts.data.historical.catalog import (
     HistoricalCatalog,
     HistoricalCatalogLoadConfig,
@@ -53,6 +54,7 @@ __all__ = [
     "HistoricalDataset",
     "HistoricalDatasetConfig",
     "HistoricalDatasetLocation",
+    "HistoricalMarketDataAdapter",
     "HistoricalMarketDataService",
     "ReplayMarketDataAdapter",
     "HistoricalFutureChainSymbolResolver",

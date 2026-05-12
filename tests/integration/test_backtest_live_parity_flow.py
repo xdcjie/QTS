@@ -9,8 +9,8 @@ from typing import Any
 
 from qts.backtest.engine import BacktestEngine
 from qts.core.ids import InstrumentId, OrderId
+from qts.data.historical.adapter import HistoricalMarketDataAdapter
 from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
-from qts.data.historical.service import HistoricalMarketDataService
 from qts.data.live_feed import FakeLiveFeedAdapter, FeedSubscription
 from qts.domain.market_data import Bar
 from qts.domain.risk import RiskDecision
@@ -184,7 +184,7 @@ def test_historical_and_fake_live_market_data_use_same_actor_event_contract(
             }
         ],
     )
-    historical_source = HistoricalMarketDataService(
+    historical_source = HistoricalMarketDataAdapter(
         source_id="historical-gc",
         csv_path=csv_path,
         symbol_resolver=StaticSymbolResolver({"GCQ0": instrument_id}),

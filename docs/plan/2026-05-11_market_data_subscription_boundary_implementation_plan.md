@@ -486,16 +486,16 @@ git commit -m "feat: deduplicate market data actor subscriptions"
 - Modify: `backend/src/qts/data/historical/__init__.py`
 - Test: `tests/unit/data/test_historical_market_data_service.py`
 
-- [ ] **Step 1: Write failing historical service tests**
+- [ ] **Step 1: Write failing historical adapter tests**
 
 Add `tests/unit/data/test_historical_market_data_service.py` with deterministic
 CSV fixture rows. Test:
 
 ```python
-def test_historical_market_data_service_replays_normalized_bars_for_subscription(
+def test_historical_market_data_adapter_replays_normalized_bars_for_subscription(
     tmp_path: Path,
 ) -> None:
-    service = HistoricalMarketDataService(
+    adapter = HistoricalMarketDataAdapter(
         source_id="historical-gc",
         csv_path=csv_path,
         symbol_resolver=StaticSymbolResolver({"GCQ0": InstrumentId("FUTURE.CME.GC.GCQ0")}),
@@ -509,8 +509,8 @@ def test_historical_market_data_service_replays_normalized_bars_for_subscription
         timeframe="1m",
     )
 
-    subscribed = service.subscribe(subscription)
-    events = tuple(service.events(subscription.subscription_id))
+    subscribed = adapter.subscribe(subscription)
+    events = tuple(adapter.events(subscription.subscription_id))
 
     assert subscribed.source_id == "historical-gc"
     assert [event.source_id for event in events] == ["historical-gc", "historical-gc"]
@@ -520,10 +520,10 @@ def test_historical_market_data_service_replays_normalized_bars_for_subscription
 Add a second test:
 
 ```python
-def test_historical_market_data_service_rejects_finer_than_source_request() -> None:
+def test_historical_market_data_adapter_rejects_finer_than_source_request() -> None:
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     instrument_id = InstrumentId("FUTURE.CME.GC.GCQ0")
-    service = HistoricalMarketDataService(
+    adapter = HistoricalMarketDataAdapter(
         source_id="historical-gc",
         csv_path=csv_path,
         symbol_resolver=StaticSymbolResolver({"GCQ0": instrument_id}),
@@ -533,7 +533,7 @@ def test_historical_market_data_service_rejects_finer_than_source_request() -> N
     )
 
     with pytest.raises(ValueError, match="cannot be derived"):
-        service.subscribe(FeedSubscription("hist-5s", instrument_id, timeframe="5s"))
+        adapter.subscribe(FeedSubscription("hist-5s", instrument_id, timeframe="5s"))
 ```
 
 - [ ] **Step 2: Run tests to verify RED**
@@ -544,14 +544,14 @@ Run:
 uv run pytest tests/unit/data/test_historical_market_data_service.py -q
 ```
 
-Expected: failure for missing `qts.data.historical.service`.
+Expected: failure for missing `qts.data.historical.adapter`.
 
-- [ ] **Step 3: Implement minimal historical service**
+- [ ] **Step 3: Implement minimal historical adapter**
 
-Create `backend/src/qts/data/historical/service.py`:
+Create `backend/src/qts/data/historical/adapter.py`:
 
 ```python
-"""Historical market data source service."""
+"""Historical market data source adapter."""
 
 from __future__ import annotations
 
@@ -567,7 +567,7 @@ from qts.registry.symbol_resolution import SourceSymbolResolver
 
 
 @dataclass(frozen=True, slots=True)
-class HistoricalMarketDataService:
+class HistoricalMarketDataAdapter:
     source_id: str
     csv_path: Path
     symbol_resolver: SourceSymbolResolver
@@ -603,7 +603,7 @@ class HistoricalMarketDataService:
             yield LiveFeedEvent(payload=bar, source_id=self.source_id)
 ```
 
-Export `HistoricalMarketDataService` from
+Export `HistoricalMarketDataAdapter` from
 `backend/src/qts/data/historical/__init__.py`.
 
 - [ ] **Step 4: Run tests to verify GREEN**
@@ -619,10 +619,10 @@ Expected: all selected tests pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add backend/src/qts/data/historical/service.py \
+git add backend/src/qts/data/historical/adapter.py \
   backend/src/qts/data/historical/__init__.py \
   tests/unit/data/test_historical_market_data_service.py
-git commit -m "feat: add historical market data service"
+git commit -m "feat: add historical market data adapter"
 ```
 
 ## Task 4: Anchor And Integration Coverage
@@ -664,7 +664,7 @@ requests for `1m` and `5m` share the same physical `5s` key.
 - [ ] **Step 2: Write integration parity test**
 
 Extend `tests/integration/test_backtest_live_parity_flow.py` with a test that
-creates a `FakeLiveFeedAdapter` and a `HistoricalMarketDataService`, subscribes
+creates a `FakeLiveFeedAdapter` and a `HistoricalMarketDataAdapter`, subscribes
 to each, emits or replays one `Bar`, and sends both through `MarketDataActor`
 as `MarketDataEvent`.
 

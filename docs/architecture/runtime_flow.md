@@ -48,8 +48,8 @@ flow while order requests and execution reports stay in the execution flow.
 
 - `LiveFeedAdapter` / `MarketDataAdapter`:
   live-mode feed contract used by `qts.runtime.actors.MarketDataActor`.
-- `ReplayMarketDataAdapter`:
-  historical/replay contract in `qts.data.historical.service`.
+- `HistoricalMarketDataAdapter`:
+  historical source adapter in `qts.data.historical.adapter`.
 - `LiveMarketDataAdapter`:
   compatibility alias to `IbkrMarketDataAdapter` in `qts.data.adapters.ibkr_market_data`.
 

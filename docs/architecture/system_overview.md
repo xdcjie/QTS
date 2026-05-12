@@ -42,7 +42,7 @@ StrategyContext.subscribe(asset, timeframe)
   -> logical market data subscription
   -> MarketDataActor
   -> one physical source subscription per provider capability
-  -> MarketDataAdapter / HistoricalDataService
+  -> MarketDataAdapter / HistoricalMarketDataAdapter
   -> normalized Tick / Quote / Bar events
   -> MarketDataActor aggregation and fan-out
   -> StrategyActor subscribers
