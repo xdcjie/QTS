@@ -46,7 +46,7 @@ flow while order requests and execution reports stay in the execution flow.
 
 ### Adapter naming map
 
-- `LiveFeedAdapter` / `MarketDataSourceAdapter`:
+- `LiveFeedAdapter` / `MarketDataAdapter`:
   live-mode feed contract used by `qts.runtime.actors.MarketDataActor`.
 - `ReplayMarketDataAdapter`:
   historical/replay contract in `qts.data.historical.service`.

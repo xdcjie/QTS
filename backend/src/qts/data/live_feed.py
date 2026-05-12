@@ -157,25 +157,17 @@ class LiveFeedAdapter(Protocol):
         ...
 
 
-MarketDataSourceCapabilities = FeedCapabilities
-MarketDataSourceSubscription = FeedSubscription
-MarketDataSourceSubscribed = LiveFeedSubscribed
-MarketDataSourceEvent = LiveFeedEvent
-MarketDataSourceFailure = LiveFeedFailure
-
-
-class MarketDataSourceAdapter(Protocol):
+class MarketDataAdapter(Protocol):
     """Canonical market-data source adapter contract shared by live and replay feeds."""
 
     @property
-    def capabilities(self) -> MarketDataSourceCapabilities:
+    def capabilities(self) -> FeedCapabilities:
         """Return feed capabilities."""
         ...
 
     def subscribe(
-        self,
-        subscription: MarketDataSourceSubscription,
-    ) -> MarketDataSourceSubscribed:
+        self, subscription: FeedSubscription
+    ) -> LiveFeedSubscribed:
         """Subscribe to a source stream."""
         ...
 
@@ -184,24 +176,19 @@ class ReplayMarketDataAdapter(Protocol):
     """Canonical replay market-data adapter contract for historical sources."""
 
     @property
-    def capabilities(self) -> MarketDataSourceCapabilities:
+    def capabilities(self) -> FeedCapabilities:
         """Return feed capabilities."""
         ...
 
     def subscribe(
-        self,
-        subscription: MarketDataSourceSubscription,
-    ) -> MarketDataSourceSubscribed:
+        self, subscription: FeedSubscription
+    ) -> LiveFeedSubscribed:
         """Subscribe to a replay stream."""
         ...
 
-    def events(self, subscription_id: str) -> Iterator[MarketDataSourceEvent]:
+    def events(self, subscription_id: str) -> Iterator[LiveFeedEvent]:
         """Iterate replay events for a subscription."""
         ...
-
-
-class MarketDataAdapter(MarketDataSourceAdapter, LiveFeedAdapter):
-    """Canonical adapter name for live and replay source implementations."""
 
 
 class FakeLiveFeedAdapter:
@@ -258,12 +245,6 @@ class FakeMarketDataAdapter(FakeLiveFeedAdapter):
 __all__ = [
     "FakeMarketDataAdapter",
     "MarketDataAdapter",
-    "MarketDataSourceAdapter",
-    "MarketDataSourceCapabilities",
-    "MarketDataSourceEvent",
-    "MarketDataSourceFailure",
-    "MarketDataSourceSubscribed",
-    "MarketDataSourceSubscription",
     "ReplayMarketDataAdapter",
     "FakeLiveFeedAdapter",
     "FeedCapabilities",
