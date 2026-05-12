@@ -1,0 +1,96 @@
+{
+  "workflow_id": "2026-05-12_QTS-OOP",
+  "name": "QTS OOP architecture cleanup and redundancy reduction",
+  "tasks": [
+    {
+      "id": "OOP-00-T01",
+      "name": "Record baseline checks",
+      "milestone": "OOP-00",
+      "task_type": "planning",
+      "risk_level": "low",
+      "expected_files": ["docs/plan/2026-05-12_oop_refactor_execution_log.md"],
+      "acceptance": ["Baseline command results are recorded", "No production code changed"],
+      "required_checks": ["make guardrails", "make test-unit"]
+    },
+    {
+      "id": "OOP-01-T01",
+      "name": "Resolve empty IBKR evidence scripts",
+      "milestone": "OOP-01",
+      "task_type": "refactor",
+      "risk_level": "medium",
+      "expected_files": ["scripts/ibkr_collect_environment_evidence.py", "scripts/ibkr_paper_order_lifecycle_drill.py"],
+      "acceptance": ["Each script is deleted or becomes a thin CLI wrapper", "No business logic duplicated in scripts"],
+      "required_checks": ["make guardrails", "make test-unit"]
+    },
+    {
+      "id": "OOP-02-T01",
+      "name": "Introduce BacktestEngineConfig",
+      "milestone": "OOP-02",
+      "task_type": "refactor",
+      "risk_level": "medium",
+      "expected_files": ["backend/src/qts/backtest/config.py", "backend/src/qts/backtest/engine.py"],
+      "acceptance": ["BacktestEngine constructor has fewer primitive construction inputs", "Config owns validation/normalization", "Behavior unchanged"],
+      "required_checks": ["make guardrails", "make typecheck", "make test-unit", "make test-integration"]
+    },
+    {
+      "id": "OOP-02-T03",
+      "name": "Move BacktestExecutionAdapter out of engine.py",
+      "milestone": "OOP-02",
+      "task_type": "refactor",
+      "risk_level": "medium",
+      "expected_files": ["backend/src/qts/backtest/engine.py", "backend/src/qts/execution/simulator/backtest_execution_adapter.py"],
+      "acceptance": ["engine.py no longer defines execution adapter classes", "Execution report behavior unchanged"],
+      "required_checks": ["make guardrails", "make typecheck", "make test-unit", "make test-integration"]
+    },
+    {
+      "id": "OOP-03-T01",
+      "name": "Clean StrategyContext.option user API",
+      "milestone": "OOP-03",
+      "task_type": "api",
+      "risk_level": "medium",
+      "expected_files": ["backend/src/qts/strategy_sdk/context.py", "backend/src/qts/strategy_sdk/asset_resolver.py"],
+      "acceptance": ["Strategy users can select options without passing raw InstrumentId", "No internal broker/actor/order manager concepts leak into Strategy SDK"],
+      "required_checks": ["make guardrails", "make typecheck", "make test-unit", "make test-integration"]
+    },
+    {
+      "id": "OOP-04-T01",
+      "name": "Move operations API schemas out of route module",
+      "milestone": "OOP-04",
+      "task_type": "refactor",
+      "risk_level": "medium",
+      "expected_files": ["backend/src/qts/api/routes/operations.py", "backend/src/qts/api/schemas/operations.py"],
+      "acceptance": ["Routes are thin", "Schemas live under qts.api.schemas", "API behavior unchanged"],
+      "required_checks": ["make guardrails", "make typecheck", "make test-unit", "make test-integration"]
+    },
+    {
+      "id": "OOP-05-T01",
+      "name": "Split reconciliation module into package",
+      "milestone": "OOP-05",
+      "task_type": "refactor",
+      "risk_level": "medium",
+      "expected_files": ["backend/src/qts/reconciliation.py", "backend/src/qts/reconciliation/snapshots.py", "backend/src/qts/reconciliation/engine.py", "backend/src/qts/reconciliation/report.py"],
+      "acceptance": ["Reconciliation behavior unchanged", "Public imports remain compatible or documented", "Startup fail-closed behavior covered"],
+      "required_checks": ["make guardrails", "make typecheck", "make test-unit", "make test-integration"]
+    },
+    {
+      "id": "OOP-06-T01",
+      "name": "Split live feed module by concept",
+      "milestone": "OOP-06",
+      "task_type": "refactor",
+      "risk_level": "medium",
+      "expected_files": ["backend/src/qts/data/live_feed.py", "backend/src/qts/data/live/capabilities.py", "backend/src/qts/data/live/adapter.py", "backend/src/qts/data/live/events.py", "backend/src/qts/data/live/reconnect.py"],
+      "acceptance": ["Live feed behavior unchanged", "Protocol, DTOs, policy, and fake adapter have clear owners"],
+      "required_checks": ["make guardrails", "make typecheck", "make test-unit", "make test-integration"]
+    },
+    {
+      "id": "OOP-09-T01",
+      "name": "Add Strategy SDK internal leakage guardrail",
+      "milestone": "OOP-09",
+      "task_type": "implementation",
+      "risk_level": "medium",
+      "expected_files": ["backend/src/qts/quality/guardrails.py", "tests/unit/quality/test_guardrails.py"],
+      "acceptance": ["Strategy SDK imports/runtime leakage are caught", "Valid Strategy SDK modules pass"],
+      "required_checks": ["make guardrails", "make test-unit"]
+    }
+  ]
+}

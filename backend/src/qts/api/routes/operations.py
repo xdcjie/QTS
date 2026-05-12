@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-from enum import StrEnum
 from typing import Annotated
 
 from fastapi import APIRouter, Header, HTTPException
-from pydantic import BaseModel, model_validator
 
 from qts.api.mappers import map_kill_switch_state_dto, map_runtime_state_dto
+from qts.api.schemas.operations import (
+    KillSwitchCommand,
+    KillSwitchResponse,
+    RuntimeCommandResponse,
+)
 from qts.api.services import CommandIdempotencyStore
 from qts.application.dto import KillSwitchCommandDTO
 from qts.application.services import OperationsService
@@ -16,49 +19,6 @@ from qts.application.services import OperationsService
 router = APIRouter(prefix="/operations")
 _idempotency = CommandIdempotencyStore()
 _operations = OperationsService()
-
-
-class RuntimeCommandResponse(BaseModel):
-    """Payload for runtime pause/resume commands."""
-
-    state: str
-
-
-class KillSwitchScopeSchema(StrEnum):
-    """Kill-switch scoping model."""
-
-    GLOBAL = "global"
-    ACCOUNT = "account"
-    STRATEGY = "strategy"
-    INSTRUMENT = "instrument"
-
-
-class KillSwitchCommand(BaseModel):
-    """Kill-switch mutation command."""
-
-    scope: KillSwitchScopeSchema
-    scope_id: str | None = None
-    reason: str
-
-    @model_validator(mode="after")
-    def validate_scope(self) -> KillSwitchCommand:
-        """Perform validate_scope."""
-        if not self.reason.strip():
-            raise ValueError("reason must not be empty")
-        if self.scope is not KillSwitchScopeSchema.GLOBAL and (
-            self.scope_id is None or not self.scope_id.strip()
-        ):
-            raise ValueError("scope_id is required for non-global scope")
-        return self
-
-
-class KillSwitchResponse(BaseModel):
-    """Kill-switch current state response."""
-
-    scope: str
-    scope_id: str | None
-    active: bool
-    reason: str
 
 
 def _require_operator(operator: str | None) -> None:
