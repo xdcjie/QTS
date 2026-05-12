@@ -17,11 +17,7 @@ BacktestRunnerCohesionRule = _guardrails.BacktestRunnerCohesionRule
 BacktestInputCohesionRule = _guardrails.BacktestInputCohesionRule
 BacktestEngineCohesionRule = _guardrails.BacktestEngineCohesionRule
 run_guardrails = _guardrails.run_guardrails
-
-
-def main() -> int:
-    """Perform main."""
-    return _guardrails.main()
+main = _guardrails.main
 
 
 if __name__ == "__main__":

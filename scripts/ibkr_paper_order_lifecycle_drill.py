@@ -1,14 +1,26 @@
 #!/usr/bin/env python
-"""Run a paper-only IBKR order lifecycle drill."""
+"""Thin CLI wrapper for paper IBKR order lifecycle drill."""
 
-from __future__ import annotations
+from typing import Any
 
 from qts.application.commands.ibkr_paper_order_lifecycle_drill import (
-    main,
-    run_paper_order_lifecycle_drill,
+    main as _command_main,
+)
+from qts.application.commands.ibkr_paper_order_lifecycle_drill import (
+    run_paper_order_lifecycle_drill as _run_paper_order_lifecycle_drill,
 )
 
-__all__ = ["run_paper_order_lifecycle_drill", "main"]
+
+def run_paper_order_lifecycle_drill(*args: Any, **kwargs: Any) -> Any:
+    """Run the command function through the legacy script entrypoint."""
+
+    return _run_paper_order_lifecycle_drill(*args, **kwargs)
+
+
+def main() -> None:
+    """Run paper order lifecycle drill command."""
+    _command_main()
+
 
 if __name__ == "__main__":
     main()
