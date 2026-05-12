@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
@@ -10,10 +11,117 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
+from qts.backtest.report import dataset_metadata_payload
 from qts.core.hashing import stable_json_hash
 from qts.core.ids import InstrumentId
+from qts.data.provenance import DatasetMetadata
 
 _SUPPORTED_MARKET_DATA_SOURCES = frozenset({"local_historical"})
+
+
+@dataclass(frozen=True, slots=True)
+class BacktestCostModel:
+    """Backtest execution fee and slippage assumptions."""
+
+    fixed_commission_per_contract: Decimal = Decimal("0")
+    slippage_bps: Decimal = Decimal("0")
+
+    def __post_init__(self) -> None:
+        """Validate and normalize decimal inputs."""
+        object.__setattr__(
+            self,
+            "fixed_commission_per_contract",
+            Decimal(str(self.fixed_commission_per_contract)),
+        )
+        object.__setattr__(self, "slippage_bps", Decimal(str(self.slippage_bps)))
+        if self.fixed_commission_per_contract < Decimal("0"):
+            raise ValueError("fixed_commission_per_contract must be non-negative")
+        if self.slippage_bps < Decimal("0"):
+            raise ValueError("slippage_bps must be non-negative")
+
+    def to_payload(self) -> dict[str, str]:
+        """Serialize cost assumptions for hashing and reporting."""
+        return {
+            "fixed_commission_per_contract": str(self.fixed_commission_per_contract),
+            "slippage_bps": str(self.slippage_bps),
+        }
+
+    @property
+    def slippage_model(self) -> str:
+        """Describe whether slippage is modeled."""
+        return "zero" if self.slippage_bps == Decimal("0") else "basis_points"
+
+    @property
+    def commission_model(self) -> str:
+        """Describe commission handling for reports."""
+        if self.fixed_commission_per_contract == Decimal("0"):
+            return "zero"
+        return "fixed_per_contract"
+
+
+@dataclass(frozen=True, slots=True)
+class BacktestEngineConfig:
+    """Stable run-level inputs for constructing a backtest engine."""
+
+    initial_cash: Decimal
+    warmup_bars: int = 0
+    target_timeframe: str | None = None
+    strategy_version: str = ""
+    config_payload: dict[str, Any] = field(default_factory=dict)
+    dataset_metadata: tuple[DatasetMetadata, ...] = ()
+    cost_model: BacktestCostModel = field(default_factory=BacktestCostModel)
+
+    def __post_init__(self) -> None:
+        """Normalize and validate constructor inputs."""
+        object.__setattr__(self, "initial_cash", Decimal(str(self.initial_cash)))
+        if self.initial_cash <= Decimal("0"):
+            raise ValueError("initial_cash must be positive")
+        if self.warmup_bars < 0:
+            raise ValueError("warmup_bars must be non-negative")
+        if self.target_timeframe is not None and not self.target_timeframe.strip():
+            raise ValueError("target_timeframe, if set, must not be empty")
+        object.__setattr__(self, "dataset_metadata", tuple(self.dataset_metadata))
+        object.__setattr__(self, "config_payload", dict(self.config_payload))
+
+    @classmethod
+    def from_legacy_kwargs(
+        cls,
+        *,
+        initial_cash: Decimal,
+        warmup_bars: int = 0,
+        target_timeframe: str | None = None,
+        strategy_version: str | None = None,
+        config: dict[str, Any] | None = None,
+        cost_model: BacktestCostModel | None = None,
+        dataset_metadata: Iterable[DatasetMetadata] = (),
+    ) -> BacktestEngineConfig:
+        """Build from constructor-style legacy fields."""
+        return cls(
+            initial_cash=initial_cash,
+            warmup_bars=warmup_bars,
+            target_timeframe=target_timeframe,
+            strategy_version=strategy_version or "",
+            config_payload=dict(config or {}),
+            dataset_metadata=tuple(dataset_metadata),
+            cost_model=cost_model or BacktestCostModel(),
+        )
+
+    def to_payload(self) -> dict[str, Any]:
+        """Serialize this engine config for stable hashing."""
+        payload = {
+            "initial_cash": str(self.initial_cash),
+            "warmup_bars": self.warmup_bars,
+            "target_timeframe": self.target_timeframe,
+            "strategy_version": self.strategy_version,
+            "cost_model": self.cost_model.to_payload(),
+        }
+        if self.config_payload:
+            payload["config"] = dict(self.config_payload)
+        if self.dataset_metadata:
+            payload["dataset_metadata"] = tuple(
+                dataset_metadata_payload(item) for item in self.dataset_metadata
+            )
+        return payload
 
 
 @dataclass(frozen=True, slots=True)
@@ -332,6 +440,8 @@ __all__ = [
     "BacktestHistoricalDataReference",
     "BacktestMarketDataReference",
     "BacktestRunConfig",
+    "BacktestEngineConfig",
+    "BacktestCostModel",
     "BacktestStrategyConfig",
     "CostModelConfig",
     "RiskConfig",

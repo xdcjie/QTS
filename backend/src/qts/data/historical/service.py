@@ -8,7 +8,12 @@ from datetime import datetime
 from pathlib import Path
 
 from qts.data.historical.csv_dataset import iter_historical_bars
-from qts.data.live_feed import FeedCapabilities, FeedSubscription, LiveFeedEvent, LiveFeedSubscribed
+from qts.data.live_feed import (
+    FeedCapabilities,
+    FeedSubscription,
+    LiveFeedEvent,
+    MarketDataSubscribed,
+)
 from qts.registry.symbol_resolution import SourceSymbolResolver
 
 
@@ -42,11 +47,11 @@ class HistoricalMarketDataService:
             supported_timeframes=frozenset({self.source_timeframe}),
         )
 
-    def subscribe(self, subscription: FeedSubscription) -> LiveFeedSubscribed:
+    def subscribe(self, subscription: FeedSubscription) -> MarketDataSubscribed:
         """Perform subscribe."""
         self.capabilities.source_timeframe_for(subscription.timeframe)
         self._subscriptions[subscription.subscription_id] = subscription
-        return LiveFeedSubscribed(subscription=subscription, source_id=self.source_id)
+        return MarketDataSubscribed(subscription=subscription, source_id=self.source_id)
 
     def events(self, subscription_id: str) -> Iterator[LiveFeedEvent]:
         """Perform events."""

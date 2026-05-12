@@ -3,22 +3,21 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import tzinfo
 from decimal import Decimal
 
+from qts.backtest.dependencies import BacktestActorLoopConfig, BacktestActorLoopDependencies
 from qts.backtest.historical_data_portal import HistoricalDataPortal
 from qts.backtest.intent_processor import BacktestProcessedIntent
 from qts.backtest.report import EquityCurvePoint
 from qts.backtest.sinks import BacktestStreamingSink
 from qts.core.ids import InstrumentId
 from qts.domain.market_data import Bar
-from qts.registry.future_roll import FutureRollRegistry
-from qts.registry.instrument_registry import InstrumentRegistry
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.account_actor import AccountActor, AccountSnapshot
-from qts.runtime.actors.execution_actor import ExecutionActor, ExecutionAdapter
+from qts.runtime.actors.execution_actor import ExecutionActor
 from qts.runtime.actors.market_data_actor import MarketDataActor, MarketDataEvent
 from qts.runtime.actors.order_manager_actor import OrderManagerActor
 from qts.runtime.actors.signal_aggregator_actor import (
@@ -63,34 +62,24 @@ class BacktestActorLoop:
         *,
         strategy: Strategy,
         bars: Iterable[Bar],
-        initial_cash: Decimal,
-        target_timeframe: str | None = None,
-        exchange_timezone_by_instrument: Mapping[InstrumentId, str | tzinfo] | None = None,
-        warmup_bars: int = 0,
-        instrument_registry: InstrumentRegistry,
-        future_roll_registry: FutureRollRegistry | None = None,
-        contract_multipliers: Mapping[InstrumentId, Decimal] | None = None,
-        execution_adapter: ExecutionAdapter | None = None,
-        process_intent: ProcessIntentHandler,
-        portfolio_view: PortfolioViewBuilder,
-        equity_point: EquityPointBuilder,
-        update_rolling_prices: RollingPriceUpdater,
+        config: BacktestActorLoopConfig,
+        dependencies: BacktestActorLoopDependencies,
     ) -> None:
         """Perform __init__."""
         self._strategy = strategy
         self._bars = bars
-        self._initial_cash = initial_cash
-        self._target_timeframe = target_timeframe
-        self._exchange_timezone_by_instrument = dict(exchange_timezone_by_instrument or {})
-        self._warmup_bars = warmup_bars
-        self._instrument_registry = instrument_registry
-        self._future_roll_registry = future_roll_registry
-        self._contract_multipliers = dict(contract_multipliers or {})
-        self._execution_adapter = execution_adapter
-        self._process_intent = process_intent
-        self._portfolio_view = portfolio_view
-        self._equity_point = equity_point
-        self._update_rolling_prices = update_rolling_prices
+        self._initial_cash = config.initial_cash
+        self._target_timeframe = config.target_timeframe
+        self._exchange_timezone_by_instrument = dict(dependencies.exchange_timezone_by_instrument)
+        self._warmup_bars = config.warmup_bars
+        self._instrument_registry = dependencies.instrument_registry
+        self._future_roll_registry = dependencies.future_roll_registry
+        self._contract_multipliers = dict(dependencies.contract_multipliers)
+        self._execution_adapter = dependencies.execution_adapter
+        self._process_intent = dependencies.process_intent
+        self._portfolio_view = dependencies.portfolio_view
+        self._equity_point = dependencies.equity_point
+        self._update_rolling_prices = dependencies.update_rolling_prices
 
     @staticmethod
     def _take_strategy_bar_result(mailbox: Mailbox) -> StrategyBarResult:

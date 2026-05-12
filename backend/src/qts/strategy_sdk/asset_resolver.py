@@ -93,16 +93,17 @@ class StrategyAssetResolver:
     def resolve_option(
         self,
         *,
-        underlying: InstrumentId,
+        underlying: str | AssetRef | InstrumentId,
         expiry: date,
         strike: Decimal,
         right: OptionRight,
     ) -> AssetRef:
-        """Perform resolve_option."""
+        """Resolve a user-level option selection to a concrete option asset."""
         if self.option_chain_registry is None:
             raise RuntimeError("option chain registry is not configured")
+        underlying_id = self._resolve_underlying_option_id(underlying)
         matches = self.option_chain_registry.find(
-            underlying=underlying,
+            underlying=underlying_id,
             expiry=expiry,
             strike=strike,
             right=right,
@@ -111,6 +112,16 @@ class StrategyAssetResolver:
             raise KeyError("no option contract matched selection")
         option = matches[0]
         return AssetRef(instrument_id=option.instrument_id, symbol=str(option.instrument_id))
+
+    def _resolve_underlying_option_id(
+        self, underlying: str | AssetRef | InstrumentId
+    ) -> InstrumentId:
+        """Resolve an option underlying from user-facing SDK input."""
+        if isinstance(underlying, AssetRef):
+            return underlying.instrument_id
+        if isinstance(underlying, InstrumentId):
+            return underlying
+        return self.resolve_symbol(underlying).instrument_id
 
 
 __all__ = [

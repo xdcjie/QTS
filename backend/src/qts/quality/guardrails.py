@@ -57,6 +57,14 @@ BROKER_ADAPTER_FORBIDDEN_IMPORT_PREFIXES = (
     "qts.portfolio",
     "qts.runtime",
 )
+STRATEGY_SDK_FORBIDDEN_IMPORT_PREFIXES = (
+    "qts.runtime",
+    "qts.execution.adapters",
+    "qts.risk.risk_engine",
+)
+STRATEGY_SDK_FORBIDDEN_SYMBOLS = frozenset(
+    {"BrokerActor", "OrderManagerActor", "ContractSpec", "BrokerSymbolMapping"}
+)
 BACKTEST_RUNNER_FORBIDDEN_IMPORT_PREFIXES = (
     "qts.data.historical.config",
     "qts.data.historical.csv_dataset",
@@ -308,6 +316,22 @@ class BacktestEngineCohesionRule:
         return _check_backtest_engine_cohesion(relative_path, qts_relative_path, tree)
 
 
+class StrategySdkPublicSurfaceRule:
+    """Reject internal runtime/broker/risk symbols from strategy SDK modules."""
+
+    code = "STRATEGY_SDK_INTERNAL_LEAK"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform check."""
+        return _check_strategy_sdk_internal_leak(relative_path, qts_relative_path, tree)
+
+
 class GuardrailSuite:
     """Execute a configured set of guardrail rules against Python files."""
 
@@ -323,6 +347,7 @@ class GuardrailSuite:
             BacktestRunnerCohesionRule(),
             BacktestInputCohesionRule(),
             BacktestEngineCohesionRule(),
+            StrategySdkPublicSurfaceRule(),
         )
 
     def check_file(
@@ -805,6 +830,68 @@ def _check_backtest_engine_cohesion(
                 ),
             )
         )
+    return violations
+
+
+def _check_strategy_sdk_internal_leak(
+    relative_path: Path,
+    qts_relative_path: Path,
+    tree: ast.AST,
+) -> list[GuardrailViolation]:
+    if qts_relative_path.parts[:1] != ("strategy_sdk",):
+        return []
+    violations: list[GuardrailViolation] = []
+    for imported_module, line in _iter_imports(tree):
+        if imported_module.startswith(STRATEGY_SDK_FORBIDDEN_IMPORT_PREFIXES):
+            violations.append(
+                GuardrailViolation(
+                    code="STRATEGY_SDK_INTERNAL_LEAK",
+                    path=str(relative_path),
+                    line=line,
+                    message=(
+                        "Strategy SDK public modules must not import execution/runtime "
+                        f"internals: {imported_module}"
+                    ),
+                )
+            )
+    for imported_module, imported_name, line in _iter_imported_names(tree):
+        if (
+            imported_module.startswith(STRATEGY_SDK_FORBIDDEN_IMPORT_PREFIXES)
+            or imported_name in STRATEGY_SDK_FORBIDDEN_SYMBOLS
+        ):
+            if imported_module.startswith(STRATEGY_SDK_FORBIDDEN_IMPORT_PREFIXES):
+                continue
+            if imported_name not in STRATEGY_SDK_FORBIDDEN_SYMBOLS:
+                continue
+            violations.append(
+                GuardrailViolation(
+                    code="STRATEGY_SDK_INTERNAL_LEAK",
+                    path=str(relative_path),
+                    line=line,
+                    message=(
+                        "Strategy SDK public modules must not reference internal actor/risk "
+                        f"symbol {imported_name}"
+                    ),
+                )
+            )
+    module = cast(ast.Module, tree)
+    for node in ast.walk(module):
+        if not isinstance(node, ast.Name):
+            continue
+        if isinstance(node.ctx, ast.Store):
+            continue
+        if node.id in STRATEGY_SDK_FORBIDDEN_SYMBOLS:
+            violations.append(
+                GuardrailViolation(
+                    code="STRATEGY_SDK_INTERNAL_LEAK",
+                    path=str(relative_path),
+                    line=getattr(node, "lineno", 1),
+                    message=(
+                        "Strategy SDK public modules must not reference internal actor/risk symbol "
+                        f"{node.id}"
+                    ),
+                )
+            )
     return violations
 
 

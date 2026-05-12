@@ -26,8 +26,8 @@ class FeedSubscription:
 
 
 @dataclass(frozen=True, slots=True)
-class LiveFeedSubscribed:
-    """Successful live feed subscription acknowledgement."""
+class MarketDataSubscribed:
+    """Successful market-data source subscription acknowledgement."""
 
     subscription: FeedSubscription
     source_id: str
@@ -56,8 +56,10 @@ class LiveFeedFailure:
 
 __all__ = [
     "FeedSubscription",
-    "LiveFeedSubscribed",
+    "MarketDataSubscribed",
     "LiveFeedEvent",
     "LiveFeedFailure",
     "LiveFeedPayload",
 ]
+
+LiveFeedSubscribed = MarketDataSubscribed

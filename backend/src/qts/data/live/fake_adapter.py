@@ -9,7 +9,7 @@ from .events import (
     LiveFeedEvent,
     LiveFeedFailure,
     LiveFeedPayload,
-    LiveFeedSubscribed,
+    MarketDataSubscribed,
 )
 
 
@@ -40,10 +40,10 @@ class FakeLiveFeedAdapter(LiveFeedAdapter):
         """Return current active subscription count."""
         return len(self._subscriptions)
 
-    def subscribe(self, subscription: FeedSubscription) -> LiveFeedSubscribed:
+    def subscribe(self, subscription: FeedSubscription) -> MarketDataSubscribed:
         """Accept a new subscription and acknowledge it."""
         self._subscriptions[subscription.subscription_id] = subscription
-        return LiveFeedSubscribed(subscription=subscription, source_id=self._source_id)
+        return MarketDataSubscribed(subscription=subscription, source_id=self._source_id)
 
     def emit(self, payload: LiveFeedPayload) -> LiveFeedEvent:
         """Emit a typed live feed event."""

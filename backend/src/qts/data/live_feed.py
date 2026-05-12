@@ -11,6 +11,7 @@ from qts.data.live import (
     LiveFeedPayload,
     LiveFeedSubscribed,
     MarketDataAdapter,
+    MarketDataSubscribed,
     ReconnectPolicy,
     ReplayMarketDataAdapter,
 )
@@ -25,6 +26,7 @@ __all__ = [
     "LiveFeedFailure",
     "LiveFeedPayload",
     "LiveFeedSubscribed",
+    "MarketDataSubscribed",
     "MarketDataAdapter",
     "ReconnectPolicy",
     "ReplayMarketDataAdapter",

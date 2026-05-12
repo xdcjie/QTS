@@ -29,6 +29,7 @@ def _bar(start: datetime, close: str = "100") -> Bar:
 
 def test_backtest_actor_loop_processes_bars_and_returns_runtime_result(tmp_path: Path) -> None:
     from qts.backtest.actor_loop import BacktestActorLoop
+    from qts.backtest.dependencies import BacktestActorLoopConfig, BacktestActorLoopDependencies
     from qts.backtest.engine import BacktestCostModel, _BacktestExecutionAdapter
     from qts.backtest.instrument_context import BacktestInstrumentContext
     from qts.backtest.intent_processor import BacktestIntentProcessor
@@ -66,15 +67,16 @@ def test_backtest_actor_loop_processes_bars_and_returns_runtime_result(tmp_path:
     loop = BacktestActorLoop(
         strategy=strategy,
         bars=bars,
-        initial_cash=Decimal("10000"),
-        warmup_bars=0,
-        instrument_registry=instrument_context.instrument_registry(),
-        contract_multipliers={},
-        execution_adapter=_BacktestExecutionAdapter(BacktestCostModel()),
-        process_intent=intent_processor.process_intent,
-        portfolio_view=portfolio_projector.portfolio_view,
-        equity_point=portfolio_projector.equity_point,
-        update_rolling_prices=instrument_context.update_rolling_prices,
+        config=BacktestActorLoopConfig(initial_cash=Decimal("10000"), warmup_bars=0),
+        dependencies=BacktestActorLoopDependencies(
+            instrument_registry=instrument_context.instrument_registry(),
+            contract_multipliers={},
+            execution_adapter=_BacktestExecutionAdapter(BacktestCostModel()),
+            process_intent=intent_processor.process_intent,
+            portfolio_view=portfolio_projector.portfolio_view,
+            equity_point=portfolio_projector.equity_point,
+            update_rolling_prices=instrument_context.update_rolling_prices,
+        ),
     )
     writer = StreamingBacktestArtifactWriter(tmp_path)
     sink = BacktestStreamingSink(writer)

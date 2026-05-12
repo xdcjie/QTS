@@ -61,9 +61,12 @@ def test_asset_resolver_resolves_front_future() -> None:
 
 
 def test_asset_resolver_resolves_option_reference() -> None:
-    resolver = StrategyAssetResolver(option_chain_registry=_FakeOptionResolver())
+    resolver = StrategyAssetResolver(
+        instrument_registry=_FakeInstrumentRegistry(),
+        option_chain_registry=_FakeOptionResolver(),
+    )
     asset = resolver.resolve_option(
-        underlying=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+        underlying="AAPL",
         expiry=date(2026, 6, 19),
         strike=Decimal("200"),
         right=OptionRight.CALL,

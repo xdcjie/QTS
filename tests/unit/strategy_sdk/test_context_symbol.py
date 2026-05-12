@@ -93,13 +93,30 @@ def test_context_resolves_option_selection_when_registry_is_available() -> None:
     )
     option_registry = OptionChainRegistry()
     option_registry.register(option)
+    instrument_registry = InstrumentRegistry()
+    instrument_registry.register(
+        "AAPL",
+        Instrument(
+            instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+            asset_class=AssetClass.EQUITY,
+            exchange="NASDAQ",
+            currency="USD",
+            contract_spec=ContractSpec(
+                tick_size=Decimal("0.01"),
+                lot_size=Decimal("1"),
+                multiplier=Decimal("1"),
+                settlement=SettlementType.CASH,
+                calendar_id="XNYS",
+            ),
+        ),
+    )
     ctx = StrategyContext(
-        instrument_registry=InstrumentRegistry(),
+        instrument_registry=instrument_registry,
         option_chain_registry=option_registry,
     )
 
     asset = ctx.option(
-        underlying=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+        underlying="AAPL",
         expiry=date(2026, 6, 19),
         strike=Decimal("200"),
         right=OptionRight.CALL,

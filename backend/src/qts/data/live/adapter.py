@@ -6,7 +6,7 @@ from collections.abc import Iterator
 from typing import Protocol
 
 from .capabilities import FeedCapabilities
-from .events import FeedSubscription, LiveFeedEvent, LiveFeedSubscribed
+from .events import FeedSubscription, LiveFeedEvent, MarketDataSubscribed
 
 
 class LiveFeedAdapter(Protocol):
@@ -17,7 +17,7 @@ class LiveFeedAdapter(Protocol):
         """Return feed capabilities."""
         ...
 
-    def subscribe(self, subscription: FeedSubscription) -> LiveFeedSubscribed:
+    def subscribe(self, subscription: FeedSubscription) -> MarketDataSubscribed:
         """Subscribe to a live feed stream."""
         ...
 
@@ -30,7 +30,7 @@ class MarketDataAdapter(Protocol):
         """Return feed capabilities."""
         ...
 
-    def subscribe(self, subscription: FeedSubscription) -> LiveFeedSubscribed:
+    def subscribe(self, subscription: FeedSubscription) -> MarketDataSubscribed:
         """Subscribe to a source stream."""
         ...
 
@@ -43,7 +43,7 @@ class ReplayMarketDataAdapter(Protocol):
         """Return feed capabilities."""
         ...
 
-    def subscribe(self, subscription: FeedSubscription) -> LiveFeedSubscribed:
+    def subscribe(self, subscription: FeedSubscription) -> MarketDataSubscribed:
         """Subscribe to a replay stream."""
         ...
 

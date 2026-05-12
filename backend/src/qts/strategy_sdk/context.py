@@ -28,7 +28,7 @@ from qts.strategy_sdk.target_emitter import TargetIntentEmitter
 
 @dataclass(slots=True)
 class StrategyContext:
-    """User-facing strategy context."""
+    """User-facing strategy facade for data, assets, targets, and subscriptions."""
 
     instrument_registry: SymbolResolver | None = None
     future_chain_registry: FutureContractResolver | ContinuousFutureResolver | None = None
@@ -44,7 +44,7 @@ class StrategyContext:
     )
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Initialize internal SDK collaborators."""
         self._asset_resolver = StrategyAssetResolver(
             instrument_registry=self.instrument_registry,
             future_chain_registry=self.future_chain_registry,
@@ -53,31 +53,31 @@ class StrategyContext:
 
     @property
     def intents(self) -> tuple[TargetIntent, ...]:
-        """Perform intents."""
+        """Return target intents emitted by the strategy."""
         return self._intent_emitter.intents
 
     @property
     def subscriptions(self) -> tuple[DataSubscription, ...]:
-        """Perform subscriptions."""
+        """Return market data subscriptions requested by the strategy."""
         return self._subscription_registry.subscriptions
 
     def symbol(self, user_symbol: str) -> AssetRef:
-        """Perform symbol."""
+        """Resolve a user-facing symbol such as ``AAPL``."""
         return self._asset_resolver.resolve_symbol(user_symbol)
 
     def future(self, root_symbol: str, *, contract: str = "front") -> AssetRef:
-        """Perform future."""
+        """Resolve a futures root to a selectable contract reference."""
         return self._asset_resolver.resolve_future(root_symbol, contract=contract)
 
     def option(
         self,
         *,
-        underlying: InstrumentId,
+        underlying: str | AssetRef | InstrumentId,
         expiry: date,
         strike: Decimal,
         right: OptionRight,
     ) -> AssetRef:
-        """Perform option."""
+        """Resolve an option by underlying symbol/ref and contract attributes."""
         return self._asset_resolver.resolve_option(
             underlying=underlying,
             expiry=expiry,
@@ -86,35 +86,35 @@ class StrategyContext:
         )
 
     def target_percent(self, asset: AssetRef, weight: Decimal) -> TargetIntent:
-        """Perform target_percent."""
+        """Emit a portfolio-weight target for an asset."""
         return self._intent_emitter.emit(
             TargetIntent(asset=asset, intent_type=TargetIntentType.PERCENT, value=weight)
         )
 
     def target_quantity(self, asset: AssetRef, quantity: Decimal) -> TargetIntent:
-        """Perform target_quantity."""
+        """Emit a quantity target for an asset."""
         return self._intent_emitter.emit(
             TargetIntent(asset=asset, intent_type=TargetIntentType.QUANTITY, value=quantity)
         )
 
     def target_value(self, asset: AssetRef, value: Decimal) -> TargetIntent:
-        """Perform target_value."""
+        """Emit a notional value target for an asset."""
         return self._intent_emitter.emit(
             TargetIntent(asset=asset, intent_type=TargetIntentType.VALUE, value=value)
         )
 
     def close(self, asset: AssetRef) -> TargetIntent:
-        """Perform close."""
+        """Emit a target that closes an asset position."""
         return self._intent_emitter.emit(
             TargetIntent(asset=asset, intent_type=TargetIntentType.CLOSE, value=None)
         )
 
     def rebalance(self, weights: dict[AssetRef, Decimal]) -> tuple[TargetIntent, ...]:
-        """Perform rebalance."""
+        """Emit one percent target per asset in ``weights``."""
         return tuple(self.target_percent(asset, weight) for asset, weight in weights.items())
 
     def subscribe(self, asset: AssetRef, *, timeframe: str, warmup: int = 1) -> DataSubscription:
-        """Perform subscribe."""
+        """Subscribe to bars for an asset and timeframe."""
         subscription = DataSubscription(asset=asset, timeframe=timeframe, warmup=warmup)
         return self._subscription_registry.subscribe(subscription)
 

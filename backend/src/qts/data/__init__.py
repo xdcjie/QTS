@@ -9,6 +9,7 @@ from qts.data.live_feed import (
     LiveFeedFailure,
     LiveFeedSubscribed,
     MarketDataAdapter,
+    MarketDataSubscribed,
     ReconnectPolicy,
 )
 from qts.data.provenance import DatasetMetadata
@@ -33,6 +34,7 @@ __all__ = [
     "LiveFeedEvent",
     "LiveFeedFailure",
     "LiveFeedSubscribed",
+    "MarketDataSubscribed",
     "ReconnectPolicy",
     "DataValidationIssue",
     "DataValidationReport",

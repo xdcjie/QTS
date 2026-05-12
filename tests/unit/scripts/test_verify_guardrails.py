@@ -58,6 +58,28 @@ def test_guardrails_reject_strategy_sdk_imports_from_execution(tmp_path: Path) -
     assert _codes(root) == {"IMPORT_BOUNDARY"}
 
 
+def test_guardrails_reject_strategy_sdk_internal_runtime_imports(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/strategy_sdk/bad.py",
+        "from qts.runtime.actors.order_manager_actor import OrderManagerActor\n",
+    )
+
+    assert "STRATEGY_SDK_INTERNAL_LEAK" in _codes(root)
+
+
+def test_guardrails_reject_strategy_sdk_internal_domain_symbols(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/strategy_sdk/bad.py",
+        "from qts.domain.instruments import ContractSpec\n",
+    )
+
+    assert _codes(root) == {"STRATEGY_SDK_INTERNAL_LEAK"}
+
+
 def test_guardrails_reject_market_data_and_execution_adapter_coupling(tmp_path: Path) -> None:
     root = tmp_path
     _write(

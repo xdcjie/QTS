@@ -11,6 +11,29 @@ from pathlib import Path
 from typing import Any
 
 from qts.core.hashing import stable_json_default, stable_json_hash
+from qts.data.provenance import DatasetMetadata
+
+
+def dataset_metadata_payload(item: DatasetMetadata) -> dict[str, str | None]:
+    """Serialize one dataset provenance row for reporting."""
+    return {
+        "dataset_id": item.dataset_id,
+        "source": item.source,
+        "instrument_id": item.instrument_id.value,
+        "timeframe": item.timeframe,
+        "timezone_policy": item.timezone_policy,
+        "adjustment_policy": item.adjustment_policy,
+        "normalization_version": item.normalization_version,
+        "created_at": item.created_at.isoformat(),
+        "content_hash": item.content_hash,
+    }
+
+
+def zero_time() -> datetime:
+    """Return the epoch boundary used for empty-equity bootstrap."""
+    from datetime import UTC
+
+    return datetime(1970, 1, 1, tzinfo=UTC)
 
 
 @dataclass(frozen=True, slots=True)
@@ -260,9 +283,11 @@ class StreamingBacktestArtifactWriter:
 
 
 __all__ = [
+    "dataset_metadata_payload",
     "EquityCurvePoint",
     "StreamingBacktestArtifactWriter",
     "StreamingBacktestArtifacts",
     "StreamingEquityMetrics",
+    "zero_time",
     "TradeLedgerEntry",
 ]
