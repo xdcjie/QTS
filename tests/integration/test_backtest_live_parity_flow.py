@@ -102,7 +102,11 @@ def test_shared_actor_order_flow_uses_same_messages_for_execution_adapters() -> 
     assert account_actor.snapshot().cash["USD"] == Decimal("800")
 
 
-def test_backtest_risk_rejection_does_not_submit_order_or_mutate_account() -> None:
+def test_backtest_risk_rejection_does_not_submit_order_or_mutate_account(
+    tmp_path: Path,
+) -> None:
+    from tests.support.backtest_streaming import run_engine_streaming
+
     class BuyOnce(Strategy):
         def initialize(self, ctx: Any) -> None:
             self.asset = ctx.symbol("AAPL")
@@ -124,15 +128,19 @@ def test_backtest_risk_rejection_does_not_submit_order_or_mutate_account() -> No
         is_complete=True,
     )
 
-    result = BacktestEngine(
-        strategy=BuyOnce(),
-        bars=[bar],
-        initial_cash=Decimal("1000"),
-        risk_engine=RiskEngine([MaxNotionalRule(max_notional=Decimal("50"))]),
-    ).run()
+    captured = run_engine_streaming(
+        BacktestEngine(
+            strategy=BuyOnce(),
+            bars=[bar],
+            initial_cash=Decimal("1000"),
+            risk_engine=RiskEngine([MaxNotionalRule(max_notional=Decimal("50"))]),
+        ),
+        tmp_path / "risk-rejection",
+    )
+    result = captured.result
 
-    assert result.orders == ()
-    assert result.fills == ()
+    assert captured.orders == ()
+    assert captured.fills == ()
     assert result.final_account.cash["USD"] == Decimal("1000")
     assert result.final_account.positions == {}
 

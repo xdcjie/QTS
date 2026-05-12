@@ -90,6 +90,29 @@ strategy_class: "tests.integration.test_backtest_gc_si:RollingGcStrategy"
     assert config.dataset_root is None
 
 
+def test_backtest_run_config_rejects_unsupported_market_data_source(tmp_path: Path) -> None:
+    config_path = tmp_path / "backtest.yaml"
+    config_path.write_text(
+        """
+market_data:
+  source: live_gateway
+  config: configs/data/historical.local.yaml
+  catalog: research_futures
+roots: [GC]
+symbols: [GC]
+start: "2026-01-02T14:30:00Z"
+end: "2026-01-02T14:31:00Z"
+timeframe: 1m
+initial_cash: "100000"
+strategy_class: "tests.integration.test_backtest_gc_si:RollingGcStrategy"
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="unsupported market_data.source"):
+        BacktestRunConfig.from_yaml(config_path)
+
+
 def test_backtest_run_config_can_reference_strategy_config(tmp_path: Path) -> None:
     strategy_path = tmp_path / "strategies" / "gc_si_momentum.yaml"
     strategy_path.parent.mkdir()

@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from qts.backtest.config import BacktestRunConfig
-from qts.backtest.engine import BacktestEngine, BacktestResult, BacktestStreamResult
+from qts.backtest.engine import BacktestEngine, BacktestStreamResult
 from qts.core.ids import InstrumentId
 from qts.data.historical.catalog import (
     HistoricalCatalog,
@@ -36,15 +36,6 @@ from qts.strategy_sdk import Strategy
 class BacktestRun:
     """Output of a backtest runner invocation."""
 
-    result: BacktestResult
-    report_path: Path
-    dataset_stats: dict[str, dict[str, int]]
-
-
-@dataclass(frozen=True, slots=True)
-class StreamingBacktestRun:
-    """Output of a streaming backtest runner invocation."""
-
     result: BacktestStreamResult
     manifest_path: Path
     summary_path: Path
@@ -65,33 +56,6 @@ def run_backtest(
     *,
     output_dir: Path = Path("runs/backtests"),
 ) -> BacktestRun:
-    """Run a backtest from YAML config and write a report JSON artifact."""
-
-    config = BacktestRunConfig.from_yaml(config_path)
-    historical_data_config = _historical_data_config_for(config)
-    catalog = _load_catalog(config, historical_data_config=historical_data_config)
-    bars, dataset_stats, roll_registry, exchange_timezones = _load_configured_bars(config, catalog)
-    strategy = _load_strategy(config.strategy_class, config.strategy_params)
-    metadata = _dataset_metadata(config, catalog)
-    result = BacktestEngine.from_config(
-        config,
-        bars=bars,
-        strategy=strategy,
-        dataset_metadata=metadata,
-        future_roll_registry=roll_registry,
-        exchange_timezone_by_instrument=exchange_timezones,
-    ).run()
-    output_dir.mkdir(parents=True, exist_ok=True)
-    report_path = output_dir / f"{result.run_id.value}.json"
-    report_path.write_text(result.report.to_json(), encoding="utf-8")
-    return BacktestRun(result=result, report_path=report_path, dataset_stats=dataset_stats)
-
-
-def run_streaming_backtest(
-    config_path: Path,
-    *,
-    output_dir: Path = Path("runs/backtests"),
-) -> StreamingBacktestRun:
     """Run a backtest and write partitioned streaming artifacts."""
 
     config = BacktestRunConfig.from_yaml(config_path)
@@ -110,7 +74,7 @@ def run_streaming_backtest(
     instrument_registry = _instrument_registry_for(config, catalog, roll_registry=roll_registry)
     strategy = _load_strategy(config.strategy_class, config.strategy_params)
     metadata = _dataset_metadata(config, catalog)
-    result = BacktestEngine.streaming_from_config(
+    result = BacktestEngine.from_config(
         config,
         bars=bars,
         strategy=strategy,
@@ -132,7 +96,7 @@ def run_streaming_backtest(
         ),
         encoding="utf-8",
     )
-    return StreamingBacktestRun(
+    return BacktestRun(
         result=result,
         manifest_path=result.manifest_path,
         summary_path=summary_path,
@@ -175,74 +139,6 @@ def _load_catalog(
         roots=config.roots,
         symbol_resolvers=symbol_resolvers,
     )
-
-
-def _load_configured_bars(
-    config: BacktestRunConfig,
-    catalog: HistoricalCatalog,
-) -> tuple[
-    tuple[Bar, ...],
-    dict[str, dict[str, int]],
-    FutureRollRegistry | None,
-    dict[InstrumentId, str],
-]:
-    requested = set(config.symbols)
-    bars: list[Bar] = []
-    stats: dict[str, dict[str, int]] = {}
-    exchange_timezones: dict[InstrumentId, str] = {}
-    roll_registry = FutureRollRegistry() if config.roll_policy.enabled else None
-    for root in config.roots:
-        dataset = catalog.datasets[root]
-        rolling_root = config.roll_policy.enabled and root in requested
-        continuous_id: InstrumentId | None = None
-        contract_selector = None
-        if rolling_root:
-            if dataset.chain is None:
-                raise ValueError(f"rolling futures require chain metadata for root: {root}")
-            assert roll_registry is not None
-            continuous_id = roll_registry.register_root(
-                root_symbol=root,
-                exchange=dataset.chain.exchange,
-                contracts=tuple(
-                    dataset.chain.instrument_id_for_symbol(contract.symbol)
-                    for contract in dataset.chain.contracts
-                ),
-            )
-            contract_selector = HighestVolumeFutureContractSelector()
-        source_timeframe = dataset.source_timeframe or config.timeframe
-        stream = iter_historical_bars(
-            dataset.csv_path,
-            dataset.symbol_resolver,
-            timeframe=source_timeframe,
-            start=config.start,
-            end=config.end,
-            contract_selector=contract_selector,
-            continuous_instrument_id=continuous_id,
-            schema=dataset.csv_schema,
-        )
-        if rolling_root:
-            source_bars = tuple(stream)
-            assert roll_registry is not None
-            for selection in stream.roll_selections:
-                roll_registry.record_selection(selection)
-            bars.extend(source_bars)
-            _record_exchange_timezones(
-                source_bars,
-                exchange_timezones=exchange_timezones,
-                exchange_timezone=_exchange_timezone_for(dataset),
-            )
-        else:
-            source_bars = tuple(
-                bar for bar in stream if bar.instrument_id.value.rsplit(".", 1)[-1] in requested
-            )
-            bars.extend(source_bars)
-            _record_exchange_timezones(
-                source_bars,
-                exchange_timezones=exchange_timezones,
-                exchange_timezone=_exchange_timezone_for(dataset),
-            )
-        stats[root] = stream.stats.as_dict()
-    return tuple(bars), stats, roll_registry, exchange_timezones
 
 
 def _stream_configured_bars(
@@ -373,18 +269,6 @@ def _merge_ordered_bar_streams(
         sequence += 1
 
 
-def _record_exchange_timezones(
-    source_bars: tuple[Bar, ...],
-    *,
-    exchange_timezones: dict[InstrumentId, str],
-    exchange_timezone: str | None,
-) -> None:
-    if exchange_timezone is None:
-        return
-    for bar in source_bars:
-        exchange_timezones.setdefault(bar.instrument_id, exchange_timezone)
-
-
 def _record_exchange_timezone(
     bar: Bar,
     *,
@@ -401,6 +285,12 @@ def _exchange_timezone_for(dataset: HistoricalDataset) -> str | None:
     if dataset.chain is not None:
         return dataset.chain.timezone
     return None
+
+
+def _dataset_instrument_id(root: str, dataset: HistoricalDataset) -> InstrumentId:
+    if dataset.chain is None:
+        return InstrumentId(f"DATASET.{root}")
+    return InstrumentId(f"FUTURE.{dataset.chain.exchange}.{root}.DATASET")
 
 
 def _instrument_registry_for(
@@ -530,10 +420,10 @@ def _chain_path_exists(
     if historical_data_config is not None:
         if config.market_data.catalog is None:
             raise RuntimeError("market data catalog is not configured")
-        chain_path = historical_data_config.resolve_dataset(
+        chain_path = historical_data_config.resolve_chain_path(
             config.market_data.catalog,
             root,
-        ).chain_path
+        )
         return chain_path is not None and chain_path.exists()
     if config.dataset_root is None:
         return False
@@ -548,7 +438,7 @@ def _dataset_metadata(
         DatasetMetadata(
             dataset_id=f"{root}-{config.timeframe}-{config.start.isoformat()}-{config.end.isoformat()}",
             source=str(catalog.datasets[root].csv_path),
-            instrument_id=InstrumentId(f"FUTURE.CME.{root}.DATASET"),
+            instrument_id=_dataset_instrument_id(root, catalog.datasets[root]),
             timeframe=config.timeframe,
             timezone_policy="source UTC timestamps; exchange session semantics",
             adjustment_policy="raw",
@@ -585,7 +475,5 @@ def _streaming_summary_payload(
 
 __all__ = [
     "BacktestRun",
-    "StreamingBacktestRun",
     "run_backtest",
-    "run_streaming_backtest",
 ]

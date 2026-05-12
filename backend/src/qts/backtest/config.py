@@ -14,6 +14,8 @@ import yaml  # type: ignore[import-untyped]
 
 from qts.core.ids import InstrumentId
 
+_SUPPORTED_MARKET_DATA_SOURCES = frozenset({"local_historical"})
+
 
 @dataclass(frozen=True, slots=True)
 class CostModelConfig:
@@ -84,8 +86,12 @@ class BacktestMarketDataReference:
     def __post_init__(self) -> None:
         if self.config_path is not None:
             object.__setattr__(self, "config_path", Path(self.config_path))
-        if not self.source.strip():
+        source = self.source.strip().lower()
+        if not source:
             raise ValueError("market_data.source must not be empty")
+        if source not in _SUPPORTED_MARKET_DATA_SOURCES:
+            raise ValueError(f"unsupported market_data.source: {self.source}")
+        object.__setattr__(self, "source", source)
         if self.catalog is not None:
             normalized = self.catalog.strip()
             if not normalized:

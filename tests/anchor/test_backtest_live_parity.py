@@ -23,7 +23,10 @@ def test_backtest_engine_order_path_uses_shared_actor_chain() -> None:
     from qts.backtest import engine
 
     engine_source = inspect.getsource(engine.BacktestEngine)
-    run_source = inspect.getsource(engine.BacktestEngine.run)
+    run_source = inspect.getsource(engine.BacktestEngine.run_streaming)
+    actor_loop_source = inspect.getsource(engine.BacktestEngine._run_actor_loop)
+
+    assert "_run_actor_loop" in run_source
 
     for required in (
         "StrategyContext",
@@ -32,9 +35,20 @@ def test_backtest_engine_order_path_uses_shared_actor_chain() -> None:
         "ExecutionActor",
         "_BacktestExecutionAdapter",
     ):
-        assert required in run_source
+        assert required in actor_loop_source or required in engine_source
     assert "OrderRiskRequest" in engine_source
     assert ".check(" in engine_source
     assert "SubmitOrder" in engine_source
     assert "resolve_contract" in engine_source
     assert "ApplyFill" not in engine_source
+
+
+def test_backtest_public_runner_is_streaming_only() -> None:
+    import qts.backtest.runner as runner
+
+    cli_source = Path("scripts/run_backtest.py").read_text(encoding="utf-8")
+
+    assert hasattr(runner, "run_backtest")
+    assert not hasattr(runner, "run_streaming_backtest")
+    assert not hasattr(runner, "StreamingBacktestRun")
+    assert "--streaming" not in cli_source

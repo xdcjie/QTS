@@ -67,7 +67,7 @@ or excluded before outright futures backtests:
 | S5-05-T03 | Complete | Strategy `finalize(ctx)` hook runs once and finalize intents are ignored. |
 | S5-06-T01 | Complete | Backtest fills and portfolio views use configured futures contract multipliers; GC/SI multiplier anchors added. |
 | S5-06-T02 | Complete | Fixed per-contract commission and basis-point slippage are explicit and reflected in fills/reports. |
-| S5-07-T01 | Complete | `BacktestReport` serializes deterministic JSON with config, dataset, cost, orders, fills, equity, metrics, and hash. |
+| S5-07-T01 | Complete | Streaming artifacts serialize deterministic manifest, orders, fills, trade ledger, equity curve, metrics, and hash. |
 | S5-07-T02 | Complete | Equity metrics include total return, max drawdown, and point count. |
 | S5-07-T03 | Complete | Trade ledger rows are populated from idempotent validated fills. |
 | S5-08-T01 | Complete | `StrategyContext.subscribe` records strategy data needs without exposing market data internals. |

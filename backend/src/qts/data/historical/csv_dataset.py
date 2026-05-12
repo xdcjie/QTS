@@ -83,53 +83,6 @@ class HistoricalValidationSample:
     bars: tuple[Bar, ...]
 
 
-@dataclass(frozen=True, slots=True)
-class HistoricalSessionRollSelection:
-    """Session-level selected contract summary for a historical rolling dataset."""
-
-    session_id: str
-    selected_symbol: str
-    selected_instrument_id: InstrumentId
-    selected_volume: Decimal
-    selected_bar_count: int
-
-
-@dataclass(slots=True)
-class HistoricalSessionRollStats:
-    """Counters for session-level historical roll summarization."""
-
-    rows_seen: int = 0
-    spreads_excluded: int = 0
-    unsupported_contracts_excluded: int = 0
-    outside_session_rows_excluded: int = 0
-
-    def to_payload(self) -> dict[str, int]:
-        return {
-            "rows_seen": self.rows_seen,
-            "spreads_excluded": self.spreads_excluded,
-            "unsupported_contracts_excluded": self.unsupported_contracts_excluded,
-            "outside_session_rows_excluded": self.outside_session_rows_excluded,
-        }
-
-
-@dataclass(frozen=True, slots=True)
-class HistoricalSessionRollSummary:
-    """Session-level selected contract summary plus source counters."""
-
-    rows: tuple[HistoricalSessionRollSelection, ...]
-    stats: HistoricalSessionRollStats
-
-
-@dataclass(slots=True)
-class _SessionContractRollStats:
-    symbol: str
-    instrument_id: InstrumentId
-    volume: Decimal = Decimal("0")
-    bar_count: int = 0
-    latest_as_of: datetime | None = None
-    latest_close: Decimal | None = None
-
-
 class HistoricalBarStream:
     """Lazy iterable over historical bars with side-channel reader stats."""
 
@@ -144,7 +97,7 @@ class HistoricalBarStream:
         contract_selector: FutureContractSelector | None = None,
         continuous_instrument_id: InstrumentId | None = None,
         session_window: RegularSessionWindow | None = None,
-        schema: HistoricalCsvSchema = DEFAULT_HISTORICAL_CSV_SCHEMA,
+        schema: HistoricalCsvSchema | None = None,
     ) -> None:
         self._csv_path = csv_path
         self._symbol_resolver = symbol_resolver
@@ -154,14 +107,18 @@ class HistoricalBarStream:
         self._contract_selector = contract_selector
         self._continuous_instrument_id = continuous_instrument_id
         self._session_window = session_window
-        self._schema = schema
+        self._schema = schema or DEFAULT_HISTORICAL_CSV_SCHEMA
+        self._configured_schema = schema
         self.stats = HistoricalCsvStats()
         self.roll_selections: list[FutureRollSelection] = []
 
     def __iter__(self) -> Iterator[Bar]:
         with self._csv_path.open(encoding="utf-8", newline="") as handle:
             reader = csv.DictReader(handle)
-            validate_historical_csv_columns(tuple(reader.fieldnames or ()), schema=self._schema)
+            validate_historical_csv_columns(
+                tuple(reader.fieldnames or ()),
+                schema=self._configured_schema,
+            )
             if self._contract_selector is None:
                 yield from self._iter_all_supported_rows(reader)
             elif self._session_window is not None:
@@ -430,7 +387,7 @@ def describe_csv_dataset(
     root: str,
     timeframe: str = "1m",
     count_rows: bool = False,
-    schema: HistoricalCsvSchema = DEFAULT_HISTORICAL_CSV_SCHEMA,
+    schema: HistoricalCsvSchema | None = None,
 ) -> CsvDatasetDescription:
     """Read historical CSV identity metadata without materializing row data."""
 
@@ -461,7 +418,7 @@ def iter_historical_bars(
     contract_selector: FutureContractSelector | None = None,
     continuous_instrument_id: InstrumentId | None = None,
     session_window: RegularSessionWindow | None = None,
-    schema: HistoricalCsvSchema = DEFAULT_HISTORICAL_CSV_SCHEMA,
+    schema: HistoricalCsvSchema | None = None,
 ) -> HistoricalBarStream:
     """Return a lazy stream of outright historical bars."""
 
@@ -478,125 +435,20 @@ def iter_historical_bars(
     )
 
 
-def summarize_historical_session_rolls(
-    csv_path: Path,
-    symbol_resolver: SourceSymbolResolver | HistoricalChain,
-    *,
-    session_window: RegularSessionWindow,
-    contract_selector: FutureContractSelector,
-    timeframe: str = "1m",
-    schema: HistoricalCsvSchema = DEFAULT_HISTORICAL_CSV_SCHEMA,
-) -> HistoricalSessionRollSummary:
-    """Summarize the session-level contract selection a historical roll reader should use."""
-
-    resolver = _as_symbol_resolver(symbol_resolver)
-    root = _resolver_root(resolver)
-    timeframe_delta = historical_timeframe_delta(timeframe)
-    sessions: dict[str, dict[InstrumentId, _SessionContractRollStats]] = {}
-    build_stats = HistoricalSessionRollStats()
-    current_timestamp: str | None = None
-    current_timestamp_value: datetime | None = None
-    current_session_id: str | None = None
-
-    with csv_path.open(encoding="utf-8", newline="") as handle:
-        reader = csv.reader(handle)
-        columns = tuple(next(reader))
-        validate_historical_csv_columns(columns, schema=schema)
-        column_index = schema.column_indices(columns)
-        timestamp_index = column_index["timestamp"]
-        open_index = column_index["open"]
-        high_index = column_index["high"]
-        low_index = column_index["low"]
-        close_index = column_index["close"]
-        volume_index = column_index["volume"]
-        symbol_index = column_index["symbol"]
-
-        for row in reader:
-            build_stats.rows_seen += 1
-            symbol = row[symbol_index]
-            if not resolver.is_supported_symbol(symbol):
-                if _is_spread_symbol(symbol):
-                    build_stats.spreads_excluded += 1
-                else:
-                    build_stats.unsupported_contracts_excluded += 1
-                continue
-
-            timestamp_text = row[timestamp_index]
-            if timestamp_text != current_timestamp:
-                current_timestamp = timestamp_text
-                current_timestamp_value = parse_historical_ts_event(timestamp_text)
-                current_session_id = session_window.session_id_for_timestamp(
-                    current_timestamp_value
-                )
-            if current_session_id is None:
-                build_stats.outside_session_rows_excluded += 1
-                continue
-            if current_timestamp_value is None:
-                raise RuntimeError("timestamp was not parsed before session roll aggregation")
-
-            try:
-                _, _, _, close, volume = _parse_ohlcv_values(
-                    open_value=row[open_index],
-                    high_value=row[high_index],
-                    low_value=row[low_index],
-                    close_value=row[close_index],
-                    volume_value=row[volume_index],
-                )
-            except ValueError:
-                continue
-
-            instrument_id = resolver.instrument_id_for_symbol(symbol)
-            per_contract = sessions.setdefault(current_session_id, {})
-            contract_stats = per_contract.setdefault(
-                instrument_id,
-                _SessionContractRollStats(symbol=symbol, instrument_id=instrument_id),
-            )
-            contract_stats.volume += volume
-            contract_stats.bar_count += 1
-            contract_stats.latest_as_of = current_timestamp_value + timeframe_delta
-            contract_stats.latest_close = close
-
-    rows: list[HistoricalSessionRollSelection] = []
-    for session_id in sorted(sessions):
-        candidates = tuple(
-            FutureContractCandidate(
-                root_symbol=root,
-                symbol=contract_stats.symbol,
-                instrument_id=contract_stats.instrument_id,
-                as_of=_required_as_of(contract_stats),
-                close=_required_close(contract_stats),
-                volume=contract_stats.volume,
-            )
-            for contract_stats in sessions[session_id].values()
-        )
-        selected = contract_selector.select(candidates)
-        selected_stats = sessions[session_id][selected.instrument_id]
-        rows.append(
-            HistoricalSessionRollSelection(
-                session_id=session_id,
-                selected_symbol=selected.symbol,
-                selected_instrument_id=selected.instrument_id,
-                selected_volume=selected_stats.volume,
-                selected_bar_count=selected_stats.bar_count,
-            )
-        )
-
-    return HistoricalSessionRollSummary(rows=tuple(rows), stats=build_stats)
-
-
 def validate_historical_sample(
     csv_path: Path,
     symbol_resolver: SourceSymbolResolver | HistoricalChain,
     *,
     sample_rows: int | None,
     timeframe: str = "1m",
-    schema: HistoricalCsvSchema = DEFAULT_HISTORICAL_CSV_SCHEMA,
+    schema: HistoricalCsvSchema | None = None,
 ) -> HistoricalValidationSample:
     """Validate a bounded sample or full CSV when `sample_rows` is None."""
 
     if sample_rows is not None and sample_rows <= 0:
         raise ValueError("sample_rows must be positive")
     resolver = _as_symbol_resolver(symbol_resolver)
+    active_schema = schema or DEFAULT_HISTORICAL_CSV_SCHEMA
     stats = HistoricalCsvStats()
     issues: list[DataValidationIssue] = []
     bars: list[Bar] = []
@@ -607,7 +459,7 @@ def validate_historical_sample(
             if sample_rows is not None and stats.rows_seen >= sample_rows:
                 break
             stats.rows_seen += 1
-            symbol = row[schema.symbol]
+            symbol = row[active_schema.symbol]
             if not resolver.is_supported_symbol(symbol):
                 stats.symbols_excluded += 1
                 is_spread = _is_spread_symbol(symbol)
@@ -630,7 +482,7 @@ def validate_historical_sample(
                     row,
                     symbol_resolver=resolver,
                     timeframe=timeframe,
-                    schema=schema,
+                    schema=active_schema,
                 )
             except ValueError as exc:
                 stats.invalid_rows += 1
@@ -730,18 +582,6 @@ def _resolver_root(symbol_resolver: SourceSymbolResolver) -> str:
     return root
 
 
-def _required_as_of(stats: _SessionContractRollStats) -> datetime:
-    if stats.latest_as_of is None:
-        raise ValueError(f"missing latest timestamp for {stats.symbol}")
-    return stats.latest_as_of
-
-
-def _required_close(stats: _SessionContractRollStats) -> Decimal:
-    if stats.latest_close is None:
-        raise ValueError(f"missing latest close for {stats.symbol}")
-    return stats.latest_close
-
-
 def _group_bars(bars: list[Bar]) -> dict[InstrumentId, list[Bar]]:
     grouped: dict[InstrumentId, list[Bar]] = defaultdict(list)
     for bar in bars:
@@ -766,12 +606,8 @@ __all__ = [
     "CsvDatasetDescription",
     "HistoricalBarStream",
     "HistoricalCsvStats",
-    "HistoricalSessionRollSelection",
-    "HistoricalSessionRollStats",
-    "HistoricalSessionRollSummary",
     "HistoricalValidationSample",
     "describe_csv_dataset",
     "iter_historical_bars",
-    "summarize_historical_session_rolls",
     "validate_historical_sample",
 ]

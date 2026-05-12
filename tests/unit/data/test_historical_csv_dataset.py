@@ -160,6 +160,41 @@ def test_iter_historical_bars_uses_configured_csv_schema_mapping(tmp_path: Path)
     assert bars[0].volume == Decimal("42")
 
 
+def test_explicit_default_schema_accepts_semantic_columns_without_databento_order(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "equity_reordered.csv"
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=("symbol", "ts_event", "open", "high", "low", "close", "volume"),
+        )
+        writer.writeheader()
+        writer.writerow(
+            {
+                "symbol": "AAPL",
+                "ts_event": "2026-01-02T14:30:00.000000000Z",
+                "open": "100",
+                "high": "101",
+                "low": "99",
+                "close": "100.5",
+                "volume": "42",
+            }
+        )
+    resolver = StaticSymbolResolver({"AAPL": InstrumentId("EQUITY.US.NASDAQ.AAPL")})
+
+    stream = iter_historical_bars(
+        path,
+        resolver,
+        timeframe="1m",
+        schema=HistoricalCsvSchema(),
+    )
+    bars = tuple(stream)
+
+    assert len(bars) == 1
+    assert bars[0].close == Decimal("100.5")
+
+
 def test_iter_historical_bars_can_emit_one_rolling_bar_per_timestamp(
     tmp_path: Path,
 ) -> None:

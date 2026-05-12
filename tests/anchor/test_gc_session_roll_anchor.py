@@ -4,12 +4,13 @@ from decimal import Decimal
 from pathlib import Path
 
 from qts.data.historical.chains import load_historical_chain
-from qts.data.historical.csv_dataset import (
+from qts.data.sessions import RegularSessionWindow
+from qts.registry.future_roll import HighestVolumeFutureContractSelector
+
+from tests.support.historical_session_roll_anchor import (
     HistoricalSessionRollSelection,
     summarize_historical_session_rolls,
 )
-from qts.data.sessions import RegularSessionWindow
-from qts.registry.future_roll import HighestVolumeFutureContractSelector
 
 ANCHOR_PATH = Path("tests/fixtures/historical/gc_session_roll_anchor.json")
 GC_CSV_PATH = Path("historical/data/gc.csv")
@@ -78,5 +79,7 @@ def test_gc_historical_session_roll_anchor_matches_full_csv() -> None:
     }
 
 
-def test_gc_session_roll_anchor_uses_project_reader_not_test_support_helper() -> None:
-    assert not Path("tests/support/historical_session_roll_anchor.py").exists()
+def test_gc_session_roll_anchor_support_stays_out_of_production_csv_dataset() -> None:
+    import qts.data.historical.csv_dataset as csv_dataset
+
+    assert not hasattr(csv_dataset, "summarize_historical_session_rolls")

@@ -34,6 +34,6 @@ def test_gc_full_backtest_gate_is_explicit() -> None:
     makefile = Path("Makefile").read_text(encoding="utf-8")
 
     assert "backtest-gc-full:" in makefile
-    assert "--streaming" in makefile
+    assert "--streaming" not in makefile
     assert "--config configs/backtest.gc.full.example.yaml" in makefile
     assert "--output-dir runs/backtests/gc-full" in makefile

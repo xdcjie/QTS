@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 from qts.domain.market_data import Bar
+
+from tests.support.backtest_streaming import run_engine_streaming
 
 
 def _bar(start: datetime, close: str) -> Bar:
@@ -25,7 +28,7 @@ def _bar(start: datetime, close: str) -> Bar:
     )
 
 
-def test_backtest_engine_runs_strategy_through_execution_flow() -> None:
+def test_backtest_engine_runs_strategy_through_execution_flow(tmp_path: Path) -> None:
     from qts.backtest.engine import BacktestEngine
     from qts.core.ids import InstrumentId
     from qts.strategy_sdk import Strategy
@@ -43,20 +46,26 @@ def test_backtest_engine_runs_strategy_through_execution_flow() -> None:
                 self.has_ordered = True
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
-    result = BacktestEngine(
-        strategy=BuyOnceStrategy(),
-        bars=[_bar(start, "100"), _bar(start + timedelta(minutes=1), "101")],
-        initial_cash=Decimal("10000"),
-    ).run()
+    captured = run_engine_streaming(
+        BacktestEngine(
+            strategy=BuyOnceStrategy(),
+            bars=[_bar(start, "100"), _bar(start + timedelta(minutes=1), "101")],
+            initial_cash=Decimal("10000"),
+        ),
+        tmp_path / "execution-flow",
+    )
+    result = captured.result
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
     assert result.final_account.positions[instrument_id].quantity == Decimal("10")
     assert result.final_account.cash["USD"] == Decimal("9000")
-    assert result.orders[0].state.value == "filled"
+    assert captured.orders[0]["state"] == "filled"
     assert result.processed_bars == 2
 
 
-def test_backtest_engine_target_intents_must_pass_pre_trade_risk_before_order_manager() -> None:
+def test_backtest_engine_target_intents_must_pass_pre_trade_risk_before_order_manager(
+    tmp_path: Path,
+) -> None:
     from qts.backtest.engine import BacktestEngine
     from qts.risk.risk_engine import RiskEngine
     from qts.risk.rules.max_notional import MaxNotionalRule
@@ -70,19 +79,26 @@ def test_backtest_engine_target_intents_must_pass_pre_trade_risk_before_order_ma
             ctx.target_quantity(self.asset, Decimal("10"))
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
-    result = BacktestEngine(
-        strategy=OversizedOrderStrategy(),
-        bars=[_bar(start, "100")],
-        initial_cash=Decimal("10000"),
-        risk_engine=RiskEngine([MaxNotionalRule(max_notional=Decimal("999"))]),
-    ).run()
+    captured = run_engine_streaming(
+        BacktestEngine(
+            strategy=OversizedOrderStrategy(),
+            bars=[_bar(start, "100")],
+            initial_cash=Decimal("10000"),
+            risk_engine=RiskEngine([MaxNotionalRule(max_notional=Decimal("999"))]),
+        ),
+        tmp_path / "risk-rejection",
+    )
+    result = captured.result
 
-    assert result.orders == ()
+    assert captured.orders == ()
     assert result.final_account.cash["USD"] == Decimal("10000")
     assert result.final_account.positions == {}
 
 
-def test_backtest_engine_routes_bars_through_strategy_actor(monkeypatch: Any) -> None:
+def test_backtest_engine_routes_bars_through_strategy_actor(
+    monkeypatch: Any,
+    tmp_path: Path,
+) -> None:
     from qts.backtest import engine as engine_module
     from qts.backtest.engine import BacktestEngine
     from qts.runtime.actors.strategy_actor import (
@@ -119,18 +135,22 @@ def test_backtest_engine_routes_bars_through_strategy_actor(monkeypatch: Any) ->
     monkeypatch.setattr(engine_module, "StrategyActor", RecordingStrategyActor)
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
-    result = BacktestEngine(
-        strategy=NoDirectOnBarStrategy(),
-        bars=[_bar(start, "100")],
-        initial_cash=Decimal("10000"),
-    ).run()
+    captured = run_engine_streaming(
+        BacktestEngine(
+            strategy=NoDirectOnBarStrategy(),
+            bars=[_bar(start, "100")],
+            initial_cash=Decimal("10000"),
+        ),
+        tmp_path / "strategy-actor",
+    )
 
-    assert result.processed_bars == 1
+    assert captured.result.processed_bars == 1
     assert RecordingStrategyActor.seen_bars == [_bar(start, "100")]
 
 
 def test_backtest_engine_routes_strategy_intents_through_signal_aggregator(
     monkeypatch: Any,
+    tmp_path: Path,
 ) -> None:
     from qts.backtest import engine as engine_module
     from qts.backtest.engine import BacktestEngine
@@ -170,66 +190,22 @@ def test_backtest_engine_routes_strategy_intents_through_signal_aggregator(
     monkeypatch.setattr(engine_module, "SignalAggregatorActor", RecordingSignalAggregatorActor)
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
-    result = BacktestEngine(
-        strategy=BuyOnceStrategy(),
-        bars=[_bar(start, "100")],
-        initial_cash=Decimal("10000"),
-    ).run()
+    captured = run_engine_streaming(
+        BacktestEngine(
+            strategy=BuyOnceStrategy(),
+            bars=[_bar(start, "100")],
+            initial_cash=Decimal("10000"),
+        ),
+        tmp_path / "signal-aggregator",
+    )
 
     assert RecordingSignalAggregatorActor.seen_quantities == [Decimal("1")]
-    assert len(result.fills) == 1
+    assert len(captured.fills) == 1
 
 
-def test_backtest_engine_advances_market_data_events_with_replay_clock(monkeypatch: Any) -> None:
-    from collections.abc import Iterable
-    from datetime import datetime
-
-    from qts.backtest import engine as engine_module
-    from qts.backtest.engine import BacktestEngine
-    from qts.strategy_sdk import Strategy
-
-    class HoldStrategy(Strategy):
-        def initialize(self, ctx: Any) -> None:
-            pass
-
-        def on_bar(self, ctx: Any, bar: object) -> None:
-            pass
-
-    class RecordingReplayClock:
-        instances: list[RecordingReplayClock] = []
-
-        def __init__(self, timestamps: Iterable[datetime]) -> None:
-            self.timestamps = tuple(sorted(timestamps))
-            self.advanced: list[datetime] = []
-            self._index = 0
-            RecordingReplayClock.instances.append(self)
-
-        def advance(self) -> datetime | None:
-            if self._index >= len(self.timestamps):
-                return None
-            timestamp = self.timestamps[self._index]
-            self._index += 1
-            self.advanced.append(timestamp)
-            return timestamp
-
-    monkeypatch.setattr(engine_module, "ReplayClock", RecordingReplayClock, raising=False)
-
-    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
-    result = BacktestEngine(
-        strategy=HoldStrategy(),
-        bars=[_bar(start + timedelta(minutes=1), "101"), _bar(start, "100")],
-        initial_cash=Decimal("10000"),
-    ).run()
-
-    assert result.processed_bars == 2
-    assert len(RecordingReplayClock.instances) == 1
-    assert RecordingReplayClock.instances[0].advanced == [
-        start + timedelta(minutes=1),
-        start + timedelta(minutes=2),
-    ]
-
-
-def test_backtest_engine_replay_clock_drives_source_bars_through_market_data_actor() -> None:
+def test_backtest_engine_streams_source_bars_through_market_data_actor(
+    tmp_path: Path,
+) -> None:
     from qts.backtest.engine import BacktestEngine
     from qts.core.ids import InstrumentId
     from qts.strategy_sdk import Strategy
@@ -253,15 +229,19 @@ def test_backtest_engine_replay_clock_drives_source_bars_through_market_data_act
         _bar(start + timedelta(minutes=offset), str(100 + offset)) for offset in range(5)
     ]
 
-    result = BacktestEngine(
-        strategy=BuyOnceStrategy(),
-        bars=source_bars,
-        initial_cash=Decimal("10000"),
-        target_timeframe="5m",
-        exchange_timezone_by_instrument={instrument_id: UTC},
-    ).run()
+    captured = run_engine_streaming(
+        BacktestEngine(
+            strategy=BuyOnceStrategy(),
+            bars=source_bars,
+            initial_cash=Decimal("10000"),
+            target_timeframe="5m",
+            exchange_timezone_by_instrument={instrument_id: UTC},
+        ),
+        tmp_path / "market-data-actor",
+    )
+    result = captured.result
 
     assert result.processed_bars == 1
     assert result.trading_bars == 1
-    assert result.fills[0].price == Decimal("104")
-    assert result.report.trade_ledger[0].source_bar_time == start
+    assert Decimal(captured.fills[0]["price"]) == Decimal("104")
+    assert datetime.fromisoformat(captured.trade_ledger[0]["source_bar_time"]) == start

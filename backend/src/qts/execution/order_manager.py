@@ -73,6 +73,9 @@ class ExecutionReportStatus(StrEnum):
     REJECTED = "rejected"
 
 
+_TERMINAL_ORDER_STATES = frozenset({OrderState.FILLED, OrderState.CANCELLED, OrderState.REJECTED})
+
+
 @dataclass(frozen=True, slots=True)
 class ExecutionReport:
     """Normalized broker execution report."""
@@ -192,8 +195,11 @@ class OrderManager:
     def get_order(self, order_id: OrderId) -> Order:
         return self._orders[order_id]
 
-    def discard_order(self, order_id: OrderId) -> None:
-        order = self._orders.pop(order_id)
+    def discard_terminal_order(self, order_id: OrderId) -> None:
+        order = self._orders[order_id]
+        if order.state not in _TERMINAL_ORDER_STATES:
+            raise ValueError(f"only terminal orders can be discarded: {order.state}")
+        self._orders.pop(order_id)
         self._machines.pop(order_id, None)
         if order.broker_order_id is not None:
             self._broker_to_order.pop(order.broker_order_id, None)

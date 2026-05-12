@@ -9,6 +9,8 @@ from typing import cast
 from qts.domain.market_data import Bar
 from qts.strategy_sdk import Strategy
 
+from tests.support.backtest_streaming import run_engine_streaming
+
 EXAMPLE_STRATEGY_PATH = Path("examples/strategies/moving_average_cross.py")
 
 
@@ -35,20 +37,23 @@ def _bar(start: datetime, close: Decimal) -> Bar:
     )
 
 
-def test_example_moving_average_strategy_runs_in_backtest_mode() -> None:
+def test_example_moving_average_strategy_runs_in_backtest_mode(tmp_path: Path) -> None:
     from qts.backtest.engine import BacktestEngine
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     bars = [_bar(start + timedelta(minutes=i), Decimal("100") + Decimal(i)) for i in range(65)]
 
-    result = BacktestEngine(
-        strategy=_load_moving_average_cross()(),
-        bars=bars,
-        initial_cash=Decimal("100000"),
-    ).run()
+    captured = run_engine_streaming(
+        BacktestEngine(
+            strategy=_load_moving_average_cross()(),
+            bars=bars,
+            initial_cash=Decimal("100000"),
+        ),
+        tmp_path / "moving-average",
+    )
 
-    assert result.processed_bars == 65
-    assert result.orders
+    assert captured.result.processed_bars == 65
+    assert captured.orders
 
 
 def test_example_strategy_imports_only_strategy_sdk() -> None:

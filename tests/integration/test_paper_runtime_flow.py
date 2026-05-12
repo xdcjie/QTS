@@ -2,14 +2,17 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 
-def test_example_strategy_runs_through_paper_like_backtest_runtime() -> None:
+def test_example_strategy_runs_through_paper_like_backtest_runtime(tmp_path: Path) -> None:
     from qts.backtest.engine import BacktestEngine
     from qts.core.ids import InstrumentId
     from qts.domain.market_data import Bar
     from qts.strategy_sdk import Strategy
+
+    from tests.support.backtest_streaming import run_engine_streaming
 
     class BuyOnce(Strategy):
         def initialize(self, ctx: Any) -> None:
@@ -35,11 +38,15 @@ def test_example_strategy_runs_through_paper_like_backtest_runtime() -> None:
         is_complete=True,
     )
 
-    result = BacktestEngine(
-        strategy=BuyOnce(),
-        bars=[bar],
-        initial_cash=Decimal("1000"),
-    ).run()
+    captured = run_engine_streaming(
+        BacktestEngine(
+            strategy=BuyOnce(),
+            bars=[bar],
+            initial_cash=Decimal("1000"),
+        ),
+        tmp_path / "paper-like",
+    )
+    result = captured.result
 
     assert result.final_account.positions[InstrumentId("EQUITY.US.NASDAQ.AAPL")].quantity == 1
-    assert result.orders[0].state.value == "filled"
+    assert captured.orders[0]["state"] == "filled"

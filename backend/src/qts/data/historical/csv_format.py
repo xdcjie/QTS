@@ -91,7 +91,7 @@ def validate_historical_csv_columns(
 ) -> None:
     """Validate historical CSV columns against the configured schema."""
 
-    if schema is not None and schema != DEFAULT_HISTORICAL_CSV_SCHEMA:
+    if schema is not None:
         schema.validate_columns(columns)
         return
     if columns != EXPECTED_HISTORICAL_COLUMNS:

@@ -42,7 +42,7 @@ mypy_path = "backend/src"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-pythonpath = ["backend/src"]
+pythonpath = ["backend/src", "."]
 markers = [
     "unit: fast unit tests",
     "integration: multi-module integration tests",

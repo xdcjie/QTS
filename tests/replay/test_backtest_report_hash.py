@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 from qts.backtest.engine import BacktestEngine
 from qts.core.ids import InstrumentId
 from qts.domain.market_data import Bar
 from qts.strategy_sdk import Strategy
+
+from tests.support.backtest_streaming import run_engine_streaming
 
 
 def _bar(start: datetime) -> Bar:
@@ -36,23 +39,29 @@ class BuyOnceStrategy(Strategy):
             self.has_ordered = True
 
 
-def test_same_backtest_inputs_produce_same_report_hash() -> None:
+def test_same_backtest_inputs_produce_same_report_hash(tmp_path: Path) -> None:
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     bars = [_bar(start), _bar(start + timedelta(minutes=1))]
 
-    left = BacktestEngine(
-        strategy=BuyOnceStrategy(),
-        bars=bars,
-        initial_cash=Decimal("10000"),
-        config={"seed": 42},
-        strategy_version="buy-once-v1",
-    ).run()
-    right = BacktestEngine(
-        strategy=BuyOnceStrategy(),
-        bars=bars,
-        initial_cash=Decimal("10000"),
-        config={"seed": 42},
-        strategy_version="buy-once-v1",
-    ).run()
+    left = run_engine_streaming(
+        BacktestEngine(
+            strategy=BuyOnceStrategy(),
+            bars=bars,
+            initial_cash=Decimal("10000"),
+            config={"seed": 42},
+            strategy_version="buy-once-v1",
+        ),
+        tmp_path / "left",
+    ).result
+    right = run_engine_streaming(
+        BacktestEngine(
+            strategy=BuyOnceStrategy(),
+            bars=bars,
+            initial_cash=Decimal("10000"),
+            config={"seed": 42},
+            strategy_version="buy-once-v1",
+        ),
+        tmp_path / "right",
+    ).result
 
     assert left.report_hash == right.report_hash

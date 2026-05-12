@@ -17,7 +17,7 @@ HistoricalDataStore
   -> BrokerSimulator
   -> OrderManagerActor
   -> AccountActor
-  -> BacktestReport
+  -> StreamingBacktestArtifacts
 ```
 
 ## Paper / Live

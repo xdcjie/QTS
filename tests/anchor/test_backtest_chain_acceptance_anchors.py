@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -105,38 +104,39 @@ def test_strategy_runtime_receives_only_completed_requested_timeframe_bars() -> 
     assert subscriber.empty()
 
 
-def test_backtest_report_contract_contains_auditable_inputs_outputs_and_hashes(
+def test_backtest_artifact_contract_contains_auditable_inputs_outputs_and_hashes(
     tmp_path: Path,
 ) -> None:
     from qts.backtest.runner import run_backtest
+
+    from tests.support.backtest_streaming import capture_stream_result
 
     run = run_backtest(
         Path("configs/backtest.gc_si.example.yaml"),
         output_dir=tmp_path / "runs",
     )
-    payload = json.loads(run.report_path.read_text(encoding="utf-8"))
+    captured = capture_stream_result(run.result)
+    manifest = captured.manifest
 
-    assert set(payload) == {
+    assert set(manifest) == {
+        "artifacts",
         "config_hash",
         "cost_model",
         "dataset_metadata",
-        "equity_curve",
-        "fills",
         "metrics",
-        "orders",
         "processed_bars",
         "report_hash",
         "run_id",
-        "trade_ledger",
         "trading_bars",
         "warmup_bars",
     }
-    assert payload["run_id"] == run.result.run_id.value
-    assert payload["config_hash"] == run.result.config_hash
-    assert payload["report_hash"] == run.result.report_hash
-    assert payload["processed_bars"] == len(payload["equity_curve"])
-    assert len(payload["orders"]) == len(payload["fills"]) == len(payload["trade_ledger"])
-    assert {item["source"] for item in payload["dataset_metadata"]} == {
+    assert set(manifest["artifacts"]) == {"orders", "fills", "trade_ledger", "equity_curve"}
+    assert manifest["run_id"] == run.result.run_id.value
+    assert manifest["config_hash"] == run.result.config_hash
+    assert manifest["report_hash"] == run.result.report_hash
+    assert manifest["processed_bars"] == len(captured.equity_curve)
+    assert len(captured.orders) == len(captured.fills) == len(captured.trade_ledger)
+    assert {item["source"] for item in manifest["dataset_metadata"]} == {
         "historical/data/gc.csv",
         "historical/data/si.csv",
     }

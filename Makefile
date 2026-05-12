@@ -64,4 +64,4 @@ backtest-acceptance:
 
 backtest-gc-full:
 	@test "$$QTS_CONFIRM_FULL_GC" = "1" || (echo "Set QTS_CONFIRM_FULL_GC=1 to run the current full GC backtest path."; exit 2)
-	PYTHONPATH=backend/src uv run python scripts/run_backtest.py --streaming --config configs/backtest.gc.full.example.yaml --output-dir runs/backtests/gc-full
+	PYTHONPATH=backend/src uv run python scripts/run_backtest.py --config configs/backtest.gc.full.example.yaml --output-dir runs/backtests/gc-full

@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from decimal import Decimal
 
+import pytest
 from qts.core.ids import InstrumentId
 from qts.registry.future_roll import (
     FutureContractCandidate,
@@ -149,3 +150,41 @@ def test_future_roll_registry_carries_forward_latest_contract_prices() -> None:
     assert registry.resolve_contract(continuous_id, as_of=t1) == second
     assert registry.execution_price(continuous_id, first, as_of=t1) == Decimal("1220.9")
     assert registry.execution_price(continuous_id, second, as_of=t1) == Decimal("1225.5")
+
+
+def test_future_roll_registry_rejects_out_of_order_selection_records() -> None:
+    first = InstrumentId("FUTURE.CME.GC.GCQ0")
+    second = InstrumentId("FUTURE.CME.GC.GCZ0")
+    t0 = datetime(2010, 6, 6, 22, 49, tzinfo=UTC)
+    t1 = datetime(2010, 6, 6, 22, 50, tzinfo=UTC)
+    registry = FutureRollRegistry()
+    continuous_id = registry.register_root(
+        root_symbol="GC",
+        exchange="CME",
+        contracts=(first, second),
+    )
+
+    registry.record_selection(
+        FutureRollSelection(
+            continuous_instrument_id=continuous_id,
+            root_symbol="GC",
+            as_of=t1,
+            concrete_instrument_id=second,
+            source_symbol="GCZ0",
+            prices_by_instrument={second: Decimal("1225.5")},
+        )
+    )
+
+    with pytest.raises(ValueError, match="chronological"):
+        registry.record_selection(
+            FutureRollSelection(
+                continuous_instrument_id=continuous_id,
+                root_symbol="GC",
+                as_of=t0,
+                concrete_instrument_id=first,
+                source_symbol="GCQ0",
+                prices_by_instrument={first: Decimal("1220.9")},
+            )
+        )
+
+    assert registry.resolve_contract(continuous_id, as_of=t1) == second

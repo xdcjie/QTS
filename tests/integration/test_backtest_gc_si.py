@@ -17,6 +17,8 @@ from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
 from qts.domain.market_data import Bar
 from qts.strategy_sdk import Strategy
 
+from tests.support.backtest_streaming import capture_stream_result, run_engine_streaming
+
 
 def _config(*, warmup_bars: int = 0) -> BacktestRunConfig:
     return BacktestRunConfig(
@@ -82,21 +84,29 @@ class RollingGcStrategy(Strategy):
         ctx.target_quantity(self.asset, Decimal("1"))
 
 
-def test_backtest_engine_runs_from_config_with_deterministic_run_id() -> None:
+def test_backtest_engine_runs_from_config_with_deterministic_run_id(tmp_path: Path) -> None:
     from qts.backtest.engine import BacktestEngine
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     bars = [_bar(start), _bar(start + timedelta(minutes=1), "2001.0")]
 
-    left = BacktestEngine.from_config(_config(), bars=bars, strategy=BuyOneGcStrategy()).run()
-    right = BacktestEngine.from_config(_config(), bars=bars, strategy=BuyOneGcStrategy()).run()
+    left = run_engine_streaming(
+        BacktestEngine.from_config(_config(), bars=bars, strategy=BuyOneGcStrategy()),
+        tmp_path / "left",
+    )
+    right = run_engine_streaming(
+        BacktestEngine.from_config(_config(), bars=bars, strategy=BuyOneGcStrategy()),
+        tmp_path / "right",
+    )
 
-    assert left.config_hash == _config().config_hash
-    assert left.run_id == right.run_id
-    assert left.report.config_hash == _config().config_hash
+    assert left.result.config_hash == _config().config_hash
+    assert left.result.run_id == right.result.run_id
+    assert left.manifest["config_hash"] == _config().config_hash
 
 
-def test_backtest_engine_from_config_does_not_require_chain_for_static_instrument_ids() -> None:
+def test_backtest_engine_from_config_does_not_require_chain_for_static_instrument_ids(
+    tmp_path: Path,
+) -> None:
     from qts.backtest.engine import BacktestEngine
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
@@ -126,35 +136,42 @@ def test_backtest_engine_from_config_does_not_require_chain_for_static_instrumen
         is_complete=True,
     )
 
-    result = BacktestEngine.from_config(
-        config,
-        bars=[bar],
-        strategy=BuyOneAaplStrategy(),
-    ).run()
+    captured = run_engine_streaming(
+        BacktestEngine.from_config(
+            config,
+            bars=[bar],
+            strategy=BuyOneAaplStrategy(),
+        ),
+        tmp_path / "static-instrument",
+    )
 
-    assert result.fills[0].instrument_id == InstrumentId("EQUITY.US.NASDAQ.AAPL")
-    assert result.final_account.cash["USD"] == Decimal("99850")
+    assert captured.fills[0]["instrument_id"] == "EQUITY.US.NASDAQ.AAPL"
+    assert captured.result.final_account.cash["USD"] == Decimal("99850")
 
 
-def test_warmup_bars_call_strategy_but_do_not_place_orders() -> None:
+def test_warmup_bars_call_strategy_but_do_not_place_orders(tmp_path: Path) -> None:
     from qts.backtest.engine import BacktestEngine
 
     class WarmupTargetStrategy(BuyOneGcStrategy):
         pass
 
-    result = BacktestEngine.from_config(
-        _config(warmup_bars=1),
-        bars=[_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC))],
-        strategy=WarmupTargetStrategy(),
-    ).run()
+    captured = run_engine_streaming(
+        BacktestEngine.from_config(
+            _config(warmup_bars=1),
+            bars=[_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC))],
+            strategy=WarmupTargetStrategy(),
+        ),
+        tmp_path / "warmup",
+    )
+    result = captured.result
 
-    assert result.orders == ()
+    assert captured.orders == ()
     assert result.warmup_bars == 1
     assert result.trading_bars == 0
-    assert result.report.warmup_bars == 1
+    assert captured.manifest["warmup_bars"] == 1
 
 
-def test_strategy_finalize_runs_once_and_finalize_intents_are_ignored() -> None:
+def test_strategy_finalize_runs_once_and_finalize_intents_are_ignored(tmp_path: Path) -> None:
     from qts.backtest.engine import BacktestEngine
 
     class FinalizeStrategy(Strategy):
@@ -167,50 +184,59 @@ def test_strategy_finalize_runs_once_and_finalize_intents_are_ignored() -> None:
             ctx.target_quantity(self.asset, Decimal("1"))
 
     strategy = FinalizeStrategy()
-    result = BacktestEngine.from_config(
-        _config(),
-        bars=[_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC))],
-        strategy=strategy,
-    ).run()
+    captured = run_engine_streaming(
+        BacktestEngine.from_config(
+            _config(),
+            bars=[_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC))],
+            strategy=strategy,
+        ),
+        tmp_path / "finalize",
+    )
 
     assert strategy.finalized == 1
-    assert result.orders == ()
+    assert captured.orders == ()
 
 
-def test_futures_multiplier_affects_backtest_fill_cash() -> None:
+def test_futures_multiplier_affects_backtest_fill_cash(tmp_path: Path) -> None:
     from qts.backtest.engine import BacktestEngine
 
-    result = BacktestEngine.from_config(
-        _config(),
-        bars=[_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC), "2000.0")],
-        strategy=BuyOneGcStrategy(),
-    ).run()
+    result = run_engine_streaming(
+        BacktestEngine.from_config(
+            _config(),
+            bars=[_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC), "2000.0")],
+            strategy=BuyOneGcStrategy(),
+        ),
+        tmp_path / "multiplier",
+    ).result
 
     assert result.final_account.cash["USD"] == Decimal("800000.0")
 
 
-def test_one_order_strategy_populates_trade_ledger() -> None:
+def test_one_order_strategy_populates_trade_ledger(tmp_path: Path) -> None:
     from qts.backtest.engine import BacktestEngine
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
-    result = BacktestEngine.from_config(
-        _config(),
-        bars=[_bar(start)],
-        strategy=BuyOneGcStrategy(),
-    ).run()
+    captured = run_engine_streaming(
+        BacktestEngine.from_config(
+            _config(),
+            bars=[_bar(start)],
+            strategy=BuyOneGcStrategy(),
+        ),
+        tmp_path / "trade-ledger",
+    )
 
-    assert len(result.report.trade_ledger) == 1
-    row = result.report.trade_ledger[0]
-    assert row.order_id == "bt-000001"
-    assert row.instrument_id == "FUTURE.CME.GC.GCQ0"
-    assert row.side == "buy"
-    assert row.quantity == Decimal("1")
-    assert row.fill_price == Decimal("2000.0")
-    assert row.fill_time == start + timedelta(minutes=1)
-    assert row.source_bar_time == start
+    assert len(captured.trade_ledger) == 1
+    row = captured.trade_ledger[0]
+    assert row["order_id"] == "bt-000001"
+    assert row["instrument_id"] == "FUTURE.CME.GC.GCQ0"
+    assert row["side"] == "buy"
+    assert Decimal(row["quantity"]) == Decimal("1")
+    assert Decimal(row["fill_price"]) == Decimal("2000.0")
+    assert datetime.fromisoformat(row["fill_time"]) == start + timedelta(minutes=1)
+    assert datetime.fromisoformat(row["source_bar_time"]) == start
 
 
-def test_warmup_updates_indicators_before_trading_starts() -> None:
+def test_warmup_updates_indicators_before_trading_starts(tmp_path: Path) -> None:
     from qts.backtest.engine import BacktestEngine
 
     class SmaStrategy(Strategy):
@@ -225,15 +251,18 @@ def test_warmup_updates_indicators_before_trading_starts() -> None:
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     strategy = SmaStrategy()
-    BacktestEngine.from_config(
-        replace(_config(warmup_bars=2), end=start + timedelta(minutes=3)),
-        bars=[
-            _bar(start, "2000.0"),
-            _bar(start + timedelta(minutes=1), "2001.0"),
-            _bar(start + timedelta(minutes=2), "2002.0"),
-        ],
-        strategy=strategy,
-    ).run()
+    run_engine_streaming(
+        BacktestEngine.from_config(
+            replace(_config(warmup_bars=2), end=start + timedelta(minutes=3)),
+            bars=[
+                _bar(start, "2000.0"),
+                _bar(start + timedelta(minutes=1), "2001.0"),
+                _bar(start + timedelta(minutes=2), "2002.0"),
+            ],
+            strategy=strategy,
+        ),
+        tmp_path / "indicator-warmup",
+    )
 
     assert strategy.ready_on_first_trading_bar is True
 
@@ -421,8 +450,10 @@ risk_config:
     )
 
     run = run_backtest(config_path, output_dir=tmp_path / "runs")
+    captured = capture_stream_result(run.result)
 
-    assert run.result.fills[0].instrument_id == InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    assert captured.fills[0]["instrument_id"] == "EQUITY.US.NASDAQ.AAPL"
+    assert run.result.dataset_metadata[0].instrument_id == InstrumentId("DATASET.EQUITY")
     assert run.dataset_stats["EQUITY"]["bars_emitted"] == 1
 
 
@@ -442,9 +473,9 @@ def test_backtest_runner_uses_project_historical_data_catalog(
 
     assert run.dataset_stats["GC"]["bars_emitted"] == 3
     assert run.dataset_stats["SI"]["bars_emitted"] == 3
-    assert run.result.report.dataset_metadata[0]["source"] == str(
-        historical_root / "data" / "gc.csv"
-    )
+    assert json.loads(run.manifest_path.read_text(encoding="utf-8"))["dataset_metadata"][0][
+        "source"
+    ] == str(historical_root / "data" / "gc.csv")
 
 
 def test_backtest_replays_historical_bars_through_market_data_actor(
@@ -484,14 +515,84 @@ risk_config:
     )
 
     run = run_backtest(config_path, output_dir=tmp_path / "runs")
+    captured = capture_stream_result(run.result)
 
     assert run.dataset_stats["GC"]["bars_emitted"] == 5
     assert run.result.processed_bars == 1
-    assert run.result.report.processed_bars == 1
-    assert run.result.report.trade_ledger[0].source_bar_time == datetime(
+    assert captured.manifest["processed_bars"] == 1
+    assert datetime.fromisoformat(captured.trade_ledger[0]["source_bar_time"]) == datetime(
         2010, 6, 6, 22, 0, tzinfo=UTC
     )
-    assert run.result.fills[0].price == Decimal("2004.0")
+    assert Decimal(captured.fills[0]["price"]) == Decimal("2004.0")
+
+
+def test_backtest_catalog_chain_resolution_ignores_unneeded_bar_choices(
+    tmp_path: Path,
+) -> None:
+    from qts.backtest.runner import run_backtest
+
+    historical_root = tmp_path / "historical"
+    (historical_root / "data").mkdir(parents=True)
+    (historical_root / "chains").mkdir()
+    shutil.copyfile(Path("historical/chains/GC.json"), historical_root / "chains" / "GC.json")
+    _write_fixture_csv(
+        historical_root / "data" / "gc.csv",
+        "GCQ0",
+        ["2000.0", "2001.0", "2002.0", "2003.0", "2004.0"],
+    )
+    data_config_path = tmp_path / "configs" / "data" / "historical.local.yaml"
+    data_config_path.parent.mkdir(parents=True)
+    data_config_path.write_text(
+        f"""
+historical_data:
+  stores:
+    local_csv:
+      type: local_csv
+      root_dir: {historical_root}
+      bars_dir: data
+      chains_dir: chains
+      defaults:
+        exchange_timezone: US/Eastern
+  catalogs:
+    research_futures:
+      store: local_csv
+      datasets:
+        GC:
+          asset_class: future
+          exchange: CME
+          chain_file: GC.json
+          bars:
+            - file: gc.csv
+              timeframe: 1m
+            - file: gc_daily.csv
+              timeframe: 1d
+""",
+        encoding="utf-8",
+    )
+    config_path = tmp_path / "backtest.yaml"
+    config_path.write_text(
+        f"""
+market_data:
+  source: local_historical
+  config: {data_config_path}
+  catalog: research_futures
+roots: [GC]
+symbols: [GCQ0]
+start: "2010-06-06T22:00:00Z"
+end: "2010-06-06T22:05:00Z"
+timeframe: 5m
+initial_cash: "1000000"
+strategy_class: "tests.integration.test_backtest_gc_si:BuyOneGcStrategy"
+risk_config:
+  max_notional: "100000000"
+""",
+        encoding="utf-8",
+    )
+
+    run = run_backtest(config_path, output_dir=tmp_path / "runs")
+
+    assert run.dataset_stats["GC"]["bars_emitted"] == 5
+    assert run.result.processed_bars == 1
 
 
 def test_backtest_runner_leaves_market_data_aggregation_to_engine(
@@ -553,7 +654,6 @@ def test_backtest_runner_rolls_continuous_future_positions(
     tmp_path: Path,
 ) -> None:
     from qts.backtest.runner import run_backtest
-    from qts.execution.order_manager import OrderSide
 
     historical_root = tmp_path / "historical"
     (historical_root / "data").mkdir(parents=True)
@@ -589,18 +689,19 @@ risk_config:
     )
 
     run = run_backtest(config_path, output_dir=tmp_path / "runs")
+    captured = capture_stream_result(run.result)
 
-    assert [fill.instrument_id for fill in run.result.fills] == [
-        InstrumentId("FUTURE.CME.GC.GCN0"),
-        InstrumentId("FUTURE.CME.GC.GCN0"),
-        InstrumentId("FUTURE.CME.GC.GCQ0"),
+    assert [fill["instrument_id"] for fill in captured.fills] == [
+        "FUTURE.CME.GC.GCN0",
+        "FUTURE.CME.GC.GCN0",
+        "FUTURE.CME.GC.GCQ0",
     ]
-    assert [fill.side for fill in run.result.fills] == [
-        OrderSide.BUY,
-        OrderSide.SELL,
-        OrderSide.BUY,
+    assert [fill["side"] for fill in captured.fills] == [
+        "buy",
+        "sell",
+        "buy",
     ]
-    assert [fill.price for fill in run.result.fills] == [
+    assert [Decimal(fill["price"]) for fill in captured.fills] == [
         Decimal("100"),
         Decimal("101"),
         Decimal("111"),
@@ -615,7 +716,7 @@ risk_config:
     assert run.dataset_stats["GC"]["contracts_excluded"] == 2
 
 
-def test_backtest_runner_writes_report_from_fixture_config(tmp_path: Path) -> None:
+def test_backtest_runner_writes_artifacts_from_fixture_config(tmp_path: Path) -> None:
     from qts.backtest.runner import run_backtest
 
     historical_root = tmp_path / "historical"
@@ -625,12 +726,12 @@ def test_backtest_runner_writes_report_from_fixture_config(tmp_path: Path) -> No
     _write_fixture_config(config_path, historical_root)
 
     run = run_backtest(config_path, output_dir=output_dir)
+    captured = capture_stream_result(run.result)
 
-    payload = json.loads(run.report_path.read_text(encoding="utf-8"))
-    assert run.report_path.parent == output_dir
-    assert payload["report_hash"] == run.result.report_hash
-    assert payload["processed_bars"] == 6
-    assert payload["trade_ledger"]
+    assert run.manifest_path.parent == output_dir
+    assert captured.manifest["report_hash"] == run.result.report_hash
+    assert captured.manifest["processed_bars"] == 6
+    assert captured.trade_ledger
 
 
 def test_backtest_cli_runs_fixture_config(tmp_path: Path) -> None:
@@ -645,13 +746,13 @@ def test_backtest_cli_runs_fixture_config(tmp_path: Path) -> None:
     exit_code = main(["--config", str(config_path), "--output-dir", str(output_dir)])
 
     assert exit_code == 0
-    json_files = list(output_dir.glob("bt-*.json"))
-    assert len([path for path in json_files if not path.name.endswith(".summary.json")]) == 1
-    assert len([path for path in json_files if path.name.endswith(".summary.json")]) == 1
+    assert len(list(output_dir.glob("bt-*.manifest.json"))) == 1
+    assert len(list(output_dir.glob("bt-*.summary.json"))) == 1
+    assert len(list(output_dir.glob("bt-*.equity_curve.ndjson"))) == 1
 
 
-def test_streaming_backtest_writes_partitioned_artifacts(tmp_path: Path) -> None:
-    from qts.backtest.runner import run_streaming_backtest
+def test_backtest_writes_partitioned_artifacts(tmp_path: Path) -> None:
+    from qts.backtest.runner import run_backtest
 
     historical_root = tmp_path / "historical"
     config_path = tmp_path / "backtest.yaml"
@@ -659,7 +760,7 @@ def test_streaming_backtest_writes_partitioned_artifacts(tmp_path: Path) -> None
     _write_fixture_historical(historical_root)
     _write_fixture_config(config_path, historical_root)
 
-    run = run_streaming_backtest(config_path, output_dir=output_dir)
+    run = run_backtest(config_path, output_dir=output_dir)
 
     manifest = json.loads(run.manifest_path.read_text(encoding="utf-8"))
     summary = json.loads(run.summary_path.read_text(encoding="utf-8"))
@@ -675,28 +776,3 @@ def test_streaming_backtest_writes_partitioned_artifacts(tmp_path: Path) -> None
     for artifact in manifest["artifacts"].values():
         assert Path(artifact["path"]).exists()
         assert artifact["sha256"].startswith("sha256:")
-
-
-def test_streaming_backtest_cli_runs_fixture_config(tmp_path: Path) -> None:
-    historical_root = tmp_path / "historical"
-    config_path = tmp_path / "backtest.yaml"
-    output_dir = tmp_path / "runs"
-    _write_fixture_historical(historical_root)
-    _write_fixture_config(config_path, historical_root)
-    module = _load_runner_script()
-    main = cast(Any, module).main
-
-    exit_code = main(
-        [
-            "--config",
-            str(config_path),
-            "--output-dir",
-            str(output_dir),
-            "--streaming",
-        ]
-    )
-
-    assert exit_code == 0
-    assert len(list(output_dir.glob("bt-*.manifest.json"))) == 1
-    assert len(list(output_dir.glob("bt-*.summary.json"))) == 1
-    assert len(list(output_dir.glob("bt-*.equity_curve.ndjson"))) == 1

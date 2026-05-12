@@ -66,7 +66,7 @@ class OrderManagerActor(Actor):
 
     def compact_for_streaming(self, order_ids: Iterable[OrderId]) -> None:
         for order_id in order_ids:
-            self._manager.discard_order(order_id)
+            self._manager.discard_terminal_order(order_id)
         self._fills.clear()
 
     def _handle_submit(self, message: SubmitOrder) -> None:

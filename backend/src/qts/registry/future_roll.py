@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from bisect import bisect_right
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from datetime import datetime
@@ -86,6 +87,7 @@ class FutureRollRegistry:
         self._root_by_continuous: dict[InstrumentId, str] = {}
         self._contracts_by_continuous: dict[InstrumentId, tuple[InstrumentId, ...]] = {}
         self._selections_by_continuous: dict[InstrumentId, list[FutureRollSelection]] = {}
+        self._selection_times_by_continuous: dict[InstrumentId, list[datetime]] = {}
         self._latest_prices_by_continuous: dict[InstrumentId, dict[InstrumentId, Decimal]] = {}
 
     def register_root(
@@ -106,6 +108,7 @@ class FutureRollRegistry:
         self._root_by_continuous[continuous_id] = root
         self._contracts_by_continuous[continuous_id] = unique_contracts
         self._selections_by_continuous.setdefault(continuous_id, [])
+        self._selection_times_by_continuous.setdefault(continuous_id, [])
         self._latest_prices_by_continuous.setdefault(continuous_id, {})
         return continuous_id
 
@@ -121,15 +124,19 @@ class FutureRollRegistry:
     def record_selection(self, selection: FutureRollSelection) -> None:
         if selection.continuous_instrument_id not in self._root_by_continuous:
             raise KeyError(f"unknown continuous future: {selection.continuous_instrument_id}")
+        selections = self._selections_by_continuous[selection.continuous_instrument_id]
+        selection_times = self._selection_times_by_continuous[selection.continuous_instrument_id]
+        if selection_times and selection.as_of < selection_times[-1]:
+            raise ValueError("future roll selections must be recorded in chronological order")
         latest_prices = self._latest_prices_by_continuous[selection.continuous_instrument_id]
         latest_prices.update(selection.prices_by_instrument)
         selection = replace(selection, prices_by_instrument=dict(latest_prices))
-        selections = self._selections_by_continuous[selection.continuous_instrument_id]
         if not self._retain_history:
             selections[:] = [selection]
+            selection_times[:] = [selection.as_of]
             return
         selections.append(selection)
-        selections.sort(key=lambda item: item.as_of)
+        selection_times.append(selection.as_of)
 
     def is_continuous(self, instrument_id: InstrumentId) -> bool:
         return instrument_id in self._root_by_continuous
@@ -180,15 +187,16 @@ class FutureRollRegistry:
     ) -> FutureRollSelection:
         try:
             selections = self._selections_by_continuous[continuous_instrument_id]
+            selection_times = self._selection_times_by_continuous[continuous_instrument_id]
         except KeyError as exc:
             raise KeyError(f"unknown continuous future: {continuous_instrument_id}") from exc
-        available = [selection for selection in selections if selection.as_of <= as_of]
-        if not available:
+        index = bisect_right(selection_times, as_of) - 1
+        if index < 0:
             raise KeyError(
                 "missing future roll selection for "
                 f"{continuous_instrument_id} at {as_of.isoformat()}"
             )
-        return available[-1]
+        return selections[index]
 
     @staticmethod
     def _normalize_root(root_symbol: str) -> str:

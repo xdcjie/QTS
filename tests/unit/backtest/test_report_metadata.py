@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 from qts.backtest.engine import BacktestEngine
@@ -9,6 +10,8 @@ from qts.core.ids import InstrumentId
 from qts.data.provenance import DatasetMetadata
 from qts.domain.market_data import Bar
 from qts.strategy_sdk import Strategy
+
+from tests.support.backtest_streaming import run_engine_streaming
 
 
 def _bar(start: datetime, close: str) -> Bar:
@@ -52,15 +55,20 @@ class BuyOnceStrategy(Strategy):
             self.has_ordered = True
 
 
-def test_backtest_report_includes_run_identity_dataset_and_cost_assumptions() -> None:
-    result = BacktestEngine(
-        strategy=BuyOnceStrategy(),
-        bars=[_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC), "100")],
-        initial_cash=Decimal("10000"),
-        dataset_metadata=(_metadata("dataset-a"),),
-        config={"mode": "unit", "seed": 7},
-        strategy_version="buy-once-v1",
-    ).run()
+def test_backtest_report_includes_run_identity_dataset_and_cost_assumptions(
+    tmp_path: Path,
+) -> None:
+    result = run_engine_streaming(
+        BacktestEngine(
+            strategy=BuyOnceStrategy(),
+            bars=[_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC), "100")],
+            initial_cash=Decimal("10000"),
+            dataset_metadata=(_metadata("dataset-a"),),
+            config={"mode": "unit", "seed": 7},
+            strategy_version="buy-once-v1",
+        ),
+        tmp_path / "metadata",
+    ).result
 
     assert result.run_id.value.startswith("bt-")
     assert result.strategy_version == "buy-once-v1"
@@ -71,20 +79,26 @@ def test_backtest_report_includes_run_identity_dataset_and_cost_assumptions() ->
     assert result.report_hash.startswith("sha256:")
 
 
-def test_backtest_report_hash_changes_when_dataset_changes() -> None:
+def test_backtest_report_hash_changes_when_dataset_changes(tmp_path: Path) -> None:
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
 
-    left = BacktestEngine(
-        strategy=BuyOnceStrategy(),
-        bars=[_bar(start, "100")],
-        initial_cash=Decimal("10000"),
-        dataset_metadata=(_metadata("dataset-a"),),
-    ).run()
-    right = BacktestEngine(
-        strategy=BuyOnceStrategy(),
-        bars=[_bar(start, "100")],
-        initial_cash=Decimal("10000"),
-        dataset_metadata=(_metadata("dataset-b"),),
-    ).run()
+    left = run_engine_streaming(
+        BacktestEngine(
+            strategy=BuyOnceStrategy(),
+            bars=[_bar(start, "100")],
+            initial_cash=Decimal("10000"),
+            dataset_metadata=(_metadata("dataset-a"),),
+        ),
+        tmp_path / "dataset-a",
+    ).result
+    right = run_engine_streaming(
+        BacktestEngine(
+            strategy=BuyOnceStrategy(),
+            bars=[_bar(start, "100")],
+            initial_cash=Decimal("10000"),
+            dataset_metadata=(_metadata("dataset-b"),),
+        ),
+        tmp_path / "dataset-b",
+    ).result
 
     assert left.report_hash != right.report_hash

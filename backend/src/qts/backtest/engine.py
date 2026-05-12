@@ -5,19 +5,15 @@ from __future__ import annotations
 import hashlib
 import json
 from collections import defaultdict
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, tzinfo
 from decimal import Decimal
 from typing import Any
 
 from qts.backtest.config import BacktestRunConfig
-from qts.backtest.events import BacktestMarketDataEvent, order_backtest_events
 from qts.backtest.historical_data_portal import HistoricalDataPortal
-from qts.backtest.metrics import compute_equity_metrics
-from qts.backtest.replay_clock import ReplayClock
 from qts.backtest.report import (
-    BacktestReport,
     EquityCurvePoint,
     StreamingBacktestArtifactWriter,
     TradeLedgerEntry,
@@ -105,25 +101,6 @@ class BacktestCostModel:
 
 
 @dataclass(frozen=True, slots=True)
-class BacktestResult:
-    """Backtest run result."""
-
-    processed_bars: int
-    warmup_bars: int
-    trading_bars: int
-    final_account: AccountSnapshot
-    orders: tuple[Order, ...]
-    fills: tuple[OrderFill, ...]
-    run_id: BacktestRunId
-    strategy_version: str
-    config_hash: str
-    dataset_metadata: tuple[DatasetMetadata, ...]
-    cost_model: BacktestCostModel
-    report_hash: str
-    report: BacktestReport
-
-
-@dataclass(frozen=True, slots=True)
 class BacktestStreamResult:
     """Backtest result written to partitioned streaming artifacts."""
 
@@ -151,6 +128,44 @@ class BacktestEngine:
         orders: tuple[Order, ...]
         fills: tuple[OrderFill, ...]
 
+    @dataclass(frozen=True, slots=True)
+    class _RuntimeRunResult:
+        final_account: AccountSnapshot
+        warmup_bars: int
+        trading_bars: int
+        last_bar: Bar | None
+
+        @property
+        def processed_bars(self) -> int:
+            return self.warmup_bars + self.trading_bars
+
+    class _StreamingBacktestSink:
+        def __init__(self, writer: StreamingBacktestArtifactWriter) -> None:
+            self._writer = writer
+            self._order_count = 0
+
+        @property
+        def order_count(self) -> int:
+            return self._order_count
+
+        def write_processed(
+            self,
+            engine: BacktestEngine,
+            processed: BacktestEngine._ProcessedIntent,
+            *,
+            bar: Bar,
+        ) -> None:
+            for order in processed.orders:
+                self._writer.write_order(engine._order_payload(order))
+            for fill in processed.fills:
+                self._writer.write_fill(engine._fill_payload(fill))
+            for row in engine._ledger_rows(processed.fills, bar=bar):
+                self._writer.write_trade_ledger(row)
+            self._order_count += len(processed.orders)
+
+        def write_equity_point(self, point: EquityCurvePoint) -> None:
+            self._writer.write_equity_point(point)
+
     def __init__(
         self,
         *,
@@ -168,20 +183,14 @@ class BacktestEngine:
         target_timeframe: str | None = None,
         exchange_timezone_by_instrument: Mapping[InstrumentId, str | tzinfo] | None = None,
         instrument_registry: InstrumentRegistry | None = None,
-        materialize_events: bool = True,
     ) -> None:
         self._strategy = strategy
-        event_stream = (
-            BacktestMarketDataEvent(bar=bar, source_sequence=index)
-            for index, bar in enumerate(bars)
-        )
-        if materialize_events:
-            self._events = order_backtest_events(event_stream)
-            self._stream_events = None
+        if instrument_registry is None and isinstance(bars, Sequence):
+            self._registry_bars = tuple(bars)
+            self._bars = iter(self._registry_bars)
         else:
-            self._events = ()
-            self._stream_events = event_stream
-        self._bars = tuple(event.bar for event in self._events)
+            self._registry_bars = ()
+            self._bars = iter(bars)
         self._initial_cash = initial_cash
         self._dataset_metadata = tuple(dataset_metadata)
         self._config = config or {}
@@ -205,39 +214,7 @@ class BacktestEngine:
         *,
         bars: Iterable[Bar],
         strategy: Strategy,
-        dataset_metadata: Iterable[DatasetMetadata] = (),
-        future_roll_registry: FutureRollRegistry | None = None,
-        exchange_timezone_by_instrument: Mapping[InstrumentId, str | tzinfo] | None = None,
-    ) -> BacktestEngine:
-        cost_model = BacktestCostModel(
-            fixed_commission_per_contract=config.cost_model.fixed_commission_per_contract,
-            slippage_bps=config.cost_model.slippage_bps,
-        )
-        risk_engine = RiskEngine([MaxNotionalRule(max_notional=config.risk_config.max_notional)])
-        return cls(
-            strategy=strategy,
-            bars=bars,
-            initial_cash=config.initial_cash,
-            risk_engine=risk_engine,
-            dataset_metadata=dataset_metadata,
-            config=config.to_payload(),
-            strategy_version=config.strategy_class,
-            cost_model=cost_model,
-            contract_multipliers=cls._contract_multipliers_from_config(config),
-            future_roll_registry=future_roll_registry,
-            warmup_bars=config.warmup_bars,
-            target_timeframe=config.timeframe,
-            exchange_timezone_by_instrument=exchange_timezone_by_instrument,
-        )
-
-    @classmethod
-    def streaming_from_config(
-        cls,
-        config: BacktestRunConfig,
-        *,
-        bars: Iterable[Bar],
-        strategy: Strategy,
-        instrument_registry: InstrumentRegistry,
+        instrument_registry: InstrumentRegistry | None = None,
         dataset_metadata: Iterable[DatasetMetadata] = (),
         future_roll_registry: FutureRollRegistry | None = None,
         exchange_timezone_by_instrument: Mapping[InstrumentId, str | tzinfo] | None = None,
@@ -262,7 +239,6 @@ class BacktestEngine:
             target_timeframe=config.timeframe,
             exchange_timezone_by_instrument=exchange_timezone_by_instrument,
             instrument_registry=instrument_registry,
-            materialize_events=False,
         )
 
     @staticmethod
@@ -330,7 +306,13 @@ class BacktestEngine:
             refs[key] = ref
         return ref
 
-    def run(self) -> BacktestResult:
+    def _run_actor_loop(
+        self,
+        *,
+        sink: BacktestEngine._StreamingBacktestSink,
+        prune_history: bool,
+        compact_orders: bool,
+    ) -> BacktestEngine._RuntimeRunResult:
         instrument_registry = self._instrument_registry_for()
 
         account_actor = AccountActor(initial_cash={"USD": self._initial_cash})
@@ -370,213 +352,18 @@ class BacktestEngine:
             mailbox=Mailbox(),
         )
 
-        orders: list[Order] = []
-        fills: list[OrderFill] = []
-        trade_ledger: list[TradeLedgerEntry] = []
-        equity_curve: list[EquityCurvePoint] = []
         latest_prices: dict[InstrumentId, Decimal] = {}
         warmup_processed = 0
         trading_processed = 0
-
-        strategy_bars_by_instrument: dict[InstrumentId, list[Bar]] = defaultdict(list)
-        market_data_mailbox = Mailbox()
-        market_data_subscriber = ActorRef(mailbox=market_data_mailbox)
-        market_data_refs: dict[tuple[str | None, str | tzinfo | None], ActorRef] = {}
-        events_by_time: dict[datetime, list[BacktestMarketDataEvent]] = defaultdict(list)
-        for event in self._events:
-            events_by_time[event.bar.end_time].append(event)
-        replay_clock = ReplayClock(events_by_time.keys())
-        event_index = 0
-        while True:
-            replay_time = replay_clock.advance()
-            if replay_time is None:
-                break
-            for event in events_by_time[replay_time]:
-                source_bar = event.bar
-                market_data_ref = self._market_data_ref_for(
-                    source_bar,
-                    refs=market_data_refs,
-                    subscriber=market_data_subscriber,
-                )
-                market_data_ref.tell(MarketDataEvent(payload=source_bar))
-                market_data_ref.process_all()
-                while not market_data_mailbox.empty():
-                    payload = market_data_mailbox.get()
-                    if not isinstance(payload, Bar):
-                        raise TypeError(f"unexpected market data payload: {type(payload).__name__}")
-                    bar = payload
-                    strategy_bars_by_instrument[bar.instrument_id].append(bar)
-                    portal = HistoricalDataPortal(strategy_bars_by_instrument)
-                    latest_prices[bar.instrument_id] = bar.close
-                    self._update_rolling_prices(
-                        bar,
-                        latest_prices=latest_prices,
-                    )
-                    strategy_ref.tell(
-                        StrategyBarEvent(
-                            bar=bar,
-                            data=portal.data_view(as_of=bar.end_time),
-                            portfolio=self._portfolio_view(
-                                account_actor.snapshot(),
-                                latest_prices=latest_prices,
-                            ),
-                        )
-                    )
-                    strategy_ref.process_all()
-                    strategy_result = self._take_strategy_bar_result(strategy_result_mailbox)
-                    if event_index < self._warmup_bars:
-                        warmup_processed += 1
-                        equity_curve.append(
-                            self._equity_point(
-                                bar,
-                                account_actor.snapshot(),
-                                latest_prices=latest_prices,
-                            )
-                        )
-                        event_index += 1
-                        continue
-
-                    signal_ref.tell(
-                        StrategySignalEvent(
-                            bar=bar,
-                            intents=strategy_result.intents,
-                        )
-                    )
-                    signal_ref.process_all()
-                    signal_batch = self._take_signal_batch(signal_result_mailbox)
-                    for intent in signal_batch.intents:
-                        processed = self._process_intent(
-                            intent,
-                            bar=bar,
-                            account_actor=account_actor,
-                            order_manager_actor=order_manager_actor,
-                            order_manager_ref=order_manager_ref,
-                            execution_ref=execution_ref,
-                            account_ref=account_ref,
-                            order_number=len(orders) + 1,
-                        )
-                        orders.extend(processed.orders)
-                        fills.extend(processed.fills)
-                        trade_ledger.extend(self._ledger_rows(processed.fills, bar=bar))
-                    trading_processed += 1
-                    equity_curve.append(
-                        self._equity_point(
-                            bar,
-                            account_actor.snapshot(),
-                            latest_prices=latest_prices,
-                        )
-                    )
-                    event_index += 1
-
-        strategy_ref.tell(StrategyFinalize())
-        strategy_ref.process_all()
-        _ = self._take_strategy_finalized(strategy_result_mailbox).intents
-
-        if not equity_curve:
-            equity_curve.append(
-                EquityCurvePoint(
-                    time=self._bars[-1].end_time if self._bars else self._zero_time(),
-                    equity=self._initial_cash,
-                )
-            )
-        config_hash = self._stable_hash(self._config)
-        processed_bar_count = warmup_processed + trading_processed
-        run_hash = self._report_hash(
-            processed_bars=processed_bar_count,
-            final_cash=account_actor.snapshot().cash["USD"],
-            order_ids=tuple(order.order_id.value for order in orders),
-            strategy_version=self._strategy_version,
-            config_hash=config_hash,
-            dataset_metadata=self._dataset_metadata,
-            cost_model=self._cost_model,
-            trade_ledger=tuple(trade_ledger),
-        )
-        run_id = BacktestRunId(f"bt-{run_hash.removeprefix('sha256:')[:12]}")
-        report = BacktestReport(
-            run_id=run_id,
-            config_hash=config_hash,
-            dataset_metadata=tuple(self._dataset_payload(item) for item in self._dataset_metadata),
-            cost_model=self._cost_model.to_payload(),
-            processed_bars=processed_bar_count,
-            warmup_bars=warmup_processed,
-            trading_bars=trading_processed,
-            orders=tuple(self._order_payload(order) for order in orders),
-            fills=tuple(self._fill_payload(fill) for fill in fills),
-            trade_ledger=tuple(trade_ledger),
-            equity_curve=tuple(equity_curve),
-            metrics=compute_equity_metrics([point.equity for point in equity_curve]),
-        )
-        return BacktestResult(
-            processed_bars=processed_bar_count,
-            warmup_bars=warmup_processed,
-            trading_bars=trading_processed,
-            final_account=account_actor.snapshot(),
-            orders=tuple(orders),
-            fills=tuple(fills),
-            run_id=run_id,
-            strategy_version=self._strategy_version,
-            config_hash=config_hash,
-            dataset_metadata=self._dataset_metadata,
-            cost_model=self._cost_model,
-            report_hash=report.report_hash,
-            report=report,
-        )
-
-    def run_streaming(self, output_dir: Any) -> BacktestStreamResult:
-        instrument_registry = self._instrument_registry_for()
-
-        account_actor = AccountActor(initial_cash={"USD": self._initial_cash})
-        account_ref = ActorRef(actor=account_actor, mailbox=Mailbox())
-        execution_mailbox = Mailbox()
-        order_manager_mailbox = Mailbox()
-        order_manager_actor = OrderManagerActor(
-            execution_ref=ActorRef(mailbox=execution_mailbox),
-            account_ref=account_ref,
-            multiplier_by_instrument=self._contract_multipliers,
-        )
-        order_manager_ref = ActorRef(actor=order_manager_actor, mailbox=order_manager_mailbox)
-        execution_ref = ActorRef(
-            actor=ExecutionActor(
-                order_manager_ref=order_manager_ref,
-                execution_adapter=_BacktestExecutionAdapter(self._cost_model),
-            ),
-            mailbox=execution_mailbox,
-        )
-
-        ctx = StrategyContext(
-            instrument_registry=instrument_registry,
-            future_chain_registry=self._future_roll_registry,
-        )
-        strategy_result_mailbox = Mailbox()
-        strategy_ref = ActorRef(
-            actor=StrategyActor(
-                strategy=self._strategy,
-                context=ctx,
-                result_ref=ActorRef(mailbox=strategy_result_mailbox),
-            ),
-            mailbox=Mailbox(),
-        )
-        signal_result_mailbox = Mailbox()
-        signal_ref = ActorRef(
-            actor=SignalAggregatorActor(result_ref=ActorRef(mailbox=signal_result_mailbox)),
-            mailbox=Mailbox(),
-        )
-
-        writer = StreamingBacktestArtifactWriter(output_dir)
-        latest_prices: dict[InstrumentId, Decimal] = {}
-        warmup_processed = 0
-        trading_processed = 0
-        order_count = 0
         event_index = 0
         last_bar: Bar | None = None
-        history_limit = self._history_limit_from_subscriptions(ctx)
+        history_limit = self._history_limit_from_subscriptions(ctx) if prune_history else None
 
         strategy_bars_by_instrument: dict[InstrumentId, list[Bar]] = defaultdict(list)
         market_data_mailbox = Mailbox()
         market_data_subscriber = ActorRef(mailbox=market_data_mailbox)
         market_data_refs: dict[tuple[str | None, str | tzinfo | None], ActorRef] = {}
-        for event in self._iter_events_for_run():
-            source_bar = event.bar
+        for source_bar in self._bars:
             market_data_ref = self._market_data_ref_for(
                 source_bar,
                 refs=market_data_refs,
@@ -614,7 +401,7 @@ class BacktestEngine:
                 strategy_result = self._take_strategy_bar_result(strategy_result_mailbox)
                 if event_index < self._warmup_bars:
                     warmup_processed += 1
-                    writer.write_equity_point(
+                    sink.write_equity_point(
                         self._equity_point(
                             bar,
                             account_actor.snapshot(),
@@ -641,20 +428,15 @@ class BacktestEngine:
                         order_manager_ref=order_manager_ref,
                         execution_ref=execution_ref,
                         account_ref=account_ref,
-                        order_number=order_count + 1,
+                        order_number=sink.order_count + 1,
                     )
-                    for order in processed.orders:
-                        writer.write_order(self._order_payload(order))
-                    for fill in processed.fills:
-                        writer.write_fill(self._fill_payload(fill))
-                    for row in self._ledger_rows(processed.fills, bar=bar):
-                        writer.write_trade_ledger(row)
-                    order_count += len(processed.orders)
-                    order_manager_actor.compact_for_streaming(
-                        order.order_id for order in processed.orders
-                    )
+                    sink.write_processed(self, processed, bar=bar)
+                    if compact_orders:
+                        order_manager_actor.compact_for_streaming(
+                            order.order_id for order in processed.orders
+                        )
                 trading_processed += 1
-                writer.write_equity_point(
+                sink.write_equity_point(
                     self._equity_point(
                         bar,
                         account_actor.snapshot(),
@@ -666,31 +448,48 @@ class BacktestEngine:
         strategy_ref.tell(StrategyFinalize())
         strategy_ref.process_all()
         _ = self._take_strategy_finalized(strategy_result_mailbox).intents
+        return BacktestEngine._RuntimeRunResult(
+            final_account=account_actor.snapshot(),
+            warmup_bars=warmup_processed,
+            trading_bars=trading_processed,
+            last_bar=last_bar,
+        )
 
-        if event_index == 0:
-            writer.write_equity_point(
+    def run_streaming(self, output_dir: Any) -> BacktestStreamResult:
+        writer = StreamingBacktestArtifactWriter(output_dir)
+        sink = BacktestEngine._StreamingBacktestSink(writer)
+        runtime = self._run_actor_loop(
+            sink=sink,
+            prune_history=True,
+            compact_orders=True,
+        )
+
+        if runtime.processed_bars == 0:
+            sink.write_equity_point(
                 EquityCurvePoint(
-                    time=last_bar.end_time if last_bar is not None else self._zero_time(),
+                    time=runtime.last_bar.end_time
+                    if runtime.last_bar is not None
+                    else self._zero_time(),
                     equity=self._initial_cash,
                 )
             )
         config_hash = self._stable_hash(self._config)
-        processed_bar_count = warmup_processed + trading_processed
+        processed_bar_count = runtime.processed_bars
         run_id_value, report_hash, _, artifacts = writer.finalize(
             config_hash=config_hash,
             dataset_metadata=tuple(self._dataset_payload(item) for item in self._dataset_metadata),
             cost_model=self._cost_model.to_payload(),
             processed_bars=processed_bar_count,
-            warmup_bars=warmup_processed,
-            trading_bars=trading_processed,
-            final_cash=account_actor.snapshot().cash["USD"],
+            warmup_bars=runtime.warmup_bars,
+            trading_bars=runtime.trading_bars,
+            final_cash=runtime.final_account.cash["USD"],
             strategy_version=self._strategy_version,
         )
         return BacktestStreamResult(
             processed_bars=processed_bar_count,
-            warmup_bars=warmup_processed,
-            trading_bars=trading_processed,
-            final_account=account_actor.snapshot(),
+            warmup_bars=runtime.warmup_bars,
+            trading_bars=runtime.trading_bars,
+            final_account=runtime.final_account,
             run_id=BacktestRunId(run_id_value),
             strategy_version=self._strategy_version,
             config_hash=config_hash,
@@ -962,9 +761,14 @@ class BacktestEngine:
     def _instrument_registry_for(self) -> InstrumentRegistry:
         if self._instrument_registry is not None:
             return self._instrument_registry
+        if not self._registry_bars:
+            raise RuntimeError(
+                "instrument_registry is required when backtest bars are streamed "
+                "from a one-pass iterable"
+            )
         registry = InstrumentRegistry()
         seen: set[InstrumentId] = set()
-        for bar in self._bars:
+        for bar in self._registry_bars:
             if bar.instrument_id in seen:
                 continue
             seen.add(bar.instrument_id)
@@ -987,11 +791,6 @@ class BacktestEngine:
             )
         return registry
 
-    def _iter_events_for_run(self) -> Iterable[BacktestMarketDataEvent]:
-        if self._stream_events is not None:
-            return self._stream_events
-        return self._events
-
     @staticmethod
     def _history_limit_from_subscriptions(ctx: StrategyContext) -> int | None:
         if not ctx.subscriptions:
@@ -1010,10 +809,10 @@ class BacktestEngine:
             if historical_data_config is not None:
                 if config.market_data.catalog is None:
                     raise RuntimeError("market data catalog is not configured")
-                chain_path = historical_data_config.resolve_dataset(
+                chain_path = historical_data_config.resolve_chain_path(
                     config.market_data.catalog,
                     root,
-                ).chain_path
+                )
             elif config.dataset_root is not None:
                 chain_path = config.dataset_root / "chains" / f"{root}.json"
             else:
@@ -1107,48 +906,9 @@ class BacktestEngine:
         encoded = json.dumps(payload, sort_keys=True, default=str, separators=(",", ":")).encode()
         return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
-    @classmethod
-    def _report_hash(
-        cls,
-        *,
-        processed_bars: int,
-        final_cash: Decimal,
-        order_ids: tuple[str, ...],
-        strategy_version: str,
-        config_hash: str,
-        dataset_metadata: tuple[DatasetMetadata, ...],
-        cost_model: BacktestCostModel,
-        trade_ledger: tuple[TradeLedgerEntry, ...],
-    ) -> str:
-        return cls._stable_hash(
-            {
-                "processed_bars": processed_bars,
-                "final_cash": str(final_cash),
-                "order_ids": order_ids,
-                "strategy_version": strategy_version,
-                "config_hash": config_hash,
-                "datasets": [cls._dataset_payload(item) for item in dataset_metadata],
-                "cost_model": cost_model.to_payload(),
-                "trade_ledger": [
-                    {
-                        "order_id": row.order_id,
-                        "instrument_id": row.instrument_id,
-                        "side": row.side,
-                        "quantity": str(row.quantity),
-                        "fill_price": str(row.fill_price),
-                        "commission": str(row.commission),
-                        "slippage": str(row.slippage),
-                        "fill_time": row.fill_time.isoformat(),
-                        "source_bar_time": row.source_bar_time.isoformat(),
-                    }
-                    for row in trade_ledger
-                ],
-            }
-        )
-
     @staticmethod
     def _zero_time() -> Any:
-        from datetime import UTC, datetime
+        from datetime import UTC
 
         return datetime(1970, 1, 1, tzinfo=UTC)
 
@@ -1183,4 +943,4 @@ class _BacktestExecutionAdapter:
         )
 
 
-__all__ = ["BacktestCostModel", "BacktestEngine", "BacktestResult"]
+__all__ = ["BacktestCostModel", "BacktestEngine", "BacktestStreamResult"]

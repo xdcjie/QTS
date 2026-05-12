@@ -276,6 +276,22 @@ class HistoricalDataConfig:
             store=store,
         )
 
+    def resolve_chain_path(self, catalog_name: str, root: str) -> Path | None:
+        """Resolve chain metadata path without selecting a concrete bar file."""
+
+        normalized_root = _normalize_root(root)
+        catalog = self.catalog(catalog_name)
+        try:
+            dataset = catalog.datasets[normalized_root]
+        except KeyError as exc:
+            raise KeyError(
+                f"unknown historical dataset root {normalized_root} in catalog {catalog_name}"
+            ) from exc
+        store = self.store(catalog.store)
+        if not dataset.requires_chain:
+            return None
+        return store.chain_path(normalized_root, override=dataset.chain_file)
+
     def _csv_schema(self, name: str | None) -> HistoricalCsvSchema:
         if name is None:
             return DEFAULT_HISTORICAL_CSV_SCHEMA
