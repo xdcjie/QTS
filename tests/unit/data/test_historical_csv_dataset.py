@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 from qts.core.ids import InstrumentId
-from qts.data.historical.chains import load_historical_chain
+from qts.data.historical.chains import HistoricalChain
 from qts.data.historical.csv_dataset import (
     EXPECTED_HISTORICAL_COLUMNS,
     describe_csv_dataset,
@@ -85,7 +85,7 @@ def test_describe_csv_dataset_rejects_invalid_column_order(tmp_path: Path) -> No
 def test_iter_historical_bars_streams_outrights_and_excludes_spreads(tmp_path: Path) -> None:
     path = tmp_path / "gc.csv"
     _write_rows(path, [_row("GCQ0", 30), _row("GCN0-GCQ0", 31), _row("GCM0", 32)])
-    chain = load_historical_chain(Path("historical/chains/GC.json"))
+    chain = HistoricalChain.load(Path("historical/chains/GC.json"))
 
     stream = iter_historical_bars(path, chain, timeframe="1m")
     bars = tuple(stream)
@@ -207,7 +207,7 @@ def test_iter_historical_bars_can_emit_one_rolling_bar_per_timestamp(
             _row("GCN0-GCQ0", 30, open_="-1.4", high="-1.4", low="-1.4", close="-1.4"),
         ],
     )
-    chain = load_historical_chain(Path("historical/chains/GC.json"))
+    chain = HistoricalChain.load(Path("historical/chains/GC.json"))
     continuous_id = InstrumentId("CONTINUOUS_FUTURE.CME.GC")
 
     stream = iter_historical_bars(
@@ -240,7 +240,7 @@ def test_iter_historical_bars_can_roll_once_per_exchange_session_by_total_volume
             _row("GCQ0", 31, open_="111", high="111", low="111", close="111", volume="100"),
         ],
     )
-    chain = load_historical_chain(Path("historical/chains/GC.json"))
+    chain = HistoricalChain.load(Path("historical/chains/GC.json"))
     continuous_id = InstrumentId("CONTINUOUS_FUTURE.CME.GC")
     session_window = RegularSessionWindow(
         exchange_timezone="US/Eastern",
@@ -276,7 +276,7 @@ def test_validate_historical_sample_reports_invalid_ohlc_and_spread_exclusion(
             _row("GCM0", 32),
         ],
     )
-    chain = load_historical_chain(Path("historical/chains/GC.json"))
+    chain = HistoricalChain.load(Path("historical/chains/GC.json"))
 
     result = validate_historical_sample(path, chain, sample_rows=3)
 

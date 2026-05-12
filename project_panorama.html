@@ -587,9 +587,9 @@
           <p class="eyebrow">QTS Project Panorama</p>
           <h1>以 Actor 为边界的运行时全景图</h1>
           <p class="intro">
-            QTS 的配置、数据读取、registry、risk、reporting 不是 Actor；真正的运行时通信主干从
-            <code>MarketDataActor</code> 开始，通过 <code>ActorRef</code> 和
-            <code>Mailbox</code> 串起策略、信号、订单、执行和账户状态。
+            QTS 的配置解析、历史 replay input 构造、registry、risk、reporting 不是 Actor；真正的运行时通信主干从
+            <code>MarketDataActor</code> 开始，通过 <code>ActorRef</code> 和 <code>Mailbox</code>
+            串起策略、信号、订单、执行和账户状态。
           </p>
         </div>
         <div class="legend" aria-label="legend">
@@ -636,8 +636,8 @@
           <div class="note-card">
             <strong>Backtest 特点</strong>
             <p>
-              Backtest 由 <code>BacktestEngine</code> 同步驱动 Actor：它读取 replay 事件，向 ActorRef
-              发消息，再调用 <code>process_all()</code> 推进 mailbox。
+              <code>HistoricalCatalog</code> 和 <code>BacktestInputBuilder</code> 先构造 replay-ready
+              inputs；<code>BacktestEngine</code> 只消费这些 inputs 并同步驱动 Actor mailbox。
             </p>
           </div>
           <div class="note-card">
@@ -674,7 +674,7 @@
                   <article class="module-card source" data-layer="source">
                     <span class="tag">BACKTEST FEED</span>
                     <h3>Historical Feed Adapter</h3>
-                    <p>历史 CSV / chain replay feed。<code>run_backtest</code> -> <code>iter_historical_bars</code> streaming 读取、过滤、换约。</p>
+                    <p><code>HistoricalCatalog.load</code> + <code>BacktestInputBuilder</code> 将 CSV / chain 配置装配成 replay stream、registry、roll registry 和 metadata。</p>
                   </article>
                   <article class="module-card source" data-layer="source">
                     <span class="tag">LIVE FEED</span>
@@ -795,14 +795,14 @@
                   </article>
                   <article class="module-card service" data-layer="service">
                     <span class="tag">SERVICE</span>
-                    <h3>Registry / RiskEngine</h3>
-                    <p>symbol、continuous future、contract resolution 和 order risk check。</p>
+                    <h3>BacktestInputBuilder</h3>
+                    <p>消费已加载的 catalog，生成 bars、dataset stats、instrument registry、contract multipliers 和 roll registry。</p>
                   </article>
                 </div>
                 <div class="route-strip">
                   <div class="route-chip"><b>聚合规则</b><code>MarketDataActor</code> -> <code>BarAggregator</code><br />completed aggregate bars</div>
                   <div class="route-chip"><b>策略数据</b><code>StrategyContext</code> -> <code>DataView</code><br />as_of 可见历史</div>
-                  <div class="route-chip"><b>标的解析</b>source / strategy -> registry<br />InstrumentId / concrete contract</div>
+                  <div class="route-chip"><b>输入装配</b><code>HistoricalCatalog</code> -> <code>BacktestInputBuilder</code><br />replay-ready bundle</div>
                   <div class="route-chip"><b>风险检查</b><code>SignalAggregatorActor</code> -> <code>RiskEngine</code><br />checked order intent</div>
                 </div>
               </div>
@@ -852,8 +852,10 @@
             <h3><span class="badge source">BACKTEST</span> 历史行情 Feed 入口</h3>
             <ul>
               <li><code>BacktestRunConfig.from_yaml</code> 解析 run config。</li>
-              <li><code>HistoricalDataConfig</code> + <code>HistoricalCatalog</code> 定位 CSV / chain。</li>
-              <li><code>HistoricalBarStream</code> 作为 historical feed 产出 source <code>Bar</code>，连续合约记录 <code>FutureRollSelection</code>。</li>
+              <li><code>HistoricalCatalogLoadConfig</code> 把 legacy root 或 project historical config 归一成一个 catalog construction input。</li>
+              <li><code>HistoricalCatalog.load</code> 定位 CSV / chain，并由 catalog/config 类自己拥有解析、归一化和路径选择规则。</li>
+              <li><code>BacktestInputBuilder</code> 消费 catalog，产出 replay bars、dataset metadata、instrument registry、contract multipliers 和 roll registry。</li>
+              <li><code>BacktestEngine.from_config</code> 消费准备好的 inputs；它不再读取 historical config 或 chain 文件来补做 input assembly。</li>
               <li><code>BacktestEngine</code> 把 source bar 包成 <code>MarketDataEvent</code>，同步投递给 <code>MarketDataActor</code>。</li>
               <li>从 <code>MarketDataActor</code> 发布出的 completed bar 开始，策略路径和 live 对齐。</li>
             </ul>
@@ -962,10 +964,16 @@
                 <td>运行前配置阶段。</td>
               </tr>
               <tr>
-                <td><code>HistoricalCatalog</code> / <code>HistoricalBarStream</code></td>
+                <td><code>HistoricalDataConfig</code> / <code>HistoricalCatalog</code></td>
                 <td>否</td>
-                <td>定位历史数据文件，读取 CSV，转换为 <code>Bar</code>，处理历史链和 roll selections。</td>
-                <td>Backtest feed adapter 阶段，进入 <code>MarketDataActor</code> 之前。</td>
+                <td>拥有 historical data YAML 解析、root 归一化、CSV / chain 路径解析和 catalog construction。</td>
+                <td>Backtest feed adapter 的 catalog 边界，进入 input builder 之前。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestInputBuilder</code> / <code>HistoricalBarStream</code></td>
+                <td>否</td>
+                <td>读取 CSV，过滤请求 symbols，处理 continuous future roll selections，并输出 replay-ready input bundle。</td>
+                <td>Backtest feed adapter 阶段，进入 <code>BacktestEngine</code> 之前。</td>
               </tr>
               <tr>
                 <td><code>FutureRollRegistry</code> / <code>InstrumentRegistry</code></td>
@@ -1009,6 +1017,8 @@
             <h3><span class="badge source">DATA</span> Backtest feed</h3>
             <ul>
               <li><code>qts.backtest.runner</code></li>
+              <li><code>qts.backtest.inputs</code></li>
+              <li><code>qts.data.historical.config</code></li>
               <li><code>qts.data.historical.catalog</code></li>
               <li><code>qts.data.historical.csv_dataset</code></li>
               <li><code>qts.registry.future_roll</code></li>
@@ -1052,7 +1062,8 @@
         <p class="callout" style="margin-top: 14px">
           当前目标状态应继续推进到：backtest / paper / live 都从各自 market data feed adapter 进入
           <code>MarketDataActor</code>，之后统一走 Strategy -> Signal -> Risk -> OrderManager -> Execution ->
-          Account 的 Actor 主链路；配置、registry、risk、portal、reporting 作为显式同步边界存在。
+          Account 的 Actor 主链路；配置、catalog、input builder、registry、risk、portal、reporting
+          作为显式同步边界存在，不能把 construction 或 replay assembly 重新塞回 runner / engine。
         </p>
       </section>
     </main>

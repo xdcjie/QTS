@@ -7,11 +7,11 @@ from pathlib import Path
 
 def test_real_gc_first_timestamp_roll_selects_highest_volume_outright_contract() -> None:
     from qts.core.ids import InstrumentId
-    from qts.data.historical.chains import load_historical_chain
+    from qts.data.historical.chains import HistoricalChain
     from qts.data.historical.csv_dataset import iter_historical_bars
     from qts.registry.future_roll import HighestVolumeFutureContractSelector
 
-    chain = load_historical_chain(Path("historical/chains/GC.json"))
+    chain = HistoricalChain.load(Path("historical/chains/GC.json"))
     continuous_id = InstrumentId("CONTINUOUS_FUTURE.CME.GC")
     stream = iter_historical_bars(
         Path("historical/data/gc.csv"),

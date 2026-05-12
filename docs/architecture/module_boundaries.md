@@ -9,14 +9,100 @@ than in a mode-specific or source-specific package.
 Ask this before creating or moving a module:
 
 ```text
+What is the unit's single reason to change?
 Who owns the domain rule?
 Which modes need it: backtest, paper, live?
 Is this source-specific, adapter-specific, mode-specific, or shared runtime/domain behavior?
+Does the module only orchestrate other owners, or does it own reusable behavior?
 ```
 
 If both backtest and live need the rule, it must not live in `qts.backtest` or
 `qts.data.historical`. Those packages may call shared services, but they do not
 own shared financial semantics.
+
+High cohesion means a module groups responsibilities that change for the same
+reason and can be described as one stable concept. Low coupling means callers
+depend on that concept's narrow public API, not on its file layout, private
+helpers, source format details, or unrelated runtime wiring.
+
+Keep these responsibilities separate unless a documented module boundary owns
+the combined concept:
+
+- configuration parsing and validation;
+- source/data loading and file-format parsing;
+- domain invariants and financial rules;
+- registry, symbol, and roll/session resolution;
+- runtime or use-case orchestration;
+- artifact/report serialization.
+
+Runners, CLIs, workers, and application services are orchestration boundaries.
+They may connect cohesive components, but they must not accumulate reusable data
+construction, domain resolution, source parsing, registry construction, or
+artifact format logic as private helpers.
+
+For backtests, configured historical bar streams, dataset metadata, instrument
+registry construction, and roll-aware replay input assembly belong in cohesive
+data/backtest input boundaries. The runner should invoke those boundaries and
+then call the engine.
+
+## Repository OOP Standard
+
+This project uses object-oriented ownership for stable system concepts. Choose
+the shape that keeps a concept closed over its own rules and keeps callers
+coupled to a narrow public API.
+
+Use a class when a concept has state, configuration, lifecycle, invariants,
+validation/normalization, or a coherent public interface. Its construction path
+belongs with the concept: constructors and classmethod constructors should
+parse, validate, normalize, and assemble the object without requiring callers to
+know its internals.
+
+For stable concepts, prefer a construction-config pattern:
+
+```python
+catalog_config = HistoricalCatalogLoadConfig(
+    source=source,
+    roots=roots,
+    symbol_resolvers=symbol_resolvers,
+    requested_timeframe=requested_timeframe,
+)
+catalog = HistoricalCatalog.load(catalog_config)
+```
+
+The `<Concept>Config` value object owns the complete construction input shape.
+The `<Concept>` object owns validation, normalization, internal branching, and
+invariant checks. Callers should pass one cohesive config object instead of long
+primitive parameter lists, and they should not reproduce the concept's assembly
+decisions outside the concept owner.
+
+Do not add new module-level public factory functions such as `load_<concept>`,
+`build_<concept>`, `create_<concept>`, or `make_<concept>` for stable concepts.
+Use class-owned constructors such as `Concept.load(config)`,
+`Concept.from_yaml(...)`, or `Concept.from_legacy_root(...)`.
+
+Use module-level functions only for stateless algorithms, pure transformations,
+framework entrypoints, protocol callbacks, and explicit compatibility wrappers.
+Compatibility wrappers must be narrow, delegate immediately to the owning object
+API, avoid new behavior, and stay out of package `__all__` unless backward
+compatibility explicitly requires export.
+
+In class-centric modules, private helpers that only serve the public class must
+live on that class as private instance, class, or static methods. Keep
+module-private helpers only when they are shared algorithm steps, pure
+transformations, function-oriented framework entrypoints, or stable module
+concepts rather than one class's construction, validation, mapping,
+serialization, or state transition logic.
+
+Do not move object construction decisions into runners, CLIs, workers, or
+unrelated builders. For example, a historical catalog boundary should close over
+historical catalog configuration, path resolution, dataset validation, and
+`HistoricalCatalog` construction. A backtest input builder should consume the
+catalog object; it should not decide how to construct the catalog.
+
+Automated guardrails block new public module-level factory functions and
+class-centric module-private helpers except for documented compatibility or
+framework exceptions. New exceptions must update this document, the guardrail
+script, and the guardrail tests in the same change.
 
 ## Top-Level Modules
 

@@ -6,11 +6,11 @@ from pathlib import Path
 
 import pytest
 from qts.core.ids import InstrumentId
-from qts.data.historical.chains import load_historical_chain
+from qts.data.historical.chains import HistoricalChain
 
 
-def test_load_historical_chain_parses_gc_contract_metadata() -> None:
-    chain = load_historical_chain(Path("historical/chains/GC.json"))
+def test_historical_chain_load_parses_gc_contract_metadata() -> None:
+    chain = HistoricalChain.load(Path("historical/chains/GC.json"))
 
     assert chain.root == "GC"
     assert chain.timezone == "US/Eastern"
@@ -29,14 +29,14 @@ def test_load_historical_chain_parses_gc_contract_metadata() -> None:
 
 
 def test_historical_chain_maps_outright_symbols_to_internal_instrument_ids() -> None:
-    chain = load_historical_chain(Path("historical/chains/GC.json"))
+    chain = HistoricalChain.load(Path("historical/chains/GC.json"))
 
     assert chain.is_outright_symbol("GCQ0") is True
     assert chain.instrument_id_for_symbol("GCQ0") == InstrumentId("FUTURE.CME.GC.GCQ0")
 
 
 def test_historical_chain_rejects_spread_symbols() -> None:
-    chain = load_historical_chain(Path("historical/chains/GC.json"))
+    chain = HistoricalChain.load(Path("historical/chains/GC.json"))
 
     assert chain.is_outright_symbol("GCN0-GCQ0") is False
     with pytest.raises(ValueError, match="not an outright"):
@@ -55,4 +55,4 @@ def test_historical_chain_missing_required_fields_raise_value_error(tmp_path: Pa
     )
 
     with pytest.raises(ValueError, match="multiplier"):
-        load_historical_chain(bad)
+        HistoricalChain.load(bad)

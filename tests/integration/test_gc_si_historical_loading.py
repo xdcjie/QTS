@@ -9,7 +9,10 @@ from typing import Any, cast
 
 import pytest
 from qts.core.ids import InstrumentId
-from qts.data.historical.catalog import load_historical_catalog
+from qts.data.historical.catalog import (
+    HistoricalCatalog,
+    HistoricalCatalogLoadConfig,
+)
 from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
 from qts.registry.symbol_resolution import StaticSymbolResolver
 
@@ -24,8 +27,8 @@ def _load_validation_script() -> ModuleType:
     return module
 
 
-def test_load_historical_catalog_uses_requested_roots_without_counting_rows() -> None:
-    catalog = load_historical_catalog(Path("historical"), roots=("GC", "SI"))
+def test_historical_catalog_from_legacy_root_uses_requested_roots_without_counting_rows() -> None:
+    catalog = HistoricalCatalog.from_legacy_root(Path("historical"), roots=("GC", "SI"))
 
     assert catalog.roots == ("GC", "SI")
     assert catalog.datasets["GC"].chain_path == Path("historical/chains/GC.json")
@@ -37,7 +40,7 @@ def test_load_historical_catalog_uses_requested_roots_without_counting_rows() ->
     assert catalog.datasets["SI"].dataset.row_count is None
 
 
-def test_load_historical_catalog_fails_clearly_when_required_file_is_missing(
+def test_historical_catalog_from_legacy_root_fails_clearly_when_required_file_is_missing(
     tmp_path: Path,
 ) -> None:
     (tmp_path / "data").mkdir()
@@ -46,10 +49,10 @@ def test_load_historical_catalog_fails_clearly_when_required_file_is_missing(
     shutil.copyfile(Path("historical/chains/SI.json"), tmp_path / "chains" / "SI.json")
 
     with pytest.raises(FileNotFoundError, match="historical/data/gc.csv"):
-        load_historical_catalog(tmp_path, roots=("GC", "SI"))
+        HistoricalCatalog.from_legacy_root(tmp_path, roots=("GC", "SI"))
 
 
-def test_load_historical_catalog_accepts_explicit_resolver_without_chain(
+def test_historical_catalog_from_legacy_root_accepts_explicit_resolver_without_chain(
     tmp_path: Path,
 ) -> None:
     (tmp_path / "data").mkdir()
@@ -60,7 +63,7 @@ def test_load_historical_catalog_accepts_explicit_resolver_without_chain(
     )
     resolver = StaticSymbolResolver({"AAPL": InstrumentId("EQUITY.US.NASDAQ.AAPL")})
 
-    catalog = load_historical_catalog(
+    catalog = HistoricalCatalog.from_legacy_root(
         tmp_path,
         roots=("EQUITY",),
         symbol_resolvers={"EQUITY": resolver},
@@ -71,6 +74,30 @@ def test_load_historical_catalog_accepts_explicit_resolver_without_chain(
     assert dataset.chain_path is None
     assert dataset.symbol_resolver is resolver
     assert dataset.csv_path == tmp_path / "data" / "equity.csv"
+
+
+def test_historical_catalog_load_uses_static_ids_when_chain_is_absent(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "equity.csv").write_text(
+        ",".join(EXPECTED_HISTORICAL_COLUMNS) + "\n",
+        encoding="utf-8",
+    )
+
+    catalog = HistoricalCatalog.load(
+        HistoricalCatalogLoadConfig.from_legacy_root(
+            tmp_path,
+            roots=("EQUITY",),
+            instrument_ids={"AAPL": InstrumentId("EQUITY.US.NASDAQ.AAPL")},
+        )
+    )
+
+    dataset = catalog.datasets["EQUITY"]
+    assert dataset.chain is None
+    assert dataset.symbol_resolver.instrument_id_for_symbol("AAPL") == InstrumentId(
+        "EQUITY.US.NASDAQ.AAPL"
+    )
 
 
 def test_validate_historical_cli_writes_sample_evidence_for_requested_roots(

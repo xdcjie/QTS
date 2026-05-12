@@ -16,6 +16,30 @@ SOURCE_SPECIFIC_BOUNDARY_PREFIXES = (
     ("backtest",),
     ("data", "historical"),
 )
+OOP_FACTORY_FUNCTION_PREFIXES = ("build_", "create_", "load_", "make_")
+OOP_CLASS_OWNED_HELPER_PREFIXES = (
+    "_map",
+    "_normalize",
+    "_parse",
+    "_render",
+    "_require",
+    "_select",
+    "_validate",
+)
+OOP_PUBLIC_FACTORY_ALLOWED = frozenset(
+    {
+        ("api/app.py", "create_app"),  # FastAPI framework entrypoint.
+        ("observability/logging.py", "build_log_record"),  # pure DTO transformation
+    }
+)
+OOP_HELPER_OWNERSHIP_ALLOWED_FILES = frozenset(
+    {
+        "config/ibkr.py",
+        "data/bars/alignment.py",
+        "data/sessions/filter.py",
+        "observability/logging.py",
+    }
+)
 
 PRODUCT_FACT_ALLOWED_PREFIXES = (
     ("registry", "providers"),
@@ -26,6 +50,53 @@ BROKER_FACT_ALLOWED_PREFIXES = (
     ("config",),
     ("data", "adapters"),
     ("execution", "adapters"),
+)
+BACKTEST_RUNNER_FORBIDDEN_IMPORT_PREFIXES = (
+    "qts.data.historical.config",
+    "qts.data.historical.csv_dataset",
+    "qts.data.provenance",
+    "qts.domain.instruments",
+    "qts.registry",
+)
+BACKTEST_RAW_CATALOG_LOADERS = frozenset(
+    {
+        "load_historical_catalog",
+        "load_historical_catalog_from_config",
+    }
+)
+BACKTEST_RUNNER_FORBIDDEN_HELPERS = frozenset(
+    {
+        "_chain_path_exists",
+        "_dataset_metadata",
+        "_historical_data_config_for",
+        "_instrument_registry_for",
+        "_iter_root_bars",
+        "_load_catalog",
+        "_stream_configured_bars",
+        "_symbol_resolvers_from_config",
+    }
+)
+BACKTEST_INPUT_FORBIDDEN_IMPORTS = frozenset(
+    {
+        "qts.data.historical.config",
+    }
+)
+BACKTEST_INPUT_FORBIDDEN_HELPERS = frozenset(
+    {
+        "_chain_path_exists",
+        "_historical_data_config",
+        "_load_catalog",
+        "_symbol_resolvers_from_config",
+    }
+)
+BACKTEST_ENGINE_FORBIDDEN_IMPORT_PREFIXES = (
+    "qts.data.historical.chains",
+    "qts.data.historical.config",
+)
+BACKTEST_ENGINE_FORBIDDEN_HELPERS = frozenset(
+    {
+        "_contract_multipliers_from_config",
+    }
 )
 
 
@@ -74,6 +145,11 @@ def _check_python_file(repo_root: Path, path: Path) -> list[GuardrailViolation]:
 
     violations.extend(_check_test_support_code(relative_path, qts_relative_path, tree))
     violations.extend(_check_shared_capability_placement(relative_path, qts_relative_path))
+    violations.extend(_check_oop_public_factory_functions(relative_path, qts_relative_path, tree))
+    violations.extend(_check_oop_helper_ownership(relative_path, qts_relative_path, tree))
+    violations.extend(_check_backtest_runner_cohesion(relative_path, qts_relative_path, tree))
+    violations.extend(_check_backtest_input_cohesion(relative_path, qts_relative_path, tree))
+    violations.extend(_check_backtest_engine_cohesion(relative_path, qts_relative_path, tree))
 
     return violations
 
@@ -231,6 +307,254 @@ def _check_shared_capability_placement(
     ]
 
 
+def _check_oop_public_factory_functions(
+    relative_path: Path,
+    qts_relative_path: Path,
+    tree: ast.AST,
+) -> list[GuardrailViolation]:
+    module_path = qts_relative_path.as_posix()
+    violations: list[GuardrailViolation] = []
+    for node in tree.body:
+        if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        if node.name.startswith("_"):
+            continue
+        if not node.name.startswith(OOP_FACTORY_FUNCTION_PREFIXES):
+            continue
+        if (module_path, node.name) in OOP_PUBLIC_FACTORY_ALLOWED:
+            continue
+        violations.append(
+            GuardrailViolation(
+                code="OOP_PUBLIC_FACTORY_FUNCTION",
+                path=str(relative_path),
+                line=node.lineno,
+                message=(
+                    "stable concept construction belongs on the owning class or config object, "
+                    f"not module-level factory function {node.name}"
+                ),
+            )
+        )
+    return violations
+
+
+def _check_oop_helper_ownership(
+    relative_path: Path,
+    qts_relative_path: Path,
+    tree: ast.AST,
+) -> list[GuardrailViolation]:
+    module_path = qts_relative_path.as_posix()
+    if module_path in OOP_HELPER_OWNERSHIP_ALLOWED_FILES:
+        return []
+    public_classes = [
+        node
+        for node in tree.body
+        if isinstance(node, ast.ClassDef) and not node.name.startswith("_")
+    ]
+    public_functions = [
+        node
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+        and not node.name.startswith("_")
+    ]
+    private_functions = [
+        node
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef) and node.name.startswith("_")
+    ]
+    if public_functions or not private_functions:
+        return []
+    if len(public_classes) == 1:
+        return [
+            GuardrailViolation(
+                code="OOP_HELPER_OWNERSHIP",
+                path=str(relative_path),
+                line=node.lineno,
+                message=(
+                    "module-private helper next to a single public class should be owned by "
+                    f"{public_classes[0].name}: {node.name}"
+                ),
+            )
+            for node in private_functions
+        ]
+    if len(public_classes) < 2:
+        return []
+    violations: list[GuardrailViolation] = []
+    for node in private_functions:
+        if not node.name.startswith(OOP_CLASS_OWNED_HELPER_PREFIXES):
+            continue
+        owner_classes = [
+            class_node.name
+            for class_node in public_classes
+            if _node_references_name(class_node, node.name)
+        ]
+        if len(owner_classes) != 1:
+            continue
+        violations.append(
+            GuardrailViolation(
+                code="OOP_HELPER_OWNERSHIP",
+                path=str(relative_path),
+                line=node.lineno,
+                message=(
+                    "module-private helper used by one public class should be owned by "
+                    f"{owner_classes[0]}: {node.name}"
+                ),
+            )
+        )
+    return violations
+
+
+def _check_backtest_runner_cohesion(
+    relative_path: Path,
+    qts_relative_path: Path,
+    tree: ast.AST,
+) -> list[GuardrailViolation]:
+    if qts_relative_path.parts != ("backtest", "runner.py"):
+        return []
+    violations: list[GuardrailViolation] = []
+    for imported_module, line in _iter_imports(tree):
+        if imported_module.startswith(BACKTEST_RUNNER_FORBIDDEN_IMPORT_PREFIXES):
+            violations.append(
+                GuardrailViolation(
+                    code="BACKTEST_RUNNER_COHESION",
+                    path=str(relative_path),
+                    line=line,
+                    message=(
+                        "backtest runner should orchestrate input builders, not own "
+                        f"replay input assembly via {imported_module}"
+                    ),
+                )
+            )
+    for imported_module, imported_name, line in _iter_imported_names(tree):
+        if (
+            imported_module == "qts.data.historical.catalog"
+            and imported_name in BACKTEST_RAW_CATALOG_LOADERS
+        ):
+            violations.append(
+                GuardrailViolation(
+                    code="BACKTEST_RUNNER_COHESION",
+                    path=str(relative_path),
+                    line=line,
+                    message=(
+                        "backtest runner should use the configured catalog boundary, "
+                        f"not raw catalog loader {imported_name}"
+                    ),
+                )
+            )
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        if node.name not in BACKTEST_RUNNER_FORBIDDEN_HELPERS:
+            continue
+        violations.append(
+            GuardrailViolation(
+                code="BACKTEST_RUNNER_COHESION",
+                path=str(relative_path),
+                line=node.lineno,
+                message=(
+                    "backtest runner private helpers must not own configured historical "
+                    f"replay input assembly: {node.name}"
+                ),
+            )
+        )
+    return violations
+
+
+def _check_backtest_input_cohesion(
+    relative_path: Path,
+    qts_relative_path: Path,
+    tree: ast.AST,
+) -> list[GuardrailViolation]:
+    if qts_relative_path.parts != ("backtest", "inputs.py"):
+        return []
+    violations: list[GuardrailViolation] = []
+    for imported_module, line in _iter_imports(tree):
+        if imported_module in BACKTEST_INPUT_FORBIDDEN_IMPORTS:
+            violations.append(
+                GuardrailViolation(
+                    code="BACKTEST_INPUT_COHESION",
+                    path=str(relative_path),
+                    line=line,
+                    message=(
+                        "backtest input builder should consume a loaded catalog, "
+                        f"not own catalog configuration via {imported_module}"
+                    ),
+                )
+            )
+    for imported_module, imported_name, line in _iter_imported_names(tree):
+        if (
+            imported_module == "qts.data.historical.catalog"
+            and imported_name in BACKTEST_RAW_CATALOG_LOADERS
+        ):
+            violations.append(
+                GuardrailViolation(
+                    code="BACKTEST_INPUT_COHESION",
+                    path=str(relative_path),
+                    line=line,
+                    message=(
+                        "backtest input builder should consume a loaded catalog, "
+                        f"not raw catalog loader {imported_name}"
+                    ),
+                )
+            )
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        if node.name not in BACKTEST_INPUT_FORBIDDEN_HELPERS:
+            continue
+        violations.append(
+            GuardrailViolation(
+                code="BACKTEST_INPUT_COHESION",
+                path=str(relative_path),
+                line=node.lineno,
+                message=(
+                    "backtest input builder must not own historical catalog construction: "
+                    f"{node.name}"
+                ),
+            )
+        )
+    return violations
+
+
+def _check_backtest_engine_cohesion(
+    relative_path: Path,
+    qts_relative_path: Path,
+    tree: ast.AST,
+) -> list[GuardrailViolation]:
+    if qts_relative_path.parts != ("backtest", "engine.py"):
+        return []
+    violations: list[GuardrailViolation] = []
+    for imported_module, line in _iter_imports(tree):
+        if imported_module.startswith(BACKTEST_ENGINE_FORBIDDEN_IMPORT_PREFIXES):
+            violations.append(
+                GuardrailViolation(
+                    code="BACKTEST_ENGINE_COHESION",
+                    path=str(relative_path),
+                    line=line,
+                    message=(
+                        "backtest engine should consume prepared replay inputs, not own "
+                        f"historical input assembly via {imported_module}"
+                    ),
+                )
+            )
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        if node.name not in BACKTEST_ENGINE_FORBIDDEN_HELPERS:
+            continue
+        violations.append(
+            GuardrailViolation(
+                code="BACKTEST_ENGINE_COHESION",
+                path=str(relative_path),
+                line=node.lineno,
+                message=(
+                    "backtest engine private helpers must not own historical replay "
+                    f"input assembly: {node.name}"
+                ),
+            )
+        )
+    return violations
+
+
 def _check_forbidden_tokens(
     relative_path: Path,
     tree: ast.AST,
@@ -278,6 +602,13 @@ def _contains_forbidden_token(value: str, forbidden_tokens: frozenset[str]) -> b
     return any(token in forbidden_tokens for token in _identifier_tokens(value))
 
 
+def _node_references_name(node: ast.AST, name: str) -> bool:
+    return any(
+        isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load) and child.id == name
+        for child in ast.walk(node)
+    )
+
+
 def _identifier_tokens(value: str) -> set[str]:
     tokens: set[str] = set()
     for part in re.split(r"[^A-Za-z0-9]+", value):
@@ -297,6 +628,14 @@ def _iter_imports(tree: ast.AST) -> list[tuple[str, int]]:
             imports.extend((alias.name, node.lineno) for alias in node.names)
         elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module is not None:
             imports.append((node.module, node.lineno))
+    return imports
+
+
+def _iter_imported_names(tree: ast.AST) -> list[tuple[str, str, int]]:
+    imports: list[tuple[str, str, int]] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module is not None:
+            imports.extend((node.module, alias.name, node.lineno) for alias in node.names)
     return imports
 
 

@@ -3,7 +3,7 @@ from datetime import UTC, datetime, time
 from decimal import Decimal
 from pathlib import Path
 
-from qts.data.historical.chains import load_historical_chain
+from qts.data.historical.chains import HistoricalChain
 from qts.data.sessions import RegularSessionWindow
 from qts.registry.future_roll import HighestVolumeFutureContractSelector
 
@@ -56,7 +56,7 @@ def test_gc_session_id_uses_exchange_time_half_open_session() -> None:
 
 def test_gc_historical_session_roll_anchor_matches_full_csv() -> None:
     expected = json.loads(ANCHOR_PATH.read_text(encoding="utf-8"))
-    chain = load_historical_chain(GC_CHAIN_PATH)
+    chain = HistoricalChain.load(GC_CHAIN_PATH)
 
     summary = summarize_historical_session_rolls(
         GC_CSV_PATH,

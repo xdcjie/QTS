@@ -19,8 +19,6 @@ from qts.backtest.report import (
     TradeLedgerEntry,
 )
 from qts.core.ids import BacktestRunId, InstrumentId, OrderId
-from qts.data.historical.chains import load_historical_chain
-from qts.data.historical.config import HistoricalDataConfig
 from qts.data.provenance import DatasetMetadata
 from qts.domain.instruments import AssetClass, ContractSpec, Instrument, SettlementType
 from qts.domain.market_data import Bar
@@ -218,6 +216,7 @@ class BacktestEngine:
         dataset_metadata: Iterable[DatasetMetadata] = (),
         future_roll_registry: FutureRollRegistry | None = None,
         exchange_timezone_by_instrument: Mapping[InstrumentId, str | tzinfo] | None = None,
+        contract_multipliers: Mapping[InstrumentId, Decimal] | None = None,
     ) -> BacktestEngine:
         cost_model = BacktestCostModel(
             fixed_commission_per_contract=config.cost_model.fixed_commission_per_contract,
@@ -233,7 +232,7 @@ class BacktestEngine:
             config=config.to_payload(),
             strategy_version=config.strategy_class,
             cost_model=cost_model,
-            contract_multipliers=cls._contract_multipliers_from_config(config),
+            contract_multipliers=contract_multipliers,
             future_roll_registry=future_roll_registry,
             warmup_bars=config.warmup_bars,
             target_timeframe=config.timeframe,
@@ -796,41 +795,6 @@ class BacktestEngine:
         if not ctx.subscriptions:
             return None
         return max(subscription.warmup for subscription in ctx.subscriptions)
-
-    @staticmethod
-    def _contract_multipliers_from_config(config: BacktestRunConfig) -> dict[InstrumentId, Decimal]:
-        multipliers: dict[InstrumentId, Decimal] = {}
-        historical_data_config = (
-            HistoricalDataConfig.from_yaml(config.market_data.config_path)
-            if config.market_data.config_path is not None
-            else None
-        )
-        for root in config.roots:
-            if historical_data_config is not None:
-                if config.market_data.catalog is None:
-                    raise RuntimeError("market data catalog is not configured")
-                chain_path = historical_data_config.resolve_chain_path(
-                    config.market_data.catalog,
-                    root,
-                )
-            elif config.dataset_root is not None:
-                chain_path = config.dataset_root / "chains" / f"{root}.json"
-            else:
-                chain_path = None
-            if chain_path is None:
-                if config.instrument_ids:
-                    continue
-                raise FileNotFoundError(
-                    f"required historical chain file is missing for root: {root}"
-                )
-            if not chain_path.exists():
-                if config.instrument_ids:
-                    continue
-                raise FileNotFoundError(f"required historical chain file is missing: {chain_path}")
-            chain = load_historical_chain(chain_path)
-            for contract in chain.contracts:
-                multipliers[chain.instrument_id_for_symbol(contract.symbol)] = contract.multiplier
-        return multipliers
 
     def _multiplier_for(self, instrument_id: InstrumentId) -> Decimal:
         return self._contract_multipliers.get(instrument_id, Decimal("1"))

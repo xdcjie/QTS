@@ -64,9 +64,13 @@ where written standards are otherwise easy to miss:
 - `strategy_sdk` importing runtime, execution, risk, registry, data, backtest,
   application, API, or workers;
 - market-data adapters importing execution/risk/portfolio/runtime;
-- order-execution adapters importing data.
+- order-execution adapters importing data;
 - shared roll/session/resolution modules placed under source-specific
-  boundaries such as `qts.backtest` or `qts.data.historical`.
+  boundaries such as `qts.backtest` or `qts.data.historical`;
+- new module-level public factory functions for stable concepts instead of
+  class-owned construction APIs;
+- module-private helpers beside a single public class when the helper should be
+  owned by that class.
 
 Guardrail exceptions must be narrow and expressed in `scripts/verify_guardrails.py`
 with tests that prove both the allowed boundary and the forbidden shortcut.

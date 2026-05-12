@@ -205,6 +205,9 @@ def test_futures_multiplier_affects_backtest_fill_cash(tmp_path: Path) -> None:
             _config(),
             bars=[_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC), "2000.0")],
             strategy=BuyOneGcStrategy(),
+            contract_multipliers={
+                InstrumentId("FUTURE.CME.GC.GCQ0"): Decimal("100"),
+            },
         ),
         tmp_path / "multiplier",
     ).result

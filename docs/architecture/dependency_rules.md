@@ -63,6 +63,12 @@ checks:
 - Order-execution adapters may not import data.
 - Shared roll/session/resolution modules may not live under source-specific
   packages such as `qts.backtest` or `qts.data.historical`.
+- New stable concept construction may not be exposed as module-level public
+  `load_*`, `build_*`, `create_*`, or `make_*` functions. Use the owning
+  class/config object instead.
+- In class-centric modules, module-private helpers that only serve one public
+  class are rejected unless the file is an explicitly documented compatibility
+  exception.
 
 When a new valid boundary is introduced, update this document, the guardrail
 script, and the guardrail tests in the same change.

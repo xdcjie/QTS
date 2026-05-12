@@ -8,7 +8,7 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
-from qts.data.historical.catalog import load_historical_catalog
+from qts.data.historical.catalog import HistoricalCatalog
 from qts.data.historical.csv_dataset import validate_historical_sample
 
 
@@ -22,7 +22,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     sample_rows = None if args.full else args.sample_rows
-    catalog = load_historical_catalog(args.root, roots=tuple(args.roots))
+    catalog = HistoricalCatalog.from_legacy_root(args.root, roots=tuple(args.roots))
     payload: dict[str, object] = {
         "root": str(args.root),
         "roots": list(catalog.roots),

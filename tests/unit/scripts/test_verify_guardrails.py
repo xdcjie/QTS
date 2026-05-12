@@ -151,6 +151,160 @@ def test_guardrails_reject_shared_session_resolution_in_backtest_boundary(
     assert _codes(root) == {"SHARED_CAPABILITY_IN_SOURCE_BOUNDARY"}
 
 
+def test_guardrails_reject_backtest_runner_replay_input_assembly(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/backtest/runner.py",
+        "from qts.data.historical.csv_dataset import iter_historical_bars\n\n"
+        "def _stream_configured_bars():\n"
+        "    return iter_historical_bars\n",
+    )
+
+    assert _codes(root) == {"BACKTEST_RUNNER_COHESION"}
+
+
+def test_guardrails_allow_backtest_runner_configured_catalog_boundary(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/backtest/runner.py",
+        "from qts.data.historical.catalog import HistoricalCatalog, HistoricalCatalogLoadConfig\n\n"
+        "def run_backtest(config):\n"
+        "    catalog_config = HistoricalCatalogLoadConfig.from_legacy_root(\n"
+        "        config.dataset_root,\n"
+        "        roots=config.roots,\n"
+        "    )\n"
+        "    return HistoricalCatalog.load(catalog_config)\n",
+    )
+
+    assert _codes(root) == set()
+
+
+def test_guardrails_reject_backtest_input_catalog_construction(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/backtest/inputs.py",
+        "from qts.data.historical.catalog import load_historical_catalog\n\n"
+        "class BacktestInputBuilder:\n"
+        "    def _load_catalog(self):\n"
+        "        return load_historical_catalog\n",
+    )
+
+    assert _codes(root) == {"BACKTEST_INPUT_COHESION"}
+
+
+def test_guardrails_reject_public_factory_function_for_stable_concept(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/domain/widget.py",
+        "class WidgetConfig:\n"
+        "    pass\n\n"
+        "class Widget:\n"
+        "    pass\n\n"
+        "def load_widget(config: WidgetConfig) -> Widget:\n"
+        "    return Widget()\n",
+    )
+
+    assert _codes(root) == {"OOP_PUBLIC_FACTORY_FUNCTION"}
+
+
+def test_guardrails_allow_public_pure_algorithm_function(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/domain/amounts.py",
+        "from decimal import Decimal\n\n"
+        "def combine_amounts(left: Decimal, right: Decimal) -> Decimal:\n"
+        "    return left + right\n",
+    )
+
+    assert _codes(root) == set()
+
+
+def test_guardrails_reject_private_helper_next_to_single_public_class(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/domain/widget.py",
+        "class Widget:\n"
+        "    def __init__(self, payload: str) -> None:\n"
+        "        self.payload = _normalize_payload(payload)\n\n"
+        "def _normalize_payload(payload: str) -> str:\n"
+        "    return payload.strip()\n",
+    )
+
+    assert _codes(root) == {"OOP_HELPER_OWNERSHIP"}
+
+
+def test_guardrails_reject_private_helper_owned_by_one_class_in_multi_class_module(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/domain/widget.py",
+        "class WidgetConfig:\n"
+        "    pass\n\n"
+        "class Widget:\n"
+        "    def __init__(self, payload: str) -> None:\n"
+        "        self.payload = _normalize_payload(payload)\n\n"
+        "def _normalize_payload(payload: str) -> str:\n"
+        "    return payload.strip()\n",
+    )
+
+    assert _codes(root) == {"OOP_HELPER_OWNERSHIP"}
+
+
+def test_guardrails_allow_class_owned_private_helper(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/domain/widget.py",
+        "class Widget:\n"
+        "    def __init__(self, payload: str) -> None:\n"
+        "        self.payload = self._normalize_payload(payload)\n\n"
+        "    @staticmethod\n"
+        "    def _normalize_payload(payload: str) -> str:\n"
+        "        return payload.strip()\n",
+    )
+
+    assert _codes(root) == set()
+
+
+def test_guardrails_reject_backtest_engine_historical_input_assembly(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/backtest/engine.py",
+        "from qts.data.historical.config import HistoricalDataConfig\n\n"
+        "class BacktestEngine:\n"
+        "    @staticmethod\n"
+        "    def _contract_multipliers_from_config(config):\n"
+        "        return HistoricalDataConfig.from_yaml(config.market_data.config_path)\n",
+    )
+
+    assert _codes(root) == {"BACKTEST_ENGINE_COHESION"}
+
+
 def test_guardrails_allow_product_facts_in_registry_providers(tmp_path: Path) -> None:
     root = tmp_path
     _write(

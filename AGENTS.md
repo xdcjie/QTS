@@ -21,6 +21,90 @@ The system must support:
 - Timeframe/session-specific behavior belongs in `qts/data/bars` and calendar/session services.
 - Financial correctness rules must be expressed as reusable domain rules and protected by tests.
 
+## Cohesion and coupling gate
+
+Before adding or changing a module, class, function, runner, service, or adapter,
+identify its single reason to change and the owner of each responsibility it
+touches.
+
+Rules:
+
+- Keep configuration parsing, data loading, source parsing, domain rules,
+  registry/resolution, runtime orchestration, and artifact/report writing in
+  separate owners unless one module explicitly owns that cohesive concept.
+- A runner, CLI, worker, or application service may orchestrate dependencies,
+  but must not own reusable data construction, source parsing, domain
+  resolution, session/roll semantics, registry construction, or artifact
+  formats.
+- A config object may parse, normalize, validate, and serialize configuration;
+  it must not open datasets, create runtime iterators, mutate registries, or
+  instantiate adapters unless that is its documented boundary.
+- If a helper only serves one class in a class-centric module, put it on that
+  class. If it represents a shared concept, move it to the module that owns the
+  concept and expose a narrow public API when other modules need it.
+- Choose classes versus functions by concept ownership, not habit. Use a class
+  when the concept has state, configuration, lifecycle, invariants,
+  validation/normalization, or a coherent public interface. Use module-level
+  functions for stateless algorithms, pure transformations, framework
+  entrypoints, or thin convenience APIs.
+- A stable object concept should close over its own construction path. Its
+  parsing, validation, normalization, and construction helpers should live on
+  the class or in the same owning module. Callers should not assemble that
+  object's internals through scattered conditionals.
+- Prefer the construction-config pattern for stable concepts: define a focused
+  `<Concept>Config` value object that contains all construction inputs, then
+  build the usable object with `<Concept>(config)`. The concept constructor owns
+  validation, normalization, internal branching, and invariant checks.
+- Use named constructors or same-module factories only when they reduce
+  ambiguity for materially different sources, such as `from_yaml(...)` for file
+  parsing or `from_legacy_root(...)` for migration compatibility. Keep those
+  entrypoints at the concept owner, and have them delegate into the same
+  `<Concept>Config` -> `<Concept>` construction path.
+- Do not pass long lists of primitive construction parameters through runners or
+  unrelated builders. Group construction inputs into the owning concept's config
+  object so the caller cannot accidentally reimplement the concept's assembly
+  rules.
+- Passing behavioral tests does not prove the design is acceptable if the
+  responsibility boundary is wrong.
+
+## Repository OOP standard
+
+This repository uses object-oriented ownership for stable system concepts.
+Functions are allowed, but they are not the default shape for concept
+construction, validation, lifecycle, state, or cohesive behavior.
+
+Rules:
+
+- Stable concepts must expose an object-owned API. Prefer
+  `<Concept>Config` plus `<Concept>`, with construction through the owning
+  class such as `Concept(config)`, `Concept.load(config)`,
+  `Concept.from_yaml(...)`, or `Concept.from_legacy_root(...)`.
+- Do not add new module-level public factory functions such as
+  `load_<concept>`, `build_<concept>`, `create_<concept>`, or
+  `make_<concept>` for stable concepts. Put that construction on the owning
+  class or config object.
+- Module-level public functions are acceptable only for pure stateless
+  algorithms, thin framework/CLI entrypoints, protocol callbacks, or explicit
+  compatibility wrappers.
+- Compatibility wrappers must be narrow, delegate immediately to the owning
+  object API, avoid new behavior, and must not be exported from package
+  `__all__` unless backward compatibility explicitly requires it.
+- In a class-centric module, private helpers that only serve the public class
+  must be private methods on that class. A module-private helper is acceptable
+  only when it is a shared algorithm step, pure transformation, or module-owned
+  concept rather than one class's construction, validation, mapping,
+  serialization, or state transition logic.
+- New exceptions to these rules require updating
+  `docs/architecture/module_boundaries.md`, `scripts/verify_guardrails.py`,
+  and `tests/unit/scripts/test_verify_guardrails.py` in the same change.
+
+Backtest-specific rule:
+
+- Backtest runners may wire a run together, but configured historical bar
+  streams, dataset metadata, instrument registry construction, and roll-aware
+  replay input assembly must live in cohesive data/backtest input boundaries,
+  not as private runner helpers.
+
 ## Domain-sensitive implementation gate
 
 Before changing sessions, bar generation, instrument identity, broker/data
