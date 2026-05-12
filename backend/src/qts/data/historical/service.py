@@ -68,4 +68,11 @@ class HistoricalMarketDataService:
                 yield LiveFeedEvent(payload=bar, source_id=self.source_id)
 
 
-__all__ = ["HistoricalMarketDataService"]
+class ReplayMarketDataAdapter(HistoricalMarketDataService):
+    """Canonical replay-market-data adapter name for historical sources."""
+
+
+__all__ = [
+    "HistoricalMarketDataService",
+    "ReplayMarketDataAdapter",
+]

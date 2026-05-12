@@ -9,6 +9,7 @@ def test_ibkr_market_data_adapter_normalizes_tick_quote_and_bar_without_order_me
     from qts.data.adapters.ibkr_market_data import (
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
+        LiveMarketDataAdapter,
     )
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
@@ -68,3 +69,4 @@ def test_ibkr_market_data_adapter_normalizes_tick_quote_and_bar_without_order_me
     assert not bar.is_partial
     assert not hasattr(adapter, "submit_order")
     assert not hasattr(adapter, "cancel_order")
+    assert LiveMarketDataAdapter is IbkrMarketDataAdapter

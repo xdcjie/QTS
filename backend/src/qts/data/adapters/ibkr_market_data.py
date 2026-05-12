@@ -137,8 +137,17 @@ class IbkrMarketDataAdapter:
         )
 
 
+# Canonicalized names used by higher-level documentation and mode-independent paths.
+LiveMarketDataAdapter = IbkrMarketDataAdapter
+LiveMarketDataConnection = IbkrMarketDataConnection
+LiveMarketDataSubscription = IbkrMarketDataSubscription
+
+
 __all__ = [
     "IbkrMarketDataAdapter",
     "IbkrMarketDataConnection",
     "IbkrMarketDataSubscription",
+    "LiveMarketDataAdapter",
+    "LiveMarketDataConnection",
+    "LiveMarketDataSubscription",
 ]

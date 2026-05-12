@@ -44,6 +44,15 @@ Market data and order execution are separate flows. IBKR can back both in paper
 and live modes, but subscriptions and market data events stay in the market data
 flow while order requests and execution reports stay in the execution flow.
 
+### Adapter naming map
+
+- `LiveFeedAdapter` / `MarketDataSourceAdapter`:
+  live-mode feed contract used by `qts.runtime.actors.MarketDataActor`.
+- `ReplayMarketDataAdapter`:
+  historical/replay contract in `qts.data.historical.service`.
+- `LiveMarketDataAdapter`:
+  compatibility alias to `IbkrMarketDataAdapter` in `qts.data.adapters.ibkr_market_data`.
+
 ## Ordering rule
 
 Do not require global order. Preserve order by business key:
