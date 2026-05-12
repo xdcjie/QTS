@@ -7,7 +7,7 @@ from enum import StrEnum
 from pydantic import BaseModel, model_validator
 
 
-class RuntimeCommandResponse(BaseModel):
+class RuntimeCommandResponseSchema(BaseModel):
     """Payload for runtime pause/resume commands."""
 
     state: str
@@ -22,7 +22,7 @@ class KillSwitchScopeSchema(StrEnum):
     INSTRUMENT = "instrument"
 
 
-class KillSwitchCommand(BaseModel):
+class KillSwitchCommandSchema(BaseModel):
     """Kill-switch mutation command."""
 
     scope: KillSwitchScopeSchema
@@ -30,7 +30,7 @@ class KillSwitchCommand(BaseModel):
     reason: str
 
     @model_validator(mode="after")
-    def validate_scope(self) -> KillSwitchCommand:
+    def validate_scope(self) -> KillSwitchCommandSchema:
         """Validate kill-switch command scope constraints."""
         if not self.reason.strip():
             raise ValueError("reason must not be empty")
@@ -41,7 +41,7 @@ class KillSwitchCommand(BaseModel):
         return self
 
 
-class KillSwitchResponse(BaseModel):
+class KillSwitchResponseSchema(BaseModel):
     """Kill-switch current state response."""
 
     scope: str
@@ -50,9 +50,17 @@ class KillSwitchResponse(BaseModel):
     reason: str
 
 
+RuntimeCommandResponse = RuntimeCommandResponseSchema
+KillSwitchCommand = KillSwitchCommandSchema
+KillSwitchResponse = KillSwitchResponseSchema
+
+
 __all__ = [
     "RuntimeCommandResponse",
+    "RuntimeCommandResponseSchema",
     "KillSwitchScopeSchema",
     "KillSwitchCommand",
+    "KillSwitchCommandSchema",
     "KillSwitchResponse",
+    "KillSwitchResponseSchema",
 ]
