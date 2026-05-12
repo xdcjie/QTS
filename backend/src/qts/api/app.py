@@ -16,6 +16,7 @@ from qts.api.websocket import events_router
 
 
 def create_app() -> FastAPI:
+    """Perform create_app."""
     app = FastAPI(title="Quant Trading System")
     app.include_router(health_router)
     app.include_router(backtests_router)

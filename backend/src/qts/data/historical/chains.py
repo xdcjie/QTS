@@ -42,6 +42,7 @@ class HistoricalChain:
     _contracts_by_symbol: dict[str, HistoricalContract] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         contracts_by_symbol: dict[str, HistoricalContract] = {}
         for contract in self.contracts:
             contracts_by_symbol.setdefault(contract.symbol, contract)
@@ -52,15 +53,18 @@ class HistoricalChain:
         )
 
     def contract_for_symbol(self, symbol: str) -> HistoricalContract:
+        """Perform contract_for_symbol."""
         try:
             return self._contracts_by_symbol[symbol]
         except KeyError as exc:
             raise KeyError(f"unknown historical contract symbol: {symbol}") from exc
 
     def is_outright_symbol(self, symbol: str) -> bool:
+        """Perform is_outright_symbol."""
         return "-" not in symbol and symbol in self._contracts_by_symbol
 
     def instrument_id_for_symbol(self, symbol: str) -> InstrumentId:
+        """Perform instrument_id_for_symbol."""
         if not self.is_outright_symbol(symbol):
             raise ValueError(f"{symbol} is not an outright {self.root} historical contract")
         return InstrumentId(f"FUTURE.{self.exchange}.{self.root}.{symbol}")
@@ -116,6 +120,7 @@ class HistoricalChain:
         chain_multiplier: Decimal,
         chain_calendar: str,
     ) -> HistoricalContract:
+        """Perform _parse_contract."""
         if not isinstance(payload, dict):
             raise ValueError("contract entries must be objects")
         item: dict[str, Any] = payload
@@ -136,6 +141,7 @@ class HistoricalChain:
 
     @staticmethod
     def _required_text(payload: dict[str, Any], field: str) -> str:
+        """Perform _required_text."""
         value = payload.get(field)
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"{field} is required")
@@ -143,6 +149,7 @@ class HistoricalChain:
 
     @staticmethod
     def _required_decimal(payload: dict[str, Any], field: str) -> Decimal:
+        """Perform _required_decimal."""
         if field not in payload:
             raise ValueError(f"{field} is required")
         value = Decimal(str(payload[field]))
@@ -152,6 +159,7 @@ class HistoricalChain:
 
     @staticmethod
     def _exchange_code(market: str) -> str:
+        """Perform _exchange_code."""
         if market.endswith("_FUT"):
             return market.removesuffix("_FUT")
         return market

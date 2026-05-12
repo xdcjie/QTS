@@ -11,6 +11,7 @@ from qts.load.synthetic_market_data import SyntheticMarketDataConfig, generate_b
 
 
 def main() -> None:
+    """Perform main."""
     bars = generate_bars(
         SyntheticMarketDataConfig(
             instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),

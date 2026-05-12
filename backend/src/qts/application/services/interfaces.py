@@ -6,15 +6,27 @@ from typing import Protocol
 
 
 class AccountService(Protocol):
-    def snapshot(self, account_id: str) -> object: ...
+    """Account query service boundary."""
+
+    def snapshot(self, account_id: str) -> object:
+        """Return an account snapshot."""
+        ...
 
 
 class OrderService(Protocol):
-    def status(self, order_id: str) -> object: ...
+    """Order query service boundary."""
+
+    def status(self, order_id: str) -> object:
+        """Return order status."""
+        ...
 
 
 class RiskService(Protocol):
-    def rules(self, account_id: str) -> object: ...
+    """Risk query service boundary."""
+
+    def rules(self, account_id: str) -> object:
+        """Return configured risk rules."""
+        ...
 
 
 __all__ = ["AccountService", "OrderService", "RiskService"]

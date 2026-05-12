@@ -31,6 +31,7 @@ class Bar:
     is_partial: bool = False
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         TimeInterval(start=self.start_time, end=self.end_time)
         if not self.timeframe.strip():
             raise ValueError("timeframe must not be empty")
@@ -52,10 +53,12 @@ class Bar:
 
     @property
     def interval(self) -> TimeInterval:
+        """Perform interval."""
         return TimeInterval(start=self.start_time, end=self.end_time)
 
     @staticmethod
     def _require_non_negative(value: Decimal, name: str) -> None:
+        """Perform _require_non_negative."""
         if value < Decimal("0"):
             raise ValueError(f"{name} must be non-negative")
 
@@ -72,6 +75,7 @@ class Quote:
     ask_size: Decimal = Decimal("0")
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         require_aware_datetime(self.time, name="time")
         if self.bid_price > self.ask_price:
             raise ValueError("bid_price must be less than or equal to ask_price")
@@ -80,6 +84,7 @@ class Quote:
 
     @property
     def spread(self) -> Decimal:
+        """Perform spread."""
         return self.ask_price - self.bid_price
 
 
@@ -93,6 +98,7 @@ class Tick:
     size: Decimal = Decimal("0")
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         require_aware_datetime(self.time, name="time")
         Bar._require_non_negative(self.size, "size")
 

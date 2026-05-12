@@ -17,6 +17,7 @@ class ImmediateFillModel:
         broker_order_id: str,
         market_price: Decimal,
     ) -> ExecutionReport:
+        """Perform fill."""
         if market_price < Decimal("0"):
             raise ValueError("market_price must be non-negative")
         return ExecutionReport(

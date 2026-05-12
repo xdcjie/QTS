@@ -39,6 +39,7 @@ class FutureSpec(DerivativeSpec):
     root_symbol: str
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         if not self.root_symbol.strip():
             raise ValueError("root_symbol must not be empty")
 
@@ -52,6 +53,7 @@ class OptionSpec(DerivativeSpec):
     exercise_style: ExerciseStyle = ExerciseStyle.AMERICAN
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         if self.strike <= Decimal("0"):
             raise ValueError("strike must be positive")
 

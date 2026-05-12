@@ -6,6 +6,7 @@ from decimal import Decimal
 
 
 def equity_notional(*, quantity: Decimal, price: Decimal) -> Decimal:
+    """Perform equity_notional."""
     return quantity * price
 
 
@@ -16,6 +17,7 @@ def future_pnl(
     exit_price: Decimal,
     multiplier: Decimal,
 ) -> Decimal:
+    """Perform future_pnl."""
     return contracts * (exit_price - entry_price) * multiplier
 
 
@@ -25,6 +27,7 @@ def option_premium_value(
     option_price: Decimal,
     multiplier: Decimal,
 ) -> Decimal:
+    """Perform option_premium_value."""
     return contracts * option_price * multiplier
 
 

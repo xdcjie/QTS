@@ -2,16 +2,15 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
+from qts.core.hashing import stable_json_hash
 from qts.core.ids import InstrumentId
 
 _SUPPORTED_MARKET_DATA_SOURCES = frozenset({"local_historical"})
@@ -25,6 +24,7 @@ class CostModelConfig:
     slippage_bps: Decimal = Decimal("0")
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         object.__setattr__(
             self,
             "fixed_commission_per_contract",
@@ -37,6 +37,7 @@ class CostModelConfig:
             raise ValueError("slippage_bps must be non-negative")
 
     def to_payload(self) -> dict[str, str]:
+        """Perform to_payload."""
         return {
             "fixed_commission_per_contract": str(self.fixed_commission_per_contract),
             "slippage_bps": str(self.slippage_bps),
@@ -50,11 +51,13 @@ class RiskConfig:
     max_notional: Decimal
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         object.__setattr__(self, "max_notional", Decimal(str(self.max_notional)))
         if self.max_notional <= Decimal("0"):
             raise ValueError("max_notional must be positive")
 
     def to_payload(self) -> dict[str, str]:
+        """Perform to_payload."""
         return {"max_notional": str(self.max_notional)}
 
 
@@ -66,12 +69,14 @@ class RollPolicyConfig:
     method: str = "highest_volume"
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         normalized = self.method.strip().lower()
         if normalized != "highest_volume":
             raise ValueError("roll_policy.method must be highest_volume")
         object.__setattr__(self, "method", normalized)
 
     def to_payload(self) -> dict[str, object]:
+        """Perform to_payload."""
         return {"enabled": self.enabled, "method": self.method}
 
 
@@ -84,6 +89,7 @@ class BacktestMarketDataReference:
     source: str = "local_historical"
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         if self.config_path is not None:
             object.__setattr__(self, "config_path", Path(self.config_path))
         source = self.source.strip().lower()
@@ -102,9 +108,11 @@ class BacktestMarketDataReference:
 
     @property
     def is_configured(self) -> bool:
+        """Perform is_configured."""
         return self.config_path is not None and self.catalog is not None
 
     def to_payload(self) -> dict[str, str] | None:
+        """Perform to_payload."""
         if not self.is_configured:
             return None
         if self.config_path is None or self.catalog is None:
@@ -127,6 +135,7 @@ class BacktestStrategyConfig:
     enabled: bool = True
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         if not self.class_path.strip():
             raise ValueError("strategy class_path must not be empty")
         object.__setattr__(self, "params", dict(self.params))
@@ -140,12 +149,14 @@ class BacktestStrategyConfig:
 
     @classmethod
     def from_yaml(cls, path: Path) -> BacktestStrategyConfig:
+        """Perform from_yaml."""
         payload = yaml.safe_load(path.read_text(encoding="utf-8"))
         if not isinstance(payload, dict):
             raise ValueError("strategy config must be a mapping")
         return cls._parse_payload(payload)
 
     def to_payload(self) -> dict[str, Any]:
+        """Perform to_payload."""
         return {
             "strategy_id": self.strategy_id,
             "class_path": self.class_path,
@@ -157,6 +168,7 @@ class BacktestStrategyConfig:
 
     @classmethod
     def _parse_payload(cls, payload: dict[str, Any]) -> BacktestStrategyConfig:
+        """Perform _parse_payload."""
         params = payload.get("params", {})
         if not isinstance(params, dict):
             raise ValueError("strategy params must be a mapping")
@@ -200,6 +212,7 @@ class BacktestRunConfig:
     warmup_bars: int = 0
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         if self.dataset_root is not None:
             object.__setattr__(self, "dataset_root", Path(self.dataset_root))
         if self.strategy_config_path is not None:
@@ -265,82 +278,18 @@ class BacktestRunConfig:
 
     @classmethod
     def from_yaml(cls, path: Path) -> BacktestRunConfig:
-        payload = yaml.safe_load(path.read_text(encoding="utf-8"))
-        if not isinstance(payload, dict):
-            raise ValueError("backtest config must be a mapping")
-        cost_payload = payload.get("cost_model", {})
-        risk_payload = payload.get("risk_config", {})
-        if not isinstance(cost_payload, dict):
-            raise ValueError("cost_model must be a mapping")
-        if not isinstance(risk_payload, dict):
-            raise ValueError("risk_config must be a mapping")
-        roll_payload = payload.get("roll_policy", {})
-        if not isinstance(roll_payload, dict):
-            raise ValueError("roll_policy must be a mapping")
-        strategy_params = payload.get("strategy_params", {})
-        instrument_ids_payload = payload.get("instrument_ids", {})
-        if not isinstance(strategy_params, dict):
-            raise ValueError("strategy_params must be a mapping")
-        if not isinstance(instrument_ids_payload, dict):
-            raise ValueError("instrument_ids must be a mapping")
-        dataset_root = (
-            Path(str(payload["dataset_root"])) if payload.get("dataset_root") is not None else None
-        )
-        strategy_config_path = (
-            Path(str(payload["strategy_config"]))
-            if payload.get("strategy_config") is not None
-            else None
-        )
-        if strategy_config_path is not None:
-            if "strategy_class" in payload or "strategy_params" in payload:
-                raise ValueError(
-                    "strategy_config must not be combined with strategy_class or strategy_params"
-                )
-            strategy = BacktestStrategyConfig.from_yaml(strategy_config_path)
-            strategy_class = strategy.class_path
-            strategy_params = dict(strategy.params)
-        else:
-            strategy = None
-            strategy_class = str(payload["strategy_class"])
-        return cls(
-            roots=tuple(payload["roots"]),
-            symbols=tuple(payload["symbols"]),
-            start=cls._parse_datetime(str(payload["start"])),
-            end=cls._parse_datetime(str(payload["end"])),
-            timeframe=payload["timeframe"],
-            initial_cash=Decimal(str(payload["initial_cash"])),
-            strategy_class=strategy_class,
-            dataset_root=dataset_root,
-            market_data=cls._parse_market_data_reference(payload.get("market_data")),
-            historical_data=cls._parse_historical_data_reference(payload.get("historical_data")),
-            strategy_config_path=strategy_config_path,
-            strategy=strategy,
-            strategy_params=strategy_params,
-            instrument_ids={
-                str(symbol): InstrumentId(str(instrument_id))
-                for symbol, instrument_id in instrument_ids_payload.items()
-            },
-            cost_model=CostModelConfig(
-                fixed_commission_per_contract=Decimal(
-                    str(cost_payload.get("fixed_commission_per_contract", "0"))
-                ),
-                slippage_bps=Decimal(str(cost_payload.get("slippage_bps", "0"))),
-            ),
-            risk_config=RiskConfig(
-                max_notional=Decimal(str(risk_payload.get("max_notional", "1")))
-            ),
-            roll_policy=RollPolicyConfig(
-                enabled=bool(roll_payload.get("enabled", False)),
-                method=str(roll_payload.get("method", "highest_volume")),
-            ),
-            warmup_bars=int(payload.get("warmup_bars", 0)),
-        )
+        """Perform from_yaml."""
+        from qts.backtest.config_loader import BacktestConfigLoader
+
+        return BacktestConfigLoader.from_path(path)
 
     @property
     def config_hash(self) -> str:
-        return self._stable_hash(self.to_payload())
+        """Perform config_hash."""
+        return stable_json_hash(self.to_payload())
 
     def to_payload(self) -> dict[str, Any]:
+        """Perform to_payload."""
         payload = {
             "roots": list(self.roots),
             "symbols": list(self.symbols),
@@ -371,50 +320,12 @@ class BacktestRunConfig:
         return payload
 
     @staticmethod
-    def _parse_datetime(value: datetime | str) -> datetime:
-        if isinstance(value, datetime):
-            parsed = value
-        else:
-            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        if parsed.tzinfo is None:
-            raise ValueError("datetime values must be timezone-aware")
-        return parsed.astimezone(UTC)
-
-    @staticmethod
     def _normalize_symbol(symbol: str) -> str:
+        """Perform _normalize_symbol."""
         normalized = symbol.strip().upper()
         if not normalized:
             raise ValueError("instrument_ids must not contain empty symbols")
         return normalized
-
-    @staticmethod
-    def _parse_market_data_reference(payload: object) -> BacktestMarketDataReference:
-        if payload is None:
-            return BacktestMarketDataReference()
-        if not isinstance(payload, dict):
-            raise ValueError("market_data must be a mapping")
-        return BacktestMarketDataReference(
-            config_path=Path(str(payload["config"])),
-            catalog=str(payload["catalog"]),
-            source=str(payload.get("source", "local_historical")),
-        )
-
-    @staticmethod
-    def _parse_historical_data_reference(payload: object) -> BacktestMarketDataReference:
-        if payload is None:
-            return BacktestMarketDataReference()
-        if not isinstance(payload, dict):
-            raise ValueError("historical_data must be a mapping")
-        return BacktestMarketDataReference(
-            config_path=Path(str(payload["config"])),
-            catalog=str(payload["catalog"]),
-            source=str(payload.get("source", "local_historical")),
-        )
-
-    @staticmethod
-    def _stable_hash(payload: Any) -> str:
-        encoded = json.dumps(payload, sort_keys=True, default=str, separators=(",", ":")).encode()
-        return f"sha256:{hashlib.sha256(encoded).hexdigest()}"
 
 
 __all__ = [

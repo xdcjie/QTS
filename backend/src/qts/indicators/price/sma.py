@@ -17,13 +17,16 @@ class SMA:
     value: Decimal | None = None
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         self._values = RollingWindow[Decimal](self.window)
 
     @property
     def ready(self) -> bool:
+        """Perform ready."""
         return self._values.ready
 
     def update(self, price: Decimal) -> Decimal | None:
+        """Perform update."""
         self._values.append(price)
         if not self.ready:
             self.value = None

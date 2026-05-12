@@ -15,6 +15,7 @@ class RiskRuleConfig:
     params: dict[str, Decimal]
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         if not self.rule_id.strip():
             raise ValueError("rule_id must not be empty")
         if not self.name.strip():
@@ -32,6 +33,7 @@ class RiskConfig:
     product_rules: dict[str, tuple[RiskRuleConfig, ...]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         if not self.account_id.strip():
             raise ValueError("account_id must not be empty")
         if self.max_notional <= Decimal("0"):

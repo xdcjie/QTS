@@ -34,6 +34,7 @@ class HistoricalCsvSchema:
     instrument_id: str | None = "instrument_id"
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         required = (
             self.timestamp,
             self.symbol,
@@ -50,6 +51,7 @@ class HistoricalCsvSchema:
 
     @property
     def required_columns(self) -> tuple[str, ...]:
+        """Perform required_columns."""
         return (
             self.timestamp,
             self.symbol,
@@ -61,13 +63,38 @@ class HistoricalCsvSchema:
         )
 
     def validate_columns(self, columns: Iterable[str]) -> tuple[str, ...]:
+        """Perform validate_columns."""
         present = tuple(columns)
         missing = tuple(column for column in self.required_columns if column not in present)
         if missing:
             raise ValueError(f"historical CSV columns missing required fields: {','.join(missing)}")
         return present
 
+    def resolve_column(self, semantic_name: str) -> str:
+        """Resolve an OHLCV semantic field name to the configured CSV column."""
+
+        if semantic_name == "timestamp":
+            return self.timestamp
+        if semantic_name == "symbol":
+            return self.symbol
+        if semantic_name == "open":
+            return self.open
+        if semantic_name == "high":
+            return self.high
+        if semantic_name == "low":
+            return self.low
+        if semantic_name == "close":
+            return self.close
+        if semantic_name == "volume":
+            return self.volume
+        if semantic_name == "instrument_id":
+            if self.instrument_id is None:
+                raise ValueError("historical CSV schema does not define instrument_id")
+            return self.instrument_id
+        raise ValueError(f"unsupported historical CSV semantic field: {semantic_name}")
+
     def column_indices(self, columns: Iterable[str]) -> dict[str, int]:
+        """Perform column_indices."""
         present = self.validate_columns(columns)
         index = {name: position for position, name in enumerate(present)}
         return {

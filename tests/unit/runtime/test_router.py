@@ -41,7 +41,7 @@ def test_event_router_routes_by_configured_key_deterministically() -> None:
 
     actor = RecordingActor()
     ref = ActorRef(actor=actor, mailbox=Mailbox())
-    router = EventRouter(partition_attr="account_id")
+    router = EventRouter(key_for=lambda message: message.account_id)
     router.register("acct-001", ref)
 
     router.route(_Message(account_id="acct-001", payload="a"))
@@ -54,7 +54,7 @@ def test_event_router_routes_by_configured_key_deterministically() -> None:
 def test_event_router_unknown_route_is_explicit_error() -> None:
     from qts.runtime.router import EventRouter, RouteNotFoundError
 
-    router = EventRouter(partition_attr="account_id")
+    router = EventRouter(key_for=lambda message: message.account_id)
 
     with pytest.raises(RouteNotFoundError, match="no route for key"):
         router.route(_Message(account_id="missing", payload="x"))
@@ -78,8 +78,8 @@ def test_event_router_routes_market_data_and_execution_messages_to_separate_acto
         actor=ExecutionActor(order_manager_ref=ActorRef(mailbox=order_manager_mailbox)),
         mailbox=execution_mailbox,
     )
-    market_data_router = EventRouter(partition_attr="market_data_source_id")
-    execution_router = EventRouter(partition_attr="account_id")
+    market_data_router = EventRouter(key_for=lambda message: message.market_data_source_id)
+    execution_router = EventRouter(key_for=lambda message: message.account_id)
     market_data_router.register("ibkr-paper-md", market_data_ref)
     execution_router.register("DU1234567", execution_ref)
 

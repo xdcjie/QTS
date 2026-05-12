@@ -6,9 +6,10 @@ import csv
 from collections import defaultdict
 from collections.abc import Iterator
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime
+from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
+from typing import Protocol, runtime_checkable
 
 from qts.core.ids import InstrumentId
 from qts.data.historical.chains import HistoricalChain
@@ -20,15 +21,14 @@ from qts.data.historical.csv_format import (
     parse_historical_ts_event,
     validate_historical_csv_columns,
 )
+from qts.data.historical.csv_row_mapper import HistoricalCsvRowMapper
 from qts.data.historical.symbols import HistoricalFutureChainSymbolResolver
-from qts.data.sessions import RegularSessionWindow
-from qts.data.validation_report import (
-    DataValidationIssue,
-    DataValidationIssueCode,
-    DataValidationReport,
-    DataValidationSeverity,
-    validate_bars,
+from qts.data.historical.validation import (
+    HistoricalCsvStats,
+    HistoricalDatasetValidator,
+    HistoricalValidationSample,
 )
+from qts.data.sessions import RegularSessionWindow
 from qts.domain.market_data import Bar
 from qts.registry.future_roll import (
     FutureContractCandidate,
@@ -50,37 +50,6 @@ class CsvDatasetDescription:
     normalization_policy: str
     source_hash_policy: str
     row_count: int | None = None
-
-
-@dataclass(slots=True)
-class HistoricalCsvStats:
-    """Streaming reader counters."""
-
-    rows_seen: int = 0
-    bars_emitted: int = 0
-    symbols_excluded: int = 0
-    spreads_excluded: int = 0
-    contracts_excluded: int = 0
-    invalid_rows: int = 0
-
-    def as_dict(self) -> dict[str, int]:
-        return {
-            "rows_seen": self.rows_seen,
-            "bars_emitted": self.bars_emitted,
-            "symbols_excluded": self.symbols_excluded,
-            "spreads_excluded": self.spreads_excluded,
-            "contracts_excluded": self.contracts_excluded,
-            "invalid_rows": self.invalid_rows,
-        }
-
-
-@dataclass(frozen=True, slots=True)
-class HistoricalValidationSample:
-    """Validation report plus counters for a sampled historical CSV."""
-
-    report: DataValidationReport
-    stats: HistoricalCsvStats
-    bars: tuple[Bar, ...]
 
 
 class HistoricalBarStream:
@@ -109,6 +78,7 @@ class HistoricalBarStream:
         self._session_window = session_window
         self._schema = schema or DEFAULT_HISTORICAL_CSV_SCHEMA
         self._configured_schema = schema
+        self._row_mapper = HistoricalCsvRowMapper(timeframe=timeframe, schema=self._schema)
         self.stats = HistoricalCsvStats()
         self.roll_selections: list[FutureRollSelection] = []
 
@@ -139,11 +109,9 @@ class HistoricalBarStream:
             if self._end is not None and timestamp >= self._end:
                 break
             try:
-                bar = _row_to_bar(
+                bar = self._row_mapper.to_bar(
                     row,
                     symbol_resolver=self._symbol_resolver,
-                    timeframe=self._timeframe,
-                    schema=self._schema,
                 )
             except ValueError:
                 self.stats.invalid_rows += 1
@@ -168,11 +136,9 @@ class HistoricalBarStream:
                     self._count_excluded_symbol(symbol)
                     continue
                 try:
-                    bar = _row_to_bar(
+                    bar = self._row_mapper.to_bar(
                         row,
                         symbol_resolver=self._symbol_resolver,
-                        timeframe=self._timeframe,
-                        schema=self._schema,
                     )
                 except ValueError:
                     self.stats.invalid_rows += 1
@@ -284,7 +250,7 @@ class HistoricalBarStream:
                     self._count_excluded_symbol(symbol)
                     continue
                 try:
-                    _, _, _, close, volume = _row_ohlcv(row, schema=self._schema)
+                    _, _, _, close, volume = self._row_mapper.extract_ohlcv(row)
                 except ValueError:
                     self.stats.invalid_rows += 1
                     continue
@@ -323,11 +289,9 @@ class HistoricalBarStream:
             selected_row = rows_by_instrument.get(selected.instrument_id)
             if selected_row is None:
                 continue
-            selected_bar = _row_to_bar(
+            selected_bar = self._row_mapper.to_bar(
                 selected_row,
                 symbol_resolver=self._symbol_resolver,
-                timeframe=self._timeframe,
-                schema=self._schema,
             )
             output_instrument_id = self._continuous_instrument_id or selected.instrument_id
             output_bar = replace(
@@ -375,7 +339,7 @@ class HistoricalBarStream:
         return _resolver_root(self._symbol_resolver)
 
     def _field(self, row: dict[str, str], semantic_name: str) -> str:
-        return row[getattr(self._schema, semantic_name)]
+        return row[self._schema.resolve_column(semantic_name)]
 
     def _timestamp(self, row: dict[str, str]) -> datetime:
         return parse_historical_ts_event(self._field(row, "timestamp"))
@@ -444,149 +408,32 @@ def validate_historical_sample(
     schema: HistoricalCsvSchema | None = None,
 ) -> HistoricalValidationSample:
     """Validate a bounded sample or full CSV when `sample_rows` is None."""
-
-    if sample_rows is not None and sample_rows <= 0:
-        raise ValueError("sample_rows must be positive")
-    resolver = _as_symbol_resolver(symbol_resolver)
-    active_schema = schema or DEFAULT_HISTORICAL_CSV_SCHEMA
-    stats = HistoricalCsvStats()
-    issues: list[DataValidationIssue] = []
-    bars: list[Bar] = []
-    with csv_path.open(encoding="utf-8", newline="") as handle:
-        reader = csv.DictReader(handle)
-        validate_historical_csv_columns(tuple(reader.fieldnames or ()), schema=schema)
-        for row in reader:
-            if sample_rows is not None and stats.rows_seen >= sample_rows:
-                break
-            stats.rows_seen += 1
-            symbol = row[active_schema.symbol]
-            if not resolver.is_supported_symbol(symbol):
-                stats.symbols_excluded += 1
-                is_spread = _is_spread_symbol(symbol)
-                if is_spread:
-                    stats.spreads_excluded += 1
-                issues.append(
-                    DataValidationIssue(
-                        code=(
-                            DataValidationIssueCode.EXCLUDED_SPREAD
-                            if is_spread
-                            else DataValidationIssueCode.EXCLUDED_SYMBOL
-                        ),
-                        message=f"excluded unsupported symbol {symbol}",
-                        severity=DataValidationSeverity.INFO,
-                    )
-                )
-                continue
-            try:
-                bar = _row_to_bar(
-                    row,
-                    symbol_resolver=resolver,
-                    timeframe=timeframe,
-                    schema=active_schema,
-                )
-            except ValueError as exc:
-                stats.invalid_rows += 1
-                issues.append(
-                    DataValidationIssue(
-                        code=DataValidationIssueCode.INVALID_OHLC,
-                        message=f"invalid row for {symbol}: {exc}",
-                        severity=DataValidationSeverity.ERROR,
-                    )
-                )
-                continue
-            stats.bars_emitted += 1
-            bars.append(bar)
-
-    for instrument_bars in _group_bars(bars).values():
-        issues.extend(
-            validate_bars(
-                tuple(instrument_bars),
-                expected_interval=historical_timeframe_delta(timeframe),
-            ).issues
-        )
-    return HistoricalValidationSample(
-        report=DataValidationReport(issues=tuple(issues)),
-        stats=stats,
-        bars=tuple(bars),
-    )
-
-
-def _row_to_bar(
-    row: dict[str, str],
-    *,
-    symbol_resolver: SourceSymbolResolver,
-    timeframe: str,
-    schema: HistoricalCsvSchema = DEFAULT_HISTORICAL_CSV_SCHEMA,
-) -> Bar:
-    start_time = parse_historical_ts_event(row[schema.timestamp])
-    end_time = start_time + historical_timeframe_delta(timeframe)
-    symbol = row[schema.symbol]
-    open_, high, low, close, volume = _row_ohlcv(row, schema=schema)
-    return Bar(
-        instrument_id=symbol_resolver.instrument_id_for_symbol(symbol),
-        start_time=start_time,
-        end_time=end_time,
+    return HistoricalDatasetValidator().validate_sample(
+        csv_path=csv_path,
+        symbol_resolver=_as_symbol_resolver(symbol_resolver),
+        sample_rows=sample_rows,
         timeframe=timeframe,
-        session_id=start_time.astimezone(UTC).date().isoformat(),
-        open=open_,
-        high=high,
-        low=low,
-        close=close,
-        volume=volume,
-        is_complete=True,
+        schema=schema,
     )
-
-
-def _row_ohlcv(
-    row: dict[str, str],
-    *,
-    schema: HistoricalCsvSchema = DEFAULT_HISTORICAL_CSV_SCHEMA,
-) -> tuple[Decimal, Decimal, Decimal, Decimal, Decimal]:
-    return _parse_ohlcv_values(
-        open_value=row[schema.open],
-        high_value=row[schema.high],
-        low_value=row[schema.low],
-        close_value=row[schema.close],
-        volume_value=row[schema.volume],
-    )
-
-
-def _parse_ohlcv_values(
-    *,
-    open_value: str,
-    high_value: str,
-    low_value: str,
-    close_value: str,
-    volume_value: str,
-) -> tuple[Decimal, Decimal, Decimal, Decimal, Decimal]:
-    open_ = Decimal(open_value)
-    high = Decimal(high_value)
-    low = Decimal(low_value)
-    close = Decimal(close_value)
-    volume = Decimal(volume_value)
-    if high < max(open_, close):
-        raise ValueError("high must be greater than or equal to open and close")
-    if low > min(open_, close):
-        raise ValueError("low must be less than or equal to open and close")
-    if low > high:
-        raise ValueError("low must be less than or equal to high")
-    if volume < Decimal("0"):
-        raise ValueError("volume must be non-negative")
-    return open_, high, low, close, volume
 
 
 def _resolver_root(symbol_resolver: SourceSymbolResolver) -> str:
-    root = getattr(symbol_resolver, "root", "")
-    if not isinstance(root, str) or not root.strip():
+    if not isinstance(symbol_resolver, RootSymbolResolver):
+        raise ValueError("rolling historical streams require a root-aware symbol resolver")
+    root = symbol_resolver.root
+    if not root:
         raise ValueError("rolling historical streams require a root-aware symbol resolver")
     return root
 
 
-def _group_bars(bars: list[Bar]) -> dict[InstrumentId, list[Bar]]:
-    grouped: dict[InstrumentId, list[Bar]] = defaultdict(list)
-    for bar in bars:
-        grouped[bar.instrument_id].append(bar)
-    return grouped
+@runtime_checkable
+class RootSymbolResolver(Protocol):
+    """Protocol for symbol resolvers that provide a root identifier."""
+
+    @property
+    def root(self) -> str:
+        """Return the root identifier."""
+        ...
 
 
 def _as_symbol_resolver(

@@ -12,9 +12,11 @@ class RiskEngine:
     """Apply risk rules in order and return the first rejection."""
 
     def __init__(self, rules: Iterable[RiskRule]) -> None:
+        """Perform __init__."""
         self._rules = tuple(rules)
 
     def check(self, request: OrderRiskRequest) -> RiskDecision:
+        """Perform check."""
         for rule in self._rules:
             decision = rule.check(request)
             if not decision.approved:

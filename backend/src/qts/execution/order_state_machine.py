@@ -5,19 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-
-class OrderState(StrEnum):
-    """Internal order lifecycle states."""
-
-    CREATED = "created"
-    SENT = "sent"
-    ACCEPTED = "accepted"
-    PARTIALLY_FILLED = "partially_filled"
-    FILLED = "filled"
-    CANCEL_REQUESTED = "cancel_requested"
-    REPLACE_REQUESTED = "replace_requested"
-    CANCELLED = "cancelled"
-    REJECTED = "rejected"
+from qts.domain.orders import OrderState
 
 
 class OrderEvent(StrEnum):
@@ -96,6 +84,7 @@ class OrderStateMachine:
     state: OrderState = OrderState.CREATED
 
     def apply(self, event: OrderEvent) -> OrderState:
+        """Perform apply."""
         if _DUPLICATE_TERMINAL_EVENTS.get(self.state) is event:
             return self.state
         next_state = _TRANSITIONS.get(self.state, {}).get(event)

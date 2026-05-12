@@ -30,9 +30,11 @@ class SignalAggregatorActor(Actor):
     """Boundary for combining strategy signals before order flow."""
 
     def __init__(self, *, result_ref: ActorRef) -> None:
+        """Perform __init__."""
         self._result_ref = result_ref
 
     def handle(self, message: object) -> None:
+        """Perform handle."""
         if isinstance(message, StrategySignalEvent):
             self._result_ref.tell(
                 AggregatedSignalBatch(

@@ -31,6 +31,11 @@ def _codes(root: Path) -> set[str]:
     return {violation.code for violation in run_guardrails(root)}
 
 
+def _codes_by_suite(root: Path, *rules: object) -> set[str]:
+    suite = _load_guardrails_module().GuardrailSuite(rules=tuple(rules))
+    return {violation.code for violation in suite.check(root)}
+
+
 def test_guardrails_reject_domain_imports_from_runtime(tmp_path: Path) -> None:
     root = tmp_path
     _write(
@@ -67,6 +72,18 @@ def test_guardrails_reject_market_data_and_execution_adapter_coupling(tmp_path: 
     )
 
     assert _codes(root) == {"ADAPTER_BOUNDARY"}
+
+
+def test_guardrails_reject_execution_adapter_state_dependency(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/execution/adapters/bad.py",
+        "from qts.runtime.actors.account_actor import AccountActor\n"
+        "from qts.portfolio.position_book import PositionBook\n",
+    )
+
+    assert _codes(root) == {"ADAPTER_STATE_DEPENDENCY"}
 
 
 def test_guardrails_reject_product_specific_identifiers_in_core_implementation(
@@ -320,3 +337,39 @@ def test_guardrails_allow_product_facts_in_registry_providers(tmp_path: Path) ->
 
 def test_guardrails_pass_current_repository() -> None:
     assert run_guardrails(Path(".")) == []
+
+
+def test_guardrail_suite_can_target_single_rule(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/domain/bad.py",
+        "from qts.runtime.actor import Actor\n",
+    )
+    assert _codes_by_suite(root, _load_guardrails_module().ImportBoundaryRule()) == {
+        "IMPORT_BOUNDARY"
+    }
+
+
+def test_guardrail_suite_can_target_product_specific_rule(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/data/historical/bad.py",
+        "GC_SESSION_OPEN = '18:00'\n",
+    )
+    assert _codes_by_suite(root, _load_guardrails_module().ProductSpecificRule()) == {
+        "PRODUCT_SPECIFIC_IMPLEMENTATION"
+    }
+
+
+def test_guardrail_suite_default_preserves_expected_codes(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/domain/bad.py",
+        "from qts.runtime.actor import Actor\nGC_SESSION_OPEN = '18:00'\n",
+    )
+    root_codes = _codes(root)
+    suite_codes = _codes_by_suite(root, *_load_guardrails_module().GuardrailSuite().rules)
+    assert root_codes == suite_codes

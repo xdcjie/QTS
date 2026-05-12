@@ -1,3 +1,4 @@
+from qts.domain.orders import OrderState
 from qts.execution.broker import (
     BrokerAdapter,
     BrokerCapabilities,
@@ -20,7 +21,6 @@ from qts.execution.order_manager import (
 )
 from qts.execution.order_state_machine import (
     OrderEvent,
-    OrderState,
     OrderStateMachine,
     OrderTransitionError,
 )

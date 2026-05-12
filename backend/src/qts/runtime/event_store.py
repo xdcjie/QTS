@@ -15,33 +15,44 @@ from qts.domain.events import BaseEvent
 class EventStore(Protocol):
     """Append-only event store contract."""
 
-    def append(self, event: BaseEvent) -> int: ...
+    def append(self, event: BaseEvent) -> int:
+        """Append an event to the store and return its sequence index."""
+        ...
 
-    def replay(self, *, partition_key: str | None = None) -> tuple[BaseEvent, ...]: ...
+    def replay(self, *, partition_key: str | None = None) -> tuple[BaseEvent, ...]:
+        """Replay events from the store, optionally filtered by partition key."""
+        ...
 
-    def by_correlation_id(self, correlation_id: CorrelationId) -> tuple[BaseEvent, ...]: ...
+    def by_correlation_id(self, correlation_id: CorrelationId) -> tuple[BaseEvent, ...]:
+        """Replay all events with a given correlation identifier."""
+        ...
 
 
 class InMemoryEventStore:
     """Deterministic append-only in-memory event store."""
 
     def __init__(self) -> None:
+        """Perform __init__."""
         self._events: list[BaseEvent] = []
 
     def append(self, event: BaseEvent) -> int:
+        """Perform append."""
         self._events.append(event)
         return len(self._events)
 
     def append_many(self, events: Iterable[BaseEvent]) -> None:
+        """Perform append_many."""
         for event in events:
             self.append(event)
 
     def replay(self, *, partition_key: str | None = None) -> tuple[BaseEvent, ...]:
+        """Perform replay."""
         if partition_key is None:
             return tuple(self._events)
         return tuple(event for event in self._events if event.partition_key == partition_key)
 
     def by_correlation_id(self, correlation_id: CorrelationId) -> tuple[BaseEvent, ...]:
+        """Perform by_correlation_id."""
         return tuple(event for event in self._events if event.correlation_id == correlation_id)
 
 
@@ -49,9 +60,11 @@ class FileEventStore:
     """JSONL event store for local deterministic recovery tests."""
 
     def __init__(self, path: Path) -> None:
+        """Perform __init__."""
         self._path = path
 
     def append(self, event: BaseEvent) -> int:
+        """Perform append."""
         self._path.parent.mkdir(parents=True, exist_ok=True)
         sequence = len(self.replay()) + 1
         payload = {"sequence": sequence, "event": self._event_to_json(event)}
@@ -61,6 +74,7 @@ class FileEventStore:
         return sequence
 
     def replay(self, *, partition_key: str | None = None) -> tuple[BaseEvent, ...]:
+        """Perform replay."""
         if not self._path.exists():
             return ()
         events: list[BaseEvent] = []
@@ -74,10 +88,12 @@ class FileEventStore:
         return tuple(events)
 
     def by_correlation_id(self, correlation_id: CorrelationId) -> tuple[BaseEvent, ...]:
+        """Perform by_correlation_id."""
         return tuple(event for event in self.replay() if event.correlation_id == correlation_id)
 
     @staticmethod
     def _event_to_json(event: BaseEvent) -> dict[str, Any]:
+        """Perform _event_to_json."""
         return {
             "event_id": event.event_id.value,
             "event_type": event.event_type,
@@ -90,6 +106,7 @@ class FileEventStore:
 
     @staticmethod
     def _event_from_json(payload: dict[str, Any]) -> BaseEvent:
+        """Perform _event_from_json."""
         correlation_id = payload["correlation_id"]
         causation_id = payload["causation_id"]
         return BaseEvent(

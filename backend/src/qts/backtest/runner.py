@@ -7,7 +7,8 @@ import importlib.util
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, cast
+from types import ModuleType
+from typing import Any
 
 from qts.backtest.config import BacktestRunConfig
 from qts.backtest.engine import BacktestEngine, BacktestStreamResult
@@ -31,10 +32,12 @@ class BacktestRun:
 
     @property
     def processed_bars(self) -> int:
+        """Perform processed_bars."""
         return self.result.processed_bars
 
     @property
     def report_hash(self) -> str:
+        """Perform report_hash."""
         return self.result.report_hash
 
 
@@ -82,6 +85,7 @@ def run_backtest(
 
 
 def _catalog_load_config(config: BacktestRunConfig) -> HistoricalCatalogLoadConfig:
+    """Perform _catalog_load_config."""
     if config.market_data.is_configured:
         if config.market_data.config_path is None or config.market_data.catalog is None:
             raise RuntimeError("market data reference is partially configured")
@@ -103,13 +107,21 @@ def _catalog_load_config(config: BacktestRunConfig) -> HistoricalCatalogLoadConf
 
 
 def _load_strategy(strategy_class: str, params: dict[str, Any]) -> Strategy:
+    """Perform _load_strategy."""
     module_name, separator, class_name = strategy_class.partition(":")
     if not separator:
         module_name, _, class_name = strategy_class.rpartition(".")
     if not module_name or not class_name:
         raise ValueError("strategy_class must be 'module:Class' or 'module.Class'")
+    module = _import_strategy_module(module_name)
+    strategy_type = _strategy_type_from_module(module, class_name)
+    return strategy_type(**params)
+
+
+def _import_strategy_module(module_name: str) -> ModuleType:
+    """Load a module that defines the requested strategy class."""
     try:
-        module = importlib.import_module(module_name)
+        return importlib.import_module(module_name)
     except ModuleNotFoundError:
         module_path = Path(*module_name.split(".")).with_suffix(".py")
         if not module_path.exists():
@@ -119,8 +131,21 @@ def _load_strategy(strategy_class: str, params: dict[str, Any]) -> Strategy:
             raise
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-    strategy_type = getattr(module, class_name)
-    return cast(Strategy, strategy_type(**params))
+        return module
+
+
+def _strategy_type_from_module(module: ModuleType, class_name: str) -> type[Strategy]:
+    """Extract the strategy class from a strategy module."""
+    strategy_type = vars(module).get(class_name)
+    if strategy_type is None:
+        raise ValueError(f"strategy class '{class_name}' not found in module '{module.__name__}'")
+    if not isinstance(strategy_type, type):
+        raise TypeError(f"{class_name} in module '{module.__name__}' is not a class")
+    if not issubclass(strategy_type, Strategy):
+        raise TypeError(
+            f"{class_name} in module '{module.__name__}' must subclass qts.strategy_sdk.Strategy"
+        )
+    return strategy_type
 
 
 def _streaming_summary_payload(
@@ -129,6 +154,7 @@ def _streaming_summary_payload(
     manifest_path: Path,
     dataset_stats: dict[str, dict[str, int]],
 ) -> dict[str, Any]:
+    """Perform _streaming_summary_payload."""
     processed_rows = sum(item["rows_seen"] for item in dataset_stats.values())
     emitted_bars = sum(item["bars_emitted"] for item in dataset_stats.values())
     excluded_spreads = sum(item["spreads_excluded"] for item in dataset_stats.values())

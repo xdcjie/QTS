@@ -49,10 +49,12 @@ class DataValidationReport:
 
     @property
     def valid(self) -> bool:
+        """Perform valid."""
         return not any(issue.severity is DataValidationSeverity.ERROR for issue in self.issues)
 
     @property
     def max_severity(self) -> DataValidationSeverity | None:
+        """Perform max_severity."""
         if not self.issues:
             return None
         rank = {
@@ -141,6 +143,7 @@ def validate_bars(
 
 
 def _append_ohlc_issue(issues: list[DataValidationIssue], bar: Bar) -> None:
+    """Perform _append_ohlc_issue."""
     if (
         bar.low > bar.high
         or bar.high < max(bar.open, bar.close)

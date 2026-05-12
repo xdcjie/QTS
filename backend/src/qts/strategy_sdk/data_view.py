@@ -20,15 +20,18 @@ class DataView:
     as_of: datetime
 
     def close(self, asset: AssetRef) -> Decimal:
+        """Perform close."""
         return self.bar(asset).close
 
     def bar(self, asset: AssetRef) -> Bar:
+        """Perform bar."""
         history = self.history(asset, bars=1)
         if not history:
             raise KeyError(f"no bar available for asset: {asset.symbol}")
         return history[-1]
 
     def history(self, asset: AssetRef, bars: int, timeframe: str | None = None) -> tuple[Bar, ...]:
+        """Perform history."""
         if bars <= 0:
             raise ValueError("bars must be positive")
         values = self.bars.get(asset.instrument_id, ())

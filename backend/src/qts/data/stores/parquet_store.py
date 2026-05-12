@@ -22,9 +22,11 @@ class ParquetMarketDataStore:
     """File-backed bar store partitioned by instrument, timeframe, and date."""
 
     def __init__(self, root: Path) -> None:
+        """Perform __init__."""
         self._root = root
 
     def write_bars(self, bars: Iterable[Bar]) -> None:
+        """Perform write_bars."""
         grouped: dict[Path, list[Bar]] = {}
         for bar in bars:
             grouped.setdefault(self._path_for(bar), []).append(bar)
@@ -48,6 +50,7 @@ class ParquetMarketDataStore:
         start: datetime,
         end: datetime,
     ) -> tuple[Bar, ...]:
+        """Perform read_bars."""
         base = self._root / instrument_id.value / timeframe
         if not base.exists():
             return ()
@@ -61,6 +64,7 @@ class ParquetMarketDataStore:
         )
 
     def _path_for(self, bar: Bar) -> Path:
+        """Perform _path_for."""
         return (
             self._root
             / bar.instrument_id.value
@@ -69,11 +73,13 @@ class ParquetMarketDataStore:
         )
 
     def _read_file(self, path: Path) -> tuple[Bar, ...]:
+        """Perform _read_file."""
         with path.open(encoding="utf-8") as handle:
             return tuple(self._bar_from_json(json.loads(line)) for line in handle if line.strip())
 
     @staticmethod
     def _bar_to_json(bar: Bar) -> dict[str, Any]:
+        """Perform _bar_to_json."""
         return {
             "instrument_id": bar.instrument_id.value,
             "start_time": bar.start_time.isoformat(),
@@ -94,6 +100,7 @@ class ParquetMarketDataStore:
 
     @staticmethod
     def _bar_from_json(payload: dict[str, Any]) -> Bar:
+        """Perform _bar_from_json."""
         return Bar(
             instrument_id=InstrumentId(str(payload["instrument_id"])),
             start_time=datetime.fromisoformat(str(payload["start_time"])),

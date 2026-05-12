@@ -17,13 +17,16 @@ class EMA:
     value: Decimal | None = None
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         self._warmup = RollingWindow[Decimal](self.window)
 
     @property
     def ready(self) -> bool:
+        """Perform ready."""
         return self.value is not None
 
     def update(self, price: Decimal) -> Decimal | None:
+        """Perform update."""
         if self.value is None:
             self._warmup.append(price)
             if not self._warmup.ready:

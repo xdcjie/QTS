@@ -14,6 +14,7 @@ class RiskRuleRegistry:
     """Map configured rule names to executable risk rules."""
 
     def build(self, config: RiskRuleConfig) -> RiskRule:
+        """Perform build."""
         if config.name == "max_notional":
             return MaxNotionalRule(max_notional=self._param(config, "max_notional"))
         if config.name == "max_order_quantity":
@@ -22,6 +23,7 @@ class RiskRuleRegistry:
 
     @staticmethod
     def _param(config: RiskRuleConfig, name: str) -> Decimal:
+        """Perform _param."""
         try:
             return config.params[name]
         except KeyError as exc:

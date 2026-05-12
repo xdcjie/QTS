@@ -25,6 +25,7 @@ class AggregationState:
 
     @property
     def aggregate_end(self) -> datetime:
+        """Perform aggregate_end."""
         return self.bucket.end
 
 
@@ -46,6 +47,7 @@ class BarAggregator:
         exchange_timezone: str | tzinfo,
         session: MarketSession | None = None,
     ) -> None:
+        """Perform __init__."""
         if target_timeframe.alignment is not AlignmentMode.CLOCK:
             raise ValueError("BarAggregator currently supports clock-aligned timeframes")
         self._target_timeframe = target_timeframe
@@ -92,6 +94,7 @@ class BarAggregator:
         return AggregationResult(completed=(completed,), state=None)
 
     def _new_state_for(self, bar: Bar) -> AggregationState:
+        """Perform _new_state_for."""
         bucket = clock_bucket_for(bar.start_time, self._target_timeframe, self._exchange_timezone)
         aggregate_end = bucket.end
         if self._session is not None and self._session.close_time < aggregate_end:
@@ -134,10 +137,12 @@ def aggregate_bars(
 
 
 def _bar_inside_session(bar: Bar, session: MarketSession) -> bool:
+    """Perform _bar_inside_session."""
     return session.interval.contains(bar.start_time) and bar.end_time <= session.close_time
 
 
 def _same_stream_bucket(left: AggregationState, right: AggregationState) -> bool:
+    """Perform _same_stream_bucket."""
     return (
         left.bucket == right.bucket
         and left.bars[-1].instrument_id == right.bars[-1].instrument_id
@@ -146,6 +151,7 @@ def _same_stream_bucket(left: AggregationState, right: AggregationState) -> bool
 
 
 def _aggregate_state(state: AggregationState) -> Bar:
+    """Perform _aggregate_state."""
     if not state.bars:
         raise ValueError("cannot aggregate an empty bucket")
 
@@ -186,6 +192,7 @@ def _aggregate_state(state: AggregationState) -> Bar:
 
 
 def _aggregate_vwap(bars: tuple[Bar, ...], total_volume: Decimal) -> Decimal | None:
+    """Perform _aggregate_vwap."""
     weighted = [
         bar.vwap * bar.volume for bar in bars if bar.vwap is not None and bar.volume > Decimal("0")
     ]
@@ -195,6 +202,7 @@ def _aggregate_vwap(bars: tuple[Bar, ...], total_volume: Decimal) -> Decimal | N
 
 
 def _last_open_interest(bars: tuple[Bar, ...]) -> Decimal | None:
+    """Perform _last_open_interest."""
     for bar in reversed(bars):
         if bar.open_interest is not None:
             return bar.open_interest
@@ -202,6 +210,7 @@ def _last_open_interest(bars: tuple[Bar, ...]) -> Decimal | None:
 
 
 def _sum_trade_count(bars: tuple[Bar, ...]) -> int | None:
+    """Perform _sum_trade_count."""
     counts = [bar.trade_count for bar in bars if bar.trade_count is not None]
     if not counts:
         return None

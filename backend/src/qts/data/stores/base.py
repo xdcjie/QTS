@@ -13,7 +13,9 @@ from qts.domain.market_data import Bar
 class MarketDataStore(Protocol):
     """Store and read bars by internal instrument identity."""
 
-    def write_bars(self, bars: Iterable[Bar]) -> None: ...
+    def write_bars(self, bars: Iterable[Bar]) -> None:
+        """Persist bars."""
+        ...
 
     def read_bars(
         self,
@@ -22,7 +24,9 @@ class MarketDataStore(Protocol):
         timeframe: str,
         start: datetime,
         end: datetime,
-    ) -> tuple[Bar, ...]: ...
+    ) -> tuple[Bar, ...]:
+        """Read bars for an interval."""
+        ...
 
 
 __all__ = ["MarketDataStore"]

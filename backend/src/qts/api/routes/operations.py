@@ -8,6 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, model_validator
 
+from qts.api.mappers import map_kill_switch_state_dto, map_runtime_state_dto
 from qts.api.services import CommandIdempotencyStore
 from qts.application.dto import KillSwitchCommandDTO
 from qts.application.services import OperationsService
@@ -18,10 +19,14 @@ _operations = OperationsService()
 
 
 class RuntimeCommandResponse(BaseModel):
+    """Payload for runtime pause/resume commands."""
+
     state: str
 
 
 class KillSwitchScopeSchema(StrEnum):
+    """Kill-switch scoping model."""
+
     GLOBAL = "global"
     ACCOUNT = "account"
     STRATEGY = "strategy"
@@ -29,12 +34,15 @@ class KillSwitchScopeSchema(StrEnum):
 
 
 class KillSwitchCommand(BaseModel):
+    """Kill-switch mutation command."""
+
     scope: KillSwitchScopeSchema
     scope_id: str | None = None
     reason: str
 
     @model_validator(mode="after")
     def validate_scope(self) -> KillSwitchCommand:
+        """Perform validate_scope."""
         if not self.reason.strip():
             raise ValueError("reason must not be empty")
         if self.scope is not KillSwitchScopeSchema.GLOBAL and (
@@ -45,6 +53,8 @@ class KillSwitchCommand(BaseModel):
 
 
 class KillSwitchResponse(BaseModel):
+    """Kill-switch current state response."""
+
     scope: str
     scope_id: str | None
     active: bool
@@ -52,6 +62,7 @@ class KillSwitchResponse(BaseModel):
 
 
 def _require_operator(operator: str | None) -> None:
+    """Perform _require_operator."""
     if operator is None or not operator.strip():
         raise HTTPException(status_code=403, detail="operator permission required")
 
@@ -61,11 +72,14 @@ def pause_runtime(
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
 ) -> RuntimeCommandResponse:
+    """Pause runtime execution for all strategies and data actors."""
     _require_operator(operator)
 
     def command() -> RuntimeCommandResponse:
+        """Perform command."""
         state = _operations.pause_runtime()
-        return RuntimeCommandResponse(state=state.state)
+        payload = map_runtime_state_dto(state)
+        return RuntimeCommandResponse(**payload)
 
     if idempotency_key is None:
         return command()
@@ -77,11 +91,14 @@ def resume_runtime(
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
 ) -> RuntimeCommandResponse:
+    """Resume runtime execution after an operator pause."""
     _require_operator(operator)
 
     def command() -> RuntimeCommandResponse:
+        """Perform command."""
         state = _operations.resume_runtime()
-        return RuntimeCommandResponse(state=state.state)
+        payload = map_runtime_state_dto(state)
+        return RuntimeCommandResponse(**payload)
 
     if idempotency_key is None:
         return command()
@@ -93,6 +110,7 @@ def activate_kill_switch(
     command: KillSwitchCommand,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
 ) -> KillSwitchResponse:
+    """Activate or refresh a kill-switch for a runtime scope."""
     _require_operator(operator)
     state = _operations.activate_kill_switch(
         KillSwitchCommandDTO(
@@ -101,12 +119,8 @@ def activate_kill_switch(
             reason=command.reason,
         )
     )
-    return KillSwitchResponse(
-        scope=state.scope,
-        scope_id=state.scope_id,
-        active=state.active,
-        reason=state.reason,
-    )
+    payload = map_kill_switch_state_dto(state)
+    return KillSwitchResponse(**payload)
 
 
 __all__ = ["router"]

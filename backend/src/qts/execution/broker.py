@@ -8,7 +8,7 @@ from enum import StrEnum
 from typing import Protocol
 
 from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
-from qts.execution.order_manager import ExecutionReport, ExecutionReportStatus, OrderSide
+from qts.domain.orders import ExecutionReport, ExecutionReportStatus, OrderSide
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,11 +35,13 @@ class BrokerCapabilities:
             raise ValueError("supported_asset_classes must not contain empty values")
 
     def supports_asset_class(self, asset_class: str) -> bool:
+        """Perform supports_asset_class."""
         if not asset_class.strip():
             raise ValueError("asset_class must not be empty")
         return not self.supported_asset_classes or asset_class in self.supported_asset_classes
 
     def supports_order_type(self, order_type: BrokerOrderType) -> bool:
+        """Perform supports_order_type."""
         if self.supported_order_types:
             return order_type in self.supported_order_types
         return {
@@ -49,6 +51,7 @@ class BrokerCapabilities:
         }[order_type]
 
     def supports_tif(self, time_in_force: TimeInForce) -> bool:
+        """Perform supports_tif."""
         return not self.supported_time_in_force or time_in_force in self.supported_time_in_force
 
 
@@ -125,11 +128,17 @@ class BrokerAdapter(Protocol):
     """Stable broker execution boundary."""
 
     @property
-    def capabilities(self) -> BrokerCapabilities: ...
+    def capabilities(self) -> BrokerCapabilities:
+        """Return broker capabilities."""
+        ...
 
-    def submit_order(self, request: BrokerOrderRequest) -> BrokerExecutionReport: ...
+    def submit_order(self, request: BrokerOrderRequest) -> BrokerExecutionReport:
+        """Submit an order request."""
+        ...
 
-    def cancel_order(self, order_id: OrderId) -> BrokerExecutionReport: ...
+    def cancel_order(self, order_id: OrderId) -> BrokerExecutionReport:
+        """Cancel an order by internal ID."""
+        ...
 
 
 class FakeBrokerAdapter:
@@ -143,9 +152,11 @@ class FakeBrokerAdapter:
 
     @property
     def capabilities(self) -> BrokerCapabilities:
+        """Perform capabilities."""
         return BrokerCapabilities(broker_id=self._broker_id)
 
     def submit_order(self, request: BrokerOrderRequest) -> BrokerExecutionReport:
+        """Perform submit_order."""
         self._orders[request.order_id] = request
         broker_order_id = self._broker_order_ids.setdefault(
             request.order_id, f"{self._broker_id.value}-{len(self._broker_order_ids) + 1}"
@@ -157,6 +168,7 @@ class FakeBrokerAdapter:
         )
 
     def cancel_order(self, order_id: OrderId) -> BrokerExecutionReport:
+        """Perform cancel_order."""
         request = self._orders[order_id]
         return self._report(
             request,
@@ -172,6 +184,7 @@ class FakeBrokerAdapter:
         price: Decimal,
         fill_id: str,
     ) -> BrokerExecutionReport:
+        """Perform emit_fill."""
         if quantity <= Decimal("0"):
             raise ValueError("quantity must be positive")
         if price < Decimal("0"):
@@ -219,13 +232,19 @@ class FakeBrokerAdapter:
         )
 
 
+def normalize_broker_status(status: BrokerExecutionReportStatus) -> ExecutionReportStatus:
+    """Map broker status to normalized execution status."""
+
+    return ExecutionReportStatus(status.value)
+
+
 def normalize_broker_execution_report(report: BrokerExecutionReport) -> ExecutionReport:
     """Convert broker-boundary report into the OrderManager report type."""
 
     return ExecutionReport(
         report_id=report.report_id,
         broker_order_id=report.broker_order_id,
-        status=ExecutionReportStatus(report.status.value),
+        status=normalize_broker_status(report.status),
         filled_quantity=report.filled_quantity,
         fill_price=report.fill_price,
         fill_id=report.fill_id,
@@ -241,5 +260,6 @@ __all__ = [
     "BrokerOrderRequest",
     "FakeBrokerAdapter",
     "TimeInForce",
+    "normalize_broker_status",
     "normalize_broker_execution_report",
 ]

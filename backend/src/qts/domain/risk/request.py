@@ -21,6 +21,7 @@ class OrderRiskRequest:
     order_time: datetime | None = None
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         if self.quantity <= Decimal("0"):
             raise ValueError("quantity must be positive")
         if self.price < Decimal("0"):
@@ -32,6 +33,7 @@ class OrderRiskRequest:
 
     @property
     def notional(self) -> Decimal:
+        """Perform notional."""
         return self.quantity * self.price * self.multiplier
 
 

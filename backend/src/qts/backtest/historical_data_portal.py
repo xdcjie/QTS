@@ -14,12 +14,14 @@ class HistoricalDataPortal:
     """Returns finalized bars visible as of a replay timestamp."""
 
     def __init__(self, bars: Mapping[InstrumentId, Iterable[Bar]]) -> None:
+        """Perform __init__."""
         self._bars = {
             instrument_id: tuple(sorted(values, key=lambda bar: bar.end_time))
             for instrument_id, values in bars.items()
         }
 
     def data_view(self, *, as_of: datetime) -> DataView:
+        """Perform data_view."""
         return DataView(bars=self._bars, as_of=as_of)
 
     def history(
@@ -30,6 +32,7 @@ class HistoricalDataPortal:
         bars: int,
         timeframe: str | None = None,
     ) -> tuple[Bar, ...]:
+        """Perform history."""
         return self.data_view(as_of=as_of).history(asset, bars=bars, timeframe=timeframe)
 
 

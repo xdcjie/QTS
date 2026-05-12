@@ -18,11 +18,13 @@ class AssetRef:
     metadata: Mapping[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         if not self.symbol.strip():
             raise ValueError("symbol must not be empty")
         object.__setattr__(self, "metadata", MappingProxyType(dict(self.metadata)))
 
     def __hash__(self) -> int:
+        """Perform __hash__."""
         return hash((self.instrument_id, self.symbol))
 
 

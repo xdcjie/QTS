@@ -6,6 +6,7 @@ from qts.application.commands.start_paper import PaperRuntimeConfig, start_paper
 
 
 def main() -> None:
+    """Perform main."""
     runtime = start_paper(
         PaperRuntimeConfig(
             account_id="paper-local",

@@ -38,7 +38,9 @@ class FutureContractSelector(Protocol):
     def select(
         self,
         candidates: tuple[FutureContractCandidate, ...],
-    ) -> FutureContractCandidate: ...
+    ) -> FutureContractCandidate:
+        """Select a concrete future contract."""
+        ...
 
 
 class HighestVolumeFutureContractSelector:
@@ -48,6 +50,7 @@ class HighestVolumeFutureContractSelector:
         self,
         candidates: tuple[FutureContractCandidate, ...],
     ) -> FutureContractCandidate:
+        """Perform select."""
         if not candidates:
             raise ValueError("candidates must not be empty")
         return max(
@@ -97,6 +100,7 @@ class FutureRollRegistry:
         exchange: str,
         contracts: tuple[InstrumentId, ...],
     ) -> InstrumentId:
+        """Perform register_root."""
         root = self._normalize_root(root_symbol)
         if not exchange.strip():
             raise ValueError("exchange must not be empty")
@@ -113,6 +117,7 @@ class FutureRollRegistry:
         return continuous_id
 
     def continuous_instrument_id(self, root_symbol: str, *, offset: int = 0) -> InstrumentId:
+        """Perform continuous_instrument_id."""
         if offset != 0:
             raise ValueError("only front continuous futures are supported")
         root = self._normalize_root(root_symbol)
@@ -122,6 +127,7 @@ class FutureRollRegistry:
             raise KeyError(f"missing future roll root: {root_symbol}") from exc
 
     def record_selection(self, selection: FutureRollSelection) -> None:
+        """Perform record_selection."""
         if selection.continuous_instrument_id not in self._root_by_continuous:
             raise KeyError(f"unknown continuous future: {selection.continuous_instrument_id}")
         selections = self._selections_by_continuous[selection.continuous_instrument_id]
@@ -139,6 +145,7 @@ class FutureRollRegistry:
         selection_times.append(selection.as_of)
 
     def is_continuous(self, instrument_id: InstrumentId) -> bool:
+        """Perform is_continuous."""
         return instrument_id in self._root_by_continuous
 
     def resolve_contract(
@@ -148,6 +155,7 @@ class FutureRollRegistry:
         as_of: datetime,
         offset: int = 0,
     ) -> InstrumentId:
+        """Perform resolve_contract."""
         if offset != 0:
             raise ValueError("only front continuous futures are supported")
         continuous_id = (
@@ -159,6 +167,7 @@ class FutureRollRegistry:
         return selection.concrete_instrument_id
 
     def related_contracts(self, continuous_instrument_id: InstrumentId) -> tuple[InstrumentId, ...]:
+        """Perform related_contracts."""
         try:
             return self._contracts_by_continuous[continuous_instrument_id]
         except KeyError as exc:
@@ -171,6 +180,7 @@ class FutureRollRegistry:
         *,
         as_of: datetime,
     ) -> Decimal:
+        """Perform execution_price."""
         selection = self._selection_at(continuous_instrument_id, as_of=as_of)
         try:
             return selection.prices_by_instrument[concrete_instrument_id]

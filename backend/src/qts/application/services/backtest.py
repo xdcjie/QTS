@@ -11,9 +11,11 @@ class BacktestService:
     """Application boundary for backtest use cases."""
 
     def __init__(self) -> None:
+        """Perform __init__."""
         self._ids = count(1)
 
     def submit(self, request: BacktestRequestDTO) -> BacktestRunDTO:
+        """Perform submit."""
         return BacktestRunDTO(
             run_id=f"bt-{next(self._ids):06d}",
             strategy_name=request.strategy_name,

@@ -16,6 +16,7 @@ class PaperRuntimeConfig:
     simulated_broker: bool = True
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         if not self.account_id.strip():
             raise ValueError("account_id must not be empty")
         if self.initial_cash <= Decimal("0"):

@@ -49,12 +49,14 @@ class StrategyActor(Actor):
         context: StrategyContext,
         result_ref: ActorRef,
     ) -> None:
+        """Perform __init__."""
         self._strategy = strategy
         self._context = context
         self._result_ref = result_ref
         self._strategy.initialize(self._context)
 
     def handle(self, message: object) -> None:
+        """Perform handle."""
         if isinstance(message, StrategyBarEvent):
             self._handle_bar(message)
             return
@@ -64,6 +66,7 @@ class StrategyActor(Actor):
         raise TypeError(f"unsupported strategy message: {type(message).__name__}")
 
     def _handle_bar(self, message: StrategyBarEvent) -> None:
+        """Perform _handle_bar."""
         self._context.data = message.data
         self._context.portfolio = message.portfolio
         self._context.indicator.update_from_bar(message.bar)
@@ -77,10 +80,9 @@ class StrategyActor(Actor):
         )
 
     def _handle_finalize(self) -> None:
+        """Perform _handle_finalize."""
         before_count = len(self._context.intents)
-        finalize = getattr(self._strategy, "finalize", None)
-        if finalize is not None:
-            finalize(self._context)
+        self._strategy.finalize(self._context)
         self._result_ref.tell(StrategyFinalized(intents=self._context.intents[before_count:]))
 
 

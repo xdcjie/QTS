@@ -16,6 +16,7 @@ class ComexGoldCalendarProvider:
     exchange_timezone = ZoneInfo("America/New_York")
 
     def session_for(self, session_date: date) -> MarketSession:
+        """Perform session_for."""
         open_date = session_date - timedelta(days=1)
         open_time = datetime.combine(
             open_date,

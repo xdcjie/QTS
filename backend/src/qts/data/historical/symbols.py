@@ -16,12 +16,15 @@ class HistoricalFutureChainSymbolResolver:
 
     @property
     def root(self) -> str:
+        """Perform root."""
         return self.chain.root
 
     def is_supported_symbol(self, symbol: str) -> bool:
+        """Perform is_supported_symbol."""
         return self.chain.is_outright_symbol(symbol)
 
     def instrument_id_for_symbol(self, symbol: str) -> InstrumentId:
+        """Perform instrument_id_for_symbol."""
         return self.chain.instrument_id_for_symbol(symbol)
 
 

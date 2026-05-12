@@ -1,142 +1,12 @@
 # Quant Trading System Project Instructions
 
-This repository implements a Python-first quantitative trading system.
+This repository is a Python-first quantitative trading system supporting multi-strategy, multi-account trading; stock/future/option instruments; backtest, paper, and live modes; API/frontend extensibility; and a Strategy SDK that hides internal trading complexity.
 
-The system must support:
+The global `~/.codex/AGENTS.md` still applies. This file adds project-specific architecture, domain, OOP, and verification rules.
 
-- Multi-strategy execution
-- Multi-account portfolio management
-- Actor + Queue orchestration
-- Stock, future, and option instruments
-- Backtest, paper trading, and live trading modes
-- Frontend and API extensibility
-- A user-facing Strategy SDK that hides internal trading complexity
-- Unit, integration, and anchor verification
+## 1. Source of truth and spec gates
 
-## Quant system abstraction rules
-
-- Instrument-specific behavior belongs in `InstrumentRegistry`, `ContractSpec`, calendar/session definitions, or product-specific risk/valuation models.
-- Broker-specific behavior belongs in broker adapters.
-- Strategy-specific behavior belongs in user strategy code, not in runtime, portfolio, risk, or execution core.
-- Timeframe/session-specific behavior belongs in `qts/data/bars` and calendar/session services.
-- Financial correctness rules must be expressed as reusable domain rules and protected by tests.
-
-## Cohesion and coupling gate
-
-Before adding or changing a module, class, function, runner, service, or adapter,
-identify its single reason to change and the owner of each responsibility it
-touches.
-
-Rules:
-
-- Keep configuration parsing, data loading, source parsing, domain rules,
-  registry/resolution, runtime orchestration, and artifact/report writing in
-  separate owners unless one module explicitly owns that cohesive concept.
-- A runner, CLI, worker, or application service may orchestrate dependencies,
-  but must not own reusable data construction, source parsing, domain
-  resolution, session/roll semantics, registry construction, or artifact
-  formats.
-- A config object may parse, normalize, validate, and serialize configuration;
-  it must not open datasets, create runtime iterators, mutate registries, or
-  instantiate adapters unless that is its documented boundary.
-- If a helper only serves one class in a class-centric module, put it on that
-  class. If it represents a shared concept, move it to the module that owns the
-  concept and expose a narrow public API when other modules need it.
-- Choose classes versus functions by concept ownership, not habit. Use a class
-  when the concept has state, configuration, lifecycle, invariants,
-  validation/normalization, or a coherent public interface. Use module-level
-  functions for stateless algorithms, pure transformations, framework
-  entrypoints, or thin convenience APIs.
-- A stable object concept should close over its own construction path. Its
-  parsing, validation, normalization, and construction helpers should live on
-  the class or in the same owning module. Callers should not assemble that
-  object's internals through scattered conditionals.
-- Prefer the construction-config pattern for stable concepts: define a focused
-  `<Concept>Config` value object that contains all construction inputs, then
-  build the usable object with `<Concept>(config)`. The concept constructor owns
-  validation, normalization, internal branching, and invariant checks.
-- Use named constructors or same-module factories only when they reduce
-  ambiguity for materially different sources, such as `from_yaml(...)` for file
-  parsing or `from_legacy_root(...)` for migration compatibility. Keep those
-  entrypoints at the concept owner, and have them delegate into the same
-  `<Concept>Config` -> `<Concept>` construction path.
-- Do not pass long lists of primitive construction parameters through runners or
-  unrelated builders. Group construction inputs into the owning concept's config
-  object so the caller cannot accidentally reimplement the concept's assembly
-  rules.
-- Passing behavioral tests does not prove the design is acceptable if the
-  responsibility boundary is wrong.
-
-## Repository OOP standard
-
-This repository uses object-oriented ownership for stable system concepts.
-Functions are allowed, but they are not the default shape for concept
-construction, validation, lifecycle, state, or cohesive behavior.
-
-Rules:
-
-- Stable concepts must expose an object-owned API. Prefer
-  `<Concept>Config` plus `<Concept>`, with construction through the owning
-  class such as `Concept(config)`, `Concept.load(config)`,
-  `Concept.from_yaml(...)`, or `Concept.from_legacy_root(...)`.
-- Do not add new module-level public factory functions such as
-  `load_<concept>`, `build_<concept>`, `create_<concept>`, or
-  `make_<concept>` for stable concepts. Put that construction on the owning
-  class or config object.
-- Module-level public functions are acceptable only for pure stateless
-  algorithms, thin framework/CLI entrypoints, protocol callbacks, or explicit
-  compatibility wrappers.
-- Compatibility wrappers must be narrow, delegate immediately to the owning
-  object API, avoid new behavior, and must not be exported from package
-  `__all__` unless backward compatibility explicitly requires it.
-- In a class-centric module, private helpers that only serve the public class
-  must be private methods on that class. A module-private helper is acceptable
-  only when it is a shared algorithm step, pure transformation, or module-owned
-  concept rather than one class's construction, validation, mapping,
-  serialization, or state transition logic.
-- New exceptions to these rules require updating
-  `docs/architecture/module_boundaries.md`, `scripts/verify_guardrails.py`,
-  and `tests/unit/scripts/test_verify_guardrails.py` in the same change.
-
-Backtest-specific rule:
-
-- Backtest runners may wire a run together, but configured historical bar
-  streams, dataset metadata, instrument registry construction, and roll-aware
-  replay input assembly must live in cohesive data/backtest input boundaries,
-  not as private runner helpers.
-
-## Domain-sensitive implementation gate
-
-Before changing sessions, bar generation, instrument identity, broker/data
-adapters, strategy SDK boundaries, risk, order flow, portfolio/accounting, or
-backtest/live parity, state this gate before editing code:
-
-```text
-Domain fact:
-Correct abstraction boundary:
-Forbidden shortcut:
-Verification:
-```
-
-If the correct abstraction boundary is unclear, stop and clarify the design
-before implementation.
-
-Rules:
-
-- Product-specific facts such as `GC`, `SI`, trading hours, roll behavior, margin,
-  or valuation overrides must not enter shared implementation as product-named
-  functions, constants, or `if root == "..."` branches. Put them in registry,
-  contract spec, calendar/session provider, configuration/data, or documented
-  product-specific risk/valuation boundaries.
-- Broker-specific facts such as IBKR host/port/client IDs, broker symbols, order
-  capabilities, and protocol behavior must stay in config or adapter boundaries.
-- Passing behavioral tests does not prove the abstraction boundary is correct.
-  Run `make guardrails` and inspect any intentional exception before claiming
-  the change is ready.
-
-## Required design documents
-
-Before implementing or modifying core behavior, read the relevant documents under `docs/`, especially:
+Before implementing or modifying core behavior, read the relevant durable docs under `docs/`, especially:
 
 - `docs/architecture/system_overview.md`
 - `docs/architecture/dependency_rules.md`
@@ -150,156 +20,158 @@ Before implementing or modifying core behavior, read the relevant documents unde
 - `docs/testing/testing_strategy.md`
 - `docs/testing/domain_invariants.md`
 
-If implementation conflicts with these documents, stop and propose a design update first.
+If implementation conflicts with docs, stop and propose either a design update or a code change. Do not create parallel scratch specs for durable rules.
 
-Before creating a new module, check `docs/architecture/module_boundaries.md`.
-Allowed import direction is not enough; the module must live in the package that
-owns the concept. Shared roll/session/resolution behavior used by both backtest
-and live must not be placed under `qts.backtest` or `qts.data.historical`.
+Important specs must become gates. For every durable boundary, invariant, or architecture rule touched by a task, identify at least one enforcement mechanism: `make guardrails`, unit/integration/anchor/regression tests, static checks, review checklist, or manual approval. Passing behavior tests alone is not enough if a boundary gate applies.
 
-## Documentation governance
+For domain-sensitive changes, state this before editing code:
 
-Before adding or moving project documentation, read `docs/README.md` and use
-the existing documentation directory boundaries.
+```text
+Domain fact / invariant:
+Correct owner or abstraction boundary:
+Forbidden shortcut:
+Required gates / verification:
+```
+
+If the correct boundary is unclear, stop and clarify.
+
+## 2. Ownership, cohesion, and OOP
+
+Use object-oriented ownership for stable system concepts. Functions are allowed, but stable concept construction, validation, normalization, lifecycle, state, and cohesive behavior should be owned by the concept.
 
 Rules:
 
-- Do not add a new top-level `docs/` directory unless the content represents a
-  stable project concept, does not fit an existing directory, is expected to
-  hold more than one document over time, and is documented in `docs/README.md`.
-- Do not add agent/tool/workflow-specific directories under `docs/`.
-- Architecture, runtime, domain, strategy SDK, testing, operations, API,
-  infrastructure, and plan material must live in the corresponding existing
-  `docs/` directory.
-- Temporary agent plans, scratch specs, and tool-specific execution notes must
-  not be committed under `docs/` unless they are rewritten as project-level
-  long-lived documentation.
-- When changing a durable rule, update the authoritative long-lived document
-  instead of creating a parallel spec.
+- Every new or changed module/class/function must have one clear reason to change.
+- Keep configuration parsing, data loading, source parsing, domain rules, registry/resolution, runtime orchestration, and artifact/report writing in separate owners unless one cohesive concept explicitly owns them.
+- Runners, CLIs, workers, and application services may orchestrate; they must not own reusable data construction, source parsing, domain resolution, roll/session semantics, registry construction, or artifact formats.
+- Stable concepts should prefer `<Concept>Config` plus `<Concept>` construction. The concept owns validation, normalization, internal branching, and invariant checks.
+- Do not add public module-level factories such as `load_<concept>`, `build_<concept>`, `create_<concept>`, or `make_<concept>` for stable concepts. Use the owning class/config, named constructors, or narrow compatibility wrappers.
+- Compatibility wrappers must delegate immediately, add no new behavior, and should not be exported unless required for backward compatibility.
+- Use a class when the concept has state, configuration, lifecycle, dependencies, invariants, or a coherent public API. Use module functions for pure stateless algorithms, framework/CLI entrypoints, protocol callbacks, or thin convenience APIs.
+- Private helpers that only serve one class in a class-centric module belong on that class. Module-private helpers are acceptable only for shared algorithm steps, pure transformations, framework entrypoints, or module-owned concepts.
+- Large god objects are not acceptable just because tests pass. Split by ownership after characterization tests are in place.
 
-## Architecture rules
+Backtest runners may wire a run together, but configured historical bar streams, dataset metadata, instrument registry construction, and roll-aware replay input assembly must live in cohesive data/backtest input boundaries, not private runner helpers.
 
-- Use Actor + Queue as the orchestration model.
-- Actor-to-actor communication must use message passing, not direct business method calls.
-- Actor-owned state must only be mutated by the owning actor.
-- Account state must be owned and mutated only by `AccountActor`.
-- Order state must be owned and mutated only by `OrderManagerActor`.
-- Broker callbacks must become normalized internal events before affecting system state.
-- Paper and live trading must use IBKR adapter boundaries unless a later design document explicitly changes the broker target.
-- Market data and order execution must be separated into different adapters, actor boundaries, configuration sections, and event streams, even when both use IBKR.
-- Risk checks must never be bypassed.
+New exceptions to ownership/OOP rules require updating `docs/architecture/module_boundaries.md`, `scripts/verify_guardrails.py`, and `tests/unit/scripts/test_verify_guardrails.py` in the same change.
+
+## 3. File and module granularity
+
+Organize code by cohesive concept, not by one function per file and not by forcing every helper into a class.
+
+- A file should represent a stable concept, component, adapter, model, policy, algorithm, command, or framework entrypoint.
+- Do not create a new file for every small helper.
+- Group tightly related helpers in the same module.
+- Keep files readable but not fragmented.
+- Prefer concept names such as `timeframe.py`, `alignment.py`, `aggregator.py`, `validation.py`, `order_state_machine.py`.
+- A single-function file is acceptable for a standalone command, route/handler, adapter entrypoint, algorithm, or public API.
+- A streaming class and a batch helper may coexist when they serve different workflows, e.g. `BarAggregator` and `aggregate_bars(...)`.
+
+Before finalizing changed Python files, inspect new private helpers:
+
+```bash
+rg -n "^def _|^class _" <changed-python-files>
+```
+
+Decide whether each belongs on an owning class, remains a module-private shared algorithm, or should become an explicit public API. Tests should prefer public behavior and owning boundaries, not private helpers.
+
+## 4. Quant domain boundaries
+
+- Instrument-specific behavior belongs in `InstrumentRegistry`, `ContractSpec`, calendar/session definitions, or product-specific risk/valuation models.
+- Broker-specific behavior belongs in broker adapters and config.
+- Strategy-specific behavior belongs in user strategy code, not runtime, portfolio, risk, or execution core.
+- Timeframe/session-specific behavior belongs in `qts.data.bars`, `qts.data.sessions`, and registry/calendar services.
+- Financial correctness rules must be reusable domain rules protected by unit, integration, anchor, or regression tests.
+- Product facts such as `GC`, `SI`, trading hours, roll behavior, margin, or valuation overrides must not appear in shared implementation as product-named functions/constants or `if root == ...` branches.
+- Broker facts such as IBKR host/port/client IDs, symbols, capabilities, and protocol behavior must not leak outside config or adapter boundaries.
+
+## 5. Architecture and runtime rules
+
+- Use Actor + Queue orchestration.
+- Actor-to-actor coordination uses message passing, not direct business method calls.
+- Actor-owned state is mutated only by the owning actor.
+- Account state belongs to `AccountActor`.
+- Order state belongs to `OrderManagerActor`.
+- Broker callbacks become normalized internal events before affecting system state.
+- Market data and order execution are separate adapters, actor boundaries, config sections, and event streams, even when both use IBKR.
+- Risk checks are never bypassed.
 - User strategies must not directly access Broker, RiskEngine, OrderManager, AccountActor, ContractSpec, or BrokerSymbolMapping.
 
-## Backtest and live parity rules
+## 6. Backtest, paper, and live parity
 
-Backtest, paper, and live are execution modes of the same trading system. They
-must share the same core domain and runtime path unless a documented adapter
-boundary requires different behavior.
+Backtest, paper, and live are execution modes of the same system. They must share the same core domain and runtime path unless a documented adapter boundary requires different behavior.
 
 Required shared path:
 
-Strategy SDK -> StrategyContext -> AssetRef/TargetIntent -> Instrument/Symbol/Roll
-resolution -> RiskEngine -> OrderManagerActor -> ExecutionActor -> AccountActor
--> Portfolio/account state -> reporting/observability.
+```text
+Strategy SDK -> StrategyContext -> AssetRef/TargetIntent -> Instrument/Symbol/Roll resolution -> RiskEngine -> OrderManagerActor -> ExecutionActor -> AccountActor -> Portfolio/account state -> reporting/observability
+```
 
-Allowed differences are limited to boundary adapters:
+Allowed differences are boundary adapters only:
 
-- Market data source: historical CSV/replay, paper feed, live market data adapter.
-- Execution adapter: simulated/backtest fill adapter, paper broker adapter, live broker adapter.
-- Clock/source timing: replay clock, paper clock, live runtime clock.
-- Environment concerns: credentials, broker connectivity, persistence, latency model,
-  and external broker capabilities.
+- market data source: historical/replay, paper feed, live adapter
+- execution adapter: simulated fill, paper broker, live broker
+- clock/source timing: replay, paper, live
+- environment: credentials, connectivity, persistence, latency model, external capabilities
 
 Rules:
 
-- Do not create a backtest-only business path that bypasses RiskEngine,
-  OrderManagerActor, ExecutionActor, or AccountActor.
-- Do not create a live-only business path for behavior that should be testable in
-  backtest.
-- Symbol, instrument, and continuous-future roll resolution must use shared
-  registry-level abstractions where possible.
-- Broker/data-source symbols must stay at adapter boundaries and resolve to
-  InstrumentId before entering core runtime logic.
-- Continuous futures are research/data references and must resolve to concrete
-  tradable contracts before order creation in both backtest and live.
-- Strategy code must not branch on execution mode except through documented
-  Strategy SDK capabilities.
-- If a feature touches one mode, the implementation must either reuse the shared
-  path for all modes or document why it is adapter-specific.
-- Any intentional divergence between backtest and live must be documented in
-  `docs/architecture/backtest_live_parity.md` and covered by a test.
+- Do not create a backtest-only business path that bypasses RiskEngine, OrderManagerActor, ExecutionActor, or AccountActor.
+- Do not create a live-only business path for behavior that should be testable in backtest.
+- Symbol, instrument, and continuous-future roll resolution must use shared registry abstractions where possible.
+- Broker/data-source symbols stay at adapter boundaries and resolve to `InstrumentId` before core runtime logic.
+- Continuous futures are research/data references and must resolve to concrete tradable contracts before order creation in both backtest and live.
+- Strategy code must not branch on execution mode except through documented Strategy SDK capabilities.
+- Intentional divergence must be documented in `docs/architecture/backtest_live_parity.md` and covered by tests.
 
+## 7. Instrument, calendar, and market data rules
 
-## Instrument and market data rules
-
-- Use `InstrumentId` internally.
-- Do not use broker symbols as internal identifiers.
+- Use `InstrumentId` internally; never use broker/data-source symbols as internal identifiers.
 - Use `InstrumentRegistry` for symbol resolution and contract metadata.
 - Use `BrokerSymbolMapping` only at broker/data-source boundaries.
-- IBKR market data adapters may resolve broker/data-source symbols only at the adapter boundary.
-- IBKR order execution adapters may translate internal orders to broker order requests only at the adapter boundary.
 - Support stock, future, and option through unified Instrument abstractions.
 - Market sessions are domain facts; timezones are representations.
 - All bar intervals use `[start, end)` semantics.
 - `<1d` bars are clock-aligned in exchange timezone.
 - `1d` bars are session-aligned and must not be treated as 24h bars.
-
-## Approved components and dependency policy
-
-Prefer mature, maintained, domain-standard Python packages for common infrastructure.
+- Domain-critical calendar/library behavior must be wrapped behind internal interfaces and protected by anchor tests.
 
 Approved default components:
 
-- `exchange-calendars`
-  - Use for exchange sessions, holidays, opens/closes, and trading calendar queries where supported.
-  - Wrap behind `qts.registry` / `qts.data.sessions` interfaces.
-  - Do not expose `exchange_calendars` objects directly through domain models or Strategy SDK.
-  - Validate important exchange/session behavior with anchor tests.
-- `pandas`
-  - Use for research-facing tabular/time-series data and batch calculations.
-  - Do not require domain models to depend on pandas objects.
-- `pydantic`
-  - Use for API schemas, external configuration, and validation at system boundaries.
-  - Do not use Pydantic models as core domain entities unless explicitly justified.
-- `fastapi`
-  - Use for backend HTTP/WebSocket APIs when API implementation begins.
-- `ruff`, `mypy`, `pytest`
-  - Use for formatting, linting, static type checking, and tests.
+- `exchange-calendars` for exchange sessions where supported, wrapped behind `qts.registry` / `qts.data.sessions`.
+- `pandas` for research-facing tabular/time-series and batch calculations; domain models must not require pandas.
+- `pydantic` for API schemas, external config, and boundary validation; not as core domain entities unless justified.
+- `fastapi` for backend HTTP/WebSocket APIs when API implementation begins.
+- `ruff`, `mypy`, `pytest` for formatting, typing, and tests.
 
-Dependency rules:
+Do not add production dependencies without explaining why existing or approved components are insufficient.
 
-- Prefer standard or approved components over custom implementations.
-- Wrap domain-critical third-party behavior behind internal interfaces.
-- Add or update anchor tests when adopting a library for financial correctness.
-- Do not leak third-party API types into core domain models unless approved.
-- Do not add new production dependencies without explaining why existing dependencies are insufficient.
+## 8. Strategy SDK rules
 
-## Strategy SDK rules
-
-User-facing strategies should use:
+User-facing strategies should use only:
 
 - `Strategy`
 - `StrategyContext`
 - `AssetRef`
 - `DataView`
 - `PortfolioView`
-- `IndicatorFactory`
-- `FactorFactory`
-- target APIs
+- `IndicatorFactory` / `FactorFactory`
+- target APIs such as `ctx.target_percent`, `ctx.target_quantity`, `ctx.target_value`, `ctx.rebalance`, and `ctx.close`
 
-Prefer:
+Direct order APIs are advanced APIs and must still emit intents that pass through Risk and OrderManager. Strategy SDK APIs must not expose actors, broker internals, ContractSpec, BrokerSymbolMapping, or internal event routing.
 
-- `ctx.target_percent(...)`
-- `ctx.target_quantity(...)`
-- `ctx.target_value(...)`
-- `ctx.rebalance(...)`
-- `ctx.close(...)`
+## 9. Documentation governance
 
-Direct order APIs are advanced APIs and must still produce intents that pass through Risk and OrderManager.
+Before adding or moving docs, read `docs/README.md` and use existing documentation boundaries.
 
-## Verification
+- Architecture, runtime, domain, strategy SDK, testing, operations, API, infrastructure, and plan material belong in their existing `docs/` areas.
+- Do not add agent/tool/workflow-specific directories under `docs/`.
+- Temporary plans, scratch specs, and tool execution notes should not be committed under `docs/` unless rewritten as project-level durable documentation.
+- When changing a durable rule, update the authoritative long-lived document instead of creating a parallel spec.
 
-Run the narrowest relevant checks first, then full checks when shared behavior changes.
+## 10. Verification
+
+Run the narrowest relevant checks first, then broader checks when shared behavior changes.
 
 Required for normal code tasks:
 
@@ -311,17 +183,9 @@ make typecheck
 make test-unit
 ```
 
-For changes that affect module interaction, actor flow, order flow, portfolio flow, broker simulation, IBKR adapter behavior, API behavior, or runtime orchestration, also run:
+Also run `make test-integration` for module interaction, actor flow, order flow, portfolio flow, broker simulation, IBKR adapter behavior, API behavior, or runtime orchestration.
 
-```bash
-make test-integration
-```
-
-For changes that affect market calendars, sessions, bar generation, instrument identity, portfolio accounting, order state machines, risk semantics, or financial domain correctness, also run:
-
-```bash
-make test-anchor
-```
+Also run `make test-anchor` for calendars, sessions, bar generation, instrument identity, portfolio accounting, order state machines, risk semantics, or financial domain correctness.
 
 Before milestone-level completion, run:
 
@@ -329,101 +193,22 @@ Before milestone-level completion, run:
 make check
 ```
 
-If a check cannot be run, explain why and do not claim full verification.
+If checks cannot be run, explain why and do not claim full verification.
 
+Deletion/refactor safety:
 
-## File and module granularity
+- Do not delete code solely because a static search finds no caller. Check graph/impact when available, dynamic entrypoints, routes, scripts, protocols, package exports, tests, and docs.
+- Characterize existing behavior before splitting large classes or moving responsibilities.
+- Remove verified redundant placeholders only after import/reference checks and relevant tests pass.
 
-Organize code by cohesive concepts, not by one function per file and not by forcing every helper into a class.
+## 11. Knowledge graph / MCP usage
 
-Rules:
+If the project has `code-review-graph` MCP tools available, use them before Grep/Glob/Read for code exploration, impact analysis, and review:
 
-- A file should represent a stable concept, component, adapter, model, policy, algorithm, command, or framework entrypoint.
-- Do not create a new file for every small helper function.
-- Group tightly related helper functions in the same module when they belong to the same concept.
-- Keep files small enough to understand, but not so small that navigation becomes fragmented.
-- Prefer names like `timeframe.py`, `alignment.py`, `aggregator.py`, `validation.py`, and `order_state_machine.py` over names like `get_x.py`, `calculate_y.py`, or `handle_z.py`.
-- A single-function file is acceptable only when the function is a standalone command, adapter entrypoint, algorithm, framework route/handler entrypoint, or clearly reusable public API.
-- Do not create artificial abstractions just to avoid putting related functions in the same file.
-- Do not introduce a class just to wrap a stateless function. Prefer a class only when the object owns state, configuration, strategy, lifecycle, dependencies, or a coherent public interface.
-- In class-centric modules, private helpers that only serve one class should live on that class as private instance, class, or static methods.
-- Do not leave a module-level private helper next to a class when the helper only implements that class's validation, normalization, mapping, serialization, or state transition logic.
-- Keep module-level functions when they are public convenience APIs, function-oriented framework entrypoints, shared algorithm steps, or pure transformations that are not owned by one class.
-- For paired APIs, it is acceptable to expose both a stateful class and a stateless convenience function when they serve different workflows. For example, a streaming `BarAggregator` can coexist with an
-`aggregate_bars(...)` batch helper.
+- `semantic_search_nodes` / `query_graph` for exploration
+- `get_impact_radius` / `get_affected_flows` for blast radius
+- `detect_changes` / `get_review_context` for review
+- `query_graph` with `tests_for` for coverage
+- `get_architecture_overview` / `list_communities` for structure
 
-### Private helper ownership review
-
-Before finalizing code changes, inspect changed Python files for newly added
-module-private helpers:
-
-```bash
-rg -n "^def _|^class _" <changed-python-files>
-```
-
-For each new private helper, explicitly decide its owner:
-
-- If it only serves one class in a class-centric module, move it onto that class
-  as a private instance, class, or static method.
-- If it is a shared algorithm step, pure transformation, function-oriented
-  framework entrypoint, or stable module concept, keep it module-private.
-- If it is meant to be used by other modules, make it an explicit public API
-  instead of relying on a leading underscore.
-
-Do not rely on nearby legacy style to override this ownership check.
-
-Tests must not depend on module-private helpers as stable integration points.
-When testing architecture or flow, prefer public behavior, public classes, or the
-owning class boundary. If a test must inspect source for an architectural anchor,
-inspect the owning public class or module-level public API instead of importing
-or referencing private helper functions directly.
-
-<!-- code-review-graph MCP tools -->
-## MCP Tools: code-review-graph
-
-**IMPORTANT: This project has a knowledge graph. ALWAYS use the
-code-review-graph MCP tools BEFORE using Grep/Glob/Read to explore
-the codebase.** The graph is faster, cheaper (fewer tokens), and gives
-you structural context (callers, dependents, test coverage) that file
-scanning cannot.
-
-### When to use graph tools FIRST
-
-- **Exploring code**: `semantic_search_nodes` or `query_graph` instead of Grep
-- **Understanding impact**: `get_impact_radius` instead of manually tracing imports
-- **Code review**: `detect_changes` + `get_review_context` instead of reading entire files
-- **Finding relationships**: `query_graph` with callers_of/callees_of/imports_of/tests_for
-- **Architecture questions**: `get_architecture_overview` + `list_communities`
-
-Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
-
-### Key Tools
-
-| Tool | Use when |
-|------|----------|
-| `detect_changes` | Reviewing code changes — gives risk-scored analysis |
-| `get_review_context` | Need source snippets for review — token-efficient |
-| `get_impact_radius` | Understanding blast radius of a change |
-| `get_affected_flows` | Finding which execution paths are impacted |
-| `query_graph` | Tracing callers, callees, imports, tests, dependencies |
-| `semantic_search_nodes` | Finding functions/classes by name or keyword |
-| `get_architecture_overview` | Understanding high-level codebase structure |
-| `refactor_tool` | Planning renames, finding dead code |
-
-### Workflow
-
-1. Treat graph refresh as a hard tool-use hook: after any successful file
-   modification (`apply_patch`, refactor tools, formatters, generated outputs,
-   or test fixture rewrites), immediately call
-   `build_or_update_graph_tool(repo_root=<repo>, full_rebuild=False,
-   postprocess="minimal")` before further code exploration, impact analysis, or
-   final review.
-2. If a batch operation modifies many files, refresh once after the batch
-   completes. Use `full_rebuild=True` only after broad file moves/deletes,
-   parser-impacting changes, or when incremental update reports errors.
-3. Do not expose graph refresh as a user-facing Make target or checklist item;
-   it is an internal maintenance hook that keeps subsequent graph queries
-   trustworthy.
-4. Use `detect_changes` for code review.
-5. Use `get_affected_flows` to understand impact.
-6. Use `query_graph` pattern="tests_for" to check coverage.
+After successful file modifications, refresh the graph with incremental update before further impact analysis or final review. If graph tools are unavailable or incomplete, fall back to repository search and state that fallback.

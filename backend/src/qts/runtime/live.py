@@ -10,6 +10,8 @@ from qts.execution.broker import BrokerAdapter, BrokerExecutionReport, BrokerOrd
 
 
 class LiveRuntimeState(StrEnum):
+    """Live runtime lifecycle states."""
+
     STOPPED = "stopped"
     STARTING = "starting"
     RUNNING = "running"
@@ -93,9 +95,12 @@ _TRANSITIONS: dict[LiveRuntimeState, dict[str, LiveRuntimeState]] = {
 
 @dataclass(slots=True)
 class LiveRuntimeStateMachine:
+    """Mutable live runtime state machine."""
+
     state: LiveRuntimeState = LiveRuntimeState.STOPPED
 
     def apply(self, command: str) -> LiveRuntimeState:
+        """Perform apply."""
         next_state = _TRANSITIONS.get(self.state, {}).get(command)
         if next_state is None:
             raise ValueError(f"invalid live runtime transition: {self.state} -> {command}")
@@ -105,6 +110,8 @@ class LiveRuntimeStateMachine:
 
 @dataclass(frozen=True, slots=True)
 class RuntimeOrderResult:
+    """Result of live runtime order submission."""
+
     request: BrokerOrderRequest
     accepted: bool
     report: BrokerExecutionReport | None = None
@@ -121,32 +128,41 @@ class LiveRuntime:
 
     @property
     def state(self) -> LiveRuntimeState:
+        """Perform state."""
         return self._machine.state
 
     @property
     def feed(self) -> LiveFeedAdapter:
+        """Perform feed."""
         return self._feed
 
     def start(self) -> LiveRuntimeState:
+        """Perform start."""
         self._machine.apply("start")
         return self._machine.apply("started")
 
     def stop(self) -> LiveRuntimeState:
+        """Perform stop."""
         return self._machine.apply("stop")
 
     def pause(self) -> LiveRuntimeState:
+        """Perform pause."""
         return self._machine.apply("pause")
 
     def resume(self) -> LiveRuntimeState:
+        """Perform resume."""
         return self._machine.apply("resume")
 
     def degrade(self) -> LiveRuntimeState:
+        """Perform degrade."""
         return self._machine.apply("degrade")
 
     def recover(self) -> LiveRuntimeState:
+        """Perform recover."""
         return self._machine.apply("recover")
 
     def submit_order(self, request: BrokerOrderRequest) -> RuntimeOrderResult:
+        """Perform submit_order."""
         if self.state is LiveRuntimeState.PAUSED:
             return RuntimeOrderResult(request=request, accepted=False, reason_code="RUNTIME_PAUSED")
         if self.state is not LiveRuntimeState.RUNNING:

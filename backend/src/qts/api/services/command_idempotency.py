@@ -12,9 +12,11 @@ class CommandIdempotencyStore:
     """Remember the first result for each command idempotency key."""
 
     def __init__(self) -> None:
+        """Perform __init__."""
         self._results: dict[str, object] = {}
 
     def run(self, key: str, command: Callable[[], T]) -> T:
+        """Perform run."""
         if not key.strip():
             raise ValueError("idempotency key must not be empty")
         if key in self._results:

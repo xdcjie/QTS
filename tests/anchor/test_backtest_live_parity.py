@@ -24,9 +24,13 @@ def test_backtest_engine_order_path_uses_shared_actor_chain() -> None:
 
     engine_source = inspect.getsource(engine.BacktestEngine)
     run_source = inspect.getsource(engine.BacktestEngine.run_streaming)
-    actor_loop_source = inspect.getsource(engine.BacktestEngine._run_actor_loop)
+    from qts.backtest.actor_loop import BacktestActorLoop
+    from qts.backtest.intent_processor import BacktestIntentProcessor
 
-    assert "_run_actor_loop" in run_source
+    actor_loop_source = inspect.getsource(BacktestActorLoop.run)
+    processor_source = inspect.getsource(BacktestIntentProcessor)
+
+    assert "BacktestActorLoop" in run_source
 
     for required in (
         "StrategyContext",
@@ -36,10 +40,11 @@ def test_backtest_engine_order_path_uses_shared_actor_chain() -> None:
         "_BacktestExecutionAdapter",
     ):
         assert required in actor_loop_source or required in engine_source
-    assert "OrderRiskRequest" in engine_source
-    assert ".check(" in engine_source
-    assert "SubmitOrder" in engine_source
-    assert "resolve_contract" in engine_source
+    assert "OrderRiskRequest" in processor_source
+    assert ".check(" in processor_source or ".check" in processor_source
+    assert "SubmitOrder" in processor_source
+    assert "order_instrument_for_intent" in processor_source
+    assert "market_price_for_intent" in processor_source
     assert "ApplyFill" not in engine_source
 
 

@@ -24,6 +24,7 @@ class DatasetMetadata:
     content_hash: str | None = None
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         self._require_text(self.dataset_id, "dataset_id")
         self._require_text(self.source, "source")
         self._require_text(self.timeframe, "timeframe")
@@ -36,11 +37,13 @@ class DatasetMetadata:
 
     @property
     def reference(self) -> str:
+        """Perform reference."""
         suffix = self.content_hash if self.content_hash is not None else "unhashed"
         return f"{self.source}:{self.dataset_id}:{suffix}"
 
     @staticmethod
     def _require_text(value: str, name: str) -> None:
+        """Perform _require_text."""
         if not value.strip():
             raise ValueError(f"{name} must not be empty")
 

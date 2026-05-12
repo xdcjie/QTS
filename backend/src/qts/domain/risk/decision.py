@@ -32,6 +32,7 @@ class RiskDecision:
         rule_id: str | None = None,
         checked_at: datetime | None = None,
     ) -> RiskDecision:
+        """Perform approve."""
         return cls(status=RiskDecisionStatus.APPROVED, rule_id=rule_id, checked_at=checked_at)
 
     @classmethod
@@ -43,6 +44,7 @@ class RiskDecision:
         rule_id: str | None = None,
         checked_at: datetime | None = None,
     ) -> RiskDecision:
+        """Perform rejected."""
         if not reason_code.strip():
             raise ValueError("reason_code must not be empty")
         if not reason.strip():
@@ -57,10 +59,12 @@ class RiskDecision:
 
     @property
     def approved(self) -> bool:
+        """Perform approved."""
         return self.status is RiskDecisionStatus.APPROVED
 
     @property
     def reason_text(self) -> str | None:
+        """Perform reason_text."""
         return self.reason
 
 

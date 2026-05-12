@@ -10,15 +10,18 @@ class InstrumentRegistry:
     """Resolve user-facing symbols to internal instruments."""
 
     def __init__(self) -> None:
+        """Perform __init__."""
         self._symbols: dict[str, InstrumentId] = {}
         self._instruments: dict[InstrumentId, Instrument] = {}
 
     def register(self, user_symbol: str, instrument: Instrument) -> None:
+        """Perform register."""
         symbol = self._normalize_symbol(user_symbol)
         self._symbols[symbol] = instrument.instrument_id
         self._instruments[instrument.instrument_id] = instrument
 
     def resolve(self, user_symbol: str) -> InstrumentId:
+        """Perform resolve."""
         symbol = self._normalize_symbol(user_symbol)
         try:
             return self._symbols[symbol]
@@ -26,16 +29,19 @@ class InstrumentRegistry:
             raise KeyError(f"unknown instrument symbol: {user_symbol}") from exc
 
     def get_instrument(self, instrument_id: InstrumentId) -> Instrument:
+        """Perform get_instrument."""
         try:
             return self._instruments[instrument_id]
         except KeyError as exc:
             raise KeyError(f"unknown instrument id: {instrument_id}") from exc
 
     def get_contract_spec(self, instrument_id: InstrumentId) -> ContractSpec:
+        """Perform get_contract_spec."""
         return self.get_instrument(instrument_id).contract_spec
 
     @staticmethod
     def _normalize_symbol(user_symbol: str) -> str:
+        """Perform _normalize_symbol."""
         normalized = user_symbol.strip().upper()
         if not normalized:
             raise ValueError("user_symbol must not be empty")

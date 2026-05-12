@@ -15,10 +15,12 @@ class MaxOrderQuantityRule:
     max_quantity: Decimal
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         if self.max_quantity <= Decimal("0"):
             raise ValueError("max_quantity must be positive")
 
     def check(self, request: OrderRiskRequest) -> RiskDecision:
+        """Perform check."""
         if request.quantity > self.max_quantity:
             return RiskDecision.rejected(
                 "MAX_ORDER_QTY_EXCEEDED",

@@ -8,6 +8,8 @@ from datetime import datetime
 
 @dataclass(frozen=True, slots=True)
 class StreamEventDTO:
+    """Public stream event DTO."""
+
     event_type: str
     event_time: datetime
     payload: dict[str, str]

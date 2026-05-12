@@ -12,6 +12,8 @@ from qts.domain.market_data import Bar
 
 @dataclass(frozen=True, slots=True)
 class SyntheticMarketDataConfig:
+    """Configuration for deterministic synthetic market data."""
+
     instrument_id: InstrumentId
     start: datetime
     count: int
@@ -30,6 +32,7 @@ class SyntheticMarketDataConfig:
 
 
 def generate_bars(config: SyntheticMarketDataConfig) -> tuple[Bar, ...]:
+    """Perform generate_bars."""
     bars: list[Bar] = []
     current = config.start_price
     for index in range(config.count):

@@ -35,10 +35,12 @@ class BacktestInputBuilder:
     """Build replay-ready market data, registry, and provenance inputs."""
 
     def __init__(self, config: BacktestRunConfig, catalog: HistoricalCatalog) -> None:
+        """Perform __init__."""
         self._config = config
         self._catalog = catalog
 
     def build(self) -> BacktestInputBundle:
+        """Perform build."""
         roll_registry = self._roll_registry()
         bars, dataset_stats, exchange_timezones = self._stream_configured_bars(
             self._catalog,
@@ -58,6 +60,7 @@ class BacktestInputBuilder:
         )
 
     def _roll_registry(self) -> FutureRollRegistry | None:
+        """Perform _roll_registry."""
         if not self._config.roll_policy.enabled:
             return None
         return FutureRollRegistry(retain_history=len(self._config.roots) > 1)
@@ -68,6 +71,7 @@ class BacktestInputBuilder:
         *,
         roll_registry: FutureRollRegistry | None,
     ) -> tuple[Iterator[Bar], dict[str, dict[str, int]], dict[InstrumentId, str]]:
+        """Perform _stream_configured_bars."""
         requested = set(self._config.symbols)
         stats: dict[str, dict[str, int]] = {}
         exchange_timezones: dict[InstrumentId, str] = {}
@@ -140,6 +144,7 @@ class BacktestInputBuilder:
         exchange_timezones: dict[InstrumentId, str],
         exchange_timezone: str | None,
     ) -> Iterator[Bar]:
+        """Perform _iter_root_bars."""
         recorded_roll_selections = 0
         try:
             for bar in stream:
@@ -170,6 +175,7 @@ class BacktestInputBuilder:
     def _merge_ordered_bar_streams(
         streams: list[tuple[int, Iterator[Bar]]],
     ) -> Iterator[Bar]:
+        """Perform _merge_ordered_bar_streams."""
         heap: list[tuple[object, int, int, Bar, Iterator[Bar]]] = []
         sequence = 0
         for root_index, stream in streams:
@@ -196,11 +202,13 @@ class BacktestInputBuilder:
         exchange_timezones: dict[InstrumentId, str],
         exchange_timezone: str | None,
     ) -> None:
+        """Perform _record_exchange_timezone."""
         if exchange_timezone is not None:
             exchange_timezones.setdefault(bar.instrument_id, exchange_timezone)
 
     @staticmethod
     def _exchange_timezone_for(dataset: HistoricalDataset) -> str | None:
+        """Perform _exchange_timezone_for."""
         if dataset.exchange_timezone is not None:
             return dataset.exchange_timezone
         if dataset.chain is not None:
@@ -213,6 +221,7 @@ class BacktestInputBuilder:
         *,
         roll_registry: FutureRollRegistry | None,
     ) -> InstrumentRegistry:
+        """Perform _instrument_registry_for."""
         registry = InstrumentRegistry()
         requested = set(self._config.symbols)
         for root in self._config.roots:
@@ -271,6 +280,7 @@ class BacktestInputBuilder:
         calendar_id: str,
         asset_class: AssetClass = AssetClass.EQUITY,
     ) -> Instrument:
+        """Perform _instrument_for."""
         return Instrument(
             instrument_id=instrument_id,
             asset_class=asset_class,
@@ -289,6 +299,7 @@ class BacktestInputBuilder:
         self,
         catalog: HistoricalCatalog,
     ) -> tuple[DatasetMetadata, ...]:
+        """Perform _dataset_metadata."""
         return tuple(
             DatasetMetadata(
                 dataset_id=(
@@ -309,6 +320,7 @@ class BacktestInputBuilder:
 
     @staticmethod
     def _dataset_instrument_id(root: str, dataset: HistoricalDataset) -> InstrumentId:
+        """Perform _dataset_instrument_id."""
         if dataset.chain is None:
             return InstrumentId(f"DATASET.{root}")
         return InstrumentId(f"FUTURE.{dataset.chain.exchange}.{root}.DATASET")
@@ -317,6 +329,7 @@ class BacktestInputBuilder:
         self,
         catalog: HistoricalCatalog,
     ) -> dict[InstrumentId, Decimal]:
+        """Perform _contract_multipliers_for."""
         multipliers: dict[InstrumentId, Decimal] = {}
         for root in self._config.roots:
             chain = catalog.datasets[root].chain

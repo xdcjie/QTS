@@ -12,6 +12,7 @@ class FactorFactory:
     """Factory for user-created factors."""
 
     def momentum(self, *, window: int) -> MomentumFactor:
+        """Perform momentum."""
         return MomentumFactor(window=window)
 
 

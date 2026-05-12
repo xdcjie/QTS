@@ -25,6 +25,7 @@ class HistoricalMarketDataService:
     _subscriptions: dict[str, FeedSubscription] = field(default_factory=dict, init=False)
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         if not self.source_id.strip():
             raise ValueError("source_id must not be empty")
         if not self.source_timeframe.strip():
@@ -32,6 +33,7 @@ class HistoricalMarketDataService:
 
     @property
     def capabilities(self) -> FeedCapabilities:
+        """Perform capabilities."""
         return FeedCapabilities(
             source_id=self.source_id,
             supports_ticks=False,
@@ -41,11 +43,13 @@ class HistoricalMarketDataService:
         )
 
     def subscribe(self, subscription: FeedSubscription) -> LiveFeedSubscribed:
+        """Perform subscribe."""
         self.capabilities.source_timeframe_for(subscription.timeframe)
         self._subscriptions[subscription.subscription_id] = subscription
         return LiveFeedSubscribed(subscription=subscription, source_id=self.source_id)
 
     def events(self, subscription_id: str) -> Iterator[LiveFeedEvent]:
+        """Perform events."""
         if not subscription_id.strip():
             raise ValueError("subscription_id must not be empty")
         try:

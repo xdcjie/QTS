@@ -15,10 +15,12 @@ class MaxNotionalRule:
     max_notional: Decimal
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         if self.max_notional <= Decimal("0"):
             raise ValueError("max_notional must be positive")
 
     def check(self, request: OrderRiskRequest) -> RiskDecision:
+        """Perform check."""
         if request.notional > self.max_notional:
             return RiskDecision.rejected(
                 "MAX_NOTIONAL_EXCEEDED",

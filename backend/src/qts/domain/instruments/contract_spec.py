@@ -25,6 +25,7 @@ class ContractSpec:
     calendar_id: str
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         self._require_positive(self.tick_size, "tick_size")
         self._require_positive(self.lot_size, "lot_size")
         self._require_positive(self.multiplier, "multiplier")
@@ -33,6 +34,7 @@ class ContractSpec:
 
     @staticmethod
     def _require_positive(value: Decimal, name: str) -> None:
+        """Perform _require_positive."""
         if value <= Decimal("0"):
             raise ValueError(f"{name} must be positive")
 

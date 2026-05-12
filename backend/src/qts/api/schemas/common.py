@@ -6,26 +6,36 @@ from pydantic import BaseModel
 
 
 class StrategyStatusSchema(BaseModel):
+    """Strategy status response schema."""
+
     strategy_id: str
     status: str
 
 
 class AccountSnapshotSchema(BaseModel):
+    """Account snapshot response schema."""
+
     account_id: str
     cash: dict[str, str]
 
 
 class OrderStatusSchema(BaseModel):
+    """Order status response schema."""
+
     order_id: str
     status: str
 
 
 class RiskRuleSchema(BaseModel):
+    """Risk rule response schema."""
+
     rule_id: str
     name: str
 
 
 class OperationalErrorSchema(BaseModel):
+    """Operational error response schema."""
+
     code: str
     message: str
     detail: str | None = None
@@ -38,6 +48,7 @@ class OperationalErrorSchema(BaseModel):
         message: str,
         exc: Exception,
     ) -> OperationalErrorSchema:
+        """Perform from_exception."""
         del exc
         return cls(code=code, message=message, detail=None)
 

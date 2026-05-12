@@ -21,6 +21,7 @@ class IbkrMarketDataConnection:
     source_id: str
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         if not self.host.strip():
             raise ValueError("host must not be empty")
         if self.port <= 0:
@@ -49,10 +50,12 @@ class IbkrMarketDataAdapter:
         connection: IbkrMarketDataConnection,
         symbol_mapping: BrokerSymbolMapping,
     ) -> None:
+        """Perform __init__."""
         self.connection = connection
         self._symbol_mapping = symbol_mapping
 
     def subscription_for(self, instrument_id: InstrumentId) -> IbkrMarketDataSubscription:
+        """Perform subscription_for."""
         return IbkrMarketDataSubscription(
             instrument_id=instrument_id,
             broker_symbol=self._symbol_mapping.to_broker_symbol(instrument_id),
@@ -67,6 +70,7 @@ class IbkrMarketDataAdapter:
         price: Decimal,
         size: Decimal = Decimal("0"),
     ) -> Tick:
+        """Perform normalize_tick."""
         return Tick(
             instrument_id=self._symbol_mapping.to_instrument_id(broker_symbol),
             time=time,
@@ -84,6 +88,7 @@ class IbkrMarketDataAdapter:
         bid_size: Decimal = Decimal("0"),
         ask_size: Decimal = Decimal("0"),
     ) -> Quote:
+        """Perform normalize_quote."""
         return Quote(
             instrument_id=self._symbol_mapping.to_instrument_id(broker_symbol),
             time=time,
@@ -112,6 +117,7 @@ class IbkrMarketDataAdapter:
         is_complete: bool = False,
         is_partial: bool = False,
     ) -> Bar:
+        """Perform normalize_bar."""
         return Bar(
             instrument_id=self._symbol_mapping.to_instrument_id(broker_symbol),
             start_time=start_time,

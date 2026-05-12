@@ -11,6 +11,7 @@ router = APIRouter()
 
 @router.get("/health")
 def health() -> dict[str, str]:
+    """Perform health."""
     status = HealthService().status()
     return {"status": status.status}
 

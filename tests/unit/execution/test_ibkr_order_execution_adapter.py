@@ -10,7 +10,8 @@ def test_ibkr_order_execution_adapter_maps_order_and_report_without_market_data_
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.order_manager import ExecutionReportStatus, OrderIntent, OrderSide
+    from qts.execution.broker import BrokerExecutionReportStatus
+    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
@@ -38,7 +39,7 @@ def test_ibkr_order_execution_adapter_maps_order_and_report_without_market_data_
         IbkrExecutionReport(
             report_id="rpt-001",
             broker_order_id="ibkr-001",
-            status=ExecutionReportStatus.FILLED,
+            status=BrokerExecutionReportStatus.FILLED,
             filled_quantity=Decimal("10"),
             fill_price=Decimal("101.25"),
             fill_id="fill-001",

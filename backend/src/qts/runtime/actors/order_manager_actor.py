@@ -35,6 +35,7 @@ class OrderManagerActor(Actor):
         account_ref: ActorRef,
         multiplier_by_instrument: Mapping[InstrumentId, Decimal] | None = None,
     ) -> None:
+        """Perform __init__."""
         self._manager = OrderManager()
         self._execution_ref = execution_ref
         self._account_ref = account_ref
@@ -42,6 +43,7 @@ class OrderManagerActor(Actor):
         self._fills: list[OrderFill] = []
 
     def handle(self, message: object) -> None:
+        """Perform handle."""
         if isinstance(message, SubmitOrder):
             self._handle_submit(message)
             return
@@ -51,25 +53,31 @@ class OrderManagerActor(Actor):
         raise TypeError(f"unsupported order manager message: {type(message).__name__}")
 
     def get_order(self, order_id: OrderId) -> Order:
+        """Perform get_order."""
         return self._manager.get_order(order_id)
 
     @property
     def fills(self) -> tuple[OrderFill, ...]:
+        """Perform fills."""
         return tuple(self._fills)
 
     @property
     def fill_count(self) -> int:
+        """Perform fill_count."""
         return len(self._fills)
 
     def fills_since(self, index: int) -> tuple[OrderFill, ...]:
+        """Perform fills_since."""
         return tuple(self._fills[index:])
 
     def compact_for_streaming(self, order_ids: Iterable[OrderId]) -> None:
+        """Perform compact_for_streaming."""
         for order_id in order_ids:
             self._manager.discard_terminal_order(order_id)
         self._fills.clear()
 
     def _handle_submit(self, message: SubmitOrder) -> None:
+        """Perform _handle_submit."""
         order = self._manager.create_order(message.intent, risk_decision=message.risk_decision)
         self._manager.mark_sent(order.order_id, broker_order_id=message.broker_order_id)
         self._execution_ref.tell(
@@ -81,6 +89,7 @@ class OrderManagerActor(Actor):
         )
 
     def _handle_report(self, message: ExecutionReport) -> None:
+        """Perform _handle_report."""
         result = self._manager.process_report(message)
         for fill in result.fills:
             self._fills.append(fill)

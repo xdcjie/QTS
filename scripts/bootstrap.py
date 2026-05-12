@@ -9,6 +9,7 @@ from qts.load.bootstrap import bootstrap_local
 
 
 def main() -> None:
+    """Perform main."""
     bootstrap_local(Path(".qts-local"))
 
 

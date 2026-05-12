@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
+from typing import Protocol, runtime_checkable
 
 from qts.core.ids import InstrumentId
 from qts.data.historical.chains import HistoricalChain
@@ -179,10 +180,20 @@ def _as_symbol_resolver(
 
 
 def _resolver_root(symbol_resolver: SourceSymbolResolver) -> str:
-    root = getattr(symbol_resolver, "root", "")
+    if not isinstance(symbol_resolver, _RootSymbolResolver):
+        raise ValueError("rolling historical streams require a root-aware symbol resolver")
+    root = symbol_resolver.root
     if not isinstance(root, str) or not root.strip():
         raise ValueError("rolling historical streams require a root-aware symbol resolver")
     return root
+
+
+@runtime_checkable
+class _RootSymbolResolver(Protocol):
+    """Protocol for symbol resolvers that expose a root identifier."""
+
+    @property
+    def root(self) -> str: ...
 
 
 def _parse_ohlcv_values(

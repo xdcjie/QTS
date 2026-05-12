@@ -12,6 +12,7 @@ class BacktestRequestDTO:
     strategy_name: str
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         if not self.strategy_name.strip():
             raise ValueError("strategy_name must not be empty")
 

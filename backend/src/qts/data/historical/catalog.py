@@ -32,6 +32,7 @@ class HistoricalDataset:
 
     @staticmethod
     def normalize_root(root: str) -> str:
+        """Perform normalize_root."""
         normalized = root.strip().upper()
         if not normalized:
             raise ValueError("roots must not contain empty values")
@@ -188,6 +189,7 @@ class HistoricalCatalog:
         *,
         historical_data_config: HistoricalDataConfig | None,
     ) -> dict[str, StaticSymbolResolver]:
+        """Perform _symbol_resolvers_for_load_config."""
         if not config.instrument_ids:
             return {}
         return {
@@ -207,6 +209,7 @@ class HistoricalCatalog:
         *,
         historical_data_config: HistoricalDataConfig | None,
     ) -> bool:
+        """Perform _chain_path_exists."""
         if historical_data_config is not None:
             if config.catalog_name is None:
                 raise RuntimeError("historical catalog name is not configured")
@@ -218,6 +221,7 @@ class HistoricalCatalog:
 
     @staticmethod
     def _require_file(path: Path, root_path: Path) -> None:
+        """Perform _require_file."""
         if not path.exists():
             try:
                 display = Path("historical") / path.relative_to(root_path)
@@ -238,6 +242,7 @@ class HistoricalCatalogLoadConfig:
     catalog_name: str | None = None
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         object.__setattr__(
             self,
             "roots",
@@ -286,6 +291,7 @@ class HistoricalCatalogLoadConfig:
         instrument_ids: Mapping[str, InstrumentId] | None = None,
         requested_timeframe: str | None = None,
     ) -> HistoricalCatalogLoadConfig:
+        """Perform from_legacy_root."""
         return cls(
             roots=roots,
             instrument_ids=instrument_ids or {},
@@ -303,6 +309,7 @@ class HistoricalCatalogLoadConfig:
         instrument_ids: Mapping[str, InstrumentId] | None = None,
         requested_timeframe: str | None = None,
     ) -> HistoricalCatalogLoadConfig:
+        """Perform from_historical_data_config."""
         return cls(
             roots=roots,
             instrument_ids=instrument_ids or {},
@@ -313,6 +320,7 @@ class HistoricalCatalogLoadConfig:
 
     @staticmethod
     def _normalize_symbol(symbol: str) -> str:
+        """Perform _normalize_symbol."""
         normalized = symbol.strip().upper()
         if not normalized:
             raise ValueError("instrument_ids must not contain empty symbols")

@@ -9,6 +9,7 @@ router = APIRouter()
 
 @router.websocket("/ws/events")
 async def event_stream(websocket: WebSocket) -> None:
+    """Perform event_stream."""
     await websocket.accept()
     await websocket.send_json(
         {

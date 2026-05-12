@@ -10,7 +10,7 @@ lint:
 	uv run ruff check .
 
 guardrails:
-	uv run python scripts/verify_guardrails.py
+	PYTHONPATH=backend/src uv run python scripts/verify_guardrails.py
 
 typecheck:
 	uv run mypy backend tests

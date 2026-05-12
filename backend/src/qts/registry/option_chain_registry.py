@@ -13,9 +13,11 @@ class OptionChainRegistry:
     """Lookup option instruments by underlying and simple filters."""
 
     def __init__(self) -> None:
+        """Perform __init__."""
         self._chains: dict[InstrumentId, list[Instrument]] = {}
 
     def register(self, option: Instrument) -> None:
+        """Perform register."""
         if option.asset_class is not AssetClass.OPTION or not isinstance(
             option.derivative, OptionSpec
         ):
@@ -23,6 +25,7 @@ class OptionChainRegistry:
         self._chains.setdefault(option.derivative.underlying, []).append(option)
 
     def options_for(self, underlying: InstrumentId) -> list[Instrument]:
+        """Perform options_for."""
         try:
             return list(self._chains[underlying])
         except KeyError as exc:
@@ -36,6 +39,7 @@ class OptionChainRegistry:
         strike: Decimal | None = None,
         right: OptionRight | None = None,
     ) -> list[Instrument]:
+        """Perform find."""
         matches = self.options_for(underlying)
         if expiry is not None:
             matches = [

@@ -28,15 +28,19 @@ class PortfolioView:
     positions: Mapping[InstrumentId, PortfolioPosition] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         object.__setattr__(self, "positions", MappingProxyType(dict(self.positions)))
 
     def position(self, asset: AssetRef) -> PortfolioPosition:
+        """Perform position."""
         return self.positions.get(asset.instrument_id, PortfolioPosition())
 
     def exposure(self, asset: AssetRef) -> Decimal:
+        """Perform exposure."""
         return self.position(asset).market_value
 
     def weight(self, asset: AssetRef) -> Decimal:
+        """Perform weight."""
         if self.equity == Decimal("0"):
             return Decimal("0")
         return self.exposure(asset) / self.equity

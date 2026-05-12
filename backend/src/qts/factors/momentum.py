@@ -30,6 +30,7 @@ class FactorResult:
     ranked: tuple[FactorScore, ...]
 
     def score(self, asset: FactorAsset) -> Decimal:
+        """Perform score."""
         for item in self.ranked:
             if item.asset == asset:
                 return item.value
@@ -43,10 +44,12 @@ class MomentumFactor:
     window: int
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         if self.window <= 1:
             raise ValueError("window must be greater than 1")
 
     def compute(self, prices: dict[FactorAsset, tuple[Decimal, ...]]) -> FactorResult:
+        """Perform compute."""
         scores = tuple(
             FactorScore(asset=asset, value=self._momentum(values, self.window))
             for asset, values in prices.items()
@@ -56,6 +59,7 @@ class MomentumFactor:
 
     @staticmethod
     def _momentum(values: tuple[Decimal, ...], window: int) -> Decimal:
+        """Perform _momentum."""
         if len(values) < window:
             raise ValueError("not enough prices for momentum window")
         window_values = values[-window:]

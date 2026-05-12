@@ -21,7 +21,9 @@ class ExecutionAdapter(Protocol):
         *,
         broker_order_id: str,
         market_price: Decimal,
-    ) -> ExecutionReport: ...
+    ) -> ExecutionReport:
+        """Execute a market order."""
+        ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +48,7 @@ class ExecutionActor(Actor):
         self._execution_adapter = execution_adapter or SimulatedBroker()
 
     def handle(self, message: object) -> None:
+        """Perform handle."""
         if isinstance(message, OrderExecutionRequest):
             report = self._execution_adapter.execute_market_order(
                 message.intent,

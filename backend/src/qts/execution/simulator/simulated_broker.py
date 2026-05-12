@@ -12,6 +12,7 @@ class SimulatedBroker:
     """Broker simulator with no external dependency."""
 
     def __init__(self, fill_model: ImmediateFillModel | None = None) -> None:
+        """Perform __init__."""
         self._fill_model = fill_model or ImmediateFillModel()
 
     def execute_market_order(
@@ -21,6 +22,7 @@ class SimulatedBroker:
         broker_order_id: str,
         market_price: Decimal,
     ) -> ExecutionReport:
+        """Perform execute_market_order."""
         return self._fill_model.fill(
             intent,
             broker_order_id=broker_order_id,

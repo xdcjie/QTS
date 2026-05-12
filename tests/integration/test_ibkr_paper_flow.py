@@ -172,7 +172,7 @@ class _FakeIbkrOrderExecutionTransport:
             IbkrExecutionReport,
             IbkrOrderExecutionAdapter,
         )
-        from qts.execution.order_manager import ExecutionReportStatus
+        from qts.execution.broker import BrokerExecutionReportStatus
 
         assert isinstance(self.adapter, IbkrOrderExecutionAdapter)
         request = self.adapter.to_order_request(intent)
@@ -181,7 +181,7 @@ class _FakeIbkrOrderExecutionTransport:
             IbkrExecutionReport(
                 report_id=f"rpt-{broker_order_id}",
                 broker_order_id=broker_order_id,
-                status=ExecutionReportStatus.FILLED,
+                status=BrokerExecutionReportStatus.FILLED,
                 filled_quantity=intent.quantity,
                 fill_price=market_price,
                 fill_id=f"fill-{broker_order_id}",

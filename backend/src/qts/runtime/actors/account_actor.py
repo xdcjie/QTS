@@ -36,23 +36,27 @@ class AccountActor(Actor):
     """Owns account cash and position state."""
 
     def __init__(self, initial_cash: Mapping[str, Decimal] | None = None) -> None:
+        """Perform __init__."""
         self._cash = CashBook(initial_cash)
         self._positions = PositionBook()
         self._fill_ids = FillIdempotencyStore()
 
     def handle(self, message: object) -> None:
+        """Perform handle."""
         if isinstance(message, ApplyFill):
             self._apply_fill(message)
             return
         raise TypeError(f"unsupported account message: {type(message).__name__}")
 
     def snapshot(self) -> AccountSnapshot:
+        """Perform snapshot."""
         return AccountSnapshot(
             cash=MappingProxyType({"USD": self._cash.balance("USD")}),
             positions=self._positions.snapshot(),
         )
 
     def _apply_fill(self, message: ApplyFill) -> None:
+        """Perform _apply_fill."""
         fill = message.fill
         if not self._fill_ids.mark_seen(fill.fill_id):
             return

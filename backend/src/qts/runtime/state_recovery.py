@@ -15,6 +15,7 @@ class StateSnapshot:
     payload: Any
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         if not self.actor_id.strip():
             raise ValueError("actor_id must not be empty")
         if self.state_version < 0:
@@ -25,12 +26,15 @@ class InMemorySnapshotStore:
     """In-memory snapshot store for deterministic tests and local recovery."""
 
     def __init__(self) -> None:
+        """Perform __init__."""
         self._snapshots: dict[str, StateSnapshot] = {}
 
     def save(self, snapshot: StateSnapshot) -> None:
+        """Perform save."""
         self._snapshots[snapshot.actor_id] = snapshot
 
     def load(self, actor_id: str) -> StateSnapshot | None:
+        """Perform load."""
         if not actor_id.strip():
             raise ValueError("actor_id must not be empty")
         return self._snapshots.get(actor_id)

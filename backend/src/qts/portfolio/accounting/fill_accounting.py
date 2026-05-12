@@ -31,6 +31,7 @@ class Fill:
     multiplier: Decimal
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         if self.quantity <= Decimal("0"):
             raise ValueError("quantity must be positive")
         if self.price < Decimal("0"):
@@ -46,6 +47,7 @@ class FillAccounting:
 
     @staticmethod
     def apply(fill: Fill, *, cash_book: CashBook, position_book: PositionBook) -> None:
+        """Perform apply."""
         signed_quantity = fill.quantity if fill.side is TradeSide.BUY else -fill.quantity
         cash_delta = -signed_quantity * fill.price * fill.multiplier
         position_book.apply_delta(fill.instrument_id, signed_quantity)

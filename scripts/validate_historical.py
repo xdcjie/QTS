@@ -13,6 +13,7 @@ from qts.data.historical.csv_dataset import validate_historical_sample
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Perform main."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path("historical"))
     parser.add_argument("--roots", nargs="+", required=True)

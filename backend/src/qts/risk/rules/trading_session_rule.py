@@ -26,6 +26,7 @@ class TradingSessionRule:
     session_date: date
 
     def check(self, request: OrderRiskRequest) -> RiskDecision:
+        """Perform check."""
         if request.order_time is None:
             return RiskDecision.rejected(
                 "MISSING_ORDER_TIME",

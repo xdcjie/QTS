@@ -441,7 +441,8 @@
 
       .mode-grid,
       .message-grid,
-      .file-grid {
+      .file-grid,
+      .stage-contract-grid {
         display: grid;
         gap: 12px;
       }
@@ -456,6 +457,101 @@
 
       .file-grid {
         grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .stage-timeline {
+        display: grid;
+        gap: 14px;
+      }
+
+      .stage-card {
+        display: grid;
+        grid-template-columns: 76px minmax(0, 1fr);
+        gap: 14px;
+        align-items: start;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .stage-index {
+        display: grid;
+        gap: 5px;
+        padding-top: 2px;
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 800;
+      }
+
+      .stage-index strong {
+        color: var(--actor);
+        font-size: 1.55rem;
+        line-height: 1;
+      }
+
+      .stage-body {
+        min-width: 0;
+      }
+
+      .stage-title {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: start;
+        margin-bottom: 8px;
+      }
+
+      .stage-title h3 {
+        font-size: 1.04rem;
+      }
+
+      .stage-summary {
+        margin-bottom: 12px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .stage-contract-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .contract-cell {
+        min-height: 82px;
+        padding: 10px;
+        border: 1px solid #e2e5de;
+        border-radius: 8px;
+        background: #fbfcfa;
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+
+      .contract-cell strong {
+        display: block;
+        margin-bottom: 4px;
+        color: #2f3c45;
+        font-size: 0.76rem;
+        text-transform: uppercase;
+      }
+
+      .stage-gate {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .stage-gate p {
+        padding: 10px;
+        border-radius: 8px;
+        background: #f4f6f1;
+        color: #43505a;
+        font-size: 0.84rem;
+      }
+
+      .stage-gate strong {
+        color: #25313a;
       }
 
       .panel,
@@ -566,7 +662,13 @@
         .summary-grid,
         .mode-grid,
         .message-grid,
-        .file-grid {
+        .file-grid,
+        .stage-contract-grid,
+        .stage-gate {
+          grid-template-columns: 1fr;
+        }
+
+        .stage-card {
           grid-template-columns: 1fr;
         }
 
@@ -607,6 +709,7 @@
         <a href="#summary">边界结论</a>
         <a href="#actor-map">Actor 主图</a>
         <a href="#mode-entry">Backtest / Live 入口</a>
+        <a href="#runtime-flow-detail">运行链路阶段</a>
         <a href="#messages">消息契约</a>
         <a href="#files">代码索引</a>
       </div>
@@ -871,6 +974,229 @@
               <li>发布给订阅者的 payload 是策略侧统一数据产品。</li>
             </ul>
           </div>
+        </div>
+      </section>
+
+      <section id="runtime-flow-detail">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Runtime Flow Detail</p>
+            <h2>运行链路阶段详解</h2>
+            <p class="section-note">
+              下面按运行顺序展开。每个阶段都说明输入、Owner / 边界、处理动作、输出、必须守住的规则和验证依据，
+              让读者可以从 Backtest 或 Live 一直追踪到订单、成交、账户和输出。
+            </p>
+          </div>
+        </div>
+
+        <div class="stage-timeline">
+          <article class="stage-card">
+            <div class="stage-index"><strong>01</strong><span>SOURCE</span></div>
+            <div class="stage-body">
+              <div class="stage-title">
+                <h3>配置与输入装配</h3>
+                <span class="badge source">SOURCE</span>
+              </div>
+              <p class="stage-summary">
+                Backtest 先把 run config、historical config、CSV / chain、roll selection 装配成 replay-ready
+                inputs；Live / paper 先把策略侧 logical subscription 映射到 provider 支持的 physical subscription。
+              </p>
+              <div class="stage-contract-grid">
+                <div class="contract-cell"><strong>输入</strong><code>BacktestRunConfig</code>、historical catalog、live subscription request。</div>
+                <div class="contract-cell"><strong>Owner / 边界</strong>配置 loader、<code>HistoricalCatalog</code>、<code>BacktestInputBuilder</code>、feed adapter。</div>
+                <div class="contract-cell"><strong>处理动作</strong>解析路径、归一化 source、构造 registry / roll registry、规划订阅。</div>
+                <div class="contract-cell"><strong>输出</strong>Backtest replay stream 或 live source subscription，准备生成内部 market data payload。</div>
+                <div class="contract-cell"><strong>必须守住</strong>broker / data-source symbol 只能停留在 adapter 边界；core 使用 <code>InstrumentId</code>。</div>
+                <div class="contract-cell"><strong>验证依据</strong><code>docs/architecture/backtest_live_parity.md</code>；historical config / input builder unit tests。</div>
+              </div>
+              <div class="stage-gate">
+                <p><strong>Backtest 差异：</strong>历史数据、roll selections、dataset metadata 在进入 engine 前完成装配。</p>
+                <p><strong>Live 差异：</strong>外部 provider capability 只影响 physical subscription，不改变策略请求的 bar 语义。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="stage-card">
+            <div class="stage-index"><strong>02</strong><span>INGEST</span></div>
+            <div class="stage-body">
+              <div class="stage-title">
+                <h3>行情归一化进入 MarketDataActor</h3>
+                <span class="badge">ACTOR</span>
+              </div>
+              <p class="stage-summary">
+                Historical replay、paper feed、live adapter 都把外部 payload 转换为内部 <code>Bar</code>、
+                <code>Quote</code>、<code>Tick</code> 或封装后的 <code>MarketDataEvent</code>，再投递给
+                <code>MarketDataActor</code>。
+              </p>
+              <div class="stage-contract-grid">
+                <div class="contract-cell"><strong>输入</strong>CSV bar、IBKR tick/quote/bar、fake feed event、replay clock event。</div>
+                <div class="contract-cell"><strong>Owner / 边界</strong>feed adapter 负责外部格式归一化；<code>MarketDataActor</code> 是 runtime 入口。</div>
+                <div class="contract-cell"><strong>处理动作</strong>建立 actor-facing payload，按 source / instrument / timeframe 投递。</div>
+                <div class="contract-cell"><strong>输出</strong><code>MarketDataActor</code> mailbox 中的 market data message。</div>
+                <div class="contract-cell"><strong>必须守住</strong>市场数据不经过 <code>ExecutionActor</code>；订单执行不经过 market data adapter。</div>
+                <div class="contract-cell"><strong>验证依据</strong><code>docs/architecture/runtime_flow.md</code>；IBKR/fake feed integration tests。</div>
+              </div>
+              <div class="stage-gate">
+                <p><strong>汇合点：</strong>进入 <code>MarketDataActor</code> 后，Backtest / paper / live 开始共享策略侧数据路径。</p>
+                <p><strong>边界：</strong>adapter 可处理外部协议，但不能拥有 core runtime 状态。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="stage-card">
+            <div class="stage-index"><strong>03</strong><span>BAR GATE</span></div>
+            <div class="stage-body">
+              <div class="stage-title">
+                <h3>聚合、completed bar gating 与 fan-out</h3>
+                <span class="badge service">BAR</span>
+              </div>
+              <p class="stage-summary">
+                <code>MarketDataActor</code> 根据 logical subscription 和 source timeframe 决定是否聚合，
+                并只把 finalized / completed bars 发送给下游订阅者。
+              </p>
+              <div class="stage-contract-grid">
+                <div class="contract-cell"><strong>输入</strong>source bar / tick / quote 和策略声明的 logical timeframe。</div>
+                <div class="contract-cell"><strong>Owner / 边界</strong><code>MarketDataActor</code> 拥有 per stream <code>BarAggregator</code> state。</div>
+                <div class="contract-cell"><strong>处理动作</strong>按 <code>(instrument_id, timeframe, session_id)</code> 更新 aggregation state，完成 fan-out。</div>
+                <div class="contract-cell"><strong>输出</strong><code>AggregationResult.completed</code> 中的 bar、quote、tick。</div>
+                <div class="contract-cell"><strong>必须守住</strong><code>AggregationState</code> 不暴露给 <code>StrategyActor</code>、<code>DataView</code> 或策略代码。</div>
+                <div class="contract-cell"><strong>验证依据</strong><code>docs/testing/domain_invariants.md</code>；bar aggregation anchor tests。</div>
+              </div>
+              <div class="stage-gate">
+                <p><strong>时间规则：</strong>intraday bars 按交易所时间 clock-aligned；<code>1d</code> bars 按 session-aligned。</p>
+                <p><strong>可见性：</strong>下游只能看到 completed data，不能看到正在聚合的 partial bucket。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="stage-card">
+            <div class="stage-index"><strong>04</strong><span>STRATEGY</span></div>
+            <div class="stage-body">
+              <div class="stage-title">
+                <h3>StrategyActor、StrategyContext、DataView</h3>
+                <span class="badge">ACTOR</span>
+              </div>
+              <p class="stage-summary">
+                <code>StrategyActor</code> 接收 finalized market data，刷新 <code>StrategyContext</code>、
+                <code>DataView</code>、indicator / factor facade，然后调用用户策略。
+              </p>
+              <div class="stage-contract-grid">
+                <div class="contract-cell"><strong>输入</strong><code>StrategyBarEvent</code>、completed bar、只读 portfolio snapshot。</div>
+                <div class="contract-cell"><strong>Owner / 边界</strong><code>StrategyActor</code> 拥有策略实例；SDK 只暴露用户 API。</div>
+                <div class="contract-cell"><strong>处理动作</strong>构造 as-of 可见数据切片，调用 <code>strategy.on_bar</code>。</div>
+                <div class="contract-cell"><strong>输出</strong><code>TargetIntent</code> 或空结果，封装为策略输出事件。</div>
+                <div class="contract-cell"><strong>必须守住</strong>策略不能直接访问 Actor、Broker、RiskEngine、OrderManager 或 broker mapping。</div>
+                <div class="contract-cell"><strong>验证依据</strong><code>docs/strategy_sdk/strategy_api.md</code>；Strategy SDK and DataView unit tests。</div>
+              </div>
+              <div class="stage-gate">
+                <p><strong>Backtest 安全：</strong><code>DataView</code> 必须 time-sliced，不允许 future data 泄漏。</p>
+                <p><strong>Mode parity：</strong>策略 API 不因 Backtest / paper / live 改变。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="stage-card">
+            <div class="stage-index"><strong>05</strong><span>INTENT</span></div>
+            <div class="stage-body">
+              <div class="stage-title">
+                <h3>TargetIntent 聚合与账户快照</h3>
+                <span class="badge service">SIGNAL</span>
+              </div>
+              <p class="stage-summary">
+                策略输出的目标仓位意图先进入聚合边界，再结合只读账户/组合状态转换为可检查的 order request。
+              </p>
+              <div class="stage-contract-grid">
+                <div class="contract-cell"><strong>输入</strong><code>StrategyBarResult</code>、<code>TargetIntent</code>、<code>AccountSnapshot</code>。</div>
+                <div class="contract-cell"><strong>Owner / 边界</strong><code>SignalAggregatorActor</code> 负责策略 intent 到订单流前的聚合。</div>
+                <div class="contract-cell"><strong>处理动作</strong>合并同一策略/账户/资产的 intents，解析 instrument / roll / target delta。</div>
+                <div class="contract-cell"><strong>输出</strong><code>AggregatedSignalBatch</code> 或准备提交 risk check 的 order intent。</div>
+                <div class="contract-cell"><strong>必须守住</strong>intent 不是订单；账户状态只读，不能由策略或 signal 聚合直接修改。</div>
+                <div class="contract-cell"><strong>验证依据</strong><code>docs/architecture/backtest_live_parity.md</code>；target emitter / asset resolver tests。</div>
+              </div>
+              <div class="stage-gate">
+                <p><strong>Resolution：</strong>continuous futures 必须解析到具体可交易合约后才能形成订单。</p>
+                <p><strong>State：</strong>账户 cash / positions 仍由 <code>AccountActor</code> 唯一拥有。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="stage-card">
+            <div class="stage-index"><strong>06</strong><span>RISK</span></div>
+            <div class="stage-body">
+              <div class="stage-title">
+                <h3>RiskEngine 到 OrderManagerActor</h3>
+                <span class="badge order">ORDER</span>
+              </div>
+              <p class="stage-summary">
+                所有 order request 都必须先经过 <code>RiskEngine</code> 的显式 decision；只有 accepted request
+                才能提交给 <code>OrderManagerActor</code>。
+              </p>
+              <div class="stage-contract-grid">
+                <div class="contract-cell"><strong>输入</strong>order intent / order request、账户快照、market context、risk config。</div>
+                <div class="contract-cell"><strong>Owner / 边界</strong><code>RiskEngine</code> 做同步 decision；<code>OrderManagerActor</code> 拥有订单状态。</div>
+                <div class="contract-cell"><strong>处理动作</strong>执行 max qty / notional / session / kill-switch 等规则，创建或拒绝订单。</div>
+                <div class="contract-cell"><strong>输出</strong><code>RiskDecision</code>、<code>SubmitOrder</code>、订单状态机事件。</div>
+                <div class="contract-cell"><strong>必须守住</strong>risk checks 不能被 SDK、API、Backtest 或 Live 路径绕过。</div>
+                <div class="contract-cell"><strong>验证依据</strong><code>docs/architecture/review_checklist.md</code>；risk and order state tests。</div>
+              </div>
+              <div class="stage-gate">
+                <p><strong>拒绝路径：</strong>risk rejection 必须可审计，不能静默丢弃。</p>
+                <p><strong>订单状态：</strong>订单 lifecycle 只由 <code>OrderManagerActor</code> 推进。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="stage-card">
+            <div class="stage-index"><strong>07</strong><span>EXEC</span></div>
+            <div class="stage-body">
+              <div class="stage-title">
+                <h3>ExecutionActor、ExecutionReport、AccountActor</h3>
+                <span class="badge state">STATE</span>
+              </div>
+              <p class="stage-summary">
+                <code>OrderManagerActor</code> 只把执行请求发给 <code>ExecutionActor</code>；broker / simulator
+                返回的结果先规范化为 <code>ExecutionReport</code>，再回到订单状态机和账户 actor。
+              </p>
+              <div class="stage-contract-grid">
+                <div class="contract-cell"><strong>输入</strong><code>OrderExecutionRequest</code>、broker / simulator response、<code>ExecutionReport</code>。</div>
+                <div class="contract-cell"><strong>Owner / 边界</strong><code>ExecutionActor</code> 调 adapter；<code>AccountActor</code> 唯一修改 cash / positions。</div>
+                <div class="contract-cell"><strong>处理动作</strong>提交、取消、替换、规范化回报、应用 fill、更新订单和账户。</div>
+                <div class="contract-cell"><strong>输出</strong><code>ExecutionReport</code>、<code>ApplyFill</code>、<code>AccountSnapshot</code>。</div>
+                <div class="contract-cell"><strong>必须守住</strong>broker callbacks 不能直接改账户；fills 必须 idempotent。</div>
+                <div class="contract-cell"><strong>验证依据</strong><code>docs/runtime/live_recovery_source_of_truth.md</code>；execution / fill idempotency tests。</div>
+              </div>
+              <div class="stage-gate">
+                <p><strong>Adapter 差异：</strong>Backtest 使用 simulator；paper / live 使用 broker adapter，但内部 report contract 相同。</p>
+                <p><strong>账户状态：</strong>cash / positions 只能从 validated fill path 变化。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="stage-card">
+            <div class="stage-index"><strong>08</strong><span>OUTPUT</span></div>
+            <div class="stage-body">
+              <div class="stage-title">
+                <h3>Artifacts / API / WebSocket 输出</h3>
+                <span class="badge state">OUTPUT</span>
+              </div>
+              <p class="stage-summary">
+                Backtest 生成可复核 artifacts；API 和 WebSocket 面向前端或外部调用方发布状态、订单、风险、
+                账户和运行状态，不泄漏 actor internals。
+              </p>
+              <div class="stage-contract-grid">
+                <div class="contract-cell"><strong>输入</strong>订单事件、fills、账户快照、equity curve、runtime status。</div>
+                <div class="contract-cell"><strong>Owner / 边界</strong>artifact writer、application services、API schemas、WebSocket DTOs。</div>
+                <div class="contract-cell"><strong>处理动作</strong>写 orders / fills / ledger / summary，映射 DTO，发布状态流。</div>
+                <div class="contract-cell"><strong>输出</strong>Backtest report files、REST responses、WebSocket updates、observability events。</div>
+                <div class="contract-cell"><strong>必须守住</strong>Frontend / API 不实现交易逻辑，不直接操作 actor 内部状态。</div>
+                <div class="contract-cell"><strong>验证依据</strong><code>docs/architecture/module_boundaries.md</code>；API and report unit/integration tests。</div>
+              </div>
+              <div class="stage-gate">
+                <p><strong>可复核：</strong>Backtest artifacts 必须能追溯订单、成交、账户和 dataset metadata。</p>
+                <p><strong>外部接口：</strong>API schemas 是边界对象，不暴露 mailbox、actor ref 或内部订单状态机对象。</p>
+              </div>
+            </div>
+          </article>
         </div>
       </section>
 

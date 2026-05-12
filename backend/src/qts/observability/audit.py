@@ -17,6 +17,7 @@ class AuditEvent:
     correlation_id: str | None = None
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         if not self.event_type.strip():
             raise ValueError("event_type must not be empty")
         if not self.actor.strip():

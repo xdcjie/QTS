@@ -10,6 +10,8 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+from qts.core.hashing import stable_json_default, stable_json_hash
+
 
 @dataclass(frozen=True, slots=True)
 class EquityCurvePoint:
@@ -35,29 +37,15 @@ class TradeLedgerEntry:
 
 
 def _stable_hash(payload: Any) -> str:
-    encoded = json.dumps(
-        payload,
-        default=_json_default,
-        sort_keys=True,
-        separators=(",", ":"),
-    )
-    return f"sha256:{hashlib.sha256(encoded.encode()).hexdigest()}"
-
-
-def _json_default(value: object) -> object:
-    if isinstance(value, Decimal):
-        return str(value)
-    if isinstance(value, datetime):
-        return value.isoformat()
-    if hasattr(value, "value") and isinstance(value.value, str):
-        return value.value
-    raise TypeError(f"object of type {type(value).__name__} is not JSON serializable")
+    """Perform _stable_hash."""
+    return stable_json_hash(payload)
 
 
 class StreamingEquityMetrics:
     """Incremental metrics for a streamed equity curve."""
 
     def __init__(self) -> None:
+        """Perform __init__."""
         self._points = 0
         self._first: Decimal | None = None
         self._last: Decimal | None = None
@@ -65,6 +53,7 @@ class StreamingEquityMetrics:
         self._max_drawdown = Decimal("0")
 
     def update(self, equity: Decimal) -> None:
+        """Perform update."""
         if self._first is None:
             if equity == Decimal("0"):
                 raise ValueError("first equity value must not be zero")
@@ -81,6 +70,7 @@ class StreamingEquityMetrics:
         self._points += 1
 
     def to_payload(self) -> dict[str, Decimal | int]:
+        """Perform to_payload."""
         if self._first is None or self._last is None:
             raise ValueError("equity curve must not be empty")
         return {
@@ -101,17 +91,20 @@ class StreamingBacktestArtifacts:
 
 
 class _NdjsonArtifact:
+    """_NdjsonArtifact."""
     def __init__(self, path: Path) -> None:
+        """Perform __init__."""
         self.path = path
         self.rows = 0
         self._hasher = hashlib.sha256()
         self._handle = path.open("w", encoding="utf-8")
 
     def write(self, payload: dict[str, Any]) -> None:
+        """Perform write."""
         line = (
             json.dumps(
                 payload,
-                default=_json_default,
+                default=stable_json_default,
                 sort_keys=True,
                 separators=(",", ":"),
             )
@@ -122,10 +115,12 @@ class _NdjsonArtifact:
         self.rows += 1
 
     def close(self) -> None:
+        """Perform close."""
         self._handle.close()
 
     @property
     def content_hash(self) -> str:
+        """Perform content_hash."""
         return f"sha256:{self._hasher.hexdigest()}"
 
 
@@ -135,6 +130,7 @@ class StreamingBacktestArtifactWriter:
     _KINDS = ("orders", "fills", "trade_ledger", "equity_curve")
 
     def __init__(self, output_dir: Path) -> None:
+        """Perform __init__."""
         self._output_dir = output_dir
         self._output_dir.mkdir(parents=True, exist_ok=True)
         self._artifacts = {
@@ -144,12 +140,15 @@ class StreamingBacktestArtifactWriter:
         self._equity_metrics = StreamingEquityMetrics()
 
     def write_order(self, payload: dict[str, Any]) -> None:
+        """Perform write_order."""
         self._artifacts["orders"].write(payload)
 
     def write_fill(self, payload: dict[str, Any]) -> None:
+        """Perform write_fill."""
         self._artifacts["fills"].write(payload)
 
     def write_trade_ledger(self, row: TradeLedgerEntry) -> None:
+        """Perform write_trade_ledger."""
         self._artifacts["trade_ledger"].write(
             {
                 "order_id": row.order_id,
@@ -165,6 +164,7 @@ class StreamingBacktestArtifactWriter:
         )
 
     def write_equity_point(self, point: EquityCurvePoint) -> None:
+        """Perform write_equity_point."""
         self._equity_metrics.update(point.equity)
         self._artifacts["equity_curve"].write({"time": point.time, "equity": point.equity})
 
@@ -180,6 +180,7 @@ class StreamingBacktestArtifactWriter:
         final_cash: Decimal,
         strategy_version: str,
     ) -> tuple[str, str, dict[str, Any], StreamingBacktestArtifacts]:
+        """Perform finalize."""
         for artifact in self._artifacts.values():
             artifact.close()
 
@@ -238,7 +239,7 @@ class StreamingBacktestArtifactWriter:
         manifest_path.write_text(
             json.dumps(
                 manifest_payload,
-                default=_json_default,
+                default=stable_json_default,
                 indent=2,
                 sort_keys=True,
             ),

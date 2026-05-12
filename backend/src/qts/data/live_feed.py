@@ -33,6 +33,7 @@ class FeedCapabilities:
             raise ValueError("supported_timeframes must not contain empty values")
 
     def supports_timeframe(self, timeframe: str) -> bool:
+        """Perform supports_timeframe."""
         if not timeframe.strip():
             raise ValueError("timeframe must not be empty")
         return not self.supported_timeframes or timeframe in self.supported_timeframes
@@ -86,18 +87,24 @@ class FeedSubscription:
 
 @dataclass(frozen=True, slots=True)
 class LiveFeedSubscribed:
+    """Successful live feed subscription acknowledgement."""
+
     subscription: FeedSubscription
     source_id: str
 
 
 @dataclass(frozen=True, slots=True)
 class LiveFeedEvent:
+    """Live feed payload emitted by a subscription."""
+
     payload: LiveFeedPayload
     source_id: str
 
 
 @dataclass(frozen=True, slots=True)
 class LiveFeedFailure:
+    """Live feed failure notification."""
+
     subscription_id: str
     source_id: str
     reason: str
@@ -127,6 +134,7 @@ class ReconnectPolicy:
             raise ValueError("max_attempts must be positive")
 
     def delay_for_attempt(self, attempt: int) -> timedelta | None:
+        """Perform delay_for_attempt."""
         if attempt <= 0:
             raise ValueError("attempt must be positive")
         if attempt > self.max_attempts:
@@ -136,10 +144,16 @@ class ReconnectPolicy:
 
 
 class LiveFeedAdapter(Protocol):
-    @property
-    def capabilities(self) -> FeedCapabilities: ...
+    """Live market data feed adapter boundary."""
 
-    def subscribe(self, subscription: FeedSubscription) -> LiveFeedSubscribed: ...
+    @property
+    def capabilities(self) -> FeedCapabilities:
+        """Return feed capabilities."""
+        ...
+
+    def subscribe(self, subscription: FeedSubscription) -> LiveFeedSubscribed:
+        """Subscribe to a live feed stream."""
+        ...
 
 
 class FakeLiveFeedAdapter:
@@ -161,20 +175,25 @@ class FakeLiveFeedAdapter:
 
     @property
     def capabilities(self) -> FeedCapabilities:
+        """Perform capabilities."""
         return self._capabilities or FeedCapabilities(source_id=self._source_id)
 
     @property
     def subscription_count(self) -> int:
+        """Perform subscription_count."""
         return len(self._subscriptions)
 
     def subscribe(self, subscription: FeedSubscription) -> LiveFeedSubscribed:
+        """Perform subscribe."""
         self._subscriptions[subscription.subscription_id] = subscription
         return LiveFeedSubscribed(subscription=subscription, source_id=self._source_id)
 
     def emit(self, payload: LiveFeedPayload) -> LiveFeedEvent:
+        """Perform emit."""
         return LiveFeedEvent(payload=payload, source_id=self._source_id)
 
     def fail(self, subscription_id: str, *, reason: str) -> LiveFeedFailure:
+        """Perform fail."""
         if subscription_id not in self._subscriptions:
             raise KeyError(subscription_id)
         return LiveFeedFailure(

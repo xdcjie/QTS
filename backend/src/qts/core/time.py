@@ -32,6 +32,7 @@ class TimeInterval:
     end: datetime
 
     def __post_init__(self) -> None:
+        """Perform __post_init__."""
         require_aware_datetime(self.start, name="start")
         require_aware_datetime(self.end, name="end")
         if self.start >= self.end:
@@ -39,9 +40,11 @@ class TimeInterval:
 
     @property
     def duration(self) -> timedelta:
+        """Perform duration."""
         return self.end - self.start
 
     def contains(self, value: datetime) -> bool:
+        """Perform contains."""
         require_aware_datetime(value, name="value")
         return self.start <= value < self.end
 
