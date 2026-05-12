@@ -9,7 +9,6 @@ from datetime import tzinfo
 from decimal import Decimal
 
 from qts.backtest.dependencies import BacktestActorLoopConfig, BacktestActorLoopDependencies
-from qts.backtest.historical_data_portal import HistoricalDataPortal
 from qts.backtest.intent_processor import BacktestProcessedIntent
 from qts.backtest.report import EquityCurvePoint
 from qts.backtest.sinks import BacktestStreamingSink
@@ -32,6 +31,7 @@ from qts.runtime.actors.strategy_actor import (
 )
 from qts.runtime.mailbox import Mailbox
 from qts.strategy_sdk import PortfolioView, Strategy, StrategyContext
+from qts.strategy_sdk.data_view import MarketDataPortal
 
 ProcessIntentHandler = Callable[..., BacktestProcessedIntent]
 PortfolioViewBuilder = Callable[..., PortfolioView]
@@ -241,7 +241,7 @@ class BacktestActorLoop:
                 history.append(bar)
                 if history_limit is not None and len(history) > history_limit:
                     del history[: len(history) - history_limit]
-                portal = HistoricalDataPortal(strategy_bars_by_instrument)
+                portal = MarketDataPortal(strategy_bars_by_instrument)
                 latest_prices[bar.instrument_id] = bar.close
                 self._update_rolling_prices(
                     bar,

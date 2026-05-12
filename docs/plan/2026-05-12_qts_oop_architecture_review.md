@@ -41,7 +41,7 @@ Recommended rule: keep domain models free of API, runtime, broker, and storage d
 
 ### Data and historical data
 
-`qts.data.historical.config` is large but mostly conceptually coherent: historical store defaults, store config, catalog config, dataset config, and resolution behavior belong together if they form a stable historical-data configuration model. However, source parsing should remain in `HistoricalDataConfigLoader`, and runtime iteration should remain outside config objects.
+`qts.data.historical.config` is large but mostly conceptually coherent: historical store defaults, store config, catalog config, dataset config, and resolution behavior belong together if they form a stable historical-data configuration model. However, source parsing should remain in `HistoricalMarketDataConfigLoader`, and runtime iteration should remain outside config objects.
 
 `qts.data.live_feed` needs concept splits because it combines protocol, DTOs, reconnect policy, and fake adapter.
 

@@ -278,7 +278,7 @@ PY
 **Steps:**
 
 - [ ] Add failing CLI smoke test that runs validation with `--sample-rows 1000`.
-- [ ] Implement `scripts/validate_historical.py --root historical --roots GC SI --sample-rows 1000`.
+- [ ] Implement `scripts/validate_historical.py --config configs/data/historical.local.yaml --catalog research_futures --roots GC SI --sample-rows 1000`.
 - [ ] Write JSON validation output to `evidence/historical/`.
 - [ ] Add `make validate-historical-sample`.
 - [ ] Run `uv run pytest tests/integration/test_gc_si_historical_loading.py`.

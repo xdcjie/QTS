@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 
-from qts.backtest.config import BacktestRunConfig, RiskConfig
+from qts.backtest.config import BacktestMarketDataReference, BacktestRunConfig, RiskConfig
 from qts.core.ids import InstrumentId
 from qts.data.historical.catalog import (
     HistoricalCatalog,
@@ -22,8 +22,33 @@ def test_backtest_input_builder_creates_streaming_inputs_from_configured_dataset
     historical_root = tmp_path / "historical"
     (historical_root / "data").mkdir(parents=True)
     _write_fixture_csv(historical_root / "data" / "equity.csv")
+    data_config_path = tmp_path / "historical.local.yaml"
+    data_config_path.write_text(
+        f"""
+historical_data:
+  stores:
+    local_csv:
+      type: local_csv
+      root_dir: {historical_root}
+      bars_dir: data
+      chains_dir: chains
+  catalogs:
+    research:
+      store: local_csv
+      datasets:
+        EQUITY:
+          asset_class: equity
+          bars:
+            - file: equity.csv
+              timeframe: 1m
+""",
+        encoding="utf-8",
+    )
     config = BacktestRunConfig(
-        dataset_root=historical_root,
+        market_data=BacktestMarketDataReference(
+            config_path=data_config_path,
+            catalog="research",
+        ),
         roots=("EQUITY",),
         symbols=("AAPL",),
         instrument_ids={"AAPL": InstrumentId("EQUITY.US.NASDAQ.AAPL")},
@@ -36,8 +61,9 @@ def test_backtest_input_builder_creates_streaming_inputs_from_configured_dataset
     )
 
     catalog = HistoricalCatalog.load(
-        HistoricalCatalogLoadConfig.from_legacy_root(
-            historical_root,
+        HistoricalCatalogLoadConfig.from_historical_market_data_config(
+            data_config_path,
+            catalog="research",
             roots=config.roots,
             instrument_ids=config.instrument_ids,
             requested_timeframe=config.timeframe,

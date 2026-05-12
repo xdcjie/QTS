@@ -16,7 +16,8 @@ def test_backtest_acceptance_gate_is_explicit() -> None:
 
     assert "backtest-acceptance:" in makefile
     assert (
-        "scripts/validate_historical.py --root historical --roots GC --sample-rows 1000" in makefile
+        "scripts/validate_historical.py --config configs/data/historical.local.yaml "
+        "--catalog research_futures --roots GC --sample-rows 1000" in makefile
     )
     assert "tests/unit/data/test_historical_data_config.py" in makefile
     assert "tests/unit/data/test_historical_csv_dataset.py" in makefile

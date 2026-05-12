@@ -11,7 +11,12 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, cast
 
-from qts.backtest.config import BacktestRunConfig, CostModelConfig, RiskConfig
+from qts.backtest.config import (
+    BacktestMarketDataReference,
+    BacktestRunConfig,
+    CostModelConfig,
+    RiskConfig,
+)
 from qts.core.ids import InstrumentId
 from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
 from qts.domain.market_data import Bar
@@ -22,7 +27,10 @@ from tests.support.backtest_streaming import capture_stream_result, run_engine_s
 
 def _config(*, warmup_bars: int = 0) -> BacktestRunConfig:
     return BacktestRunConfig(
-        dataset_root=Path("historical"),
+        market_data=BacktestMarketDataReference(
+            config_path=Path("configs/data/historical.local.yaml"),
+            catalog="research_futures",
+        ),
         roots=("GC",),
         symbols=("GCQ0",),
         start=datetime(2026, 1, 2, 14, 30, tzinfo=UTC),
@@ -111,7 +119,10 @@ def test_backtest_engine_from_config_does_not_require_chain_for_static_instrumen
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     config = BacktestRunConfig(
-        dataset_root=Path("historical"),
+        market_data=BacktestMarketDataReference(
+            config_path=Path("configs/data/historical.local.yaml"),
+            catalog="research_futures",
+        ),
         roots=("EQUITY",),
         symbols=("AAPL",),
         instrument_ids={"AAPL": InstrumentId("EQUITY.US.NASDAQ.AAPL")},
@@ -339,9 +350,14 @@ def _fixture_row(
 
 
 def _write_fixture_config(path: Path, historical_root: Path) -> None:
+    data_config_path = path.with_name("historical.local.yaml")
+    _write_project_historical_config(data_config_path, historical_root)
     path.write_text(
         f"""
-dataset_root: {historical_root}
+market_data:
+  source: local_historical
+  config: {data_config_path}
+  catalog: research_futures
 roots: [GC, SI]
 symbols: [GCQ0, SIN0]
 start: "2010-06-06T22:00:00Z"
@@ -377,10 +393,10 @@ historical_data:
       chains_dir: chains
       bars_file_template: "{{root_lower}}.csv"
       chain_file_template: "{{root}}.json"
-      source_timeframe: 1m
-      exchange_timezone: US/Eastern
-      timezone_policy: source_utc_exchange_sessions
-      normalization: raw
+      defaults:
+        exchange_timezone: US/Eastern
+        timezone_policy: source_utc_exchange_sessions
+        normalization: raw
   catalogs:
     research_futures:
       store: local_csv
@@ -388,9 +404,13 @@ historical_data:
         GC:
           asset_class: future
           exchange: CME
+          bars:
+            - timeframe: 1m
         SI:
           asset_class: future
           exchange: CME
+          bars:
+            - timeframe: 1m
 """,
         encoding="utf-8",
     )
@@ -433,10 +453,35 @@ def test_backtest_runner_supports_non_chain_static_symbol_dataset(
     historical_root = tmp_path / "historical"
     (historical_root / "data").mkdir(parents=True)
     _write_fixture_csv(historical_root / "data" / "equity.csv", "AAPL", ["150.0"])
+    data_config_path = tmp_path / "historical.local.yaml"
+    data_config_path.write_text(
+        f"""
+historical_data:
+  stores:
+    local_csv:
+      type: local_csv
+      root_dir: {historical_root}
+      bars_dir: data
+      chains_dir: chains
+  catalogs:
+    research:
+      store: local_csv
+      datasets:
+        EQUITY:
+          asset_class: equity
+          bars:
+            - file: equity.csv
+              timeframe: 1m
+""",
+        encoding="utf-8",
+    )
     config_path = tmp_path / "backtest.yaml"
     config_path.write_text(
         f"""
-dataset_root: {historical_root}
+market_data:
+  source: local_historical
+  config: {data_config_path}
+  catalog: research
 roots: [EQUITY]
 symbols: [AAPL]
 instrument_ids:
@@ -671,10 +716,15 @@ def test_backtest_runner_rolls_continuous_future_positions(
             _fixture_row("2010-06-06T22:01:00.000000000Z", "GCQ0", "111", volume="100"),
         ],
     )
+    data_config_path = tmp_path / "historical.local.yaml"
+    _write_project_historical_config(data_config_path, historical_root)
     config_path = tmp_path / "backtest.yaml"
     config_path.write_text(
         f"""
-dataset_root: {historical_root}
+market_data:
+  source: local_historical
+  config: {data_config_path}
+  catalog: research_futures
 roots: [GC]
 symbols: [GC]
 start: "2010-06-06T22:00:00Z"

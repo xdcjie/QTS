@@ -1307,12 +1307,12 @@ Goal: run a simple user strategy on historical bars.
 
 ---
 
-## P10-T02 — Implement Historical Data Portal
+## P10-T02 — Implement Market Data Portal
 
 ### Scope
 
-- `backend/src/qts/backtest/historical_data_portal.py`
-- `tests/unit/backtest/test_historical_data_portal.py`
+- `backend/src/qts/strategy_sdk/data_view.py`
+- `tests/unit/strategy_sdk/test_data_view.py`
 
 ### Acceptance Criteria
 

@@ -8,14 +8,15 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
-from qts.data.historical.catalog import HistoricalCatalog
+from qts.data.historical.catalog import HistoricalCatalog, HistoricalCatalogLoadConfig
 from qts.data.historical.csv_dataset import validate_historical_sample
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Perform main."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--root", type=Path, default=Path("historical"))
+    parser.add_argument("--config", type=Path, default=Path("configs/data/historical.local.yaml"))
+    parser.add_argument("--catalog", default="research_futures")
     parser.add_argument("--roots", nargs="+", required=True)
     parser.add_argument("--sample-rows", type=int, default=1000)
     parser.add_argument("--full", action="store_true")
@@ -23,9 +24,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     sample_rows = None if args.full else args.sample_rows
-    catalog = HistoricalCatalog.from_legacy_root(args.root, roots=tuple(args.roots))
+    catalog = HistoricalCatalog.load(
+        HistoricalCatalogLoadConfig.from_historical_market_data_config(
+            args.config,
+            catalog=args.catalog,
+            roots=tuple(args.roots),
+        )
+    )
     payload: dict[str, object] = {
-        "root": str(args.root),
+        "config": str(args.config),
+        "catalog": args.catalog,
         "roots": list(catalog.roots),
         "sample_rows": sample_rows,
         "full": bool(args.full),

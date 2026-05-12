@@ -52,13 +52,13 @@ soak-test:
 readiness-check: check test-replay test-reconciliation test-soak
 
 validate-historical-sample:
-	PYTHONPATH=backend/src uv run python scripts/validate_historical.py --root historical --roots GC SI --sample-rows 1000
+	PYTHONPATH=backend/src uv run python scripts/validate_historical.py --config configs/data/historical.local.yaml --catalog research_futures --roots GC SI --sample-rows 1000
 
 backtest-full-smoke:
 	PYTHONPATH=backend/src uv run python scripts/run_backtest.py --config configs/backtest.gc_si.example.yaml --output-dir runs/backtests/full-smoke
 
 backtest-acceptance:
-	PYTHONPATH=backend/src uv run python scripts/validate_historical.py --root historical --roots GC --sample-rows 1000 --output-dir evidence/historical
+	PYTHONPATH=backend/src uv run python scripts/validate_historical.py --config configs/data/historical.local.yaml --catalog research_futures --roots GC --sample-rows 1000 --output-dir evidence/historical
 	PYTHONPATH=backend/src uv run pytest tests/unit/data/test_historical_data_config.py tests/unit/data/test_historical_csv_dataset.py tests/unit/data/test_historical_chains.py tests/unit/runtime/test_market_data_actor.py tests/unit/strategy_sdk/test_data_view.py tests/integration/test_backtest_gc_si.py tests/integration/test_backtest_engine_flow.py tests/anchor tests/replay/test_backtest_determinism.py tests/replay/test_backtest_report_hash.py
 	PYTHONPATH=backend/src uv run python scripts/run_backtest.py --config configs/backtest.gc_si.example.yaml --output-dir runs/backtests/stage-acceptance
 

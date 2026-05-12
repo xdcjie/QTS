@@ -86,20 +86,11 @@ def run_backtest(
 
 def _catalog_load_config(config: BacktestRunConfig) -> HistoricalCatalogLoadConfig:
     """Perform _catalog_load_config."""
-    if config.market_data.is_configured:
-        if config.market_data.config_path is None or config.market_data.catalog is None:
-            raise RuntimeError("market data reference is partially configured")
-        return HistoricalCatalogLoadConfig.from_historical_data_config(
-            config.market_data.config_path,
-            catalog=config.market_data.catalog,
-            roots=config.roots,
-            instrument_ids=config.instrument_ids,
-            requested_timeframe=config.timeframe,
-        )
-    if config.dataset_root is None:
-        raise RuntimeError("legacy dataset_root is not configured")
-    return HistoricalCatalogLoadConfig.from_legacy_root(
-        config.dataset_root,
+    if config.market_data.config_path is None or config.market_data.catalog is None:
+        raise RuntimeError("market data reference is partially configured")
+    return HistoricalCatalogLoadConfig.from_historical_market_data_config(
+        config.market_data.config_path,
+        catalog=config.market_data.catalog,
         roots=config.roots,
         instrument_ids=config.instrument_ids,
         requested_timeframe=config.timeframe,

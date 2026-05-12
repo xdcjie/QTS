@@ -3,10 +3,49 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from qts.data.historical.config import HistoricalDataConfig
+from qts.data.historical.config import HistoricalMarketDataConfig
 
 
-def test_historical_data_config_accepts_legacy_store_level_source_timeframe(
+def test_historical_market_data_config_is_only_system_level_config_name(
+    tmp_path: Path,
+) -> None:
+    import qts.data.historical as historical
+    import qts.data.historical.config as historical_config
+
+    config_path = tmp_path / "historical.local.yaml"
+    config_path.write_text(
+        """
+historical_data:
+  stores:
+    local_csv:
+      type: local_csv
+      root_dir: historical
+      bars_dir: data
+      chains_dir: chains
+  catalogs:
+    research_futures:
+      store: local_csv
+      datasets:
+        GC:
+          asset_class: future
+          exchange: CME
+          bars:
+            - timeframe: 1m
+""",
+        encoding="utf-8",
+    )
+
+    config = HistoricalMarketDataConfig.from_yaml(config_path)
+
+    assert isinstance(config, HistoricalMarketDataConfig)
+    assert not hasattr(historical_config, "HistoricalDataConfig")
+    assert not hasattr(historical, "HistoricalDataConfig")
+    assert config.resolve_dataset("research_futures", "GC").chain_path == Path(
+        "historical/chains/GC.json"
+    )
+
+
+def test_historical_market_data_config_rejects_legacy_store_level_source_timeframe(
     tmp_path: Path,
 ) -> None:
     config_path = tmp_path / "historical.local.yaml"
@@ -39,17 +78,8 @@ historical_data:
         encoding="utf-8",
     )
 
-    config = HistoricalDataConfig.from_yaml(config_path)
-
-    gc = config.resolve_dataset("research_futures", "GC")
-    si = config.resolve_dataset("research_futures", "SI")
-    assert gc.csv_path == Path("historical/data/gc.csv")
-    assert gc.chain_path == Path("historical/chains/GC.json")
-    assert si.csv_path == Path("historical/data/si.csv")
-    assert si.chain_path == Path("historical/chains/SI.json")
-    assert gc.source_timeframe == "1m"
-    assert gc.exchange_timezone == "US/Eastern"
-    assert config.catalog("research_futures").datasets["GC"].asset_class == "future"
+    with pytest.raises(ValueError, match="unsupported historical store keys"):
+        HistoricalMarketDataConfig.from_yaml(config_path)
 
 
 def test_historical_data_config_maps_timeframe_and_schema_at_bar_file_level(
@@ -108,7 +138,7 @@ historical_data:
         encoding="utf-8",
     )
 
-    config = HistoricalDataConfig.from_yaml(config_path)
+    config = HistoricalMarketDataConfig.from_yaml(config_path)
 
     gc = config.resolve_dataset("research_futures", "GC", requested_timeframe="5m")
     si = config.resolve_dataset("research_futures", "SI", requested_timeframe="1m")
@@ -123,7 +153,7 @@ historical_data:
 
 
 def test_project_historical_data_example_resolves_gc_si_paths() -> None:
-    config = HistoricalDataConfig.from_yaml(Path("configs/data/historical.local.yaml"))
+    config = HistoricalMarketDataConfig.from_yaml(Path("configs/data/historical.local.yaml"))
 
     gc = config.resolve_dataset("research_futures", "GC")
     si = config.resolve_dataset("research_futures", "SI")
@@ -134,7 +164,7 @@ def test_project_historical_data_example_resolves_gc_si_paths() -> None:
     assert gc.source_timeframe == "1m"
 
 
-def test_historical_data_config_accepts_legacy_dataset_file_overrides(
+def test_historical_market_data_config_rejects_legacy_dataset_file_overrides(
     tmp_path: Path,
 ) -> None:
     config_path = tmp_path / "historical.local.yaml"
@@ -149,10 +179,10 @@ historical_data:
       chains_dir: chains
       bars_file_template: "{root_lower}.csv"
       chain_file_template: "{root}.json"
-      source_timeframe: 1m
-      exchange_timezone: US/Eastern
-      timezone_policy: source_utc_exchange_sessions
-      normalization: raw
+      defaults:
+        exchange_timezone: US/Eastern
+        timezone_policy: source_utc_exchange_sessions
+        normalization: raw
   catalogs:
     research_futures:
       store: local_csv
@@ -168,13 +198,37 @@ historical_data:
         encoding="utf-8",
     )
 
-    config = HistoricalDataConfig.from_yaml(config_path)
+    with pytest.raises(ValueError, match="unsupported historical dataset keys"):
+        HistoricalMarketDataConfig.from_yaml(config_path)
 
-    gc = config.resolve_dataset("research_futures", "GC")
-    assert gc.csv_path == Path("historical/data/gc_1m.csv")
-    assert gc.chain_path == Path("historical/chains/GC_custom.json")
-    assert gc.source_timeframe == "5s"
-    assert gc.exchange_timezone == "America/Chicago"
+
+def test_historical_market_data_config_requires_explicit_bars_list(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "historical.local.yaml"
+    config_path.write_text(
+        """
+historical_data:
+  stores:
+    local_csv:
+      type: local_csv
+      root_dir: historical
+      bars_dir: data
+      chains_dir: chains
+  catalogs:
+    research_futures:
+      store: local_csv
+      datasets:
+        GC:
+          asset_class: future
+          exchange: CME
+          chain_file: GC.json
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="historical dataset bars must not be empty"):
+        HistoricalMarketDataConfig.from_yaml(config_path)
 
 
 def test_historical_data_config_rejects_storage_paths_inside_dataset_entries(
@@ -203,4 +257,4 @@ historical_data:
     )
 
     with pytest.raises(ValueError, match="storage paths belong to stores"):
-        HistoricalDataConfig.from_yaml(config_path)
+        HistoricalMarketDataConfig.from_yaml(config_path)

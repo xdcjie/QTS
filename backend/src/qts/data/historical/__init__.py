@@ -9,12 +9,12 @@ from qts.data.historical.catalog import (
 from qts.data.historical.chains import HistoricalChain, HistoricalContract
 from qts.data.historical.config import (
     HistoricalDataCatalogConfig,
-    HistoricalDataConfig,
     HistoricalDatasetConfig,
     HistoricalDatasetLocation,
     HistoricalDataStoreConfig,
+    HistoricalMarketDataConfig,
 )
-from qts.data.historical.config_loader import HistoricalDataConfigLoader
+from qts.data.historical.config_loader import HistoricalMarketDataConfigLoader
 from qts.data.historical.csv_dataset import (
     EXPECTED_HISTORICAL_COLUMNS,
     CsvDatasetDescription,
@@ -45,9 +45,9 @@ __all__ = [
     "HistoricalChain",
     "HistoricalContract",
     "HistoricalDataCatalogConfig",
-    "HistoricalDataConfig",
     "HistoricalDataStoreConfig",
-    "HistoricalDataConfigLoader",
+    "HistoricalMarketDataConfigLoader",
+    "HistoricalMarketDataConfig",
     "HistoricalCsvStats",
     "HistoricalCsvRowMapper",
     "HistoricalDatasetValidator",

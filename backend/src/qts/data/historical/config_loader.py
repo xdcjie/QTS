@@ -10,10 +10,10 @@ import yaml  # type: ignore[import-untyped]
 from qts.data.historical.config import (
     HistoricalBarFileConfig,
     HistoricalDataCatalogConfig,
-    HistoricalDataConfig,
     HistoricalDatasetConfig,
     HistoricalDataStoreConfig,
     HistoricalDataStoreDefaults,
+    HistoricalMarketDataConfig,
 )
 from qts.data.historical.csv_format import HistoricalCsvSchema
 
@@ -26,13 +26,29 @@ _DATASET_STORAGE_PATH_KEYS = frozenset(
         "chains_dir",
     }
 )
+_UNSUPPORTED_STORE_KEYS = frozenset(
+    {
+        "source_timeframe",
+        "exchange_timezone",
+        "timezone_policy",
+        "normalization",
+    }
+)
+_UNSUPPORTED_DATASET_KEYS = frozenset(
+    {
+        "bars_file",
+        "source_timeframe",
+        "schema",
+        "exchange_timezone",
+    }
+)
 
 
-class HistoricalDataConfigLoader:
+class HistoricalMarketDataConfigLoader:
     """Load historical data configuration from files or payload dictionaries."""
 
     @classmethod
-    def from_path(cls, path: Path) -> HistoricalDataConfig:
+    def from_path(cls, path: Path) -> HistoricalMarketDataConfig:
         """Perform from_path."""
         payload = yaml.safe_load(path.read_text(encoding="utf-8"))
         if not isinstance(payload, dict):
@@ -40,14 +56,14 @@ class HistoricalDataConfigLoader:
         return cls.from_payload(payload)
 
     @classmethod
-    def from_payload(cls, payload: object) -> HistoricalDataConfig:
+    def from_payload(cls, payload: object) -> HistoricalMarketDataConfig:
         """Perform from_payload."""
         if not isinstance(payload, Mapping):
             raise ValueError("historical_data must be a mapping")
         raw_config = payload.get("historical_data")
         if not isinstance(raw_config, Mapping):
             raise ValueError("historical_data must be a mapping")
-        return HistoricalDataConfig(
+        return HistoricalMarketDataConfig(
             stores=cls._parse_stores(raw_config.get("stores")),
             catalogs=cls._parse_catalogs(raw_config.get("catalogs")),
             schemas=cls._parse_schemas(raw_config.get("schemas")),
@@ -64,6 +80,10 @@ class HistoricalDataConfigLoader:
                 raise ValueError("historical data store names must be strings")
             if not isinstance(raw_store, dict):
                 raise ValueError(f"historical data store {name} must be a mapping")
+            unsupported_keys = _UNSUPPORTED_STORE_KEYS.intersection(raw_store)
+            if unsupported_keys:
+                names = ", ".join(sorted(unsupported_keys))
+                raise ValueError(f"unsupported historical store keys: {names}")
             defaults = cls._parse_store_defaults(raw_store)
             stores[name] = HistoricalDataStoreConfig(
                 name=name,
@@ -73,20 +93,6 @@ class HistoricalDataConfigLoader:
                 chains_dir=Path(str(raw_store.get("chains_dir", "chains"))),
                 bars_file_template=str(raw_store.get("bars_file_template", "{root_lower}.csv")),
                 chain_file_template=str(raw_store.get("chain_file_template", "{root}.json")),
-                source_timeframe=(
-                    str(raw_store["source_timeframe"])
-                    if raw_store.get("source_timeframe") is not None
-                    else None
-                ),
-                exchange_timezone=(
-                    str(raw_store["exchange_timezone"])
-                    if raw_store.get("exchange_timezone") is not None
-                    else None
-                ),
-                timezone_policy=str(
-                    raw_store.get("timezone_policy", "source_utc_exchange_sessions")
-                ),
-                normalization=str(raw_store.get("normalization", "raw")),
                 defaults=defaults,
             )
         return stores
@@ -106,21 +112,12 @@ class HistoricalDataConfigLoader:
             exchange_timezone=(
                 str(raw_defaults["exchange_timezone"])
                 if raw_defaults.get("exchange_timezone") is not None
-                else (
-                    str(raw_store["exchange_timezone"])
-                    if raw_store.get("exchange_timezone") is not None
-                    else None
-                )
+                else None
             ),
             timezone_policy=str(
-                raw_defaults.get(
-                    "timezone_policy",
-                    raw_store.get("timezone_policy", "source_utc_exchange_sessions"),
-                )
+                raw_defaults.get("timezone_policy", "source_utc_exchange_sessions")
             ),
-            normalization=str(
-                raw_defaults.get("normalization", raw_store.get("normalization", "raw"))
-            ),
+            normalization=str(raw_defaults.get("normalization", "raw")),
         )
 
     @classmethod
@@ -159,6 +156,10 @@ class HistoricalDataConfigLoader:
             if forbidden:
                 names = ", ".join(sorted(forbidden))
                 raise ValueError(f"storage paths belong to stores, not dataset entries: {names}")
+            unsupported_keys = _UNSUPPORTED_DATASET_KEYS.intersection(raw_dataset)
+            if unsupported_keys:
+                names = ", ".join(sorted(unsupported_keys))
+                raise ValueError(f"unsupported historical dataset keys: {names}")
             normalized_root = HistoricalDatasetConfig.normalize_root(root)
             datasets[normalized_root] = HistoricalDatasetConfig(
                 root=normalized_root,
@@ -168,27 +169,9 @@ class HistoricalDataConfigLoader:
                     if raw_dataset.get("exchange") is not None
                     else None
                 ),
-                bars_file=(
-                    str(raw_dataset["bars_file"])
-                    if raw_dataset.get("bars_file") is not None
-                    else None
-                ),
                 chain_file=(
                     str(raw_dataset["chain_file"])
                     if raw_dataset.get("chain_file") is not None
-                    else None
-                ),
-                source_timeframe=(
-                    str(raw_dataset["source_timeframe"])
-                    if raw_dataset.get("source_timeframe") is not None
-                    else None
-                ),
-                schema=(
-                    str(raw_dataset["schema"]) if raw_dataset.get("schema") is not None else None
-                ),
-                exchange_timezone=(
-                    str(raw_dataset["exchange_timezone"])
-                    if raw_dataset.get("exchange_timezone") is not None
                     else None
                 ),
                 bars=cls._parse_bar_files(raw_dataset.get("bars")),
@@ -262,4 +245,4 @@ class HistoricalDataConfigLoader:
         return schemas
 
 
-__all__ = ["HistoricalDataConfigLoader"]
+__all__ = ["HistoricalMarketDataConfigLoader"]

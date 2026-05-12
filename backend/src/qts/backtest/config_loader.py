@@ -35,6 +35,10 @@ class BacktestConfigLoader:
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> BacktestRunConfig:
         """Perform from_payload."""
+        if "historical_data" in payload:
+            raise ValueError("backtest run configs must use market_data")
+        if "dataset_root" in payload:
+            raise ValueError("backtest run configs must use market_data")
         cost_payload = payload.get("cost_model", {})
         risk_payload = payload.get("risk_config", {})
         if not isinstance(cost_payload, dict):
@@ -52,9 +56,6 @@ class BacktestConfigLoader:
         if not isinstance(instrument_ids_payload, dict):
             raise ValueError("instrument_ids must be a mapping")
 
-        dataset_root = (
-            Path(str(payload["dataset_root"])) if payload.get("dataset_root") is not None else None
-        )
         strategy_config_path = (
             Path(str(payload["strategy_config"]))
             if payload.get("strategy_config") is not None
@@ -82,9 +83,7 @@ class BacktestConfigLoader:
             timeframe=payload["timeframe"],
             initial_cash=Decimal(str(payload["initial_cash"])),
             strategy_class=strategy_class,
-            dataset_root=dataset_root,
             market_data=cls._parse_market_data_reference(payload.get("market_data")),
-            historical_data=cls._parse_market_data_reference(payload.get("historical_data")),
             strategy_config_path=strategy_config_path,
             strategy=strategy,
             strategy_params=cast(dict[str, Any], strategy_params),

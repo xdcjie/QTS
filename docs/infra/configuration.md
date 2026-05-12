@@ -39,7 +39,18 @@ mode, that source is typically a historical data store and catalog.
 Historical data storage layout is project/environment configuration, not a
 strategy setting and not a product-domain fact.
 
-Use a project-level historical data config such as
+Keep the axes separate:
+
+- `historical` vs `realtime` describes the market data source and its temporal
+  delivery model.
+- `backtest`, `paper`, and `live` describe execution modes.
+
+A backtest commonly uses a historical source, but historical sources are not
+owned by the backtest package. Realtime sources are not synonymous with live
+execution either: paper and live can both use realtime adapters, and historical
+replay can use feed-like event contracts.
+
+Use a project-level `HistoricalMarketDataConfig` such as
 `configs/data/historical.local.yaml` to define:
 
 - stores: physical layout, including root directory, bars directory, chain
@@ -103,12 +114,14 @@ historical_data:
               timeframe: 1m
 ```
 
-Legacy configs may still contain `source_timeframe` and `bars_file` at store or
-dataset level for migration compatibility. New configs should use `bars[]` so
-each concrete file declares its own source timeframe.
+Each dataset must use `bars[]` so every concrete file declares its own source
+timeframe. Store-level `source_timeframe` and dataset-level `bars_file` are not
+supported.
 
 Backtest run configs should reference a market data source by config path and
-catalog name, then define the run-specific universe and time window:
+catalog name, then define the run-specific universe and time window. A
+`BacktestRunConfig` must not duplicate stores, catalogs, chain file locations,
+or CSV schemas from the historical market data system config:
 
 ```yaml
 market_data:
@@ -125,5 +138,5 @@ they reach strategy processing.
 Strategy configs should remain separate and contain strategy class, strategy
 ID, allocation, account, enabled flag, and strategy parameters.
 
-The older `historical_data` field is accepted as a compatibility alias in
-backtest run configs, but new configs should use `market_data`.
+Backtest run configs must use `market_data`; `historical_data` is reserved for
+the project-level historical market data system config.

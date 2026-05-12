@@ -315,7 +315,7 @@ Implement:
 - `qts/backtest/engine.py`
 - `qts/backtest/backtest_runtime.py`
 - `qts/backtest/replay_clock.py`
-- `qts/backtest/historical_data_portal.py`
+- `qts/strategy_sdk/data_view.py` (`MarketDataPortal`)
 - `qts/backtest/broker_simulator.py`
 - `qts/backtest/fill_model.py`
 - `scripts/run_backtest.py`

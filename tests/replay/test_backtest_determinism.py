@@ -14,10 +14,44 @@ def _write_fixture(root: Path) -> Path:
     shutil.copyfile(Path("historical/chains/SI.json"), root / "historical" / "chains" / "SI.json")
     _write_csv(root / "historical" / "data" / "gc.csv", "GCQ0", ["2000.0", "2001.0"])
     _write_csv(root / "historical" / "data" / "si.csv", "SIN0", ["20.0", "19.0"])
+    data_config_path = root / "historical.local.yaml"
+    data_config_path.write_text(
+        f"""
+historical_data:
+  stores:
+    local_csv:
+      type: local_csv
+      root_dir: {root / "historical"}
+      bars_dir: data
+      chains_dir: chains
+  catalogs:
+    research_futures:
+      store: local_csv
+      datasets:
+        GC:
+          asset_class: future
+          exchange: CME
+          chain_file: GC.json
+          bars:
+            - file: gc.csv
+              timeframe: 1m
+        SI:
+          asset_class: future
+          exchange: CME
+          chain_file: SI.json
+          bars:
+            - file: si.csv
+              timeframe: 1m
+""",
+        encoding="utf-8",
+    )
     config_path = root / "backtest.yaml"
     config_path.write_text(
         f"""
-dataset_root: {root / "historical"}
+market_data:
+  source: local_historical
+  config: {data_config_path}
+  catalog: research_futures
 roots: [GC, SI]
 symbols: [GCQ0, SIN0]
 start: "2010-06-06T22:00:00Z"

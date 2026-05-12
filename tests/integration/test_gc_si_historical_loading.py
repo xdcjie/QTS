@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import shutil
 from pathlib import Path
 from types import ModuleType
 from typing import Any, cast
@@ -13,6 +12,7 @@ from qts.data.historical.catalog import (
     HistoricalCatalog,
     HistoricalCatalogLoadConfig,
 )
+from qts.data.historical.config import HistoricalMarketDataConfig
 from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
 from qts.registry.symbol_resolution import StaticSymbolResolver
 
@@ -27,8 +27,14 @@ def _load_validation_script() -> ModuleType:
     return module
 
 
-def test_historical_catalog_from_legacy_root_uses_requested_roots_without_counting_rows() -> None:
-    catalog = HistoricalCatalog.from_legacy_root(Path("historical"), roots=("GC", "SI"))
+def test_historical_catalog_load_uses_requested_roots_without_counting_rows() -> None:
+    catalog = HistoricalCatalog.load(
+        HistoricalCatalogLoadConfig.from_historical_market_data_config(
+            Path("configs/data/historical.local.yaml"),
+            catalog="research_futures",
+            roots=("GC", "SI"),
+        )
+    )
 
     assert catalog.roots == ("GC", "SI")
     assert catalog.datasets["GC"].chain_path == Path("historical/chains/GC.json")
@@ -40,31 +46,35 @@ def test_historical_catalog_from_legacy_root_uses_requested_roots_without_counti
     assert catalog.datasets["SI"].dataset.row_count is None
 
 
-def test_historical_catalog_from_legacy_root_fails_clearly_when_required_file_is_missing(
+def test_historical_catalog_load_fails_clearly_when_required_file_is_missing(
     tmp_path: Path,
 ) -> None:
-    (tmp_path / "data").mkdir()
-    (tmp_path / "chains").mkdir()
-    shutil.copyfile(Path("historical/chains/GC.json"), tmp_path / "chains" / "GC.json")
-    shutil.copyfile(Path("historical/chains/SI.json"), tmp_path / "chains" / "SI.json")
+    config_path = _write_historical_config(tmp_path, roots=("GC", "SI"))
 
     with pytest.raises(FileNotFoundError, match="historical/data/gc.csv"):
-        HistoricalCatalog.from_legacy_root(tmp_path, roots=("GC", "SI"))
+        HistoricalCatalog.load(
+            HistoricalCatalogLoadConfig.from_historical_market_data_config(
+                config_path,
+                catalog="research_futures",
+                roots=("GC", "SI"),
+            )
+        )
 
 
-def test_historical_catalog_from_legacy_root_accepts_explicit_resolver_without_chain(
+def test_historical_catalog_accepts_explicit_resolver_without_chain(
     tmp_path: Path,
 ) -> None:
     (tmp_path / "data").mkdir()
-    (tmp_path / "chains").mkdir()
     (tmp_path / "data" / "equity.csv").write_text(
         ",".join(EXPECTED_HISTORICAL_COLUMNS) + "\n",
         encoding="utf-8",
     )
+    config_path = _write_historical_config(tmp_path, roots=("EQUITY",))
     resolver = StaticSymbolResolver({"AAPL": InstrumentId("EQUITY.US.NASDAQ.AAPL")})
 
-    catalog = HistoricalCatalog.from_legacy_root(
-        tmp_path,
+    catalog = HistoricalCatalog.from_historical_market_data_config(
+        HistoricalMarketDataConfig.from_yaml(config_path),
+        catalog="research_futures",
         roots=("EQUITY",),
         symbol_resolvers={"EQUITY": resolver},
     )
@@ -84,10 +94,12 @@ def test_historical_catalog_load_uses_static_ids_when_chain_is_absent(
         ",".join(EXPECTED_HISTORICAL_COLUMNS) + "\n",
         encoding="utf-8",
     )
+    config_path = _write_historical_config(tmp_path, roots=("EQUITY",))
 
     catalog = HistoricalCatalog.load(
-        HistoricalCatalogLoadConfig.from_legacy_root(
-            tmp_path,
+        HistoricalCatalogLoadConfig.from_historical_market_data_config(
+            config_path,
+            catalog="research_futures",
             roots=("EQUITY",),
             instrument_ids={"AAPL": InstrumentId("EQUITY.US.NASDAQ.AAPL")},
         )
@@ -100,6 +112,37 @@ def test_historical_catalog_load_uses_static_ids_when_chain_is_absent(
     )
 
 
+def _write_historical_config(root: Path, *, roots: tuple[str, ...]) -> Path:
+    config_path = root / "historical.local.yaml"
+    datasets = "\n".join(
+        f"""        {symbol}:
+          asset_class: {"future" if symbol in {"GC", "SI"} else "equity"}
+          {"chain_file: " + symbol + ".json" if symbol in {"GC", "SI"} else ""}
+          bars:
+            - file: {symbol.lower()}.csv
+              timeframe: 1m"""
+        for symbol in roots
+    )
+    config_path.write_text(
+        f"""
+historical_data:
+  stores:
+    local_csv:
+      type: local_csv
+      root_dir: {root}
+      bars_dir: data
+      chains_dir: chains
+  catalogs:
+    research_futures:
+      store: local_csv
+      datasets:
+{datasets}
+""",
+        encoding="utf-8",
+    )
+    return config_path
+
+
 def test_validate_historical_cli_writes_sample_evidence_for_requested_roots(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -110,8 +153,10 @@ def test_validate_historical_cli_writes_sample_evidence_for_requested_roots(
     output_dir = tmp_path / "evidence"
     exit_code = main(
         [
-            "--root",
-            "historical",
+            "--config",
+            "configs/data/historical.local.yaml",
+            "--catalog",
+            "research_futures",
             "--roots",
             "GC",
             "SI",
@@ -126,7 +171,8 @@ def test_validate_historical_cli_writes_sample_evidence_for_requested_roots(
     evidence_files = sorted(output_dir.glob("historical_validation_*.json"))
     assert len(evidence_files) == 1
     payload = json.loads(evidence_files[0].read_text(encoding="utf-8"))
-    assert payload["root"] == "historical"
+    assert payload["config"] == "configs/data/historical.local.yaml"
+    assert payload["catalog"] == "research_futures"
     assert payload["sample_rows"] == 5
     assert payload["datasets"]["GC"]["stats"]["rows_seen"] == 5
     assert payload["datasets"]["SI"]["stats"]["rows_seen"] == 5

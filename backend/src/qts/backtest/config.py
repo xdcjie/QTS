@@ -190,7 +190,7 @@ class RollPolicyConfig:
 
 @dataclass(frozen=True, slots=True)
 class BacktestMarketDataReference:
-    """Market data source reference for one backtest run."""
+    """Run-level reference to a configured market data source."""
 
     config_path: Path | None = None
     catalog: str | None = None
@@ -226,9 +226,6 @@ class BacktestMarketDataReference:
         if self.config_path is None or self.catalog is None:
             raise RuntimeError("market data reference is partially configured")
         return {"source": self.source, "config": str(self.config_path), "catalog": self.catalog}
-
-
-BacktestHistoricalDataReference = BacktestMarketDataReference
 
 
 @dataclass(frozen=True, slots=True)
@@ -296,7 +293,11 @@ class BacktestStrategyConfig:
 
 @dataclass(frozen=True, slots=True)
 class BacktestRunConfig:
-    """Complete identity for a backtest run."""
+    """Complete identity for one backtest run.
+
+    Historical stores, catalogs, chains, and CSV schemas belong to
+    HistoricalMarketDataConfig; this config only references the chosen source.
+    """
 
     roots: tuple[str, ...]
     symbols: tuple[str, ...]
@@ -305,11 +306,7 @@ class BacktestRunConfig:
     timeframe: str
     initial_cash: Decimal
     strategy_class: str = ""
-    dataset_root: Path | None = None
     market_data: BacktestMarketDataReference = field(default_factory=BacktestMarketDataReference)
-    historical_data: BacktestMarketDataReference = field(
-        default_factory=BacktestMarketDataReference
-    )
     strategy_config_path: Path | None = None
     strategy: BacktestStrategyConfig | None = None
     strategy_params: dict[str, Any] = field(default_factory=dict)
@@ -321,8 +318,6 @@ class BacktestRunConfig:
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""
-        if self.dataset_root is not None:
-            object.__setattr__(self, "dataset_root", Path(self.dataset_root))
         if self.strategy_config_path is not None:
             object.__setattr__(self, "strategy_config_path", Path(self.strategy_config_path))
         if not isinstance(self.market_data, BacktestMarketDataReference):
@@ -331,19 +326,6 @@ class BacktestRunConfig:
                 "market_data",
                 BacktestMarketDataReference(**self.market_data),
             )
-        if not isinstance(self.historical_data, BacktestMarketDataReference):
-            object.__setattr__(
-                self,
-                "historical_data",
-                BacktestMarketDataReference(**self.historical_data),
-            )
-        if self.market_data.is_configured and self.historical_data.is_configured:
-            if self.market_data.to_payload() != self.historical_data.to_payload():
-                raise ValueError("market_data and historical_data references must match")
-        elif self.historical_data.is_configured:
-            object.__setattr__(self, "market_data", self.historical_data)
-        elif self.market_data.is_configured:
-            object.__setattr__(self, "historical_data", self.market_data)
         if self.strategy is not None and not isinstance(self.strategy, BacktestStrategyConfig):
             object.__setattr__(self, "strategy", BacktestStrategyConfig(**self.strategy))
         object.__setattr__(self, "roots", tuple(self.roots))
@@ -381,8 +363,8 @@ class BacktestRunConfig:
             raise ValueError("strategy_class must not be empty")
         if self.warmup_bars < 0:
             raise ValueError("warmup_bars must be non-negative")
-        if self.dataset_root is None and not self.market_data.is_configured:
-            raise ValueError("market_data or dataset_root must be configured")
+        if not self.market_data.is_configured:
+            raise ValueError("market_data must be configured")
 
     @classmethod
     def from_yaml(cls, path: Path) -> BacktestRunConfig:
@@ -416,8 +398,6 @@ class BacktestRunConfig:
             "roll_policy": self.roll_policy.to_payload(),
             "warmup_bars": self.warmup_bars,
         }
-        if self.dataset_root is not None:
-            payload["dataset_root"] = str(self.dataset_root)
         market_data = self.market_data.to_payload()
         if market_data is not None:
             payload["market_data"] = market_data
@@ -437,7 +417,6 @@ class BacktestRunConfig:
 
 
 __all__ = [
-    "BacktestHistoricalDataReference",
     "BacktestMarketDataReference",
     "BacktestRunConfig",
     "BacktestEngineConfig",

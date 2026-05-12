@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from qts.data.historical.config_loader import HistoricalDataConfigLoader
+from qts.data.historical.config_loader import HistoricalMarketDataConfigLoader
 
 
 def test_config_loader_loads_payload(tmp_path: Path) -> None:
@@ -17,10 +17,11 @@ def test_config_loader_loads_payload(tmp_path: Path) -> None:
                     "chains_dir": "chains",
                     "bars_file_template": "{root_lower}.csv",
                     "chain_file_template": "{root}.json",
-                    "source_timeframe": "1m",
-                    "exchange_timezone": "US/Eastern",
-                    "timezone_policy": "source_utc_exchange_sessions",
-                    "normalization": "raw",
+                    "defaults": {
+                        "exchange_timezone": "US/Eastern",
+                        "timezone_policy": "source_utc_exchange_sessions",
+                        "normalization": "raw",
+                    },
                 }
             },
             "catalogs": {
@@ -30,6 +31,7 @@ def test_config_loader_loads_payload(tmp_path: Path) -> None:
                         "GC": {
                             "asset_class": "future",
                             "exchange": "CME",
+                            "bars": [{"timeframe": "1m"}],
                         }
                     },
                 }
@@ -38,7 +40,7 @@ def test_config_loader_loads_payload(tmp_path: Path) -> None:
         }
     }
 
-    config = HistoricalDataConfigLoader.from_payload(payload)
+    config = HistoricalMarketDataConfigLoader.from_payload(payload)
     dataset = config.resolve_dataset("research_futures", "GC")
 
     assert dataset.csv_path == Path("historical/data/gc.csv")
@@ -50,7 +52,7 @@ def test_config_loader_loads_payload(tmp_path: Path) -> None:
 
 def test_config_loader_from_payload_rejects_non_mapping_payload() -> None:
     with pytest.raises(ValueError, match="historical_data must be a mapping"):
-        HistoricalDataConfigLoader.from_payload([])
+        HistoricalMarketDataConfigLoader.from_payload([])
 
 
 def test_config_loader_from_path_supports_yaml_file(tmp_path: Path) -> None:
@@ -66,17 +68,19 @@ historical_data:
       chains_dir: chains
   catalogs:
     research_futures:
-      store: local_csv
-      datasets:
-        SI:
-          asset_class: future
-          exchange: CME
+          store: local_csv
+          datasets:
+            SI:
+              asset_class: future
+              exchange: CME
+              bars:
+                - timeframe: 1m
 """,
         encoding="utf-8",
     )
 
-    config = HistoricalDataConfigLoader.from_path(path)
+    config = HistoricalMarketDataConfigLoader.from_path(path)
     dataset = config.resolve_dataset("research_futures", "SI")
 
     assert dataset.csv_path == Path("historical/data/si.csv")
-    assert dataset.source_timeframe is None
+    assert dataset.source_timeframe == "1m"

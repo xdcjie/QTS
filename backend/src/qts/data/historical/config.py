@@ -42,10 +42,6 @@ class HistoricalDataStoreConfig:
     chains_dir: Path = Path("chains")
     bars_file_template: str = "{root_lower}.csv"
     chain_file_template: str = "{root}.json"
-    source_timeframe: str | None = None
-    exchange_timezone: str | None = None
-    timezone_policy: str = "source_utc_exchange_sessions"
-    normalization: str = "raw"
     defaults: HistoricalDataStoreDefaults = field(default_factory=HistoricalDataStoreDefaults)
 
     def __post_init__(self) -> None:
@@ -60,14 +56,6 @@ class HistoricalDataStoreConfig:
             raise ValueError("bars_file_template must not be empty")
         if not self.chain_file_template.strip():
             raise ValueError("chain_file_template must not be empty")
-        if self.source_timeframe is not None and not self.source_timeframe.strip():
-            raise ValueError("source_timeframe must not be empty")
-        if self.exchange_timezone is not None and not self.exchange_timezone.strip():
-            raise ValueError("exchange_timezone must not be empty")
-        if not self.timezone_policy.strip():
-            raise ValueError("timezone_policy must not be empty")
-        if not self.normalization.strip():
-            raise ValueError("normalization must not be empty")
 
     def bars_path(self, root: str, *, override: str | None = None) -> Path:
         """Perform bars_path."""
@@ -124,11 +112,7 @@ class HistoricalDatasetConfig:
     root: str
     asset_class: str
     exchange: str | None = None
-    bars_file: str | None = None
     chain_file: str | None = None
-    source_timeframe: str | None = None
-    schema: str | None = None
-    exchange_timezone: str | None = None
     bars: tuple[HistoricalBarFileConfig, ...] = ()
 
     def __post_init__(self) -> None:
@@ -139,16 +123,10 @@ class HistoricalDatasetConfig:
             raise ValueError("historical dataset asset_class must not be empty")
         if self.exchange is not None and not self.exchange.strip():
             raise ValueError("historical dataset exchange must not be empty")
-        if self.bars_file is not None and not self.bars_file.strip():
-            raise ValueError("historical dataset bars_file must not be empty")
         if self.chain_file is not None and not self.chain_file.strip():
             raise ValueError("historical dataset chain_file must not be empty")
-        if self.source_timeframe is not None and not self.source_timeframe.strip():
-            raise ValueError("historical dataset source_timeframe must not be empty")
-        if self.schema is not None and not self.schema.strip():
-            raise ValueError("historical dataset schema must not be empty")
-        if self.exchange_timezone is not None and not self.exchange_timezone.strip():
-            raise ValueError("historical dataset exchange_timezone must not be empty")
+        if not self.bars:
+            raise ValueError("historical dataset bars must not be empty")
 
     @property
     def requires_chain(self) -> bool:
@@ -199,8 +177,8 @@ class HistoricalDatasetLocation:
 
 
 @dataclass(frozen=True, slots=True)
-class HistoricalDataConfig:
-    """Project-level historical data stores and catalogs."""
+class HistoricalMarketDataConfig:
+    """Project-level historical market data stores, catalogs, and metadata."""
 
     stores: Mapping[str, HistoricalDataStoreConfig]
     catalogs: Mapping[str, HistoricalDataCatalogConfig]
@@ -217,20 +195,20 @@ class HistoricalDataConfig:
                 raise ValueError(f"unknown historical data store: {catalog.store}")
 
     @classmethod
-    def from_yaml(cls, path: Path) -> HistoricalDataConfig:
+    def from_yaml(cls, path: Path) -> HistoricalMarketDataConfig:
         """Perform from_yaml."""
-        from qts.data.historical.config_loader import HistoricalDataConfigLoader
+        from qts.data.historical.config_loader import HistoricalMarketDataConfigLoader
 
-        return HistoricalDataConfigLoader.from_path(path)
+        return HistoricalMarketDataConfigLoader.from_path(path)
 
     @classmethod
-    def from_payload(cls, payload: object) -> HistoricalDataConfig:
+    def from_payload(cls, payload: object) -> HistoricalMarketDataConfig:
         """Perform from_payload."""
-        from qts.data.historical.config_loader import HistoricalDataConfigLoader
+        from qts.data.historical.config_loader import HistoricalMarketDataConfigLoader
 
         if not isinstance(payload, dict):
             raise ValueError("historical_data must be a mapping")
-        return HistoricalDataConfigLoader.from_payload(payload)
+        return HistoricalMarketDataConfigLoader.from_payload(payload)
 
     def catalog(self, name: str) -> HistoricalDataCatalogConfig:
         """Perform catalog."""
@@ -270,7 +248,7 @@ class HistoricalDataConfig:
             store=store,
             requested_timeframe=requested_timeframe,
         )
-        schema_name = bar.schema or dataset.schema or store.defaults.schema
+        schema_name = bar.schema or store.defaults.schema
         return HistoricalDatasetLocation(
             root=normalized_root,
             csv_path=store.bars_path(normalized_root, override=bar.file),
@@ -280,12 +258,7 @@ class HistoricalDataConfig:
                 else None
             ),
             source_timeframe=bar.timeframe,
-            exchange_timezone=(
-                bar.exchange_timezone
-                or dataset.exchange_timezone
-                or store.defaults.exchange_timezone
-                or store.exchange_timezone
-            ),
+            exchange_timezone=bar.exchange_timezone or store.defaults.exchange_timezone,
             schema_name=schema_name,
             csv_schema=self._csv_schema(schema_name),
             bar=bar,
@@ -328,14 +301,7 @@ class HistoricalDataConfig:
         requested_timeframe: str | None,
     ) -> HistoricalBarFileConfig:
         """Perform _select_bar_file."""
-        bars = dataset.bars or (
-            HistoricalBarFileConfig(
-                file=dataset.bars_file,
-                timeframe=dataset.source_timeframe or store.source_timeframe,
-                schema=dataset.schema,
-                exchange_timezone=dataset.exchange_timezone,
-            ),
-        )
+        bars = dataset.bars
         if requested_timeframe is None:
             if len(bars) > 1:
                 raise ValueError(
@@ -361,7 +327,7 @@ class HistoricalDataConfig:
 
 __all__ = [
     "HistoricalDataCatalogConfig",
-    "HistoricalDataConfig",
+    "HistoricalMarketDataConfig",
     "HistoricalDataStoreDefaults",
     "HistoricalBarFileConfig",
     "HistoricalDatasetConfig",

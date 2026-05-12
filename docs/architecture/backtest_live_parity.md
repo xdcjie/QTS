@@ -28,6 +28,12 @@ flowchart LR
 
 ## Mode-Specific Boundaries
 
+`historical`/`realtime` and `backtest`/`paper`/`live` are separate concepts.
+The first axis describes the market data source's temporal delivery model. The
+second axis describes the execution mode and adapter set. Backtests normally
+consume historical replay, but historical market data configuration belongs to
+the data source boundary, not to the backtest mode boundary.
+
 | Concern | Shared Core | Backtest | Paper | Live |
 | --- | --- | --- | --- | --- |
 | Strategy API | `Strategy`, `StrategyContext`, `TargetIntent` | same | same | same |

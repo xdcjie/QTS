@@ -8,7 +8,7 @@ from pathlib import Path
 
 from qts.core.ids import InstrumentId
 from qts.data.historical.chains import HistoricalChain
-from qts.data.historical.config import HistoricalDataConfig
+from qts.data.historical.config import HistoricalMarketDataConfig
 from qts.data.historical.csv_dataset import CsvDatasetDescription, describe_csv_dataset
 from qts.data.historical.csv_format import DEFAULT_HISTORICAL_CSV_SCHEMA, HistoricalCsvSchema
 from qts.data.historical.symbols import HistoricalFutureChainSymbolResolver
@@ -51,79 +51,23 @@ class HistoricalCatalog:
     def load(cls, config: HistoricalCatalogLoadConfig) -> HistoricalCatalog:
         """Load a catalog from one cohesive construction config."""
 
-        historical_data_config: HistoricalDataConfig | None = None
-        if config.data_config_path is not None:
-            historical_data_config = HistoricalDataConfig.from_yaml(config.data_config_path)
+        historical_data_config = HistoricalMarketDataConfig.from_yaml(config.data_config_path)
         symbol_resolvers = cls._symbol_resolvers_for_load_config(
             config,
             historical_data_config=historical_data_config,
         )
-        if historical_data_config is not None:
-            if config.catalog_name is None:
-                raise RuntimeError("historical catalog name is not configured")
-            return cls.from_historical_data_config(
-                historical_data_config,
-                catalog=config.catalog_name,
-                roots=config.roots,
-                symbol_resolvers=symbol_resolvers,
-                requested_timeframe=config.requested_timeframe,
-            )
-        if config.legacy_root_path is None:
-            raise RuntimeError("legacy historical root is not configured")
-        return cls.from_legacy_root(
-            config.legacy_root_path,
+        return cls.from_historical_market_data_config(
+            historical_data_config,
+            catalog=config.catalog_name,
             roots=config.roots,
             symbol_resolvers=symbol_resolvers,
+            requested_timeframe=config.requested_timeframe,
         )
 
     @classmethod
-    def from_legacy_root(
+    def from_historical_market_data_config(
         cls,
-        root_path: Path,
-        *,
-        roots: tuple[str, ...],
-        symbol_resolvers: Mapping[str, SourceSymbolResolver] | None = None,
-        count_rows: bool = False,
-    ) -> HistoricalCatalog:
-        """Load requested roots from a local historical data directory."""
-
-        normalized_roots = tuple(HistoricalDataset.normalize_root(root) for root in roots)
-        if not normalized_roots:
-            raise ValueError("roots must not be empty")
-        resolvers = {
-            HistoricalDataset.normalize_root(root): resolver
-            for root, resolver in (symbol_resolvers or {}).items()
-        }
-
-        datasets: dict[str, HistoricalDataset] = {}
-        for root in normalized_roots:
-            csv_path = root_path / "data" / f"{root.lower()}.csv"
-            cls._require_file(csv_path, root_path)
-            chain_path: Path | None = None
-            chain: HistoricalChain | None = None
-            resolver = resolvers.get(root)
-            if resolver is None:
-                chain_path = root_path / "chains" / f"{root}.json"
-                cls._require_file(chain_path, root_path)
-                chain = HistoricalChain.load(chain_path)
-                resolver = HistoricalFutureChainSymbolResolver(chain)
-            dataset = describe_csv_dataset(csv_path, root=root, count_rows=count_rows)
-            datasets[root] = HistoricalDataset(
-                root=root,
-                chain_path=chain_path,
-                csv_path=csv_path,
-                chain=chain,
-                symbol_resolver=resolver,
-                dataset=dataset,
-                source_timeframe=None,
-                exchange_timezone=chain.timezone if chain is not None else None,
-            )
-        return cls(root_path=root_path, roots=normalized_roots, datasets=datasets)
-
-    @classmethod
-    def from_historical_data_config(
-        cls,
-        config: HistoricalDataConfig,
+        config: HistoricalMarketDataConfig,
         *,
         catalog: str,
         roots: tuple[str, ...],
@@ -187,7 +131,7 @@ class HistoricalCatalog:
         cls,
         config: HistoricalCatalogLoadConfig,
         *,
-        historical_data_config: HistoricalDataConfig | None,
+        historical_data_config: HistoricalMarketDataConfig,
     ) -> dict[str, StaticSymbolResolver]:
         """Perform _symbol_resolvers_for_load_config."""
         if not config.instrument_ids:
@@ -207,17 +151,11 @@ class HistoricalCatalog:
         config: HistoricalCatalogLoadConfig,
         root: str,
         *,
-        historical_data_config: HistoricalDataConfig | None,
+        historical_data_config: HistoricalMarketDataConfig,
     ) -> bool:
         """Perform _chain_path_exists."""
-        if historical_data_config is not None:
-            if config.catalog_name is None:
-                raise RuntimeError("historical catalog name is not configured")
-            chain_path = historical_data_config.resolve_chain_path(config.catalog_name, root)
-            return chain_path is not None and chain_path.exists()
-        if config.legacy_root_path is None:
-            return False
-        return (config.legacy_root_path / "chains" / f"{root}.json").exists()
+        chain_path = historical_data_config.resolve_chain_path(config.catalog_name, root)
+        return chain_path is not None and chain_path.exists()
 
     @staticmethod
     def _require_file(path: Path, root_path: Path) -> None:
@@ -235,11 +173,10 @@ class HistoricalCatalogLoadConfig:
     """Construction inputs for a configured historical catalog."""
 
     roots: tuple[str, ...]
+    data_config_path: Path
+    catalog_name: str
     instrument_ids: Mapping[str, InstrumentId] = field(default_factory=dict)
     requested_timeframe: str | None = None
-    legacy_root_path: Path | None = None
-    data_config_path: Path | None = None
-    catalog_name: str | None = None
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""
@@ -267,40 +204,14 @@ class HistoricalCatalogLoadConfig:
             if not requested_timeframe:
                 raise ValueError("requested_timeframe must not be empty")
             object.__setattr__(self, "requested_timeframe", requested_timeframe)
-        if self.legacy_root_path is not None:
-            object.__setattr__(self, "legacy_root_path", Path(self.legacy_root_path))
-        if self.data_config_path is not None:
-            object.__setattr__(self, "data_config_path", Path(self.data_config_path))
-        if self.catalog_name is not None:
-            catalog_name = self.catalog_name.strip()
-            if not catalog_name:
-                raise ValueError("catalog_name must not be empty")
-            object.__setattr__(self, "catalog_name", catalog_name)
-        data_configured = self.data_config_path is not None or self.catalog_name is not None
-        if data_configured and (self.data_config_path is None or self.catalog_name is None):
-            raise ValueError("data_config_path and catalog_name must be provided together")
-        if data_configured == (self.legacy_root_path is not None):
-            raise ValueError("configure exactly one historical catalog source")
+        object.__setattr__(self, "data_config_path", Path(self.data_config_path))
+        catalog_name = self.catalog_name.strip()
+        if not catalog_name:
+            raise ValueError("catalog_name must not be empty")
+        object.__setattr__(self, "catalog_name", catalog_name)
 
     @classmethod
-    def from_legacy_root(
-        cls,
-        root_path: Path,
-        *,
-        roots: tuple[str, ...],
-        instrument_ids: Mapping[str, InstrumentId] | None = None,
-        requested_timeframe: str | None = None,
-    ) -> HistoricalCatalogLoadConfig:
-        """Perform from_legacy_root."""
-        return cls(
-            roots=roots,
-            instrument_ids=instrument_ids or {},
-            requested_timeframe=requested_timeframe,
-            legacy_root_path=root_path,
-        )
-
-    @classmethod
-    def from_historical_data_config(
+    def from_historical_market_data_config(
         cls,
         config_path: Path,
         *,
@@ -309,7 +220,7 @@ class HistoricalCatalogLoadConfig:
         instrument_ids: Mapping[str, InstrumentId] | None = None,
         requested_timeframe: str | None = None,
     ) -> HistoricalCatalogLoadConfig:
-        """Perform from_historical_data_config."""
+        """Perform from_historical_market_data_config."""
         return cls(
             roots=roots,
             instrument_ids=instrument_ids or {},

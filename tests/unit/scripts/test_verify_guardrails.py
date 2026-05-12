@@ -214,8 +214,9 @@ def test_guardrails_allow_backtest_runner_configured_catalog_boundary(
         "backend/src/qts/backtest/runner.py",
         "from qts.data.historical.catalog import HistoricalCatalog, HistoricalCatalogLoadConfig\n\n"
         "def run_backtest(config):\n"
-        "    catalog_config = HistoricalCatalogLoadConfig.from_legacy_root(\n"
-        "        config.dataset_root,\n"
+        "    catalog_config = HistoricalCatalogLoadConfig.from_historical_market_data_config(\n"
+        "        config.market_data.config_path,\n"
+        "        catalog=config.market_data.catalog,\n"
         "        roots=config.roots,\n"
         "    )\n"
         "    return HistoricalCatalog.load(catalog_config)\n",
@@ -334,11 +335,11 @@ def test_guardrails_reject_backtest_engine_historical_input_assembly(
     _write(
         root,
         "backend/src/qts/backtest/engine.py",
-        "from qts.data.historical.config import HistoricalDataConfig\n\n"
+        "from qts.data.historical.config import HistoricalMarketDataConfig\n\n"
         "class BacktestEngine:\n"
         "    @staticmethod\n"
         "    def _contract_multipliers_from_config(config):\n"
-        "        return HistoricalDataConfig.from_yaml(config.market_data.config_path)\n",
+        "        return HistoricalMarketDataConfig.from_yaml(config.market_data.config_path)\n",
     )
 
     assert _codes(root) == {"BACKTEST_ENGINE_COHESION"}

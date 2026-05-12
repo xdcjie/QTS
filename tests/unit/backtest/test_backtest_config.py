@@ -13,9 +13,10 @@ from qts.core.ids import InstrumentId
 def test_backtest_run_config_loads_example_yaml_with_stable_hash() -> None:
     config = BacktestRunConfig.from_yaml(Path("configs/backtest.gc_si.example.yaml"))
 
-    assert config.historical_data.config_path == Path("configs/data/historical.local.yaml")
-    assert config.historical_data.catalog == "research_futures"
-    assert config.dataset_root is None
+    assert config.market_data.config_path == Path("configs/data/historical.local.yaml")
+    assert config.market_data.catalog == "research_futures"
+    assert not hasattr(config, "historical_data")
+    assert not hasattr(config, "dataset_root")
     assert config.roots == ("GC", "SI")
     assert config.symbols == ("GC", "SI")
     assert config.instrument_ids == {}
@@ -44,7 +45,7 @@ def test_backtest_run_config_loads_gc_full_example_yaml() -> None:
 
     assert config.market_data.config_path == Path("configs/data/historical.local.yaml")
     assert config.market_data.catalog == "research_futures"
-    assert config.dataset_root is None
+    assert not hasattr(config, "dataset_root")
     assert config.roots == ("GC",)
     assert config.symbols == ("GC",)
     assert config.roll_policy.enabled is True
@@ -85,9 +86,55 @@ strategy_class: "tests.integration.test_backtest_gc_si:RollingGcStrategy"
     assert config.market_data.source == "local_historical"
     assert config.market_data.config_path == Path("configs/data/historical.local.yaml")
     assert config.market_data.catalog == "research_futures"
-    assert config.historical_data.config_path == Path("configs/data/historical.local.yaml")
-    assert config.historical_data.catalog == "research_futures"
-    assert config.dataset_root is None
+    assert not hasattr(config, "historical_data")
+    assert not hasattr(config, "dataset_root")
+
+
+def test_backtest_run_config_rejects_legacy_historical_data_alias(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "backtest.yaml"
+    config_path.write_text(
+        """
+historical_data:
+  source: local_historical
+  config: configs/data/historical.local.yaml
+  catalog: research_futures
+roots: [GC]
+symbols: [GC]
+start: "2026-01-02T14:30:00Z"
+end: "2026-01-02T14:31:00Z"
+timeframe: 1m
+initial_cash: "100000"
+strategy_class: "tests.integration.test_backtest_gc_si:RollingGcStrategy"
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="backtest run configs must use market_data"):
+        BacktestRunConfig.from_yaml(config_path)
+
+
+def test_backtest_run_config_rejects_legacy_dataset_root(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "backtest.yaml"
+    config_path.write_text(
+        """
+dataset_root: historical
+roots: [GC]
+symbols: [GC]
+start: "2026-01-02T14:30:00Z"
+end: "2026-01-02T14:31:00Z"
+timeframe: 1m
+initial_cash: "100000"
+strategy_class: "tests.integration.test_backtest_gc_si:RollingGcStrategy"
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="backtest run configs must use market_data"):
+        BacktestRunConfig.from_yaml(config_path)
 
 
 def test_backtest_run_config_rejects_unsupported_market_data_source(tmp_path: Path) -> None:
@@ -166,7 +213,10 @@ def test_backtest_run_config_accepts_explicit_instrument_ids_for_non_chain_datas
     config_path = tmp_path / "backtest.yaml"
     config_path.write_text(
         """
-dataset_root: historical
+market_data:
+  source: local_historical
+  config: configs/data/historical.local.yaml
+  catalog: research_futures
 roots: [EQUITY]
 symbols: [AAPL]
 instrument_ids:
@@ -189,7 +239,10 @@ def test_backtest_run_config_accepts_roll_policy(tmp_path: Path) -> None:
     config_path = tmp_path / "backtest.yaml"
     config_path.write_text(
         """
-dataset_root: historical
+market_data:
+  source: local_historical
+  config: configs/data/historical.local.yaml
+  catalog: research_futures
 roots: [GC]
 symbols: [GC]
 start: "2026-01-02T14:30:00Z"

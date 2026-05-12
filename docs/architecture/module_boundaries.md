@@ -45,6 +45,13 @@ registry construction, and roll-aware replay input assembly belong in cohesive
 data/backtest input boundaries. The runner should invoke those boundaries and
 then call the engine.
 
+Do not use backtest package placement to describe the source's time model.
+`historical` versus `realtime` is a market data source property;
+`backtest`/`paper`/`live` is an execution-mode property. A source-agnostic
+strategy data view or market data portal belongs in a shared Strategy SDK or
+runtime-facing boundary, not in `qts.backtest` solely because backtests replay
+historical bars.
+
 ## Repository OOP Standard
 
 This project uses object-oriented ownership for stable system concepts. Choose
@@ -77,8 +84,8 @@ decisions outside the concept owner.
 
 Do not add new module-level public factory functions such as `load_<concept>`,
 `build_<concept>`, `create_<concept>`, or `make_<concept>` for stable concepts.
-Use class-owned constructors such as `Concept.load(config)`,
-`Concept.from_yaml(...)`, or `Concept.from_legacy_root(...)`.
+Use class-owned constructors such as `Concept.load(config)` or
+`Concept.from_yaml(...)`.
 
 Use module-level functions only for stateless algorithms, pure transformations,
 framework entrypoints, protocol callbacks, and explicit compatibility wrappers.

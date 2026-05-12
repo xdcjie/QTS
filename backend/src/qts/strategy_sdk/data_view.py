@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -46,4 +46,30 @@ class DataView:
         return tuple(visible[-bars:])
 
 
-__all__ = ["DataView"]
+class MarketDataPortal:
+    """Build source- and mode-agnostic strategy data views from finalized bars."""
+
+    def __init__(self, bars: Mapping[InstrumentId, Iterable[Bar]]) -> None:
+        """Normalize finalized bar history by instrument."""
+        self._bars = {
+            instrument_id: tuple(sorted(values, key=lambda bar: bar.end_time))
+            for instrument_id, values in bars.items()
+        }
+
+    def data_view(self, *, as_of: datetime) -> DataView:
+        """Return the strategy-facing data view for one logical timestamp."""
+        return DataView(bars=self._bars, as_of=as_of)
+
+    def history(
+        self,
+        asset: AssetRef,
+        *,
+        as_of: datetime,
+        bars: int,
+        timeframe: str | None = None,
+    ) -> tuple[Bar, ...]:
+        """Return finalized bar history visible to a strategy at as_of."""
+        return self.data_view(as_of=as_of).history(asset, bars=bars, timeframe=timeframe)
+
+
+__all__ = ["DataView", "MarketDataPortal"]
