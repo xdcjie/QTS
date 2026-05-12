@@ -288,6 +288,7 @@ class BacktestEngine:
 
 class _BacktestExecutionAdapter:
     """_BacktestExecutionAdapter."""
+
     def __init__(self, cost_model: BacktestCostModel) -> None:
         """Perform __init__."""
         self._cost_model = cost_model

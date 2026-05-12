@@ -92,6 +92,7 @@ class StreamingBacktestArtifacts:
 
 class _NdjsonArtifact:
     """_NdjsonArtifact."""
+
     def __init__(self, path: Path) -> None:
         """Perform __init__."""
         self.path = path
