@@ -173,11 +173,19 @@ class TargetIntentProcessor:
         risk_engine: RiskEngine,
         instrument_context: InstrumentExecutionContext,
         multiplier_for: Callable[[InstrumentId], Decimal],
+        order_id_prefix: str = "bt",
+        broker_order_id_prefix: str = "sim",
     ) -> None:
         """Perform __init__."""
+        if not order_id_prefix.strip():
+            raise ValueError("order_id_prefix must not be empty")
+        if not broker_order_id_prefix.strip():
+            raise ValueError("broker_order_id_prefix must not be empty")
         self._risk_engine = risk_engine
         self._order_plan_builder = OrderPlanBuilder(instrument_context=instrument_context)
         self._multiplier_for = multiplier_for
+        self._order_id_prefix = order_id_prefix
+        self._broker_order_id_prefix = broker_order_id_prefix
 
     def process_intent(
         self,
@@ -254,7 +262,7 @@ class TargetIntentProcessor:
             return ProcessedIntent(orders=(), fills=())
 
         before_fill_count = order_manager_actor.fill_count
-        order_id = OrderId(f"bt-{order_number:06d}")
+        order_id = OrderId(f"{self._order_id_prefix}-{order_number:06d}")
         order_intent = OrderIntent(
             order_id=order_id,
             instrument_id=instrument_id,
@@ -265,7 +273,7 @@ class TargetIntentProcessor:
             SubmitOrder(
                 intent=order_intent,
                 risk_decision=risk_decision,
-                broker_order_id=f"sim-{order_number:06d}",
+                broker_order_id=f"{self._broker_order_id_prefix}-{order_number:06d}",
                 market_price=market_price,
             )
         )

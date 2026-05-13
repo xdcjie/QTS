@@ -60,6 +60,26 @@ def test_backtest_engine_order_path_uses_shared_actor_chain() -> None:
     assert "ApplyFill" not in engine_source
 
 
+def test_live_runtime_session_uses_shared_actor_chain() -> None:
+    import qts.runtime.live_runtime_dependencies as live_runtime_dependencies
+    import qts.runtime.live_runtime_session as live_runtime_session
+
+    source = inspect.getsource(live_runtime_dependencies) + inspect.getsource(
+        live_runtime_session.LiveRuntimeSession
+    )
+
+    for required in (
+        "MarketDataFlow",
+        "StrategyExecutionPipeline",
+        "TargetIntentProcessor",
+        "OrderManagerActor",
+        "ExecutionActor",
+        "AccountActor",
+    ):
+        assert required in source
+    assert "submit_order(" not in source
+
+
 def test_backtest_public_runner_is_streaming_only() -> None:
     import qts.backtest.runner as runner
 

@@ -671,8 +671,8 @@ Paper is fully usable when:
 - P0 through P9 are complete.
 - `make check` passes.
 - Real paper Gateway evidence exists for connection, market data, order
-  lifecycle, strategy-driven order, reconciliation, kill switch, rollback, and
-  full-session soak.
+  lifecycle, strategy-driven runtime submission, account-config match,
+  reconciliation, kill switch, rollback, and full-session soak.
 - The final paper readiness report has no unexplained drift or unresolved stale
   data.
 

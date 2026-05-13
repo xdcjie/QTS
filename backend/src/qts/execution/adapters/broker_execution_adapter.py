@@ -12,7 +12,7 @@ from qts.execution.broker import (
     BrokerOrderRequest,
     normalize_broker_execution_report,
 )
-from qts.execution.order_manager import ExecutionReport, OrderIntent
+from qts.execution.order_manager import ExecutionReport, OrderIntent, OrderManagerSnapshot
 
 
 class BrokerExecutionAdapter:
@@ -61,6 +61,23 @@ class BrokerExecutionAdapter:
     ) -> ExecutionReport:
         """Normalize an asynchronous broker callback for the order manager actor."""
         return self._normalize_with_runtime_broker_order_id(report)
+
+    def restore_order_mapping(
+        self,
+        snapshot: OrderManagerSnapshot,
+        *,
+        broker_order_ids_by_runtime_id: dict[str, str] | None = None,
+    ) -> None:
+        """Restore broker callback ID mapping from recovered order manager state."""
+        external_by_runtime = dict(broker_order_ids_by_runtime_id or {})
+        for runtime_broker_order_id, _order_id in snapshot.broker_to_order:
+            external_broker_order_id = external_by_runtime.get(
+                runtime_broker_order_id,
+                runtime_broker_order_id,
+            )
+            self._runtime_broker_order_id_by_broker_order_id[external_broker_order_id] = (
+                runtime_broker_order_id
+            )
 
     def cancel_order(self, order_id: OrderId, *, broker_order_id: str) -> ExecutionReport:
         """Cancel an active broker order and normalize the broker callback."""

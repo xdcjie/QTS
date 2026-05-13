@@ -107,3 +107,58 @@ def test_broker_execution_adapter_rejects_unknown_broker_order_id() -> None:
 
     with pytest.raises(ValueError, match="unknown broker_order_id"):
         adapter.normalize_execution_report(unknown)
+
+
+def test_broker_execution_adapter_can_recover_runtime_broker_order_mapping() -> None:
+    from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId
+    from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
+    from qts.execution.broker import (
+        BrokerExecutionReport,
+        BrokerExecutionReportStatus,
+        FakeBrokerAdapter,
+    )
+    from qts.execution.order_manager import Order, OrderIntent, OrderManagerSnapshot, OrderSide
+    from qts.execution.order_state_machine import OrderState
+
+    order_id = OrderId("ord-001")
+    adapter = BrokerExecutionAdapter(
+        broker=FakeBrokerAdapter(broker_id=BrokerId("paper")),
+        account_id=AccountId("acct-a"),
+    )
+    adapter.restore_order_mapping(
+        OrderManagerSnapshot(
+            orders=(
+                Order(
+                    order_id=order_id,
+                    intent=OrderIntent(
+                        order_id=order_id,
+                        instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+                        side=OrderSide.BUY,
+                        quantity=Decimal("1"),
+                    ),
+                    state=OrderState.ACCEPTED,
+                    broker_order_id="runtime-broker-001",
+                ),
+            ),
+            broker_to_order=(("runtime-broker-001", order_id),),
+        ),
+        broker_order_ids_by_runtime_id={"runtime-broker-001": "paper-1"},
+    )
+
+    report = BrokerExecutionReport(
+        report_id="rpt-001",
+        broker_id=BrokerId("paper"),
+        broker_order_id="paper-1",
+        order_id=order_id,
+        account_id=AccountId("acct-a"),
+        strategy_id=None,
+        instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+        status=BrokerExecutionReportStatus.FILLED,
+        filled_quantity=Decimal("1"),
+        fill_price=Decimal("100"),
+        fill_id="fill-001",
+    )
+
+    normalized = adapter.normalize_execution_report(report)
+
+    assert normalized.broker_order_id == "runtime-broker-001"

@@ -3,7 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
+from threading import Event
 from typing import TYPE_CHECKING
+
+import pytest
 
 if TYPE_CHECKING:
     from qts.data.adapters.ibkr_transport import (
@@ -137,6 +140,100 @@ def test_ibkr_tws_market_data_transport_builds_stock_contract_and_normalizes_tic
     assert tick.price == Decimal("101.25")
 
 
+def test_ibkr_tws_market_data_transport_waits_through_transient_connectivity_status() -> None:
+    from qts.core.ids import BrokerId, InstrumentId
+    from qts.data.adapters.ibkr_market_data import (
+        IbkrMarketDataAdapter,
+        IbkrMarketDataConnection,
+    )
+    from qts.data.adapters.ibkr_transport import (
+        IbkrTwsMarketDataTransport,
+        IbkrTwsMarketDataTransportConfig,
+    )
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    adapter = IbkrMarketDataAdapter(
+        connection=IbkrMarketDataConnection(
+            host="127.0.0.1",
+            port=4002,
+            client_id=101,
+            source_id="ibkr-paper-md",
+        ),
+        symbol_mapping=mapping,
+    )
+    transport = IbkrTwsMarketDataTransport(
+        config=IbkrTwsMarketDataTransportConfig(
+            host="127.0.0.1",
+            port=4002,
+            client_id=101,
+        ),
+        sink=adapter,
+    )
+    transport.register_market_data_request(77, broker_symbol="AAPL")
+    transport.handle_error(
+        request_id=-1,
+        code=2110,
+        message="Connectivity between TWS and server is broken. It will be restored automatically.",
+    )
+    transport.handle_tick_price(77, tick_type=4, price=101.25)
+
+    tick = transport.wait_for_event(timeout_seconds=1)
+
+    from qts.domain.market_data import Tick
+
+    assert isinstance(tick, Tick)
+    assert tick.instrument_id == instrument_id
+    assert tick.price == Decimal("101.25")
+
+
+def test_ibkr_tws_market_data_transport_bounds_blocking_ibapi_connect(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from qts.core.ids import BrokerId, InstrumentId
+    from qts.data.adapters.ibkr_market_data import (
+        IbkrMarketDataAdapter,
+        IbkrMarketDataConnection,
+    )
+    from qts.data.adapters.ibkr_transport import (
+        IbkrTwsMarketDataTransport,
+        IbkrTwsMarketDataTransportConfig,
+    )
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    adapter = IbkrMarketDataAdapter(
+        connection=IbkrMarketDataConnection(
+            host="127.0.0.1",
+            port=4002,
+            client_id=101,
+            source_id="ibkr-paper-md",
+        ),
+        symbol_mapping=mapping,
+    )
+    app = _BlockingConnectApp()
+    monkeypatch.setattr("qts.data.adapters.ibkr_transport._new_market_data_app", lambda owner: app)
+    transport = IbkrTwsMarketDataTransport(
+        config=IbkrTwsMarketDataTransportConfig(
+            host="127.0.0.1",
+            port=4002,
+            client_id=101,
+            timeout_seconds=0.01,
+        ),
+        sink=adapter,
+    )
+
+    with pytest.raises(TimeoutError, match="timed out connecting"):
+        transport.connect()
+
+    assert app.disconnect_called
+    assert not transport.connected
+
+
 @dataclass(slots=True)
 class _FakeMarketDataTransport:
     sink: IbkrMarketDataCallbackSink
@@ -156,3 +253,23 @@ class _FakeMarketDataTransport:
 
     def emit_bar(self, payload: IbkrBarPayload) -> Bar:
         return self.sink.on_bar(payload)
+
+
+class _BlockingConnectApp:
+    def __init__(self) -> None:
+        self._disconnected = Event()
+        self.disconnect_called = False
+
+    def connect(self, host: str, port: int, client_id: int) -> None:
+        del host, port, client_id
+        self._disconnected.wait(timeout=5)
+
+    def disconnect(self) -> None:
+        self.disconnect_called = True
+        self._disconnected.set()
+
+    def isConnected(self) -> bool:
+        return False
+
+    def run(self) -> None:
+        return None

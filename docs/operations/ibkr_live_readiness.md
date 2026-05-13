@@ -9,6 +9,9 @@ This checklist must be completed before enabling live order execution.
 - Keep market data and order execution in separate config sections.
 - Keep market data and order execution on distinct IBKR client IDs.
 - Load credentials from environment variables or a secret manager, never from committed config.
+- Live observation config must reject `DU...` paper accounts and paper-only
+  client IDs or secret references.
+- Live observation mode must keep `orders_enabled: false` until signoff evidence exists.
 
 ## Cutover
 
@@ -18,7 +21,8 @@ This checklist must be completed before enabling live order execution.
 4. Confirm account ID, permissions, and risk profile with the broker account owner.
 5. Start market data worker first and verify normalized ticks/quotes/bars.
 6. Start order execution worker in observe-only mode if available.
-7. Submit a minimal test order only after manual approval.
+7. Compare paper decisions against live market and broker state.
+8. Submit a minimal test order only after engineering, operations, and risk signoff.
 
 ## Reconnect
 

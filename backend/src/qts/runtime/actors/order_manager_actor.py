@@ -9,7 +9,14 @@ from decimal import Decimal
 from qts.core.ids import InstrumentId, OrderId
 from qts.domain.orders import CancelIntent
 from qts.domain.risk import RiskDecision
-from qts.execution.order_manager import ExecutionReport, Order, OrderFill, OrderIntent, OrderManager
+from qts.execution.order_manager import (
+    ExecutionReport,
+    Order,
+    OrderFill,
+    OrderIntent,
+    OrderManager,
+    OrderManagerSnapshot,
+)
 from qts.runtime.actor import Actor
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.execution_actor import OrderCancelRequest, OrderExecutionRequest
@@ -83,6 +90,10 @@ class OrderManagerActor(Actor):
     def fills_since(self, index: int) -> tuple[OrderFill, ...]:
         """Perform fills_since."""
         return tuple(self._fills[index:])
+
+    def snapshot(self) -> OrderManagerSnapshot:
+        """Return actor-owned order manager snapshot."""
+        return self._manager.snapshot()
 
     def compact_for_streaming(self, order_ids: Iterable[OrderId]) -> None:
         """Perform compact_for_streaming."""

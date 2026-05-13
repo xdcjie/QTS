@@ -4,12 +4,12 @@ provider: ibkr
 connections:
   market_data:
     host: 127.0.0.1
-    port: 7496
+    port: 4001
     client_id: 111
     source_id: ibkr-live-md
   order_execution:
     host: 127.0.0.1
-    port: 7496
+    port: 4001
     client_id: 211
     broker_id: IBKR
 

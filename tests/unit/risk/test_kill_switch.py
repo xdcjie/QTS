@@ -50,3 +50,15 @@ def test_kill_switch_registry_keeps_scope_matching_inside_the_registry() -> None
     }
 
     assert "_matching_scopes" not in private_functions
+
+
+def test_runtime_kill_switch_command_requires_operator_reason() -> None:
+    import pytest
+    from qts.risk.kill_switch import RuntimeKillSwitchCommand
+
+    with pytest.raises(ValueError, match="reason"):
+        RuntimeKillSwitchCommand(operator_id="ops-a", reason=" ")
+
+    command = RuntimeKillSwitchCommand(operator_id="ops-a", reason="manual halt")
+
+    assert command.cancel_active_orders is True

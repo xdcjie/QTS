@@ -19,7 +19,11 @@ class RuntimeEvent:
 
 
 class RuntimeEventSink:
-    """Boundary placeholder for consuming normalized runtime events."""
+    """Boundary for consuming normalized runtime events."""
+
+    def write(self, event: RuntimeEvent) -> object:
+        """Write one runtime event."""
+        raise NotImplementedError
 
 
 __all__ = ["RuntimeEvent", "RuntimeEventSink"]

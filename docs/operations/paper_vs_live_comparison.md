@@ -15,3 +15,7 @@ Compare paper decisions against live market and broker state before enabling rea
 ## Gate
 
 Unexplained differences block production readiness.
+
+Live observation must submit no orders. The comparison may produce hypothetical
+paper decisions, but live broker state is read-only until signoff evidence
+explicitly enables live capital.

@@ -59,6 +59,22 @@ class KillSwitchState:
     reason: str
 
 
+@dataclass(frozen=True, slots=True)
+class RuntimeKillSwitchCommand:
+    """Operator command to halt runtime order submission."""
+
+    operator_id: str
+    reason: str
+    cancel_active_orders: bool = True
+
+    def __post_init__(self) -> None:
+        """Validate operator kill-switch evidence fields."""
+        if not self.operator_id.strip():
+            raise ValueError("operator_id must not be empty")
+        if not self.reason.strip():
+            raise ValueError("reason must not be empty")
+
+
 class KillSwitchRegistry:
     """Auditable in-memory kill-switch registry."""
 
@@ -122,4 +138,5 @@ __all__ = [
     "KillSwitchScope",
     "KillSwitchScopeType",
     "KillSwitchState",
+    "RuntimeKillSwitchCommand",
 ]

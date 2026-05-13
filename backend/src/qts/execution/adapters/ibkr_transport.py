@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import queue
 import threading
+from contextlib import suppress
 from dataclasses import dataclass
 from decimal import Decimal
 from importlib import import_module
@@ -13,7 +14,9 @@ from typing import Any, Literal, Protocol
 from qts.domain.orders import ExecutionReport, ExecutionReportStatus
 from qts.execution.broker import BrokerOrderType, TimeInForce
 
-_IBKR_INFO_ERROR_CODES = frozenset({399, 2103, 2104, 2105, 2106, 2107, 2108, 2119, 2157, 2158})
+_IBKR_INFO_ERROR_CODES = frozenset(
+    {399, 1100, 1101, 1102, 1104, 2103, 2104, 2105, 2106, 2107, 2108, 2110, 2119, 2157, 2158}
+)
 _ORDER_STATUS_REPORT_PREFIX = "ibkr-status"
 _EXECUTION_REPORT_PREFIX = "ibkr-exec"
 
@@ -106,6 +109,7 @@ class IbkrOrderRequest:
     time_in_force: TimeInForce = TimeInForce.DAY
     limit_price: Decimal | None = None
     contract: IbkrOrderContractSpec | None = None
+    outside_regular_trading_hours: bool = False
 
     def __post_init__(self) -> None:
         if not self.client_order_id.strip():
@@ -145,6 +149,7 @@ class IbkrOrderRequest:
         order.tif = self.time_in_force.value.upper()
         order.account = self.account_id
         order.transmit = True
+        order.outsideRth = self.outside_regular_trading_hours
         if self.order_type is BrokerOrderType.MARKET:
             order.orderType = "MKT"
         elif self.order_type is BrokerOrderType.LIMIT:
@@ -388,16 +393,27 @@ class IbkrTwsOrderExecutionTransport:
         self._ready.clear()
         app = _new_order_execution_app(self)
         self._app = app
-        app.connect(self.config.host, self.config.port, self.config.client_id)
-        self._thread = threading.Thread(
-            target=app.run,
-            name=f"qts-ibkr-oe-{self.config.client_id}",
-            daemon=True,
-        )
-        self._thread.start()
-        if not self._ready.wait(self.config.timeout_seconds):
+        try:
+            _connect_ibapi_app(
+                app,
+                host=self.config.host,
+                port=self.config.port,
+                client_id=self.config.client_id,
+                timeout_seconds=self.config.timeout_seconds,
+            )
+            self._thread = threading.Thread(
+                target=app.run,
+                name=f"qts-ibkr-oe-{self.config.client_id}",
+                daemon=True,
+            )
+            self._thread.start()
+            if self._ready.wait(self.config.timeout_seconds):
+                return
+        except Exception:
             self.disconnect()
-            raise TimeoutError("timed out waiting for IBKR order-execution API readiness")
+            raise
+        self.disconnect()
+        raise TimeoutError("timed out waiting for IBKR order-execution API readiness")
 
     def disconnect(self) -> None:
         """Disconnect from TWS/Gateway."""
@@ -475,6 +491,44 @@ class IbkrTwsOrderExecutionTransport:
             if event.broker_order_id == broker_order_id and event.status in statuses:
                 return event
 
+    def wait_for_fill_report(
+        self,
+        broker_order_id: str,
+        *,
+        timeout_seconds: float | None = None,
+    ) -> ExecutionReport:
+        """Wait for a broker fill report with quantity, price, and fill id."""
+
+        if not broker_order_id.strip():
+            raise ValueError("broker_order_id must not be empty")
+
+        timeout = timeout_seconds or self.config.timeout_seconds
+        deadline = monotonic() + timeout
+        while True:
+            remaining = deadline - monotonic()
+            if remaining <= 0:
+                details = "; ".join(_format_error(error) for error in self._seen_errors)
+                suffix = f" IBKR errors: {details}" if details else ""
+                raise TimeoutError(f"timed out waiting for IBKR fill report.{suffix}")
+            try:
+                event = self._reports.get(timeout=min(0.25, remaining))
+            except queue.Empty:
+                continue
+            if isinstance(event, IbkrTransportError):
+                self._seen_errors.append(event)
+                if event.code not in _IBKR_INFO_ERROR_CODES:
+                    raise RuntimeError(f"IBKR order-execution error: {_format_error(event)}")
+                continue
+            if isinstance(event, IbkrConnectionEvent):
+                continue
+            if (
+                event.broker_order_id == broker_order_id
+                and event.fill_id is not None
+                and event.filled_quantity > Decimal("0")
+                and event.fill_price is not None
+            ):
+                return event
+
     def handle_order_status(self, *, order_id: int, status: str) -> ExecutionReport:
         """Handle an IBKR orderStatus callback."""
 
@@ -499,18 +553,28 @@ class IbkrTwsOrderExecutionTransport:
             )
         )
 
-    def handle_commission_and_fees(self, commission_report: Any) -> None:
-        """Handle an IBKR commissionAndFeesReport callback."""
+    def handle_commission_report(self, commission_report: Any) -> None:
+        """Handle an IBKR commission callback."""
 
+        commission = (
+            commission_report.commissionAndFees
+            if hasattr(commission_report, "commissionAndFees")
+            else commission_report.commission
+        )
         result = self.emit_commission(
             IbkrCommissionPayload(
                 execution_id=str(commission_report.execId),
-                commission=_to_decimal(commission_report.commissionAndFees),
+                commission=_to_decimal(commission),
                 currency=str(commission_report.currency),
             )
         )
         if isinstance(result, ExecutionReport):
             self._reports.put(result)
+
+    def handle_commission_and_fees(self, commission_report: Any) -> None:
+        """Handle an IBKR commissionAndFeesReport callback."""
+
+        self.handle_commission_report(commission_report)
 
     def handle_error(self, *, request_id: int, code: int, message: str) -> None:
         """Handle an IBKR error callback."""
@@ -664,6 +728,9 @@ def _new_order_execution_app(owner: IbkrTwsOrderExecutionTransport) -> Any:
     def commission_and_fees_report(self: Any, commission_report: Any) -> None:
         owner.handle_commission_and_fees(commission_report)
 
+    def commission_report(self: Any, commission_report: Any) -> None:
+        owner.handle_commission_report(commission_report)
+
     def error(
         self: Any,
         req_id: int,
@@ -688,6 +755,7 @@ def _new_order_execution_app(owner: IbkrTwsOrderExecutionTransport) -> Any:
             "orderStatus": order_status,
             "execDetails": exec_details,
             "commissionAndFeesReport": commission_and_fees_report,
+            "commissionReport": commission_report,
             "error": error,
             "connectionClosed": connection_closed,
         },
@@ -704,6 +772,38 @@ def _ibapi_attr(module_name: str, attribute_name: str) -> Any:
             "the Interactive Brokers TWS API download"
         ) from exc
     return getattr(module, attribute_name)
+
+
+def _connect_ibapi_app(
+    app: Any,
+    *,
+    host: str,
+    port: int,
+    client_id: int,
+    timeout_seconds: float,
+) -> None:
+    errors: list[BaseException] = []
+
+    def connect() -> None:
+        try:
+            app.connect(host, port, client_id)
+        except BaseException as exc:  # pragma: no cover - re-raised on caller thread
+            errors.append(exc)
+
+    thread = threading.Thread(
+        target=connect,
+        name=f"qts-ibkr-connect-{client_id}",
+        daemon=True,
+    )
+    thread.start()
+    thread.join(timeout_seconds)
+    if thread.is_alive():
+        with suppress(Exception):
+            app.disconnect()
+        thread.join(timeout=1)
+        raise TimeoutError("timed out connecting to IBKR API")
+    if errors:
+        raise errors[0]
 
 
 def _to_decimal(value: object) -> Decimal:

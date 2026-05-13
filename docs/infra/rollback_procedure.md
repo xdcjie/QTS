@@ -8,3 +8,11 @@
 6. Deploy the previous approved version.
 7. Start in observation mode and verify no real orders can be submitted.
 8. Resume paper or live trading only after operator approval.
+
+Rollback evidence must preserve:
+
+- Operator ID, timestamp, and reason.
+- Runtime state and event store paths.
+- Active order IDs and broker cancel reports.
+- Internal account snapshot and broker snapshot.
+- Final reconciliation report and any accepted drift classification.

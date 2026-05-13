@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import queue
 import threading
+from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -20,7 +21,24 @@ _BID_SIZE_TICK_TYPES = frozenset({0, 69})
 _ASK_SIZE_TICK_TYPES = frozenset({3, 70})
 _LAST_SIZE_TICK_TYPES = frozenset({5, 71})
 _IBKR_INFO_ERROR_CODES = frozenset(
-    {10167, 10168, 2103, 2104, 2105, 2106, 2107, 2108, 2119, 2157, 2158}
+    {
+        1100,
+        1101,
+        1102,
+        1104,
+        10167,
+        10168,
+        2103,
+        2104,
+        2105,
+        2106,
+        2107,
+        2108,
+        2110,
+        2119,
+        2157,
+        2158,
+    }
 )
 _DEFAULT_REALTIME_BAR_SECONDS = 5
 
@@ -265,16 +283,27 @@ class IbkrTwsMarketDataTransport:
         self._ready.clear()
         app = _new_market_data_app(self)
         self._app = app
-        app.connect(self.config.host, self.config.port, self.config.client_id)
-        self._thread = threading.Thread(
-            target=app.run,
-            name=f"qts-ibkr-md-{self.config.client_id}",
-            daemon=True,
-        )
-        self._thread.start()
-        if not self._ready.wait(self.config.timeout_seconds):
+        try:
+            _connect_ibapi_app(
+                app,
+                host=self.config.host,
+                port=self.config.port,
+                client_id=self.config.client_id,
+                timeout_seconds=self.config.timeout_seconds,
+            )
+            self._thread = threading.Thread(
+                target=app.run,
+                name=f"qts-ibkr-md-{self.config.client_id}",
+                daemon=True,
+            )
+            self._thread.start()
+            if self._ready.wait(self.config.timeout_seconds):
+                return
+        except Exception:
             self.disconnect()
-            raise TimeoutError("timed out waiting for IBKR market-data API readiness")
+            raise
+        self.disconnect()
+        raise TimeoutError("timed out waiting for IBKR market-data API readiness")
 
     def disconnect(self) -> None:
         """Disconnect from TWS/Gateway."""
@@ -615,6 +644,38 @@ def _ibapi_attr(module_name: str, attribute_name: str) -> Any:
             "the Interactive Brokers TWS API download"
         ) from exc
     return getattr(module, attribute_name)
+
+
+def _connect_ibapi_app(
+    app: Any,
+    *,
+    host: str,
+    port: int,
+    client_id: int,
+    timeout_seconds: float,
+) -> None:
+    errors: list[BaseException] = []
+
+    def connect() -> None:
+        try:
+            app.connect(host, port, client_id)
+        except BaseException as exc:  # pragma: no cover - re-raised on caller thread
+            errors.append(exc)
+
+    thread = threading.Thread(
+        target=connect,
+        name=f"qts-ibkr-connect-{client_id}",
+        daemon=True,
+    )
+    thread.start()
+    thread.join(timeout_seconds)
+    if thread.is_alive():
+        with suppress(Exception):
+            app.disconnect()
+        thread.join(timeout=1)
+        raise TimeoutError("timed out connecting to IBKR API")
+    if errors:
+        raise errors[0]
 
 
 def _to_decimal(value: object) -> Decimal:

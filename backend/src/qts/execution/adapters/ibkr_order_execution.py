@@ -99,6 +99,7 @@ class IbkrOrderExecutionAdapter:
         asset_class: str = "equity",
         opens_short: bool = False,
         contract: IbkrOrderContractSpec | None = None,
+        outside_regular_trading_hours: bool = False,
     ) -> IbkrOrderRequest:
         """Perform to_order_request."""
         self._validate_order_request(
@@ -119,6 +120,7 @@ class IbkrOrderExecutionAdapter:
             time_in_force=time_in_force,
             limit_price=limit_price,
             contract=contract,
+            outside_regular_trading_hours=outside_regular_trading_hours,
         )
 
     def normalize_execution_report(self, report: IbkrExecutionReport) -> ExecutionReport:
