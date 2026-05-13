@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from qts.core.ids import InstrumentId
 from qts.data.live_feed import FeedCapabilities
@@ -55,3 +57,38 @@ def test_coarse_historical_source_rejects_finer_requested_timeframe() -> None:
             ),
             capabilities=capabilities,
         )
+
+
+def test_streaming_source_stale_degradation_uses_internal_instrument_id() -> None:
+    from qts.core.ids import BrokerId
+    from qts.data.adapters.ibkr_market_data import (
+        IbkrMarketDataAdapter,
+        IbkrMarketDataConnection,
+    )
+    from qts.data.sources.streaming_market_data_source import StreamingMarketDataSource
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    source = StreamingMarketDataSource(
+        adapter=IbkrMarketDataAdapter(
+            connection=IbkrMarketDataConnection(
+                host="127.0.0.1",
+                port=4002,
+                client_id=101,
+                source_id="ibkr-paper-md",
+            ),
+            symbol_mapping=mapping,
+        ),
+        default_max_age=timedelta(seconds=5),
+    )
+    subscribed_at = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    source.subscribe(
+        LogicalSubscription("strategy-a", instrument_id, "1m"), subscribed_at=subscribed_at
+    )
+
+    [degradation] = source.drain(observed_at=subscribed_at + timedelta(seconds=6))
+
+    assert degradation.instrument_id == instrument_id
+    assert not hasattr(degradation, "broker_symbol")

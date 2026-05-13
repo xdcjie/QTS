@@ -27,8 +27,6 @@ def _bar(start: datetime, close: str = "100") -> Bar:
 
 
 def test_backtest_streaming_sink_writes_orders_fills_ledger_and_points(tmp_path: Path) -> None:
-    from qts.backtest.report import EquityCurvePoint, StreamingBacktestArtifactWriter
-    from qts.backtest.sinks import BacktestStreamingSink
     from qts.core.ids import InstrumentId, OrderId
     from qts.execution.order_manager import (
         Order,
@@ -37,9 +35,11 @@ def test_backtest_streaming_sink_writes_orders_fills_ledger_and_points(tmp_path:
         OrderSide,
     )
     from qts.execution.order_state_machine import OrderState
+    from qts.reporting.backtest import BacktestArtifactWriter, EquityCurvePoint
+    from qts.runtime.sinks.backtest import BacktestRuntimeEventSink
 
-    writer = StreamingBacktestArtifactWriter(tmp_path)
-    sink = BacktestStreamingSink(writer)
+    writer = BacktestArtifactWriter(tmp_path)
+    sink = BacktestRuntimeEventSink(writer)
     bar = _bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC))
 
     order = Order(

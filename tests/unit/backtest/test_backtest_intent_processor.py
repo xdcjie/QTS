@@ -41,11 +41,12 @@ def _asset() -> AssetRef:
 def _new_environment(
     *, bar: Bar
 ) -> tuple[Any, OrderManagerActor, ActorRef, ActorRef, AccountActor, ActorRef]:
-    from qts.backtest.engine import BacktestCostModel, _BacktestExecutionAdapter
+    from qts.backtest.engine import BacktestCostModel
     from qts.backtest.instrument_context import BacktestInstrumentContext
-    from qts.backtest.intent_processor import BacktestIntentProcessor
     from qts.backtest.portfolio_projection import BacktestPortfolioProjector
+    from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
     from qts.risk.risk_engine import RiskEngine
+    from qts.runtime.intent_processing import TargetIntentProcessor
 
     account_actor = AccountActor(initial_cash={"USD": Decimal("10000")})
     account_ref = ActorRef(actor=account_actor, mailbox=Mailbox())
@@ -58,7 +59,7 @@ def _new_environment(
     execution_ref = ActorRef(
         actor=ExecutionActor(
             order_manager_ref=order_manager_ref,
-            execution_adapter=_BacktestExecutionAdapter(BacktestCostModel()),
+            execution_adapter=SimulatedExecutionAdapter(BacktestCostModel()),
         ),
         mailbox=execution_mailbox,
     )
@@ -66,7 +67,7 @@ def _new_environment(
         registry_bars=(bar,),
     )
     projector = BacktestPortfolioProjector()
-    processor = BacktestIntentProcessor(
+    processor = TargetIntentProcessor(
         risk_engine=RiskEngine([]),
         instrument_context=instrument_context,
         multiplier_for=projector.multiplier_for,

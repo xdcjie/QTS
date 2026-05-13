@@ -53,7 +53,7 @@ class RoundTripStrategy(Strategy):
 
 
 def test_streaming_equity_metrics_reports_return_drawdown_and_count() -> None:
-    from qts.backtest.report import StreamingEquityMetrics
+    from qts.reporting.backtest import StreamingEquityMetrics
 
     equity_metrics = StreamingEquityMetrics()
     for value in [Decimal("100"), Decimal("110"), Decimal("105"), Decimal("120")]:
@@ -66,7 +66,7 @@ def test_streaming_equity_metrics_reports_return_drawdown_and_count() -> None:
 
 
 def test_streaming_equity_metrics_rejects_empty_curve() -> None:
-    from qts.backtest.report import StreamingEquityMetrics
+    from qts.reporting.backtest import StreamingEquityMetrics
 
     with pytest.raises(ValueError, match="equity curve"):
         StreamingEquityMetrics().to_payload()

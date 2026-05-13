@@ -7,6 +7,7 @@ from datetime import datetime
 from decimal import Decimal
 
 from qts.core.ids import InstrumentId
+from qts.data.adapters.ibkr_transport import IbkrBarPayload, IbkrQuotePayload, IbkrTickPayload
 from qts.domain.market_data import Bar, Quote, Tick
 from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
@@ -78,6 +79,16 @@ class IbkrMarketDataAdapter:
             size=size,
         )
 
+    def on_tick(self, payload: IbkrTickPayload) -> Tick:
+        """Normalize a raw IBKR tick transport callback."""
+
+        return self.normalize_tick(
+            broker_symbol=payload.broker_symbol,
+            time=payload.time,
+            price=payload.price,
+            size=payload.size,
+        )
+
     def normalize_quote(
         self,
         *,
@@ -96,6 +107,18 @@ class IbkrMarketDataAdapter:
             ask_price=ask_price,
             bid_size=bid_size,
             ask_size=ask_size,
+        )
+
+    def on_quote(self, payload: IbkrQuotePayload) -> Quote:
+        """Normalize a raw IBKR quote transport callback."""
+
+        return self.normalize_quote(
+            broker_symbol=payload.broker_symbol,
+            time=payload.time,
+            bid_price=payload.bid_price,
+            ask_price=payload.ask_price,
+            bid_size=payload.bid_size,
+            ask_size=payload.ask_size,
         )
 
     def normalize_bar(
@@ -134,6 +157,27 @@ class IbkrMarketDataAdapter:
             trade_count=trade_count,
             is_complete=is_complete,
             is_partial=is_partial,
+        )
+
+    def on_bar(self, payload: IbkrBarPayload) -> Bar:
+        """Normalize a raw IBKR bar transport callback."""
+
+        return self.normalize_bar(
+            broker_symbol=payload.broker_symbol,
+            start_time=payload.start_time,
+            end_time=payload.end_time,
+            timeframe=payload.timeframe,
+            session_id=payload.session_id,
+            open=payload.open,
+            high=payload.high,
+            low=payload.low,
+            close=payload.close,
+            volume=payload.volume,
+            vwap=payload.vwap,
+            open_interest=payload.open_interest,
+            trade_count=payload.trade_count,
+            is_complete=payload.is_complete,
+            is_partial=payload.is_partial,
         )
 
 

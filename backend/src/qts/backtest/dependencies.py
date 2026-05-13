@@ -15,12 +15,12 @@ from qts.risk.risk_engine import RiskEngine
 from qts.risk.rules.max_notional import MaxNotionalRule
 
 if TYPE_CHECKING:
-    from qts.backtest.intent_processor import BacktestProcessedIntent
-    from qts.backtest.report import EquityCurvePoint
+    from qts.reporting.backtest import EquityCurvePoint
     from qts.runtime.actors.execution_actor import ExecutionAdapter
+    from qts.runtime.intent_processing import ProcessedIntent
     from qts.strategy_sdk import PortfolioView
 
-ProcessIntentHandler = Callable[..., "BacktestProcessedIntent"]
+ProcessIntentHandler = Callable[..., "ProcessedIntent"]
 PortfolioViewBuilder = Callable[..., "PortfolioView"]
 EquityPointBuilder = Callable[..., "EquityCurvePoint"]
 RollingPriceUpdater = Callable[..., None]

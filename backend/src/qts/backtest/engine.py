@@ -9,29 +9,26 @@ from decimal import Decimal
 from typing import Any
 
 from qts.backtest.actor_loop import BacktestActorLoop
-from qts.backtest.config import BacktestCostModel, BacktestEngineConfig, BacktestRunConfig
 from qts.backtest.dependencies import (
     BacktestActorLoopConfig,
     BacktestActorLoopDependencies,
     BacktestEngineDependencies,
 )
 from qts.backtest.instrument_context import BacktestInstrumentContext
-from qts.backtest.intent_processor import BacktestIntentProcessor
 from qts.backtest.portfolio_projection import BacktestPortfolioProjector
-from qts.backtest.report import (
-    EquityCurvePoint,
-    StreamingBacktestArtifactWriter,
-    dataset_metadata_payload,
-    zero_time,
-)
-from qts.backtest.sinks import BacktestStreamingSink
 from qts.core.hashing import stable_json_hash
 from qts.core.ids import BacktestRunId, InstrumentId
 from qts.data.provenance import DatasetMetadata
 from qts.domain.market_data import Bar
-from qts.execution.simulator.backtest_execution_adapter import BacktestExecutionAdapter
+from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
 from qts.registry.future_roll import FutureRollRegistry
 from qts.registry.instrument_registry import InstrumentRegistry
+from qts.reporting.backtest import (
+    BacktestArtifactWriter,
+    EquityCurvePoint,
+    dataset_metadata_payload,
+    zero_time,
+)
 from qts.risk.risk_engine import RiskEngine
 from qts.risk.rules.max_notional import MaxNotionalRule
 from qts.runtime.actors.account_actor import AccountSnapshot
@@ -47,6 +44,9 @@ from qts.runtime.actors.strategy_actor import (
     StrategyFinalize,
     StrategyFinalized,
 )
+from qts.runtime.config import BacktestCostModel, BacktestEngineConfig, BacktestRuntimeConfig
+from qts.runtime.intent_processing import TargetIntentProcessor
+from qts.runtime.sinks.backtest import BacktestRuntimeEventSink
 from qts.strategy_sdk import Strategy
 
 
@@ -95,8 +95,8 @@ class BacktestEngine:
     ) -> None:
         """Create an engine from explicit config and dependency objects.
 
-        Legacy keyword arguments remain supported and are normalized into
-        ``BacktestEngineConfig`` and ``BacktestEngineDependencies``.
+        Keyword arguments are normalized into ``BacktestEngineConfig`` and
+        ``BacktestEngineDependencies`` when explicit objects are not supplied.
         """
         self._strategy = strategy
         if instrument_registry is None and isinstance(bars, Sequence):
@@ -154,7 +154,7 @@ class BacktestEngine:
         self._target_timeframe = engine_config.target_timeframe
         self._exchange_timezone_by_instrument = dict(dependencies.exchange_timezone_by_instrument)
         self._risk_engine = dependencies.risk_engine
-        self._execution_adapter = dependencies.execution_adapter or _BacktestExecutionAdapter(
+        self._execution_adapter = dependencies.execution_adapter or SimulatedExecutionAdapter(
             self._cost_model
         )
         self._instrument_context = BacktestInstrumentContext(
@@ -166,7 +166,7 @@ class BacktestEngine:
         self._portfolio_projector = BacktestPortfolioProjector(
             contract_multipliers=self._contract_multipliers
         )
-        self._intent_processor = BacktestIntentProcessor(
+        self._intent_processor = TargetIntentProcessor(
             risk_engine=self._risk_engine,
             instrument_context=self._instrument_context,
             multiplier_for=self._portfolio_projector.multiplier_for,
@@ -175,7 +175,7 @@ class BacktestEngine:
     @classmethod
     def from_config(
         cls,
-        config: BacktestRunConfig,
+        config: BacktestRuntimeConfig,
         *,
         bars: Iterable[Bar],
         strategy: Strategy,
@@ -216,8 +216,8 @@ class BacktestEngine:
 
     def run_streaming(self, output_dir: Any) -> BacktestStreamResult:
         """Run the backtest and write streaming artifacts."""
-        writer = StreamingBacktestArtifactWriter(output_dir)
-        sink = BacktestStreamingSink(writer)
+        writer = BacktestArtifactWriter(output_dir)
+        sink = BacktestRuntimeEventSink(writer)
         actor_loop = BacktestActorLoop(
             strategy=self._strategy,
             bars=self._bars,
@@ -283,14 +283,10 @@ class BacktestEngine:
         )
 
 
-_BacktestExecutionAdapter = BacktestExecutionAdapter
-
-
 __all__ = [
     "BacktestCostModel",
     "BacktestEngine",
     "BacktestStreamResult",
-    "_BacktestExecutionAdapter",
     "SignalAggregatorActor",
     "StrategyActor",
     "StrategyBarEvent",

@@ -7,12 +7,13 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from qts.core.ids import InstrumentId, OrderId
+from qts.domain.orders import CancelIntent
 from qts.domain.risk import RiskDecision
 from qts.execution.order_manager import ExecutionReport, Order, OrderFill, OrderIntent, OrderManager
 from qts.runtime.actor import Actor
 from qts.runtime.actor_ref import ActorRef
-from qts.runtime.actors.account_actor import ApplyFill
-from qts.runtime.actors.execution_actor import OrderExecutionRequest
+from qts.runtime.actors.execution_actor import OrderCancelRequest, OrderExecutionRequest
+from qts.runtime.execution_report_handler import ExecutionReportHandler
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,6 +24,13 @@ class SubmitOrder:
     risk_decision: RiskDecision
     broker_order_id: str
     market_price: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class CancelOrder:
+    """Message to cancel an active order through the execution actor."""
+
+    intent: CancelIntent
 
 
 class OrderManagerActor(Actor):
@@ -38,14 +46,20 @@ class OrderManagerActor(Actor):
         """Perform __init__."""
         self._manager = OrderManager()
         self._execution_ref = execution_ref
-        self._account_ref = account_ref
-        self._multiplier_by_instrument = dict(multiplier_by_instrument or {})
+        self._execution_report_handler = ExecutionReportHandler(
+            order_manager=self._manager,
+            account_ref=account_ref,
+            multiplier_by_instrument=multiplier_by_instrument,
+        )
         self._fills: list[OrderFill] = []
 
     def handle(self, message: object) -> None:
         """Perform handle."""
         if isinstance(message, SubmitOrder):
             self._handle_submit(message)
+            return
+        if isinstance(message, CancelOrder):
+            self._handle_cancel(message)
             return
         if isinstance(message, ExecutionReport):
             self._handle_report(message)
@@ -88,18 +102,23 @@ class OrderManagerActor(Actor):
             )
         )
 
+    def _handle_cancel(self, message: CancelOrder) -> None:
+        """Perform _handle_cancel."""
+        current = self._manager.get_order(message.intent.order_id)
+        if current.broker_order_id is None:
+            raise RuntimeError("order must have broker_order_id before cancellation")
+        order = self._manager.request_cancel(message.intent)
+        assert order.broker_order_id is not None
+        self._execution_ref.tell(
+            OrderCancelRequest(
+                order_id=order.order_id,
+                broker_order_id=order.broker_order_id,
+            )
+        )
+
     def _handle_report(self, message: ExecutionReport) -> None:
         """Perform _handle_report."""
-        result = self._manager.process_report(message)
-        for fill in result.fills:
-            self._fills.append(fill)
-            self._account_ref.tell(
-                ApplyFill(
-                    fill=fill,
-                    currency="USD",
-                    multiplier=self._multiplier_by_instrument.get(fill.instrument_id, Decimal("1")),
-                )
-            )
+        self._fills.extend(self._execution_report_handler.handle(message))
 
 
-__all__ = ["OrderManagerActor", "SubmitOrder"]
+__all__ = ["CancelOrder", "OrderManagerActor", "SubmitOrder"]

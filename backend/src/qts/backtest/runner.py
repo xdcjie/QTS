@@ -10,13 +10,13 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-from qts.backtest.config import BacktestRunConfig
 from qts.backtest.engine import BacktestEngine, BacktestStreamResult
-from qts.backtest.inputs import BacktestInputBuilder
 from qts.data.historical.catalog import (
     HistoricalCatalog,
     HistoricalCatalogLoadConfig,
 )
+from qts.data.sources.replay_market_data_source import ReplayMarketDataSource
+from qts.runtime.config import BacktestRuntimeConfig
 from qts.strategy_sdk import Strategy
 
 
@@ -48,9 +48,9 @@ def run_backtest(
 ) -> BacktestRun:
     """Run a backtest and write partitioned streaming artifacts."""
 
-    config = BacktestRunConfig.from_yaml(config_path)
+    config = BacktestRuntimeConfig.from_yaml(config_path)
     catalog = HistoricalCatalog.load(_catalog_load_config(config))
-    inputs = BacktestInputBuilder(config, catalog).build()
+    inputs = ReplayMarketDataSource(config, catalog).build()
     strategy = _load_strategy(config.strategy_class, config.strategy_params)
     result = BacktestEngine.from_config(
         config,
@@ -84,7 +84,7 @@ def run_backtest(
     )
 
 
-def _catalog_load_config(config: BacktestRunConfig) -> HistoricalCatalogLoadConfig:
+def _catalog_load_config(config: BacktestRuntimeConfig) -> HistoricalCatalogLoadConfig:
     """Perform _catalog_load_config."""
     if config.market_data.config_path is None or config.market_data.catalog is None:
         raise RuntimeError("market data reference is partially configured")

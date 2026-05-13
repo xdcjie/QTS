@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Backtest / Live 职责链对照</title>
+    <style>
+      :root {
+        --bg: #f8fafc;
+        --panel: #ffffff;
+        --ink: #0f172a;
+        --muted: #475569;
+        --line: #cbd5e1;
+        --row: #f8fafc;
+        --ok-bg: #dcfce7;
+        --ok-ink: #166534;
+        --partial-bg: #fef3c7;
+        --partial-ink: #92400e;
+        --missing-bg: #fee2e2;
+        --missing-ink: #991b1b;
+        --shared-bg: #e0f2fe;
+        --shared-ink: #075985;
+        --bt: #0284c7;
+        --live: #d97706;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+        line-height: 1.45;
+      }
+
+      .page {
+        max-width: 1760px;
+        margin: 0 auto;
+        padding: 32px;
+      }
+
+      .page-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 28px;
+        align-items: start;
+        margin-bottom: 22px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+        font-weight: 780;
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 760;
+        letter-spacing: 0;
+      }
+
+      h3 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 760;
+        letter-spacing: 0;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      code {
+        color: #0f172a;
+        font-family:
+          "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+        font-size: 12px;
+      }
+
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+        min-width: 390px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 26px;
+        border-radius: 999px;
+        padding: 3px 10px;
+        font-size: 12px;
+        font-weight: 740;
+        white-space: nowrap;
+      }
+
+      .ok {
+        background: var(--ok-bg);
+        color: var(--ok-ink);
+      }
+
+      .partial {
+        background: var(--partial-bg);
+        color: var(--partial-ink);
+      }
+
+      .missing {
+        background: var(--missing-bg);
+        color: var(--missing-ink);
+      }
+
+      .shared {
+        background: var(--shared-bg);
+        color: var(--shared-ink);
+      }
+
+      .surface {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: 0 16px 42px rgb(15 23 42 / 0.08);
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: 1.1fr 1.1fr 1fr;
+        gap: 14px;
+        margin: 18px 0;
+      }
+
+      .summary {
+        padding: 16px;
+      }
+
+      .summary h2 {
+        margin-bottom: 8px;
+      }
+
+      .summary p {
+        font-size: 14px;
+      }
+
+      .chain {
+        padding: 18px;
+      }
+
+      .chain-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+
+      .phase-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(220px, 1fr));
+        gap: 18px;
+        min-width: 1680px;
+      }
+
+      .scroll-x {
+        overflow-x: auto;
+        padding-bottom: 8px;
+      }
+
+      .phase-card {
+        position: relative;
+        display: grid;
+        grid-template-rows: auto auto 1fr 1fr auto;
+        min-height: 356px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      .phase-card:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        right: -15px;
+        width: 12px;
+        height: 12px;
+        border-top: 2px solid #64748b;
+        border-right: 2px solid #64748b;
+        transform: translateY(-50%) rotate(45deg);
+        background: var(--bg);
+      }
+
+      .phase-head {
+        padding: 13px 14px 10px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .phase-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        margin-right: 8px;
+        border-radius: 50%;
+        background: #0f172a;
+        color: #ffffff;
+        font-size: 12px;
+        font-weight: 760;
+      }
+
+      .role {
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--line);
+        background: #f8fafc;
+        color: #334155;
+        font-size: 13px;
+        font-weight: 680;
+      }
+
+      .lane {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .lane:last-of-type {
+        border-bottom: 0;
+      }
+
+      .lane-name {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 8px;
+        font-size: 13px;
+        font-weight: 760;
+      }
+
+      .lane-name.backtest {
+        color: var(--bt);
+      }
+
+      .lane-name.live {
+        color: var(--live);
+      }
+
+      .lane ul {
+        margin: 0;
+        padding-left: 18px;
+        color: #334155;
+        font-size: 13px;
+      }
+
+      .lane li + li {
+        margin-top: 4px;
+      }
+
+      .shared-note {
+        padding: 10px 14px 12px;
+        border-top: 1px solid var(--line);
+        background: #f0f9ff;
+        color: #075985;
+        font-size: 12px;
+      }
+
+      .tagline {
+        margin-top: 10px;
+        color: #0f172a;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      caption {
+        text-align: left;
+        padding: 18px 18px 10px;
+        font-size: 18px;
+        font-weight: 760;
+      }
+
+      th,
+      td {
+        border-top: 1px solid var(--line);
+        padding: 11px 14px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f1f5f9;
+        color: #334155;
+        font-size: 12px;
+        letter-spacing: 0;
+      }
+
+      .phase {
+        font-weight: 740;
+      }
+
+      .footnote {
+        margin-top: 14px;
+        font-size: 13px;
+      }
+
+      .placeholder {
+        margin-top: 12px;
+        padding: 10px 14px 4px;
+      }
+
+      .placeholder ul {
+        margin: 0 0 4px;
+        padding-left: 18px;
+        font-size: 14px;
+        color: #334155;
+      }
+
+      .placeholder li + li {
+        margin-top: 4px;
+      }
+
+      @media (max-width: 980px) {
+        .page {
+          padding: 20px;
+        }
+
+        .page-header {
+          display: block;
+        }
+
+        .legend {
+          justify-content: flex-start;
+          min-width: 0;
+          margin-top: 14px;
+        }
+
+        .summary-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="page-header">
+        <div>
+          <h1>Backtest / Live 职责链对照：统一类名版</h1>
+          <p>
+            采用同一套职责命名，按
+            配置加载 -> 数据获取 -> 标准化与聚合 -> 策略执行 -> 意图到风控 -> 订单执行 -> Fill/账户/输出
+            的链路对齐显示。已实现阶段先落到目标类名，未实现阶段先占位文件和类名。
+          </p>
+        </div>
+        <div class="legend" aria-label="状态图例">
+          <span class="badge ok">已实现</span>
+          <span class="badge partial">部分实现</span>
+          <span class="badge missing">未实现</span>
+          <span class="badge shared">职能一致 / 共享核心</span>
+        </div>
+      </div>
+
+      <div class="summary-grid" aria-label="链路摘要">
+        <div class="summary surface">
+          <h2>共同目标</h2>
+          <p>
+            两条路径共享同一条职责链，差异只在边界：历史回放/实盘 feed 与
+            模拟执行/经纪商执行。共用核心保持一致。
+          </p>
+        </div>
+        <div class="summary surface">
+          <h2>目录原则</h2>
+          <p>
+            <code>qts/runtime</code> 是 backtest/live 共用运行时，不是 live 专属目录。
+            模式差异只落在 data source、execution adapter、runtime event sink。
+          </p>
+        </div>
+        <div class="summary surface">
+          <h2>命名原则</h2>
+          <p>
+            相同职责使用同一个类名；只有边界实现带模式差异，例如
+            <code>ReplayMarketDataSource</code> / <code>StreamingMarketDataSource</code>、
+            <code>SimulatedExecutionAdapter</code> / <code>BrokerExecutionAdapter</code>。
+          </p>
+        </div>
+      </div>
+
+      <div class="surface chain" aria-label="阶段链路图">
+        <div class="chain-title">
+          <h2>阶段链路图</h2>
+          <span class="badge shared">每张卡对比 Backtest / Live，保留职责链一致性</span>
+        </div>
+        <div class="scroll-x">
+          <div class="phase-grid">
+            <div class="phase-card">
+              <div class="phase-head">
+                <h3><span class="phase-number">1</span>配置加载</h3>
+              </div>
+              <div class="role">
+                职责：把外部配置转成受校验运行输入。统一目标类名：
+                <code>TradingRuntimeConfig</code>。
+              </div>
+              <div class="lane">
+                <div class="lane-name backtest">
+                  <span>Backtest</span><span class="badge ok">已实现</span>
+                </div>
+                <ul>
+                  <li><code>BacktestRuntimeConfig</code>（目标名）</li>
+                  <li>目标文件：<code>backend/src/qts/runtime/config.py</code></li>
+                  <li>当前承接：<code>BacktestRuntimeConfig.from_yaml</code>、<code>BacktestEngineConfig</code></li>
+                </ul>
+              </div>
+              <div class="lane">
+                <div class="lane-name live">
+                  <span>Live / Paper</span><span class="badge partial">部分实现</span>
+                </div>
+                <ul>
+                  <li><code>LiveRuntimeConfig</code>（目标名）</li>
+                  <li>目标文件：<code>backend/src/qts/runtime/config.py</code></li>
+                  <li>当前承接：<code>LiveRuntimeConfig</code>、<code>validate_live_startup</code></li>
+                </ul>
+              </div>
+              <div class="shared-note">统一输出：账户配置、风险配置、日历、adapter 边界。</div>
+            </div>
+
+            <div class="phase-card">
+              <div class="phase-head">
+                <h3><span class="phase-number">2</span>数据获取</h3>
+              </div>
+              <div class="role">
+                职责：从边界源取数据并规范化。统一目标类名：
+                <code>MarketDataSource</code>。
+              </div>
+              <div class="lane">
+                <div class="lane-name backtest">
+                  <span>Backtest</span><span class="badge ok">已实现</span>
+                </div>
+                <ul>
+                  <li><code>ReplayMarketDataSource</code>（目标名）</li>
+                  <li>目标文件：<code>backend/src/qts/data/sources/replay_market_data_source.py</code>（占位）</li>
+                  <li>当前承接：<code>ReplayMarketDataSource</code>、<code>HistoricalMarketDataAdapter</code></li>
+                </ul>
+              </div>
+              <div class="lane">
+                <div class="lane-name live">
+                  <span>Live / Paper</span><span class="badge partial">部分实现</span>
+                </div>
+                <ul>
+                  <li><code>StreamingMarketDataSource</code>（目标名）</li>
+                  <li>目标文件：<code>backend/src/qts/data/sources/streaming_market_data_source.py</code>（占位）</li>
+                  <li>当前承接：<code>FakeLiveFeedAdapter</code>、<code>IbkrMarketDataAdapter</code></li>
+                </ul>
+              </div>
+              <div class="shared-note">统一约束：外部符号只允许停留在 adapter 边界。</div>
+            </div>
+
+            <div class="phase-card">
+              <div class="phase-head">
+                <h3><span class="phase-number">3</span>标准化与聚合</h3>
+              </div>
+              <div class="role">
+                职责：标准化、去重、bar 聚合、时序对齐；运行时只负责把数据流接入 actor/queue。
+                统一目标类名：<code>MarketDataPipeline</code>、<code>MarketDataFlow</code>。
+              </div>
+              <div class="lane">
+                <div class="lane-name backtest">
+                  <span>Backtest</span><span class="badge ok">已实现</span>
+                </div>
+                <ul>
+                  <li><code>MarketDataPipeline</code>（目标名）</li>
+                  <li>目标文件：<code>backend/src/qts/data/market_data_pipeline.py</code>（共享数据处理）</li>
+                  <li><code>MarketDataFlow</code>：<code>backend/src/qts/runtime/market_data_flow.py</code>（共享运行时编排）</li>
+                  <li>当前承接：<code>BacktestActorLoop</code>、<code>BarAggregationPipeline</code></li>
+                </ul>
+              </div>
+              <div class="lane">
+                <div class="lane-name live">
+                  <span>Live / Paper</span><span class="badge partial">部分实现</span>
+                </div>
+                <ul>
+                  <li><code>MarketDataPipeline</code>（目标名）</li>
+                  <li>目标文件：<code>backend/src/qts/data/market_data_pipeline.py</code>（共享数据处理）</li>
+                  <li><code>MarketDataFlow</code>：<code>backend/src/qts/runtime/market_data_flow.py</code>（共享运行时编排）</li>
+                  <li>当前承接：fake live 事件可进入 <code>MarketDataActor</code>，生产 loop 未闭环</li>
+                </ul>
+              </div>
+              <div class="shared-note">统一约束：timeframe 与 session 语义由领域层定义，不可受 provider 影响。</div>
+            </div>
+
+            <div class="phase-card">
+              <div class="phase-head">
+                <h3><span class="phase-number">4</span>策略执行</h3>
+              </div>
+              <div class="role">
+                职责：策略只读视图并输出目标意图。统一目标类名：
+                <code>StrategyExecutionPipeline</code>。
+              </div>
+              <div class="lane">
+                <div class="lane-name backtest">
+                  <span>Backtest</span><span class="badge ok">已实现</span>
+                </div>
+                <ul>
+                  <li><code>StrategyExecutionPipeline</code>（目标名）</li>
+                  <li>目标文件：<code>backend/src/qts/runtime/strategy_execution_pipeline.py</code>（已实现）</li>
+                  <li>当前承接：<code>StrategyExecutionPipeline</code> 协调 <code>StrategyActor</code>、<code>SignalAggregatorActor</code>、<code>StrategyContext</code></li>
+                </ul>
+              </div>
+              <div class="lane">
+                <div class="lane-name live">
+                  <span>Live / Paper</span><span class="badge partial">部分实现</span>
+                </div>
+                <ul>
+                  <li><code>StrategyExecutionPipeline</code>（目标名）</li>
+                  <li>目标文件：<code>backend/src/qts/runtime/strategy_execution_pipeline.py</code>（同上，已实现）</li>
+                  <li>当前承接：共享策略组件，未形成完整 live runtime 调度链</li>
+                </ul>
+              </div>
+              <div class="shared-note">统一约束：策略侧不分模式分支，不直接触达 Order/Account/Risk。</div>
+            </div>
+
+            <div class="phase-card">
+              <div class="phase-head">
+                <h3><span class="phase-number">5</span>意图到风控</h3>
+              </div>
+              <div class="role">
+                职责：目标意图解析为订单计划并执行风控。统一目标类名：
+                <code>TargetIntentProcessor</code>、<code>OrderPlanBuilder</code>。
+              </div>
+              <div class="lane">
+                <div class="lane-name backtest">
+                  <span>Backtest</span><span class="badge ok">已实现</span>
+                </div>
+                <ul>
+                  <li><code>TargetIntentProcessor</code>（目标名）</li>
+                  <li><code>OrderPlanBuilder</code>（目标名）</li>
+                  <li>目标文件：<code>backend/src/qts/runtime/intent_processing.py</code>（已实现）</li>
+                  <li>当前承接：<code>OrderPlanBuilder</code> 生成订单计划，<code>TargetIntentProcessor</code> 执行风控和提交订单</li>
+                </ul>
+              </div>
+              <div class="lane">
+                <div class="lane-name live">
+                  <span>Live / Paper</span><span class="badge missing">未实现</span>
+                </div>
+                <ul>
+                  <li><code>TargetIntentProcessor</code> + <code>OrderPlanBuilder</code>（目标名）</li>
+                  <li>目标文件：<code>backend/src/qts/runtime/intent_processing.py</code>（共享处理器已实现，live runtime 未接入）</li>
+                  <li>缺口：live runtime 未形成 intent -> risk -> order 的完整闭环</li>
+                </ul>
+              </div>
+              <div class="shared-note">统一约束：RiskEngine 在两种模式下都必须前置。</div>
+            </div>
+
+            <div class="phase-card">
+              <div class="phase-head">
+                <h3><span class="phase-number">6</span>订单执行</h3>
+              </div>
+              <div class="role">
+                职责：订单生命周期与执行桥接。统一目标类名：
+                <code>ExecutionAdapter</code>、<code>OrderExecutionCoordinator</code>。
+              </div>
+              <div class="lane">
+                <div class="lane-name backtest">
+                  <span>Backtest</span><span class="badge ok">已实现</span>
+                </div>
+                <ul>
+                  <li><code>SimulatedExecutionAdapter</code>（目标名）</li>
+                  <li>目标文件：<code>backend/src/qts/execution/adapters/simulated_execution_adapter.py</code>（已实现）</li>
+                  <li>当前承接：<code>SimulatedExecutionAdapter</code>、<code>ExecutionActor</code></li>
+                </ul>
+              </div>
+              <div class="lane">
+                <div class="lane-name live">
+                  <span>Live / Paper</span><span class="badge partial">部分实现</span>
+                </div>
+                <ul>
+                  <li><code>BrokerExecutionAdapter</code>（目标名）</li>
+                  <li>目标文件：<code>backend/src/qts/execution/adapters/broker_execution_adapter.py</code>（已实现基础 broker adapter）</li>
+                  <li>当前承接：<code>BrokerExecutionAdapter</code> 可接入 <code>ExecutionActor</code>；<code>IbkrOrderExecutionAdapter</code> 仍是 provider shape 映射</li>
+                </ul>
+              </div>
+              <div class="shared-note">统一约束：OrderManagerOwner 与 ExecutionActor 的边界不变。</div>
+            </div>
+
+            <div class="phase-card">
+              <div class="phase-head">
+                <h3><span class="phase-number">7</span>Fill / 账户 / 输出</h3>
+              </div>
+              <div class="role">
+                职责：fill 回流、账户更新与运行输出。统一目标类名：
+                <code>ExecutionReportHandler</code>、<code>RuntimeEventSink</code>、<code>ReportWriter</code>。
+              </div>
+              <div class="lane">
+                <div class="lane-name backtest">
+                  <span>Backtest</span><span class="badge ok">已实现</span>
+                </div>
+                <ul>
+                  <li><code>ExecutionReportHandler</code>（目标名）</li>
+                  <li>目标文件：<code>backend/src/qts/runtime/execution_report_handler.py</code>（已实现）</li>
+                  <li><code>BacktestRuntimeEventSink</code>：<code>backend/src/qts/runtime/sinks/backtest.py</code>（已实现）</li>
+                  <li><code>BacktestReportWriter</code>：<code>backend/src/qts/reporting/backtest.py</code>（已实现）</li>
+                  <li>当前承接：<code>ExecutionReportHandler</code> 处理 <code>ExecutionReport</code> -> <code>ApplyFill</code> -> <code>AccountActor</code></li>
+                </ul>
+              </div>
+              <div class="lane">
+                <div class="lane-name live">
+                  <span>Live / Paper</span><span class="badge partial">部分实现</span>
+                </div>
+                <ul>
+                  <li><code>ExecutionReportHandler</code>、<code>LiveRuntimeEventSink</code>（目标名）</li>
+                  <li><code>LiveRuntimeEventSink</code>：<code>backend/src/qts/runtime/sinks/live.py</code>（占位）</li>
+                  <li><code>LiveReportWriter</code>：<code>backend/src/qts/reporting/live.py</code>（占位）</li>
+                  <li>当前承接：broker callback 可经 <code>BrokerExecutionAdapter</code> 标准化后接入 <code>ExecutionReportHandler</code></li>
+                  <li>缺口：live runtime 事件输出和 live report writer 完整链路</li>
+                </ul>
+              </div>
+              <div class="shared-note">统一约束：账户状态变更只允许来自标准化 fill 回报并经 AccountActor。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="surface" aria-label="推荐目录规范与实现状态">
+        <table>
+          <caption>推荐目录规范：共享运行时 + 模式边界</caption>
+          <thead>
+            <tr>
+              <th>阶段</th>
+              <th>Backtest 目标</th>
+              <th>Live 目标</th>
+              <th>规范位置</th>
+              <th>位置规则</th>
+              <th>实现状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="phase">配置加载</td>
+              <td><code>BacktestRuntimeConfig</code></td>
+              <td><code>LiveRuntimeConfig</code></td>
+              <td><code>qts/runtime/config.py</code></td>
+              <td>运行时配置是共享 runtime contract；模式只决定字段取值和 adapter 选择。</td>
+              <td><span class="badge ok">backtest 已接入共享 pipeline</span>，<span class="badge partial">live 尚未接入完整 runtime</span></td>
+            </tr>
+            <tr>
+              <td class="phase">数据获取</td>
+              <td><code>ReplayMarketDataSource</code></td>
+              <td><code>StreamingMarketDataSource</code></td>
+              <td><code>qts/data/sources/replay_market_data_source.py</code> / <code>qts/data/sources/streaming_market_data_source.py</code></td>
+              <td>数据源属于 data 边界；backtest/live 只是 source 类型不同。</td>
+              <td><span class="badge ok">backtest 已实现</span>，<span class="badge partial">live 部分实现</span></td>
+            </tr>
+            <tr>
+              <td class="phase">标准化与聚合</td>
+              <td><code>MarketDataPipeline</code> + <code>MarketDataFlow</code></td>
+              <td><code>MarketDataPipeline</code> + <code>MarketDataFlow</code></td>
+              <td><code>qts/data/market_data_pipeline.py</code> + <code>qts/runtime/market_data_flow.py</code></td>
+              <td><code>MarketDataPipeline</code> 属于 data 领域处理；<code>MarketDataFlow</code> 属于 runtime actor/queue 编排。</td>
+              <td><span class="badge ok">backtest 已实现</span>，<span class="badge partial">live 部分实现</span></td>
+            </tr>
+            <tr>
+              <td class="phase">策略执行</td>
+              <td><code>StrategyExecutionPipeline</code></td>
+              <td><code>StrategyExecutionPipeline</code></td>
+              <td><code>qts/runtime/strategy_execution_pipeline.py</code></td>
+              <td>策略执行必须模式无关；策略只依赖 SDK 视图和 intent API。</td>
+              <td><span class="badge ok">backtest 已实现</span>，<span class="badge partial">live 部分实现</span></td>
+            </tr>
+            <tr>
+              <td class="phase">意图到风控</td>
+              <td><code>TargetIntentProcessor</code> / <code>OrderPlanBuilder</code></td>
+              <td><code>TargetIntentProcessor</code> / <code>OrderPlanBuilder</code></td>
+              <td><code>qts/runtime/intent_processing.py</code></td>
+              <td>intent 解析和 risk-before-order 是共享业务链路，不能留在 backtest 专属包。</td>
+              <td><span class="badge ok">backtest 已实现</span>，<span class="badge missing">live 未实现</span></td>
+            </tr>
+            <tr>
+              <td class="phase">订单执行</td>
+              <td><code>SimulatedExecutionAdapter</code></td>
+              <td><code>BrokerExecutionAdapter</code></td>
+              <td><code>qts/execution/adapters/simulated_execution_adapter.py</code> / <code>qts/execution/adapters/broker_execution_adapter.py</code></td>
+              <td>执行差异是 adapter 差异；adapter 统一放 execution/adapters，不按模式散落。</td>
+              <td><span class="badge ok">backtest 已实现</span>，<span class="badge partial">live 部分实现</span></td>
+            </tr>
+            <tr>
+              <td class="phase">Fill / 账户 / 输出</td>
+              <td><code>ExecutionReportHandler</code> + <code>BacktestRuntimeEventSink</code> + <code>BacktestReportWriter</code></td>
+              <td><code>ExecutionReportHandler</code> + <code>LiveRuntimeEventSink</code> + <code>LiveReportWriter</code></td>
+              <td><code>qts/runtime/execution_report_handler.py</code> + <code>qts/runtime/sinks/backtest.py</code> / <code>qts/runtime/sinks/live.py</code> + <code>qts/reporting/backtest.py</code> / <code>qts/reporting/live.py</code></td>
+              <td>fill 处理共享；sink 属于 runtime 事件出口；reporting 属于工件/报表输出，不按顶层模式目录分散。</td>
+              <td><span class="badge ok">backtest 已实现</span>，<span class="badge partial">live 部分实现</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="surface placeholder" aria-label="推荐占位清单">
+        <h2>推荐占位清单（按最终目录规则）</h2>
+        <ul>
+          <li><code>qts/runtime/config.py</code> -> <code>TradingRuntimeConfig</code>, <code>BacktestRuntimeConfig</code>, <code>LiveRuntimeConfig</code></li>
+          <li><code>qts/data/sources/replay_market_data_source.py</code> -> <code>ReplayMarketDataSource</code></li>
+          <li><code>qts/data/sources/streaming_market_data_source.py</code> -> <code>StreamingMarketDataSource</code></li>
+          <li><code>qts/data/market_data_pipeline.py</code> -> <code>MarketDataPipeline</code></li>
+          <li><code>qts/runtime/market_data_flow.py</code> -> <code>MarketDataFlow</code></li>
+          <li><code>qts/runtime/strategy_execution_pipeline.py</code> -> <code>StrategyExecutionPipeline</code></li>
+          <li><code>qts/runtime/intent_processing.py</code> -> <code>TargetIntentProcessor</code>, <code>OrderPlanBuilder</code></li>
+          <li><code>qts/execution/adapters/simulated_execution_adapter.py</code> -> <code>SimulatedExecutionAdapter</code></li>
+          <li><code>qts/execution/adapters/broker_execution_adapter.py</code> -> <code>BrokerExecutionAdapter</code></li>
+          <li><code>qts/runtime/execution_report_handler.py</code> -> <code>ExecutionReportHandler</code></li>
+          <li><code>qts/runtime/sinks/base.py</code> -> <code>RuntimeEventSink</code>, <code>RuntimeEvent</code></li>
+          <li><code>qts/runtime/sinks/backtest.py</code> -> <code>BacktestRuntimeEventSink</code></li>
+          <li><code>qts/runtime/sinks/live.py</code> -> <code>LiveRuntimeEventSink</code></li>
+          <li><code>qts/reporting/base.py</code> -> <code>ReportWriter</code>, <code>RuntimeArtifactWriter</code></li>
+          <li><code>qts/reporting/backtest.py</code> -> <code>BacktestReportWriter</code>, <code>BacktestArtifactWriter</code></li>
+          <li><code>qts/reporting/live.py</code> -> <code>LiveReportWriter</code>, <code>LiveEventReporter</code></li>
+        </ul>
+      </div>
+
+      <p class="footnote">
+        注：本图用于对齐类名与实现进度。最终边界与职责以
+        <code>docs/architecture/backtest_live_parity.md</code>
+        与
+        <code>docs/architecture/runtime_flow.md</code> 为准。
+      </p>
+    </div>
+  </body>
+</html>

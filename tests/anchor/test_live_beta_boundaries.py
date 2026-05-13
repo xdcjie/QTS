@@ -27,6 +27,19 @@ def test_live_broker_boundary_preserves_internal_identifiers() -> None:
     assert "FUTURE.CME.GC.202606" not in report.broker_order_id
 
 
+def test_broker_execution_adapter_normalizes_reports_without_account_mutation() -> None:
+    import inspect
+
+    from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
+
+    source = inspect.getsource(BrokerExecutionAdapter)
+
+    assert "BrokerOrderRequest" in source
+    assert "normalize_broker_execution_report" in source
+    assert "AccountActor" not in source
+    assert "ApplyFill" not in source
+
+
 def test_reconciliation_does_not_directly_change_order_state() -> None:
     order = OrderSnapshot(
         order_id=OrderId("order-1"),

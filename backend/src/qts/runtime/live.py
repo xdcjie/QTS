@@ -7,6 +7,8 @@ from enum import StrEnum
 
 from qts.data.live_feed import LiveFeedAdapter
 from qts.execution.broker import BrokerAdapter, BrokerExecutionReport, BrokerOrderRequest
+from qts.runtime.config import LiveRuntimeConfig
+from qts.runtime.sinks.base import RuntimeEvent
 
 
 class LiveRuntimeState(StrEnum):
@@ -28,18 +30,6 @@ class LiveMode(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
-class LiveStartupConfig:
-    """Startup guard inputs for live-capable runtime."""
-
-    mode: LiveMode
-    broker_configured: bool
-    account_configured: bool
-    risk_configured: bool
-    calendar_configured: bool
-    kill_switch_configured: bool
-
-
-@dataclass(frozen=True, slots=True)
 class LiveStartupDecision:
     """Result of startup guard validation."""
 
@@ -47,7 +37,7 @@ class LiveStartupDecision:
     real_order_submission_enabled: bool
 
 
-def validate_live_startup(config: LiveStartupConfig) -> LiveStartupDecision:
+def validate_live_startup(config: LiveRuntimeConfig) -> LiveStartupDecision:
     """Fail closed unless all live safety prerequisites are explicit."""
 
     missing = [
@@ -64,8 +54,8 @@ def validate_live_startup(config: LiveStartupConfig) -> LiveStartupDecision:
     if missing:
         raise ValueError("live startup missing required config: " + ", ".join(missing))
     return LiveStartupDecision(
-        mode=config.mode,
-        real_order_submission_enabled=config.mode is LiveMode.LIVE,
+        mode=LiveMode(config.mode),
+        real_order_submission_enabled=config.mode == LiveMode.LIVE.value,
     )
 
 
@@ -161,10 +151,23 @@ class LiveRuntime:
         """Perform recover."""
         return self._machine.apply("recover")
 
+    def apply_runtime_event(self, event: RuntimeEvent) -> LiveRuntimeState:
+        """Apply runtime control events such as market-data degradation."""
+
+        if event.kind == "runtime.degraded":
+            if self.state is LiveRuntimeState.DEGRADED:
+                return self.state
+            return self.degrade()
+        return self.state
+
     def submit_order(self, request: BrokerOrderRequest) -> RuntimeOrderResult:
         """Perform submit_order."""
         if self.state is LiveRuntimeState.PAUSED:
             return RuntimeOrderResult(request=request, accepted=False, reason_code="RUNTIME_PAUSED")
+        if self.state is LiveRuntimeState.DEGRADED:
+            return RuntimeOrderResult(
+                request=request, accepted=False, reason_code="RUNTIME_DEGRADED"
+            )
         if self.state is not LiveRuntimeState.RUNNING:
             return RuntimeOrderResult(
                 request=request, accepted=False, reason_code="RUNTIME_NOT_RUNNING"
@@ -179,7 +182,6 @@ __all__ = [
     "LiveRuntime",
     "LiveRuntimeState",
     "LiveRuntimeStateMachine",
-    "LiveStartupConfig",
     "LiveStartupDecision",
     "RuntimeOrderResult",
     "validate_live_startup",

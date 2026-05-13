@@ -96,6 +96,22 @@ def test_guardrails_reject_market_data_and_execution_adapter_coupling(tmp_path: 
     assert _codes(root) == {"ADAPTER_BOUNDARY"}
 
 
+def test_guardrails_reject_ibkr_transport_cross_boundary_imports(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/data/adapters/ibkr_transport.py",
+        "from qts.execution.adapters.ibkr_order_execution import IbkrOrderExecutionAdapter\n",
+    )
+    _write(
+        root,
+        "backend/src/qts/execution/adapters/ibkr_transport.py",
+        "from qts.data.adapters.ibkr_market_data import IbkrMarketDataAdapter\n",
+    )
+
+    assert _codes(root) == {"ADAPTER_BOUNDARY"}
+
+
 def test_guardrails_reject_execution_adapter_state_dependency(tmp_path: Path) -> None:
     root = tmp_path
     _write(
@@ -233,7 +249,7 @@ def test_guardrails_reject_backtest_input_catalog_construction(
         root,
         "backend/src/qts/backtest/inputs.py",
         "from qts.data.historical.catalog import load_historical_catalog\n\n"
-        "class BacktestInputBuilder:\n"
+        "class ReplayMarketDataSource:\n"
         "    def _load_catalog(self):\n"
         "        return load_historical_catalog\n",
     )

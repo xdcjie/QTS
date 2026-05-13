@@ -1,4 +1,4 @@
-"""Backtest run configuration and stable run identity."""
+"""Runtime configuration models shared by backtest, paper, and live modes."""
 
 from __future__ import annotations
 
@@ -11,12 +11,26 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
-from qts.backtest.report import dataset_metadata_payload
 from qts.core.hashing import stable_json_hash
 from qts.core.ids import InstrumentId
 from qts.data.provenance import DatasetMetadata
+from qts.reporting.backtest import dataset_metadata_payload
 
 _SUPPORTED_MARKET_DATA_SOURCES = frozenset({"local_historical"})
+
+
+@dataclass(frozen=True, slots=True)
+class TradingRuntimeConfig:
+    """Base runtime configuration contract for all execution modes."""
+
+    mode: str
+
+    def __post_init__(self) -> None:
+        """Validate the runtime mode label."""
+        normalized = self.mode.strip().lower()
+        if not normalized:
+            raise ValueError("mode must not be empty")
+        object.__setattr__(self, "mode", normalized)
 
 
 @dataclass(frozen=True, slots=True)
@@ -292,7 +306,7 @@ class BacktestStrategyConfig:
 
 
 @dataclass(frozen=True, slots=True)
-class BacktestRunConfig:
+class BacktestRuntimeConfig:
     """Complete identity for one backtest run.
 
     Historical stores, catalogs, chains, and CSV schemas belong to
@@ -367,9 +381,9 @@ class BacktestRunConfig:
             raise ValueError("market_data must be configured")
 
     @classmethod
-    def from_yaml(cls, path: Path) -> BacktestRunConfig:
+    def from_yaml(cls, path: Path) -> BacktestRuntimeConfig:
         """Perform from_yaml."""
-        from qts.backtest.config_loader import BacktestConfigLoader
+        from qts.runtime.config_loader import BacktestConfigLoader
 
         return BacktestConfigLoader.from_path(path)
 
@@ -416,9 +430,30 @@ class BacktestRunConfig:
         return normalized
 
 
+@dataclass(frozen=True, slots=True)
+class LiveRuntimeConfig:
+    """Startup and safety configuration for live-capable runtimes."""
+
+    mode: str
+    broker_configured: bool
+    account_configured: bool
+    risk_configured: bool
+    calendar_configured: bool
+    kill_switch_configured: bool
+
+    def __post_init__(self) -> None:
+        """Validate the live runtime mode label."""
+        normalized = self.mode.strip().lower()
+        if normalized not in {"paper", "observation", "live"}:
+            raise ValueError("mode must be paper, observation, or live")
+        object.__setattr__(self, "mode", normalized)
+
+
 __all__ = [
+    "TradingRuntimeConfig",
     "BacktestMarketDataReference",
-    "BacktestRunConfig",
+    "BacktestRuntimeConfig",
+    "LiveRuntimeConfig",
     "BacktestEngineConfig",
     "BacktestCostModel",
     "BacktestStrategyConfig",

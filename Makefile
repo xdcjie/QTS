@@ -1,7 +1,10 @@
-.PHONY: install format lint guardrails typecheck test-unit test-integration test-anchor test-replay test-backtest-replay test-reconciliation test-soak test quick-check check load-test soak-test readiness-check validate-historical-sample backtest-full-smoke backtest-acceptance backtest-gc-full
+.PHONY: install install-ibkr-api format lint guardrails typecheck test-unit test-integration test-anchor test-replay test-backtest-replay test-reconciliation test-soak test quick-check check load-test soak-test readiness-check validate-historical-sample backtest-full-smoke backtest-acceptance backtest-gc-full
 
 install:
 	uv sync
+
+install-ibkr-api:
+	uv run python scripts/install_ibapi_official.py
 
 format:
 	uv run ruff format .

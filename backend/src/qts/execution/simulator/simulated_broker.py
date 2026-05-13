@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from qts.execution.order_manager import ExecutionReport, OrderIntent
+from qts.core.ids import OrderId
+from qts.execution.order_manager import ExecutionReport, ExecutionReportStatus, OrderIntent
 from qts.execution.simulator.fill_model import ImmediateFillModel
 
 
@@ -27,6 +28,15 @@ class SimulatedBroker:
             intent,
             broker_order_id=broker_order_id,
             market_price=market_price,
+        )
+
+    def cancel_order(self, order_id: OrderId, *, broker_order_id: str) -> ExecutionReport:
+        """Return a deterministic cancellation report."""
+        _ = order_id
+        return ExecutionReport(
+            report_id=f"{broker_order_id}-cancel-1",
+            broker_order_id=broker_order_id,
+            status=ExecutionReportStatus.CANCELLED,
         )
 
 

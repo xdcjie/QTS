@@ -1,13 +1,7 @@
-from qts.backtest.config import BacktestRunConfig, CostModelConfig, RiskConfig
-from qts.backtest.engine import BacktestEngine, BacktestStreamResult
-from qts.backtest.inputs import BacktestInputBuilder, BacktestInputBundle
+"""Backtest mode orchestration package.
 
-__all__ = [
-    "BacktestEngine",
-    "BacktestInputBuilder",
-    "BacktestInputBundle",
-    "BacktestStreamResult",
-    "BacktestRunConfig",
-    "CostModelConfig",
-    "RiskConfig",
-]
+Reusable runtime, data source, execution, sink, and reporting concepts are
+exported from their owning functional modules rather than from this mode package.
+"""
+
+__all__: list[str] = []

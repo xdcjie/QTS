@@ -10,22 +10,22 @@ from typing import Any, cast
 
 import yaml  # type: ignore[import-untyped]
 
-from qts.backtest.config import (
+from qts.core.ids import InstrumentId
+from qts.runtime.config import (
     BacktestMarketDataReference,
-    BacktestRunConfig,
+    BacktestRuntimeConfig,
     BacktestStrategyConfig,
     CostModelConfig,
     RiskConfig,
     RollPolicyConfig,
 )
-from qts.core.ids import InstrumentId
 
 
 class BacktestConfigLoader:
     """Load backtest configuration from YAML or payload dictionaries."""
 
     @classmethod
-    def from_path(cls, path: Path) -> BacktestRunConfig:
+    def from_path(cls, path: Path) -> BacktestRuntimeConfig:
         """Perform from_path."""
         payload = yaml.safe_load(path.read_text(encoding="utf-8"))
         if not isinstance(payload, dict):
@@ -33,7 +33,7 @@ class BacktestConfigLoader:
         return cls.from_payload(payload)
 
     @classmethod
-    def from_payload(cls, payload: Mapping[str, Any]) -> BacktestRunConfig:
+    def from_payload(cls, payload: Mapping[str, Any]) -> BacktestRuntimeConfig:
         """Perform from_payload."""
         if "historical_data" in payload:
             raise ValueError("backtest run configs must use market_data")
@@ -75,7 +75,7 @@ class BacktestConfigLoader:
         else:
             strategy_class = str(payload["strategy_class"])
 
-        return BacktestRunConfig(
+        return BacktestRuntimeConfig(
             roots=tuple(payload["roots"]),
             symbols=tuple(payload["symbols"]),
             start=cls._parse_datetime(str(payload["start"])),

@@ -25,26 +25,38 @@ def test_backtest_engine_order_path_uses_shared_actor_chain() -> None:
     engine_source = inspect.getsource(engine.BacktestEngine)
     run_source = inspect.getsource(engine.BacktestEngine.run_streaming)
     from qts.backtest.actor_loop import BacktestActorLoop
-    from qts.backtest.intent_processor import BacktestIntentProcessor
+    from qts.runtime.actors.order_manager_actor import OrderManagerActor
+    from qts.runtime.execution_report_handler import ExecutionReportHandler
+    from qts.runtime.intent_processing import OrderPlanBuilder, TargetIntentProcessor
+    from qts.runtime.strategy_execution_pipeline import StrategyExecutionPipeline
 
     actor_loop_source = inspect.getsource(BacktestActorLoop.run)
-    processor_source = inspect.getsource(BacktestIntentProcessor)
+    order_manager_actor_source = inspect.getsource(OrderManagerActor)
+    order_plan_builder_source = inspect.getsource(OrderPlanBuilder)
+    processor_source = inspect.getsource(TargetIntentProcessor)
+    report_handler_source = inspect.getsource(ExecutionReportHandler)
+    strategy_pipeline_source = inspect.getsource(StrategyExecutionPipeline)
 
     assert "BacktestActorLoop" in run_source
 
     for required in (
-        "StrategyContext",
         "AccountActor",
         "OrderManagerActor",
         "ExecutionActor",
-        "_BacktestExecutionAdapter",
+        "SimulatedExecutionAdapter",
     ):
         assert required in actor_loop_source or required in engine_source
+    assert "StrategyContext" in strategy_pipeline_source
+    assert "StrategyActor" in strategy_pipeline_source
+    assert "SignalAggregatorActor" in strategy_pipeline_source
     assert "OrderRiskRequest" in processor_source
     assert ".check(" in processor_source or ".check" in processor_source
     assert "SubmitOrder" in processor_source
-    assert "order_instrument_for_intent" in processor_source
-    assert "market_price_for_intent" in processor_source
+    assert "OrderPlanBuilder" in processor_source
+    assert "order_instrument_for_intent" in order_plan_builder_source
+    assert "market_price_for_intent" in order_plan_builder_source
+    assert "ExecutionReportHandler" in order_manager_actor_source
+    assert "ApplyFill" in report_handler_source
     assert "ApplyFill" not in engine_source
 
 

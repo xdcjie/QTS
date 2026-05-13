@@ -5,19 +5,19 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 
-from qts.backtest.config import BacktestMarketDataReference, BacktestRunConfig, RiskConfig
 from qts.core.ids import InstrumentId
 from qts.data.historical.catalog import (
     HistoricalCatalog,
     HistoricalCatalogLoadConfig,
 )
 from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
+from qts.runtime.config import BacktestMarketDataReference, BacktestRuntimeConfig, RiskConfig
 
 
 def test_backtest_input_builder_creates_streaming_inputs_from_configured_dataset(
     tmp_path: Path,
 ) -> None:
-    from qts.backtest.inputs import BacktestInputBuilder
+    from qts.data.sources.replay_market_data_source import ReplayMarketDataSource
 
     historical_root = tmp_path / "historical"
     (historical_root / "data").mkdir(parents=True)
@@ -47,7 +47,7 @@ historical_data:
 """,
         encoding="utf-8",
     )
-    config = BacktestRunConfig(
+    config = BacktestRuntimeConfig(
         market_data=BacktestMarketDataReference(
             config_path=data_config_path,
             catalog="research",
@@ -72,7 +72,7 @@ historical_data:
             requested_timeframe=config.timeframe,
         )
     )
-    inputs = BacktestInputBuilder(config, catalog).build()
+    inputs = ReplayMarketDataSource(config, catalog).build()
     bars = list(inputs.bars)
 
     assert [bar.instrument_id for bar in bars] == [InstrumentId("EQUITY.US.NASDAQ.AAPL")]

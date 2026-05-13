@@ -6,6 +6,37 @@ Selected integration scope: IBKR TWS/Gateway adapter boundary for paper trading,
 
 Current live-capital status: No-Go until the required external evidence is recorded.
 
+## TWS API Client Implementation
+
+Selected Python client: the official Interactive Brokers TWS API Python client
+distributed with the IBKR TWS API download, exposed to this codebase only from
+IBKR transport modules.
+
+Rationale:
+
+- IBKR documents TWS API as a TCP socket API for TWS or IB Gateway and lists a
+  maintained Python offering among the official language implementations:
+  <https://www.interactivebrokers.com/campus/ibkr-api-page/twsapi-doc/>.
+- IBKR's download page is the authoritative source for current TWS API Stable
+  and Latest releases, including Python support in the current Latest package:
+  <https://interactivebrokers.github.io/>.
+- IBKR states that third-party wrappers such as `ib_insync` and `ib_async` are
+  not the official support surface, and that IBKR advises use of its direct TWS
+  API implementation when possible:
+  <https://www.interactivebrokers.com/campus/ibkr-api-page/twsapi-doc/>.
+
+Dependency decision for this milestone: install the official IBKR TWS API Python
+client from the IBKR API ZIP into the runtime environment for real Gateway
+anchors and deployments. Do not add the PyPI `ibapi` package to
+`project.dependencies`, because PyPI currently exposes an older non-current
+package while IBKR documents the official distribution as the direct TWS API
+download. The official source URL, version, ZIP subdirectory, and SHA256 are
+recorded in `pyproject.toml` under `tool.qts.ibkr_api`; deployments install it
+with `make install-ibkr-api`. The actual `ibapi` import must stay isolated
+inside `qts.data.adapters` or `qts.execution.adapters` transport modules when
+enabled, so core domain, runtime, strategy, risk, portfolio, and reconciliation
+code never imports IBKR client objects.
+
 ## Selected Scope
 
 IBKR is the selected first broker integration target for paper and live execution hardening. The integration is bounded by the existing architecture: market data and order execution remain separate adapters, separate configuration sections, separate client IDs, separate actor-facing boundaries, and separate event streams.

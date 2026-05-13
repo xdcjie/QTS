@@ -57,6 +57,14 @@ class RecordingExecutionAdapter:
             fill_id=f"{broker_order_id}-fill",
         )
 
+    def cancel_order(self, order_id: OrderId, *, broker_order_id: str) -> ExecutionReport:
+        _ = order_id
+        return ExecutionReport(
+            report_id=f"{broker_order_id}-cancel",
+            broker_order_id=broker_order_id,
+            status=ExecutionReportStatus.CANCELLED,
+        )
+
 
 def test_shared_actor_order_flow_uses_same_messages_for_execution_adapters() -> None:
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")

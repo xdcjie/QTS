@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import pytest
-from qts.runtime.live import LiveMode, LiveStartupConfig, validate_live_startup
+from qts.runtime.config import LiveRuntimeConfig
+from qts.runtime.live import LiveMode, validate_live_startup
 
 
 def test_live_startup_guard_requires_all_safety_controls_for_live_mode() -> None:
-    config = LiveStartupConfig(
-        mode=LiveMode.LIVE,
+    config = LiveRuntimeConfig(
+        mode=LiveMode.LIVE.value,
         broker_configured=True,
         account_configured=True,
         risk_configured=True,
@@ -19,8 +20,8 @@ def test_live_startup_guard_requires_all_safety_controls_for_live_mode() -> None
 
 
 def test_observation_mode_allows_connections_but_blocks_real_order_submission() -> None:
-    config = LiveStartupConfig(
-        mode=LiveMode.OBSERVATION,
+    config = LiveRuntimeConfig(
+        mode=LiveMode.OBSERVATION.value,
         broker_configured=True,
         account_configured=True,
         risk_configured=True,

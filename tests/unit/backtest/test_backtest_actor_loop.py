@@ -30,15 +30,16 @@ def _bar(start: datetime, close: str = "100") -> Bar:
 def test_backtest_actor_loop_processes_bars_and_returns_runtime_result(tmp_path: Path) -> None:
     from qts.backtest.actor_loop import BacktestActorLoop
     from qts.backtest.dependencies import BacktestActorLoopConfig, BacktestActorLoopDependencies
-    from qts.backtest.engine import BacktestCostModel, _BacktestExecutionAdapter
+    from qts.backtest.engine import BacktestCostModel
     from qts.backtest.instrument_context import BacktestInstrumentContext
-    from qts.backtest.intent_processor import BacktestIntentProcessor
     from qts.backtest.portfolio_projection import BacktestPortfolioProjector
-    from qts.backtest.report import StreamingBacktestArtifactWriter
-    from qts.backtest.sinks import BacktestStreamingSink
     from qts.core.ids import InstrumentId
+    from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
+    from qts.reporting.backtest import BacktestArtifactWriter
     from qts.risk.risk_engine import RiskEngine
     from qts.risk.rules.max_notional import MaxNotionalRule
+    from qts.runtime.intent_processing import TargetIntentProcessor
+    from qts.runtime.sinks.backtest import BacktestRuntimeEventSink
 
     class OneOrderStrategy(Strategy):
         def initialize(self, ctx: Any) -> None:
@@ -58,7 +59,7 @@ def test_backtest_actor_loop_processes_bars_and_returns_runtime_result(tmp_path:
         registry_bars=bars,
     )
     portfolio_projector = BacktestPortfolioProjector()
-    intent_processor = BacktestIntentProcessor(
+    intent_processor = TargetIntentProcessor(
         risk_engine=RiskEngine([MaxNotionalRule(max_notional=Decimal("1000000"))]),
         instrument_context=instrument_context,
         multiplier_for=portfolio_projector.multiplier_for,
@@ -71,15 +72,15 @@ def test_backtest_actor_loop_processes_bars_and_returns_runtime_result(tmp_path:
         dependencies=BacktestActorLoopDependencies(
             instrument_registry=instrument_context.instrument_registry(),
             contract_multipliers={},
-            execution_adapter=_BacktestExecutionAdapter(BacktestCostModel()),
+            execution_adapter=SimulatedExecutionAdapter(BacktestCostModel()),
             process_intent=intent_processor.process_intent,
             portfolio_view=portfolio_projector.portfolio_view,
             equity_point=portfolio_projector.equity_point,
             update_rolling_prices=instrument_context.update_rolling_prices,
         ),
     )
-    writer = StreamingBacktestArtifactWriter(tmp_path)
-    sink = BacktestStreamingSink(writer)
+    writer = BacktestArtifactWriter(tmp_path)
+    sink = BacktestRuntimeEventSink(writer)
     runtime = loop.run(sink=sink, prune_history=True, compact_orders=True)
 
     writer.finalize(

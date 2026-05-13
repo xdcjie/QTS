@@ -15,6 +15,7 @@ htmlcov/
 configs/live.yaml
 configs/live.ibkr.yaml
 configs/paper.ibkr.yaml
+configs/*.ibkr.local.yaml
 broker_credentials.yaml
 
 .claude/
@@ -27,6 +28,7 @@ broker_credentials.yaml
 .mcp.json
 .opencode.json
 .pip-cache/
+.cache/
 .windsurfrules
 uv.lock
 

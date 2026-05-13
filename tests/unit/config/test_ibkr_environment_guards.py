@@ -106,3 +106,79 @@ def test_ibkr_config_rejects_shared_market_data_and_order_client_id() -> None:
 
     with pytest.raises(ValueError, match="market data and order execution client_id"):
         validate_ibkr_environment(config)
+
+
+def test_paper_ibkr_config_accepts_local_paper_gateway_on_distinct_clients() -> None:
+    from qts.config.ibkr import (
+        IbkrConnectionConfig,
+        IbkrEnvironmentConfig,
+        IbkrOrderExecutionConfig,
+        IbkrSecretRefs,
+        validate_ibkr_environment,
+    )
+
+    config = IbkrEnvironmentConfig(
+        mode="paper",
+        observe_only=True,
+        market_data=IbkrConnectionConfig(
+            host="127.0.0.1",
+            port=4002,
+            client_id=101,
+        ),
+        order_execution=IbkrOrderExecutionConfig(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+            account_id="DU1234567",
+            risk_profile="paper-default",
+        ),
+        secrets=IbkrSecretRefs(
+            username_env="IBKR_PAPER_USERNAME",
+            password_env="IBKR_PAPER_PASSWORD",
+        ),
+    )
+
+    validate_ibkr_environment(config)
+
+
+def test_live_ibkr_config_rejects_paper_gateway_port_unless_observe_only() -> None:
+    from qts.config.ibkr import (
+        IbkrConnectionConfig,
+        IbkrEnvironmentConfig,
+        IbkrOrderExecutionConfig,
+        IbkrSecretRefs,
+        validate_ibkr_environment,
+    )
+
+    config = IbkrEnvironmentConfig(
+        mode="live",
+        market_data=IbkrConnectionConfig(
+            host="127.0.0.1",
+            port=4002,
+            client_id=111,
+        ),
+        order_execution=IbkrOrderExecutionConfig(
+            host="127.0.0.1",
+            port=4002,
+            client_id=211,
+            account_id="U1234567",
+            risk_profile="live-default",
+        ),
+        secrets=IbkrSecretRefs(
+            username_env="IBKR_LIVE_USERNAME",
+            password_env="IBKR_LIVE_PASSWORD",
+        ),
+    )
+
+    with pytest.raises(ValueError, match="paper Gateway port 4002"):
+        validate_ibkr_environment(config)
+
+    observation_config = IbkrEnvironmentConfig(
+        mode="live",
+        observe_only=True,
+        market_data=config.market_data,
+        order_execution=config.order_execution,
+        secrets=config.secrets,
+    )
+
+    validate_ibkr_environment(observation_config)

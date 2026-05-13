@@ -11,22 +11,22 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, cast
 
-from qts.backtest.config import (
-    BacktestMarketDataReference,
-    BacktestRunConfig,
-    CostModelConfig,
-    RiskConfig,
-)
 from qts.core.ids import InstrumentId
 from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
 from qts.domain.market_data import Bar
+from qts.runtime.config import (
+    BacktestMarketDataReference,
+    BacktestRuntimeConfig,
+    CostModelConfig,
+    RiskConfig,
+)
 from qts.strategy_sdk import Strategy
 
 from tests.support.backtest_streaming import capture_stream_result, run_engine_streaming
 
 
-def _config(*, warmup_bars: int = 0) -> BacktestRunConfig:
-    return BacktestRunConfig(
+def _config(*, warmup_bars: int = 0) -> BacktestRuntimeConfig:
+    return BacktestRuntimeConfig(
         market_data=BacktestMarketDataReference(
             config_path=Path("configs/data/historical.local.yaml"),
             catalog="research_futures",
@@ -118,7 +118,7 @@ def test_backtest_engine_from_config_does_not_require_chain_for_static_instrumen
     from qts.backtest.engine import BacktestEngine
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
-    config = BacktestRunConfig(
+    config = BacktestRuntimeConfig(
         market_data=BacktestMarketDataReference(
             config_path=Path("configs/data/historical.local.yaml"),
             catalog="research_futures",

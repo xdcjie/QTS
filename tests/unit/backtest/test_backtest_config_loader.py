@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from qts.backtest.config_loader import BacktestConfigLoader
+from qts.runtime.config_loader import BacktestConfigLoader
 
 
 def test_config_loader_parses_market_data_payload() -> None:

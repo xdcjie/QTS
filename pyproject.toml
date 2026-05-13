@@ -10,6 +10,13 @@ dependencies = [
     "pyyaml",
 ]
 
+[tool.qts.ibkr_api]
+package = "ibapi"
+version = "10.46.1"
+source_url = "https://interactivebrokers.github.io/downloads/twsapi_macunix.1046.01.zip"
+subdirectory = "IBJts/source/pythonclient"
+sha256 = "d62d0bd602d9b0154f73246b1224467b6cff7062d34fe864510691b7677148c4"
+
 [dependency-groups]
 api = [
     "fastapi",

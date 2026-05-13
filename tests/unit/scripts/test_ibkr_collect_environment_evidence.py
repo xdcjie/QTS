@@ -61,3 +61,71 @@ def test_collector_module_exposes_no_order_placement_api() -> None:
     assert not any(
         fragment in name.lower() for fragment in forbidden_fragments for name in public_names
     )
+
+
+def test_evidence_records_separate_gateway_targets_and_secret_statuses(
+    tmp_path: Path,
+) -> None:
+    collector = _load_collector_module()
+    collect_environment_evidence = cast(Any, collector).collect_environment_evidence
+
+    config_path = tmp_path / "paper.ibkr.local.yaml"
+    config_path.write_text(
+        """
+mode: paper
+provider: ibkr
+observe_only: true
+
+connections:
+  market_data:
+    host: 127.0.0.1
+    port: 4002
+    client_id: 101
+    source_id: ibkr-paper-md
+  order_execution:
+    host: 127.0.0.1
+    port: 4002
+    client_id: 201
+    broker_id: IBKR
+
+order_execution:
+  account_id: DU1234567
+  risk_profile: paper-default
+
+secrets:
+  username_env: IBKR_PAPER_USERNAME
+  password_env: IBKR_PAPER_PASSWORD
+""",
+        encoding="utf-8",
+    )
+
+    evidence_path = collect_environment_evidence(
+        config_path=config_path,
+        output_dir=tmp_path / "evidence",
+        dry_run=True,
+        label="paper-gateway-4002",
+    )
+
+    payload = json.loads(evidence_path.read_text(encoding="utf-8"))
+
+    assert payload["observe_only"] is True
+    assert payload["orders_enabled"] is False
+    assert payload["config"]["mode"] == "paper"
+    assert payload["config"]["observe_only"] is True
+    assert payload["config"]["account_classification"] == "paper"
+    assert payload["config"]["gateway_targets"] == {
+        "market_data": {
+            "host": "127.0.0.1",
+            "port": 4002,
+            "client_id": 101,
+        },
+        "order_execution": {
+            "host": "127.0.0.1",
+            "port": 4002,
+            "client_id": 201,
+        },
+    }
+    assert payload["network"]["market_data"]["attempted"] is False
+    assert payload["network"]["order_execution"]["attempted"] is False
+    assert payload["config"]["secrets"]["credential_env"]["name_redacted"] is True
+    assert "IBKR_PAPER_PASSWORD" not in json.dumps(payload)

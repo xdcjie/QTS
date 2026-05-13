@@ -104,7 +104,7 @@ class StreamingEquityMetrics:
 
 
 @dataclass(frozen=True, slots=True)
-class StreamingBacktestArtifacts:
+class BacktestArtifacts:
     """Final paths and row counts for streamed backtest artifacts."""
 
     manifest_path: Path
@@ -148,7 +148,7 @@ class _NdjsonArtifact:
         return f"sha256:{self._hasher.hexdigest()}"
 
 
-class StreamingBacktestArtifactWriter:
+class BacktestArtifactWriter:
     """Write large backtest outputs as line-delimited artifacts."""
 
     _KINDS = ("orders", "fills", "trade_ledger", "equity_curve")
@@ -203,7 +203,7 @@ class StreamingBacktestArtifactWriter:
         trading_bars: int,
         final_cash: Decimal,
         strategy_version: str,
-    ) -> tuple[str, str, dict[str, Any], StreamingBacktestArtifacts]:
+    ) -> tuple[str, str, dict[str, Any], BacktestArtifacts]:
         """Perform finalize."""
         for artifact in self._artifacts.values():
             artifact.close()
@@ -273,7 +273,7 @@ class StreamingBacktestArtifactWriter:
             run_id,
             report_hash,
             manifest_payload,
-            StreamingBacktestArtifacts(
+            BacktestArtifacts(
                 manifest_path=manifest_path,
                 artifact_paths=artifact_paths,
                 artifact_rows=artifact_rows,
@@ -282,11 +282,16 @@ class StreamingBacktestArtifactWriter:
         )
 
 
+class BacktestReportWriter(BacktestArtifactWriter):
+    """Backtest report writer for partitioned artifacts."""
+
+
 __all__ = [
     "dataset_metadata_payload",
     "EquityCurvePoint",
-    "StreamingBacktestArtifactWriter",
-    "StreamingBacktestArtifacts",
+    "BacktestArtifactWriter",
+    "BacktestReportWriter",
+    "BacktestArtifacts",
     "StreamingEquityMetrics",
     "zero_time",
     "TradeLedgerEntry",

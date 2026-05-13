@@ -7,7 +7,6 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from decimal import Decimal
 
-from qts.backtest.config import BacktestRunConfig
 from qts.core.ids import InstrumentId
 from qts.data.historical.catalog import HistoricalCatalog, HistoricalDataset
 from qts.data.historical.csv_dataset import HistoricalBarStream, iter_historical_bars
@@ -16,10 +15,11 @@ from qts.domain.instruments import AssetClass, ContractSpec, Instrument, Settlem
 from qts.domain.market_data import Bar
 from qts.registry.future_roll import FutureRollRegistry, HighestVolumeFutureContractSelector
 from qts.registry.instrument_registry import InstrumentRegistry
+from qts.runtime.config import BacktestRuntimeConfig
 
 
 @dataclass(frozen=True, slots=True)
-class BacktestInputBundle:
+class ReplayMarketDataBundle:
     """Streaming inputs and side-channel metadata required by a backtest run."""
 
     bars: Iterator[Bar]
@@ -31,22 +31,22 @@ class BacktestInputBundle:
     future_roll_registry: FutureRollRegistry | None
 
 
-class BacktestInputBuilder:
+class ReplayMarketDataSource:
     """Build replay-ready market data, registry, and provenance inputs."""
 
-    def __init__(self, config: BacktestRunConfig, catalog: HistoricalCatalog) -> None:
+    def __init__(self, config: BacktestRuntimeConfig, catalog: HistoricalCatalog) -> None:
         """Perform __init__."""
         self._config = config
         self._catalog = catalog
 
-    def build(self) -> BacktestInputBundle:
+    def build(self) -> ReplayMarketDataBundle:
         """Perform build."""
         roll_registry = self._roll_registry()
         bars, dataset_stats, exchange_timezones = self._stream_configured_bars(
             self._catalog,
             roll_registry=roll_registry,
         )
-        return BacktestInputBundle(
+        return ReplayMarketDataBundle(
             bars=bars,
             dataset_stats=dataset_stats,
             exchange_timezone_by_instrument=exchange_timezones,
@@ -340,4 +340,4 @@ class BacktestInputBuilder:
         return multipliers
 
 
-__all__ = ["BacktestInputBuilder", "BacktestInputBundle"]
+__all__ = ["ReplayMarketDataSource", "ReplayMarketDataBundle"]

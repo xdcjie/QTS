@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Protocol
 
+from qts.core.ids import OrderId
 from qts.execution.order_manager import ExecutionReport, OrderIntent
 from qts.execution.simulator.simulated_broker import SimulatedBroker
 from qts.runtime.actor import Actor
@@ -25,6 +26,10 @@ class ExecutionAdapter(Protocol):
         """Execute a market order."""
         ...
 
+    def cancel_order(self, order_id: OrderId, *, broker_order_id: str) -> ExecutionReport:
+        """Cancel an active order."""
+        ...
+
 
 @dataclass(frozen=True, slots=True)
 class OrderExecutionRequest:
@@ -33,6 +38,14 @@ class OrderExecutionRequest:
     intent: OrderIntent
     broker_order_id: str
     market_price: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class OrderCancelRequest:
+    """Message requesting broker order cancellation."""
+
+    order_id: OrderId
+    broker_order_id: str
 
 
 class ExecutionActor(Actor):
@@ -57,7 +70,14 @@ class ExecutionActor(Actor):
             )
             self._order_manager_ref.tell(report)
             return
+        if isinstance(message, OrderCancelRequest):
+            report = self._execution_adapter.cancel_order(
+                message.order_id,
+                broker_order_id=message.broker_order_id,
+            )
+            self._order_manager_ref.tell(report)
+            return
         raise TypeError(f"unsupported execution message: {type(message).__name__}")
 
 
-__all__ = ["ExecutionActor", "OrderExecutionRequest"]
+__all__ = ["ExecutionActor", "OrderCancelRequest", "OrderExecutionRequest"]

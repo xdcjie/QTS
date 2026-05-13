@@ -4,17 +4,32 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import Protocol
 
-from qts.backtest.config import BacktestCostModel
+from qts.core.ids import OrderId
 from qts.domain.orders import OrderSide
 from qts.execution.order_manager import ExecutionReport, ExecutionReportStatus, OrderIntent
 
 
+class SimulatedExecutionCostModel(Protocol):
+    """Cost-model fields required by simulated execution."""
+
+    @property
+    def fixed_commission_per_contract(self) -> Decimal:
+        """Fixed commission charged per filled unit."""
+        ...
+
+    @property
+    def slippage_bps(self) -> Decimal:
+        """Slippage applied to simulated market fills."""
+        ...
+
+
 @dataclass(frozen=True, slots=True)
-class BacktestExecutionAdapter:
+class SimulatedExecutionAdapter:
     """Apply deterministic commission and slippage assumptions for backtests."""
 
-    cost_model: BacktestCostModel
+    cost_model: SimulatedExecutionCostModel
 
     def __post_init__(self) -> None:
         """Validate and normalize cost-model-backed configuration."""
@@ -47,5 +62,14 @@ class BacktestExecutionAdapter:
             slippage=abs(fill_price - market_price),
         )
 
+    def cancel_order(self, order_id: OrderId, *, broker_order_id: str) -> ExecutionReport:
+        """Return a deterministic cancellation report for actor parity."""
+        _ = order_id
+        return ExecutionReport(
+            report_id=f"{broker_order_id}-cancel-1",
+            broker_order_id=broker_order_id,
+            status=ExecutionReportStatus.CANCELLED,
+        )
 
-__all__ = ["BacktestExecutionAdapter"]
+
+__all__ = ["SimulatedExecutionAdapter", "SimulatedExecutionCostModel"]

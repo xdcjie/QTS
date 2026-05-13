@@ -5,9 +5,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 from decimal import Decimal
 
-from qts.backtest.report import EquityCurvePoint
 from qts.core.ids import InstrumentId
 from qts.domain.market_data import Bar
+from qts.reporting.backtest import EquityCurvePoint
 from qts.runtime.actors.account_actor import AccountSnapshot
 from qts.strategy_sdk import PortfolioPosition, PortfolioView
 

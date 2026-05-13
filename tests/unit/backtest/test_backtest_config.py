@@ -6,12 +6,12 @@ from decimal import Decimal
 from pathlib import Path
 
 import pytest
-from qts.backtest.config import BacktestRunConfig
 from qts.core.ids import InstrumentId
+from qts.runtime.config import BacktestRuntimeConfig
 
 
 def test_backtest_run_config_loads_example_yaml_with_stable_hash() -> None:
-    config = BacktestRunConfig.from_yaml(Path("configs/backtest.gc_si.example.yaml"))
+    config = BacktestRuntimeConfig.from_yaml(Path("configs/backtest.gc_si.example.yaml"))
 
     assert config.market_data.config_path == Path("configs/data/historical.local.yaml")
     assert config.market_data.catalog == "research_futures"
@@ -33,7 +33,7 @@ def test_backtest_run_config_loads_example_yaml_with_stable_hash() -> None:
     assert config.risk_config.max_notional == Decimal("100000000")
     assert (
         config.config_hash
-        == BacktestRunConfig.from_yaml(Path("configs/backtest.gc_si.example.yaml")).config_hash
+        == BacktestRuntimeConfig.from_yaml(Path("configs/backtest.gc_si.example.yaml")).config_hash
     )
 
     changed = replace(config, initial_cash=Decimal("2000000"))
@@ -41,7 +41,7 @@ def test_backtest_run_config_loads_example_yaml_with_stable_hash() -> None:
 
 
 def test_backtest_run_config_loads_gc_full_example_yaml() -> None:
-    config = BacktestRunConfig.from_yaml(Path("configs/backtest.gc.full.example.yaml"))
+    config = BacktestRuntimeConfig.from_yaml(Path("configs/backtest.gc.full.example.yaml"))
 
     assert config.market_data.config_path == Path("configs/data/historical.local.yaml")
     assert config.market_data.catalog == "research_futures"
@@ -81,7 +81,7 @@ strategy_class: "tests.integration.test_backtest_gc_si:RollingGcStrategy"
         encoding="utf-8",
     )
 
-    config = BacktestRunConfig.from_yaml(config_path)
+    config = BacktestRuntimeConfig.from_yaml(config_path)
 
     assert config.market_data.source == "local_historical"
     assert config.market_data.config_path == Path("configs/data/historical.local.yaml")
@@ -112,7 +112,7 @@ strategy_class: "tests.integration.test_backtest_gc_si:RollingGcStrategy"
     )
 
     with pytest.raises(ValueError, match="backtest run configs must use market_data"):
-        BacktestRunConfig.from_yaml(config_path)
+        BacktestRuntimeConfig.from_yaml(config_path)
 
 
 def test_backtest_run_config_rejects_legacy_dataset_root(
@@ -134,7 +134,7 @@ strategy_class: "tests.integration.test_backtest_gc_si:RollingGcStrategy"
     )
 
     with pytest.raises(ValueError, match="backtest run configs must use market_data"):
-        BacktestRunConfig.from_yaml(config_path)
+        BacktestRuntimeConfig.from_yaml(config_path)
 
 
 def test_backtest_run_config_rejects_unsupported_market_data_source(tmp_path: Path) -> None:
@@ -157,7 +157,7 @@ strategy_class: "tests.integration.test_backtest_gc_si:RollingGcStrategy"
     )
 
     with pytest.raises(ValueError, match="unsupported market_data.source"):
-        BacktestRunConfig.from_yaml(config_path)
+        BacktestRuntimeConfig.from_yaml(config_path)
 
 
 def test_backtest_run_config_can_reference_strategy_config(tmp_path: Path) -> None:
@@ -195,7 +195,7 @@ strategy_config: {strategy_path}
         encoding="utf-8",
     )
 
-    config = BacktestRunConfig.from_yaml(config_path)
+    config = BacktestRuntimeConfig.from_yaml(config_path)
 
     assert config.market_data.source == "local_historical"
     assert config.strategy_config_path == strategy_path
@@ -230,7 +230,7 @@ strategy_class: "tests.integration.test_backtest_gc_si:BuyOneGcStrategy"
         encoding="utf-8",
     )
 
-    config = BacktestRunConfig.from_yaml(config_path)
+    config = BacktestRuntimeConfig.from_yaml(config_path)
 
     assert config.instrument_ids == {"AAPL": InstrumentId("EQUITY.US.NASDAQ.AAPL")}
 
@@ -257,14 +257,14 @@ roll_policy:
         encoding="utf-8",
     )
 
-    config = BacktestRunConfig.from_yaml(config_path)
+    config = BacktestRuntimeConfig.from_yaml(config_path)
 
     assert config.roll_policy.enabled is True
     assert config.roll_policy.method == "highest_volume"
 
 
 def test_backtest_run_config_validates_material_fields() -> None:
-    config = BacktestRunConfig.from_yaml(Path("configs/backtest.gc_si.example.yaml"))
+    config = BacktestRuntimeConfig.from_yaml(Path("configs/backtest.gc_si.example.yaml"))
 
     with pytest.raises(ValueError, match="roots"):
         replace(config, roots=())

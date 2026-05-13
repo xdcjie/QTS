@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from qts.core.ids import OrderId
     from qts.domain.market_data import Tick
     from qts.execution.adapters.ibkr_order_execution import IbkrOrderRequest
     from qts.execution.order_manager import ExecutionReport, OrderIntent
@@ -186,4 +187,14 @@ class _FakeIbkrOrderExecutionTransport:
                 fill_price=market_price,
                 fill_id=f"fill-{broker_order_id}",
             )
+        )
+
+    def cancel_order(self, order_id: OrderId, *, broker_order_id: str) -> ExecutionReport:
+        from qts.execution.order_manager import ExecutionReport, ExecutionReportStatus
+
+        _ = order_id
+        return ExecutionReport(
+            report_id=f"rpt-cancel-{broker_order_id}",
+            broker_order_id=broker_order_id,
+            status=ExecutionReportStatus.CANCELLED,
         )

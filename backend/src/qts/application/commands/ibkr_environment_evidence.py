@@ -139,6 +139,20 @@ def _summarize_config(config: IbkrEnvironmentConfig | None) -> JsonObject:
     return {
         "provider": "ibkr",
         "mode": config.mode,
+        "observe_only": config.observe_only,
+        "account_classification": config.account_classification(),
+        "gateway_targets": {
+            "market_data": {
+                "host": market_data.host,
+                "port": market_data.port,
+                "client_id": market_data.client_id,
+            },
+            "order_execution": {
+                "host": order_execution.host,
+                "port": order_execution.port,
+                "client_id": order_execution.client_id,
+            },
+        },
         "market_data": {
             "host": market_data.host,
             "port": market_data.port,

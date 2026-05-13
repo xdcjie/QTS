@@ -5,15 +5,15 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
-from qts.backtest.report import EquityCurvePoint, StreamingBacktestArtifactWriter, TradeLedgerEntry
 from qts.domain.market_data import Bar
 from qts.execution.order_manager import Order, OrderFill
+from qts.reporting.backtest import BacktestArtifactWriter, EquityCurvePoint, TradeLedgerEntry
 
 
-class BacktestStreamingSink:
+class BacktestRuntimeEventSink:
     """Write engine stream artifacts through a shared writer."""
 
-    def __init__(self, writer: StreamingBacktestArtifactWriter) -> None:
+    def __init__(self, writer: BacktestArtifactWriter) -> None:
         """Perform __init__."""
         self._writer = writer
         self._order_count = 0
@@ -88,4 +88,4 @@ class BacktestStreamingSink:
         }
 
 
-__all__ = ["BacktestStreamingSink"]
+__all__ = ["BacktestRuntimeEventSink"]

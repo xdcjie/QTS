@@ -10,6 +10,7 @@ from typing import Any, Literal
 import yaml  # type: ignore[import-untyped]
 
 IbkrMode = Literal["paper", "live"]
+IBKR_PAPER_GATEWAY_PORT = 4002
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,6 +85,7 @@ class IbkrEnvironmentConfig:
     market_data: IbkrConnectionConfig
     order_execution: IbkrOrderExecutionConfig
     secrets: IbkrSecretRefs
+    observe_only: bool = False
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> IbkrEnvironmentConfig:
@@ -113,6 +115,7 @@ class IbkrEnvironmentConfig:
                 order_execution_connection, order_execution_payload
             ),
             secrets=_read_secret_refs(secrets),
+            observe_only=cls._read_bool(payload, "observe_only", default=False),
         )
 
     @classmethod
@@ -123,6 +126,31 @@ class IbkrEnvironmentConfig:
         if not isinstance(payload, Mapping):
             raise ValueError(f"{path} must contain a YAML mapping")
         return cls.from_payload(payload)
+
+    @staticmethod
+    def _read_bool(payload: Mapping[str, Any], key: str, *, default: bool) -> bool:
+        value = payload.get(key, default)
+        if not isinstance(value, bool):
+            raise ValueError(f"{key} must be a boolean")
+        return value
+
+    def uses_paper_gateway_port(self) -> bool:
+        """Return whether any configured boundary points at the paper Gateway port."""
+
+        return (
+            self.market_data.port == IBKR_PAPER_GATEWAY_PORT
+            or self.order_execution.port == IBKR_PAPER_GATEWAY_PORT
+        )
+
+    def account_classification(self) -> str:
+        """Classify the configured account without exposing credential values."""
+
+        account_id = self.order_execution.account_id.upper()
+        if account_id.startswith("DU"):
+            return "paper"
+        if account_id.startswith("U"):
+            return "live"
+        return "unknown"
 
 
 def collect_validation_errors(
@@ -152,6 +180,10 @@ def validate_ibkr_environment(
         paper_client_ids = paper_client_ids or set()
         if config.order_execution.account_id.upper().startswith("DU"):
             errors.append("live mode cannot use a paper account")
+        if config.uses_paper_gateway_port() and not config.observe_only:
+            errors.append(
+                "live mode cannot use paper Gateway port 4002 unless observe_only is true"
+            )
         live_client_ids = {
             config.market_data.client_id,
             config.order_execution.client_id,
@@ -238,6 +270,7 @@ def _contains_paper_reference(secret_env_name: str) -> bool:
 
 
 __all__ = [
+    "IBKR_PAPER_GATEWAY_PORT",
     "IbkrConnectionConfig",
     "collect_validation_errors",
     "IbkrEnvironmentConfig",
