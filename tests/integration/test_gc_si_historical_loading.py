@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import importlib.util
 import json
 from pathlib import Path
@@ -176,3 +177,118 @@ def test_validate_historical_cli_writes_sample_evidence_for_requested_roots(
     assert payload["sample_rows"] == 5
     assert payload["datasets"]["GC"]["stats"]["rows_seen"] == 5
     assert payload["datasets"]["SI"]["stats"]["rows_seen"] == 5
+
+
+def test_validate_historical_cli_uses_configured_schema_and_timeframe(
+    tmp_path: Path,
+) -> None:
+    module = _load_validation_script()
+    main = cast(Any, module).main
+    historical_root = tmp_path / "historical"
+    (historical_root / "data").mkdir(parents=True)
+    (historical_root / "chains").mkdir(parents=True)
+    _write_minimal_chain(historical_root / "chains" / "GC.json")
+    _write_custom_schema_csv(historical_root / "data" / "gc_5s.csv")
+    config_path = tmp_path / "historical.local.yaml"
+    config_path.write_text(
+        f"""
+historical_data:
+  stores:
+    local_csv:
+      type: local_csv
+      root_dir: {historical_root}
+      bars_dir: data
+      chains_dir: chains
+  schemas:
+    custom_ohlcv:
+      timestamp: time
+      symbol: ticker
+      instrument_id: source_id
+      open: o
+      high: h
+      low: l
+      close: c
+      volume: v
+  catalogs:
+    research_futures:
+      store: local_csv
+      datasets:
+        GC:
+          asset_class: future
+          chain_file: GC.json
+          bars:
+            - file: gc_5s.csv
+              timeframe: 5s
+              schema: custom_ohlcv
+""",
+        encoding="utf-8",
+    )
+    output_dir = tmp_path / "evidence"
+
+    exit_code = main(
+        [
+            "--config",
+            str(config_path),
+            "--catalog",
+            "research_futures",
+            "--roots",
+            "GC",
+            "--sample-rows",
+            "1",
+            "--output-dir",
+            str(output_dir),
+        ]
+    )
+
+    assert exit_code == 0
+    evidence_files = sorted(output_dir.glob("historical_validation_*.json"))
+    payload = json.loads(evidence_files[0].read_text(encoding="utf-8"))
+    dataset = payload["datasets"]["GC"]
+    assert dataset["source_timeframe"] == "5s"
+    assert dataset["schema_name"] == "custom_ohlcv"
+    assert dataset["stats"]["bars_emitted"] == 1
+
+
+def _write_minimal_chain(path: Path) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "root": "GC",
+                "market": "CME_FUT",
+                "currency": "USD",
+                "timezone_id": "US/Eastern",
+                "tick_size": "0.1",
+                "multiplier": "100",
+                "trading_calendar": "CMES",
+                "contracts": [
+                    {
+                        "local_symbol": "GCQ0",
+                        "expiry": "2026-08-28T22:00:00+00:00",
+                        "first_notice_day": "2026-07-31",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_custom_schema_csv(path: Path) -> None:
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=("time", "source_id", "o", "h", "l", "c", "v", "ticker"),
+        )
+        writer.writeheader()
+        writer.writerow(
+            {
+                "time": "2026-01-02T14:30:00.000000000Z",
+                "source_id": "GCQ0",
+                "o": "2000",
+                "h": "2000",
+                "l": "2000",
+                "c": "2000",
+                "v": "1",
+                "ticker": "GCQ0",
+            }
+        )

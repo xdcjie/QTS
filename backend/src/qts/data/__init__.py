@@ -1,4 +1,4 @@
-from qts.data.historical import HistoricalMarketDataAdapter, ReplayMarketDataAdapter
+from qts.data.historical import HistoricalMarketDataAdapter
 from qts.data.live_feed import (
     FakeLiveFeedAdapter,
     FakeMarketDataAdapter,
@@ -27,7 +27,6 @@ __all__ = [
     "FakeMarketDataAdapter",
     "MarketDataAdapter",
     "HistoricalMarketDataAdapter",
-    "ReplayMarketDataAdapter",
     "FakeLiveFeedAdapter",
     "FeedCapabilities",
     "FeedSubscription",

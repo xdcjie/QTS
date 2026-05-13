@@ -31,7 +31,7 @@ from qts.data.historical.csv_format import (
     validate_historical_csv_columns,
 )
 from qts.data.historical.csv_row_mapper import HistoricalCsvRowMapper
-from qts.data.historical.service import HistoricalMarketDataService, ReplayMarketDataAdapter
+from qts.data.historical.service import HistoricalMarketDataService
 from qts.data.historical.symbols import HistoricalFutureChainSymbolResolver
 from qts.data.historical.validation import HistoricalDatasetValidator
 from qts.registry.symbol_resolution import SourceSymbolResolver, StaticSymbolResolver
@@ -56,7 +56,6 @@ __all__ = [
     "HistoricalDatasetLocation",
     "HistoricalMarketDataAdapter",
     "HistoricalMarketDataService",
-    "ReplayMarketDataAdapter",
     "HistoricalFutureChainSymbolResolver",
     "HistoricalValidationSample",
     "SourceSymbolResolver",

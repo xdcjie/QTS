@@ -352,6 +352,8 @@ def describe_csv_dataset(
     timeframe: str = "1m",
     count_rows: bool = False,
     schema: HistoricalCsvSchema | None = None,
+    timezone_policy: str = "source UTC timestamps; exchange session semantics",
+    normalization_policy: str = "raw OHLCV rows; spreads excluded by default",
 ) -> CsvDatasetDescription:
     """Read historical CSV identity metadata without materializing row data."""
 
@@ -365,8 +367,8 @@ def describe_csv_dataset(
         path=path,
         columns=columns,
         timeframe=timeframe,
-        timezone_policy="source UTC timestamps; exchange session semantics",
-        normalization_policy="raw OHLCV rows; spreads excluded by default",
+        timezone_policy=timezone_policy,
+        normalization_policy=normalization_policy,
         source_hash_policy="not computed unless explicitly requested",
         row_count=row_count,
     )

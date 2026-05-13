@@ -46,10 +46,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             dataset.csv_path,
             dataset.symbol_resolver,
             sample_rows=sample_rows,
+            timeframe=dataset.source_timeframe or "1m",
+            schema=dataset.csv_schema,
         )
         datasets[root] = {
             "csv_path": str(dataset.csv_path),
             "chain_path": None if dataset.chain_path is None else str(dataset.chain_path),
+            "source_timeframe": dataset.source_timeframe,
+            "schema_name": dataset.schema_name,
+            "timezone_policy": dataset.timezone_policy,
+            "normalization": dataset.normalization,
             "stats": sample.stats.as_dict(),
             "valid": sample.report.valid,
             "max_severity": (

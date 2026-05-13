@@ -147,6 +147,8 @@ historical_data:
     assert gc.source_timeframe == "1m"
     assert gc.schema_name == "databento_ohlcv"
     assert gc.csv_schema.timestamp == "ts_event"
+    assert gc.timezone_policy == "source_utc_exchange_sessions"
+    assert gc.normalization == "raw"
     assert si.csv_path == Path("historical/data/si_5s.csv")
     assert si.source_timeframe == "5s"
     assert si.exchange_timezone == "US/Eastern"

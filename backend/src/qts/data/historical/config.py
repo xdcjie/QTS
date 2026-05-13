@@ -169,6 +169,8 @@ class HistoricalDatasetLocation:
     chain_path: Path | None
     source_timeframe: str | None
     exchange_timezone: str | None
+    timezone_policy: str
+    normalization: str
     schema_name: str | None
     csv_schema: HistoricalCsvSchema
     bar: HistoricalBarFileConfig
@@ -259,6 +261,8 @@ class HistoricalMarketDataConfig:
             ),
             source_timeframe=bar.timeframe,
             exchange_timezone=bar.exchange_timezone or store.defaults.exchange_timezone,
+            timezone_policy=bar.timezone_policy or store.defaults.timezone_policy,
+            normalization=bar.normalization or store.defaults.normalization,
             schema_name=schema_name,
             csv_schema=self._csv_schema(schema_name),
             bar=bar,

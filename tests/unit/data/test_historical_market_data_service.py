@@ -45,6 +45,16 @@ def test_historical_market_data_service_name_remains_compatibility_alias() -> No
     assert HistoricalMarketDataService is HistoricalMarketDataAdapter
 
 
+def test_replay_market_data_adapter_is_not_historical_public_alias() -> None:
+    import qts.data as data
+    import qts.data.historical as historical
+    from qts.data.historical import service
+
+    assert service.ReplayMarketDataAdapter is HistoricalMarketDataAdapter
+    assert not hasattr(data, "ReplayMarketDataAdapter")
+    assert not hasattr(historical, "ReplayMarketDataAdapter")
+
+
 def test_historical_market_data_adapter_replays_normalized_bars_for_subscription(
     tmp_path: Path,
 ) -> None:

@@ -31,7 +31,7 @@ from qts.runtime.actors.strategy_actor import (
 )
 from qts.runtime.mailbox import Mailbox
 from qts.strategy_sdk import PortfolioView, Strategy, StrategyContext
-from qts.strategy_sdk.data_view import MarketDataPortal
+from qts.strategy_sdk.data_view import DataView
 
 ProcessIntentHandler = Callable[..., BacktestProcessedIntent]
 PortfolioViewBuilder = Callable[..., PortfolioView]
@@ -241,7 +241,6 @@ class BacktestActorLoop:
                 history.append(bar)
                 if history_limit is not None and len(history) > history_limit:
                     del history[: len(history) - history_limit]
-                portal = MarketDataPortal(strategy_bars_by_instrument)
                 latest_prices[bar.instrument_id] = bar.close
                 self._update_rolling_prices(
                     bar,
@@ -250,7 +249,10 @@ class BacktestActorLoop:
                 strategy_ref.tell(
                     StrategyBarEvent(
                         bar=bar,
-                        data=portal.data_view(as_of=bar.end_time),
+                        data=DataView(
+                            bars=strategy_bars_by_instrument,
+                            as_of=bar.end_time,
+                        ),
                         portfolio=self._portfolio_view(
                             account_actor.snapshot(),
                             latest_prices=latest_prices,

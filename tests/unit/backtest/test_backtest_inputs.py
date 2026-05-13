@@ -32,6 +32,9 @@ historical_data:
       root_dir: {historical_root}
       bars_dir: data
       chains_dir: chains
+      defaults:
+        timezone_policy: custom_exchange_policy
+        normalization: vendor_adjusted
   catalogs:
     research:
       store: local_csv
@@ -75,6 +78,8 @@ historical_data:
     assert [bar.instrument_id for bar in bars] == [InstrumentId("EQUITY.US.NASDAQ.AAPL")]
     assert inputs.dataset_stats["EQUITY"]["bars_emitted"] == 1
     assert inputs.dataset_metadata[0].instrument_id == InstrumentId("DATASET.EQUITY")
+    assert inputs.dataset_metadata[0].timezone_policy == "custom_exchange_policy"
+    assert inputs.dataset_metadata[0].adjustment_policy == "vendor_adjusted"
     assert inputs.instrument_registry.resolve("AAPL") == InstrumentId("EQUITY.US.NASDAQ.AAPL")
     assert inputs.future_roll_registry is None
     assert inputs.exchange_timezone_by_instrument == {}

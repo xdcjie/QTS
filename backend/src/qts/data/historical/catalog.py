@@ -8,7 +8,7 @@ from pathlib import Path
 
 from qts.core.ids import InstrumentId
 from qts.data.historical.chains import HistoricalChain
-from qts.data.historical.config import HistoricalMarketDataConfig
+from qts.data.historical.config import HistoricalDatasetConfig, HistoricalMarketDataConfig
 from qts.data.historical.csv_dataset import CsvDatasetDescription, describe_csv_dataset
 from qts.data.historical.csv_format import DEFAULT_HISTORICAL_CSV_SCHEMA, HistoricalCsvSchema
 from qts.data.historical.symbols import HistoricalFutureChainSymbolResolver
@@ -27,16 +27,10 @@ class HistoricalDataset:
     dataset: CsvDatasetDescription
     source_timeframe: str | None = None
     exchange_timezone: str | None = None
+    timezone_policy: str = "source_utc_exchange_sessions"
+    normalization: str = "raw"
     csv_schema: HistoricalCsvSchema = DEFAULT_HISTORICAL_CSV_SCHEMA
     schema_name: str | None = None
-
-    @staticmethod
-    def normalize_root(root: str) -> str:
-        """Perform normalize_root."""
-        normalized = root.strip().upper()
-        if not normalized:
-            raise ValueError("roots must not contain empty values")
-        return normalized
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,13 +71,13 @@ class HistoricalCatalog:
     ) -> HistoricalCatalog:
         """Load requested roots from a project-level historical data catalog."""
 
-        normalized_roots = tuple(HistoricalDataset.normalize_root(root) for root in roots)
+        normalized_roots = tuple(HistoricalDatasetConfig.normalize_root(root) for root in roots)
         if not normalized_roots:
             raise ValueError("roots must not be empty")
         catalog_config = config.catalog(catalog)
         store = config.store(catalog_config.store)
         resolvers = {
-            HistoricalDataset.normalize_root(root): resolver
+            HistoricalDatasetConfig.normalize_root(root): resolver
             for root, resolver in (symbol_resolvers or {}).items()
         }
 
@@ -110,6 +104,8 @@ class HistoricalCatalog:
                 timeframe=location.source_timeframe or "1m",
                 count_rows=count_rows,
                 schema=location.csv_schema,
+                timezone_policy=location.timezone_policy,
+                normalization_policy=location.normalization,
             )
             datasets[root] = HistoricalDataset(
                 root=root,
@@ -121,6 +117,8 @@ class HistoricalCatalog:
                 source_timeframe=location.source_timeframe,
                 exchange_timezone=location.exchange_timezone
                 or (chain.timezone if chain is not None else None),
+                timezone_policy=location.timezone_policy,
+                normalization=location.normalization,
                 csv_schema=location.csv_schema,
                 schema_name=location.schema_name,
             )
@@ -183,7 +181,7 @@ class HistoricalCatalogLoadConfig:
         object.__setattr__(
             self,
             "roots",
-            tuple(HistoricalDataset.normalize_root(root) for root in self.roots),
+            tuple(HistoricalDatasetConfig.normalize_root(root) for root in self.roots),
         )
         if not self.roots:
             raise ValueError("roots must not be empty")
