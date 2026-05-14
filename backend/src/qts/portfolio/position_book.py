@@ -19,7 +19,7 @@ class Position:
 
 
 class PositionBook:
-    """Mutable position book intended to be owned by AccountActor later."""
+    """Mutable position book owned by AccountActor for account-state mutation."""
 
     def __init__(self, positions: Mapping[InstrumentId, Decimal] | None = None) -> None:
         """Perform __init__."""

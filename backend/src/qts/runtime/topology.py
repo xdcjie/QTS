@@ -1,0 +1,244 @@
+"""Auditable runtime topology for strategy, account, broker, and data routes."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from decimal import Decimal
+from typing import Any
+
+from qts.core.hashing import stable_json_hash
+from qts.core.ids import AccountId, BrokerId, InstrumentId, RuntimeRunId, StrategyId
+from qts.runtime.mode import AccountEnvironment, ExecutionEnvironment, RuntimeMode
+
+
+@dataclass(frozen=True, slots=True)
+class StrategyRuntimeSpec:
+    """One configured strategy instance in a runtime topology."""
+
+    strategy_id: StrategyId
+    strategy_class: str
+    account_id: AccountId
+    subscriptions: tuple[InstrumentId, ...] = ()
+    capital_allocation: Decimal = Decimal("1")
+    risk_profile_id: str = "default"
+    signal_aggregation_policy: str = "sum_targets"
+    enabled: bool = True
+    signal_priority: int = 0
+    signal_weight: Decimal = Decimal("1")
+    conflict_group: str = "default"
+
+    def __post_init__(self) -> None:
+        """Validate and normalize strategy topology fields."""
+        if not self.strategy_class.strip():
+            raise ValueError("strategy_class must not be empty")
+        if self.capital_allocation < Decimal("0"):
+            raise ValueError("capital_allocation must be non-negative")
+        if self.signal_weight < Decimal("0"):
+            raise ValueError("signal_weight must be non-negative")
+        object.__setattr__(self, "subscriptions", tuple(self.subscriptions))
+
+    def to_payload(self) -> dict[str, Any]:
+        """Serialize this strategy spec for manifests and hashing."""
+        return {
+            "strategy_id": self.strategy_id.value,
+            "strategy_class": self.strategy_class,
+            "account_id": self.account_id.value,
+            "subscriptions": sorted(item.value for item in self.subscriptions),
+            "capital_allocation": str(self.capital_allocation),
+            "risk_profile_id": self.risk_profile_id,
+            "signal_aggregation_policy": self.signal_aggregation_policy,
+            "enabled": self.enabled,
+            "signal_priority": self.signal_priority,
+            "signal_weight": str(self.signal_weight),
+            "conflict_group": self.conflict_group,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class AccountRuntimeSpec:
+    """One runtime account partition."""
+
+    account_id: AccountId
+    broker_id: BrokerId | None = None
+    base_currency: str = "USD"
+    risk_config: str = "default"
+    initial_cash: Decimal = Decimal("0")
+    live_account_mapping: str | None = None
+    broker_account_code: str | None = None
+    account_environment: AccountEnvironment = AccountEnvironment.SIMULATED
+
+    def __post_init__(self) -> None:
+        """Validate and normalize account topology fields."""
+        if not self.base_currency.strip():
+            raise ValueError("base_currency must not be empty")
+        if self.initial_cash < Decimal("0"):
+            raise ValueError("initial_cash must be non-negative")
+
+    def to_payload(self) -> dict[str, Any]:
+        """Serialize this account spec for manifests and hashing."""
+        return {
+            "account_id": self.account_id.value,
+            "broker_id": None if self.broker_id is None else self.broker_id.value,
+            "base_currency": self.base_currency,
+            "risk_config": self.risk_config,
+            "initial_cash": str(self.initial_cash),
+            "live_account_mapping": self.live_account_mapping,
+            "broker_account_code": self.broker_account_code,
+            "account_environment": self.account_environment.value,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class BrokerRouteSpec:
+    """Execution route from an account partition to a broker boundary."""
+
+    broker_id: BrokerId
+    account_id: AccountId
+    execution_adapter_type: str
+    order_transport_type: str
+    execution_environment: ExecutionEnvironment
+    broker_capabilities: tuple[str, ...] = ()
+    idempotency_store_ref: str | None = None
+
+    def __post_init__(self) -> None:
+        """Validate broker route labels."""
+        if not self.execution_adapter_type.strip():
+            raise ValueError("execution_adapter_type must not be empty")
+        if not self.order_transport_type.strip():
+            raise ValueError("order_transport_type must not be empty")
+        object.__setattr__(self, "broker_capabilities", tuple(self.broker_capabilities))
+
+    def to_payload(self) -> dict[str, Any]:
+        """Serialize this broker route for manifests and hashing."""
+        return {
+            "broker_id": self.broker_id.value,
+            "account_id": self.account_id.value,
+            "execution_adapter_type": self.execution_adapter_type,
+            "order_transport_type": self.order_transport_type,
+            "execution_environment": self.execution_environment.value,
+            "broker_capabilities": sorted(self.broker_capabilities),
+            "idempotency_store_ref": self.idempotency_store_ref,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class MarketDataRouteSpec:
+    """Market-data route available to strategies in a runtime topology."""
+
+    source_id: str
+    source_type: str
+    provider: str
+    subscriptions: tuple[InstrumentId, ...] = ()
+    permission_policy: str = "default"
+    stale_data_policy: str = "default"
+
+    def __post_init__(self) -> None:
+        """Validate market-data route labels."""
+        if not self.source_id.strip():
+            raise ValueError("source_id must not be empty")
+        if not self.source_type.strip():
+            raise ValueError("source_type must not be empty")
+        if not self.provider.strip():
+            raise ValueError("provider must not be empty")
+        object.__setattr__(self, "subscriptions", tuple(self.subscriptions))
+
+    def to_payload(self) -> dict[str, Any]:
+        """Serialize this market-data route for manifests and hashing."""
+        return {
+            "source_id": self.source_id,
+            "source_type": self.source_type,
+            "provider": self.provider,
+            "subscriptions": sorted(item.value for item in self.subscriptions),
+            "permission_policy": self.permission_policy,
+            "stale_data_policy": self.stale_data_policy,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class RuntimePartitionKey:
+    """Stable account-scoped runtime partition key."""
+
+    account_id: AccountId
+
+    @property
+    def value(self) -> str:
+        """Return the route key value."""
+        return f"account:{self.account_id.value}"
+
+
+@dataclass(frozen=True, slots=True)
+class RuntimeTopology:
+    """Auditable topology for one runtime session."""
+
+    run_id: RuntimeRunId
+    mode: RuntimeMode
+    accounts: tuple[AccountRuntimeSpec, ...]
+    strategies: tuple[StrategyRuntimeSpec, ...]
+    broker_routes: tuple[BrokerRouteSpec, ...]
+    market_data_routes: tuple[MarketDataRouteSpec, ...]
+
+    def __post_init__(self) -> None:
+        """Normalize and validate topology references."""
+        object.__setattr__(self, "mode", RuntimeMode.from_value(self.mode))
+        object.__setattr__(self, "accounts", tuple(self.accounts))
+        object.__setattr__(self, "strategies", tuple(self.strategies))
+        object.__setattr__(self, "broker_routes", tuple(self.broker_routes))
+        object.__setattr__(self, "market_data_routes", tuple(self.market_data_routes))
+        self._validate_unique_strategy_ids()
+        self._validate_strategy_accounts()
+        self._validate_broker_routes()
+
+    @property
+    def topology_hash(self) -> str:
+        """Return a stable hash for this topology."""
+        return stable_json_hash(self.to_payload())
+
+    def to_payload(self) -> dict[str, Any]:
+        """Serialize this topology without derived manifest fields."""
+        return {
+            "run_id": self.run_id.value,
+            "mode": self.mode.value,
+            "accounts": [item.to_payload() for item in self.accounts],
+            "strategies": [item.to_payload() for item in self.strategies],
+            "broker_routes": [item.to_payload() for item in self.broker_routes],
+            "market_data_routes": [item.to_payload() for item in self.market_data_routes],
+        }
+
+    def to_manifest_payload(self) -> dict[str, Any]:
+        """Serialize this topology with manifest metadata."""
+        payload = self.to_payload()
+        payload["account_count"] = len(self.accounts)
+        payload["strategy_count"] = len(self.strategies)
+        payload["broker_route_count"] = len(self.broker_routes)
+        payload["market_data_route_count"] = len(self.market_data_routes)
+        payload["topology_hash"] = self.topology_hash
+        return payload
+
+    def _validate_unique_strategy_ids(self) -> None:
+        strategy_ids = [item.strategy_id for item in self.strategies]
+        if len(set(strategy_ids)) != len(strategy_ids):
+            raise ValueError("duplicate strategy_id in runtime topology")
+
+    def _validate_strategy_accounts(self) -> None:
+        account_ids = {item.account_id for item in self.accounts}
+        for strategy in self.strategies:
+            if strategy.account_id not in account_ids:
+                raise ValueError(f"strategy references missing account: {strategy.account_id}")
+
+    def _validate_broker_routes(self) -> None:
+        routes = {(route.account_id, route.broker_id) for route in self.broker_routes}
+        for account in self.accounts:
+            if account.broker_id is None:
+                continue
+            if (account.account_id, account.broker_id) not in routes:
+                raise ValueError(f"missing broker route for account: {account.account_id}")
+
+
+__all__ = [
+    "AccountRuntimeSpec",
+    "BrokerRouteSpec",
+    "MarketDataRouteSpec",
+    "RuntimePartitionKey",
+    "RuntimeTopology",
+    "StrategyRuntimeSpec",
+]

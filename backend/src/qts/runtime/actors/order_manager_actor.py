@@ -6,7 +6,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal
 
-from qts.core.ids import InstrumentId, OrderId
+from qts.core.ids import AccountId, InstrumentId, OrderId
 from qts.domain.orders import CancelIntent
 from qts.domain.risk import RiskDecision
 from qts.execution.order_manager import (
@@ -48,9 +48,11 @@ class OrderManagerActor(Actor):
         *,
         execution_ref: ActorRef,
         account_ref: ActorRef,
+        account_id: AccountId | None = None,
         multiplier_by_instrument: Mapping[InstrumentId, Decimal] | None = None,
     ) -> None:
         """Perform __init__."""
+        self._account_id = account_id
         self._manager = OrderManager()
         self._execution_ref = execution_ref
         self._execution_report_handler = ExecutionReportHandler(
@@ -103,6 +105,8 @@ class OrderManagerActor(Actor):
 
     def _handle_submit(self, message: SubmitOrder) -> None:
         """Perform _handle_submit."""
+        if self._account_id is not None and message.intent.account_id != self._account_id:
+            raise ValueError("order account_id does not match OrderManagerActor account_id")
         order = self._manager.create_order(message.intent, risk_decision=message.risk_decision)
         self._manager.mark_sent(order.order_id, broker_order_id=message.broker_order_id)
         self._execution_ref.tell(
@@ -110,6 +114,7 @@ class OrderManagerActor(Actor):
                 intent=message.intent,
                 broker_order_id=message.broker_order_id,
                 market_price=message.market_price,
+                account_id=self._account_id,
             )
         )
 
@@ -124,6 +129,7 @@ class OrderManagerActor(Actor):
             OrderCancelRequest(
                 order_id=order.order_id,
                 broker_order_id=order.broker_order_id,
+                account_id=self._account_id,
             )
         )
 

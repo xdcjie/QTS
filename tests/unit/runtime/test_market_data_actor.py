@@ -98,10 +98,12 @@ def test_market_data_actor_owns_bar_aggregation_state_and_emits_completed_bars()
 
 def test_market_data_actor_deduplicates_physical_subscription_and_fans_out() -> None:
     from qts.core.ids import InstrumentId
-    from qts.data.live_feed import FakeLiveFeedAdapter, FeedCapabilities
+    from qts.data.live_feed import FeedCapabilities
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.market_data_actor import MarketDataActor, SubscribeMarketData
     from qts.runtime.mailbox import Mailbox
+
+    from tests.support.live_feed import FakeLiveFeedAdapter
 
     source = FakeLiveFeedAdapter(
         source_id="ibkr-live-md",
@@ -138,7 +140,7 @@ def test_market_data_actor_deduplicates_physical_subscription_and_fans_out() -> 
 
 def test_market_data_actor_aggregates_one_source_stream_once_and_fans_out_to_strategies() -> None:
     from qts.core.ids import InstrumentId
-    from qts.data.live_feed import FakeLiveFeedAdapter, FeedCapabilities
+    from qts.data.live_feed import FeedCapabilities
     from qts.domain.market_data import Bar
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.market_data_actor import (
@@ -147,6 +149,8 @@ def test_market_data_actor_aggregates_one_source_stream_once_and_fans_out_to_str
         SubscribeMarketData,
     )
     from qts.runtime.mailbox import Mailbox
+
+    from tests.support.live_feed import FakeLiveFeedAdapter
 
     source = FakeLiveFeedAdapter(
         source_id="ibkr-live-md",

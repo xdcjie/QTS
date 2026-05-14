@@ -147,7 +147,7 @@ class BrokerAdapter(Protocol):
 
 
 class FakeBrokerAdapter:
-    """Deterministic fake broker for live-beta tests and local runs."""
+    """Deterministic broker double for local simulated runs."""
 
     def __init__(self, *, broker_id: BrokerId) -> None:
         self._broker_id = broker_id

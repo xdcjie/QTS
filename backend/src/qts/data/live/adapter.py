@@ -1,12 +1,11 @@
-"""Adapter protocols for live and replay market data feeds."""
+"""Adapter protocols for streaming market data feeds."""
 
 from __future__ import annotations
 
-from collections.abc import Iterator
 from typing import Protocol
 
 from .capabilities import FeedCapabilities
-from .events import FeedSubscription, LiveFeedEvent, MarketDataSubscribed
+from .events import FeedSubscription, MarketDataSubscribed
 
 
 class LiveFeedAdapter(Protocol):
@@ -23,7 +22,7 @@ class LiveFeedAdapter(Protocol):
 
 
 class MarketDataAdapter(Protocol):
-    """Canonical market-data source adapter contract shared by live and replay feeds."""
+    """Canonical market-data source adapter contract."""
 
     @property
     def capabilities(self) -> FeedCapabilities:
@@ -35,25 +34,7 @@ class MarketDataAdapter(Protocol):
         ...
 
 
-class ReplayMarketDataAdapter(Protocol):
-    """Canonical replay market-data adapter contract for historical sources."""
-
-    @property
-    def capabilities(self) -> FeedCapabilities:
-        """Return feed capabilities."""
-        ...
-
-    def subscribe(self, subscription: FeedSubscription) -> MarketDataSubscribed:
-        """Subscribe to a replay stream."""
-        ...
-
-    def events(self, subscription_id: str) -> Iterator[LiveFeedEvent]:
-        """Iterate replay events for a subscription."""
-        ...
-
-
 __all__ = [
     "LiveFeedAdapter",
     "MarketDataAdapter",
-    "ReplayMarketDataAdapter",
 ]

@@ -57,14 +57,13 @@ class LiveRuntimeEventSink(RuntimeEventSink):
         if self._closed:
             raise RuntimeError("event sink is closed")
         self._reject_secrets(event.payload)
-        event_hash = stable_json_hash({"kind": event.kind, "payload": event.payload})
         sequence = self._rows + 1
-        row = {
-            "sequence": sequence,
-            "kind": event.kind,
-            "payload": event.payload,
-            "event_hash": event_hash,
-        }
+        row = event.to_envelope(sequence_no=sequence)
+        event_hash = stable_json_hash(
+            {key: value for key, value in row.items() if key not in {"sequence_no", "ts_ingest"}}
+        )
+        row["sequence"] = sequence
+        row["event_hash"] = event_hash
         line = (
             json.dumps(
                 row,

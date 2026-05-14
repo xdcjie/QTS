@@ -48,8 +48,16 @@ class EventId(_StringId):
     """Stable internal event identifier."""
 
 
-class BacktestRunId(_StringId):
-    """Stable identifier for a backtest run."""
+class RuntimeRunId(_StringId):
+    """Stable identifier for one runtime run across all modes."""
+
+
+class RuntimeInstanceId(_StringId):
+    """Stable identifier for one runtime process/session instance."""
+
+
+class BacktestRunId(RuntimeRunId):
+    """Backward-compatible identifier for a backtest run."""
 
 
 class CorrelationId(_StringId):
@@ -69,5 +77,7 @@ __all__ = [
     "EventId",
     "InstrumentId",
     "OrderId",
+    "RuntimeInstanceId",
+    "RuntimeRunId",
     "StrategyId",
 ]

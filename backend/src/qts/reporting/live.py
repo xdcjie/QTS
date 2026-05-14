@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from qts.core.hashing import stable_json_default, stable_json_hash
+from qts.runtime.sinks.base import RuntimeEvent
 from qts.runtime.sinks.live import LiveRuntimeEventSink
 
 _SECRET_KEY_PARTS = ("password", "token", "credential")
@@ -37,6 +38,12 @@ class LiveReportWriter:
         account_id: str,
         connection_metadata: dict[str, Any],
         event_sink: LiveRuntimeEventSink,
+        market_data_environment: str | None = None,
+        execution_environment: str | None = None,
+        account_environment: str | None = None,
+        broker_account_kind: str | None = None,
+        allow_live_orders: bool = False,
+        operator_signoff_id: str | None = None,
         extra_artifacts: dict[str, Path] | None = None,
     ) -> LiveReportManifest:
         """Write a manifest naming event and evidence artifacts."""
@@ -56,6 +63,25 @@ class LiveReportWriter:
         payload = {
             "runtime_mode": runtime_mode,
             "account_id": account_id,
+            "event_schema_version": RuntimeEvent.SCHEMA_VERSION,
+            "market_data_environment": self._non_empty_or_default(
+                market_data_environment,
+                default="unknown",
+            ),
+            "execution_environment": self._non_empty_or_default(
+                execution_environment,
+                default="unknown",
+            ),
+            "account_environment": self._non_empty_or_default(
+                account_environment,
+                default="unknown",
+            ),
+            "broker_account_kind": self._non_empty_or_default(
+                broker_account_kind,
+                default="unknown",
+            ),
+            "allow_live_orders": allow_live_orders,
+            "operator_signoff_id": operator_signoff_id,
             "config_hash": stable_json_hash(config_payload),
             "connection_metadata": self._redacted_connection_metadata(connection_metadata),
             "artifacts": artifacts,
@@ -63,6 +89,7 @@ class LiveReportWriter:
         report_hash = stable_json_hash(payload)
         payload["report_hash"] = report_hash
         run_id = f"live-{report_hash.removeprefix('sha256:')[:12]}"
+        payload["run_id"] = run_id
         manifest_path = self._output_dir / f"{run_id}.manifest.json"
         manifest_path.write_text(
             json.dumps(
@@ -100,6 +127,14 @@ class LiveReportWriter:
             else:
                 redacted[key] = value
         return redacted
+
+    @staticmethod
+    def _non_empty_or_default(value: str | None, *, default: str) -> str:
+        """Return a stripped value or a manifest-safe fallback."""
+        if value is None:
+            return default
+        normalized = value.strip()
+        return normalized or default
 
 
 class LiveEventReporter:

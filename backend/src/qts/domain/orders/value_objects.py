@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
 
-from qts.core.ids import InstrumentId, OrderId
+from qts.core.ids import AccountId, InstrumentId, OrderId
 
 
 class OrderState(StrEnum):
@@ -38,6 +38,7 @@ class OrderIntent:
     instrument_id: InstrumentId
     side: OrderSide
     quantity: Decimal
+    account_id: AccountId | None = None
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""
@@ -125,6 +126,7 @@ class OrderFill:
     price: Decimal
     commission: Decimal = Decimal("0")
     slippage: Decimal = Decimal("0")
+    account_id: AccountId | None = None
 
 
 @dataclass(frozen=True, slots=True)

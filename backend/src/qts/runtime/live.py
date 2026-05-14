@@ -8,6 +8,7 @@ from enum import StrEnum
 from qts.data.live_feed import LiveFeedAdapter
 from qts.execution.broker import BrokerAdapter, BrokerExecutionReport, BrokerOrderRequest
 from qts.runtime.config import LiveRuntimeConfig
+from qts.runtime.mode import RuntimeMode
 from qts.runtime.sinks.base import RuntimeEvent
 
 
@@ -21,7 +22,7 @@ class LiveRuntimeState(StrEnum):
     DEGRADED = "degraded"
 
 
-class LiveMode(StrEnum):
+class LivePermissionMode(StrEnum):
     """Runtime mode with explicit live-trading permissions."""
 
     PAPER = "paper"
@@ -29,11 +30,14 @@ class LiveMode(StrEnum):
     LIVE = "live"
 
 
+LiveMode = LivePermissionMode
+
+
 @dataclass(frozen=True, slots=True)
 class LiveStartupDecision:
     """Result of startup guard validation."""
 
-    mode: LiveMode
+    mode: RuntimeMode
     real_order_submission_enabled: bool
 
 
@@ -53,9 +57,12 @@ def validate_live_startup(config: LiveRuntimeConfig) -> LiveStartupDecision:
     ]
     if missing:
         raise ValueError("live startup missing required config: " + ", ".join(missing))
+    mode = RuntimeMode.from_value(config.mode)
     return LiveStartupDecision(
-        mode=LiveMode(config.mode),
-        real_order_submission_enabled=config.mode == LiveMode.LIVE.value,
+        mode=mode,
+        real_order_submission_enabled=(
+            mode is RuntimeMode.LIVE and config.allow_live_orders and not config.observation_only
+        ),
     )
 
 
@@ -109,7 +116,7 @@ class RuntimeOrderResult:
 
 
 class LiveRuntime:
-    """Small live-beta runtime wrapper over fake or real boundary adapters."""
+    """Runtime facade over broker and market-data boundary adapters."""
 
     def __init__(self, *, broker: BrokerAdapter, feed: LiveFeedAdapter) -> None:
         self._broker = broker
@@ -178,6 +185,7 @@ class LiveRuntime:
 
 
 __all__ = [
+    "LivePermissionMode",
     "LiveMode",
     "LiveRuntime",
     "LiveRuntimeState",

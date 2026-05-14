@@ -6,7 +6,7 @@ from decimal import Decimal
 from fastapi.testclient import TestClient
 from qts.api.app import create_app
 from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
-from qts.data.live_feed import FakeLiveFeedAdapter, FeedSubscription
+from qts.data.live_feed import FeedSubscription
 from qts.domain.market_data import Bar
 from qts.execution.broker import BrokerOrderRequest, FakeBrokerAdapter
 from qts.execution.order_manager import OrderSide
@@ -15,6 +15,8 @@ from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.market_data_actor import MarketDataActor, MarketDataEvent
 from qts.runtime.live import LiveRuntime
 from qts.runtime.mailbox import Mailbox
+
+from tests.support.live_feed import FakeLiveFeedAdapter
 
 
 def test_live_runtime_start_pause_resume_and_fake_broker_flow() -> None:

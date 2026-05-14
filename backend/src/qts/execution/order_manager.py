@@ -72,6 +72,7 @@ class OrderManager:
             instrument_id=current.intent.instrument_id,
             side=current.intent.side,
             quantity=intent.new_quantity,
+            account_id=current.intent.account_id,
         )
         order = Order(
             order_id=current.order_id,
@@ -166,6 +167,7 @@ class OrderManager:
                 price=report.fill_price,
                 commission=report.commission,
                 slippage=report.slippage,
+                account_id=order.intent.account_id,
             ),
         )
 

@@ -23,11 +23,12 @@ def test_live_runtime_degrades_from_runtime_event_and_rejects_new_orders() -> No
     from decimal import Decimal
 
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId
-    from qts.data.live_feed import FakeLiveFeedAdapter
     from qts.execution.broker import BrokerOrderRequest, FakeBrokerAdapter
     from qts.execution.order_manager import OrderSide
     from qts.runtime.live import LiveRuntime
     from qts.runtime.sinks.base import RuntimeEvent
+
+    from tests.support.live_feed import FakeLiveFeedAdapter
 
     runtime = LiveRuntime(
         broker=FakeBrokerAdapter(broker_id=BrokerId("paper")),

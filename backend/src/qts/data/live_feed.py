@@ -1,8 +1,6 @@
 """Backward-compatible live feed import surface."""
 
 from qts.data.live import (
-    FakeLiveFeedAdapter,
-    FakeMarketDataAdapter,
     FeedCapabilities,
     FeedSubscription,
     LiveFeedAdapter,
@@ -13,14 +11,11 @@ from qts.data.live import (
     MarketDataAdapter,
     MarketDataSubscribed,
     ReconnectPolicy,
-    ReplayMarketDataAdapter,
 )
 
 __all__ = [
     "FeedCapabilities",
     "FeedSubscription",
-    "FakeMarketDataAdapter",
-    "FakeLiveFeedAdapter",
     "LiveFeedAdapter",
     "LiveFeedEvent",
     "LiveFeedFailure",
@@ -29,5 +24,4 @@ __all__ = [
     "MarketDataSubscribed",
     "MarketDataAdapter",
     "ReconnectPolicy",
-    "ReplayMarketDataAdapter",
 ]

@@ -14,6 +14,8 @@ def test_all_phase1_ids_are_immutable_non_empty_value_objects() -> None:
         EventId,
         InstrumentId,
         OrderId,
+        RuntimeInstanceId,
+        RuntimeRunId,
         StrategyId,
     )
 
@@ -24,6 +26,8 @@ def test_all_phase1_ids_are_immutable_non_empty_value_objects() -> None:
         OrderId,
         BrokerId,
         EventId,
+        RuntimeRunId,
+        RuntimeInstanceId,
         CorrelationId,
         CausationId,
     )
@@ -46,3 +50,11 @@ def test_ids_are_typed_even_when_values_match() -> None:
     instrument_id: object = InstrumentId("same")
 
     assert AccountId("same") != instrument_id
+
+
+def test_backtest_run_id_is_runtime_run_id() -> None:
+    from qts.core.ids import BacktestRunId, RuntimeRunId
+
+    run_id = BacktestRunId("bt-001")
+
+    assert isinstance(run_id, RuntimeRunId)

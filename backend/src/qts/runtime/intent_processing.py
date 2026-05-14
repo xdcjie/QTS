@@ -165,7 +165,7 @@ class OrderPlanBuilder:
 
 
 class TargetIntentProcessor:
-    """Translate strategy target intents into validated, executed backtest orders."""
+    """Translate strategy target intents into validated runtime order submissions."""
 
     def __init__(
         self,

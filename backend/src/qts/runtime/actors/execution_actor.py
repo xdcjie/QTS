@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Protocol
 
-from qts.core.ids import OrderId
+from qts.core.ids import AccountId, OrderId
 from qts.execution.order_manager import ExecutionReport, OrderIntent
 from qts.execution.simulator.simulated_broker import SimulatedBroker
 from qts.runtime.actor import Actor
@@ -38,6 +38,7 @@ class OrderExecutionRequest:
     intent: OrderIntent
     broker_order_id: str
     market_price: Decimal
+    account_id: AccountId | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,6 +47,7 @@ class OrderCancelRequest:
 
     order_id: OrderId
     broker_order_id: str
+    account_id: AccountId | None = None
 
 
 class ExecutionActor(Actor):

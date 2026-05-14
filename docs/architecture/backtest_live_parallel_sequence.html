@@ -785,6 +785,82 @@
           本索引覆盖 <code>backend/src/qts</code> 下的所有生产 Python class，包括公共概念、协议、DTO、配置、actor message、adapter payload 和少量私有辅助类型。
           作用列描述类自身职责；价值列描述它在 backtest / paper / live 统一链路中的工程价值。
         </p>
+
+        <details class="inventory-group">
+          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">69 classes</span></summary>
+          <ul>
+            <li><code>RuntimeRunId</code> <code>backend/src/qts/core/ids.py:51</code></li>
+            <li><code>RuntimeInstanceId</code> <code>backend/src/qts/core/ids.py:55</code></li>
+            <li><code>CorrelationId</code> <code>backend/src/qts/core/ids.py:63</code></li>
+            <li><code>CausationId</code> <code>backend/src/qts/core/ids.py:67</code></li>
+            <li><code>LiveFeedAdapter</code> <code>backend/src/qts/data/live/adapter.py:11</code></li>
+            <li><code>MarketDataAdapter</code> <code>backend/src/qts/data/live/adapter.py:24</code></li>
+            <li><code>CancelIntent</code> <code>backend/src/qts/domain/orders/value_objects.py:50</code></li>
+            <li><code>ReplaceIntent</code> <code>backend/src/qts/domain/orders/value_objects.py:58</code></li>
+            <li><code>Order</code> <code>backend/src/qts/domain/orders/value_objects.py:71</code></li>
+            <li><code>ExecutionReportStatus</code> <code>backend/src/qts/domain/orders/value_objects.py:80</code></li>
+            <li><code>ExecutionReport</code> <code>backend/src/qts/domain/orders/value_objects.py:91</code></li>
+            <li><code>OrderFill</code> <code>backend/src/qts/domain/orders/value_objects.py:118</code></li>
+            <li><code>OrderManagerResult</code> <code>backend/src/qts/domain/orders/value_objects.py:133</code></li>
+            <li><code>OrderManagerSnapshot</code> <code>backend/src/qts/domain/orders/value_objects.py:141</code></li>
+            <li><code>LivePackageNoReplayClassRule</code> <code>backend/src/qts/quality/guardrails.py:173</code></li>
+            <li><code>ProductionNoFakeClassRule</code> <code>backend/src/qts/quality/guardrails.py:205</code></li>
+            <li><code>SharedRuntimeWordingRule</code> <code>backend/src/qts/quality/guardrails.py:234</code></li>
+            <li><code>ProductionPlaceholderDocstringRule</code> <code>backend/src/qts/quality/guardrails.py:266</code></li>
+            <li><code>ProductSpecificRule</code> <code>backend/src/qts/quality/guardrails.py:296</code></li>
+            <li><code>BrokerSpecificRule</code> <code>backend/src/qts/quality/guardrails.py:314</code></li>
+            <li><code>TestSupportRule</code> <code>backend/src/qts/quality/guardrails.py:332</code></li>
+            <li><code>SharedCapabilityRule</code> <code>backend/src/qts/quality/guardrails.py:348</code></li>
+            <li><code>OOPPublicFactoryRule</code> <code>backend/src/qts/quality/guardrails.py:364</code></li>
+            <li><code>OOPHelperOwnershipRule</code> <code>backend/src/qts/quality/guardrails.py:380</code></li>
+            <li><code>BacktestRunnerCohesionRule</code> <code>backend/src/qts/quality/guardrails.py:396</code></li>
+            <li><code>BacktestInputCohesionRule</code> <code>backend/src/qts/quality/guardrails.py:412</code></li>
+            <li><code>BacktestEngineCohesionRule</code> <code>backend/src/qts/quality/guardrails.py:428</code></li>
+            <li><code>StrategySdkPublicSurfaceRule</code> <code>backend/src/qts/quality/guardrails.py:444</code></li>
+            <li><code>GuardrailSuite</code> <code>backend/src/qts/quality/guardrails.py:460</code></li>
+            <li><code>LiveReportManifest</code> <code>backend/src/qts/reporting/live.py:18</code></li>
+            <li><code>LiveReportWriter</code> <code>backend/src/qts/reporting/live.py:25</code></li>
+            <li><code>LiveEventReporter</code> <code>backend/src/qts/reporting/live.py:140</code></li>
+            <li><code>AccountActor</code> <code>backend/src/qts/runtime/actors/account_actor.py:36</code></li>
+            <li><code>OrderCancelRequest</code> <code>backend/src/qts/runtime/actors/execution_actor.py:45</code></li>
+            <li><code>ExecutionActor</code> <code>backend/src/qts/runtime/actors/execution_actor.py:53</code></li>
+            <li><code>StrategySignalEvent</code> <code>backend/src/qts/runtime/actors/signal_aggregator_actor.py:20</code></li>
+            <li><code>SignalAggregatorActor</code> <code>backend/src/qts/runtime/actors/signal_aggregator_actor.py:40</code></li>
+            <li><code>TradingRuntimeConfig</code> <code>backend/src/qts/runtime/config.py:29</code></li>
+            <li><code>BacktestEngineConfig</code> <code>backend/src/qts/runtime/config.py:83</code></li>
+            <li><code>CostModelConfig</code> <code>backend/src/qts/runtime/config.py:148</code></li>
+            <li><code>RiskConfig</code> <code>backend/src/qts/runtime/config.py:176</code></li>
+            <li><code>RollPolicyConfig</code> <code>backend/src/qts/runtime/config.py:193</code></li>
+            <li><code>BacktestMarketDataReference</code> <code>backend/src/qts/runtime/config.py:212</code></li>
+            <li><code>BacktestStrategyConfig</code> <code>backend/src/qts/runtime/config.py:252</code></li>
+            <li><code>BacktestRuntimeConfig</code> <code>backend/src/qts/runtime/config.py:315</code></li>
+            <li><code>LiveRuntimeConfig</code> <code>backend/src/qts/runtime/config.py:470</code></li>
+            <li><code>LiveRuntimeState</code> <code>backend/src/qts/runtime/live.py:15</code></li>
+            <li><code>LivePermissionMode</code> <code>backend/src/qts/runtime/live.py:25</code></li>
+            <li><code>LiveStartupDecision</code> <code>backend/src/qts/runtime/live.py:37</code></li>
+            <li><code>LiveRuntimeStateMachine</code> <code>backend/src/qts/runtime/live.py:94</code></li>
+            <li><code>RuntimeOrderResult</code> <code>backend/src/qts/runtime/live.py:109</code></li>
+            <li><code>LiveRuntime</code> <code>backend/src/qts/runtime/live.py:118</code></li>
+            <li><code>RuntimeMode</code> <code>backend/src/qts/runtime/mode.py:8</code></li>
+            <li><code>MarketDataEnvironment</code> <code>backend/src/qts/runtime/mode.py:28</code></li>
+            <li><code>ExecutionEnvironment</code> <code>backend/src/qts/runtime/mode.py:48</code></li>
+            <li><code>AccountEnvironment</code> <code>backend/src/qts/runtime/mode.py:71</code></li>
+            <li><code>SignalAggregationPolicy</code> <code>backend/src/qts/runtime/signal_policy.py:13</code></li>
+            <li><code>SignalContribution</code> <code>backend/src/qts/runtime/signal_policy.py:23</code></li>
+            <li><code>SignalConflict</code> <code>backend/src/qts/runtime/signal_policy.py:40</code></li>
+            <li><code>SignalAggregationDecision</code> <code>backend/src/qts/runtime/signal_policy.py:49</code></li>
+            <li><code>SignalPolicyEngine</code> <code>backend/src/qts/runtime/signal_policy.py:62</code></li>
+            <li><code>RuntimeEvent</code> <code>backend/src/qts/runtime/sinks/base.py:25</code></li>
+            <li><code>RuntimeEventSink</code> <code>backend/src/qts/runtime/sinks/base.py:83</code></li>
+            <li><code>StrategyRuntimeSpec</code> <code>backend/src/qts/runtime/topology.py:15</code></li>
+            <li><code>AccountRuntimeSpec</code> <code>backend/src/qts/runtime/topology.py:58</code></li>
+            <li><code>BrokerRouteSpec</code> <code>backend/src/qts/runtime/topology.py:92</code></li>
+            <li><code>MarketDataRouteSpec</code> <code>backend/src/qts/runtime/topology.py:125</code></li>
+            <li><code>RuntimePartitionKey</code> <code>backend/src/qts/runtime/topology.py:158</code></li>
+            <li><code>RuntimeTopology</code> <code>backend/src/qts/runtime/topology.py:170</code></li>
+          </ul>
+        </details>
+
         <details class="inventory-group">
           <summary><span>0 共享基础语义 · <code>qts.core</code></span><span class="badge shared">11 classes</span></summary>
           <table>

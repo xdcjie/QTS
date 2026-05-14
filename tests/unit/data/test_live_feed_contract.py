@@ -6,13 +6,14 @@ from decimal import Decimal
 import pytest
 from qts.core.ids import InstrumentId
 from qts.data.live_feed import (
-    FakeLiveFeedAdapter,
     FeedCapabilities,
     FeedSubscription,
     LiveFeedFailure,
     ReconnectPolicy,
 )
 from qts.domain.market_data import Tick
+
+from tests.support.live_feed import FakeLiveFeedAdapter
 
 
 def test_feed_capabilities_are_typed_and_validate_limits() -> None:

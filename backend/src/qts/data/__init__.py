@@ -1,7 +1,5 @@
 from qts.data.historical import HistoricalMarketDataAdapter
 from qts.data.live_feed import (
-    FakeLiveFeedAdapter,
-    FakeMarketDataAdapter,
     FeedCapabilities,
     FeedSubscription,
     LiveFeedAdapter,
@@ -24,10 +22,8 @@ from qts.data.subscriptions import (
 from qts.data.validation_report import DataValidationIssue, DataValidationReport
 
 __all__ = [
-    "FakeMarketDataAdapter",
     "MarketDataAdapter",
     "HistoricalMarketDataAdapter",
-    "FakeLiveFeedAdapter",
     "FeedCapabilities",
     "FeedSubscription",
     "LiveFeedAdapter",

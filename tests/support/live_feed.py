@@ -1,11 +1,11 @@
-"""Test-oriented fake live feed adapter."""
+"""Test-only live feed fakes."""
 
 from __future__ import annotations
 
-from .adapter import LiveFeedAdapter
-from .capabilities import FeedCapabilities
-from .events import (
+from qts.data.live import (
+    FeedCapabilities,
     FeedSubscription,
+    LiveFeedAdapter,
     LiveFeedEvent,
     LiveFeedFailure,
     LiveFeedPayload,
@@ -14,7 +14,7 @@ from .events import (
 
 
 class FakeLiveFeedAdapter(LiveFeedAdapter):
-    """Deterministic fake live market data feed."""
+    """Deterministic fake live market data feed for tests."""
 
     def __init__(
         self,
@@ -60,8 +60,4 @@ class FakeLiveFeedAdapter(LiveFeedAdapter):
         )
 
 
-class FakeMarketDataAdapter(FakeLiveFeedAdapter):
-    """Canonical fake adapter name used for market-data source tests."""
-
-
-__all__ = ["FakeLiveFeedAdapter", "FakeMarketDataAdapter"]
+__all__ = ["FakeLiveFeedAdapter"]

@@ -8,11 +8,11 @@ from __future__ import annotations
 
 
 class ReportWriter:
-    """Boundary placeholder for report generation."""
+    """Boundary for writing run-level report manifests."""
 
 
 class RuntimeArtifactWriter:
-    """Boundary placeholder for runtime artifact persistence."""
+    """Boundary for persisting runtime artifact files."""
 
 
 __all__ = ["ReportWriter", "RuntimeArtifactWriter"]

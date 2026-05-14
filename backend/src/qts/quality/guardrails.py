@@ -160,10 +160,134 @@ class ImportBoundaryRule:
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
         """Perform check."""
+        if qts_relative_path.parts[:1] == ("quality",):
+            return []
         violations: list[GuardrailViolation] = []
         for imported_module, line in _iter_imports(tree):
             violations.extend(
                 _check_import(relative_path, qts_relative_path, imported_module, line)
+            )
+        return violations
+
+
+class LivePackageNoReplayClassRule:
+    """Reject replay concepts in the live market-data package."""
+
+    code = "LIVE_PACKAGE_REPLAY_CLASS"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform check."""
+        if qts_relative_path.parts[:2] != ("data", "live"):
+            return []
+        violations: list[GuardrailViolation] = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef) and node.name.startswith("Replay"):
+                violations.append(
+                    GuardrailViolation(
+                        code=self.code,
+                        path=str(relative_path),
+                        line=node.lineno,
+                        message=(
+                            "replay market-data classes belong under data/sources or historical"
+                        ),
+                    )
+                )
+        return violations
+
+
+class ProductionNoFakeClassRule:
+    """Reject fake market-data classes from production data packages."""
+
+    code = "PRODUCTION_FAKE_CLASS"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform check."""
+        if qts_relative_path.parts[:1] != ("data",):
+            return []
+        violations: list[GuardrailViolation] = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef) and node.name.startswith("Fake"):
+                violations.append(
+                    GuardrailViolation(
+                        code=self.code,
+                        path=str(relative_path),
+                        line=node.lineno,
+                        message="test market-data fakes belong under tests/support",
+                    )
+                )
+        return violations
+
+
+class SharedRuntimeWordingRule:
+    """Reject mode-specific wording in shared runtime docstrings."""
+
+    code = "SHARED_RUNTIME_WORDING"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform check."""
+        if qts_relative_path.parts[:1] != ("runtime",):
+            return []
+        violations: list[GuardrailViolation] = []
+        forbidden = ("backtest orders", "beta only")
+        for node, docstring in _iter_docstrings(tree):
+            normalized = docstring.lower()
+            if not any(text in normalized for text in forbidden):
+                continue
+            violations.append(
+                GuardrailViolation(
+                    code=self.code,
+                    path=str(relative_path),
+                    line=getattr(node, "lineno", 1),
+                    message="shared runtime docstrings must be mode-neutral",
+                )
+            )
+        return violations
+
+
+class ProductionPlaceholderDocstringRule:
+    """Reject placeholder docstrings in production code."""
+
+    code = "PLACEHOLDER_DOCSTRING"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform check."""
+        if qts_relative_path.parts[:1] == ("quality",):
+            return []
+        violations: list[GuardrailViolation] = []
+        for node, docstring in _iter_docstrings(tree):
+            if "placeholder" not in docstring.lower():
+                continue
+            violations.append(
+                GuardrailViolation(
+                    code=self.code,
+                    path=str(relative_path),
+                    line=getattr(node, "lineno", 1),
+                    message="production docstrings must describe the artifact contract",
+                )
             )
         return violations
 
@@ -348,6 +472,10 @@ class GuardrailSuite:
             BacktestInputCohesionRule(),
             BacktestEngineCohesionRule(),
             StrategySdkPublicSurfaceRule(),
+            LivePackageNoReplayClassRule(),
+            ProductionNoFakeClassRule(),
+            SharedRuntimeWordingRule(),
+            ProductionPlaceholderDocstringRule(),
         )
 
     def check_file(
@@ -413,6 +541,25 @@ def _check_import(
     imported_layer = imported_parts[1] if len(imported_parts) > 1 else ""
     if imported_layer in ("", source_layer):
         return []
+
+    if _is_transport_actor_import(qts_relative_path, imported_module):
+        return [
+            GuardrailViolation(
+                code="TRANSPORT_ACTOR_IMPORT",
+                path=str(relative_path),
+                line=line,
+                message=f"transport boundary must not import runtime actors: {imported_module}",
+            )
+        ]
+    if _is_pipeline_actor_import(qts_relative_path, imported_module):
+        return [
+            GuardrailViolation(
+                code="PIPELINE_ACTOR_IMPORT",
+                path=str(relative_path),
+                line=line,
+                message=f"data pipeline must not import runtime actors: {imported_module}",
+            )
+        ]
 
     if _is_forbidden_broker_adapter_dependency(qts_relative_path, imported_module):
         return [
@@ -496,6 +643,31 @@ def _is_forbidden_adapter_dependency(qts_relative_path: Path, imported_module: s
     if parts[:2] == ("execution", "adapters"):
         return imported_module.startswith("qts.data")
     return False
+
+
+def _is_transport_actor_import(qts_relative_path: Path, imported_module: str) -> bool:
+    if "transport" not in qts_relative_path.stem:
+        return False
+    return _is_runtime_actor_module(imported_module)
+
+
+def _is_pipeline_actor_import(qts_relative_path: Path, imported_module: str) -> bool:
+    if qts_relative_path.parts[:1] != ("data",):
+        return False
+    if "pipeline" not in qts_relative_path.stem:
+        return False
+    return _is_runtime_actor_module(imported_module)
+
+
+def _is_runtime_actor_module(imported_module: str) -> bool:
+    return imported_module.startswith(
+        (
+            "qts.runtime.actor",
+            "qts.runtime.actor_ref",
+            "qts.runtime.actors",
+            "qts.runtime.mailbox",
+        )
+    )
 
 
 def _check_product_specific_code(
@@ -977,6 +1149,20 @@ def _iter_imported_names(tree: ast.AST) -> list[tuple[str, str, int]]:
         if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module is not None:
             imports.extend((node.module, alias.name, node.lineno) for alias in node.names)
     return imports
+
+
+def _iter_docstrings(tree: ast.AST) -> list[tuple[ast.AST, str]]:
+    docstrings: list[tuple[ast.AST, str]] = []
+    for node in ast.walk(tree):
+        if not isinstance(
+            node,
+            ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
+        ):
+            continue
+        docstring = ast.get_docstring(node)
+        if docstring is not None:
+            docstrings.append((node, docstring))
+    return docstrings
 
 
 def _has_allowed_prefix(path: Path, prefixes: tuple[tuple[str, ...], ...]) -> bool:

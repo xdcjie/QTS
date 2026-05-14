@@ -15,6 +15,12 @@ from qts.core.hashing import stable_json_hash
 from qts.core.ids import InstrumentId
 from qts.data.provenance import DatasetMetadata
 from qts.reporting.backtest import dataset_metadata_payload
+from qts.runtime.mode import (
+    AccountEnvironment,
+    ExecutionEnvironment,
+    MarketDataEnvironment,
+    RuntimeMode,
+)
 
 _SUPPORTED_MARKET_DATA_SOURCES = frozenset({"local_historical"})
 
@@ -329,9 +335,30 @@ class BacktestRuntimeConfig:
     risk_config: RiskConfig = field(default_factory=lambda: RiskConfig(max_notional=Decimal("1")))
     roll_policy: RollPolicyConfig = field(default_factory=RollPolicyConfig)
     warmup_bars: int = 0
+    mode: RuntimeMode | str = RuntimeMode.BACKTEST
+    execution_environment: ExecutionEnvironment | str = ExecutionEnvironment.SIMULATED
+    market_data_environment: MarketDataEnvironment | str = MarketDataEnvironment.REPLAY
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""
+        mode = RuntimeMode.from_value(self.mode)
+        if mode is not RuntimeMode.BACKTEST:
+            raise ValueError("BacktestRuntimeConfig mode must be backtest")
+        object.__setattr__(self, "mode", mode)
+        execution_environment = ExecutionEnvironment.from_value(
+            self.execution_environment,
+            mode=mode,
+        )
+        if execution_environment is not ExecutionEnvironment.SIMULATED:
+            raise ValueError("BacktestRuntimeConfig execution_environment must be simulated")
+        object.__setattr__(self, "execution_environment", execution_environment)
+        market_data_environment = MarketDataEnvironment.from_value(
+            self.market_data_environment,
+            mode=mode,
+        )
+        if market_data_environment is not MarketDataEnvironment.REPLAY:
+            raise ValueError("BacktestRuntimeConfig market_data_environment must be replay")
+        object.__setattr__(self, "market_data_environment", market_data_environment)
         if self.strategy_config_path is not None:
             object.__setattr__(self, "strategy_config_path", Path(self.strategy_config_path))
         if not isinstance(self.market_data, BacktestMarketDataReference):
@@ -395,6 +422,15 @@ class BacktestRuntimeConfig:
     def to_payload(self) -> dict[str, Any]:
         """Perform to_payload."""
         payload = {
+            "mode": RuntimeMode.from_value(self.mode).value,
+            "execution_environment": ExecutionEnvironment.from_value(
+                self.execution_environment,
+                mode=RuntimeMode.BACKTEST,
+            ).value,
+            "market_data_environment": MarketDataEnvironment.from_value(
+                self.market_data_environment,
+                mode=RuntimeMode.BACKTEST,
+            ).value,
             "roots": list(self.roots),
             "symbols": list(self.symbols),
             "start": self.start.isoformat(),
@@ -434,19 +470,125 @@ class BacktestRuntimeConfig:
 class LiveRuntimeConfig:
     """Startup and safety configuration for live-capable runtimes."""
 
-    mode: str
+    mode: RuntimeMode | str
     broker_configured: bool
     account_configured: bool
     risk_configured: bool
     calendar_configured: bool
     kill_switch_configured: bool
+    allow_live_orders: bool = False
+    observation_only: bool = False
+    broker_account_kind: str | None = None
+    execution_environment: ExecutionEnvironment | str | None = None
+    market_data_environment: MarketDataEnvironment | str | None = None
+    account_environment: AccountEnvironment | str | None = None
+    broker_account_code: str | None = None
+    broker_port: int | None = None
+    broker_port_override_reason: str | None = None
+    operator_signoff_id: str | None = None
 
     def __post_init__(self) -> None:
         """Validate the live runtime mode label."""
-        normalized = self.mode.strip().lower()
-        if normalized not in {"paper", "observation", "live"}:
-            raise ValueError("mode must be paper, observation, or live")
-        object.__setattr__(self, "mode", normalized)
+        mode = RuntimeMode.from_value(self.mode)
+        if mode is RuntimeMode.BACKTEST:
+            raise ValueError("LiveRuntimeConfig mode cannot be backtest")
+        object.__setattr__(self, "mode", mode.value)
+        execution_environment = ExecutionEnvironment.from_value(
+            self.execution_environment,
+            mode=mode,
+        )
+        market_data_environment = MarketDataEnvironment.from_value(
+            self.market_data_environment,
+            mode=mode,
+        )
+        account_environment = AccountEnvironment.from_value(self.account_environment, mode=mode)
+        broker_account_kind = self._normalize_broker_account_kind(
+            self.broker_account_kind,
+            account_environment=account_environment,
+        )
+        object.__setattr__(self, "execution_environment", execution_environment)
+        object.__setattr__(self, "market_data_environment", market_data_environment)
+        object.__setattr__(self, "account_environment", account_environment)
+        object.__setattr__(self, "broker_account_kind", broker_account_kind)
+        if self.broker_account_code is not None:
+            object.__setattr__(self, "broker_account_code", self.broker_account_code.strip())
+        if self.operator_signoff_id is not None:
+            object.__setattr__(self, "operator_signoff_id", self.operator_signoff_id.strip())
+        if self.broker_port_override_reason is not None:
+            object.__setattr__(
+                self,
+                "broker_port_override_reason",
+                self.broker_port_override_reason.strip(),
+            )
+        self._validate_mode_contract(mode)
+
+    @staticmethod
+    def _normalize_broker_account_kind(
+        value: str | None, *, account_environment: AccountEnvironment
+    ) -> str:
+        """Normalize the broker account classification for manifests."""
+        if value is None:
+            return account_environment.value
+        normalized = value.strip().lower()
+        if normalized not in {"paper", "live", "simulated"}:
+            raise ValueError("broker_account_kind must be paper, live, or simulated")
+        return normalized
+
+    def _validate_mode_contract(self, mode: RuntimeMode) -> None:
+        """Validate mode, account, execution, and port consistency."""
+        account_code = self.broker_account_code or ""
+        is_paper_account = account_code.upper().startswith("DU")
+        if mode is RuntimeMode.LIVE:
+            if is_paper_account:
+                raise ValueError("live mode cannot use a paper account")
+            if self.broker_account_kind != AccountEnvironment.LIVE.value:
+                raise ValueError("live mode requires broker_account_kind=live")
+            if self.account_environment is not AccountEnvironment.LIVE:
+                raise ValueError("live mode requires account_environment=live")
+            if self.execution_environment is not ExecutionEnvironment.BROKER:
+                raise ValueError("live mode requires execution_environment=broker")
+            if self.market_data_environment is not MarketDataEnvironment.REALTIME:
+                raise ValueError("live mode requires market_data_environment=realtime")
+            if self.broker_port is not None and self.broker_port != 4001:
+                if not self.broker_port_override_reason:
+                    raise ValueError(
+                        "live broker port override requires broker_port_override_reason"
+                    )
+            if not self.allow_live_orders:
+                raise ValueError("live mode requires allow_live_orders=true")
+            if not self.operator_signoff_id:
+                raise ValueError("live mode requires operator_signoff_id")
+            if self.observation_only:
+                raise ValueError("live mode with allow_live_orders cannot be observation_only")
+            return
+
+        if self.allow_live_orders:
+            raise ValueError(f"{mode.value} mode cannot allow live orders")
+
+        if mode is RuntimeMode.PAPER_BROKER:
+            if account_code and not is_paper_account:
+                raise ValueError("paper broker mode requires a paper account")
+            if self.broker_account_kind != AccountEnvironment.PAPER.value:
+                raise ValueError("paper broker mode requires broker_account_kind=paper")
+            if self.execution_environment is not ExecutionEnvironment.BROKER:
+                raise ValueError("paper broker mode requires execution_environment=broker")
+            if self.broker_port is not None and self.broker_port != 4002:
+                raise ValueError("paper broker mode requires broker port 4002")
+            return
+
+        if mode is RuntimeMode.PAPER_SIMULATED:
+            if self.execution_environment is not ExecutionEnvironment.SIMULATED:
+                raise ValueError("paper simulated mode requires execution_environment=simulated")
+            if self.account_environment is not AccountEnvironment.SIMULATED:
+                raise ValueError("paper simulated mode requires account_environment=simulated")
+            if self.broker_account_kind != AccountEnvironment.SIMULATED.value:
+                raise ValueError("paper simulated mode requires broker_account_kind=simulated")
+            return
+
+        if mode is RuntimeMode.OBSERVATION:
+            object.__setattr__(self, "observation_only", True)
+            if self.execution_environment is not ExecutionEnvironment.DISABLED:
+                raise ValueError("observation mode requires execution_environment=disabled")
 
 
 __all__ = [

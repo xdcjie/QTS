@@ -11,7 +11,7 @@ from qts.backtest.engine import BacktestEngine
 from qts.core.ids import InstrumentId, OrderId
 from qts.data.historical.adapter import HistoricalMarketDataAdapter
 from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
-from qts.data.live_feed import FakeLiveFeedAdapter, FeedSubscription
+from qts.data.live_feed import FeedSubscription
 from qts.domain.market_data import Bar
 from qts.domain.risk import RiskDecision
 from qts.execution.order_manager import (
@@ -34,6 +34,8 @@ from qts.runtime.actors.market_data_actor import (
 from qts.runtime.actors.order_manager_actor import OrderManagerActor, SubmitOrder
 from qts.runtime.mailbox import Mailbox
 from qts.strategy_sdk import Strategy
+
+from tests.support.live_feed import FakeLiveFeedAdapter
 
 
 @dataclass(slots=True)

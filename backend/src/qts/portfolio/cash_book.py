@@ -9,7 +9,7 @@ from qts.portfolio.reservation_book import ReservationBook
 
 
 class CashBook:
-    """Mutable cash balance book intended to be owned by AccountActor later."""
+    """Mutable cash balance book owned by AccountActor for account-state mutation."""
 
     def __init__(self, balances: Mapping[str, Decimal] | None = None) -> None:
         """Perform __init__."""

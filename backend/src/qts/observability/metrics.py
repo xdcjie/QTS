@@ -1,4 +1,4 @@
-"""Small in-memory metrics registry for live-beta instrumentation."""
+"""Small in-memory metrics registry for runtime instrumentation."""
 
 from __future__ import annotations
 

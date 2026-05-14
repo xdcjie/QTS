@@ -374,6 +374,73 @@ def test_guardrails_allow_product_facts_in_registry_providers(tmp_path: Path) ->
     assert run_guardrails(root) == []
 
 
+def test_guardrails_reject_replay_classes_in_live_package(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/data/live/adapter.py",
+        "class ReplayMarketDataAdapter:\n    pass\n",
+    )
+
+    assert _codes(root) == {"LIVE_PACKAGE_REPLAY_CLASS"}
+
+
+def test_guardrails_reject_fake_classes_in_production_data_package(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/data/live/fake_adapter.py",
+        "class FakeMarketDataAdapter:\n    pass\n",
+    )
+
+    assert _codes(root) == {"PRODUCTION_FAKE_CLASS"}
+
+
+def test_guardrails_reject_pipeline_importing_runtime_actor(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/data/bars/pipeline.py",
+        "from qts.runtime.actor_ref import ActorRef\n",
+    )
+
+    assert _codes(root) == {"PIPELINE_ACTOR_IMPORT"}
+
+
+def test_guardrails_reject_transport_importing_runtime_actor(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/data/adapters/ibkr_transport.py",
+        "from qts.runtime.actors.account_actor import AccountActor\n",
+    )
+
+    assert _codes(root) == {"TRANSPORT_ACTOR_IMPORT"}
+
+
+def test_guardrails_reject_shared_runtime_backtest_only_docstring(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/runtime/intent_processing.py",
+        "class TargetIntentProcessor:\n"
+        '    """Translate strategy target intents into validated backtest orders."""\n',
+    )
+
+    assert _codes(root) == {"SHARED_RUNTIME_WORDING"}
+
+
+def test_guardrails_reject_placeholder_docstrings_in_production(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/reporting/base.py",
+        'class ReportWriter:\n    """Boundary placeholder for report generation."""\n',
+    )
+
+    assert _codes(root) == {"PLACEHOLDER_DOCSTRING"}
+
+
 def test_guardrails_pass_current_repository() -> None:
     assert run_guardrails(Path(".")) == []
 
