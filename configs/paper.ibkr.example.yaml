@@ -1,5 +1,6 @@
 mode: paper
 provider: ibkr
+transport: official
 
 connections:
   market_data:

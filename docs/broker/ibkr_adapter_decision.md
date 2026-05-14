@@ -6,11 +6,20 @@ Selected integration scope: IBKR TWS/Gateway adapter boundary for paper trading,
 
 Current live-capital status: No-Go until the required external evidence is recorded.
 
-## TWS API Client Implementation
+## TWS API Client Implementations
 
-Selected Python client: the official Interactive Brokers TWS API Python client
-distributed with the IBKR TWS API download, exposed to this codebase only from
-IBKR transport modules.
+Selected Python clients:
+
+- default: the official Interactive Brokers TWS API Python client distributed
+  with the IBKR TWS API download;
+- alternate validation path: `ib_async`, exposed through separate transport
+  modules with the same adapter-facing contracts.
+
+Both SDKs are exposed to this codebase only from IBKR transport modules.
+Selection must be explicit through configuration or test parameters. Runtime
+configuration uses `transport: official` or `transport: async`; real Gateway
+anchors use `--ibkr-transport=official` or `--ibkr-transport=async`. The default
+remains `official`.
 
 Rationale:
 
@@ -22,20 +31,27 @@ Rationale:
   <https://interactivebrokers.github.io/>.
 - IBKR states that third-party wrappers such as `ib_insync` and `ib_async` are
   not the official support surface, and that IBKR advises use of its direct TWS
-  API implementation when possible:
+  API implementation when possible. This is why `official` remains the default:
   <https://www.interactivebrokers.com/campus/ibkr-api-page/twsapi-doc/>.
 
-Dependency decision for this milestone: install the official IBKR TWS API Python
-client from the IBKR API ZIP into the runtime environment for real Gateway
-anchors and deployments. Do not add the PyPI `ibapi` package to
-`project.dependencies`, because PyPI currently exposes an older non-current
-package while IBKR documents the official distribution as the direct TWS API
-download. The official source URL, version, ZIP subdirectory, and SHA256 are
-recorded in `pyproject.toml` under `tool.qts.ibkr_api`; deployments install it
-with `make install-ibkr-api`. The actual `ibapi` import must stay isolated
-inside `qts.data.adapters` or `qts.execution.adapters` transport modules when
-enabled, so core domain, runtime, strategy, risk, portfolio, and reconciliation
-code never imports IBKR client objects.
+Dependency decision for this milestone:
+
+- Install the official IBKR TWS API Python client from the IBKR API ZIP into the
+  runtime environment for official real Gateway anchors and deployments. Do not
+  add the PyPI `ibapi` package to `project.dependencies`, because PyPI currently
+  exposes an older non-current package while IBKR documents the official
+  distribution as the direct TWS API download. The official source URL, version,
+  ZIP subdirectory, and SHA256 are recorded in `pyproject.toml` under
+  `tool.qts.ibkr_api`; deployments install it with `make install-ibkr-api`.
+- Include `ib-async` in `project.dependencies` as a supported alternate SDK for
+  independent Gateway validation and operational cross-checks. Its imports must
+  stay isolated inside `qts.data.adapters.ibkr_async_transport` and
+  `qts.execution.adapters.ibkr_async_transport`.
+
+The actual SDK imports must stay isolated inside `qts.data.adapters` or
+`qts.execution.adapters` transport modules when enabled, so core domain,
+runtime, strategy, risk, portfolio, and reconciliation code never imports IBKR
+client objects.
 
 ## Selected Scope
 

@@ -11,6 +11,13 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         help="IBKR paper Gateway host:port for environment-gated anchors.",
     )
     parser.addoption(
+        "--ibkr-transport",
+        action="store",
+        default="official",
+        choices=("official", "async"),
+        help="IBKR transport implementation for environment-gated anchors.",
+    )
+    parser.addoption(
         "--paper-only",
         action="store_true",
         help="Confirm an IBKR Gateway anchor is restricted to paper trading.",

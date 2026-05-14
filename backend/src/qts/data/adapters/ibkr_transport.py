@@ -399,7 +399,7 @@ class IbkrTwsMarketDataTransport:
     ) -> Tick | Quote | None:
         """Handle an IBKR tickPrice callback."""
 
-        if price <= 0:
+        if price <= 0 or req_id not in self._request_symbols:
             return None
         value = _to_decimal(price)
         if tick_type in _LAST_PRICE_TICK_TYPES:
@@ -424,7 +424,7 @@ class IbkrTwsMarketDataTransport:
     def handle_tick_size(self, req_id: int, *, tick_type: int, size: Decimal) -> Quote | None:
         """Handle an IBKR tickSize callback."""
 
-        if size < Decimal("0"):
+        if size < Decimal("0") or req_id not in self._request_symbols:
             return None
         if tick_type in _LAST_SIZE_TICK_TYPES:
             self._last_sizes[req_id] = size

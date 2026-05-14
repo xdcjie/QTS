@@ -7,7 +7,6 @@ from contextlib import suppress
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from importlib.util import find_spec
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +16,13 @@ from qts.domain.market_data import Bar
 from qts.execution.order_manager import ExecutionReportStatus, OrderSide
 from qts.registry.instrument_registry import InstrumentRegistry
 from qts.strategy_sdk import PortfolioPosition, PortfolioView, Strategy, TargetIntent
+
+from tests.support.ibkr_transports import (
+    market_data_transport,
+    order_execution_transport,
+    require_ibkr_transport_sdk,
+    wait_for_managed_accounts,
+)
 
 
 def test_ibkr_gateway_full_chain_anchor_requires_real_paper_evidence(
@@ -35,11 +41,8 @@ def test_ibkr_gateway_full_chain_anchor_requires_real_paper_evidence(
     with socket.create_connection((host, port), timeout=2):
         pass
 
-    if find_spec("ibapi") is None:
-        pytest.skip(
-            "official IBKR TWS Python API package is required before running "
-            "real full-chain paper anchors"
-        )
+    transport_name = request.config.getoption("--ibkr-transport")
+    require_ibkr_transport_sdk(transport_name)
 
     from qts.data.adapters.ibkr_market_data import (
         IbkrMarketDataAdapter,
@@ -47,8 +50,6 @@ def test_ibkr_gateway_full_chain_anchor_requires_real_paper_evidence(
     )
     from qts.data.adapters.ibkr_transport import (
         IbkrMarketDataContractSpec,
-        IbkrTwsMarketDataTransport,
-        IbkrTwsMarketDataTransportConfig,
     )
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
@@ -56,8 +57,6 @@ def test_ibkr_gateway_full_chain_anchor_requires_real_paper_evidence(
     )
     from qts.execution.adapters.ibkr_transport import (
         IbkrOrderContractSpec,
-        IbkrTwsOrderExecutionTransport,
-        IbkrTwsOrderExecutionTransportConfig,
     )
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
     from qts.reporting.live import LiveReportWriter
@@ -86,14 +85,11 @@ def test_ibkr_gateway_full_chain_anchor_requires_real_paper_evidence(
         ),
         symbol_mapping=mapping,
     )
-    market_transport = IbkrTwsMarketDataTransport(
-        config=IbkrTwsMarketDataTransportConfig(
-            host=host,
-            port=port,
-            client_id=102,
-            timeout_seconds=25,
-            market_data_type=3,
-        ),
+    market_transport = market_data_transport(
+        transport_name=transport_name,
+        host=host,
+        port=port,
+        client_id=102,
         sink=market_adapter,
     )
 
@@ -107,13 +103,12 @@ def test_ibkr_gateway_full_chain_anchor_requires_real_paper_evidence(
         ),
         symbol_mapping=mapping,
     )
-    order_transport = IbkrTwsOrderExecutionTransport(
-        config=IbkrTwsOrderExecutionTransportConfig(
-            host=host,
-            port=port,
-            client_id=202,
-            timeout_seconds=35,
-        ),
+    order_transport = order_execution_transport(
+        transport_name=transport_name,
+        host=host,
+        port=port,
+        client_id=202,
+        timeout_seconds=35,
         sink=order_callback_adapter,
     )
 
@@ -149,7 +144,7 @@ def test_ibkr_gateway_full_chain_anchor_requires_real_paper_evidence(
 
     try:
         order_transport.connect()
-        account_id = _select_paper_account(_wait_for_managed_accounts(order_transport))
+        account_id = _select_paper_account(wait_for_managed_accounts(order_transport))
         config_account_id = _validated_config_account(request, account_id)
         request_adapter = IbkrOrderExecutionAdapter(
             connection=IbkrOrderExecutionConnection(
@@ -211,6 +206,7 @@ def test_ibkr_gateway_full_chain_anchor_requires_real_paper_evidence(
         config_payload={
             "mode": "paper",
             "gateway": gateway,
+            "transport": transport_name,
             "client_ids": {"market_data": 102, "order_execution": 202},
             "account_id": account_id,
             "configured_account_id": config_account_id,
@@ -224,6 +220,7 @@ def test_ibkr_gateway_full_chain_anchor_requires_real_paper_evidence(
         "schema_version": 1,
         "generated_at": generated_at.isoformat(),
         "gateway": gateway,
+        "transport": transport_name,
         "paper_only": True,
         "account_id": account_id,
         "config_account_id": config_account_id,
@@ -526,22 +523,6 @@ def _reference_price(event: Any) -> Decimal:
     if isinstance(event, Tick):
         return event.price
     raise TypeError(f"unsupported market data event: {type(event).__name__}")
-
-
-def _wait_for_managed_accounts(
-    transport: Any,
-    *,
-    timeout_seconds: float = 5,
-) -> tuple[str, ...]:
-    import time
-
-    deadline = time.monotonic() + timeout_seconds
-    while time.monotonic() < deadline:
-        accounts = tuple(str(account) for account in transport.managed_accounts)
-        if accounts:
-            return accounts
-        time.sleep(0.1)
-    return tuple(str(account) for account in transport.managed_accounts)
 
 
 def _select_paper_account(accounts: tuple[str, ...]) -> str:

@@ -1,20 +1,16 @@
 from __future__ import annotations
 
 import socket
-import time
 from contextlib import suppress
 from decimal import Decimal
-from importlib.util import find_spec
-from typing import Protocol
 
 import pytest
 
-
-class _ManagedAccountTransport(Protocol):
-    @property
-    def managed_accounts(self) -> tuple[str, ...]:
-        """Return managed accounts from the connected broker session."""
-        ...
+from tests.support.ibkr_transports import (
+    order_execution_transport,
+    require_ibkr_transport_sdk,
+    wait_for_managed_accounts,
+)
 
 
 def test_ibkr_gateway_order_lifecycle_anchor_requires_paper_and_real_transport(
@@ -32,12 +28,8 @@ def test_ibkr_gateway_order_lifecycle_anchor_requires_paper_and_real_transport(
     with socket.create_connection((host, int(port_text)), timeout=2):
         pass
 
-    if find_spec("ibapi") is None:
-        pytest.skip(
-            "official IBKR TWS Python API package is not installed; install the "
-            "Python client from the IBKR TWS API download before running real "
-            "paper order lifecycle anchors"
-        )
+    transport_name = request.config.getoption("--ibkr-transport")
+    require_ibkr_transport_sdk(transport_name)
 
     from qts.core.ids import BrokerId, InstrumentId, OrderId
     from qts.domain.orders import ExecutionReportStatus
@@ -45,11 +37,7 @@ def test_ibkr_gateway_order_lifecycle_anchor_requires_paper_and_real_transport(
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.adapters.ibkr_transport import (
-        IbkrOrderContractSpec,
-        IbkrTwsOrderExecutionTransport,
-        IbkrTwsOrderExecutionTransportConfig,
-    )
+    from qts.execution.adapters.ibkr_transport import IbkrOrderContractSpec
     from qts.execution.broker import BrokerOrderType
     from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
@@ -67,20 +55,18 @@ def test_ibkr_gateway_order_lifecycle_anchor_requires_paper_and_real_transport(
         ),
         symbol_mapping=mapping,
     )
-    transport = IbkrTwsOrderExecutionTransport(
-        config=IbkrTwsOrderExecutionTransportConfig(
-            host=host,
-            port=int(port_text),
-            client_id=201,
-            timeout_seconds=25,
-        ),
+    transport = order_execution_transport(
+        transport_name=transport_name,
+        host=host,
+        port=int(port_text),
+        client_id=201,
         sink=callback_adapter,
     )
     broker_order_id: str | None = None
 
     try:
         transport.connect()
-        account_id = _select_paper_account(_wait_for_managed_accounts(transport))
+        account_id = _select_paper_account(wait_for_managed_accounts(transport))
         request_adapter = IbkrOrderExecutionAdapter(
             connection=IbkrOrderExecutionConnection(
                 host=host,
@@ -125,20 +111,6 @@ def test_ibkr_gateway_order_lifecycle_anchor_requires_paper_and_real_transport(
     assert accepted.status is ExecutionReportStatus.ACCEPTED
     assert cancelled.broker_order_id == broker_order_id
     assert cancelled.status is ExecutionReportStatus.CANCELLED
-
-
-def _wait_for_managed_accounts(
-    transport: _ManagedAccountTransport,
-    *,
-    timeout_seconds: float = 5,
-) -> tuple[str, ...]:
-    deadline = time.monotonic() + timeout_seconds
-    while time.monotonic() < deadline:
-        accounts = transport.managed_accounts
-        if accounts:
-            return accounts
-        time.sleep(0.1)
-    return transport.managed_accounts
 
 
 def _select_paper_account(accounts: tuple[str, ...]) -> str:

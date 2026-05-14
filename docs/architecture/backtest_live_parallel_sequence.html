@@ -330,6 +330,48 @@
         margin-top: 4px;
       }
 
+
+      .class-inventory {
+        margin-top: 14px;
+        padding: 18px;
+      }
+
+      .inventory-intro {
+        margin-top: 8px;
+        margin-bottom: 14px;
+        font-size: 14px;
+      }
+
+      .inventory-group {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+      }
+
+      .inventory-group + .inventory-group {
+        margin-top: 10px;
+      }
+
+      .inventory-group summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 14px;
+        cursor: pointer;
+        font-weight: 760;
+      }
+
+      .inventory-group table {
+        border-top: 1px solid var(--line);
+        font-size: 13px;
+      }
+
+      .class-role {
+        color: #0f172a;
+        font-weight: 650;
+      }
+
       @media (max-width: 980px) {
         .page {
           padding: 20px;
@@ -355,11 +397,12 @@
     <div class="page">
       <div class="page-header">
         <div>
-          <h1>Backtest / Live 职责链对照：统一类名版</h1>
+          <h1>Backtest / Paper / Live 职责链对照：统一运行时版</h1>
           <p>
             采用同一套职责命名，按
             配置加载 -> 数据获取 -> 标准化与聚合 -> 策略执行 -> 意图到风控 -> 订单执行 -> Fill/账户/输出
-            的链路对齐显示。已实现阶段先落到目标类名，未实现阶段先占位文件和类名。
+            的链路对齐显示。Paper 与 Live 共用运行时链路；差异只允许落在数据源、执行 adapter、
+            外部账户/端口、风控门禁、观测与签核状态。
           </p>
         </div>
         <div class="legend" aria-label="状态图例">
@@ -372,17 +415,19 @@
 
       <div class="summary-grid" aria-label="链路摘要">
         <div class="summary surface">
-          <h2>共同目标</h2>
+          <h2>共同实现链路</h2>
           <p>
-            两条路径共享同一条职责链，差异只在边界：历史回放/实盘 feed 与
-            模拟执行/经纪商执行。共用核心保持一致。
+            三种模式共享同一条职责链：Strategy SDK -> StrategyContext -> TargetIntent ->
+            RiskEngine -> OrderManagerActor -> ExecutionActor -> AccountActor -> reporting。
+            Backtest 使用 replay/simulated 边界；paper/live 使用 broker 边界。
           </p>
         </div>
         <div class="summary surface">
           <h2>目录原则</h2>
           <p>
             <code>qts/runtime</code> 是 backtest/live 共用运行时，不是 live 专属目录。
-            模式差异只落在 data source、execution adapter、runtime event sink。
+            Paper/live 的会话编排由 <code>LiveRuntimeSession</code> 持有；模式差异只落在
+            data source、execution adapter、runtime event sink、配置和运营门禁。
           </p>
         </div>
         <div class="summary surface">
@@ -391,6 +436,7 @@
             相同职责使用同一个类名；只有边界实现带模式差异，例如
             <code>ReplayMarketDataSource</code> / <code>StreamingMarketDataSource</code>、
             <code>SimulatedExecutionAdapter</code> / <code>BrokerExecutionAdapter</code>。
+            Live capital 未签核前只允许 observation/code-path-ready。
           </p>
         </div>
       </div>
@@ -407,7 +453,7 @@
                 <h3><span class="phase-number">1</span>配置加载</h3>
               </div>
               <div class="role">
-                职责：把外部配置转成受校验运行输入。统一目标类名：
+                职责：把外部配置转成受校验运行输入。已实现类：
                 <code>TradingRuntimeConfig</code>。
               </div>
               <div class="lane">
@@ -415,22 +461,23 @@
                   <span>Backtest</span><span class="badge ok">已实现</span>
                 </div>
                 <ul>
-                  <li><code>BacktestRuntimeConfig</code>（目标名）</li>
-                  <li>目标文件：<code>backend/src/qts/runtime/config.py</code></li>
+                  <li><code>BacktestRuntimeConfig</code>（已实现）</li>
+                  <li>实现文件：<code>backend/src/qts/runtime/config.py</code></li>
                   <li>当前承接：<code>BacktestRuntimeConfig.from_yaml</code>、<code>BacktestEngineConfig</code></li>
                 </ul>
               </div>
               <div class="lane">
                 <div class="lane-name live">
-                  <span>Live / Paper</span><span class="badge partial">部分实现</span>
+                  <span>Paper / Live</span><span class="badge ok">已实现门禁</span>
                 </div>
                 <ul>
-                  <li><code>LiveRuntimeConfig</code>（目标名）</li>
-                  <li>目标文件：<code>backend/src/qts/runtime/config.py</code></li>
-                  <li>当前承接：<code>LiveRuntimeConfig</code>、<code>validate_live_startup</code></li>
+                  <li><code>LiveRuntimeConfig</code>（已实现）</li>
+                  <li>实现文件：<code>backend/src/qts/runtime/config.py</code></li>
+                  <li>当前承接：<code>LiveRuntimeConfig</code>、<code>validate_live_startup</code>、<code>IbkrEnvironmentConfig</code></li>
+                  <li>IB Gateway 约束：paper <code>127.0.0.1:4002</code> + <code>DU...</code>，live <code>4001</code> + <code>U...</code></li>
                 </ul>
               </div>
-              <div class="shared-note">统一输出：账户配置、风险配置、日历、adapter 边界。</div>
+              <div class="shared-note">统一输出：账户配置、风险配置、日历、adapter 边界；live capital 仍需签核。</div>
             </div>
 
             <div class="phase-card">
@@ -438,27 +485,28 @@
                 <h3><span class="phase-number">2</span>数据获取</h3>
               </div>
               <div class="role">
-                职责：从边界源取数据并规范化。统一目标类名：
-                <code>MarketDataSource</code>。
+                职责：从边界源取数据并规范化。已实现类：
+                <code>ReplayMarketDataSource</code>、<code>StreamingMarketDataSource</code>。
               </div>
               <div class="lane">
                 <div class="lane-name backtest">
                   <span>Backtest</span><span class="badge ok">已实现</span>
                 </div>
                 <ul>
-                  <li><code>ReplayMarketDataSource</code>（目标名）</li>
-                  <li>目标文件：<code>backend/src/qts/data/sources/replay_market_data_source.py</code>（占位）</li>
+                  <li><code>ReplayMarketDataSource</code>（已实现）</li>
+                  <li>实现文件：<code>backend/src/qts/data/sources/replay_market_data_source.py</code></li>
                   <li>当前承接：<code>ReplayMarketDataSource</code>、<code>HistoricalMarketDataAdapter</code></li>
                 </ul>
               </div>
               <div class="lane">
                 <div class="lane-name live">
-                  <span>Live / Paper</span><span class="badge partial">部分实现</span>
+                  <span>Paper / Live</span><span class="badge ok">已实现边界</span>
                 </div>
                 <ul>
-                  <li><code>StreamingMarketDataSource</code>（目标名）</li>
-                  <li>目标文件：<code>backend/src/qts/data/sources/streaming_market_data_source.py</code>（占位）</li>
-                  <li>当前承接：<code>FakeLiveFeedAdapter</code>、<code>IbkrMarketDataAdapter</code></li>
+                  <li><code>StreamingMarketDataSource</code>（已实现）</li>
+                  <li>实现文件：<code>backend/src/qts/data/sources/streaming_market_data_source.py</code></li>
+                  <li>当前承接：<code>StreamingMarketDataSource</code>、<code>IbkrMarketDataAdapter</code>、<code>IbkrTwsMarketDataTransport</code> / <code>IbAsyncMarketDataTransport</code></li>
+                  <li>外部证据：paper Gateway market-data anchor 已接收规范化事件。</li>
                 </ul>
               </div>
               <div class="shared-note">统一约束：外部符号只允许停留在 adapter 边界。</div>
@@ -470,28 +518,28 @@
               </div>
               <div class="role">
                 职责：标准化、去重、bar 聚合、时序对齐；运行时只负责把数据流接入 actor/queue。
-                统一目标类名：<code>MarketDataPipeline</code>、<code>MarketDataFlow</code>。
+                已实现类：<code>MarketDataPipeline</code>、<code>MarketDataFlow</code>。
               </div>
               <div class="lane">
                 <div class="lane-name backtest">
                   <span>Backtest</span><span class="badge ok">已实现</span>
                 </div>
                 <ul>
-                  <li><code>MarketDataPipeline</code>（目标名）</li>
-                  <li>目标文件：<code>backend/src/qts/data/market_data_pipeline.py</code>（共享数据处理）</li>
+                  <li><code>MarketDataPipeline</code>（已实现）</li>
+                  <li>实现文件：<code>backend/src/qts/data/market_data_pipeline.py</code>（共享数据处理）</li>
                   <li><code>MarketDataFlow</code>：<code>backend/src/qts/runtime/market_data_flow.py</code>（共享运行时编排）</li>
                   <li>当前承接：<code>BacktestActorLoop</code>、<code>BarAggregationPipeline</code></li>
                 </ul>
               </div>
               <div class="lane">
                 <div class="lane-name live">
-                  <span>Live / Paper</span><span class="badge partial">部分实现</span>
+                  <span>Paper / Live</span><span class="badge ok">已接入</span>
                 </div>
                 <ul>
-                  <li><code>MarketDataPipeline</code>（目标名）</li>
-                  <li>目标文件：<code>backend/src/qts/data/market_data_pipeline.py</code>（共享数据处理）</li>
+                  <li><code>MarketDataPipeline</code>（已实现）</li>
+                  <li>实现文件：<code>backend/src/qts/data/market_data_pipeline.py</code>（共享数据处理）</li>
                   <li><code>MarketDataFlow</code>：<code>backend/src/qts/runtime/market_data_flow.py</code>（共享运行时编排）</li>
-                  <li>当前承接：fake live 事件可进入 <code>MarketDataActor</code>，生产 loop 未闭环</li>
+                  <li>当前承接：<code>LiveRuntimeSession.on_market_data</code> 将 paper/live bar 接入 <code>MarketDataFlow</code></li>
                 </ul>
               </div>
               <div class="shared-note">统一约束：timeframe 与 session 语义由领域层定义，不可受 provider 影响。</div>
@@ -502,7 +550,7 @@
                 <h3><span class="phase-number">4</span>策略执行</h3>
               </div>
               <div class="role">
-                职责：策略只读视图并输出目标意图。统一目标类名：
+                职责：策略只读视图并输出目标意图。已实现类：
                 <code>StrategyExecutionPipeline</code>。
               </div>
               <div class="lane">
@@ -510,19 +558,20 @@
                   <span>Backtest</span><span class="badge ok">已实现</span>
                 </div>
                 <ul>
-                  <li><code>StrategyExecutionPipeline</code>（目标名）</li>
-                  <li>目标文件：<code>backend/src/qts/runtime/strategy_execution_pipeline.py</code>（已实现）</li>
+                  <li><code>StrategyExecutionPipeline</code>（已实现）</li>
+                  <li>实现文件：<code>backend/src/qts/runtime/strategy_execution_pipeline.py</code></li>
                   <li>当前承接：<code>StrategyExecutionPipeline</code> 协调 <code>StrategyActor</code>、<code>SignalAggregatorActor</code>、<code>StrategyContext</code></li>
                 </ul>
               </div>
               <div class="lane">
                 <div class="lane-name live">
-                  <span>Live / Paper</span><span class="badge partial">部分实现</span>
+                  <span>Paper / Live</span><span class="badge ok">已接入</span>
                 </div>
                 <ul>
-                  <li><code>StrategyExecutionPipeline</code>（目标名）</li>
-                  <li>目标文件：<code>backend/src/qts/runtime/strategy_execution_pipeline.py</code>（同上，已实现）</li>
-                  <li>当前承接：共享策略组件，未形成完整 live runtime 调度链</li>
+                  <li><code>StrategyExecutionPipeline</code>（已实现）</li>
+                  <li>实现文件：<code>backend/src/qts/runtime/strategy_execution_pipeline.py</code>（同上）</li>
+                  <li>当前承接：<code>LiveRuntimeSession</code> 调度共享 <code>StrategyExecutionPipeline</code></li>
+                  <li>外部证据：reference strategy 经 paper full-chain 产生 runtime order。</li>
                 </ul>
               </div>
               <div class="shared-note">统一约束：策略侧不分模式分支，不直接触达 Order/Account/Risk。</div>
@@ -533,7 +582,7 @@
                 <h3><span class="phase-number">5</span>意图到风控</h3>
               </div>
               <div class="role">
-                职责：目标意图解析为订单计划并执行风控。统一目标类名：
+                职责：目标意图解析为订单计划并执行风控。已实现类：
                 <code>TargetIntentProcessor</code>、<code>OrderPlanBuilder</code>。
               </div>
               <div class="lane">
@@ -541,20 +590,20 @@
                   <span>Backtest</span><span class="badge ok">已实现</span>
                 </div>
                 <ul>
-                  <li><code>TargetIntentProcessor</code>（目标名）</li>
-                  <li><code>OrderPlanBuilder</code>（目标名）</li>
-                  <li>目标文件：<code>backend/src/qts/runtime/intent_processing.py</code>（已实现）</li>
+                  <li><code>TargetIntentProcessor</code>（已实现）</li>
+                  <li><code>OrderPlanBuilder</code>（已实现）</li>
+                  <li>实现文件：<code>backend/src/qts/runtime/intent_processing.py</code></li>
                   <li>当前承接：<code>OrderPlanBuilder</code> 生成订单计划，<code>TargetIntentProcessor</code> 执行风控和提交订单</li>
                 </ul>
               </div>
               <div class="lane">
                 <div class="lane-name live">
-                  <span>Live / Paper</span><span class="badge missing">未实现</span>
+                  <span>Paper / Live</span><span class="badge ok">已接入</span>
                 </div>
                 <ul>
-                  <li><code>TargetIntentProcessor</code> + <code>OrderPlanBuilder</code>（目标名）</li>
-                  <li>目标文件：<code>backend/src/qts/runtime/intent_processing.py</code>（共享处理器已实现，live runtime 未接入）</li>
-                  <li>缺口：live runtime 未形成 intent -> risk -> order 的完整闭环</li>
+                  <li><code>TargetIntentProcessor</code> + <code>OrderPlanBuilder</code>（已实现）</li>
+                  <li>实现文件：<code>backend/src/qts/runtime/intent_processing.py</code>（共享处理器）</li>
+                  <li>当前承接：<code>LiveRuntimeSession</code> 调用共享处理器，保持 risk-before-order。</li>
                 </ul>
               </div>
               <div class="shared-note">统一约束：RiskEngine 在两种模式下都必须前置。</div>
@@ -565,30 +614,31 @@
                 <h3><span class="phase-number">6</span>订单执行</h3>
               </div>
               <div class="role">
-                职责：订单生命周期与执行桥接。统一目标类名：
-                <code>ExecutionAdapter</code>、<code>OrderExecutionCoordinator</code>。
+                职责：订单生命周期与执行桥接。已实现边界：
+                <code>OrderManagerActor</code>、<code>ExecutionActor</code>、<code>ExecutionAdapter</code>。
               </div>
               <div class="lane">
                 <div class="lane-name backtest">
                   <span>Backtest</span><span class="badge ok">已实现</span>
                 </div>
                 <ul>
-                  <li><code>SimulatedExecutionAdapter</code>（目标名）</li>
-                  <li>目标文件：<code>backend/src/qts/execution/adapters/simulated_execution_adapter.py</code>（已实现）</li>
+                  <li><code>SimulatedExecutionAdapter</code>（已实现）</li>
+                  <li>实现文件：<code>backend/src/qts/execution/adapters/simulated_execution_adapter.py</code></li>
                   <li>当前承接：<code>SimulatedExecutionAdapter</code>、<code>ExecutionActor</code></li>
                 </ul>
               </div>
               <div class="lane">
                 <div class="lane-name live">
-                  <span>Live / Paper</span><span class="badge partial">部分实现</span>
+                  <span>Paper / Live</span><span class="badge ok">已接入</span>
                 </div>
                 <ul>
-                  <li><code>BrokerExecutionAdapter</code>（目标名）</li>
-                  <li>目标文件：<code>backend/src/qts/execution/adapters/broker_execution_adapter.py</code>（已实现基础 broker adapter）</li>
-                  <li>当前承接：<code>BrokerExecutionAdapter</code> 可接入 <code>ExecutionActor</code>；<code>IbkrOrderExecutionAdapter</code> 仍是 provider shape 映射</li>
+                  <li><code>BrokerExecutionAdapter</code>（已实现）</li>
+                  <li>实现文件：<code>backend/src/qts/execution/adapters/broker_execution_adapter.py</code>（基础 broker adapter）</li>
+                  <li>当前承接：<code>BrokerExecutionAdapter</code> 可接入 <code>ExecutionActor</code>；<code>IbkrOrderExecutionAdapter</code> / official 或 async transport 处理 provider shape 映射。</li>
+                  <li>外部证据：paper Gateway submit/cancel 与 tiny fill 均通过 actor/runtime 路径。</li>
                 </ul>
               </div>
-              <div class="shared-note">统一约束：OrderManagerOwner 与 ExecutionActor 的边界不变。</div>
+              <div class="shared-note">统一约束：OrderManagerActor 与 ExecutionActor 的边界不变。</div>
             </div>
 
             <div class="phase-card">
@@ -596,7 +646,7 @@
                 <h3><span class="phase-number">7</span>Fill / 账户 / 输出</h3>
               </div>
               <div class="role">
-                职责：fill 回流、账户更新与运行输出。统一目标类名：
+                职责：fill 回流、账户更新与运行输出。已实现类：
                 <code>ExecutionReportHandler</code>、<code>RuntimeEventSink</code>、<code>ReportWriter</code>。
               </div>
               <div class="lane">
@@ -604,8 +654,8 @@
                   <span>Backtest</span><span class="badge ok">已实现</span>
                 </div>
                 <ul>
-                  <li><code>ExecutionReportHandler</code>（目标名）</li>
-                  <li>目标文件：<code>backend/src/qts/runtime/execution_report_handler.py</code>（已实现）</li>
+                  <li><code>ExecutionReportHandler</code>（已实现）</li>
+                  <li>实现文件：<code>backend/src/qts/runtime/execution_report_handler.py</code></li>
                   <li><code>BacktestRuntimeEventSink</code>：<code>backend/src/qts/runtime/sinks/backtest.py</code>（已实现）</li>
                   <li><code>BacktestReportWriter</code>：<code>backend/src/qts/reporting/backtest.py</code>（已实现）</li>
                   <li>当前承接：<code>ExecutionReportHandler</code> 处理 <code>ExecutionReport</code> -> <code>ApplyFill</code> -> <code>AccountActor</code></li>
@@ -613,14 +663,14 @@
               </div>
               <div class="lane">
                 <div class="lane-name live">
-                  <span>Live / Paper</span><span class="badge partial">部分实现</span>
+                  <span>Paper / Live</span><span class="badge ok">已接入</span>
                 </div>
                 <ul>
-                  <li><code>ExecutionReportHandler</code>、<code>LiveRuntimeEventSink</code>（目标名）</li>
-                  <li><code>LiveRuntimeEventSink</code>：<code>backend/src/qts/runtime/sinks/live.py</code>（占位）</li>
-                  <li><code>LiveReportWriter</code>：<code>backend/src/qts/reporting/live.py</code>（占位）</li>
-                  <li>当前承接：broker callback 可经 <code>BrokerExecutionAdapter</code> 标准化后接入 <code>ExecutionReportHandler</code></li>
-                  <li>缺口：live runtime 事件输出和 live report writer 完整链路</li>
+                  <li><code>ExecutionReportHandler</code>、<code>LiveRuntimeEventSink</code>（已实现）</li>
+                  <li><code>LiveRuntimeEventSink</code>：<code>backend/src/qts/runtime/sinks/live.py</code>（已实现）</li>
+                  <li><code>LiveReportWriter</code>：<code>backend/src/qts/reporting/live.py</code>（已实现）</li>
+                  <li>当前承接：broker callback 标准化为 <code>ExecutionReport</code> 后进入 <code>ExecutionReportHandler</code> 与 <code>AccountActor</code></li>
+                  <li>外部证据：paper full-chain 写出 event stream 与 report manifest，并完成账户归零对账。</li>
                 </ul>
               </div>
               <div class="shared-note">统一约束：账户状态变更只允许来自标准化 fill 回报并经 AccountActor。</div>
@@ -635,8 +685,8 @@
           <thead>
             <tr>
               <th>阶段</th>
-              <th>Backtest 目标</th>
-              <th>Live 目标</th>
+              <th>Backtest 实现</th>
+              <th>Paper / Live 实现</th>
               <th>规范位置</th>
               <th>位置规则</th>
               <th>实现状态</th>
@@ -649,7 +699,7 @@
               <td><code>LiveRuntimeConfig</code></td>
               <td><code>qts/runtime/config.py</code></td>
               <td>运行时配置是共享 runtime contract；模式只决定字段取值和 adapter 选择。</td>
-              <td><span class="badge ok">backtest 已接入共享 pipeline</span>，<span class="badge partial">live 尚未接入完整 runtime</span></td>
+              <td><span class="badge ok">backtest 已接入</span>，<span class="badge ok">paper/live 门禁已实现</span></td>
             </tr>
             <tr>
               <td class="phase">数据获取</td>
@@ -657,7 +707,7 @@
               <td><code>StreamingMarketDataSource</code></td>
               <td><code>qts/data/sources/replay_market_data_source.py</code> / <code>qts/data/sources/streaming_market_data_source.py</code></td>
               <td>数据源属于 data 边界；backtest/live 只是 source 类型不同。</td>
-              <td><span class="badge ok">backtest 已实现</span>，<span class="badge partial">live 部分实现</span></td>
+              <td><span class="badge ok">backtest 已实现</span>，<span class="badge ok">paper/live 边界已实现</span></td>
             </tr>
             <tr>
               <td class="phase">标准化与聚合</td>
@@ -665,7 +715,7 @@
               <td><code>MarketDataPipeline</code> + <code>MarketDataFlow</code></td>
               <td><code>qts/data/market_data_pipeline.py</code> + <code>qts/runtime/market_data_flow.py</code></td>
               <td><code>MarketDataPipeline</code> 属于 data 领域处理；<code>MarketDataFlow</code> 属于 runtime actor/queue 编排。</td>
-              <td><span class="badge ok">backtest 已实现</span>，<span class="badge partial">live 部分实现</span></td>
+              <td><span class="badge ok">backtest 已实现</span>，<span class="badge ok">paper/live 已接入</span></td>
             </tr>
             <tr>
               <td class="phase">策略执行</td>
@@ -673,7 +723,7 @@
               <td><code>StrategyExecutionPipeline</code></td>
               <td><code>qts/runtime/strategy_execution_pipeline.py</code></td>
               <td>策略执行必须模式无关；策略只依赖 SDK 视图和 intent API。</td>
-              <td><span class="badge ok">backtest 已实现</span>，<span class="badge partial">live 部分实现</span></td>
+              <td><span class="badge ok">backtest 已实现</span>，<span class="badge ok">paper/live 已接入</span></td>
             </tr>
             <tr>
               <td class="phase">意图到风控</td>
@@ -681,7 +731,7 @@
               <td><code>TargetIntentProcessor</code> / <code>OrderPlanBuilder</code></td>
               <td><code>qts/runtime/intent_processing.py</code></td>
               <td>intent 解析和 risk-before-order 是共享业务链路，不能留在 backtest 专属包。</td>
-              <td><span class="badge ok">backtest 已实现</span>，<span class="badge missing">live 未实现</span></td>
+              <td><span class="badge ok">backtest 已实现</span>，<span class="badge ok">paper/live 已接入</span></td>
             </tr>
             <tr>
               <td class="phase">订单执行</td>
@@ -689,7 +739,7 @@
               <td><code>BrokerExecutionAdapter</code></td>
               <td><code>qts/execution/adapters/simulated_execution_adapter.py</code> / <code>qts/execution/adapters/broker_execution_adapter.py</code></td>
               <td>执行差异是 adapter 差异；adapter 统一放 execution/adapters，不按模式散落。</td>
-              <td><span class="badge ok">backtest 已实现</span>，<span class="badge partial">live 部分实现</span></td>
+              <td><span class="badge ok">backtest 已实现</span>，<span class="badge ok">paper 已外部验证</span>，<span class="badge partial">live capital 未启用</span></td>
             </tr>
             <tr>
               <td class="phase">Fill / 账户 / 输出</td>
@@ -697,16 +747,20 @@
               <td><code>ExecutionReportHandler</code> + <code>LiveRuntimeEventSink</code> + <code>LiveReportWriter</code></td>
               <td><code>qts/runtime/execution_report_handler.py</code> + <code>qts/runtime/sinks/backtest.py</code> / <code>qts/runtime/sinks/live.py</code> + <code>qts/reporting/backtest.py</code> / <code>qts/reporting/live.py</code></td>
               <td>fill 处理共享；sink 属于 runtime 事件出口；reporting 属于工件/报表输出，不按顶层模式目录分散。</td>
-              <td><span class="badge ok">backtest 已实现</span>，<span class="badge partial">live 部分实现</span></td>
+              <td><span class="badge ok">backtest 已实现</span>，<span class="badge ok">paper 已外部验证</span>，<span class="badge partial">live observation only</span></td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <div class="surface placeholder" aria-label="推荐占位清单">
-        <h2>推荐占位清单（按最终目录规则）</h2>
+      <div class="surface placeholder" aria-label="当前实现清单">
+        <h2>当前实现清单（按最终目录规则）</h2>
         <ul>
           <li><code>qts/runtime/config.py</code> -> <code>TradingRuntimeConfig</code>, <code>BacktestRuntimeConfig</code>, <code>LiveRuntimeConfig</code></li>
+          <li><code>qts/runtime/live_runtime_session.py</code> -> <code>LiveRuntimeSession</code>, <code>LiveRuntimeSessionResult</code></li>
+          <li><code>qts/runtime/live_runtime_dependencies.py</code> -> <code>LiveRuntimeDependencies</code></li>
+          <li><code>qts/runtime/live_reconciliation.py</code> -> <code>LiveReconciliation</code>, <code>LiveReconciliationResult</code></li>
+          <li><code>qts/reconciliation/snapshots.py</code> -> <code>ReconciliationSnapshot</code></li>
           <li><code>qts/data/sources/replay_market_data_source.py</code> -> <code>ReplayMarketDataSource</code></li>
           <li><code>qts/data/sources/streaming_market_data_source.py</code> -> <code>StreamingMarketDataSource</code></li>
           <li><code>qts/data/market_data_pipeline.py</code> -> <code>MarketDataPipeline</code></li>
@@ -721,12 +775,2365 @@
           <li><code>qts/runtime/sinks/live.py</code> -> <code>LiveRuntimeEventSink</code></li>
           <li><code>qts/reporting/base.py</code> -> <code>ReportWriter</code>, <code>RuntimeArtifactWriter</code></li>
           <li><code>qts/reporting/backtest.py</code> -> <code>BacktestReportWriter</code>, <code>BacktestArtifactWriter</code></li>
-          <li><code>qts/reporting/live.py</code> -> <code>LiveReportWriter</code>, <code>LiveEventReporter</code></li>
+          <li><code>qts/reporting/live.py</code> -> <code>LiveReportWriter</code>, <code>LiveReportManifest</code>, <code>LiveEventReporter</code></li>
         </ul>
       </div>
 
+      <div class="surface class-inventory" aria-label="生产类全量索引">
+        <h2>生产类全量索引（按阶段 / 模块）</h2>
+        <p class="inventory-intro">
+          本索引覆盖 <code>backend/src/qts</code> 下的所有生产 Python class，包括公共概念、协议、DTO、配置、actor message、adapter payload 和少量私有辅助类型。
+          作用列描述类自身职责；价值列描述它在 backtest / paper / live 统一链路中的工程价值。
+        </p>
+        <details class="inventory-group">
+          <summary><span>0 共享基础语义 · <code>qts.core</code></span><span class="badge shared">11 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>_StringId</code></td>
+                <td><code>backend/src/qts/core/ids.py:9</code></td>
+                <td><span class="class-role">作用：Base class for typed string identifiers。</span><br />价值：提供稳定 ID、时间区间和哈希等跨模块基础语义，避免字符串/时间散落。</td>
+              </tr>
+              <tr>
+                <td><code>AccountId</code></td>
+                <td><code>backend/src/qts/core/ids.py:27</code></td>
+                <td><span class="class-role">作用：Stable internal account identifier。</span><br />价值：提供稳定 ID、时间区间和哈希等跨模块基础语义，避免字符串/时间散落。</td>
+              </tr>
+              <tr>
+                <td><code>StrategyId</code></td>
+                <td><code>backend/src/qts/core/ids.py:31</code></td>
+                <td><span class="class-role">作用：Stable internal strategy identifier。</span><br />价值：提供稳定 ID、时间区间和哈希等跨模块基础语义，避免字符串/时间散落。</td>
+              </tr>
+              <tr>
+                <td><code>InstrumentId</code></td>
+                <td><code>backend/src/qts/core/ids.py:35</code></td>
+                <td><span class="class-role">作用：Stable internal instrument identifier。</span><br />价值：提供稳定 ID、时间区间和哈希等跨模块基础语义，避免字符串/时间散落。</td>
+              </tr>
+              <tr>
+                <td><code>OrderId</code></td>
+                <td><code>backend/src/qts/core/ids.py:39</code></td>
+                <td><span class="class-role">作用：Stable internal order identifier。</span><br />价值：提供稳定 ID、时间区间和哈希等跨模块基础语义，避免字符串/时间散落。</td>
+              </tr>
+              <tr>
+                <td><code>BrokerId</code></td>
+                <td><code>backend/src/qts/core/ids.py:43</code></td>
+                <td><span class="class-role">作用：Stable internal broker identifier。</span><br />价值：提供稳定 ID、时间区间和哈希等跨模块基础语义，避免字符串/时间散落。</td>
+              </tr>
+              <tr>
+                <td><code>EventId</code></td>
+                <td><code>backend/src/qts/core/ids.py:47</code></td>
+                <td><span class="class-role">作用：Stable internal event identifier。</span><br />价值：提供稳定 ID、时间区间和哈希等跨模块基础语义，避免字符串/时间散落。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestRunId</code></td>
+                <td><code>backend/src/qts/core/ids.py:51</code></td>
+                <td><span class="class-role">作用：Stable identifier for a backtest run。</span><br />价值：提供稳定 ID、时间区间和哈希等跨模块基础语义，避免字符串/时间散落。</td>
+              </tr>
+              <tr>
+                <td><code>CorrelationId</code></td>
+                <td><code>backend/src/qts/core/ids.py:55</code></td>
+                <td><span class="class-role">作用：Identifier grouping events in one business workflow。</span><br />价值：提供稳定 ID、时间区间和哈希等跨模块基础语义，避免字符串/时间散落。</td>
+              </tr>
+              <tr>
+                <td><code>CausationId</code></td>
+                <td><code>backend/src/qts/core/ids.py:59</code></td>
+                <td><span class="class-role">作用：Identifier linking an event to the event that caused it。</span><br />价值：提供稳定 ID、时间区间和哈希等跨模块基础语义，避免字符串/时间散落。</td>
+              </tr>
+              <tr>
+                <td><code>TimeInterval</code></td>
+                <td><code>backend/src/qts/core/time.py:28</code></td>
+                <td><span class="class-role">作用：A half-open time interval with `[start, end)` membership。</span><br />价值：提供稳定 ID、时间区间和哈希等跨模块基础语义，避免字符串/时间散落。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>0 领域事实 · <code>qts.domain</code></span><span class="badge shared">28 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>BaseEvent</code></td>
+                <td><code>backend/src/qts/domain/events/event.py:13</code></td>
+                <td><span class="class-role">作用：Minimal event envelope used for traceable internal messages。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>EventMetadata</code></td>
+                <td><code>backend/src/qts/domain/events/metadata.py:21</code></td>
+                <td><span class="class-role">作用：Trace metadata carried by platform events。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>SettlementType</code></td>
+                <td><code>backend/src/qts/domain/instruments/contract_spec.py:10</code></td>
+                <td><span class="class-role">作用：How a contract settles。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>ContractSpec</code></td>
+                <td><code>backend/src/qts/domain/instruments/contract_spec.py:18</code></td>
+                <td><span class="class-role">作用：Trading contract metadata required for valuation and order sizing。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>OptionRight</code></td>
+                <td><code>backend/src/qts/domain/instruments/derivative_spec.py:13</code></td>
+                <td><span class="class-role">作用：Option payoff direction。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>ExerciseStyle</code></td>
+                <td><code>backend/src/qts/domain/instruments/derivative_spec.py:20</code></td>
+                <td><span class="class-role">作用：Option exercise style。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>DerivativeSpec</code></td>
+                <td><code>backend/src/qts/domain/instruments/derivative_spec.py:28</code></td>
+                <td><span class="class-role">作用：Common derivative metadata。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>FutureSpec</code></td>
+                <td><code>backend/src/qts/domain/instruments/derivative_spec.py:36</code></td>
+                <td><span class="class-role">作用：Future contract metadata。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>OptionSpec</code></td>
+                <td><code>backend/src/qts/domain/instruments/derivative_spec.py:48</code></td>
+                <td><span class="class-role">作用：Option contract metadata。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>AssetClass</code></td>
+                <td><code>backend/src/qts/domain/instruments/instrument.py:19</code></td>
+                <td><span class="class-role">作用：Supported instrument asset classes。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>Instrument</code></td>
+                <td><code>backend/src/qts/domain/instruments/instrument.py:28</code></td>
+                <td><span class="class-role">作用：Tradable instrument identified by a stable internal InstrumentId。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>Bar</code></td>
+                <td><code>backend/src/qts/domain/market_data/bar.py:14</code></td>
+                <td><span class="class-role">作用：OHLCV bar over a half-open interval。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>Quote</code></td>
+                <td><code>backend/src/qts/domain/market_data/bar.py:67</code></td>
+                <td><span class="class-role">作用：Top-of-book quote。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>Tick</code></td>
+                <td><code>backend/src/qts/domain/market_data/bar.py:92</code></td>
+                <td><span class="class-role">作用：Trade tick。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>OrderState</code></td>
+                <td><code>backend/src/qts/domain/orders/value_objects.py:12</code></td>
+                <td><span class="class-role">作用：Execution lifecycle states for orders。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>OrderSide</code></td>
+                <td><code>backend/src/qts/domain/orders/value_objects.py:26</code></td>
+                <td><span class="class-role">作用：Order side。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>OrderIntent</code></td>
+                <td><code>backend/src/qts/domain/orders/value_objects.py:34</code></td>
+                <td><span class="class-role">作用：Approved order instruction before broker submission。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>CancelIntent</code></td>
+                <td><code>backend/src/qts/domain/orders/value_objects.py:49</code></td>
+                <td><span class="class-role">作用：Intent to cancel an order through OrderManager。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>ReplaceIntent</code></td>
+                <td><code>backend/src/qts/domain/orders/value_objects.py:57</code></td>
+                <td><span class="class-role">作用：Intent to replace an order through OrderManager。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>Order</code></td>
+                <td><code>backend/src/qts/domain/orders/value_objects.py:70</code></td>
+                <td><span class="class-role">作用：Order snapshot owned by OrderManager。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>ExecutionReportStatus</code></td>
+                <td><code>backend/src/qts/domain/orders/value_objects.py:79</code></td>
+                <td><span class="class-role">作用：Normalized broker report status。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>ExecutionReport</code></td>
+                <td><code>backend/src/qts/domain/orders/value_objects.py:90</code></td>
+                <td><span class="class-role">作用：Normalized broker execution report。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>OrderFill</code></td>
+                <td><code>backend/src/qts/domain/orders/value_objects.py:117</code></td>
+                <td><span class="class-role">作用：OrderManager-validated fill event。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>OrderManagerResult</code></td>
+                <td><code>backend/src/qts/domain/orders/value_objects.py:131</code></td>
+                <td><span class="class-role">作用：Events emitted by processing an execution report。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>OrderManagerSnapshot</code></td>
+                <td><code>backend/src/qts/domain/orders/value_objects.py:139</code></td>
+                <td><span class="class-role">作用：Serializable OrderManager state for reconnect/recovery。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>RiskDecisionStatus</code></td>
+                <td><code>backend/src/qts/domain/risk/decision.py:10</code></td>
+                <td><span class="class-role">作用：Risk check outcome。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>RiskDecision</code></td>
+                <td><code>backend/src/qts/domain/risk/decision.py:19</code></td>
+                <td><span class="class-role">作用：Explicit result of a risk check。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+              <tr>
+                <td><code>OrderRiskRequest</code></td>
+                <td><code>backend/src/qts/domain/risk/request.py:14</code></td>
+                <td><span class="class-role">作用：Pre-trade risk input for a proposed order。</span><br />价值：定义交易系统不可变领域语义，是其它实现表示必须服从的真相。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>1 配置加载 · <code>qts.config</code></span><span class="badge shared">4 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>IbkrConnectionConfig</code></td>
+                <td><code>backend/src/qts/config/ibkr.py:18</code></td>
+                <td><span class="class-role">作用：IBKR connection settings for one boundary。</span><br />价值：把 broker/runtime 外部配置变成可校验、可审计的启动输入。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrOrderExecutionConfig</code></td>
+                <td><code>backend/src/qts/config/ibkr.py:39</code></td>
+                <td><span class="class-role">作用：IBKR order execution settings。</span><br />价值：把 broker/runtime 外部配置变成可校验、可审计的启动输入。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrSecretRefs</code></td>
+                <td><code>backend/src/qts/config/ibkr.py:67</code></td>
+                <td><span class="class-role">作用：Environment variable names for IBKR credentials。</span><br />价值：把 broker/runtime 外部配置变成可校验、可审计的启动输入。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrEnvironmentConfig</code></td>
+                <td><code>backend/src/qts/config/ibkr.py:82</code></td>
+                <td><span class="class-role">作用：IBKR runtime configuration split by external boundary。</span><br />价值：把 broker/runtime 外部配置变成可校验、可审计的启动输入。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>1 配置加载 · <code>qts.load</code></span><span class="badge shared">1 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>SyntheticMarketDataConfig</code></td>
+                <td><code>backend/src/qts/load/synthetic_market_data.py:14</code></td>
+                <td><span class="class-role">作用：Configuration for deterministic synthetic market data。</span><br />价值：提供本地启动和 synthetic 数据装配能力，支撑开发与验收。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>1-2 标的 / 日历解析 · <code>qts.registry</code></span><span class="badge shared">18 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>BrokerSymbolMapping</code></td>
+                <td><code>backend/src/qts/registry/broker_symbol_mapping.py:8</code></td>
+                <td><span class="class-role">作用：Bidirectional mapping between internal IDs and one broker&#x27;s symbols。</span><br />价值：集中 InstrumentId、symbol、calendar、chain 和 roll 解析，防止 broker/source 符号泄漏。</td>
+              </tr>
+              <tr>
+                <td><code>MarketSession</code></td>
+                <td><code>backend/src/qts/registry/calendar_registry.py:13</code></td>
+                <td><span class="class-role">作用：Internal half-open exchange session。</span><br />价值：集中 InstrumentId、symbol、calendar、chain 和 roll 解析，防止 broker/source 符号泄漏。</td>
+              </tr>
+              <tr>
+                <td><code>CalendarProvider</code></td>
+                <td><code>backend/src/qts/registry/calendar_registry.py:38</code></td>
+                <td><span class="class-role">作用：Provider interface for internal calendar session lookup。</span><br />价值：集中 InstrumentId、symbol、calendar、chain 和 roll 解析，防止 broker/source 符号泄漏。</td>
+              </tr>
+              <tr>
+                <td><code>CalendarRegistry</code></td>
+                <td><code>backend/src/qts/registry/calendar_registry.py:45</code></td>
+                <td><span class="class-role">作用：Lookup table for calendar providers。</span><br />价值：集中 InstrumentId、symbol、calendar、chain 和 roll 解析，防止 broker/source 符号泄漏。</td>
+              </tr>
+              <tr>
+                <td><code>FutureChain</code></td>
+                <td><code>backend/src/qts/registry/future_chain_registry.py:11</code></td>
+                <td><span class="class-role">作用：Ordered concrete future contracts for a root symbol。</span><br />价值：集中 InstrumentId、symbol、calendar、chain 和 roll 解析，防止 broker/source 符号泄漏。</td>
+              </tr>
+              <tr>
+                <td><code>ContinuousFutureRef</code></td>
+                <td><code>backend/src/qts/registry/future_chain_registry.py:26</code></td>
+                <td><span class="class-role">作用：Research/data reference to a rolling future contract。</span><br />价值：集中 InstrumentId、symbol、calendar、chain 和 roll 解析，防止 broker/source 符号泄漏。</td>
+              </tr>
+              <tr>
+                <td><code>FutureChainRegistry</code></td>
+                <td><code>backend/src/qts/registry/future_chain_registry.py:40</code></td>
+                <td><span class="class-role">作用：Resolve future roots to concrete tradable contracts。</span><br />价值：集中 InstrumentId、symbol、calendar、chain 和 roll 解析，防止 broker/source 符号泄漏。</td>
+              </tr>
+              <tr>
+                <td><code>FutureContractCandidate</code></td>
+                <td><code>backend/src/qts/registry/future_roll.py:16</code></td>
+                <td><span class="class-role">作用：One concrete futures contract candidate at a decision timestamp。</span><br />价值：集中 InstrumentId、symbol、calendar、chain 和 roll 解析，防止 broker/source 符号泄漏。</td>
+              </tr>
+              <tr>
+                <td><code>FutureContractSelector</code></td>
+                <td><code>backend/src/qts/registry/future_roll.py:35</code></td>
+                <td><span class="class-role">作用：Select one concrete future from same-root same-time candidates。</span><br />价值：集中 InstrumentId、symbol、calendar、chain 和 roll 解析，防止 broker/source 符号泄漏。</td>
+              </tr>
+              <tr>
+                <td><code>HighestVolumeFutureContractSelector</code></td>
+                <td><code>backend/src/qts/registry/future_roll.py:46</code></td>
+                <td><span class="class-role">作用：Select the most liquid candidate for one root at one timestamp。</span><br />价值：集中 InstrumentId、symbol、calendar、chain 和 roll 解析，防止 broker/source 符号泄漏。</td>
+              </tr>
+              <tr>
+                <td><code>FutureRollSelection</code></td>
+                <td><code>backend/src/qts/registry/future_roll.py:67</code></td>
+                <td><span class="class-role">作用：Resolved concrete contract for a continuous future at one timestamp。</span><br />价值：集中 InstrumentId、symbol、calendar、chain 和 roll 解析，防止 broker/source 符号泄漏。</td>
+              </tr>
+              <tr>
+                <td><code>FutureRollRegistry</code></td>
+                <td><code>backend/src/qts/registry/future_roll.py:84</code></td>
+                <td><span class="class-role">作用：Resolve continuous futures to concrete contracts over time。</span><br />价值：集中 InstrumentId、symbol、calendar、chain 和 roll 解析，防止 broker/source 符号泄漏。</td>
+              </tr>
+              <tr>
+                <td><code>InstrumentRegistry</code></td>
+                <td><code>backend/src/qts/registry/instrument_registry.py:9</code></td>
+                <td><span class="class-role">作用：Resolve user-facing symbols to internal instruments。</span><br />价值：集中 InstrumentId、symbol、calendar、chain 和 roll 解析，防止 broker/source 符号泄漏。</td>
+              </tr>
+              <tr>
+                <td><code>OptionChainRegistry</code></td>
+                <td><code>backend/src/qts/registry/option_chain_registry.py:12</code></td>
+                <td><span class="class-role">作用：Lookup option instruments by underlying and simple filters。</span><br />价值：集中 InstrumentId、symbol、calendar、chain 和 roll 解析，防止 broker/source 符号泄漏。</td>
+              </tr>
+              <tr>
+                <td><code>ComexGoldCalendarProvider</code></td>
+                <td><code>backend/src/qts/registry/providers/comex_gold_calendar_provider.py:12</code></td>
+                <td><span class="class-role">作用：Regular COMEX Gold session provider for anchor-verified semantics。</span><br />价值：集中 InstrumentId、symbol、calendar、chain 和 roll 解析，防止 broker/source 符号泄漏。</td>
+              </tr>
+              <tr>
+                <td><code>ExchangeCalendarProvider</code></td>
+                <td><code>backend/src/qts/registry/providers/exchange_calendar_provider.py:14</code></td>
+                <td><span class="class-role">作用：Calendar provider backed by ``exchange-calendars``。</span><br />价值：集中 InstrumentId、symbol、calendar、chain 和 roll 解析，防止 broker/source 符号泄漏。</td>
+              </tr>
+              <tr>
+                <td><code>SourceSymbolResolver</code></td>
+                <td><code>backend/src/qts/registry/symbol_resolution.py:12</code></td>
+                <td><span class="class-role">作用：Resolve external source symbols into internal instrument IDs。</span><br />价值：集中 InstrumentId、symbol、calendar、chain 和 roll 解析，防止 broker/source 符号泄漏。</td>
+              </tr>
+              <tr>
+                <td><code>StaticSymbolResolver</code></td>
+                <td><code>backend/src/qts/registry/symbol_resolution.py:25</code></td>
+                <td><span class="class-role">作用：Resolve source symbols from an explicit symbol-to-instrument mapping。</span><br />价值：集中 InstrumentId、symbol、calendar、chain 和 roll 解析，防止 broker/source 符号泄漏。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>1-7 Backtest 编排 · <code>qts.backtest</code></span><span class="badge shared">10 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>BacktestActorLoopResult</code></td>
+                <td><code>backend/src/qts/backtest/actor_loop.py:31</code></td>
+                <td><span class="class-role">作用：Result summary produced by an actor loop run。</span><br />价值：把历史回放接入共享 Strategy SDK、风控、订单和账户链路，保护 backtest/live parity。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestActorLoop</code></td>
+                <td><code>backend/src/qts/backtest/actor_loop.py:45</code></td>
+                <td><span class="class-role">作用：Run backtest bars through strategy/order execution actors。</span><br />价值：把历史回放接入共享 Strategy SDK、风控、订单和账户链路，保护 backtest/live parity。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestEngineDependencies</code></td>
+                <td><code>backend/src/qts/backtest/dependencies.py:30</code></td>
+                <td><span class="class-role">作用：Runtime dependencies for constructing and running ``BacktestEngine``。</span><br />价值：把历史回放接入共享 Strategy SDK、风控、订单和账户链路，保护 backtest/live parity。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestActorLoopConfig</code></td>
+                <td><code>backend/src/qts/backtest/dependencies.py:71</code></td>
+                <td><span class="class-role">作用：Execution-loop runtime configuration。</span><br />价值：把历史回放接入共享 Strategy SDK、风控、订单和账户链路，保护 backtest/live parity。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestActorLoopDependencies</code></td>
+                <td><code>backend/src/qts/backtest/dependencies.py:88</code></td>
+                <td><span class="class-role">作用：Runtime collaborators and policy objects used by ``BacktestActorLoop``。</span><br />价值：把历史回放接入共享 Strategy SDK、风控、订单和账户链路，保护 backtest/live parity。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestStreamResult</code></td>
+                <td><code>backend/src/qts/backtest/engine.py:54</code></td>
+                <td><span class="class-role">作用：Backtest result written to partitioned streaming artifacts。</span><br />价值：把历史回放接入共享 Strategy SDK、风控、订单和账户链路，保护 backtest/live parity。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestEngine</code></td>
+                <td><code>backend/src/qts/backtest/engine.py:73</code></td>
+                <td><span class="class-role">作用：Single-process backtest engine using the Strategy SDK and actor order flow。</span><br />价值：把历史回放接入共享 Strategy SDK、风控、订单和账户链路，保护 backtest/live parity。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestInstrumentContext</code></td>
+                <td><code>backend/src/qts/backtest/instrument_context.py:16</code></td>
+                <td><span class="class-role">作用：Resolve backtest instrument IDs, roll targets, and instrument metadata。</span><br />价值：把历史回放接入共享 Strategy SDK、风控、订单和账户链路，保护 backtest/live parity。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestPortfolioProjector</code></td>
+                <td><code>backend/src/qts/backtest/portfolio_projection.py:15</code></td>
+                <td><span class="class-role">作用：Compute portfolio state views and equity points for streaming backtests。</span><br />价值：把历史回放接入共享 Strategy SDK、风控、订单和账户链路，保护 backtest/live parity。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestRun</code></td>
+                <td><code>backend/src/qts/backtest/runner.py:24</code></td>
+                <td><span class="class-role">作用：Output of a backtest runner invocation。</span><br />价值：把历史回放接入共享 Strategy SDK、风控、订单和账户链路，保护 backtest/live parity。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>1-7 共享运行时 · <code>qts.runtime</code></span><span class="badge shared">48 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>Actor</code></td>
+                <td><code>backend/src/qts/runtime/actor.py:8</code></td>
+                <td><span class="class-role">作用：Base actor that handles messages serially through an ActorRef。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>ActorRef</code></td>
+                <td><code>backend/src/qts/runtime/actor_ref.py:12</code></td>
+                <td><span class="class-role">作用：Message-only reference to an actor mailbox。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>TradingRuntimeConfig</code></td>
+                <td><code>backend/src/qts/runtime/config.py:23</code></td>
+                <td><span class="class-role">作用：Base runtime configuration contract for all execution modes。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestCostModel</code></td>
+                <td><code>backend/src/qts/runtime/config.py:37</code></td>
+                <td><span class="class-role">作用：Backtest execution fee and slippage assumptions。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestEngineConfig</code></td>
+                <td><code>backend/src/qts/runtime/config.py:77</code></td>
+                <td><span class="class-role">作用：Stable run-level inputs for constructing a backtest engine。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>CostModelConfig</code></td>
+                <td><code>backend/src/qts/runtime/config.py:142</code></td>
+                <td><span class="class-role">作用：Explicit backtest cost model settings。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>RiskConfig</code></td>
+                <td><code>backend/src/qts/runtime/config.py:170</code></td>
+                <td><span class="class-role">作用：Backtest risk settings。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>RollPolicyConfig</code></td>
+                <td><code>backend/src/qts/runtime/config.py:187</code></td>
+                <td><span class="class-role">作用：Continuous futures roll policy for config-driven backtest runs。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestMarketDataReference</code></td>
+                <td><code>backend/src/qts/runtime/config.py:206</code></td>
+                <td><span class="class-role">作用：Run-level reference to a configured market data source。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestStrategyConfig</code></td>
+                <td><code>backend/src/qts/runtime/config.py:246</code></td>
+                <td><span class="class-role">作用：Configured strategy instance referenced by a backtest run。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestRuntimeConfig</code></td>
+                <td><code>backend/src/qts/runtime/config.py:309</code></td>
+                <td><span class="class-role">作用：Complete identity for one backtest run。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>LiveRuntimeConfig</code></td>
+                <td><code>backend/src/qts/runtime/config.py:434</code></td>
+                <td><span class="class-role">作用：Startup and safety configuration for live-capable runtimes。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestConfigLoader</code></td>
+                <td><code>backend/src/qts/runtime/config_loader.py:24</code></td>
+                <td><span class="class-role">作用：Load backtest configuration from YAML or payload dictionaries。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>EventStore</code></td>
+                <td><code>backend/src/qts/runtime/event_store.py:15</code></td>
+                <td><span class="class-role">作用：Append-only event store contract。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>InMemoryEventStore</code></td>
+                <td><code>backend/src/qts/runtime/event_store.py:31</code></td>
+                <td><span class="class-role">作用：Deterministic append-only in-memory event store。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>FileEventStore</code></td>
+                <td><code>backend/src/qts/runtime/event_store.py:59</code></td>
+                <td><span class="class-role">作用：JSONL event store for local deterministic recovery tests。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>ExecutionReportHandler</code></td>
+                <td><code>backend/src/qts/runtime/execution_report_handler.py:14</code></td>
+                <td><span class="class-role">作用：Route normalized execution reports through order and account actors。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>InstrumentExecutionContext</code></td>
+                <td><code>backend/src/qts/runtime/intent_processing.py:24</code></td>
+                <td><span class="class-role">作用：Instrument resolution required to turn target intents into order plans。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>ProcessedIntent</code></td>
+                <td><code>backend/src/qts/runtime/intent_processing.py:53</code></td>
+                <td><span class="class-role">作用：Orders and fills generated for a single strategy intent。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>OrderPlan</code></td>
+                <td><code>backend/src/qts/runtime/intent_processing.py:61</code></td>
+                <td><span class="class-role">作用：One concrete order delta planned from a strategy target intent。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>OrderPlanBuilder</code></td>
+                <td><code>backend/src/qts/runtime/intent_processing.py:70</code></td>
+                <td><span class="class-role">作用：Convert target intents and positions into concrete order plans。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>TargetIntentProcessor</code></td>
+                <td><code>backend/src/qts/runtime/intent_processing.py:167</code></td>
+                <td><span class="class-role">作用：Translate strategy target intents into validated, executed backtest orders。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>LiveRuntimeState</code></td>
+                <td><code>backend/src/qts/runtime/live.py:14</code></td>
+                <td><span class="class-role">作用：Live runtime lifecycle states。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>LiveMode</code></td>
+                <td><code>backend/src/qts/runtime/live.py:24</code></td>
+                <td><span class="class-role">作用：Runtime mode with explicit live-trading permissions。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>LiveStartupDecision</code></td>
+                <td><code>backend/src/qts/runtime/live.py:33</code></td>
+                <td><span class="class-role">作用：Result of startup guard validation。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>LiveRuntimeStateMachine</code></td>
+                <td><code>backend/src/qts/runtime/live.py:87</code></td>
+                <td><span class="class-role">作用：Mutable live runtime state machine。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>RuntimeOrderResult</code></td>
+                <td><code>backend/src/qts/runtime/live.py:102</code></td>
+                <td><span class="class-role">作用：Result of live runtime order submission。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>LiveRuntime</code></td>
+                <td><code>backend/src/qts/runtime/live.py:111</code></td>
+                <td><span class="class-role">作用：Small live-beta runtime wrapper over fake or real boundary adapters。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>LiveReconciliationResult</code></td>
+                <td><code>backend/src/qts/runtime/live_reconciliation.py:24</code></td>
+                <td><span class="class-role">作用：Result of a runtime reconciliation check。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>LiveReconciliation</code></td>
+                <td><code>backend/src/qts/runtime/live_reconciliation.py:31</code></td>
+                <td><span class="class-role">作用：Build snapshots and gate paper/live trading on reconciliation drift。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>LiveRuntimeDependencies</code></td>
+                <td><code>backend/src/qts/runtime/live_runtime_dependencies.py:28</code></td>
+                <td><span class="class-role">作用：Cohesive dependencies needed to run one paper/live runtime session。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>LiveRuntimeSessionResult</code></td>
+                <td><code>backend/src/qts/runtime/live_runtime_session.py:30</code></td>
+                <td><span class="class-role">作用：Observable result from one paper/live market-data event。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>LiveKillSwitchEvidence</code></td>
+                <td><code>backend/src/qts/runtime/live_runtime_session.py:41</code></td>
+                <td><span class="class-role">作用：Evidence emitted when a runtime kill switch is activated。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>RuntimeRollbackCommand</code></td>
+                <td><code>backend/src/qts/runtime/live_runtime_session.py:53</code></td>
+                <td><span class="class-role">作用：Operator command to preserve state and stop new orders for rollback。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>RuntimeRollbackEvidence</code></td>
+                <td><code>backend/src/qts/runtime/live_runtime_session.py:69</code></td>
+                <td><span class="class-role">作用：Evidence captured during a runtime rollback drill。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>LiveRuntimeSession</code></td>
+                <td><code>backend/src/qts/runtime/live_runtime_session.py:79</code></td>
+                <td><span class="class-role">作用：Run paper/live market data through the shared strategy/order actor chain。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>Mailbox</code></td>
+                <td><code>backend/src/qts/runtime/mailbox.py:8</code></td>
+                <td><span class="class-role">作用：Simple in-memory FIFO mailbox。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>MarketDataFlowResult</code></td>
+                <td><code>backend/src/qts/runtime/market_data_flow.py:18</code></td>
+                <td><span class="class-role">作用：Runtime events produced by one source market-data event。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>MarketDataFlow</code></td>
+                <td><code>backend/src/qts/runtime/market_data_flow.py:25</code></td>
+                <td><span class="class-role">作用：Connect source bars to MarketDataActor and return actor-ready bars。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>AccountPartitionPolicy</code></td>
+                <td><code>backend/src/qts/runtime/partitioning.py:11</code></td>
+                <td><span class="class-role">作用：Partition live state and messages by internal account id。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>AccountBrokerMapping</code></td>
+                <td><code>backend/src/qts/runtime/partitioning.py:20</code></td>
+                <td><span class="class-role">作用：Boundary-only broker account mapping。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>AccountRiskConfig</code></td>
+                <td><code>backend/src/qts/runtime/partitioning.py:41</code></td>
+                <td><span class="class-role">作用：Per-account live risk limits。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>RouteNotFoundError</code></td>
+                <td><code>backend/src/qts/runtime/router.py:10</code></td>
+                <td><span class="class-role">作用：Raised when no actor route exists for a partition key。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>EventRouter</code></td>
+                <td><code>backend/src/qts/runtime/router.py:14</code></td>
+                <td><span class="class-role">作用：Route messages to actor refs by a message-derived key。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>StateSnapshot</code></td>
+                <td><code>backend/src/qts/runtime/state_recovery.py:10</code></td>
+                <td><span class="class-role">作用：Serialized actor state snapshot envelope。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>InMemorySnapshotStore</code></td>
+                <td><code>backend/src/qts/runtime/state_recovery.py:25</code></td>
+                <td><span class="class-role">作用：In-memory snapshot store for deterministic tests and local recovery。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>StrategyExecutionResult</code></td>
+                <td><code>backend/src/qts/runtime/strategy_execution_pipeline.py:36</code></td>
+                <td><span class="class-role">作用：Strategy intents emitted for one strategy-facing bar。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+              <tr>
+                <td><code>StrategyExecutionPipeline</code></td>
+                <td><code>backend/src/qts/runtime/strategy_execution_pipeline.py:43</code></td>
+                <td><span class="class-role">作用：Run strategy actors and signal aggregation for strategy-facing bars。</span><br />价值：连接策略、市场数据、风控、订单、账户和恢复流程，保持模式共享核心路径。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>2 数据获取 · <code>qts.data.adapters</code></span><span class="badge shared">15 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>IbAsyncMarketDataTransportConfig</code></td>
+                <td><code>backend/src/qts/data/adapters/ibkr_async_transport.py:46</code></td>
+                <td><span class="class-role">作用：IB Gateway market-data settings for an ib_async client。</span><br />价值：隔离 provider SDK callback 和外部符号，把 market data 规范化为内部事件。</td>
+              </tr>
+              <tr>
+                <td><code>IbAsyncMarketDataTransport</code></td>
+                <td><code>backend/src/qts/data/adapters/ibkr_async_transport.py:68</code></td>
+                <td><span class="class-role">作用：Collect normalized market-data events through ib_async。</span><br />价值：隔离 provider SDK callback 和外部符号，把 market data 规范化为内部事件。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrMarketDataConnection</code></td>
+                <td><code>backend/src/qts/data/adapters/ibkr_market_data.py:16</code></td>
+                <td><span class="class-role">作用：IBKR market data connection settings。</span><br />价值：隔离 provider SDK callback 和外部符号，把 market data 规范化为内部事件。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrMarketDataSubscription</code></td>
+                <td><code>backend/src/qts/data/adapters/ibkr_market_data.py:37</code></td>
+                <td><span class="class-role">作用：IBKR market data subscription request at the adapter boundary。</span><br />价值：隔离 provider SDK callback 和外部符号，把 market data 规范化为内部事件。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrMarketDataAdapter</code></td>
+                <td><code>backend/src/qts/data/adapters/ibkr_market_data.py:45</code></td>
+                <td><span class="class-role">作用：Normalizes IBKR market data without owning order execution。</span><br />价值：隔离 provider SDK callback 和外部符号，把 market data 规范化为内部事件。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrMarketDataContractSpec</code></td>
+                <td><code>backend/src/qts/data/adapters/ibkr_transport.py:47</code></td>
+                <td><span class="class-role">作用：IBKR contract fields required for market-data requests。</span><br />价值：隔离 provider SDK callback 和外部符号，把 market data 规范化为内部事件。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrTwsMarketDataTransportConfig</code></td>
+                <td><code>backend/src/qts/data/adapters/ibkr_transport.py:102</code></td>
+                <td><span class="class-role">作用：IBKR TWS/Gateway market-data transport settings。</span><br />价值：隔离 provider SDK callback 和外部符号，把 market data 规范化为内部事件。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrTickPayload</code></td>
+                <td><code>backend/src/qts/data/adapters/ibkr_transport.py:125</code></td>
+                <td><span class="class-role">作用：Raw IBKR tick callback payload at the market-data boundary。</span><br />价值：隔离 provider SDK callback 和外部符号，把 market data 规范化为内部事件。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrQuotePayload</code></td>
+                <td><code>backend/src/qts/data/adapters/ibkr_transport.py:139</code></td>
+                <td><span class="class-role">作用：Raw IBKR top-of-book callback payload at the market-data boundary。</span><br />价值：隔离 provider SDK callback 和外部符号，把 market data 规范化为内部事件。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrBarPayload</code></td>
+                <td><code>backend/src/qts/data/adapters/ibkr_transport.py:155</code></td>
+                <td><span class="class-role">作用：Raw IBKR bar callback payload at the market-data boundary。</span><br />价值：隔离 provider SDK callback 和外部符号，把 market data 规范化为内部事件。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrMarketDataErrorPayload</code></td>
+                <td><code>backend/src/qts/data/adapters/ibkr_transport.py:184</code></td>
+                <td><span class="class-role">作用：Raw IBKR market-data error callback payload。</span><br />价值：隔离 provider SDK callback 和外部符号，把 market data 规范化为内部事件。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrMarketDataCallbackSink</code></td>
+                <td><code>backend/src/qts/data/adapters/ibkr_transport.py:196</code></td>
+                <td><span class="class-role">作用：IBKR market-data callback sink owned by the market-data adapter。</span><br />价值：隔离 provider SDK callback 和外部符号，把 market data 规范化为内部事件。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrMarketDataTransport</code></td>
+                <td><code>backend/src/qts/data/adapters/ibkr_transport.py:212</code></td>
+                <td><span class="class-role">作用：Transport interface for IBKR market-data connectivity。</span><br />价值：隔离 provider SDK callback 和外部符号，把 market data 规范化为内部事件。</td>
+              </tr>
+              <tr>
+                <td><code>_IbkrQuoteState</code></td>
+                <td><code>backend/src/qts/data/adapters/ibkr_transport.py:242</code></td>
+                <td><span class="class-role">作用：内部辅助类型，封装局部状态或协议适配细节。。</span><br />价值：隔离 provider SDK callback 和外部符号，把 market data 规范化为内部事件。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrTwsMarketDataTransport</code></td>
+                <td><code>backend/src/qts/data/adapters/ibkr_transport.py:249</code></td>
+                <td><span class="class-role">作用：Official IBKR TWS API transport for paper/live market data。</span><br />价值：隔离 provider SDK callback 和外部符号，把 market data 规范化为内部事件。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>2 数据获取 · <code>qts.data.feeds</code></span><span class="badge shared">1 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>ReplayFeed</code></td>
+                <td><code>backend/src/qts/data/feeds/replay_feed.py:12</code></td>
+                <td><span class="class-role">作用：Deterministic replay feed over stored bars。</span><br />价值：提供可重复的 feed 边界，让 replay/live 输入形状可替换。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>2 数据获取 · <code>qts.data.historical</code></span><span class="badge shared">23 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>HistoricalMarketDataAdapter</code></td>
+                <td><code>backend/src/qts/data/historical/adapter.py:21</code></td>
+                <td><span class="class-role">作用：Deterministic historical market data adapter with feed-like contracts。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalDataset</code></td>
+                <td><code>backend/src/qts/data/historical/catalog.py:19</code></td>
+                <td><span class="class-role">作用：One local historical dataset entry。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalCatalog</code></td>
+                <td><code>backend/src/qts/data/historical/catalog.py:37</code></td>
+                <td><span class="class-role">作用：Explicit catalog for a local historical data layout。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalCatalogLoadConfig</code></td>
+                <td><code>backend/src/qts/data/historical/catalog.py:170</code></td>
+                <td><span class="class-role">作用：Construction inputs for a configured historical catalog。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalContract</code></td>
+                <td><code>backend/src/qts/data/historical/chains.py:16</code></td>
+                <td><span class="class-role">作用：One outright contract from a historical chain file。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalChain</code></td>
+                <td><code>backend/src/qts/data/historical/chains.py:31</code></td>
+                <td><span class="class-role">作用：Parsed historical futures chain。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalDataStoreDefaults</code></td>
+                <td><code>backend/src/qts/data/historical/config.py:14</code></td>
+                <td><span class="class-role">作用：Default metadata applied to datasets and bars in one historical store。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalDataStoreConfig</code></td>
+                <td><code>backend/src/qts/data/historical/config.py:35</code></td>
+                <td><span class="class-role">作用：Project-level physical layout for a historical data store。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalBarFileConfig</code></td>
+                <td><code>backend/src/qts/data/historical/config.py:82</code></td>
+                <td><span class="class-role">作用：One physical bar file for a dataset。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalDatasetConfig</code></td>
+                <td><code>backend/src/qts/data/historical/config.py:109</code></td>
+                <td><span class="class-role">作用：One product/data entry inside a historical data catalog。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalDataCatalogConfig</code></td>
+                <td><code>backend/src/qts/data/historical/config.py:146</code></td>
+                <td><span class="class-role">作用：Logical catalog of historical datasets backed by one store。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalDatasetLocation</code></td>
+                <td><code>backend/src/qts/data/historical/config.py:164</code></td>
+                <td><span class="class-role">作用：Resolved physical file paths for one catalog dataset。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalMarketDataConfig</code></td>
+                <td><code>backend/src/qts/data/historical/config.py:182</code></td>
+                <td><span class="class-role">作用：Project-level historical market data stores, catalogs, and metadata。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalMarketDataConfigLoader</code></td>
+                <td><code>backend/src/qts/data/historical/config_loader.py:47</code></td>
+                <td><span class="class-role">作用：Load historical data configuration from files or payload dictionaries。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>CsvDatasetDescription</code></td>
+                <td><code>backend/src/qts/data/historical/csv_dataset.py:42</code></td>
+                <td><span class="class-role">作用：Cheap metadata description for a historical CSV dataset。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalBarStream</code></td>
+                <td><code>backend/src/qts/data/historical/csv_dataset.py:55</code></td>
+                <td><span class="class-role">作用：Lazy iterable over historical bars with side-channel reader stats。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>RootSymbolResolver</code></td>
+                <td><code>backend/src/qts/data/historical/csv_dataset.py:432</code></td>
+                <td><span class="class-role">作用：Protocol for symbol resolvers that provide a root identifier。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalCsvSchema</code></td>
+                <td><code>backend/src/qts/data/historical/csv_format.py:24</code></td>
+                <td><span class="class-role">作用：Mapping from framework OHLCV semantics to concrete CSV columns。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalCsvRowMapper</code></td>
+                <td><code>backend/src/qts/data/historical/csv_row_mapper.py:21</code></td>
+                <td><span class="class-role">作用：Map one validated CSV row to an OHLCV bar。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalFutureChainSymbolResolver</code></td>
+                <td><code>backend/src/qts/data/historical/symbols.py:12</code></td>
+                <td><span class="class-role">作用：Resolve historical futures outright symbols through chain metadata。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalCsvStats</code></td>
+                <td><code>backend/src/qts/data/historical/validation.py:30</code></td>
+                <td><span class="class-role">作用：Streaming counters for historical CSV validation。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalValidationSample</code></td>
+                <td><code>backend/src/qts/data/historical/validation.py:53</code></td>
+                <td><span class="class-role">作用：Validation report plus counters for one sampled historical file。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+              <tr>
+                <td><code>HistoricalDatasetValidator</code></td>
+                <td><code>backend/src/qts/data/historical/validation.py:62</code></td>
+                <td><span class="class-role">作用：Validate historical sample files and return domain-friendly diagnostics。</span><br />价值：把历史源配置、CSV、chain 和校验转换成 replay-ready 数据。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>2 数据获取 · <code>qts.data.live</code></span><span class="badge shared">11 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>LiveFeedAdapter</code></td>
+                <td><code>backend/src/qts/data/live/adapter.py:12</code></td>
+                <td><span class="class-role">作用：Live market data feed adapter boundary。</span><br />价值：定义 live/paper feed 能力、订阅、失败和重连边界。</td>
+              </tr>
+              <tr>
+                <td><code>MarketDataAdapter</code></td>
+                <td><code>backend/src/qts/data/live/adapter.py:25</code></td>
+                <td><span class="class-role">作用：Canonical market-data source adapter contract shared by live and replay feeds。</span><br />价值：定义 live/paper feed 能力、订阅、失败和重连边界。</td>
+              </tr>
+              <tr>
+                <td><code>ReplayMarketDataAdapter</code></td>
+                <td><code>backend/src/qts/data/live/adapter.py:38</code></td>
+                <td><span class="class-role">作用：Canonical replay market-data adapter contract for historical sources。</span><br />价值：定义 live/paper feed 能力、订阅、失败和重连边界。</td>
+              </tr>
+              <tr>
+                <td><code>FeedCapabilities</code></td>
+                <td><code>backend/src/qts/data/live/capabilities.py:11</code></td>
+                <td><span class="class-role">作用：Feed-supported live market data capabilities。</span><br />价值：定义 live/paper feed 能力、订阅、失败和重连边界。</td>
+              </tr>
+              <tr>
+                <td><code>FeedSubscription</code></td>
+                <td><code>backend/src/qts/data/live/events.py:14</code></td>
+                <td><span class="class-role">作用：Internal live feed subscription request。</span><br />价值：定义 live/paper feed 能力、订阅、失败和重连边界。</td>
+              </tr>
+              <tr>
+                <td><code>MarketDataSubscribed</code></td>
+                <td><code>backend/src/qts/data/live/events.py:29</code></td>
+                <td><span class="class-role">作用：Successful market-data source subscription acknowledgement。</span><br />价值：定义 live/paper feed 能力、订阅、失败和重连边界。</td>
+              </tr>
+              <tr>
+                <td><code>LiveFeedEvent</code></td>
+                <td><code>backend/src/qts/data/live/events.py:37</code></td>
+                <td><span class="class-role">作用：Live feed payload emitted by a subscription。</span><br />价值：定义 live/paper feed 能力、订阅、失败和重连边界。</td>
+              </tr>
+              <tr>
+                <td><code>LiveFeedFailure</code></td>
+                <td><code>backend/src/qts/data/live/events.py:45</code></td>
+                <td><span class="class-role">作用：Live feed failure notification。</span><br />价值：定义 live/paper feed 能力、订阅、失败和重连边界。</td>
+              </tr>
+              <tr>
+                <td><code>FakeLiveFeedAdapter</code></td>
+                <td><code>backend/src/qts/data/live/fake_adapter.py:16</code></td>
+                <td><span class="class-role">作用：Deterministic fake live market data feed。</span><br />价值：定义 live/paper feed 能力、订阅、失败和重连边界。</td>
+              </tr>
+              <tr>
+                <td><code>FakeMarketDataAdapter</code></td>
+                <td><code>backend/src/qts/data/live/fake_adapter.py:63</code></td>
+                <td><span class="class-role">作用：Canonical fake adapter name used for market-data source tests。</span><br />价值：定义 live/paper feed 能力、订阅、失败和重连边界。</td>
+              </tr>
+              <tr>
+                <td><code>ReconnectPolicy</code></td>
+                <td><code>backend/src/qts/data/live/reconnect.py:11</code></td>
+                <td><span class="class-role">作用：Deterministic reconnect backoff policy。</span><br />价值：定义 live/paper feed 能力、订阅、失败和重连边界。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>2 数据获取 · <code>qts.data.sources</code></span><span class="badge shared">5 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>ReplayMarketDataBundle</code></td>
+                <td><code>backend/src/qts/data/sources/replay_market_data_source.py:22</code></td>
+                <td><span class="class-role">作用：Streaming inputs and side-channel metadata required by a backtest run。</span><br />价值：拥有 replay 或 streaming source lifecycle，给 runtime 提供统一输入。</td>
+              </tr>
+              <tr>
+                <td><code>ReplayMarketDataSource</code></td>
+                <td><code>backend/src/qts/data/sources/replay_market_data_source.py:34</code></td>
+                <td><span class="class-role">作用：Build replay-ready market data, registry, and provenance inputs。</span><br />价值：拥有 replay 或 streaming source lifecycle，给 runtime 提供统一输入。</td>
+              </tr>
+              <tr>
+                <td><code>StreamingMarketDataSubscription</code></td>
+                <td><code>backend/src/qts/data/sources/streaming_market_data_source.py:23</code></td>
+                <td><span class="class-role">作用：Source-owned live/paper subscription state。</span><br />价值：拥有 replay 或 streaming source lifecycle，给 runtime 提供统一输入。</td>
+              </tr>
+              <tr>
+                <td><code>StreamingMarketDataDegradation</code></td>
+                <td><code>backend/src/qts/data/sources/streaming_market_data_source.py:43</code></td>
+                <td><span class="class-role">作用：Data-source degradation signal for stale live/paper market data。</span><br />价值：拥有 replay 或 streaming source lifecycle，给 runtime 提供统一输入。</td>
+              </tr>
+              <tr>
+                <td><code>StreamingMarketDataSource</code></td>
+                <td><code>backend/src/qts/data/sources/streaming_market_data_source.py:59</code></td>
+                <td><span class="class-role">作用：Owns live/paper source subscriptions and normalized callback delivery。</span><br />价值：拥有 replay 或 streaming source lifecycle，给 runtime 提供统一输入。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>2 数据获取 · <code>qts.data.stores</code></span><span class="badge shared">3 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>MarketDataStore</code></td>
+                <td><code>backend/src/qts/data/stores/base.py:13</code></td>
+                <td><span class="class-role">作用：Store and read bars by internal instrument identity。</span><br />价值：隔离 bar 存储实现，保持内部按 InstrumentId/timeframe 读写。</td>
+              </tr>
+              <tr>
+                <td><code>InMemoryMarketDataStore</code></td>
+                <td><code>backend/src/qts/data/stores/memory_store.py:13</code></td>
+                <td><span class="class-role">作用：In-memory bar store for tests and local runs。</span><br />价值：隔离 bar 存储实现，保持内部按 InstrumentId/timeframe 读写。</td>
+              </tr>
+              <tr>
+                <td><code>ParquetMarketDataStore</code></td>
+                <td><code>backend/src/qts/data/stores/parquet_store.py:21</code></td>
+                <td><span class="class-role">作用：File-backed bar store partitioned by instrument, timeframe, and date。</span><br />价值：隔离 bar 存储实现，保持内部按 InstrumentId/timeframe 读写。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>3 标准化与聚合 · <code>qts.data</code></span><span class="badge shared">10 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>MarketDataPipeline</code></td>
+                <td><code>backend/src/qts/data/market_data_pipeline.py:12</code></td>
+                <td><span class="class-role">作用：Process market data without owning runtime actor or queue orchestration。</span><br />价值：承接数据管线、订阅和 provenance，使 source/provider 差异不污染 runtime。</td>
+              </tr>
+              <tr>
+                <td><code>DatasetMetadata</code></td>
+                <td><code>backend/src/qts/data/provenance.py:13</code></td>
+                <td><span class="class-role">作用：Stable reference to historical data used by simulation or research。</span><br />价值：承接数据管线、订阅和 provenance，使 source/provider 差异不污染 runtime。</td>
+              </tr>
+              <tr>
+                <td><code>SourceStreamType</code></td>
+                <td><code>backend/src/qts/data/subscriptions.py:12</code></td>
+                <td><span class="class-role">作用：Physical market data stream type。</span><br />价值：承接数据管线、订阅和 provenance，使 source/provider 差异不污染 runtime。</td>
+              </tr>
+              <tr>
+                <td><code>LogicalSubscription</code></td>
+                <td><code>backend/src/qts/data/subscriptions.py:21</code></td>
+                <td><span class="class-role">作用：Strategy-requested market data stream。</span><br />价值：承接数据管线、订阅和 provenance，使 source/provider 差异不污染 runtime。</td>
+              </tr>
+              <tr>
+                <td><code>LogicalSubscriptionKey</code></td>
+                <td><code>backend/src/qts/data/subscriptions.py:38</code></td>
+                <td><span class="class-role">作用：Deduplication key for strategy-facing subscribers。</span><br />价值：承接数据管线、订阅和 provenance，使 source/provider 差异不污染 runtime。</td>
+              </tr>
+              <tr>
+                <td><code>PhysicalSubscriptionKey</code></td>
+                <td><code>backend/src/qts/data/subscriptions.py:47</code></td>
+                <td><span class="class-role">作用：Deduplication key for provider-facing subscriptions。</span><br />价值：承接数据管线、订阅和 provenance，使 source/provider 差异不污染 runtime。</td>
+              </tr>
+              <tr>
+                <td><code>DataValidationIssueCode</code></td>
+                <td><code>backend/src/qts/data/validation_report.py:13</code></td>
+                <td><span class="class-role">作用：Known market data validation issue codes。</span><br />价值：承接数据管线、订阅和 provenance，使 source/provider 差异不污染 runtime。</td>
+              </tr>
+              <tr>
+                <td><code>DataValidationSeverity</code></td>
+                <td><code>backend/src/qts/data/validation_report.py:27</code></td>
+                <td><span class="class-role">作用：Severity for data validation issues。</span><br />价值：承接数据管线、订阅和 provenance，使 source/provider 差异不污染 runtime。</td>
+              </tr>
+              <tr>
+                <td><code>DataValidationIssue</code></td>
+                <td><code>backend/src/qts/data/validation_report.py:36</code></td>
+                <td><span class="class-role">作用：One validation issue for a bar sequence。</span><br />价值：承接数据管线、订阅和 provenance，使 source/provider 差异不污染 runtime。</td>
+              </tr>
+              <tr>
+                <td><code>DataValidationReport</code></td>
+                <td><code>backend/src/qts/data/validation_report.py:45</code></td>
+                <td><span class="class-role">作用：Validation result for a bar sequence。</span><br />价值：承接数据管线、订阅和 provenance，使 source/provider 差异不污染 runtime。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>3 标准化与聚合 · <code>qts.data.bars</code></span><span class="badge shared">6 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>AggregationState</code></td>
+                <td><code>backend/src/qts/data/bars/aggregator.py:18</code></td>
+                <td><span class="class-role">作用：Current in-progress aggregation bucket。</span><br />价值：保护 timeframe、半开区间、聚合桶和 bar 完整性语义。</td>
+              </tr>
+              <tr>
+                <td><code>AggregationResult</code></td>
+                <td><code>backend/src/qts/data/bars/aggregator.py:33</code></td>
+                <td><span class="class-role">作用：Result returned by one incremental aggregator update。</span><br />价值：保护 timeframe、半开区间、聚合桶和 bar 完整性语义。</td>
+              </tr>
+              <tr>
+                <td><code>BarAggregator</code></td>
+                <td><code>backend/src/qts/data/bars/aggregator.py:40</code></td>
+                <td><span class="class-role">作用：Stateful incremental bar aggregator for one ordered bar stream。</span><br />价值：保护 timeframe、半开区间、聚合桶和 bar 完整性语义。</td>
+              </tr>
+              <tr>
+                <td><code>BarAggregationPipeline</code></td>
+                <td><code>backend/src/qts/data/bars/pipeline.py:15</code></td>
+                <td><span class="class-role">作用：Own incremental aggregation state for bar streams in memory。</span><br />价值：保护 timeframe、半开区间、聚合桶和 bar 完整性语义。</td>
+              </tr>
+              <tr>
+                <td><code>AlignmentMode</code></td>
+                <td><code>backend/src/qts/data/bars/timeframe.py:10</code></td>
+                <td><span class="class-role">作用：How bars for a timeframe align to time。</span><br />价值：保护 timeframe、半开区间、聚合桶和 bar 完整性语义。</td>
+              </tr>
+              <tr>
+                <td><code>Timeframe</code></td>
+                <td><code>backend/src/qts/data/bars/timeframe.py:29</code></td>
+                <td><span class="class-role">作用：Bar timeframe with explicit alignment semantics。</span><br />价值：保护 timeframe、半开区间、聚合桶和 bar 完整性语义。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>3 标准化与聚合 · <code>qts.data.sessions</code></span><span class="badge shared">2 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>SessionLookup</code></td>
+                <td><code>backend/src/qts/data/sessions/filter.py:13</code></td>
+                <td><span class="class-role">作用：Calendar session lookup required by session filters。</span><br />价值：封装交易时段窗口和过滤规则，防止时区表示改变 session 事实。</td>
+              </tr>
+              <tr>
+                <td><code>RegularSessionWindow</code></td>
+                <td><code>backend/src/qts/data/sessions/window.py:12</code></td>
+                <td><span class="class-role">作用：A recurring half-open exchange session window。</span><br />价值：封装交易时段窗口和过滤规则，防止时区表示改变 session 事实。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>3-7 Actor 运行链路 · <code>qts.runtime.actors</code></span><span class="badge shared">21 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>ApplyFill</code></td>
+                <td><code>backend/src/qts/runtime/actors/account_actor.py:19</code></td>
+                <td><span class="class-role">作用：Message instructing AccountActor to apply a validated fill。</span><br />价值：用消息传递拥有 mutable state，保护 MarketData/Order/Account 等 actor 边界。</td>
+              </tr>
+              <tr>
+                <td><code>AccountSnapshot</code></td>
+                <td><code>backend/src/qts/runtime/actors/account_actor.py:28</code></td>
+                <td><span class="class-role">作用：Read-only account snapshot。</span><br />价值：用消息传递拥有 mutable state，保护 MarketData/Order/Account 等 actor 边界。</td>
+              </tr>
+              <tr>
+                <td><code>AccountActor</code></td>
+                <td><code>backend/src/qts/runtime/actors/account_actor.py:35</code></td>
+                <td><span class="class-role">作用：Owns account cash and position state。</span><br />价值：用消息传递拥有 mutable state，保护 MarketData/Order/Account 等 actor 边界。</td>
+              </tr>
+              <tr>
+                <td><code>ExecutionAdapter</code></td>
+                <td><code>backend/src/qts/runtime/actors/execution_actor.py:16</code></td>
+                <td><span class="class-role">作用：Execution boundary contract used by the actor。</span><br />价值：用消息传递拥有 mutable state，保护 MarketData/Order/Account 等 actor 边界。</td>
+              </tr>
+              <tr>
+                <td><code>OrderExecutionRequest</code></td>
+                <td><code>backend/src/qts/runtime/actors/execution_actor.py:35</code></td>
+                <td><span class="class-role">作用：Message requesting order execution。</span><br />价值：用消息传递拥有 mutable state，保护 MarketData/Order/Account 等 actor 边界。</td>
+              </tr>
+              <tr>
+                <td><code>OrderCancelRequest</code></td>
+                <td><code>backend/src/qts/runtime/actors/execution_actor.py:44</code></td>
+                <td><span class="class-role">作用：Message requesting broker order cancellation。</span><br />价值：用消息传递拥有 mutable state，保护 MarketData/Order/Account 等 actor 边界。</td>
+              </tr>
+              <tr>
+                <td><code>ExecutionActor</code></td>
+                <td><code>backend/src/qts/runtime/actors/execution_actor.py:51</code></td>
+                <td><span class="class-role">作用：Actor wrapper for an order execution adapter or simulator。</span><br />价值：用消息传递拥有 mutable state，保护 MarketData/Order/Account 等 actor 边界。</td>
+              </tr>
+              <tr>
+                <td><code>MarketDataEvent</code></td>
+                <td><code>backend/src/qts/runtime/actors/market_data_actor.py:29</code></td>
+                <td><span class="class-role">作用：Normalized market data payload accepted by MarketDataActor。</span><br />价值：用消息传递拥有 mutable state，保护 MarketData/Order/Account 等 actor 边界。</td>
+              </tr>
+              <tr>
+                <td><code>SubscribeMarketData</code></td>
+                <td><code>backend/src/qts/runtime/actors/market_data_actor.py:36</code></td>
+                <td><span class="class-role">作用：Message requesting strategy market data fan-out。</span><br />价值：用消息传递拥有 mutable state，保护 MarketData/Order/Account 等 actor 边界。</td>
+              </tr>
+              <tr>
+                <td><code>MarketDataActor</code></td>
+                <td><code>backend/src/qts/runtime/actors/market_data_actor.py:52</code></td>
+                <td><span class="class-role">作用：Actor boundary for normalized market data events。</span><br />价值：用消息传递拥有 mutable state，保护 MarketData/Order/Account 等 actor 边界。</td>
+              </tr>
+              <tr>
+                <td><code>SubmitOrder</code></td>
+                <td><code>backend/src/qts/runtime/actors/order_manager_actor.py:27</code></td>
+                <td><span class="class-role">作用：Message to submit an approved order to an execution actor。</span><br />价值：用消息传递拥有 mutable state，保护 MarketData/Order/Account 等 actor 边界。</td>
+              </tr>
+              <tr>
+                <td><code>CancelOrder</code></td>
+                <td><code>backend/src/qts/runtime/actors/order_manager_actor.py:37</code></td>
+                <td><span class="class-role">作用：Message to cancel an active order through the execution actor。</span><br />价值：用消息传递拥有 mutable state，保护 MarketData/Order/Account 等 actor 边界。</td>
+              </tr>
+              <tr>
+                <td><code>OrderManagerActor</code></td>
+                <td><code>backend/src/qts/runtime/actors/order_manager_actor.py:43</code></td>
+                <td><span class="class-role">作用：Actor-owned OrderManager wrapper。</span><br />价值：用消息传递拥有 mutable state，保护 MarketData/Order/Account 等 actor 边界。</td>
+              </tr>
+              <tr>
+                <td><code>StrategySignalEvent</code></td>
+                <td><code>backend/src/qts/runtime/actors/signal_aggregator_actor.py:14</code></td>
+                <td><span class="class-role">作用：Strategy intents emitted for one completed bar。</span><br />价值：用消息传递拥有 mutable state，保护 MarketData/Order/Account 等 actor 边界。</td>
+              </tr>
+              <tr>
+                <td><code>AggregatedSignalBatch</code></td>
+                <td><code>backend/src/qts/runtime/actors/signal_aggregator_actor.py:22</code></td>
+                <td><span class="class-role">作用：Aggregated intents ready for portfolio/risk/order flow。</span><br />价值：用消息传递拥有 mutable state，保护 MarketData/Order/Account 等 actor 边界。</td>
+              </tr>
+              <tr>
+                <td><code>SignalAggregatorActor</code></td>
+                <td><code>backend/src/qts/runtime/actors/signal_aggregator_actor.py:29</code></td>
+                <td><span class="class-role">作用：Boundary for combining strategy signals before order flow。</span><br />价值：用消息传递拥有 mutable state，保护 MarketData/Order/Account 等 actor 边界。</td>
+              </tr>
+              <tr>
+                <td><code>StrategyBarEvent</code></td>
+                <td><code>backend/src/qts/runtime/actors/strategy_actor.py:14</code></td>
+                <td><span class="class-role">作用：Completed strategy-facing bar delivered to a strategy actor。</span><br />价值：用消息传递拥有 mutable state，保护 MarketData/Order/Account 等 actor 边界。</td>
+              </tr>
+              <tr>
+                <td><code>StrategyBarResult</code></td>
+                <td><code>backend/src/qts/runtime/actors/strategy_actor.py:23</code></td>
+                <td><span class="class-role">作用：New strategy intents emitted while handling one bar。</span><br />价值：用消息传递拥有 mutable state，保护 MarketData/Order/Account 等 actor 边界。</td>
+              </tr>
+              <tr>
+                <td><code>StrategyFinalize</code></td>
+                <td><code>backend/src/qts/runtime/actors/strategy_actor.py:31</code></td>
+                <td><span class="class-role">作用：Request strategy finalization。</span><br />价值：用消息传递拥有 mutable state，保护 MarketData/Order/Account 等 actor 边界。</td>
+              </tr>
+              <tr>
+                <td><code>StrategyFinalized</code></td>
+                <td><code>backend/src/qts/runtime/actors/strategy_actor.py:36</code></td>
+                <td><span class="class-role">作用：Strategy finalization completed。</span><br />价值：用消息传递拥有 mutable state，保护 MarketData/Order/Account 等 actor 边界。</td>
+              </tr>
+              <tr>
+                <td><code>StrategyActor</code></td>
+                <td><code>backend/src/qts/runtime/actors/strategy_actor.py:42</code></td>
+                <td><span class="class-role">作用：Actor-owned strategy instance and user-facing context。</span><br />价值：用消息传递拥有 mutable state，保护 MarketData/Order/Account 等 actor 边界。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>4 策略执行 · <code>qts.factors</code></span><span class="badge shared">4 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>FactorAsset</code></td>
+                <td><code>backend/src/qts/factors/momentum.py:10</code></td>
+                <td><span class="class-role">作用：Minimal asset shape required by factor ranking。</span><br />价值：提供策略侧可复用计算组件，保持策略逻辑简洁并可测试。</td>
+              </tr>
+              <tr>
+                <td><code>FactorScore</code></td>
+                <td><code>backend/src/qts/factors/momentum.py:19</code></td>
+                <td><span class="class-role">作用：Single asset factor score。</span><br />价值：提供策略侧可复用计算组件，保持策略逻辑简洁并可测试。</td>
+              </tr>
+              <tr>
+                <td><code>FactorResult</code></td>
+                <td><code>backend/src/qts/factors/momentum.py:27</code></td>
+                <td><span class="class-role">作用：Ranked cross-sectional factor result。</span><br />价值：提供策略侧可复用计算组件，保持策略逻辑简洁并可测试。</td>
+              </tr>
+              <tr>
+                <td><code>MomentumFactor</code></td>
+                <td><code>backend/src/qts/factors/momentum.py:41</code></td>
+                <td><span class="class-role">作用：Compute simple period momentum as last / first - 1。</span><br />价值：提供策略侧可复用计算组件，保持策略逻辑简洁并可测试。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>4 策略执行 · <code>qts.indicators</code></span><span class="badge shared">3 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>EMA</code></td>
+                <td><code>backend/src/qts/indicators/price/ema.py:12</code></td>
+                <td><span class="class-role">作用：Incremental EMA using SMA as the warmup seed。</span><br />价值：提供策略侧可复用计算组件，保持策略逻辑简洁并可测试。</td>
+              </tr>
+              <tr>
+                <td><code>SMA</code></td>
+                <td><code>backend/src/qts/indicators/price/sma.py:12</code></td>
+                <td><span class="class-role">作用：Incremental simple moving average。</span><br />价值：提供策略侧可复用计算组件，保持策略逻辑简洁并可测试。</td>
+              </tr>
+              <tr>
+                <td><code>RollingWindow</code></td>
+                <td><code>backend/src/qts/indicators/rolling.py:14</code></td>
+                <td><span class="class-role">作用：Bounded FIFO buffer with warmup state。</span><br />价值：提供策略侧可复用计算组件，保持策略逻辑简洁并可测试。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>4 策略执行 · <code>qts.strategy_sdk</code></span><span class="badge shared">20 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>AssetRef</code></td>
+                <td><code>backend/src/qts/strategy_sdk/asset_ref.py:13</code></td>
+                <td><span class="class-role">作用：Lightweight strategy-facing reference to an internal instrument。</span><br />价值：提供用户策略唯一稳定 API，隐藏 actor、broker、risk 和 registry 内部细节。</td>
+              </tr>
+              <tr>
+                <td><code>SymbolResolver</code></td>
+                <td><code>backend/src/qts/strategy_sdk/asset_resolver.py:15</code></td>
+                <td><span class="class-role">作用：Platform-provided symbol resolution boundary。</span><br />价值：提供用户策略唯一稳定 API，隐藏 actor、broker、risk 和 registry 内部细节。</td>
+              </tr>
+              <tr>
+                <td><code>FutureContractResolver</code></td>
+                <td><code>backend/src/qts/strategy_sdk/asset_resolver.py:21</code></td>
+                <td><span class="class-role">作用：Platform-provided future chain resolution boundary。</span><br />价值：提供用户策略唯一稳定 API，隐藏 actor、broker、risk 和 registry 内部细节。</td>
+              </tr>
+              <tr>
+                <td><code>ContinuousFutureResolver</code></td>
+                <td><code>backend/src/qts/strategy_sdk/asset_resolver.py:28</code></td>
+                <td><span class="class-role">作用：Platform-provided continuous future reference boundary。</span><br />价值：提供用户策略唯一稳定 API，隐藏 actor、broker、risk 和 registry 内部细节。</td>
+              </tr>
+              <tr>
+                <td><code>OptionContractRef</code></td>
+                <td><code>backend/src/qts/strategy_sdk/asset_resolver.py:34</code></td>
+                <td><span class="class-role">作用：Read-only option contract reference returned by the platform。</span><br />价值：提供用户策略唯一稳定 API，隐藏 actor、broker、risk 和 registry 内部细节。</td>
+              </tr>
+              <tr>
+                <td><code>OptionContractResolver</code></td>
+                <td><code>backend/src/qts/strategy_sdk/asset_resolver.py:41</code></td>
+                <td><span class="class-role">作用：Platform-provided option chain resolution boundary。</span><br />价值：提供用户策略唯一稳定 API，隐藏 actor、broker、risk 和 registry 内部细节。</td>
+              </tr>
+              <tr>
+                <td><code>StrategyAssetResolver</code></td>
+                <td><code>backend/src/qts/strategy_sdk/asset_resolver.py:54</code></td>
+                <td><span class="class-role">作用：Resolve user input symbols/roots/options into stable `AssetRef` objects。</span><br />价值：提供用户策略唯一稳定 API，隐藏 actor、broker、risk 和 registry 内部细节。</td>
+              </tr>
+              <tr>
+                <td><code>StrategyContext</code></td>
+                <td><code>backend/src/qts/strategy_sdk/context.py:30</code></td>
+                <td><span class="class-role">作用：User-facing strategy facade for data, assets, targets, and subscriptions。</span><br />价值：提供用户策略唯一稳定 API，隐藏 actor、broker、risk 和 registry 内部细节。</td>
+              </tr>
+              <tr>
+                <td><code>DataView</code></td>
+                <td><code>backend/src/qts/strategy_sdk/data_view.py:16</code></td>
+                <td><span class="class-role">作用：Time-sliced market data exposed to strategies。</span><br />价值：提供用户策略唯一稳定 API，隐藏 actor、broker、risk 和 registry 内部细节。</td>
+              </tr>
+              <tr>
+                <td><code>FactorFactory</code></td>
+                <td><code>backend/src/qts/strategy_sdk/factors.py:11</code></td>
+                <td><span class="class-role">作用：Factory for user-created factors。</span><br />价值：提供用户策略唯一稳定 API，隐藏 actor、broker、risk 和 registry 内部细节。</td>
+              </tr>
+              <tr>
+                <td><code>AssetIndicator</code></td>
+                <td><code>backend/src/qts/strategy_sdk/indicators.py:14</code></td>
+                <td><span class="class-role">作用：Indicator bound to a strategy asset reference。</span><br />价值：提供用户策略唯一稳定 API，隐藏 actor、broker、risk 和 registry 内部细节。</td>
+              </tr>
+              <tr>
+                <td><code>IndicatorFactory</code></td>
+                <td><code>backend/src/qts/strategy_sdk/indicators.py:36</code></td>
+                <td><span class="class-role">作用：Factory for user-created indicators。</span><br />价值：提供用户策略唯一稳定 API，隐藏 actor、broker、risk 和 registry 内部细节。</td>
+              </tr>
+              <tr>
+                <td><code>PortfolioPosition</code></td>
+                <td><code>backend/src/qts/strategy_sdk/portfolio_view.py:15</code></td>
+                <td><span class="class-role">作用：Read-only position snapshot。</span><br />价值：提供用户策略唯一稳定 API，隐藏 actor、broker、risk 和 registry 内部细节。</td>
+              </tr>
+              <tr>
+                <td><code>PortfolioView</code></td>
+                <td><code>backend/src/qts/strategy_sdk/portfolio_view.py:23</code></td>
+                <td><span class="class-role">作用：Immutable user-facing portfolio snapshot。</span><br />价值：提供用户策略唯一稳定 API，隐藏 actor、broker、risk 和 registry 内部细节。</td>
+              </tr>
+              <tr>
+                <td><code>Strategy</code></td>
+                <td><code>backend/src/qts/strategy_sdk/strategy.py:6</code></td>
+                <td><span class="class-role">作用：Base class for user strategies。</span><br />价值：提供用户策略唯一稳定 API，隐藏 actor、broker、risk 和 registry 内部细节。</td>
+              </tr>
+              <tr>
+                <td><code>DataSubscription</code></td>
+                <td><code>backend/src/qts/strategy_sdk/subscription_registry.py:11</code></td>
+                <td><span class="class-role">作用：Strategy-declared market data requirement。</span><br />价值：提供用户策略唯一稳定 API，隐藏 actor、broker、risk 和 registry 内部细节。</td>
+              </tr>
+              <tr>
+                <td><code>StrategySubscriptionRegistry</code></td>
+                <td><code>backend/src/qts/strategy_sdk/subscription_registry.py:26</code></td>
+                <td><span class="class-role">作用：Own strategy subscriptions and enforce invariant validation。</span><br />价值：提供用户策略唯一稳定 API，隐藏 actor、broker、risk 和 registry 内部细节。</td>
+              </tr>
+              <tr>
+                <td><code>TargetIntentType</code></td>
+                <td><code>backend/src/qts/strategy_sdk/target.py:12</code></td>
+                <td><span class="class-role">作用：Supported target intent kinds。</span><br />价值：提供用户策略唯一稳定 API，隐藏 actor、broker、risk 和 registry 内部细节。</td>
+              </tr>
+              <tr>
+                <td><code>TargetIntent</code></td>
+                <td><code>backend/src/qts/strategy_sdk/target.py:22</code></td>
+                <td><span class="class-role">作用：Strategy-emitted intent, later handled by platform risk/order flow。</span><br />价值：提供用户策略唯一稳定 API，隐藏 actor、broker、risk 和 registry 内部细节。</td>
+              </tr>
+              <tr>
+                <td><code>TargetIntentEmitter</code></td>
+                <td><code>backend/src/qts/strategy_sdk/target_emitter.py:8</code></td>
+                <td><span class="class-role">作用：Collect and emit `TargetIntent` values for one strategy context。</span><br />价值：提供用户策略唯一稳定 API，隐藏 actor、broker、risk 和 registry 内部细节。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>5 意图到风控 · <code>qts.risk</code></span><span class="badge shared">14 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>RiskRuleConfig</code></td>
+                <td><code>backend/src/qts/risk/config.py:10</code></td>
+                <td><span class="class-role">作用：One configured risk rule。</span><br />价值：在订单进入执行前统一评估风险规则，保证 risk-before-order。</td>
+              </tr>
+              <tr>
+                <td><code>RiskConfig</code></td>
+                <td><code>backend/src/qts/risk/config.py:26</code></td>
+                <td><span class="class-role">作用：Account/strategy/product risk configuration。</span><br />价值：在订单进入执行前统一评估风险规则，保证 risk-before-order。</td>
+              </tr>
+              <tr>
+                <td><code>KillSwitchScopeType</code></td>
+                <td><code>backend/src/qts/risk/kill_switch.py:12</code></td>
+                <td><span class="class-role">作用：Supported kill-switch scopes。</span><br />价值：在订单进入执行前统一评估风险规则，保证 risk-before-order。</td>
+              </tr>
+              <tr>
+                <td><code>KillSwitchScope</code></td>
+                <td><code>backend/src/qts/risk/kill_switch.py:22</code></td>
+                <td><span class="class-role">作用：Kill-switch scope identity。</span><br />价值：在订单进入执行前统一评估风险规则，保证 risk-before-order。</td>
+              </tr>
+              <tr>
+                <td><code>KillSwitchState</code></td>
+                <td><code>backend/src/qts/risk/kill_switch.py:54</code></td>
+                <td><span class="class-role">作用：Kill-switch activation state。</span><br />价值：在订单进入执行前统一评估风险规则，保证 risk-before-order。</td>
+              </tr>
+              <tr>
+                <td><code>RuntimeKillSwitchCommand</code></td>
+                <td><code>backend/src/qts/risk/kill_switch.py:63</code></td>
+                <td><span class="class-role">作用：Operator command to halt runtime order submission。</span><br />价值：在订单进入执行前统一评估风险规则，保证 risk-before-order。</td>
+              </tr>
+              <tr>
+                <td><code>KillSwitchRegistry</code></td>
+                <td><code>backend/src/qts/risk/kill_switch.py:78</code></td>
+                <td><span class="class-role">作用：Auditable in-memory kill-switch registry。</span><br />价值：在订单进入执行前统一评估风险规则，保证 risk-before-order。</td>
+              </tr>
+              <tr>
+                <td><code>RiskEngine</code></td>
+                <td><code>backend/src/qts/risk/risk_engine.py:11</code></td>
+                <td><span class="class-role">作用：Apply risk rules in order and return the first rejection。</span><br />价值：在订单进入执行前统一评估风险规则，保证 risk-before-order。</td>
+              </tr>
+              <tr>
+                <td><code>RiskRule</code></td>
+                <td><code>backend/src/qts/risk/rule.py:10</code></td>
+                <td><span class="class-role">作用：A pre-trade risk rule。</span><br />价值：在订单进入执行前统一评估风险规则，保证 risk-before-order。</td>
+              </tr>
+              <tr>
+                <td><code>RiskRuleRegistry</code></td>
+                <td><code>backend/src/qts/risk/rule_registry.py:13</code></td>
+                <td><span class="class-role">作用：Map configured rule names to executable risk rules。</span><br />价值：在订单进入执行前统一评估风险规则，保证 risk-before-order。</td>
+              </tr>
+              <tr>
+                <td><code>MaxNotionalRule</code></td>
+                <td><code>backend/src/qts/risk/rules/max_notional.py:12</code></td>
+                <td><span class="class-role">作用：Reject orders whose notional exceeds a fixed limit。</span><br />价值：在订单进入执行前统一评估风险规则，保证 risk-before-order。</td>
+              </tr>
+              <tr>
+                <td><code>MaxOrderQuantityRule</code></td>
+                <td><code>backend/src/qts/risk/rules/max_order_qty.py:12</code></td>
+                <td><span class="class-role">作用：Reject orders whose absolute quantity exceeds a fixed limit。</span><br />价值：在订单进入执行前统一评估风险规则，保证 risk-before-order。</td>
+              </tr>
+              <tr>
+                <td><code>SessionLookup</code></td>
+                <td><code>backend/src/qts/risk/rules/trading_session_rule.py:13</code></td>
+                <td><span class="class-role">作用：Calendar session lookup required by the rule。</span><br />价值：在订单进入执行前统一评估风险规则，保证 risk-before-order。</td>
+              </tr>
+              <tr>
+                <td><code>TradingSessionRule</code></td>
+                <td><code>backend/src/qts/risk/rules/trading_session_rule.py:21</code></td>
+                <td><span class="class-role">作用：Reject orders whose order time is outside the configured session。</span><br />价值：在订单进入执行前统一评估风险规则，保证 risk-before-order。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>6 订单执行 · <code>qts.execution</code></span><span class="badge shared">13 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>BrokerCapabilities</code></td>
+                <td><code>backend/src/qts/execution/broker.py:20</code></td>
+                <td><span class="class-role">作用：Broker-supported live execution features。</span><br />价值：拥有订单生命周期、幂等和 broker 能力边界。</td>
+              </tr>
+              <tr>
+                <td><code>BrokerOrderType</code></td>
+                <td><code>backend/src/qts/execution/broker.py:63</code></td>
+                <td><span class="class-role">作用：Order types modeled before broker submission。</span><br />价值：拥有订单生命周期、幂等和 broker 能力边界。</td>
+              </tr>
+              <tr>
+                <td><code>TimeInForce</code></td>
+                <td><code>backend/src/qts/execution/broker.py:71</code></td>
+                <td><span class="class-role">作用：Time-in-force values modeled at the execution boundary。</span><br />价值：拥有订单生命周期、幂等和 broker 能力边界。</td>
+              </tr>
+              <tr>
+                <td><code>BrokerOrderRequest</code></td>
+                <td><code>backend/src/qts/execution/broker.py:80</code></td>
+                <td><span class="class-role">作用：Internal order request sent to the broker adapter boundary。</span><br />价值：拥有订单生命周期、幂等和 broker 能力边界。</td>
+              </tr>
+              <tr>
+                <td><code>BrokerExecutionReportStatus</code></td>
+                <td><code>backend/src/qts/execution/broker.py:95</code></td>
+                <td><span class="class-role">作用：Broker-boundary execution report status。</span><br />价值：拥有订单生命周期、幂等和 broker 能力边界。</td>
+              </tr>
+              <tr>
+                <td><code>BrokerExecutionReport</code></td>
+                <td><code>backend/src/qts/execution/broker.py:106</code></td>
+                <td><span class="class-role">作用：Normalized broker callback before it reaches OrderManager。</span><br />价值：拥有订单生命周期、幂等和 broker 能力边界。</td>
+              </tr>
+              <tr>
+                <td><code>BrokerAdapter</code></td>
+                <td><code>backend/src/qts/execution/broker.py:132</code></td>
+                <td><span class="class-role">作用：Stable broker execution boundary。</span><br />价值：拥有订单生命周期、幂等和 broker 能力边界。</td>
+              </tr>
+              <tr>
+                <td><code>FakeBrokerAdapter</code></td>
+                <td><code>backend/src/qts/execution/broker.py:149</code></td>
+                <td><span class="class-role">作用：Deterministic fake broker for live-beta tests and local runs。</span><br />价值：拥有订单生命周期、幂等和 broker 能力边界。</td>
+              </tr>
+              <tr>
+                <td><code>FillIdempotencyStore</code></td>
+                <td><code>backend/src/qts/execution/idempotency.py:6</code></td>
+                <td><span class="class-role">作用：Tracks fill IDs that have already been applied。</span><br />价值：拥有订单生命周期、幂等和 broker 能力边界。</td>
+              </tr>
+              <tr>
+                <td><code>OrderManager</code></td>
+                <td><code>backend/src/qts/execution/order_manager.py:28</code></td>
+                <td><span class="class-role">作用：Owns order lifecycle and normalized execution reports。</span><br />价值：拥有订单生命周期、幂等和 broker 能力边界。</td>
+              </tr>
+              <tr>
+                <td><code>OrderEvent</code></td>
+                <td><code>backend/src/qts/execution/order_state_machine.py:11</code></td>
+                <td><span class="class-role">作用：Order lifecycle transition inputs。</span><br />价值：拥有订单生命周期、幂等和 broker 能力边界。</td>
+              </tr>
+              <tr>
+                <td><code>OrderTransitionError</code></td>
+                <td><code>backend/src/qts/execution/order_state_machine.py:24</code></td>
+                <td><span class="class-role">作用：Raised when an order transition is invalid。</span><br />价值：拥有订单生命周期、幂等和 broker 能力边界。</td>
+              </tr>
+              <tr>
+                <td><code>OrderStateMachine</code></td>
+                <td><code>backend/src/qts/execution/order_state_machine.py:81</code></td>
+                <td><span class="class-role">作用：Validate and apply order lifecycle transitions。</span><br />价值：拥有订单生命周期、幂等和 broker 能力边界。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>6 订单执行 · <code>qts.execution.adapters</code></span><span class="badge shared">22 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>BrokerExecutionAdapter</code></td>
+                <td><code>backend/src/qts/execution/adapters/broker_execution_adapter.py:18</code></td>
+                <td><span class="class-role">作用：Adapt live or paper broker reports to the shared execution actor contract。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+              <tr>
+                <td><code>IbAsyncOrderExecutionTransportConfig</code></td>
+                <td><code>backend/src/qts/execution/adapters/ibkr_async_transport.py:28</code></td>
+                <td><span class="class-role">作用：IB Gateway order-execution settings for an ib_async client。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+              <tr>
+                <td><code>IbAsyncOrderExecutionTransport</code></td>
+                <td><code>backend/src/qts/execution/adapters/ibkr_async_transport.py:47</code></td>
+                <td><span class="class-role">作用：Submit and monitor IBKR orders through ib_async。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrOrderExecutionConnection</code></td>
+                <td><code>backend/src/qts/execution/adapters/ibkr_order_execution.py:33</code></td>
+                <td><span class="class-role">作用：IBKR order execution connection settings。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrExecutionReport</code></td>
+                <td><code>backend/src/qts/execution/adapters/ibkr_order_execution.py:55</code></td>
+                <td><span class="class-role">作用：IBKR execution report shape before normalization。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrOrderExecutionAdapter</code></td>
+                <td><code>backend/src/qts/execution/adapters/ibkr_order_execution.py:67</code></td>
+                <td><span class="class-role">作用：Maps internal orders to IBKR order requests and normalizes reports。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrOrderContractSpec</code></td>
+                <td><code>backend/src/qts/execution/adapters/ibkr_transport.py:25</code></td>
+                <td><span class="class-role">作用：IBKR contract fields required for order requests。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrTwsOrderExecutionTransportConfig</code></td>
+                <td><code>backend/src/qts/execution/adapters/ibkr_transport.py:80</code></td>
+                <td><span class="class-role">作用：IBKR TWS/Gateway order-execution transport settings。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrOrderRequest</code></td>
+                <td><code>backend/src/qts/execution/adapters/ibkr_transport.py:100</code></td>
+                <td><span class="class-role">作用：IBKR order request produced at the adapter boundary。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrOrderStatusPayload</code></td>
+                <td><code>backend/src/qts/execution/adapters/ibkr_transport.py:164</code></td>
+                <td><span class="class-role">作用：Raw IBKR order-status callback payload。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrExecutionPayload</code></td>
+                <td><code>backend/src/qts/execution/adapters/ibkr_transport.py:181</code></td>
+                <td><span class="class-role">作用：Raw IBKR execution callback payload。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrCommissionPayload</code></td>
+                <td><code>backend/src/qts/execution/adapters/ibkr_transport.py:204</code></td>
+                <td><span class="class-role">作用：Raw IBKR commission callback payload。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrErrorPayload</code></td>
+                <td><code>backend/src/qts/execution/adapters/ibkr_transport.py:221</code></td>
+                <td><span class="class-role">作用：Raw IBKR error callback payload。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrConnectionEventPayload</code></td>
+                <td><code>backend/src/qts/execution/adapters/ibkr_transport.py:234</code></td>
+                <td><span class="class-role">作用：Raw IBKR disconnect/reconnect payload。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrCommissionReport</code></td>
+                <td><code>backend/src/qts/execution/adapters/ibkr_transport.py:245</code></td>
+                <td><span class="class-role">作用：Normalized commission callback at the adapter boundary。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrTransportError</code></td>
+                <td><code>backend/src/qts/execution/adapters/ibkr_transport.py:254</code></td>
+                <td><span class="class-role">作用：Normalized IBKR transport error at the adapter boundary。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrConnectionEvent</code></td>
+                <td><code>backend/src/qts/execution/adapters/ibkr_transport.py:263</code></td>
+                <td><span class="class-role">作用：Normalized IBKR transport connection event。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrOrderExecutionCallbackSink</code></td>
+                <td><code>backend/src/qts/execution/adapters/ibkr_transport.py:270</code></td>
+                <td><span class="class-role">作用：IBKR order-execution callback sink owned by the execution adapter。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrOrderExecutionTransport</code></td>
+                <td><code>backend/src/qts/execution/adapters/ibkr_transport.py:301</code></td>
+                <td><span class="class-role">作用：Transport interface for IBKR order-execution connectivity。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+              <tr>
+                <td><code>IbkrTwsOrderExecutionTransport</code></td>
+                <td><code>backend/src/qts/execution/adapters/ibkr_transport.py:353</code></td>
+                <td><span class="class-role">作用：Official IBKR TWS API transport for paper/live order execution。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+              <tr>
+                <td><code>SimulatedExecutionCostModel</code></td>
+                <td><code>backend/src/qts/execution/adapters/simulated_execution_adapter.py:14</code></td>
+                <td><span class="class-role">作用：Cost-model fields required by simulated execution。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+              <tr>
+                <td><code>SimulatedExecutionAdapter</code></td>
+                <td><code>backend/src/qts/execution/adapters/simulated_execution_adapter.py:29</code></td>
+                <td><span class="class-role">作用：Apply deterministic commission and slippage assumptions for backtests。</span><br />价值：隔离 broker/provider order API，并把回报规范化为内部 ExecutionReport。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>6 订单执行 · <code>qts.execution.simulator</code></span><span class="badge shared">2 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>ImmediateFillModel</code></td>
+                <td><code>backend/src/qts/execution/simulator/fill_model.py:10</code></td>
+                <td><span class="class-role">作用：Fills market orders at the provided market price。</span><br />价值：提供 backtest/paper 可复现 fill 模型，不改写共享订单生命周期。</td>
+              </tr>
+              <tr>
+                <td><code>SimulatedBroker</code></td>
+                <td><code>backend/src/qts/execution/simulator/simulated_broker.py:12</code></td>
+                <td><span class="class-role">作用：Broker simulator with no external dependency。</span><br />价值：提供 backtest/paper 可复现 fill 模型，不改写共享订单生命周期。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>7 Fill / 账户 / 输出 · <code>qts.observability</code></span><span class="badge shared">2 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>AuditEvent</code></td>
+                <td><code>backend/src/qts/observability/audit.py:10</code></td>
+                <td><span class="class-role">作用：Operational or trading audit event。</span><br />价值：记录审计、日志和指标，支撑运行证据与问题定位。</td>
+              </tr>
+              <tr>
+                <td><code>MetricsRegistry</code></td>
+                <td><code>backend/src/qts/observability/metrics.py:10</code></td>
+                <td><span class="class-role">作用：Record counters and gauges with deterministic key formatting。</span><br />价值：记录审计、日志和指标，支撑运行证据与问题定位。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>7 Fill / 账户 / 输出 · <code>qts.portfolio</code></span><span class="badge shared">8 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>TradeSide</code></td>
+                <td><code>backend/src/qts/portfolio/accounting/fill_accounting.py:14</code></td>
+                <td><span class="class-role">作用：Fill side。</span><br />价值：拥有现金、仓位、预留和 fill accounting 计算，保护账户状态一致性。</td>
+              </tr>
+              <tr>
+                <td><code>Fill</code></td>
+                <td><code>backend/src/qts/portfolio/accounting/fill_accounting.py:22</code></td>
+                <td><span class="class-role">作用：Executed fill used by accounting。</span><br />价值：拥有现金、仓位、预留和 fill accounting 计算，保护账户状态一致性。</td>
+              </tr>
+              <tr>
+                <td><code>FillAccounting</code></td>
+                <td><code>backend/src/qts/portfolio/accounting/fill_accounting.py:45</code></td>
+                <td><span class="class-role">作用：Fill accounting operations。</span><br />价值：拥有现金、仓位、预留和 fill accounting 计算，保护账户状态一致性。</td>
+              </tr>
+              <tr>
+                <td><code>CashBook</code></td>
+                <td><code>backend/src/qts/portfolio/cash_book.py:11</code></td>
+                <td><span class="class-role">作用：Mutable cash balance book intended to be owned by AccountActor later。</span><br />价值：拥有现金、仓位、预留和 fill accounting 计算，保护账户状态一致性。</td>
+              </tr>
+              <tr>
+                <td><code>Position</code></td>
+                <td><code>backend/src/qts/portfolio/position_book.py:14</code></td>
+                <td><span class="class-role">作用：Immutable position snapshot。</span><br />价值：拥有现金、仓位、预留和 fill accounting 计算，保护账户状态一致性。</td>
+              </tr>
+              <tr>
+                <td><code>PositionBook</code></td>
+                <td><code>backend/src/qts/portfolio/position_book.py:21</code></td>
+                <td><span class="class-role">作用：Mutable position book intended to be owned by AccountActor later。</span><br />价值：拥有现金、仓位、预留和 fill accounting 计算，保护账户状态一致性。</td>
+              </tr>
+              <tr>
+                <td><code>Reservation</code></td>
+                <td><code>backend/src/qts/portfolio/reservation_book.py:12</code></td>
+                <td><span class="class-role">作用：Cash reservation by order ID。</span><br />价值：拥有现金、仓位、预留和 fill accounting 计算，保护账户状态一致性。</td>
+              </tr>
+              <tr>
+                <td><code>ReservationBook</code></td>
+                <td><code>backend/src/qts/portfolio/reservation_book.py:20</code></td>
+                <td><span class="class-role">作用：Idempotent cash reservations keyed by order ID。</span><br />价值：拥有现金、仓位、预留和 fill accounting 计算，保护账户状态一致性。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>7 Fill / 账户 / 输出 · <code>qts.reconciliation</code></span><span class="badge shared">9 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>DriftKind</code></td>
+                <td><code>backend/src/qts/reconciliation/drift.py:12</code></td>
+                <td><span class="class-role">作用：Reconciliation drift categories。</span><br />价值：比较内部与 broker/account 快照，在启动和运行中发现 drift。</td>
+              </tr>
+              <tr>
+                <td><code>DriftItem</code></td>
+                <td><code>backend/src/qts/reconciliation/drift.py:23</code></td>
+                <td><span class="class-role">作用：Single discrepancy item between snapshots。</span><br />价值：比较内部与 broker/account 快照，在启动和运行中发现 drift。</td>
+              </tr>
+              <tr>
+                <td><code>ReconciliationEngine</code></td>
+                <td><code>backend/src/qts/reconciliation/engine.py:13</code></td>
+                <td><span class="class-role">作用：Deterministic snapshot reconciliation service。</span><br />价值：比较内部与 broker/account 快照，在启动和运行中发现 drift。</td>
+              </tr>
+              <tr>
+                <td><code>ReconciliationReport</code></td>
+                <td><code>backend/src/qts/reconciliation/report.py:14</code></td>
+                <td><span class="class-role">作用：Drift report for a single account。</span><br />价值：比较内部与 broker/account 快照，在启动和运行中发现 drift。</td>
+              </tr>
+              <tr>
+                <td><code>OrderSnapshot</code></td>
+                <td><code>backend/src/qts/reconciliation/snapshots.py:13</code></td>
+                <td><span class="class-role">作用：Normalized representation of an internal or broker order。</span><br />价值：比较内部与 broker/account 快照，在启动和运行中发现 drift。</td>
+              </tr>
+              <tr>
+                <td><code>PositionSnapshot</code></td>
+                <td><code>backend/src/qts/reconciliation/snapshots.py:31</code></td>
+                <td><span class="class-role">作用：Normalized position entry used for reconciliation。</span><br />价值：比较内部与 broker/account 快照，在启动和运行中发现 drift。</td>
+              </tr>
+              <tr>
+                <td><code>CashSnapshot</code></td>
+                <td><code>backend/src/qts/reconciliation/snapshots.py:39</code></td>
+                <td><span class="class-role">作用：Normalized cash entry used for reconciliation。</span><br />价值：比较内部与 broker/account 快照，在启动和运行中发现 drift。</td>
+              </tr>
+              <tr>
+                <td><code>ReconciliationSnapshot</code></td>
+                <td><code>backend/src/qts/reconciliation/snapshots.py:52</code></td>
+                <td><span class="class-role">作用：Normalized account snapshot used by the reconciliation engine。</span><br />价值：比较内部与 broker/account 快照，在启动和运行中发现 drift。</td>
+              </tr>
+              <tr>
+                <td><code>StartupReconciliationDecision</code></td>
+                <td><code>backend/src/qts/reconciliation/startup_gate.py:11</code></td>
+                <td><span class="class-role">作用：Decision object returned before runtime startup。</span><br />价值：比较内部与 broker/account 快照，在启动和运行中发现 drift。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>7 Fill / 账户 / 输出 · <code>qts.reporting</code></span><span class="badge shared">12 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>EquityCurvePoint</code></td>
+                <td><code>backend/src/qts/reporting/backtest.py:40</code></td>
+                <td><span class="class-role">作用：One timestamped equity observation。</span><br />价值：产出 backtest/paper/live 证据工件和 manifest，支撑审计与复现。</td>
+              </tr>
+              <tr>
+                <td><code>TradeLedgerEntry</code></td>
+                <td><code>backend/src/qts/reporting/backtest.py:48</code></td>
+                <td><span class="class-role">作用：Auditable row for a simulated fill。</span><br />价值：产出 backtest/paper/live 证据工件和 manifest，支撑审计与复现。</td>
+              </tr>
+              <tr>
+                <td><code>StreamingEquityMetrics</code></td>
+                <td><code>backend/src/qts/reporting/backtest.py:67</code></td>
+                <td><span class="class-role">作用：Incremental metrics for a streamed equity curve。</span><br />价值：产出 backtest/paper/live 证据工件和 manifest，支撑审计与复现。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestArtifacts</code></td>
+                <td><code>backend/src/qts/reporting/backtest.py:107</code></td>
+                <td><span class="class-role">作用：Final paths and row counts for streamed backtest artifacts。</span><br />价值：产出 backtest/paper/live 证据工件和 manifest，支撑审计与复现。</td>
+              </tr>
+              <tr>
+                <td><code>_NdjsonArtifact</code></td>
+                <td><code>backend/src/qts/reporting/backtest.py:116</code></td>
+                <td><span class="class-role">作用：_NdjsonArtifact。</span><br />价值：产出 backtest/paper/live 证据工件和 manifest，支撑审计与复现。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestArtifactWriter</code></td>
+                <td><code>backend/src/qts/reporting/backtest.py:151</code></td>
+                <td><span class="class-role">作用：Write large backtest outputs as line-delimited artifacts。</span><br />价值：产出 backtest/paper/live 证据工件和 manifest，支撑审计与复现。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestReportWriter</code></td>
+                <td><code>backend/src/qts/reporting/backtest.py:285</code></td>
+                <td><span class="class-role">作用：Backtest report writer for partitioned artifacts。</span><br />价值：产出 backtest/paper/live 证据工件和 manifest，支撑审计与复现。</td>
+              </tr>
+              <tr>
+                <td><code>ReportWriter</code></td>
+                <td><code>backend/src/qts/reporting/base.py:10</code></td>
+                <td><span class="class-role">作用：Boundary placeholder for report generation。</span><br />价值：产出 backtest/paper/live 证据工件和 manifest，支撑审计与复现。</td>
+              </tr>
+              <tr>
+                <td><code>RuntimeArtifactWriter</code></td>
+                <td><code>backend/src/qts/reporting/base.py:14</code></td>
+                <td><span class="class-role">作用：Boundary placeholder for runtime artifact persistence。</span><br />价值：产出 backtest/paper/live 证据工件和 manifest，支撑审计与复现。</td>
+              </tr>
+              <tr>
+                <td><code>LiveReportManifest</code></td>
+                <td><code>backend/src/qts/reporting/live.py:17</code></td>
+                <td><span class="class-role">作用：Live report manifest metadata。</span><br />价值：产出 backtest/paper/live 证据工件和 manifest，支撑审计与复现。</td>
+              </tr>
+              <tr>
+                <td><code>LiveReportWriter</code></td>
+                <td><code>backend/src/qts/reporting/live.py:24</code></td>
+                <td><span class="class-role">作用：Write auditable paper/live run manifests。</span><br />价值：产出 backtest/paper/live 证据工件和 manifest，支撑审计与复现。</td>
+              </tr>
+              <tr>
+                <td><code>LiveEventReporter</code></td>
+                <td><code>backend/src/qts/reporting/live.py:105</code></td>
+                <td><span class="class-role">作用：Boundary for live event reporting integrations。</span><br />价值：产出 backtest/paper/live 证据工件和 manifest，支撑审计与复现。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>7 Fill / 账户 / 输出 · <code>qts.runtime.sinks</code></span><span class="badge shared">5 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>BacktestRuntimeEventSink</code></td>
+                <td><code>backend/src/qts/runtime/sinks/backtest.py:13</code></td>
+                <td><span class="class-role">作用：Write engine stream artifacts through a shared writer。</span><br />价值：统一 runtime event 出口，隔离 backtest/live 工件写入差异。</td>
+              </tr>
+              <tr>
+                <td><code>RuntimeEvent</code></td>
+                <td><code>backend/src/qts/runtime/sinks/base.py:14</code></td>
+                <td><span class="class-role">作用：A normalized event emitted by the shared runtime。</span><br />价值：统一 runtime event 出口，隔离 backtest/live 工件写入差异。</td>
+              </tr>
+              <tr>
+                <td><code>RuntimeEventSink</code></td>
+                <td><code>backend/src/qts/runtime/sinks/base.py:21</code></td>
+                <td><span class="class-role">作用：Boundary for consuming normalized runtime events。</span><br />价值：统一 runtime event 出口，隔离 backtest/live 工件写入差异。</td>
+              </tr>
+              <tr>
+                <td><code>WrittenRuntimeEvent</code></td>
+                <td><code>backend/src/qts/runtime/sinks/live.py:18</code></td>
+                <td><span class="class-role">作用：Metadata returned after writing one event。</span><br />价值：统一 runtime event 出口，隔离 backtest/live 工件写入差异。</td>
+              </tr>
+              <tr>
+                <td><code>LiveRuntimeEventSink</code></td>
+                <td><code>backend/src/qts/runtime/sinks/live.py:25</code></td>
+                <td><span class="class-role">作用：Write append-only paper/live runtime events as deterministic NDJSON。</span><br />价值：统一 runtime event 出口，隔离 backtest/live 工件写入差异。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>8 API / WebSocket 边界 · <code>qts.api</code></span><span class="badge shared">15 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>BacktestRequestSchema</code></td>
+                <td><code>backend/src/qts/api/schemas/backtest_schema.py:8</code></td>
+                <td><span class="class-role">作用：HTTP request for submitting a backtest。</span><br />价值：把 HTTP/WebSocket 输入输出和内部 DTO/runtime 对象隔离，降低公共接口耦合。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestRunSchema</code></td>
+                <td><code>backend/src/qts/api/schemas/backtest_schema.py:14</code></td>
+                <td><span class="class-role">作用：HTTP response for a submitted backtest。</span><br />价值：把 HTTP/WebSocket 输入输出和内部 DTO/runtime 对象隔离，降低公共接口耦合。</td>
+              </tr>
+              <tr>
+                <td><code>StrategyStatusSchema</code></td>
+                <td><code>backend/src/qts/api/schemas/common.py:8</code></td>
+                <td><span class="class-role">作用：Strategy status response schema。</span><br />价值：把 HTTP/WebSocket 输入输出和内部 DTO/runtime 对象隔离，降低公共接口耦合。</td>
+              </tr>
+              <tr>
+                <td><code>AccountSnapshotSchema</code></td>
+                <td><code>backend/src/qts/api/schemas/common.py:15</code></td>
+                <td><span class="class-role">作用：Account snapshot response schema。</span><br />价值：把 HTTP/WebSocket 输入输出和内部 DTO/runtime 对象隔离，降低公共接口耦合。</td>
+              </tr>
+              <tr>
+                <td><code>OrderStatusSchema</code></td>
+                <td><code>backend/src/qts/api/schemas/common.py:22</code></td>
+                <td><span class="class-role">作用：Order status response schema。</span><br />价值：把 HTTP/WebSocket 输入输出和内部 DTO/runtime 对象隔离，降低公共接口耦合。</td>
+              </tr>
+              <tr>
+                <td><code>RiskRuleSchema</code></td>
+                <td><code>backend/src/qts/api/schemas/common.py:29</code></td>
+                <td><span class="class-role">作用：Risk rule response schema。</span><br />价值：把 HTTP/WebSocket 输入输出和内部 DTO/runtime 对象隔离，降低公共接口耦合。</td>
+              </tr>
+              <tr>
+                <td><code>OperationalErrorSchema</code></td>
+                <td><code>backend/src/qts/api/schemas/common.py:36</code></td>
+                <td><span class="class-role">作用：Operational error response schema。</span><br />价值：把 HTTP/WebSocket 输入输出和内部 DTO/runtime 对象隔离，降低公共接口耦合。</td>
+              </tr>
+              <tr>
+                <td><code>RuntimeCommandResponseSchema</code></td>
+                <td><code>backend/src/qts/api/schemas/operations.py:10</code></td>
+                <td><span class="class-role">作用：Payload for runtime pause/resume commands。</span><br />价值：把 HTTP/WebSocket 输入输出和内部 DTO/runtime 对象隔离，降低公共接口耦合。</td>
+              </tr>
+              <tr>
+                <td><code>KillSwitchScopeSchema</code></td>
+                <td><code>backend/src/qts/api/schemas/operations.py:16</code></td>
+                <td><span class="class-role">作用：Kill-switch scoping model。</span><br />价值：把 HTTP/WebSocket 输入输出和内部 DTO/runtime 对象隔离，降低公共接口耦合。</td>
+              </tr>
+              <tr>
+                <td><code>KillSwitchCommandSchema</code></td>
+                <td><code>backend/src/qts/api/schemas/operations.py:25</code></td>
+                <td><span class="class-role">作用：Kill-switch mutation command。</span><br />价值：把 HTTP/WebSocket 输入输出和内部 DTO/runtime 对象隔离，降低公共接口耦合。</td>
+              </tr>
+              <tr>
+                <td><code>KillSwitchResponseSchema</code></td>
+                <td><code>backend/src/qts/api/schemas/operations.py:44</code></td>
+                <td><span class="class-role">作用：Kill-switch current state response。</span><br />价值：把 HTTP/WebSocket 输入输出和内部 DTO/runtime 对象隔离，降低公共接口耦合。</td>
+              </tr>
+              <tr>
+                <td><code>CommandIdempotencyStore</code></td>
+                <td><code>backend/src/qts/api/services/command_idempotency.py:11</code></td>
+                <td><span class="class-role">作用：Remember the first result for each command idempotency key。</span><br />价值：把 HTTP/WebSocket 输入输出和内部 DTO/runtime 对象隔离，降低公共接口耦合。</td>
+              </tr>
+              <tr>
+                <td><code>StreamEventDTO</code></td>
+                <td><code>backend/src/qts/api/websocket/dtos.py:10</code></td>
+                <td><span class="class-role">作用：Public stream event DTO。</span><br />价值：把 HTTP/WebSocket 输入输出和内部 DTO/runtime 对象隔离，降低公共接口耦合。</td>
+              </tr>
+              <tr>
+                <td><code>JsonWebSocket</code></td>
+                <td><code>backend/src/qts/api/websocket/manager.py:8</code></td>
+                <td><span class="class-role">作用：Minimal WebSocket protocol used by the connection manager。</span><br />价值：把 HTTP/WebSocket 输入输出和内部 DTO/runtime 对象隔离，降低公共接口耦合。</td>
+              </tr>
+              <tr>
+                <td><code>WebSocketConnectionManager</code></td>
+                <td><code>backend/src/qts/api/websocket/manager.py:20</code></td>
+                <td><span class="class-role">作用：Track WebSocket clients and broadcast JSON payloads。</span><br />价值：把 HTTP/WebSocket 输入输出和内部 DTO/runtime 对象隔离，降低公共接口耦合。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>8 应用用例边界 · <code>qts.application</code></span><span class="badge shared">19 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>PaperRuntimeConfig</code></td>
+                <td><code>backend/src/qts/application/commands/start_paper.py:10</code></td>
+                <td><span class="class-role">作用：Paper runtime configuration without real broker credentials。</span><br />价值：承接 API/CLI 用例编排，让外部入口不直接触碰领域、actor 或 broker 细节。</td>
+              </tr>
+              <tr>
+                <td><code>PaperRuntime</code></td>
+                <td><code>backend/src/qts/application/commands/start_paper.py:29</code></td>
+                <td><span class="class-role">作用：Constructed paper runtime descriptor。</span><br />价值：承接 API/CLI 用例编排，让外部入口不直接触碰领域、actor 或 broker 细节。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestRequestDTO</code></td>
+                <td><code>backend/src/qts/application/dto/backtest.py:9</code></td>
+                <td><span class="class-role">作用：Stable application request for starting a backtest。</span><br />价值：承接 API/CLI 用例编排，让外部入口不直接触碰领域、actor 或 broker 细节。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestRunDTO</code></td>
+                <td><code>backend/src/qts/application/dto/backtest.py:21</code></td>
+                <td><span class="class-role">作用：Stable application response for a submitted backtest。</span><br />价值：承接 API/CLI 用例编排，让外部入口不直接触碰领域、actor 或 broker 细节。</td>
+              </tr>
+              <tr>
+                <td><code>HealthStatusDTO</code></td>
+                <td><code>backend/src/qts/application/dto/health.py:9</code></td>
+                <td><span class="class-role">作用：Stable health status response。</span><br />价值：承接 API/CLI 用例编排，让外部入口不直接触碰领域、actor 或 broker 细节。</td>
+              </tr>
+              <tr>
+                <td><code>RuntimeStateDTO</code></td>
+                <td><code>backend/src/qts/application/dto/operations.py:9</code></td>
+                <td><span class="class-role">作用：Stable runtime state response。</span><br />价值：承接 API/CLI 用例编排，让外部入口不直接触碰领域、actor 或 broker 细节。</td>
+              </tr>
+              <tr>
+                <td><code>KillSwitchCommandDTO</code></td>
+                <td><code>backend/src/qts/application/dto/operations.py:16</code></td>
+                <td><span class="class-role">作用：Stable kill-switch activation request。</span><br />价值：承接 API/CLI 用例编排，让外部入口不直接触碰领域、actor 或 broker 细节。</td>
+              </tr>
+              <tr>
+                <td><code>KillSwitchStateDTO</code></td>
+                <td><code>backend/src/qts/application/dto/operations.py:34</code></td>
+                <td><span class="class-role">作用：Stable kill-switch state response。</span><br />价值：承接 API/CLI 用例编排，让外部入口不直接触碰领域、actor 或 broker 细节。</td>
+              </tr>
+              <tr>
+                <td><code>OrderFillDTO</code></td>
+                <td><code>backend/src/qts/application/dto/order_events.py:10</code></td>
+                <td><span class="class-role">作用：Stable fill event shape for public streams。</span><br />价值：承接 API/CLI 用例编排，让外部入口不直接触碰领域、actor 或 broker 细节。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestService</code></td>
+                <td><code>backend/src/qts/application/services/backtest.py:10</code></td>
+                <td><span class="class-role">作用：Application boundary for backtest use cases。</span><br />价值：承接 API/CLI 用例编排，让外部入口不直接触碰领域、actor 或 broker 细节。</td>
+              </tr>
+              <tr>
+                <td><code>HealthService</code></td>
+                <td><code>backend/src/qts/application/services/health.py:8</code></td>
+                <td><span class="class-role">作用：Returns platform health without exposing internals。</span><br />价值：承接 API/CLI 用例编排，让外部入口不直接触碰领域、actor 或 broker 细节。</td>
+              </tr>
+              <tr>
+                <td><code>AccountService</code></td>
+                <td><code>backend/src/qts/application/services/interfaces.py:8</code></td>
+                <td><span class="class-role">作用：Account query service boundary。</span><br />价值：承接 API/CLI 用例编排，让外部入口不直接触碰领域、actor 或 broker 细节。</td>
+              </tr>
+              <tr>
+                <td><code>OrderService</code></td>
+                <td><code>backend/src/qts/application/services/interfaces.py:16</code></td>
+                <td><span class="class-role">作用：Order query service boundary。</span><br />价值：承接 API/CLI 用例编排，让外部入口不直接触碰领域、actor 或 broker 细节。</td>
+              </tr>
+              <tr>
+                <td><code>RiskService</code></td>
+                <td><code>backend/src/qts/application/services/interfaces.py:24</code></td>
+                <td><span class="class-role">作用：Risk query service boundary。</span><br />价值：承接 API/CLI 用例编排，让外部入口不直接触碰领域、actor 或 broker 细节。</td>
+              </tr>
+              <tr>
+                <td><code>OperationsService</code></td>
+                <td><code>backend/src/qts/application/services/operations.py:9</code></td>
+                <td><span class="class-role">作用：Owns operational state without leaking runtime internals into API routes。</span><br />价值：承接 API/CLI 用例编排，让外部入口不直接触碰领域、actor 或 broker 细节。</td>
+              </tr>
+              <tr>
+                <td><code>StrategyLifecycleService</code></td>
+                <td><code>backend/src/qts/application/services/strategy_service.py:9</code></td>
+                <td><span class="class-role">作用：Start, stop, and inspect configured strategy instances。</span><br />价值：承接 API/CLI 用例编排，让外部入口不直接触碰领域、actor 或 broker 细节。</td>
+              </tr>
+              <tr>
+                <td><code>StrategyStatus</code></td>
+                <td><code>backend/src/qts/application/strategy_lifecycle.py:14</code></td>
+                <td><span class="class-role">作用：Configured strategy instance lifecycle status。</span><br />价值：承接 API/CLI 用例编排，让外部入口不直接触碰领域、actor 或 broker 细节。</td>
+              </tr>
+              <tr>
+                <td><code>StrategyInstance</code></td>
+                <td><code>backend/src/qts/application/strategy_lifecycle.py:22</code></td>
+                <td><span class="class-role">作用：Configured runtime instance of a Strategy class。</span><br />价值：承接 API/CLI 用例编排，让外部入口不直接触碰领域、actor 或 broker 细节。</td>
+              </tr>
+              <tr>
+                <td><code>StrategyRegistry</code></td>
+                <td><code>backend/src/qts/application/strategy_lifecycle.py:40</code></td>
+                <td><span class="class-role">作用：Safe registry for explicitly approved strategy classes。</span><br />价值：承接 API/CLI 用例编排，让外部入口不直接触碰领域、actor 或 broker 细节。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+        <details class="inventory-group">
+          <summary><span>9 架构守门 · <code>qts.quality</code></span><span class="badge shared">14 classes</span></summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>File</th>
+                <th>作用 / 价值</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>GuardrailViolation</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:118</code></td>
+                <td><span class="class-role">作用：One architecture or domain-boundary guardrail violation。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
+              </tr>
+              <tr>
+                <td><code>Rule</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:131</code></td>
+                <td><span class="class-role">作用：Pluggable guardrail rule interface。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
+              </tr>
+              <tr>
+                <td><code>ImportBoundaryRule</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:150</code></td>
+                <td><span class="class-role">作用：Validate package import boundary direction and adapter constraints。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
+              </tr>
+              <tr>
+                <td><code>ProductSpecificRule</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:171</code></td>
+                <td><span class="class-role">作用：Reject product hard-coding outside documented locations。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
+              </tr>
+              <tr>
+                <td><code>BrokerSpecificRule</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:189</code></td>
+                <td><span class="class-role">作用：Reject broker hard-coding outside broker boundaries。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
+              </tr>
+              <tr>
+                <td><code>TestSupportRule</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:207</code></td>
+                <td><span class="class-role">作用：Reject test/anchor support in production source。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
+              </tr>
+              <tr>
+                <td><code>SharedCapabilityRule</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:223</code></td>
+                <td><span class="class-role">作用：Reject shared capability semantics in source-specific modules。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
+              </tr>
+              <tr>
+                <td><code>OOPPublicFactoryRule</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:239</code></td>
+                <td><span class="class-role">作用：Reject module-level public factory names on stable concepts。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
+              </tr>
+              <tr>
+                <td><code>OOPHelperOwnershipRule</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:255</code></td>
+                <td><span class="class-role">作用：Reject helper ownership violations that should stay private。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestRunnerCohesionRule</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:271</code></td>
+                <td><span class="class-role">作用：Reject replay input assembly inside backtest runner。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestInputCohesionRule</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:287</code></td>
+                <td><span class="class-role">作用：Reject catalog/data construction inside backtest input builder。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
+              </tr>
+              <tr>
+                <td><code>BacktestEngineCohesionRule</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:303</code></td>
+                <td><span class="class-role">作用：Reject historical replay assembly inside backtest engine。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
+              </tr>
+              <tr>
+                <td><code>StrategySdkPublicSurfaceRule</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:319</code></td>
+                <td><span class="class-role">作用：Reject internal runtime/broker/risk symbols from strategy SDK modules。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
+              </tr>
+              <tr>
+                <td><code>GuardrailSuite</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:335</code></td>
+                <td><span class="class-role">作用：Execute a configured set of guardrail rules against Python files。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
+              </tr>
+            </tbody>
+          </table>
+        </details>
+      </div>
+
       <p class="footnote">
-        注：本图用于对齐类名与实现进度。最终边界与职责以
+        注：本图用于对齐类名与实现进度。最新 paper 外部证据已覆盖
+        market-data、submit/cancel、runtime tiny fill、report manifest 和账户对账；
+        live capital 仍必须保持 disabled，直到运维、工程、风控签核完成。最终边界与职责以
         <code>docs/architecture/backtest_live_parity.md</code>
         与
         <code>docs/architecture/runtime_flow.md</code> 为准。

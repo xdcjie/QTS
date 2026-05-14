@@ -10,6 +10,7 @@ def test_ibkr_paper_config_separates_market_data_and_order_execution() -> None:
 
     assert config["mode"] == "paper"
     assert config["provider"] == "ibkr"
+    assert config["transport"] == "official"
     assert set(config["connections"]) == {"market_data", "order_execution"}
     assert (
         config["connections"]["market_data"]["client_id"]
@@ -23,6 +24,7 @@ def test_ibkr_live_config_separates_market_data_and_order_execution() -> None:
 
     assert config["mode"] == "live"
     assert config["provider"] == "ibkr"
+    assert config["transport"] == "official"
     assert set(config["connections"]) == {"market_data", "order_execution"}
     assert (
         config["connections"]["market_data"]["client_id"]

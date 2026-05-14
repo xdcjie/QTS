@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import socket
-from importlib.util import find_spec
 
 import pytest
+
+from tests.support.ibkr_transports import market_data_transport, require_ibkr_transport_sdk
 
 
 def test_ibkr_gateway_market_data_subscription_anchor_requires_real_transport(
@@ -17,23 +18,15 @@ def test_ibkr_gateway_market_data_subscription_anchor_requires_real_transport(
     with socket.create_connection((host, int(port_text)), timeout=2):
         pass
 
-    if find_spec("ibapi") is None:
-        pytest.skip(
-            "official IBKR TWS Python API package is not installed; install the "
-            "Python client from the IBKR TWS API download before running real "
-            "market-data subscription anchors"
-        )
+    transport_name = request.config.getoption("--ibkr-transport")
+    require_ibkr_transport_sdk(transport_name)
 
     from qts.core.ids import BrokerId, InstrumentId
     from qts.data.adapters.ibkr_market_data import (
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
     )
-    from qts.data.adapters.ibkr_transport import (
-        IbkrMarketDataContractSpec,
-        IbkrTwsMarketDataTransport,
-        IbkrTwsMarketDataTransportConfig,
-    )
+    from qts.data.adapters.ibkr_transport import IbkrMarketDataContractSpec
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("CASH.IDEALPRO.EUR.USD")
@@ -48,14 +41,11 @@ def test_ibkr_gateway_market_data_subscription_anchor_requires_real_transport(
         ),
         symbol_mapping=mapping,
     )
-    transport = IbkrTwsMarketDataTransport(
-        config=IbkrTwsMarketDataTransportConfig(
-            host=host,
-            port=int(port_text),
-            client_id=101,
-            timeout_seconds=25,
-            market_data_type=3,
-        ),
+    transport = market_data_transport(
+        transport_name=transport_name,
+        host=host,
+        port=int(port_text),
+        client_id=101,
         sink=adapter,
     )
 

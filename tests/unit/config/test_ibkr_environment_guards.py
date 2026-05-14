@@ -182,3 +182,49 @@ def test_live_ibkr_config_rejects_paper_gateway_port_unless_observe_only() -> No
     )
 
     validate_ibkr_environment(observation_config)
+
+
+def test_ibkr_environment_config_reads_transport_with_official_default() -> None:
+    from qts.config.ibkr import IbkrEnvironmentConfig
+
+    payload = {
+        "mode": "paper",
+        "provider": "ibkr",
+        "connections": {
+            "market_data": {"host": "127.0.0.1", "port": 4002, "client_id": 101},
+            "order_execution": {"host": "127.0.0.1", "port": 4002, "client_id": 201},
+        },
+        "order_execution": {"account_id": "DU1234567", "risk_profile": "paper-default"},
+        "secrets": {
+            "username_env": "IBKR_PAPER_USERNAME",
+            "password_env": "IBKR_PAPER_PASSWORD",
+        },
+    }
+
+    default_config = IbkrEnvironmentConfig.from_payload(payload)
+    async_config = IbkrEnvironmentConfig.from_payload({**payload, "transport": "async"})
+
+    assert default_config.transport == "official"
+    assert async_config.transport == "async"
+
+
+def test_ibkr_environment_config_rejects_unknown_transport() -> None:
+    from qts.config.ibkr import IbkrEnvironmentConfig
+
+    payload = {
+        "mode": "paper",
+        "provider": "ibkr",
+        "transport": "ib-insync",
+        "connections": {
+            "market_data": {"host": "127.0.0.1", "port": 4002, "client_id": 101},
+            "order_execution": {"host": "127.0.0.1", "port": 4002, "client_id": 201},
+        },
+        "order_execution": {"account_id": "DU1234567", "risk_profile": "paper-default"},
+        "secrets": {
+            "username_env": "IBKR_PAPER_USERNAME",
+            "password_env": "IBKR_PAPER_PASSWORD",
+        },
+    }
+
+    with pytest.raises(ValueError, match="transport must be official or async"):
+        IbkrEnvironmentConfig.from_payload(payload)

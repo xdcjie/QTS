@@ -10,6 +10,7 @@ from typing import Any, Literal
 import yaml  # type: ignore[import-untyped]
 
 IbkrMode = Literal["paper", "live"]
+IbkrTransport = Literal["official", "async"]
 IBKR_PAPER_GATEWAY_PORT = 4002
 
 
@@ -85,6 +86,7 @@ class IbkrEnvironmentConfig:
     market_data: IbkrConnectionConfig
     order_execution: IbkrOrderExecutionConfig
     secrets: IbkrSecretRefs
+    transport: IbkrTransport = "official"
     observe_only: bool = False
 
     @classmethod
@@ -102,6 +104,14 @@ class IbkrEnvironmentConfig:
         else:
             raise ValueError("mode must be paper or live")
 
+        transport_value = str(payload.get("transport", "official")).strip()
+        if transport_value == "official":
+            transport: IbkrTransport = "official"
+        elif transport_value == "async":
+            transport = "async"
+        else:
+            raise ValueError("transport must be official or async")
+
         connections = _as_mapping(payload, "connections")
         market_data = _as_mapping(connections, "market_data")
         order_execution_connection = _as_mapping(connections, "order_execution")
@@ -115,6 +125,7 @@ class IbkrEnvironmentConfig:
                 order_execution_connection, order_execution_payload
             ),
             secrets=_read_secret_refs(secrets),
+            transport=transport,
             observe_only=cls._read_bool(payload, "observe_only", default=False),
         )
 
@@ -277,5 +288,6 @@ __all__ = [
     "IbkrMode",
     "IbkrOrderExecutionConfig",
     "IbkrSecretRefs",
+    "IbkrTransport",
     "validate_ibkr_environment",
 ]

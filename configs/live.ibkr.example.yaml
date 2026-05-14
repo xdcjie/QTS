@@ -1,5 +1,6 @@
 mode: live
 provider: ibkr
+transport: official
 
 connections:
   market_data:

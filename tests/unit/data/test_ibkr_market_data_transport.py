@@ -189,6 +189,44 @@ def test_ibkr_tws_market_data_transport_waits_through_transient_connectivity_sta
     assert tick.price == Decimal("101.25")
 
 
+def test_ibkr_tws_market_data_transport_ignores_late_ticks_after_unsubscribe() -> None:
+    from qts.core.ids import BrokerId, InstrumentId
+    from qts.data.adapters.ibkr_market_data import (
+        IbkrMarketDataAdapter,
+        IbkrMarketDataConnection,
+    )
+    from qts.data.adapters.ibkr_transport import (
+        IbkrTwsMarketDataTransport,
+        IbkrTwsMarketDataTransportConfig,
+    )
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    adapter = IbkrMarketDataAdapter(
+        connection=IbkrMarketDataConnection(
+            host="127.0.0.1",
+            port=4002,
+            client_id=101,
+            source_id="ibkr-paper-md",
+        ),
+        symbol_mapping=mapping,
+    )
+    transport = IbkrTwsMarketDataTransport(
+        config=IbkrTwsMarketDataTransportConfig(
+            host="127.0.0.1",
+            port=4002,
+            client_id=101,
+        ),
+        sink=adapter,
+    )
+    transport.register_market_data_request(77, broker_symbol="AAPL")
+    transport._request_symbols.pop(77)
+
+    assert transport.handle_tick_price(77, tick_type=4, price=101.25) is None
+
+
 def test_ibkr_tws_market_data_transport_bounds_blocking_ibapi_connect(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
