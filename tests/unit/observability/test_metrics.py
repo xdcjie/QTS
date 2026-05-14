@@ -3,8 +3,10 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from qts.observability.metrics import MetricsRegistry
+from qts.core.ids import CorrelationId
+from qts.observability.metrics import MetricsRegistry, RuntimeCounterMetric, RuntimeLatencyMetric
 from qts.runtime.mailbox import Mailbox
+from qts.runtime.sinks.base import RuntimeEvent
 
 
 def test_metrics_registry_records_counters_gauges_and_queue_health() -> None:
@@ -30,3 +32,25 @@ def test_metrics_registry_keeps_private_key_formatting_inside_the_class() -> Non
     }
 
     assert "_metric_key" not in private_functions
+
+
+def test_metrics_registry_defines_runtime_counter_and_latency_metrics() -> None:
+    assert RuntimeCounterMetric.RISK_REJECTIONS_TOTAL.value == "risk_rejections_total"
+    assert RuntimeCounterMetric.MARKET_DATA_STALE_TOTAL.value == "market_data_stale_total"
+    assert RuntimeLatencyMetric.FILL_TO_ACCOUNT_APPLY_LATENCY.value == (
+        "fill_to_account_apply_latency"
+    )
+
+
+def test_metrics_increment_on_risk_rejection() -> None:
+    metrics = MetricsRegistry()
+    metrics.record_runtime_event(
+        RuntimeEvent(
+            kind="risk.rejected",
+            payload={"reason_code": "MAX_QTY_EXCEEDED"},
+            correlation_id=CorrelationId("corr-1"),
+        )
+    )
+
+    snapshot = metrics.snapshot()
+    assert snapshot["risk_rejections_total{reason_code=MAX_QTY_EXCEEDED}"] == 1

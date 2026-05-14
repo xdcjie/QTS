@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
-from qts.core.ids import InstrumentId, OrderId
+from qts.core.ids import AccountId, InstrumentId, OrderId, RuntimeRunId, StrategyId
 from qts.domain.market_data import Bar
 from qts.execution.order_manager import ExecutionReport, ExecutionReportStatus, OrderIntent
 from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventSink
@@ -181,6 +181,54 @@ def test_live_runtime_session_submits_only_through_actor_execution_path() -> Non
         "runtime.broker_report",
         "runtime.account_snapshot",
     ]
+
+
+def test_live_runtime_session_writes_contextual_runtime_event_envelope() -> None:
+    from qts.risk.risk_engine import RiskEngine
+    from qts.risk.rules.max_notional import MaxNotionalRule
+    from qts.runtime.actors.account_actor import AccountActor
+    from qts.runtime.live_runtime_dependencies import LiveRuntimeDependencies
+    from qts.runtime.live_runtime_session import LiveRuntimeSession
+    from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
+
+    account_id = AccountId("acct-live-1")
+    strategy_id = StrategyId("strategy-live-1")
+    sink = _RecordingSink()
+    session = LiveRuntimeSession(
+        LiveRuntimeDependencies(
+            run_id=RuntimeRunId("run-live-1"),
+            mode=RuntimeMode.PAPER_BROKER,
+            execution_environment=ExecutionEnvironment.BROKER,
+            account_id=account_id,
+            strategy_id=strategy_id,
+            strategy=_BuyOnceStrategy(),
+            risk_engine=RiskEngine([MaxNotionalRule(max_notional=Decimal("100000"))]),
+            instrument_context=_InstrumentContext(),
+            execution_adapter=_RecordingExecutionAdapter(),
+            account_actor=AccountActor(
+                initial_cash={"USD": Decimal("10000")},
+                account_id=account_id,
+            ),
+            instrument_registry=_registry(),
+            portfolio_view=_portfolio_view,
+            multiplier_for=lambda instrument_id: Decimal("1"),
+            sink=sink,
+        )
+    )
+
+    session.start()
+    session.on_market_data(_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC)))
+
+    envelopes = [event.to_envelope() for event in sink.events]
+    assert [row["sequence_no"] for row in envelopes] == list(range(1, len(envelopes) + 1))
+    assert {row["run_id"] for row in envelopes} == {"run-live-1"}
+    assert {row["mode"] for row in envelopes} == {"paper_broker"}
+    assert {row["execution_environment"] for row in envelopes} == {"broker"}
+    assert {row["account_id"] for row in envelopes} == {"acct-live-1"}
+    assert {row["strategy_id"] for row in envelopes} == {"strategy-live-1"}
+    order_event = next(row for row in envelopes if row["kind"] == "runtime.order_submitted")
+    assert order_event["instrument_id"] == "EQUITY.US.NASDAQ.AAPL"
+    assert order_event["correlation_id"] == "md:EQUITY.US.NASDAQ.AAPL:1m:2026-01-02T14:31:00+00:00"
 
 
 def test_live_runtime_session_blocks_intents_when_paused_or_degraded() -> None:

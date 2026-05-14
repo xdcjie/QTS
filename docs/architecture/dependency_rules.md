@@ -61,6 +61,8 @@ checks:
 - API code may not import actor internals or `OrderManager` internals directly.
 - Market-data adapters may not import execution, risk, portfolio, or runtime.
 - Order-execution adapters may not import data.
+- Provider SDK imports such as `ib_async` and `ibapi` are allowed only in
+  adapter or transport boundaries.
 - Shared roll/session/resolution modules may not live under source-specific
   packages such as `qts.backtest` or `qts.data.historical`.
 - New stable concept construction may not be exposed as module-level public
@@ -69,6 +71,8 @@ checks:
 - In class-centric modules, module-private helpers that only serve one public
   class are rejected unless the file is an explicitly documented compatibility
   exception.
+- Guardrail violation reports include remediation text so CI output is
+  actionable.
 
 When a new valid boundary is introduced, update this document, the guardrail
 script, and the guardrail tests in the same change.

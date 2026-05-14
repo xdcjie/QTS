@@ -65,12 +65,14 @@ def test_backtest_streaming_emits_stable_artifacts(tmp_path: Path) -> None:
 
     assert captured.result.run_id.value == captured.manifest["run_id"]
     assert captured.manifest["artifacts"].keys() == {
+        "events",
         "equity_curve",
         "fills",
         "orders",
         "trade_ledger",
     }
     assert captured.result.artifact_rows == {
+        "events": 7,
         "orders": 1,
         "fills": 1,
         "trade_ledger": 1,

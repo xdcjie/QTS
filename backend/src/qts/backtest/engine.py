@@ -47,6 +47,7 @@ from qts.runtime.actors.strategy_actor import (
 from qts.runtime.config import BacktestCostModel, BacktestEngineConfig, BacktestRuntimeConfig
 from qts.runtime.intent_processing import TargetIntentProcessor
 from qts.runtime.sinks.backtest import BacktestRuntimeEventSink
+from qts.runtime.sinks.base import RuntimeEventContext
 from qts.strategy_sdk import Strategy
 
 
@@ -216,8 +217,17 @@ class BacktestEngine:
 
     def run_streaming(self, output_dir: Any) -> BacktestStreamResult:
         """Run the backtest and write streaming artifacts."""
-        writer = BacktestArtifactWriter(output_dir)
-        sink = BacktestRuntimeEventSink(writer)
+        config_hash = stable_json_hash(self._config_hash_payload)
+        runtime_run_id = BacktestRunId(f"bt-{config_hash.removeprefix('sha256:')[:12]}")
+        writer = BacktestArtifactWriter(output_dir, run_id=runtime_run_id)
+        sink = BacktestRuntimeEventSink(
+            writer,
+            context=RuntimeEventContext(
+                run_id=runtime_run_id,
+                mode="backtest",
+                execution_environment="simulated",
+            ),
+        )
         actor_loop = BacktestActorLoop(
             strategy=self._strategy,
             bars=self._bars,
@@ -251,7 +261,6 @@ class BacktestEngine:
                     equity=self._initial_cash,
                 )
             )
-        config_hash = stable_json_hash(self._config_hash_payload)
         processed_bar_count = runtime.processed_bars
         run_id_value, report_hash, _, artifacts = writer.finalize(
             config_hash=config_hash,

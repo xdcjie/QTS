@@ -102,6 +102,60 @@ def test_backtest_streaming_sink_writes_orders_fills_ledger_and_points(tmp_path:
     assert sink.order_count == 1
 
 
+def test_backtest_runtime_event_sink_writes_events_and_manifest_contract(
+    tmp_path: Path,
+) -> None:
+    import json
+
+    from qts.core.ids import CorrelationId, RuntimeRunId
+    from qts.reporting.backtest import BacktestArtifactWriter, EquityCurvePoint
+    from qts.runtime.sinks.backtest import BacktestRuntimeEventSink
+    from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventContext
+
+    context = RuntimeEventContext(
+        run_id=RuntimeRunId("bt-run-1"),
+        mode="backtest",
+        execution_environment="simulated",
+    )
+    writer = BacktestArtifactWriter(tmp_path, run_id=context.run_id)
+    sink = BacktestRuntimeEventSink(writer, context=context)
+
+    sink.write(
+        RuntimeEvent(
+            kind="runtime.market_data",
+            payload={"instrument_id": "EQUITY.US.NASDAQ.AAPL"},
+            correlation_id=CorrelationId("corr-bt-1"),
+        )
+    )
+    sink.write_equity_point(
+        EquityCurvePoint(
+            time=datetime(2026, 1, 2, 14, 31, tzinfo=UTC),
+            equity=Decimal("10000"),
+        )
+    )
+    _, _, manifest, _ = writer.finalize(
+        config_hash="cfg",
+        dataset_metadata=(),
+        cost_model={},
+        processed_bars=1,
+        warmup_bars=0,
+        trading_bars=1,
+        final_cash=Decimal("10000"),
+        strategy_version="test",
+    )
+
+    events_path = next(tmp_path.glob("*.events.ndjson"))
+    event_row = json.loads(events_path.read_text(encoding="utf-8").strip())
+    assert event_row["run_id"] == "bt-run-1"
+    assert event_row["mode"] == "backtest"
+    assert event_row["sequence_no"] == 1
+    assert event_row["execution_environment"] == "simulated"
+    assert manifest["run_id"] == "bt-run-1"
+    assert manifest["runtime_mode"] == "backtest"
+    assert manifest["event_schema_version"] == RuntimeEvent.SCHEMA_VERSION
+    assert manifest["artifacts"]["events"]["rows"] == 1
+
+
 def _read_ndjson_lines(path: Path) -> list[dict[str, Any]]:
     import json
 

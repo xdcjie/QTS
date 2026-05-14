@@ -11,7 +11,10 @@ from pathlib import Path
 from typing import Any
 
 from qts.core.hashing import stable_json_default, stable_json_hash
+from qts.core.ids import RuntimeRunId
 from qts.data.provenance import DatasetMetadata
+
+RUNTIME_EVENT_SCHEMA_VERSION = "1"
 
 
 def dataset_metadata_payload(item: DatasetMetadata) -> dict[str, str | None]:
@@ -151,11 +154,12 @@ class _NdjsonArtifact:
 class BacktestArtifactWriter:
     """Write large backtest outputs as line-delimited artifacts."""
 
-    _KINDS = ("orders", "fills", "trade_ledger", "equity_curve")
+    _KINDS = ("events", "orders", "fills", "trade_ledger", "equity_curve")
 
-    def __init__(self, output_dir: Path) -> None:
-        """Perform __init__."""
+    def __init__(self, output_dir: Path, *, run_id: RuntimeRunId | None = None) -> None:
+        """Create a writer for partitioned backtest artifacts."""
         self._output_dir = output_dir
+        self._run_id = run_id
         self._output_dir.mkdir(parents=True, exist_ok=True)
         self._artifacts = {
             kind: _NdjsonArtifact(self._output_dir / f".{kind}.partial.ndjson")
@@ -166,6 +170,10 @@ class BacktestArtifactWriter:
     def write_order(self, payload: dict[str, Any]) -> None:
         """Perform write_order."""
         self._artifacts["orders"].write(payload)
+
+    def write_runtime_event(self, payload: dict[str, Any]) -> None:
+        """Write one normalized runtime event envelope."""
+        self._artifacts["events"].write(payload)
 
     def write_fill(self, payload: dict[str, Any]) -> None:
         """Perform write_fill."""
@@ -233,7 +241,11 @@ class BacktestArtifactWriter:
                 },
             }
         )
-        run_id = f"bt-{report_hash.removeprefix('sha256:')[:12]}"
+        run_id = (
+            self._run_id.value
+            if self._run_id is not None
+            else f"bt-{report_hash.removeprefix('sha256:')[:12]}"
+        )
         artifact_paths: dict[str, Path] = {}
         for kind, artifact in self._artifacts.items():
             final_path = self._output_dir / f"{run_id}.{kind}.ndjson"
@@ -242,6 +254,8 @@ class BacktestArtifactWriter:
 
         manifest_payload: dict[str, Any] = {
             "run_id": run_id,
+            "runtime_mode": "backtest",
+            "event_schema_version": RUNTIME_EVENT_SCHEMA_VERSION,
             "config_hash": config_hash,
             "report_hash": report_hash,
             "dataset_metadata": dataset_metadata,

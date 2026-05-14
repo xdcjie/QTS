@@ -823,13 +823,13 @@
             <li><code>StrategyStatus</code> <code>backend/src/qts/application/strategy_lifecycle.py:14</code></li>
             <li><code>StrategyInstance</code> <code>backend/src/qts/application/strategy_lifecycle.py:22</code></li>
             <li><code>StrategyRegistry</code> <code>backend/src/qts/application/strategy_lifecycle.py:40</code></li>
-            <li><code>BacktestActorLoopResult</code> <code>backend/src/qts/backtest/actor_loop.py:31</code></li>
-            <li><code>BacktestActorLoop</code> <code>backend/src/qts/backtest/actor_loop.py:45</code></li>
+            <li><code>BacktestActorLoopResult</code> <code>backend/src/qts/backtest/actor_loop.py:32</code></li>
+            <li><code>BacktestActorLoop</code> <code>backend/src/qts/backtest/actor_loop.py:46</code></li>
             <li><code>BacktestEngineDependencies</code> <code>backend/src/qts/backtest/dependencies.py:30</code></li>
             <li><code>BacktestActorLoopConfig</code> <code>backend/src/qts/backtest/dependencies.py:71</code></li>
             <li><code>BacktestActorLoopDependencies</code> <code>backend/src/qts/backtest/dependencies.py:88</code></li>
-            <li><code>BacktestStreamResult</code> <code>backend/src/qts/backtest/engine.py:54</code></li>
-            <li><code>BacktestEngine</code> <code>backend/src/qts/backtest/engine.py:73</code></li>
+            <li><code>BacktestStreamResult</code> <code>backend/src/qts/backtest/engine.py:55</code></li>
+            <li><code>BacktestEngine</code> <code>backend/src/qts/backtest/engine.py:74</code></li>
             <li><code>BacktestInstrumentContext</code> <code>backend/src/qts/backtest/instrument_context.py:16</code></li>
             <li><code>BacktestPortfolioProjector</code> <code>backend/src/qts/backtest/portfolio_projection.py:15</code></li>
             <li><code>BacktestRun</code> <code>backend/src/qts/backtest/runner.py:24</code></li>
@@ -1005,7 +1005,19 @@
             <li><code>RollingWindow</code> <code>backend/src/qts/indicators/rolling.py:14</code></li>
             <li><code>SyntheticMarketDataConfig</code> <code>backend/src/qts/load/synthetic_market_data.py:14</code></li>
             <li><code>AuditEvent</code> <code>backend/src/qts/observability/audit.py:10</code></li>
-            <li><code>MetricsRegistry</code> <code>backend/src/qts/observability/metrics.py:10</code></li>
+            <li><code>RuntimeSubscriptionSnapshot</code> <code>backend/src/qts/observability/dashboard.py:10</code></li>
+            <li><code>OpenOrderSnapshot</code> <code>backend/src/qts/observability/dashboard.py:31</code></li>
+            <li><code>PositionSnapshot</code> <code>backend/src/qts/observability/dashboard.py:50</code></li>
+            <li><code>CashSnapshot</code> <code>backend/src/qts/observability/dashboard.py:67</code></li>
+            <li><code>RiskStatusSnapshot</code> <code>backend/src/qts/observability/dashboard.py:84</code></li>
+            <li><code>BrokerConnectionSnapshot</code> <code>backend/src/qts/observability/dashboard.py:99</code></li>
+            <li><code>OperationalDashboardSnapshot</code> <code>backend/src/qts/observability/dashboard.py:114</code></li>
+            <li><code>OperationalErrorCode</code> <code>backend/src/qts/observability/errors.py:10</code></li>
+            <li><code>RuntimeErrorReason</code> <code>backend/src/qts/observability/errors.py:24</code></li>
+            <li><code>RuntimeCounterMetric</code> <code>backend/src/qts/observability/metrics.py:12</code></li>
+            <li><code>RuntimeLatencyMetric</code> <code>backend/src/qts/observability/metrics.py:27</code></li>
+            <li><code>RuntimeMetricEvent</code> <code>backend/src/qts/observability/metrics.py:40</code></li>
+            <li><code>MetricsRegistry</code> <code>backend/src/qts/observability/metrics.py:54</code></li>
             <li><code>TradeSide</code> <code>backend/src/qts/portfolio/accounting/fill_accounting.py:14</code></li>
             <li><code>Fill</code> <code>backend/src/qts/portfolio/accounting/fill_accounting.py:22</code></li>
             <li><code>FillAccounting</code> <code>backend/src/qts/portfolio/accounting/fill_accounting.py:45</code></li>
@@ -1014,24 +1026,25 @@
             <li><code>PositionBook</code> <code>backend/src/qts/portfolio/position_book.py:21</code></li>
             <li><code>Reservation</code> <code>backend/src/qts/portfolio/reservation_book.py:12</code></li>
             <li><code>ReservationBook</code> <code>backend/src/qts/portfolio/reservation_book.py:20</code></li>
-            <li><code>GuardrailViolation</code> <code>backend/src/qts/quality/guardrails.py:118</code></li>
-            <li><code>Rule</code> <code>backend/src/qts/quality/guardrails.py:131</code></li>
-            <li><code>ImportBoundaryRule</code> <code>backend/src/qts/quality/guardrails.py:150</code></li>
-            <li><code>LivePackageNoReplayClassRule</code> <code>backend/src/qts/quality/guardrails.py:173</code></li>
-            <li><code>ProductionNoFakeClassRule</code> <code>backend/src/qts/quality/guardrails.py:204</code></li>
-            <li><code>SharedRuntimeWordingRule</code> <code>backend/src/qts/quality/guardrails.py:233</code></li>
-            <li><code>ProductionPlaceholderDocstringRule</code> <code>backend/src/qts/quality/guardrails.py:265</code></li>
-            <li><code>ProductSpecificRule</code> <code>backend/src/qts/quality/guardrails.py:295</code></li>
-            <li><code>BrokerSpecificRule</code> <code>backend/src/qts/quality/guardrails.py:313</code></li>
-            <li><code>TestSupportRule</code> <code>backend/src/qts/quality/guardrails.py:331</code></li>
-            <li><code>SharedCapabilityRule</code> <code>backend/src/qts/quality/guardrails.py:347</code></li>
-            <li><code>OOPPublicFactoryRule</code> <code>backend/src/qts/quality/guardrails.py:363</code></li>
-            <li><code>OOPHelperOwnershipRule</code> <code>backend/src/qts/quality/guardrails.py:379</code></li>
-            <li><code>BacktestRunnerCohesionRule</code> <code>backend/src/qts/quality/guardrails.py:395</code></li>
-            <li><code>BacktestInputCohesionRule</code> <code>backend/src/qts/quality/guardrails.py:411</code></li>
-            <li><code>BacktestEngineCohesionRule</code> <code>backend/src/qts/quality/guardrails.py:427</code></li>
-            <li><code>StrategySdkPublicSurfaceRule</code> <code>backend/src/qts/quality/guardrails.py:443</code></li>
-            <li><code>GuardrailSuite</code> <code>backend/src/qts/quality/guardrails.py:459</code></li>
+            <li><code>GuardrailViolation</code> <code>backend/src/qts/quality/guardrails.py:169</code></li>
+            <li><code>Rule</code> <code>backend/src/qts/quality/guardrails.py:198</code></li>
+            <li><code>ImportBoundaryRule</code> <code>backend/src/qts/quality/guardrails.py:217</code></li>
+            <li><code>LivePackageNoReplayClassRule</code> <code>backend/src/qts/quality/guardrails.py:240</code></li>
+            <li><code>ProductionNoFakeClassRule</code> <code>backend/src/qts/quality/guardrails.py:271</code></li>
+            <li><code>SharedRuntimeWordingRule</code> <code>backend/src/qts/quality/guardrails.py:300</code></li>
+            <li><code>ProductionPlaceholderDocstringRule</code> <code>backend/src/qts/quality/guardrails.py:332</code></li>
+            <li><code>ProductSpecificRule</code> <code>backend/src/qts/quality/guardrails.py:362</code></li>
+            <li><code>BrokerSpecificRule</code> <code>backend/src/qts/quality/guardrails.py:380</code></li>
+            <li><code>ProviderSdkImportRule</code> <code>backend/src/qts/quality/guardrails.py:398</code></li>
+            <li><code>TestSupportRule</code> <code>backend/src/qts/quality/guardrails.py:431</code></li>
+            <li><code>SharedCapabilityRule</code> <code>backend/src/qts/quality/guardrails.py:447</code></li>
+            <li><code>OOPPublicFactoryRule</code> <code>backend/src/qts/quality/guardrails.py:463</code></li>
+            <li><code>OOPHelperOwnershipRule</code> <code>backend/src/qts/quality/guardrails.py:479</code></li>
+            <li><code>BacktestRunnerCohesionRule</code> <code>backend/src/qts/quality/guardrails.py:495</code></li>
+            <li><code>BacktestInputCohesionRule</code> <code>backend/src/qts/quality/guardrails.py:511</code></li>
+            <li><code>BacktestEngineCohesionRule</code> <code>backend/src/qts/quality/guardrails.py:527</code></li>
+            <li><code>StrategySdkPublicSurfaceRule</code> <code>backend/src/qts/quality/guardrails.py:543</code></li>
+            <li><code>GuardrailSuite</code> <code>backend/src/qts/quality/guardrails.py:559</code></li>
             <li><code>DriftKind</code> <code>backend/src/qts/reconciliation/drift.py:12</code></li>
             <li><code>DriftItem</code> <code>backend/src/qts/reconciliation/drift.py:23</code></li>
             <li><code>ReconciliationEngine</code> <code>backend/src/qts/reconciliation/engine.py:13</code></li>
@@ -1059,13 +1072,13 @@
             <li><code>ExchangeCalendarProvider</code> <code>backend/src/qts/registry/providers/exchange_calendar_provider.py:14</code></li>
             <li><code>SourceSymbolResolver</code> <code>backend/src/qts/registry/symbol_resolution.py:12</code></li>
             <li><code>StaticSymbolResolver</code> <code>backend/src/qts/registry/symbol_resolution.py:25</code></li>
-            <li><code>EquityCurvePoint</code> <code>backend/src/qts/reporting/backtest.py:40</code></li>
-            <li><code>TradeLedgerEntry</code> <code>backend/src/qts/reporting/backtest.py:48</code></li>
-            <li><code>StreamingEquityMetrics</code> <code>backend/src/qts/reporting/backtest.py:67</code></li>
-            <li><code>BacktestArtifacts</code> <code>backend/src/qts/reporting/backtest.py:107</code></li>
-            <li><code>_NdjsonArtifact</code> <code>backend/src/qts/reporting/backtest.py:116</code></li>
-            <li><code>BacktestArtifactWriter</code> <code>backend/src/qts/reporting/backtest.py:151</code></li>
-            <li><code>BacktestReportWriter</code> <code>backend/src/qts/reporting/backtest.py:285</code></li>
+            <li><code>EquityCurvePoint</code> <code>backend/src/qts/reporting/backtest.py:43</code></li>
+            <li><code>TradeLedgerEntry</code> <code>backend/src/qts/reporting/backtest.py:51</code></li>
+            <li><code>StreamingEquityMetrics</code> <code>backend/src/qts/reporting/backtest.py:70</code></li>
+            <li><code>BacktestArtifacts</code> <code>backend/src/qts/reporting/backtest.py:110</code></li>
+            <li><code>_NdjsonArtifact</code> <code>backend/src/qts/reporting/backtest.py:119</code></li>
+            <li><code>BacktestArtifactWriter</code> <code>backend/src/qts/reporting/backtest.py:154</code></li>
+            <li><code>BacktestReportWriter</code> <code>backend/src/qts/reporting/backtest.py:299</code></li>
             <li><code>ReportWriter</code> <code>backend/src/qts/reporting/base.py:10</code></li>
             <li><code>RuntimeArtifactWriter</code> <code>backend/src/qts/reporting/base.py:14</code></li>
             <li><code>LiveReportManifest</code> <code>backend/src/qts/reporting/live.py:18</code></li>
@@ -1139,7 +1152,7 @@
             <li><code>LiveRuntime</code> <code>backend/src/qts/runtime/live.py:176</code></li>
             <li><code>LiveReconciliationResult</code> <code>backend/src/qts/runtime/live_reconciliation.py:24</code></li>
             <li><code>LiveReconciliation</code> <code>backend/src/qts/runtime/live_reconciliation.py:31</code></li>
-            <li><code>LiveRuntimeDependencies</code> <code>backend/src/qts/runtime/live_runtime_dependencies.py:28</code></li>
+            <li><code>LiveRuntimeDependencies</code> <code>backend/src/qts/runtime/live_runtime_dependencies.py:29</code></li>
             <li><code>LiveRuntimeSessionResult</code> <code>backend/src/qts/runtime/live_runtime_session.py:30</code></li>
             <li><code>LiveKillSwitchEvidence</code> <code>backend/src/qts/runtime/live_runtime_session.py:41</code></li>
             <li><code>RuntimeRollbackCommand</code> <code>backend/src/qts/runtime/live_runtime_session.py:53</code></li>
@@ -1162,9 +1175,11 @@
             <li><code>SignalConflict</code> <code>backend/src/qts/runtime/signal_policy.py:40</code></li>
             <li><code>SignalAggregationDecision</code> <code>backend/src/qts/runtime/signal_policy.py:49</code></li>
             <li><code>SignalPolicyEngine</code> <code>backend/src/qts/runtime/signal_policy.py:62</code></li>
-            <li><code>BacktestRuntimeEventSink</code> <code>backend/src/qts/runtime/sinks/backtest.py:13</code></li>
+            <li><code>BacktestRuntimeEventSink</code> <code>backend/src/qts/runtime/sinks/backtest.py:15</code></li>
             <li><code>RuntimeEvent</code> <code>backend/src/qts/runtime/sinks/base.py:25</code></li>
-            <li><code>RuntimeEventSink</code> <code>backend/src/qts/runtime/sinks/base.py:83</code></li>
+            <li><code>RuntimeEventWriteResult</code> <code>backend/src/qts/runtime/sinks/base.py:93</code></li>
+            <li><code>RuntimeEventContext</code> <code>backend/src/qts/runtime/sinks/base.py:101</code></li>
+            <li><code>RuntimeEventSink</code> <code>backend/src/qts/runtime/sinks/base.py:168</code></li>
             <li><code>WrittenRuntimeEvent</code> <code>backend/src/qts/runtime/sinks/live.py:18</code></li>
             <li><code>LiveRuntimeEventSink</code> <code>backend/src/qts/runtime/sinks/live.py:25</code></li>
             <li><code>StateSnapshot</code> <code>backend/src/qts/runtime/state_recovery.py:10</code></li>
@@ -3012,7 +3027,7 @@
           </table>
         </details>
         <details class="inventory-group">
-          <summary><span>7 Fill / 账户 / 输出 · <code>qts.observability</code></span><span class="badge shared">2 classes</span></summary>
+          <summary><span>7 Fill / 账户 / 输出 · <code>qts.observability</code></span><span class="badge shared">14 classes</span></summary>
           <table>
             <thead>
               <tr>
@@ -3029,8 +3044,68 @@
               </tr>
               <tr>
                 <td><code>MetricsRegistry</code></td>
-                <td><code>backend/src/qts/observability/metrics.py:10</code></td>
+                <td><code>backend/src/qts/observability/metrics.py:54</code></td>
                 <td><span class="class-role">作用：Record counters and gauges with deterministic key formatting。</span><br />价值：记录审计、日志和指标，支撑运行证据与问题定位。</td>
+              </tr>
+              <tr>
+                <td><code>RuntimeSubscriptionSnapshot</code></td>
+                <td><code>backend/src/qts/observability/dashboard.py:10</code></td>
+                <td><span class="class-role">作用：One runtime market-data subscription row。</span><br />价值：标准化运维 dashboard schema，支持按 run/order/correlation 排障。</td>
+              </tr>
+              <tr>
+                <td><code>OpenOrderSnapshot</code></td>
+                <td><code>backend/src/qts/observability/dashboard.py:31</code></td>
+                <td><span class="class-role">作用：One open order row。</span><br />价值：标准化运维 dashboard schema，支持按 run/order/correlation 排障。</td>
+              </tr>
+              <tr>
+                <td><code>PositionSnapshot</code></td>
+                <td><code>backend/src/qts/observability/dashboard.py:50</code></td>
+                <td><span class="class-role">作用：One account position row。</span><br />价值：标准化运维 dashboard schema，支持按 run/order/correlation 排障。</td>
+              </tr>
+              <tr>
+                <td><code>CashSnapshot</code></td>
+                <td><code>backend/src/qts/observability/dashboard.py:67</code></td>
+                <td><span class="class-role">作用：One account cash balance row。</span><br />价值：标准化运维 dashboard schema，支持按 run/order/correlation 排障。</td>
+              </tr>
+              <tr>
+                <td><code>RiskStatusSnapshot</code></td>
+                <td><code>backend/src/qts/observability/dashboard.py:84</code></td>
+                <td><span class="class-role">作用：Current runtime risk status。</span><br />价值：标准化运维 dashboard schema，支持按 run/order/correlation 排障。</td>
+              </tr>
+              <tr>
+                <td><code>BrokerConnectionSnapshot</code></td>
+                <td><code>backend/src/qts/observability/dashboard.py:99</code></td>
+                <td><span class="class-role">作用：Current broker connection status。</span><br />价值：标准化运维 dashboard schema，支持按 run/order/correlation 排障。</td>
+              </tr>
+              <tr>
+                <td><code>OperationalDashboardSnapshot</code></td>
+                <td><code>backend/src/qts/observability/dashboard.py:114</code></td>
+                <td><span class="class-role">作用：Runtime state snapshot for operational dashboards。</span><br />价值：标准化运维 dashboard schema，支持按 run/order/correlation 排障。</td>
+              </tr>
+              <tr>
+                <td><code>OperationalErrorCode</code></td>
+                <td><code>backend/src/qts/observability/errors.py:10</code></td>
+                <td><span class="class-role">作用：Standard reason codes for runtime incidents。</span><br />价值：统一核心异常 reason_code，支持跨 backtest/paper/live 分析。</td>
+              </tr>
+              <tr>
+                <td><code>RuntimeErrorReason</code></td>
+                <td><code>backend/src/qts/observability/errors.py:24</code></td>
+                <td><span class="class-role">作用：Structured runtime error reason suitable for event payloads。</span><br />价值：统一核心异常 reason_code，支持跨 backtest/paper/live 分析。</td>
+              </tr>
+              <tr>
+                <td><code>RuntimeCounterMetric</code></td>
+                <td><code>backend/src/qts/observability/metrics.py:12</code></td>
+                <td><span class="class-role">作用：Standard runtime counter metrics emitted across execution modes。</span><br />价值：记录审计、日志和指标，支撑运行证据与问题定位。</td>
+              </tr>
+              <tr>
+                <td><code>RuntimeLatencyMetric</code></td>
+                <td><code>backend/src/qts/observability/metrics.py:27</code></td>
+                <td><span class="class-role">作用：Standard runtime latency metrics emitted across execution modes。</span><br />价值：记录审计、日志和指标，支撑运行证据与问题定位。</td>
+              </tr>
+              <tr>
+                <td><code>RuntimeMetricEvent</code></td>
+                <td><code>backend/src/qts/observability/metrics.py:40</code></td>
+                <td><span class="class-role">作用：Runtime event shape consumed by metrics instrumentation。</span><br />价值：记录审计、日志和指标，支撑运行证据与问题定位。</td>
               </tr>
             </tbody>
           </table>
@@ -3460,7 +3535,7 @@
           </table>
         </details>
         <details class="inventory-group">
-          <summary><span>9 架构守门 · <code>qts.quality</code></span><span class="badge shared">14 classes</span></summary>
+          <summary><span>9 架构守门 · <code>qts.quality</code></span><span class="badge shared">15 classes</span></summary>
           <table>
             <thead>
               <tr>
@@ -3472,72 +3547,98 @@
             <tbody>
               <tr>
                 <td><code>GuardrailViolation</code></td>
-                <td><code>backend/src/qts/quality/guardrails.py:118</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:169</code></td>
                 <td><span class="class-role">作用：One architecture or domain-boundary guardrail violation。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
               </tr>
               <tr>
                 <td><code>Rule</code></td>
-                <td><code>backend/src/qts/quality/guardrails.py:131</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:198</code></td>
                 <td><span class="class-role">作用：Pluggable guardrail rule interface。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
               </tr>
               <tr>
                 <td><code>ImportBoundaryRule</code></td>
-                <td><code>backend/src/qts/quality/guardrails.py:150</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:217</code></td>
                 <td><span class="class-role">作用：Validate package import boundary direction and adapter constraints。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
               </tr>
               <tr>
                 <td><code>ProductSpecificRule</code></td>
-                <td><code>backend/src/qts/quality/guardrails.py:171</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:362</code></td>
                 <td><span class="class-role">作用：Reject product hard-coding outside documented locations。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
               </tr>
               <tr>
                 <td><code>BrokerSpecificRule</code></td>
-                <td><code>backend/src/qts/quality/guardrails.py:189</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:380</code></td>
                 <td><span class="class-role">作用：Reject broker hard-coding outside broker boundaries。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
               </tr>
               <tr>
+              <tr>
+                <td><code>ProviderSdkImportRule</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:398</code></td>
+                <td><span class="class-role">作用：Reject provider SDK imports outside adapter and transport boundaries。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
+              </tr>
+              <tr>
+                <td><code>LivePackageNoReplayClassRule</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:240</code></td>
+                <td><span class="class-role">作用：Reject replay concepts in the live market-data package。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
+              </tr>
+              <tr>
+                <td><code>ProductionNoFakeClassRule</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:271</code></td>
+                <td><span class="class-role">作用：Reject fake market-data classes from production data packages。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
+              </tr>
+              <tr>
+                <td><code>SharedRuntimeWordingRule</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:300</code></td>
+                <td><span class="class-role">作用：Reject mode-specific wording in shared runtime docstrings。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
+              </tr>
+              <tr>
+                <td><code>ProductionPlaceholderDocstringRule</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:332</code></td>
+                <td><span class="class-role">作用：Reject placeholder docstrings in production code。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
+              </tr>
+              <tr>
                 <td><code>TestSupportRule</code></td>
-                <td><code>backend/src/qts/quality/guardrails.py:207</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:431</code></td>
                 <td><span class="class-role">作用：Reject test/anchor support in production source。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
               </tr>
               <tr>
                 <td><code>SharedCapabilityRule</code></td>
-                <td><code>backend/src/qts/quality/guardrails.py:223</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:447</code></td>
                 <td><span class="class-role">作用：Reject shared capability semantics in source-specific modules。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
               </tr>
               <tr>
                 <td><code>OOPPublicFactoryRule</code></td>
-                <td><code>backend/src/qts/quality/guardrails.py:239</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:463</code></td>
                 <td><span class="class-role">作用：Reject module-level public factory names on stable concepts。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
               </tr>
               <tr>
                 <td><code>OOPHelperOwnershipRule</code></td>
-                <td><code>backend/src/qts/quality/guardrails.py:255</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:479</code></td>
                 <td><span class="class-role">作用：Reject helper ownership violations that should stay private。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
               </tr>
               <tr>
                 <td><code>BacktestRunnerCohesionRule</code></td>
-                <td><code>backend/src/qts/quality/guardrails.py:271</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:495</code></td>
                 <td><span class="class-role">作用：Reject replay input assembly inside backtest runner。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
               </tr>
               <tr>
                 <td><code>BacktestInputCohesionRule</code></td>
-                <td><code>backend/src/qts/quality/guardrails.py:287</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:511</code></td>
                 <td><span class="class-role">作用：Reject catalog/data construction inside backtest input builder。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
               </tr>
               <tr>
                 <td><code>BacktestEngineCohesionRule</code></td>
-                <td><code>backend/src/qts/quality/guardrails.py:303</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:527</code></td>
                 <td><span class="class-role">作用：Reject historical replay assembly inside backtest engine。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
               </tr>
               <tr>
                 <td><code>StrategySdkPublicSurfaceRule</code></td>
-                <td><code>backend/src/qts/quality/guardrails.py:319</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:543</code></td>
                 <td><span class="class-role">作用：Reject internal runtime/broker/risk symbols from strategy SDK modules。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
               </tr>
               <tr>
                 <td><code>GuardrailSuite</code></td>
-                <td><code>backend/src/qts/quality/guardrails.py:335</code></td>
+                <td><code>backend/src/qts/quality/guardrails.py:559</code></td>
                 <td><span class="class-role">作用：Execute a configured set of guardrail rules against Python files。</span><br />价值：把架构、边界和命名规则变成自动 guardrail。</td>
               </tr>
             </tbody>

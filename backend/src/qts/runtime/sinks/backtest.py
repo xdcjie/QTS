@@ -5,23 +5,44 @@ from __future__ import annotations
 from collections.abc import Iterable
 from typing import Any
 
+from qts.core.hashing import stable_json_hash
 from qts.domain.market_data import Bar
 from qts.execution.order_manager import Order, OrderFill
 from qts.reporting.backtest import BacktestArtifactWriter, EquityCurvePoint, TradeLedgerEntry
+from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventContext, RuntimeEventSink
 
 
-class BacktestRuntimeEventSink:
+class BacktestRuntimeEventSink(RuntimeEventSink):
     """Write engine stream artifacts through a shared writer."""
 
-    def __init__(self, writer: BacktestArtifactWriter) -> None:
-        """Perform __init__."""
+    def __init__(
+        self,
+        writer: BacktestArtifactWriter,
+        *,
+        context: RuntimeEventContext | None = None,
+    ) -> None:
+        """Create a backtest sink for runtime events and derived artifacts."""
         self._writer = writer
+        self._context = context
         self._order_count = 0
+        self._event_count = 0
 
     @property
     def order_count(self) -> int:
         """Perform order_count."""
         return self._order_count
+
+    def write(self, event: RuntimeEvent) -> object:
+        """Write one normalized runtime event envelope."""
+        self._event_count += 1
+        if self._context is not None:
+            event = self._context.apply(event, sequence_no=self._event_count)
+        row = event.to_envelope(sequence_no=self._event_count)
+        row["event_hash"] = stable_json_hash(
+            {key: value for key, value in row.items() if key not in {"sequence_no", "ts_ingest"}}
+        )
+        self._writer.write_runtime_event(row)
+        return self._event_count
 
     def write_processed(
         self,

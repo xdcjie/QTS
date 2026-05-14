@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from qts.core.hashing import stable_json_default, stable_json_hash
-from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventSink
+from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventContext, RuntimeEventSink
 
 _SECRET_KEY_PARTS = ("password", "secret", "token", "credential")
 
@@ -25,7 +25,13 @@ class WrittenRuntimeEvent:
 class LiveRuntimeEventSink(RuntimeEventSink):
     """Write append-only paper/live runtime events as deterministic NDJSON."""
 
-    def __init__(self, output_dir: Path, *, filename: str = "events.ndjson") -> None:
+    def __init__(
+        self,
+        output_dir: Path,
+        *,
+        filename: str = "events.ndjson",
+        context: RuntimeEventContext | None = None,
+    ) -> None:
         """Create a live event sink under an artifact directory."""
         if not filename.strip():
             raise ValueError("filename must not be empty")
@@ -36,6 +42,7 @@ class LiveRuntimeEventSink(RuntimeEventSink):
         self._content_hasher = hashlib.sha256()
         self._rows = 0
         self._closed = False
+        self._context = context
 
     @property
     def path(self) -> Path:
@@ -58,11 +65,11 @@ class LiveRuntimeEventSink(RuntimeEventSink):
             raise RuntimeError("event sink is closed")
         self._reject_secrets(event.payload)
         sequence = self._rows + 1
+        event = self._context.apply(event, sequence_no=sequence) if self._context else event
         row = event.to_envelope(sequence_no=sequence)
         event_hash = stable_json_hash(
             {key: value for key, value in row.items() if key not in {"sequence_no", "ts_ingest"}}
         )
-        row["sequence"] = sequence
         row["event_hash"] = event_hash
         line = (
             json.dumps(

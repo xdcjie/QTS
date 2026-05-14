@@ -1,0 +1,13 @@
+repos:
+  - repo: local
+    hooks:
+      - id: qts-guardrails
+        name: qts architecture guardrails
+        entry: make guardrails
+        language: system
+        pass_filenames: false
+      - id: qts-lint
+        name: qts lint
+        entry: make lint
+        language: system
+        pass_filenames: false

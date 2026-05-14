@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
 
-from qts.core.ids import InstrumentId, OrderId
+from qts.core.ids import CorrelationId, InstrumentId, OrderId
 from qts.domain.market_data import Bar
 from qts.domain.orders import CancelIntent
 from qts.execution.order_manager import Order, OrderFill
@@ -21,7 +21,7 @@ from qts.runtime.live import LiveRuntimeState, LiveRuntimeStateMachine
 from qts.runtime.live_runtime_dependencies import LiveRuntimeDependencies
 from qts.runtime.mailbox import Mailbox
 from qts.runtime.market_data_flow import MarketDataFlow
-from qts.runtime.sinks.base import RuntimeEvent
+from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventContext
 from qts.runtime.strategy_execution_pipeline import StrategyExecutionPipeline
 from qts.strategy_sdk import TargetIntent
 
@@ -85,6 +85,7 @@ class LiveRuntimeSession:
         self._machine = LiveRuntimeStateMachine()
         self._latest_prices: dict[InstrumentId, Decimal] = {}
         self._event_index = 0
+        self._runtime_event_sequence = 0
         self._order_sequence = 0
         self._kill_switch_active = False
         self._account_actor = dependencies.account_actor
@@ -124,6 +125,13 @@ class LiveRuntimeSession:
         self._market_data_flow = MarketDataFlow(
             target_timeframe=dependencies.target_timeframe,
             exchange_timezone_by_instrument=dependencies.exchange_timezones,
+        )
+        self._event_context = RuntimeEventContext(
+            run_id=dependencies.run_id,
+            mode=dependencies.mode,
+            execution_environment=dependencies.execution_environment,
+            account_id=dependencies.account_id,
+            strategy_id=dependencies.strategy_id,
         )
 
     @property
@@ -186,6 +194,9 @@ class LiveRuntimeSession:
         all_fills: list[OrderFill] = []
         reason_code: str | None = None
         for bar in bars:
+            correlation_id = CorrelationId(
+                f"md:{bar.instrument_id.value}:{bar.timeframe}:{bar.end_time.isoformat()}"
+            )
             self._latest_prices[bar.instrument_id] = bar.close
             self._write_event(
                 "runtime.market_data",
@@ -194,6 +205,8 @@ class LiveRuntimeSession:
                     "timeframe": bar.timeframe,
                     "end_time": bar.end_time.isoformat(),
                 },
+                correlation_id=correlation_id,
+                instrument_id=bar.instrument_id,
             )
             blocked_reason = self._blocked_reason()
             if blocked_reason is not None:
@@ -213,6 +226,8 @@ class LiveRuntimeSession:
                         "intent_type": intent.intent_type.value,
                         "value": str(intent.value) if intent.value is not None else None,
                     },
+                    correlation_id=correlation_id,
+                    instrument_id=intent.asset.instrument_id,
                 )
                 if not self._dependencies.order_submission_enabled:
                     reason_code = "ORDER_SUBMISSION_DISABLED"
@@ -228,6 +243,8 @@ class LiveRuntimeSession:
                             "broker_order_id": order.broker_order_id,
                             "instrument_id": order.intent.instrument_id.value,
                         },
+                        correlation_id=correlation_id,
+                        instrument_id=order.intent.instrument_id,
                     )
                     self._write_event(
                         "runtime.broker_report",
@@ -236,6 +253,8 @@ class LiveRuntimeSession:
                             "state": order.state.value,
                             "broker_order_id": order.broker_order_id,
                         },
+                        correlation_id=correlation_id,
+                        instrument_id=order.intent.instrument_id,
                     )
             self._event_index += 1
 
@@ -352,10 +371,26 @@ class LiveRuntimeSession:
             return "RUNTIME_NOT_RUNNING"
         return None
 
-    def _write_event(self, kind: str, payload: dict[str, object]) -> None:
-        self._write(RuntimeEvent(kind=kind, payload=payload))
+    def _write_event(
+        self,
+        kind: str,
+        payload: dict[str, object],
+        *,
+        correlation_id: CorrelationId | None = None,
+        instrument_id: InstrumentId | None = None,
+    ) -> None:
+        self._write(
+            RuntimeEvent(
+                kind=kind,
+                payload=payload,
+                correlation_id=correlation_id,
+                instrument_id=instrument_id,
+            )
+        )
 
     def _write(self, event: RuntimeEvent) -> None:
+        self._runtime_event_sequence += 1
+        event = self._event_context.apply(event, sequence_no=self._runtime_event_sequence)
         sink = self._dependencies.sink
         if sink is not None:
             sink.write(event)

@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import tzinfo
 from decimal import Decimal
 
-from qts.core.ids import InstrumentId
+from qts.core.ids import AccountId, InstrumentId, RuntimeRunId, StrategyId
 from qts.data.sources.streaming_market_data_source import StreamingMarketDataSource
 from qts.registry.future_roll import FutureRollRegistry
 from qts.registry.instrument_registry import InstrumentRegistry
@@ -15,6 +15,7 @@ from qts.risk.risk_engine import RiskEngine
 from qts.runtime.actors.account_actor import AccountActor, AccountSnapshot
 from qts.runtime.actors.execution_actor import ExecutionAdapter
 from qts.runtime.intent_processing import InstrumentExecutionContext
+from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
 from qts.runtime.sinks.base import RuntimeEventSink
 from qts.strategy_sdk import PortfolioView, Strategy
 
@@ -35,6 +36,11 @@ class LiveRuntimeDependencies:
     account_actor: AccountActor
     portfolio_view: Callable[..., PortfolioView]
     multiplier_for: Callable[[InstrumentId], Decimal]
+    run_id: RuntimeRunId = field(default_factory=lambda: RuntimeRunId("local-live-run"))
+    mode: RuntimeMode = RuntimeMode.PAPER_SIMULATED
+    execution_environment: ExecutionEnvironment = ExecutionEnvironment.SIMULATED
+    account_id: AccountId | None = None
+    strategy_id: StrategyId | None = None
     market_data_source: StreamingMarketDataSource | None = None
     sink: RuntimeEventSink | None = None
     instrument_registry: InstrumentRegistry | None = None

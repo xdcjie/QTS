@@ -418,6 +418,30 @@ def test_guardrails_reject_transport_importing_runtime_actor(tmp_path: Path) -> 
     assert _codes(root) == {"TRANSPORT_ACTOR_IMPORT"}
 
 
+def test_guardrails_reject_provider_sdk_import_in_runtime(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/runtime/bad.py",
+        "from ib_async import IB\n",
+    )
+
+    assert _codes(root) == {"PROVIDER_SDK_IMPORT"}
+
+
+def test_guardrail_report_contains_remediation(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/domain/bad.py",
+        "from qts.runtime.actor import Actor\n",
+    )
+
+    violation = run_guardrails(root)[0]
+    assert violation.remediation
+    assert "remediation:" in violation.format()
+
+
 def test_guardrails_reject_shared_runtime_backtest_only_docstring(tmp_path: Path) -> None:
     root = tmp_path
     _write(
@@ -479,3 +503,12 @@ def test_guardrail_suite_default_preserves_expected_codes(tmp_path: Path) -> Non
     root_codes = _codes(root)
     suite_codes = _codes_by_suite(root, *_load_guardrails_module().GuardrailSuite().rules)
     assert root_codes == suite_codes
+
+
+def test_ci_and_pre_commit_run_architecture_guardrails() -> None:
+    workflow = Path(".github/workflows/quality.yml").read_text(encoding="utf-8")
+    pre_commit = Path(".pre-commit-config.yaml").read_text(encoding="utf-8")
+
+    assert "make guardrails" in workflow
+    assert "make test-unit" in workflow
+    assert "make guardrails" in pre_commit

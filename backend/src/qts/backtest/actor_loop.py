@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from qts.backtest.dependencies import BacktestActorLoopConfig, BacktestActorLoopDependencies
-from qts.core.ids import InstrumentId
+from qts.core.ids import CorrelationId, InstrumentId
 from qts.domain.market_data import Bar
 from qts.reporting.backtest import EquityCurvePoint
 from qts.runtime.actor_ref import ActorRef
@@ -18,6 +18,7 @@ from qts.runtime.intent_processing import ProcessedIntent
 from qts.runtime.mailbox import Mailbox
 from qts.runtime.market_data_flow import MarketDataFlow
 from qts.runtime.sinks.backtest import BacktestRuntimeEventSink
+from qts.runtime.sinks.base import RuntimeEvent
 from qts.runtime.strategy_execution_pipeline import StrategyExecutionPipeline
 from qts.strategy_sdk import PortfolioView, Strategy
 
@@ -128,7 +129,22 @@ class BacktestActorLoop:
         for source_bar in self._bars:
             for bar in market_data_flow.publish_bar(source_bar):
                 last_bar = bar
+                correlation_id = CorrelationId(
+                    f"md:{bar.instrument_id.value}:{bar.timeframe}:{bar.end_time.isoformat()}"
+                )
                 latest_prices[bar.instrument_id] = bar.close
+                sink.write(
+                    RuntimeEvent(
+                        kind="runtime.market_data",
+                        payload={
+                            "instrument_id": bar.instrument_id.value,
+                            "timeframe": bar.timeframe,
+                            "end_time": bar.end_time.isoformat(),
+                        },
+                        correlation_id=correlation_id,
+                        instrument_id=bar.instrument_id,
+                    )
+                )
                 self._update_rolling_prices(
                     bar,
                     latest_prices=latest_prices,
@@ -148,10 +164,23 @@ class BacktestActorLoop:
                             latest_prices=latest_prices,
                         )
                     )
+                    self._write_account_snapshot(sink, account_actor.snapshot())
                     event_index += 1
                     continue
 
                 for intent in strategy_result.intents:
+                    sink.write(
+                        RuntimeEvent(
+                            kind="runtime.strategy_intent",
+                            payload={
+                                "instrument_id": intent.asset.instrument_id.value,
+                                "intent_type": intent.intent_type.value,
+                                "value": str(intent.value) if intent.value is not None else None,
+                            },
+                            correlation_id=correlation_id,
+                            instrument_id=intent.asset.instrument_id,
+                        )
+                    )
                     processed = self._process_intent(
                         intent,
                         bar=bar,
@@ -169,6 +198,31 @@ class BacktestActorLoop:
                         fills=fill_payload,
                         bar=bar,
                     )
+                    for order in order_payload:
+                        sink.write(
+                            RuntimeEvent(
+                                kind="runtime.order_submitted",
+                                payload={
+                                    "order_id": order.order_id.value,
+                                    "broker_order_id": order.broker_order_id,
+                                    "instrument_id": order.intent.instrument_id.value,
+                                },
+                                correlation_id=correlation_id,
+                                instrument_id=order.intent.instrument_id,
+                            )
+                        )
+                        sink.write(
+                            RuntimeEvent(
+                                kind="runtime.broker_report",
+                                payload={
+                                    "order_id": order.order_id.value,
+                                    "state": order.state.value,
+                                    "broker_order_id": order.broker_order_id,
+                                },
+                                correlation_id=correlation_id,
+                                instrument_id=order.intent.instrument_id,
+                            )
+                        )
                     if compact_orders:
                         order_manager_actor.compact_for_streaming(
                             order.order_id for order in order_payload
@@ -181,6 +235,7 @@ class BacktestActorLoop:
                         latest_prices=latest_prices,
                     )
                 )
+                self._write_account_snapshot(sink, account_actor.snapshot())
                 event_index += 1
 
         _ = strategy_pipeline.finalize()
@@ -189,6 +244,25 @@ class BacktestActorLoop:
             warmup_bars=warmup_processed,
             trading_bars=trading_processed,
             last_bar=last_bar,
+        )
+
+    @staticmethod
+    def _write_account_snapshot(
+        sink: BacktestRuntimeEventSink,
+        snapshot: AccountSnapshot,
+    ) -> None:
+        """Emit a normalized account snapshot event."""
+        sink.write(
+            RuntimeEvent(
+                kind="runtime.account_snapshot",
+                payload={
+                    "cash": {currency: str(balance) for currency, balance in snapshot.cash.items()},
+                    "positions": {
+                        instrument_id.value: str(position.quantity)
+                        for instrument_id, position in snapshot.positions.items()
+                    },
+                },
+            )
         )
 
 
