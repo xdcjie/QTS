@@ -7,7 +7,14 @@ from datetime import datetime
 from decimal import Decimal
 
 from qts.core.ids import InstrumentId
-from qts.data.adapters.ibkr_transport import IbkrBarPayload, IbkrQuotePayload, IbkrTickPayload
+from qts.data.adapters.ibkr_transport import (
+    IbkrBarPayload,
+    IbkrMarketDataTypePayload,
+    IbkrProviderMarketDataType,
+    IbkrQuotePayload,
+    IbkrTickPayload,
+)
+from qts.data.permissions import MarketDataPermissionEvent, MarketDataPermissionState
 from qts.domain.market_data import Bar, Quote, Tick
 from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
@@ -54,6 +61,13 @@ class IbkrMarketDataAdapter:
         """Perform __init__."""
         self.connection = connection
         self._symbol_mapping = symbol_mapping
+        self._permission_state = MarketDataPermissionState.UNAVAILABLE
+
+    @property
+    def permission_state(self) -> MarketDataPermissionState:
+        """Return the latest provider permission state."""
+
+        return self._permission_state
 
     def subscription_for(self, instrument_id: InstrumentId) -> IbkrMarketDataSubscription:
         """Perform subscription_for."""
@@ -180,6 +194,23 @@ class IbkrMarketDataAdapter:
             is_partial=payload.is_partial,
         )
 
+    def on_market_data_type(self, payload: IbkrMarketDataTypePayload) -> MarketDataPermissionEvent:
+        """Normalize a raw IBKR marketDataType callback."""
+
+        state = {
+            IbkrProviderMarketDataType.LIVE: MarketDataPermissionState.LIVE,
+            IbkrProviderMarketDataType.FROZEN: MarketDataPermissionState.FROZEN,
+            IbkrProviderMarketDataType.DELAYED: MarketDataPermissionState.DELAYED,
+            IbkrProviderMarketDataType.DELAYED_FROZEN: MarketDataPermissionState.DELAYED_FROZEN,
+        }[IbkrProviderMarketDataType(payload.market_data_type)]
+        self._permission_state = state
+        return MarketDataPermissionEvent(
+            source_id=self.connection.source_id,
+            permission_state=state,
+            provider_market_data_type=payload.market_data_type,
+            request_id=payload.request_id,
+        )
+
 
 # Canonicalized names used by higher-level documentation and mode-independent paths.
 LiveMarketDataAdapter = IbkrMarketDataAdapter
@@ -194,4 +225,6 @@ __all__ = [
     "LiveMarketDataAdapter",
     "LiveMarketDataConnection",
     "LiveMarketDataSubscription",
+    "MarketDataPermissionEvent",
+    "MarketDataPermissionState",
 ]

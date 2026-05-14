@@ -162,6 +162,68 @@ def test_streaming_market_data_source_emits_stale_data_degradation() -> None:
     assert degradation.max_age == timedelta(seconds=5)
 
 
+def test_market_data_permission_event_is_visible_from_streaming_source() -> None:
+    from qts.core.ids import BrokerId, InstrumentId
+    from qts.data.adapters.ibkr_market_data import (
+        IbkrMarketDataAdapter,
+        IbkrMarketDataConnection,
+        MarketDataPermissionEvent,
+        MarketDataPermissionState,
+    )
+    from qts.data.adapters.ibkr_transport import IbkrMarketDataTypePayload
+    from qts.data.sources.streaming_market_data_source import StreamingMarketDataSource
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    source = StreamingMarketDataSource(
+        adapter=IbkrMarketDataAdapter(
+            connection=IbkrMarketDataConnection(
+                host="127.0.0.1",
+                port=4002,
+                client_id=101,
+                source_id="ibkr-paper-md",
+            ),
+            symbol_mapping=mapping,
+        )
+    )
+
+    event = source.on_market_data_type(IbkrMarketDataTypePayload(request_id=7, market_data_type=3))
+
+    assert isinstance(event, MarketDataPermissionEvent)
+    assert event.permission_state is MarketDataPermissionState.DELAYED
+    assert source.permission_state is MarketDataPermissionState.DELAYED
+    assert source.drain(observed_at=datetime(2026, 1, 2, 14, 31, tzinfo=UTC)) == (event,)
+
+
+def test_market_data_permission_event_enters_runtime_flow() -> None:
+    from qts.data.adapters.ibkr_market_data import (
+        MarketDataPermissionEvent,
+        MarketDataPermissionState,
+    )
+    from qts.runtime.market_data_flow import MarketDataFlow
+
+    event = MarketDataPermissionEvent(
+        source_id="ibkr-paper-md",
+        permission_state=MarketDataPermissionState.DELAYED,
+        provider_market_data_type=3,
+        request_id=7,
+    )
+
+    result = MarketDataFlow(
+        target_timeframe=None,
+        exchange_timezone_by_instrument={},
+    ).publish_source_event(event)
+
+    assert result.market_data == ()
+    [runtime_event] = result.runtime_events
+    assert runtime_event.kind == "market_data_permission_changed"
+    assert runtime_event.payload["source_id"] == "ibkr-paper-md"
+    assert runtime_event.payload["permission_state"] == "delayed"
+    assert runtime_event.payload["provider_market_data_type"] == 3
+
+
 def test_stale_market_data_degradation_enters_runtime_flow() -> None:
     from qts.core.ids import BrokerId, InstrumentId
     from qts.data.adapters.ibkr_market_data import (

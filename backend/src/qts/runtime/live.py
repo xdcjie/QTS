@@ -34,6 +34,73 @@ LiveMode = LivePermissionMode
 
 
 @dataclass(frozen=True, slots=True)
+class LiveStartupCheck:
+    """One structured live startup checklist item."""
+
+    check_name: str
+    status: str
+    severity: str
+    evidence: str
+    remediation: str
+
+    def __post_init__(self) -> None:
+        if not self.check_name.strip():
+            raise ValueError("check_name must not be empty")
+        if self.status not in {"PASS", "WARN", "FAIL"}:
+            raise ValueError("status must be PASS, WARN, or FAIL")
+        if self.severity not in {"INFO", "WARN", "BLOCKER"}:
+            raise ValueError("severity must be INFO, WARN, or BLOCKER")
+        if not self.evidence.strip():
+            raise ValueError("evidence must not be empty")
+        if not self.remediation.strip():
+            raise ValueError("remediation must not be empty")
+
+
+@dataclass(frozen=True, slots=True)
+class LiveStartupChecklist:
+    """Structured startup checklist evidence for paper/live modes."""
+
+    checks: tuple[LiveStartupCheck, ...]
+
+    @classmethod
+    def from_config(cls, config: LiveRuntimeConfig) -> LiveStartupChecklist:
+        """Build structured startup evidence without changing startup state."""
+
+        checks: list[LiveStartupCheck] = []
+        for field_name, configured, remediation in (
+            ("broker_configured", config.broker_configured, "configure broker connection"),
+            ("account_configured", config.account_configured, "configure account mapping"),
+            ("risk_configured", config.risk_configured, "configure risk limits"),
+            ("calendar_configured", config.calendar_configured, "configure trading calendar"),
+            ("kill_switch_configured", config.kill_switch_configured, "configure kill switch"),
+        ):
+            checks.append(
+                LiveStartupCheck(
+                    check_name=field_name,
+                    status="PASS" if configured else "FAIL",
+                    severity="INFO" if configured else "BLOCKER",
+                    evidence=f"{field_name}={configured}",
+                    remediation="none" if configured else remediation,
+                )
+            )
+        return cls(checks=tuple(checks))
+
+    @property
+    def passed(self) -> bool:
+        """Return whether all blocking checks passed."""
+
+        return all(check.status != "FAIL" for check in self.checks)
+
+    def by_name(self, check_name: str) -> LiveStartupCheck:
+        """Return one checklist item by name."""
+
+        for check in self.checks:
+            if check.check_name == check_name:
+                return check
+        raise KeyError(check_name)
+
+
+@dataclass(frozen=True, slots=True)
 class LiveStartupDecision:
     """Result of startup guard validation."""
 
@@ -44,17 +111,8 @@ class LiveStartupDecision:
 def validate_live_startup(config: LiveRuntimeConfig) -> LiveStartupDecision:
     """Fail closed unless all live safety prerequisites are explicit."""
 
-    missing = [
-        field_name
-        for field_name, configured in (
-            ("broker_configured", config.broker_configured),
-            ("account_configured", config.account_configured),
-            ("risk_configured", config.risk_configured),
-            ("calendar_configured", config.calendar_configured),
-            ("kill_switch_configured", config.kill_switch_configured),
-        )
-        if not configured
-    ]
+    checklist = LiveStartupChecklist.from_config(config)
+    missing = [check.check_name for check in checklist.checks if check.status == "FAIL"]
     if missing:
         raise ValueError("live startup missing required config: " + ", ".join(missing))
     mode = RuntimeMode.from_value(config.mode)
@@ -186,6 +244,8 @@ class LiveRuntime:
 
 __all__ = [
     "LivePermissionMode",
+    "LiveStartupCheck",
+    "LiveStartupChecklist",
     "LiveMode",
     "LiveRuntime",
     "LiveRuntimeState",

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 from qts.runtime.config import LiveRuntimeConfig
-from qts.runtime.live import LivePermissionMode, validate_live_startup
+from qts.runtime.live import LivePermissionMode, LiveStartupChecklist, validate_live_startup
 from qts.runtime.mode import (
     AccountEnvironment,
     ExecutionEnvironment,
@@ -27,6 +27,26 @@ def test_live_startup_guard_requires_all_safety_controls_for_live_mode() -> None
 
     with pytest.raises(ValueError, match="kill_switch_configured"):
         validate_live_startup(config)
+
+
+def test_live_startup_checklist_reports_evidence_and_remediation() -> None:
+    config = LiveRuntimeConfig(
+        mode=RuntimeMode.OBSERVATION.value,
+        broker_configured=True,
+        account_configured=False,
+        risk_configured=True,
+        calendar_configured=True,
+        kill_switch_configured=True,
+    )
+
+    checklist = LiveStartupChecklist.from_config(config)
+    account_check = checklist.by_name("account_configured")
+
+    assert not checklist.passed
+    assert account_check.status == "FAIL"
+    assert account_check.severity == "BLOCKER"
+    assert account_check.evidence == "account_configured=False"
+    assert "account" in account_check.remediation
 
 
 def test_observation_mode_allows_connections_but_blocks_real_order_submission() -> None:

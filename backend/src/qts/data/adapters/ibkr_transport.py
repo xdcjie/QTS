@@ -8,6 +8,7 @@ from contextlib import suppress
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from enum import IntEnum
 from importlib import import_module
 from time import monotonic
 from typing import Any, Protocol
@@ -41,6 +42,15 @@ _IBKR_INFO_ERROR_CODES = frozenset(
     }
 )
 _DEFAULT_REALTIME_BAR_SECONDS = 5
+
+
+class IbkrProviderMarketDataType(IntEnum):
+    """IBKR provider market data type codes."""
+
+    LIVE = 1
+    FROZEN = 2
+    DELAYED = 3
+    DELAYED_FROZEN = 4
 
 
 @dataclass(frozen=True, slots=True)
@@ -193,6 +203,18 @@ class IbkrMarketDataErrorPayload:
             raise ValueError("message must not be empty")
 
 
+@dataclass(frozen=True, slots=True)
+class IbkrMarketDataTypePayload:
+    """Raw IBKR marketDataType callback payload."""
+
+    request_id: int
+    market_data_type: int
+
+    def __post_init__(self) -> None:
+        if self.market_data_type not in set(IbkrProviderMarketDataType):
+            raise ValueError("market_data_type must be one of 1, 2, 3, or 4")
+
+
 class IbkrMarketDataCallbackSink(Protocol):
     """IBKR market-data callback sink owned by the market-data adapter."""
 
@@ -206,6 +228,10 @@ class IbkrMarketDataCallbackSink(Protocol):
 
     def on_bar(self, payload: IbkrBarPayload) -> Bar:
         """Normalize a raw IBKR bar callback."""
+        ...
+
+    def on_market_data_type(self, payload: IbkrMarketDataTypePayload) -> object:
+        """Normalize a raw marketDataType callback."""
         ...
 
 
@@ -486,6 +512,16 @@ class IbkrTwsMarketDataTransport:
                 IbkrMarketDataErrorPayload(request_id=request_id, code=code, message=message)
             )
 
+    def handle_market_data_type(self, *, request_id: int, market_data_type: int) -> object:
+        """Handle an IBKR marketDataType callback."""
+
+        return self._sink.on_market_data_type(
+            IbkrMarketDataTypePayload(
+                request_id=request_id,
+                market_data_type=market_data_type,
+            )
+        )
+
     def mark_ready(self) -> None:
         """Mark the API client as ready after nextValidId."""
 
@@ -554,7 +590,9 @@ __all__ = [
     "IbkrMarketDataContractSpec",
     "IbkrMarketDataErrorPayload",
     "IbkrMarketDataCallbackSink",
+    "IbkrMarketDataTypePayload",
     "IbkrMarketDataTransport",
+    "IbkrProviderMarketDataType",
     "IbkrQuotePayload",
     "IbkrTickPayload",
     "IbkrTwsMarketDataTransport",
@@ -608,6 +646,9 @@ def _new_market_data_app(owner: IbkrTwsMarketDataTransport) -> Any:
             count=count,
         )
 
+    def market_data_type(self: Any, req_id: int, market_data_type: int) -> None:
+        owner.handle_market_data_type(request_id=req_id, market_data_type=market_data_type)
+
     def error(
         self: Any,
         req_id: int,
@@ -629,6 +670,7 @@ def _new_market_data_app(owner: IbkrTwsMarketDataTransport) -> Any:
             "tickPrice": tick_price,
             "tickSize": tick_size,
             "realtimeBar": realtime_bar,
+            "marketDataType": market_data_type,
             "error": error,
         },
     )

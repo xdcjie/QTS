@@ -4,12 +4,22 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol
 
 from qts.core.ids import CausationId, CorrelationId, EventId
 from qts.domain.events import BaseEvent
+
+
+@dataclass(frozen=True, slots=True)
+class EventSequenceValidationReport:
+    """Validation result for persisted event sequence numbers."""
+
+    valid: bool
+    missing_sequences: tuple[int, ...] = ()
+    duplicate_sequences: tuple[int, ...] = ()
 
 
 class EventStore(Protocol):
@@ -91,6 +101,25 @@ class FileEventStore:
         """Perform by_correlation_id."""
         return tuple(event for event in self.replay() if event.correlation_id == correlation_id)
 
+    def validate_sequence(self) -> EventSequenceValidationReport:
+        """Detect missing or duplicate persisted sequence numbers."""
+
+        sequences = self._read_sequences()
+        seen: set[int] = set()
+        duplicates: list[int] = []
+        for sequence in sequences:
+            if sequence in seen and sequence not in duplicates:
+                duplicates.append(sequence)
+            seen.add(sequence)
+        highest = max(sequences, default=0)
+        missing = tuple(sequence for sequence in range(1, highest + 1) if sequence not in seen)
+        duplicate_tuple = tuple(sorted(duplicates))
+        return EventSequenceValidationReport(
+            valid=not missing and not duplicate_tuple,
+            missing_sequences=missing,
+            duplicate_sequences=duplicate_tuple,
+        )
+
     @staticmethod
     def _event_to_json(event: BaseEvent) -> dict[str, Any]:
         """Perform _event_to_json."""
@@ -119,5 +148,20 @@ class FileEventStore:
             causation_id=None if causation_id is None else CausationId(str(causation_id)),
         )
 
+    def _read_sequences(self) -> tuple[int, ...]:
+        if not self._path.exists():
+            return ()
+        sequences: list[int] = []
+        with self._path.open(encoding="utf-8") as handle:
+            for line in handle:
+                if line.strip():
+                    sequences.append(int(json.loads(line)["sequence"]))
+        return tuple(sequences)
 
-__all__ = ["EventStore", "FileEventStore", "InMemoryEventStore"]
+
+__all__ = [
+    "EventSequenceValidationReport",
+    "EventStore",
+    "FileEventStore",
+    "InMemoryEventStore",
+]

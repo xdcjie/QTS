@@ -7,6 +7,8 @@ from qts.data.adapters.ibkr_market_data import (
     LiveMarketDataAdapter,
     LiveMarketDataConnection,
     LiveMarketDataSubscription,
+    MarketDataPermissionEvent,
+    MarketDataPermissionState,
 )
 
 __all__ = [
@@ -16,4 +18,6 @@ __all__ = [
     "LiveMarketDataAdapter",
     "LiveMarketDataConnection",
     "LiveMarketDataSubscription",
+    "MarketDataPermissionEvent",
+    "MarketDataPermissionState",
 ]

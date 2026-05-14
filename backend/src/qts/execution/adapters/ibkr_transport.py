@@ -8,10 +8,12 @@ from contextlib import suppress
 from dataclasses import dataclass
 from decimal import Decimal
 from importlib import import_module
+from pathlib import Path
 from time import monotonic
 from typing import Any, Literal, Protocol
 
 from qts.domain.orders import ExecutionReport, ExecutionReportStatus
+from qts.execution.adapters.ibkr_order_ids import IbkrOrderIdAllocator
 from qts.execution.broker import BrokerOrderType, TimeInForce
 
 _IBKR_INFO_ERROR_CODES = frozenset(
@@ -84,6 +86,7 @@ class IbkrTwsOrderExecutionTransportConfig:
     port: int
     client_id: int
     timeout_seconds: float = 20.0
+    order_id_store_path: str | Path | None = None
 
     def __post_init__(self) -> None:
         if not self.host.strip():
@@ -358,13 +361,16 @@ class IbkrTwsOrderExecutionTransport:
         *,
         config: IbkrTwsOrderExecutionTransportConfig,
         sink: IbkrOrderExecutionCallbackSink,
+        order_id_allocator: IbkrOrderIdAllocator | None = None,
     ) -> None:
         self.config = config
         self._sink = sink
         self._app: Any | None = None
         self._thread: threading.Thread | None = None
         self._ready = threading.Event()
-        self._next_order_id: int | None = None
+        self._order_id_allocator = order_id_allocator or IbkrOrderIdAllocator(
+            config.order_id_store_path
+        )
         self._reports: queue.Queue[ExecutionReport | IbkrTransportError | IbkrConnectionEvent] = (
             queue.Queue()
         )
@@ -599,8 +605,10 @@ class IbkrTwsOrderExecutionTransport:
 
         if order_id <= 0:
             raise ValueError("order_id must be positive")
-        if self._next_order_id is None or order_id > self._next_order_id:
-            self._next_order_id = order_id
+        self._order_id_allocator.reconcile_next_valid_id(
+            client_id=self.config.client_id,
+            broker_next_valid_id=order_id,
+        )
         self._ready.set()
 
     def set_managed_accounts(self, accounts: str) -> None:
@@ -649,11 +657,9 @@ class IbkrTwsOrderExecutionTransport:
         return self._sink.on_reconnect(payload)
 
     def _reserve_order_id(self) -> int:
-        order_id = self._next_order_id
-        if order_id is None:
+        if self._order_id_allocator.next_id(client_id=self.config.client_id) is None:
             raise RuntimeError("IBKR order-execution transport has no next order id")
-        self._next_order_id = order_id + 1
-        return order_id
+        return self._order_id_allocator.allocate(client_id=self.config.client_id)
 
     def _require_connected_app(self) -> Any:
         app = self._app

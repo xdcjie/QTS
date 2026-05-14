@@ -10,6 +10,7 @@ from qts.data.live_feed import (
     MarketDataSubscribed,
     ReconnectPolicy,
 )
+from qts.data.permissions import MarketDataPermissionEvent, MarketDataPermissionState
 from qts.data.provenance import DatasetMetadata
 from qts.data.subscriptions import (
     LogicalSubscription,
@@ -23,6 +24,8 @@ from qts.data.validation_report import DataValidationIssue, DataValidationReport
 
 __all__ = [
     "MarketDataAdapter",
+    "MarketDataPermissionEvent",
+    "MarketDataPermissionState",
     "HistoricalMarketDataAdapter",
     "FeedCapabilities",
     "FeedSubscription",

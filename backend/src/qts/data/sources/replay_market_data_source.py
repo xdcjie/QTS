@@ -3,19 +3,105 @@
 from __future__ import annotations
 
 import heapq
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 
 from qts.core.ids import InstrumentId
+from qts.core.time import require_aware_datetime
 from qts.data.historical.catalog import HistoricalCatalog, HistoricalDataset
 from qts.data.historical.csv_dataset import HistoricalBarStream, iter_historical_bars
 from qts.data.provenance import DatasetMetadata
+from qts.data.subscriptions import LogicalSubscription, LogicalSubscriptionKey, logical_key
 from qts.domain.instruments import AssetClass, ContractSpec, Instrument, SettlementType
 from qts.domain.market_data import Bar
 from qts.registry.future_roll import FutureRollRegistry, HighestVolumeFutureContractSelector
 from qts.registry.instrument_registry import InstrumentRegistry
 from qts.runtime.config import BacktestRuntimeConfig
+
+
+class SubscriptionReplayMarketDataSource:
+    """Broker-like replay source that emits only active logical subscriptions."""
+
+    def __init__(self, *, bars: Iterator[Bar] | tuple[Bar, ...] | list[Bar]) -> None:
+        self._events = self._ordered_events(tuple(bars))
+        self._subscriptions: dict[LogicalSubscriptionKey, datetime | None] = {}
+        self._callbacks: list[Callable[[Bar], None]] = []
+        self._closed = False
+        self.current_time: datetime | None = None
+
+    def subscribe(
+        self,
+        subscription: LogicalSubscription,
+        *,
+        subscribed_at: datetime | None = None,
+    ) -> None:
+        """Register a replay subscription."""
+
+        if subscribed_at is not None:
+            require_aware_datetime(subscribed_at, name="subscribed_at")
+        self._subscriptions[logical_key(subscription)] = subscribed_at
+
+    def unsubscribe(self, subscription: LogicalSubscription) -> None:
+        """Remove a replay subscription."""
+
+        self._subscriptions.pop(logical_key(subscription), None)
+
+    def poll_next(self) -> Bar | None:
+        """Return the next visible bar for active subscriptions."""
+
+        if self._closed:
+            return None
+        while self._events:
+            _, _, bar = heapq.heappop(self._events)
+            self.current_time = bar.end_time
+            if not self._is_active(bar):
+                continue
+            for callback in tuple(self._callbacks):
+                callback(bar)
+            return bar
+        return None
+
+    def on_event(self, callback: Callable[[Bar], None]) -> None:
+        """Register a callback invoked for every emitted replay event."""
+
+        self._callbacks.append(callback)
+
+    def close(self) -> None:
+        """Stop emitting replay events."""
+
+        self._closed = True
+        self._callbacks.clear()
+
+    def _is_active(self, bar: Bar) -> bool:
+        key = LogicalSubscriptionKey(
+            instrument_id=bar.instrument_id,
+            requested_timeframe=bar.timeframe,
+        )
+        subscribed_at = self._subscriptions.get(key)
+        if key not in self._subscriptions:
+            return False
+        return subscribed_at is None or bar.end_time >= subscribed_at
+
+    @staticmethod
+    def _ordered_events(bars: tuple[Bar, ...]) -> list[tuple[object, int, Bar]]:
+        events: list[tuple[object, int, Bar]] = []
+        for sequence, bar in enumerate(bars):
+            heapq.heappush(
+                events,
+                (
+                    (
+                        bar.end_time,
+                        bar.instrument_id.value,
+                        bar.timeframe,
+                        bar.start_time,
+                    ),
+                    sequence,
+                    bar,
+                ),
+            )
+        return events
 
 
 @dataclass(frozen=True, slots=True)
@@ -340,4 +426,8 @@ class ReplayMarketDataSource:
         return multipliers
 
 
-__all__ = ["ReplayMarketDataSource", "ReplayMarketDataBundle"]
+__all__ = [
+    "ReplayMarketDataSource",
+    "ReplayMarketDataBundle",
+    "SubscriptionReplayMarketDataSource",
+]

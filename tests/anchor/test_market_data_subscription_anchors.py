@@ -65,7 +65,10 @@ def test_streaming_source_stale_degradation_uses_internal_instrument_id() -> Non
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
     )
-    from qts.data.sources.streaming_market_data_source import StreamingMarketDataSource
+    from qts.data.sources.streaming_market_data_source import (
+        StreamingMarketDataDegradation,
+        StreamingMarketDataSource,
+    )
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
@@ -90,5 +93,6 @@ def test_streaming_source_stale_degradation_uses_internal_instrument_id() -> Non
 
     [degradation] = source.drain(observed_at=subscribed_at + timedelta(seconds=6))
 
+    assert isinstance(degradation, StreamingMarketDataDegradation)
     assert degradation.instrument_id == instrument_id
     assert not hasattr(degradation, "broker_symbol")

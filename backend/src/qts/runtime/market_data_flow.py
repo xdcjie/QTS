@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import tzinfo
 
 from qts.core.ids import InstrumentId
+from qts.data.permissions import MarketDataPermissionEvent
 from qts.data.sources.streaming_market_data_source import StreamingMarketDataDegradation
 from qts.domain.market_data import Bar
 from qts.runtime.actor_ref import ActorRef
@@ -53,7 +54,7 @@ class MarketDataFlow:
 
     def publish_source_event(
         self,
-        event: Bar | StreamingMarketDataDegradation,
+        event: Bar | StreamingMarketDataDegradation | MarketDataPermissionEvent,
     ) -> MarketDataFlowResult:
         """Publish a source event through runtime market-data orchestration."""
 
@@ -61,6 +62,8 @@ class MarketDataFlow:
             return MarketDataFlowResult(market_data=self.publish_bar(event))
         if isinstance(event, StreamingMarketDataDegradation):
             return MarketDataFlowResult(runtime_events=(self._runtime_degradation_event(event),))
+        if isinstance(event, MarketDataPermissionEvent):
+            return MarketDataFlowResult(runtime_events=(self._runtime_permission_event(event),))
         raise TypeError(f"unsupported market data source event: {type(event).__name__}")
 
     def _market_data_ref_for(self, bar: Bar) -> ActorRef:
@@ -106,6 +109,20 @@ class MarketDataFlow:
                 "age_seconds": degradation.age.total_seconds(),
                 "max_age_seconds": degradation.max_age.total_seconds(),
                 "observed_at": degradation.observed_at.isoformat(),
+            },
+        )
+
+    @staticmethod
+    def _runtime_permission_event(event: MarketDataPermissionEvent) -> RuntimeEvent:
+        """Convert provider permission callbacks to runtime events."""
+
+        return RuntimeEvent(
+            kind="market_data_permission_changed",
+            payload={
+                "source_id": event.source_id,
+                "permission_state": event.permission_state.value,
+                "provider_market_data_type": event.provider_market_data_type,
+                "request_id": event.request_id,
             },
         )
 

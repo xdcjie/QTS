@@ -787,14 +787,164 @@
         </p>
 
         <details class="inventory-group">
-          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">69 classes</span></summary>
+          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">408 classes</span></summary>
           <ul>
+            <li><code>BacktestRequestSchema</code> <code>backend/src/qts/api/schemas/backtest_schema.py:8</code></li>
+            <li><code>BacktestRunSchema</code> <code>backend/src/qts/api/schemas/backtest_schema.py:14</code></li>
+            <li><code>StrategyStatusSchema</code> <code>backend/src/qts/api/schemas/common.py:8</code></li>
+            <li><code>AccountSnapshotSchema</code> <code>backend/src/qts/api/schemas/common.py:15</code></li>
+            <li><code>OrderStatusSchema</code> <code>backend/src/qts/api/schemas/common.py:22</code></li>
+            <li><code>RiskRuleSchema</code> <code>backend/src/qts/api/schemas/common.py:29</code></li>
+            <li><code>OperationalErrorSchema</code> <code>backend/src/qts/api/schemas/common.py:36</code></li>
+            <li><code>RuntimeCommandResponseSchema</code> <code>backend/src/qts/api/schemas/operations.py:10</code></li>
+            <li><code>KillSwitchScopeSchema</code> <code>backend/src/qts/api/schemas/operations.py:16</code></li>
+            <li><code>KillSwitchCommandSchema</code> <code>backend/src/qts/api/schemas/operations.py:25</code></li>
+            <li><code>KillSwitchResponseSchema</code> <code>backend/src/qts/api/schemas/operations.py:44</code></li>
+            <li><code>CommandIdempotencyStore</code> <code>backend/src/qts/api/services/command_idempotency.py:11</code></li>
+            <li><code>StreamEventDTO</code> <code>backend/src/qts/api/websocket/dtos.py:10</code></li>
+            <li><code>JsonWebSocket</code> <code>backend/src/qts/api/websocket/manager.py:8</code></li>
+            <li><code>WebSocketConnectionManager</code> <code>backend/src/qts/api/websocket/manager.py:20</code></li>
+            <li><code>PaperRuntimeConfig</code> <code>backend/src/qts/application/commands/start_paper.py:10</code></li>
+            <li><code>PaperRuntime</code> <code>backend/src/qts/application/commands/start_paper.py:29</code></li>
+            <li><code>BacktestRequestDTO</code> <code>backend/src/qts/application/dto/backtest.py:9</code></li>
+            <li><code>BacktestRunDTO</code> <code>backend/src/qts/application/dto/backtest.py:21</code></li>
+            <li><code>HealthStatusDTO</code> <code>backend/src/qts/application/dto/health.py:9</code></li>
+            <li><code>RuntimeStateDTO</code> <code>backend/src/qts/application/dto/operations.py:9</code></li>
+            <li><code>KillSwitchCommandDTO</code> <code>backend/src/qts/application/dto/operations.py:16</code></li>
+            <li><code>KillSwitchStateDTO</code> <code>backend/src/qts/application/dto/operations.py:34</code></li>
+            <li><code>OrderFillDTO</code> <code>backend/src/qts/application/dto/order_events.py:10</code></li>
+            <li><code>BacktestService</code> <code>backend/src/qts/application/services/backtest.py:10</code></li>
+            <li><code>HealthService</code> <code>backend/src/qts/application/services/health.py:8</code></li>
+            <li><code>AccountService</code> <code>backend/src/qts/application/services/interfaces.py:8</code></li>
+            <li><code>OrderService</code> <code>backend/src/qts/application/services/interfaces.py:16</code></li>
+            <li><code>RiskService</code> <code>backend/src/qts/application/services/interfaces.py:24</code></li>
+            <li><code>OperationsService</code> <code>backend/src/qts/application/services/operations.py:9</code></li>
+            <li><code>StrategyLifecycleService</code> <code>backend/src/qts/application/services/strategy_service.py:9</code></li>
+            <li><code>StrategyStatus</code> <code>backend/src/qts/application/strategy_lifecycle.py:14</code></li>
+            <li><code>StrategyInstance</code> <code>backend/src/qts/application/strategy_lifecycle.py:22</code></li>
+            <li><code>StrategyRegistry</code> <code>backend/src/qts/application/strategy_lifecycle.py:40</code></li>
+            <li><code>BacktestActorLoopResult</code> <code>backend/src/qts/backtest/actor_loop.py:31</code></li>
+            <li><code>BacktestActorLoop</code> <code>backend/src/qts/backtest/actor_loop.py:45</code></li>
+            <li><code>BacktestEngineDependencies</code> <code>backend/src/qts/backtest/dependencies.py:30</code></li>
+            <li><code>BacktestActorLoopConfig</code> <code>backend/src/qts/backtest/dependencies.py:71</code></li>
+            <li><code>BacktestActorLoopDependencies</code> <code>backend/src/qts/backtest/dependencies.py:88</code></li>
+            <li><code>BacktestStreamResult</code> <code>backend/src/qts/backtest/engine.py:54</code></li>
+            <li><code>BacktestEngine</code> <code>backend/src/qts/backtest/engine.py:73</code></li>
+            <li><code>BacktestInstrumentContext</code> <code>backend/src/qts/backtest/instrument_context.py:16</code></li>
+            <li><code>BacktestPortfolioProjector</code> <code>backend/src/qts/backtest/portfolio_projection.py:15</code></li>
+            <li><code>BacktestRun</code> <code>backend/src/qts/backtest/runner.py:24</code></li>
+            <li><code>IbkrConnectionConfig</code> <code>backend/src/qts/config/ibkr.py:18</code></li>
+            <li><code>IbkrOrderExecutionConfig</code> <code>backend/src/qts/config/ibkr.py:39</code></li>
+            <li><code>IbkrSecretRefs</code> <code>backend/src/qts/config/ibkr.py:67</code></li>
+            <li><code>IbkrEnvironmentConfig</code> <code>backend/src/qts/config/ibkr.py:82</code></li>
+            <li><code>_StringId</code> <code>backend/src/qts/core/ids.py:9</code></li>
+            <li><code>AccountId</code> <code>backend/src/qts/core/ids.py:27</code></li>
+            <li><code>StrategyId</code> <code>backend/src/qts/core/ids.py:31</code></li>
+            <li><code>InstrumentId</code> <code>backend/src/qts/core/ids.py:35</code></li>
+            <li><code>OrderId</code> <code>backend/src/qts/core/ids.py:39</code></li>
+            <li><code>BrokerId</code> <code>backend/src/qts/core/ids.py:43</code></li>
+            <li><code>EventId</code> <code>backend/src/qts/core/ids.py:47</code></li>
             <li><code>RuntimeRunId</code> <code>backend/src/qts/core/ids.py:51</code></li>
             <li><code>RuntimeInstanceId</code> <code>backend/src/qts/core/ids.py:55</code></li>
+            <li><code>BacktestRunId</code> <code>backend/src/qts/core/ids.py:59</code></li>
             <li><code>CorrelationId</code> <code>backend/src/qts/core/ids.py:63</code></li>
             <li><code>CausationId</code> <code>backend/src/qts/core/ids.py:67</code></li>
+            <li><code>TimeInterval</code> <code>backend/src/qts/core/time.py:28</code></li>
+            <li><code>IbAsyncMarketDataTransportConfig</code> <code>backend/src/qts/data/adapters/ibkr_async_transport.py:46</code></li>
+            <li><code>IbAsyncMarketDataTransport</code> <code>backend/src/qts/data/adapters/ibkr_async_transport.py:68</code></li>
+            <li><code>IbkrMarketDataConnection</code> <code>backend/src/qts/data/adapters/ibkr_market_data.py:23</code></li>
+            <li><code>IbkrMarketDataSubscription</code> <code>backend/src/qts/data/adapters/ibkr_market_data.py:44</code></li>
+            <li><code>IbkrMarketDataAdapter</code> <code>backend/src/qts/data/adapters/ibkr_market_data.py:52</code></li>
+            <li><code>IbkrProviderMarketDataType</code> <code>backend/src/qts/data/adapters/ibkr_transport.py:47</code></li>
+            <li><code>IbkrMarketDataContractSpec</code> <code>backend/src/qts/data/adapters/ibkr_transport.py:57</code></li>
+            <li><code>IbkrTwsMarketDataTransportConfig</code> <code>backend/src/qts/data/adapters/ibkr_transport.py:112</code></li>
+            <li><code>IbkrTickPayload</code> <code>backend/src/qts/data/adapters/ibkr_transport.py:135</code></li>
+            <li><code>IbkrQuotePayload</code> <code>backend/src/qts/data/adapters/ibkr_transport.py:149</code></li>
+            <li><code>IbkrBarPayload</code> <code>backend/src/qts/data/adapters/ibkr_transport.py:165</code></li>
+            <li><code>IbkrMarketDataErrorPayload</code> <code>backend/src/qts/data/adapters/ibkr_transport.py:194</code></li>
+            <li><code>IbkrMarketDataTypePayload</code> <code>backend/src/qts/data/adapters/ibkr_transport.py:207</code></li>
+            <li><code>IbkrMarketDataCallbackSink</code> <code>backend/src/qts/data/adapters/ibkr_transport.py:218</code></li>
+            <li><code>IbkrMarketDataTransport</code> <code>backend/src/qts/data/adapters/ibkr_transport.py:238</code></li>
+            <li><code>_IbkrQuoteState</code> <code>backend/src/qts/data/adapters/ibkr_transport.py:268</code></li>
+            <li><code>IbkrTwsMarketDataTransport</code> <code>backend/src/qts/data/adapters/ibkr_transport.py:275</code></li>
+            <li><code>AggregationState</code> <code>backend/src/qts/data/bars/aggregator.py:18</code></li>
+            <li><code>AggregationResult</code> <code>backend/src/qts/data/bars/aggregator.py:33</code></li>
+            <li><code>BarAggregator</code> <code>backend/src/qts/data/bars/aggregator.py:40</code></li>
+            <li><code>BarAggregationPipeline</code> <code>backend/src/qts/data/bars/pipeline.py:15</code></li>
+            <li><code>AlignmentMode</code> <code>backend/src/qts/data/bars/timeframe.py:10</code></li>
+            <li><code>Timeframe</code> <code>backend/src/qts/data/bars/timeframe.py:29</code></li>
+            <li><code>ReplayFeed</code> <code>backend/src/qts/data/feeds/replay_feed.py:12</code></li>
+            <li><code>HistoricalMarketDataAdapter</code> <code>backend/src/qts/data/historical/adapter.py:21</code></li>
+            <li><code>HistoricalDataset</code> <code>backend/src/qts/data/historical/catalog.py:19</code></li>
+            <li><code>HistoricalCatalog</code> <code>backend/src/qts/data/historical/catalog.py:37</code></li>
+            <li><code>HistoricalCatalogLoadConfig</code> <code>backend/src/qts/data/historical/catalog.py:170</code></li>
+            <li><code>HistoricalContract</code> <code>backend/src/qts/data/historical/chains.py:16</code></li>
+            <li><code>HistoricalChain</code> <code>backend/src/qts/data/historical/chains.py:31</code></li>
+            <li><code>HistoricalDataStoreDefaults</code> <code>backend/src/qts/data/historical/config.py:14</code></li>
+            <li><code>HistoricalDataStoreConfig</code> <code>backend/src/qts/data/historical/config.py:35</code></li>
+            <li><code>HistoricalBarFileConfig</code> <code>backend/src/qts/data/historical/config.py:82</code></li>
+            <li><code>HistoricalDatasetConfig</code> <code>backend/src/qts/data/historical/config.py:109</code></li>
+            <li><code>HistoricalDataCatalogConfig</code> <code>backend/src/qts/data/historical/config.py:146</code></li>
+            <li><code>HistoricalDatasetLocation</code> <code>backend/src/qts/data/historical/config.py:164</code></li>
+            <li><code>HistoricalMarketDataConfig</code> <code>backend/src/qts/data/historical/config.py:182</code></li>
+            <li><code>HistoricalMarketDataConfigLoader</code> <code>backend/src/qts/data/historical/config_loader.py:47</code></li>
+            <li><code>CsvDatasetDescription</code> <code>backend/src/qts/data/historical/csv_dataset.py:42</code></li>
+            <li><code>HistoricalBarStream</code> <code>backend/src/qts/data/historical/csv_dataset.py:55</code></li>
+            <li><code>RootSymbolResolver</code> <code>backend/src/qts/data/historical/csv_dataset.py:432</code></li>
+            <li><code>HistoricalCsvSchema</code> <code>backend/src/qts/data/historical/csv_format.py:24</code></li>
+            <li><code>HistoricalCsvRowMapper</code> <code>backend/src/qts/data/historical/csv_row_mapper.py:21</code></li>
+            <li><code>HistoricalFutureChainSymbolResolver</code> <code>backend/src/qts/data/historical/symbols.py:12</code></li>
+            <li><code>HistoricalCsvStats</code> <code>backend/src/qts/data/historical/validation.py:30</code></li>
+            <li><code>HistoricalValidationSample</code> <code>backend/src/qts/data/historical/validation.py:53</code></li>
+            <li><code>HistoricalDatasetValidator</code> <code>backend/src/qts/data/historical/validation.py:62</code></li>
             <li><code>LiveFeedAdapter</code> <code>backend/src/qts/data/live/adapter.py:11</code></li>
             <li><code>MarketDataAdapter</code> <code>backend/src/qts/data/live/adapter.py:24</code></li>
+            <li><code>FeedCapabilities</code> <code>backend/src/qts/data/live/capabilities.py:11</code></li>
+            <li><code>FeedSubscription</code> <code>backend/src/qts/data/live/events.py:14</code></li>
+            <li><code>MarketDataSubscribed</code> <code>backend/src/qts/data/live/events.py:29</code></li>
+            <li><code>LiveFeedEvent</code> <code>backend/src/qts/data/live/events.py:37</code></li>
+            <li><code>LiveFeedFailure</code> <code>backend/src/qts/data/live/events.py:45</code></li>
+            <li><code>ReconnectPolicy</code> <code>backend/src/qts/data/live/reconnect.py:11</code></li>
+            <li><code>MarketDataPipeline</code> <code>backend/src/qts/data/market_data_pipeline.py:12</code></li>
+            <li><code>MarketDataPermissionState</code> <code>backend/src/qts/data/permissions.py:9</code></li>
+            <li><code>MarketDataPermissionEvent</code> <code>backend/src/qts/data/permissions.py:20</code></li>
+            <li><code>DatasetMetadata</code> <code>backend/src/qts/data/provenance.py:13</code></li>
+            <li><code>SessionLookup</code> <code>backend/src/qts/data/sessions/filter.py:13</code></li>
+            <li><code>RegularSessionWindow</code> <code>backend/src/qts/data/sessions/window.py:12</code></li>
+            <li><code>SubscriptionReplayMarketDataSource</code> <code>backend/src/qts/data/sources/replay_market_data_source.py:24</code></li>
+            <li><code>ReplayMarketDataBundle</code> <code>backend/src/qts/data/sources/replay_market_data_source.py:108</code></li>
+            <li><code>ReplayMarketDataSource</code> <code>backend/src/qts/data/sources/replay_market_data_source.py:120</code></li>
+            <li><code>StreamingMarketDataSubscription</code> <code>backend/src/qts/data/sources/streaming_market_data_source.py:32</code></li>
+            <li><code>StreamingMarketDataDegradation</code> <code>backend/src/qts/data/sources/streaming_market_data_source.py:52</code></li>
+            <li><code>StreamingMarketDataSource</code> <code>backend/src/qts/data/sources/streaming_market_data_source.py:68</code></li>
+            <li><code>MarketDataStore</code> <code>backend/src/qts/data/stores/base.py:13</code></li>
+            <li><code>InMemoryMarketDataStore</code> <code>backend/src/qts/data/stores/memory_store.py:13</code></li>
+            <li><code>ParquetMarketDataStore</code> <code>backend/src/qts/data/stores/parquet_store.py:21</code></li>
+            <li><code>SourceStreamType</code> <code>backend/src/qts/data/subscriptions.py:12</code></li>
+            <li><code>LogicalSubscription</code> <code>backend/src/qts/data/subscriptions.py:21</code></li>
+            <li><code>LogicalSubscriptionKey</code> <code>backend/src/qts/data/subscriptions.py:38</code></li>
+            <li><code>PhysicalSubscriptionKey</code> <code>backend/src/qts/data/subscriptions.py:47</code></li>
+            <li><code>DataValidationIssueCode</code> <code>backend/src/qts/data/validation_report.py:13</code></li>
+            <li><code>DataValidationSeverity</code> <code>backend/src/qts/data/validation_report.py:27</code></li>
+            <li><code>DataValidationIssue</code> <code>backend/src/qts/data/validation_report.py:36</code></li>
+            <li><code>DataValidationReport</code> <code>backend/src/qts/data/validation_report.py:45</code></li>
+            <li><code>BaseEvent</code> <code>backend/src/qts/domain/events/event.py:13</code></li>
+            <li><code>EventMetadata</code> <code>backend/src/qts/domain/events/metadata.py:21</code></li>
+            <li><code>SettlementType</code> <code>backend/src/qts/domain/instruments/contract_spec.py:10</code></li>
+            <li><code>ContractSpec</code> <code>backend/src/qts/domain/instruments/contract_spec.py:18</code></li>
+            <li><code>OptionRight</code> <code>backend/src/qts/domain/instruments/derivative_spec.py:13</code></li>
+            <li><code>ExerciseStyle</code> <code>backend/src/qts/domain/instruments/derivative_spec.py:20</code></li>
+            <li><code>DerivativeSpec</code> <code>backend/src/qts/domain/instruments/derivative_spec.py:28</code></li>
+            <li><code>FutureSpec</code> <code>backend/src/qts/domain/instruments/derivative_spec.py:36</code></li>
+            <li><code>OptionSpec</code> <code>backend/src/qts/domain/instruments/derivative_spec.py:48</code></li>
+            <li><code>AssetClass</code> <code>backend/src/qts/domain/instruments/instrument.py:19</code></li>
+            <li><code>Instrument</code> <code>backend/src/qts/domain/instruments/instrument.py:28</code></li>
+            <li><code>Bar</code> <code>backend/src/qts/domain/market_data/bar.py:14</code></li>
+            <li><code>Quote</code> <code>backend/src/qts/domain/market_data/bar.py:67</code></li>
+            <li><code>Tick</code> <code>backend/src/qts/domain/market_data/bar.py:92</code></li>
+            <li><code>OrderState</code> <code>backend/src/qts/domain/orders/value_objects.py:12</code></li>
+            <li><code>OrderSide</code> <code>backend/src/qts/domain/orders/value_objects.py:26</code></li>
+            <li><code>OrderIntent</code> <code>backend/src/qts/domain/orders/value_objects.py:34</code></li>
             <li><code>CancelIntent</code> <code>backend/src/qts/domain/orders/value_objects.py:50</code></li>
             <li><code>ReplaceIntent</code> <code>backend/src/qts/domain/orders/value_objects.py:58</code></li>
             <li><code>Order</code> <code>backend/src/qts/domain/orders/value_objects.py:71</code></li>
@@ -803,30 +953,163 @@
             <li><code>OrderFill</code> <code>backend/src/qts/domain/orders/value_objects.py:118</code></li>
             <li><code>OrderManagerResult</code> <code>backend/src/qts/domain/orders/value_objects.py:133</code></li>
             <li><code>OrderManagerSnapshot</code> <code>backend/src/qts/domain/orders/value_objects.py:141</code></li>
+            <li><code>RiskDecisionStatus</code> <code>backend/src/qts/domain/risk/decision.py:10</code></li>
+            <li><code>RiskDecision</code> <code>backend/src/qts/domain/risk/decision.py:19</code></li>
+            <li><code>OrderRiskRequest</code> <code>backend/src/qts/domain/risk/request.py:14</code></li>
+            <li><code>BrokerExecutionAdapter</code> <code>backend/src/qts/execution/adapters/broker_execution_adapter.py:18</code></li>
+            <li><code>IbAsyncOrderExecutionTransportConfig</code> <code>backend/src/qts/execution/adapters/ibkr_async_transport.py:28</code></li>
+            <li><code>IbAsyncOrderExecutionTransport</code> <code>backend/src/qts/execution/adapters/ibkr_async_transport.py:47</code></li>
+            <li><code>IbkrOrderExecutionConnection</code> <code>backend/src/qts/execution/adapters/ibkr_order_execution.py:33</code></li>
+            <li><code>IbkrExecutionReport</code> <code>backend/src/qts/execution/adapters/ibkr_order_execution.py:55</code></li>
+            <li><code>IbkrOrderExecutionAdapter</code> <code>backend/src/qts/execution/adapters/ibkr_order_execution.py:67</code></li>
+            <li><code>IbkrOrderIdAllocator</code> <code>backend/src/qts/execution/adapters/ibkr_order_ids.py:9</code></li>
+            <li><code>BrokerOrderRecord</code> <code>backend/src/qts/execution/adapters/ibkr_order_map.py:12</code></li>
+            <li><code>BrokerOrderMap</code> <code>backend/src/qts/execution/adapters/ibkr_order_map.py:36</code></li>
+            <li><code>IbkrOrderContractSpec</code> <code>backend/src/qts/execution/adapters/ibkr_transport.py:27</code></li>
+            <li><code>IbkrTwsOrderExecutionTransportConfig</code> <code>backend/src/qts/execution/adapters/ibkr_transport.py:82</code></li>
+            <li><code>IbkrOrderRequest</code> <code>backend/src/qts/execution/adapters/ibkr_transport.py:103</code></li>
+            <li><code>IbkrOrderStatusPayload</code> <code>backend/src/qts/execution/adapters/ibkr_transport.py:167</code></li>
+            <li><code>IbkrExecutionPayload</code> <code>backend/src/qts/execution/adapters/ibkr_transport.py:184</code></li>
+            <li><code>IbkrCommissionPayload</code> <code>backend/src/qts/execution/adapters/ibkr_transport.py:207</code></li>
+            <li><code>IbkrErrorPayload</code> <code>backend/src/qts/execution/adapters/ibkr_transport.py:224</code></li>
+            <li><code>IbkrConnectionEventPayload</code> <code>backend/src/qts/execution/adapters/ibkr_transport.py:237</code></li>
+            <li><code>IbkrCommissionReport</code> <code>backend/src/qts/execution/adapters/ibkr_transport.py:248</code></li>
+            <li><code>IbkrTransportError</code> <code>backend/src/qts/execution/adapters/ibkr_transport.py:257</code></li>
+            <li><code>IbkrConnectionEvent</code> <code>backend/src/qts/execution/adapters/ibkr_transport.py:266</code></li>
+            <li><code>IbkrOrderExecutionCallbackSink</code> <code>backend/src/qts/execution/adapters/ibkr_transport.py:273</code></li>
+            <li><code>IbkrOrderExecutionTransport</code> <code>backend/src/qts/execution/adapters/ibkr_transport.py:304</code></li>
+            <li><code>IbkrTwsOrderExecutionTransport</code> <code>backend/src/qts/execution/adapters/ibkr_transport.py:356</code></li>
+            <li><code>SimulatedExecutionCostModel</code> <code>backend/src/qts/execution/adapters/simulated_execution_adapter.py:15</code></li>
+            <li><code>SimulatedExecutionAdapter</code> <code>backend/src/qts/execution/adapters/simulated_execution_adapter.py:30</code></li>
+            <li><code>BrokerCapabilities</code> <code>backend/src/qts/execution/broker.py:20</code></li>
+            <li><code>BrokerOrderType</code> <code>backend/src/qts/execution/broker.py:63</code></li>
+            <li><code>TimeInForce</code> <code>backend/src/qts/execution/broker.py:71</code></li>
+            <li><code>BrokerOrderRequest</code> <code>backend/src/qts/execution/broker.py:80</code></li>
+            <li><code>BrokerExecutionReportStatus</code> <code>backend/src/qts/execution/broker.py:95</code></li>
+            <li><code>BrokerExecutionReport</code> <code>backend/src/qts/execution/broker.py:106</code></li>
+            <li><code>BrokerAdapter</code> <code>backend/src/qts/execution/broker.py:132</code></li>
+            <li><code>FakeBrokerAdapter</code> <code>backend/src/qts/execution/broker.py:149</code></li>
+            <li><code>FillIdempotencyStore</code> <code>backend/src/qts/execution/idempotency.py:6</code></li>
+            <li><code>OrderManager</code> <code>backend/src/qts/execution/order_manager.py:28</code></li>
+            <li><code>OrderEvent</code> <code>backend/src/qts/execution/order_state_machine.py:11</code></li>
+            <li><code>OrderTransitionError</code> <code>backend/src/qts/execution/order_state_machine.py:24</code></li>
+            <li><code>OrderStateMachine</code> <code>backend/src/qts/execution/order_state_machine.py:81</code></li>
+            <li><code>ImmediateFillModel</code> <code>backend/src/qts/execution/simulator/fill_model.py:10</code></li>
+            <li><code>SimulatedBroker</code> <code>backend/src/qts/execution/simulator/simulated_broker.py:12</code></li>
+            <li><code>FactorAsset</code> <code>backend/src/qts/factors/momentum.py:10</code></li>
+            <li><code>FactorScore</code> <code>backend/src/qts/factors/momentum.py:19</code></li>
+            <li><code>FactorResult</code> <code>backend/src/qts/factors/momentum.py:27</code></li>
+            <li><code>MomentumFactor</code> <code>backend/src/qts/factors/momentum.py:41</code></li>
+            <li><code>EMA</code> <code>backend/src/qts/indicators/price/ema.py:12</code></li>
+            <li><code>SMA</code> <code>backend/src/qts/indicators/price/sma.py:12</code></li>
+            <li><code>RollingWindow</code> <code>backend/src/qts/indicators/rolling.py:14</code></li>
+            <li><code>SyntheticMarketDataConfig</code> <code>backend/src/qts/load/synthetic_market_data.py:14</code></li>
+            <li><code>AuditEvent</code> <code>backend/src/qts/observability/audit.py:10</code></li>
+            <li><code>MetricsRegistry</code> <code>backend/src/qts/observability/metrics.py:10</code></li>
+            <li><code>TradeSide</code> <code>backend/src/qts/portfolio/accounting/fill_accounting.py:14</code></li>
+            <li><code>Fill</code> <code>backend/src/qts/portfolio/accounting/fill_accounting.py:22</code></li>
+            <li><code>FillAccounting</code> <code>backend/src/qts/portfolio/accounting/fill_accounting.py:45</code></li>
+            <li><code>CashBook</code> <code>backend/src/qts/portfolio/cash_book.py:11</code></li>
+            <li><code>Position</code> <code>backend/src/qts/portfolio/position_book.py:14</code></li>
+            <li><code>PositionBook</code> <code>backend/src/qts/portfolio/position_book.py:21</code></li>
+            <li><code>Reservation</code> <code>backend/src/qts/portfolio/reservation_book.py:12</code></li>
+            <li><code>ReservationBook</code> <code>backend/src/qts/portfolio/reservation_book.py:20</code></li>
+            <li><code>GuardrailViolation</code> <code>backend/src/qts/quality/guardrails.py:118</code></li>
+            <li><code>Rule</code> <code>backend/src/qts/quality/guardrails.py:131</code></li>
+            <li><code>ImportBoundaryRule</code> <code>backend/src/qts/quality/guardrails.py:150</code></li>
             <li><code>LivePackageNoReplayClassRule</code> <code>backend/src/qts/quality/guardrails.py:173</code></li>
-            <li><code>ProductionNoFakeClassRule</code> <code>backend/src/qts/quality/guardrails.py:205</code></li>
-            <li><code>SharedRuntimeWordingRule</code> <code>backend/src/qts/quality/guardrails.py:234</code></li>
-            <li><code>ProductionPlaceholderDocstringRule</code> <code>backend/src/qts/quality/guardrails.py:266</code></li>
-            <li><code>ProductSpecificRule</code> <code>backend/src/qts/quality/guardrails.py:296</code></li>
-            <li><code>BrokerSpecificRule</code> <code>backend/src/qts/quality/guardrails.py:314</code></li>
-            <li><code>TestSupportRule</code> <code>backend/src/qts/quality/guardrails.py:332</code></li>
-            <li><code>SharedCapabilityRule</code> <code>backend/src/qts/quality/guardrails.py:348</code></li>
-            <li><code>OOPPublicFactoryRule</code> <code>backend/src/qts/quality/guardrails.py:364</code></li>
-            <li><code>OOPHelperOwnershipRule</code> <code>backend/src/qts/quality/guardrails.py:380</code></li>
-            <li><code>BacktestRunnerCohesionRule</code> <code>backend/src/qts/quality/guardrails.py:396</code></li>
-            <li><code>BacktestInputCohesionRule</code> <code>backend/src/qts/quality/guardrails.py:412</code></li>
-            <li><code>BacktestEngineCohesionRule</code> <code>backend/src/qts/quality/guardrails.py:428</code></li>
-            <li><code>StrategySdkPublicSurfaceRule</code> <code>backend/src/qts/quality/guardrails.py:444</code></li>
-            <li><code>GuardrailSuite</code> <code>backend/src/qts/quality/guardrails.py:460</code></li>
+            <li><code>ProductionNoFakeClassRule</code> <code>backend/src/qts/quality/guardrails.py:204</code></li>
+            <li><code>SharedRuntimeWordingRule</code> <code>backend/src/qts/quality/guardrails.py:233</code></li>
+            <li><code>ProductionPlaceholderDocstringRule</code> <code>backend/src/qts/quality/guardrails.py:265</code></li>
+            <li><code>ProductSpecificRule</code> <code>backend/src/qts/quality/guardrails.py:295</code></li>
+            <li><code>BrokerSpecificRule</code> <code>backend/src/qts/quality/guardrails.py:313</code></li>
+            <li><code>TestSupportRule</code> <code>backend/src/qts/quality/guardrails.py:331</code></li>
+            <li><code>SharedCapabilityRule</code> <code>backend/src/qts/quality/guardrails.py:347</code></li>
+            <li><code>OOPPublicFactoryRule</code> <code>backend/src/qts/quality/guardrails.py:363</code></li>
+            <li><code>OOPHelperOwnershipRule</code> <code>backend/src/qts/quality/guardrails.py:379</code></li>
+            <li><code>BacktestRunnerCohesionRule</code> <code>backend/src/qts/quality/guardrails.py:395</code></li>
+            <li><code>BacktestInputCohesionRule</code> <code>backend/src/qts/quality/guardrails.py:411</code></li>
+            <li><code>BacktestEngineCohesionRule</code> <code>backend/src/qts/quality/guardrails.py:427</code></li>
+            <li><code>StrategySdkPublicSurfaceRule</code> <code>backend/src/qts/quality/guardrails.py:443</code></li>
+            <li><code>GuardrailSuite</code> <code>backend/src/qts/quality/guardrails.py:459</code></li>
+            <li><code>DriftKind</code> <code>backend/src/qts/reconciliation/drift.py:12</code></li>
+            <li><code>DriftItem</code> <code>backend/src/qts/reconciliation/drift.py:23</code></li>
+            <li><code>ReconciliationEngine</code> <code>backend/src/qts/reconciliation/engine.py:13</code></li>
+            <li><code>ReconciliationReport</code> <code>backend/src/qts/reconciliation/report.py:14</code></li>
+            <li><code>OrderSnapshot</code> <code>backend/src/qts/reconciliation/snapshots.py:13</code></li>
+            <li><code>PositionSnapshot</code> <code>backend/src/qts/reconciliation/snapshots.py:31</code></li>
+            <li><code>CashSnapshot</code> <code>backend/src/qts/reconciliation/snapshots.py:39</code></li>
+            <li><code>ReconciliationSnapshot</code> <code>backend/src/qts/reconciliation/snapshots.py:52</code></li>
+            <li><code>StartupReconciliationDecision</code> <code>backend/src/qts/reconciliation/startup_gate.py:11</code></li>
+            <li><code>BrokerSymbolMapping</code> <code>backend/src/qts/registry/broker_symbol_mapping.py:8</code></li>
+            <li><code>MarketSession</code> <code>backend/src/qts/registry/calendar_registry.py:13</code></li>
+            <li><code>CalendarProvider</code> <code>backend/src/qts/registry/calendar_registry.py:38</code></li>
+            <li><code>CalendarRegistry</code> <code>backend/src/qts/registry/calendar_registry.py:45</code></li>
+            <li><code>FutureChain</code> <code>backend/src/qts/registry/future_chain_registry.py:11</code></li>
+            <li><code>ContinuousFutureRef</code> <code>backend/src/qts/registry/future_chain_registry.py:26</code></li>
+            <li><code>FutureChainRegistry</code> <code>backend/src/qts/registry/future_chain_registry.py:40</code></li>
+            <li><code>FutureContractCandidate</code> <code>backend/src/qts/registry/future_roll.py:16</code></li>
+            <li><code>FutureContractSelector</code> <code>backend/src/qts/registry/future_roll.py:35</code></li>
+            <li><code>HighestVolumeFutureContractSelector</code> <code>backend/src/qts/registry/future_roll.py:46</code></li>
+            <li><code>FutureRollSelection</code> <code>backend/src/qts/registry/future_roll.py:67</code></li>
+            <li><code>FutureRollRegistry</code> <code>backend/src/qts/registry/future_roll.py:84</code></li>
+            <li><code>InstrumentRegistry</code> <code>backend/src/qts/registry/instrument_registry.py:9</code></li>
+            <li><code>OptionChainRegistry</code> <code>backend/src/qts/registry/option_chain_registry.py:12</code></li>
+            <li><code>ComexGoldCalendarProvider</code> <code>backend/src/qts/registry/providers/comex_gold_calendar_provider.py:12</code></li>
+            <li><code>ExchangeCalendarProvider</code> <code>backend/src/qts/registry/providers/exchange_calendar_provider.py:14</code></li>
+            <li><code>SourceSymbolResolver</code> <code>backend/src/qts/registry/symbol_resolution.py:12</code></li>
+            <li><code>StaticSymbolResolver</code> <code>backend/src/qts/registry/symbol_resolution.py:25</code></li>
+            <li><code>EquityCurvePoint</code> <code>backend/src/qts/reporting/backtest.py:40</code></li>
+            <li><code>TradeLedgerEntry</code> <code>backend/src/qts/reporting/backtest.py:48</code></li>
+            <li><code>StreamingEquityMetrics</code> <code>backend/src/qts/reporting/backtest.py:67</code></li>
+            <li><code>BacktestArtifacts</code> <code>backend/src/qts/reporting/backtest.py:107</code></li>
+            <li><code>_NdjsonArtifact</code> <code>backend/src/qts/reporting/backtest.py:116</code></li>
+            <li><code>BacktestArtifactWriter</code> <code>backend/src/qts/reporting/backtest.py:151</code></li>
+            <li><code>BacktestReportWriter</code> <code>backend/src/qts/reporting/backtest.py:285</code></li>
+            <li><code>ReportWriter</code> <code>backend/src/qts/reporting/base.py:10</code></li>
+            <li><code>RuntimeArtifactWriter</code> <code>backend/src/qts/reporting/base.py:14</code></li>
             <li><code>LiveReportManifest</code> <code>backend/src/qts/reporting/live.py:18</code></li>
             <li><code>LiveReportWriter</code> <code>backend/src/qts/reporting/live.py:25</code></li>
             <li><code>LiveEventReporter</code> <code>backend/src/qts/reporting/live.py:140</code></li>
+            <li><code>RiskRuleConfig</code> <code>backend/src/qts/risk/config.py:10</code></li>
+            <li><code>RiskConfig</code> <code>backend/src/qts/risk/config.py:26</code></li>
+            <li><code>KillSwitchScopeType</code> <code>backend/src/qts/risk/kill_switch.py:12</code></li>
+            <li><code>KillSwitchScope</code> <code>backend/src/qts/risk/kill_switch.py:22</code></li>
+            <li><code>KillSwitchState</code> <code>backend/src/qts/risk/kill_switch.py:54</code></li>
+            <li><code>RuntimeKillSwitchCommand</code> <code>backend/src/qts/risk/kill_switch.py:63</code></li>
+            <li><code>KillSwitchRegistry</code> <code>backend/src/qts/risk/kill_switch.py:78</code></li>
+            <li><code>RiskEngine</code> <code>backend/src/qts/risk/risk_engine.py:11</code></li>
+            <li><code>RiskRule</code> <code>backend/src/qts/risk/rule.py:10</code></li>
+            <li><code>RiskRuleRegistry</code> <code>backend/src/qts/risk/rule_registry.py:13</code></li>
+            <li><code>MaxNotionalRule</code> <code>backend/src/qts/risk/rules/max_notional.py:12</code></li>
+            <li><code>MaxOrderQuantityRule</code> <code>backend/src/qts/risk/rules/max_order_qty.py:12</code></li>
+            <li><code>SessionLookup</code> <code>backend/src/qts/risk/rules/trading_session_rule.py:13</code></li>
+            <li><code>TradingSessionRule</code> <code>backend/src/qts/risk/rules/trading_session_rule.py:21</code></li>
+            <li><code>Actor</code> <code>backend/src/qts/runtime/actor.py:8</code></li>
+            <li><code>ActorRef</code> <code>backend/src/qts/runtime/actor_ref.py:12</code></li>
+            <li><code>ApplyFill</code> <code>backend/src/qts/runtime/actors/account_actor.py:19</code></li>
+            <li><code>AccountSnapshot</code> <code>backend/src/qts/runtime/actors/account_actor.py:28</code></li>
             <li><code>AccountActor</code> <code>backend/src/qts/runtime/actors/account_actor.py:36</code></li>
+            <li><code>ExecutionAdapter</code> <code>backend/src/qts/runtime/actors/execution_actor.py:16</code></li>
+            <li><code>OrderExecutionRequest</code> <code>backend/src/qts/runtime/actors/execution_actor.py:35</code></li>
             <li><code>OrderCancelRequest</code> <code>backend/src/qts/runtime/actors/execution_actor.py:45</code></li>
             <li><code>ExecutionActor</code> <code>backend/src/qts/runtime/actors/execution_actor.py:53</code></li>
+            <li><code>MarketDataEvent</code> <code>backend/src/qts/runtime/actors/market_data_actor.py:29</code></li>
+            <li><code>SubscribeMarketData</code> <code>backend/src/qts/runtime/actors/market_data_actor.py:36</code></li>
+            <li><code>MarketDataActor</code> <code>backend/src/qts/runtime/actors/market_data_actor.py:52</code></li>
+            <li><code>SubmitOrder</code> <code>backend/src/qts/runtime/actors/order_manager_actor.py:27</code></li>
+            <li><code>CancelOrder</code> <code>backend/src/qts/runtime/actors/order_manager_actor.py:37</code></li>
+            <li><code>OrderManagerActor</code> <code>backend/src/qts/runtime/actors/order_manager_actor.py:43</code></li>
             <li><code>StrategySignalEvent</code> <code>backend/src/qts/runtime/actors/signal_aggregator_actor.py:20</code></li>
+            <li><code>AggregatedSignalBatch</code> <code>backend/src/qts/runtime/actors/signal_aggregator_actor.py:29</code></li>
             <li><code>SignalAggregatorActor</code> <code>backend/src/qts/runtime/actors/signal_aggregator_actor.py:40</code></li>
+            <li><code>StrategyBarEvent</code> <code>backend/src/qts/runtime/actors/strategy_actor.py:14</code></li>
+            <li><code>StrategyBarResult</code> <code>backend/src/qts/runtime/actors/strategy_actor.py:23</code></li>
+            <li><code>StrategyFinalize</code> <code>backend/src/qts/runtime/actors/strategy_actor.py:31</code></li>
+            <li><code>StrategyFinalized</code> <code>backend/src/qts/runtime/actors/strategy_actor.py:36</code></li>
+            <li><code>StrategyActor</code> <code>backend/src/qts/runtime/actors/strategy_actor.py:42</code></li>
             <li><code>TradingRuntimeConfig</code> <code>backend/src/qts/runtime/config.py:29</code></li>
+            <li><code>BacktestCostModel</code> <code>backend/src/qts/runtime/config.py:43</code></li>
             <li><code>BacktestEngineConfig</code> <code>backend/src/qts/runtime/config.py:83</code></li>
             <li><code>CostModelConfig</code> <code>backend/src/qts/runtime/config.py:148</code></li>
             <li><code>RiskConfig</code> <code>backend/src/qts/runtime/config.py:176</code></li>
@@ -835,29 +1118,85 @@
             <li><code>BacktestStrategyConfig</code> <code>backend/src/qts/runtime/config.py:252</code></li>
             <li><code>BacktestRuntimeConfig</code> <code>backend/src/qts/runtime/config.py:315</code></li>
             <li><code>LiveRuntimeConfig</code> <code>backend/src/qts/runtime/config.py:470</code></li>
+            <li><code>BacktestConfigLoader</code> <code>backend/src/qts/runtime/config_loader.py:24</code></li>
+            <li><code>EventSequenceValidationReport</code> <code>backend/src/qts/runtime/event_store.py:17</code></li>
+            <li><code>EventStore</code> <code>backend/src/qts/runtime/event_store.py:25</code></li>
+            <li><code>InMemoryEventStore</code> <code>backend/src/qts/runtime/event_store.py:41</code></li>
+            <li><code>FileEventStore</code> <code>backend/src/qts/runtime/event_store.py:69</code></li>
+            <li><code>ExecutionReportHandler</code> <code>backend/src/qts/runtime/execution_report_handler.py:14</code></li>
+            <li><code>InstrumentExecutionContext</code> <code>backend/src/qts/runtime/intent_processing.py:24</code></li>
+            <li><code>ProcessedIntent</code> <code>backend/src/qts/runtime/intent_processing.py:53</code></li>
+            <li><code>OrderPlan</code> <code>backend/src/qts/runtime/intent_processing.py:61</code></li>
+            <li><code>OrderPlanBuilder</code> <code>backend/src/qts/runtime/intent_processing.py:70</code></li>
+            <li><code>TargetIntentProcessor</code> <code>backend/src/qts/runtime/intent_processing.py:167</code></li>
             <li><code>LiveRuntimeState</code> <code>backend/src/qts/runtime/live.py:15</code></li>
             <li><code>LivePermissionMode</code> <code>backend/src/qts/runtime/live.py:25</code></li>
-            <li><code>LiveStartupDecision</code> <code>backend/src/qts/runtime/live.py:37</code></li>
-            <li><code>LiveRuntimeStateMachine</code> <code>backend/src/qts/runtime/live.py:94</code></li>
-            <li><code>RuntimeOrderResult</code> <code>backend/src/qts/runtime/live.py:109</code></li>
-            <li><code>LiveRuntime</code> <code>backend/src/qts/runtime/live.py:118</code></li>
+            <li><code>LiveStartupCheck</code> <code>backend/src/qts/runtime/live.py:37</code></li>
+            <li><code>LiveStartupChecklist</code> <code>backend/src/qts/runtime/live.py:60</code></li>
+            <li><code>LiveStartupDecision</code> <code>backend/src/qts/runtime/live.py:104</code></li>
+            <li><code>LiveRuntimeStateMachine</code> <code>backend/src/qts/runtime/live.py:152</code></li>
+            <li><code>RuntimeOrderResult</code> <code>backend/src/qts/runtime/live.py:167</code></li>
+            <li><code>LiveRuntime</code> <code>backend/src/qts/runtime/live.py:176</code></li>
+            <li><code>LiveReconciliationResult</code> <code>backend/src/qts/runtime/live_reconciliation.py:24</code></li>
+            <li><code>LiveReconciliation</code> <code>backend/src/qts/runtime/live_reconciliation.py:31</code></li>
+            <li><code>LiveRuntimeDependencies</code> <code>backend/src/qts/runtime/live_runtime_dependencies.py:28</code></li>
+            <li><code>LiveRuntimeSessionResult</code> <code>backend/src/qts/runtime/live_runtime_session.py:30</code></li>
+            <li><code>LiveKillSwitchEvidence</code> <code>backend/src/qts/runtime/live_runtime_session.py:41</code></li>
+            <li><code>RuntimeRollbackCommand</code> <code>backend/src/qts/runtime/live_runtime_session.py:53</code></li>
+            <li><code>RuntimeRollbackEvidence</code> <code>backend/src/qts/runtime/live_runtime_session.py:69</code></li>
+            <li><code>LiveRuntimeSession</code> <code>backend/src/qts/runtime/live_runtime_session.py:79</code></li>
+            <li><code>Mailbox</code> <code>backend/src/qts/runtime/mailbox.py:8</code></li>
+            <li><code>MarketDataFlowResult</code> <code>backend/src/qts/runtime/market_data_flow.py:19</code></li>
+            <li><code>MarketDataFlow</code> <code>backend/src/qts/runtime/market_data_flow.py:26</code></li>
             <li><code>RuntimeMode</code> <code>backend/src/qts/runtime/mode.py:8</code></li>
             <li><code>MarketDataEnvironment</code> <code>backend/src/qts/runtime/mode.py:28</code></li>
             <li><code>ExecutionEnvironment</code> <code>backend/src/qts/runtime/mode.py:48</code></li>
             <li><code>AccountEnvironment</code> <code>backend/src/qts/runtime/mode.py:71</code></li>
+            <li><code>AccountPartitionPolicy</code> <code>backend/src/qts/runtime/partitioning.py:11</code></li>
+            <li><code>AccountBrokerMapping</code> <code>backend/src/qts/runtime/partitioning.py:20</code></li>
+            <li><code>AccountRiskConfig</code> <code>backend/src/qts/runtime/partitioning.py:41</code></li>
+            <li><code>RouteNotFoundError</code> <code>backend/src/qts/runtime/router.py:10</code></li>
+            <li><code>EventRouter</code> <code>backend/src/qts/runtime/router.py:14</code></li>
             <li><code>SignalAggregationPolicy</code> <code>backend/src/qts/runtime/signal_policy.py:13</code></li>
             <li><code>SignalContribution</code> <code>backend/src/qts/runtime/signal_policy.py:23</code></li>
             <li><code>SignalConflict</code> <code>backend/src/qts/runtime/signal_policy.py:40</code></li>
             <li><code>SignalAggregationDecision</code> <code>backend/src/qts/runtime/signal_policy.py:49</code></li>
             <li><code>SignalPolicyEngine</code> <code>backend/src/qts/runtime/signal_policy.py:62</code></li>
+            <li><code>BacktestRuntimeEventSink</code> <code>backend/src/qts/runtime/sinks/backtest.py:13</code></li>
             <li><code>RuntimeEvent</code> <code>backend/src/qts/runtime/sinks/base.py:25</code></li>
             <li><code>RuntimeEventSink</code> <code>backend/src/qts/runtime/sinks/base.py:83</code></li>
+            <li><code>WrittenRuntimeEvent</code> <code>backend/src/qts/runtime/sinks/live.py:18</code></li>
+            <li><code>LiveRuntimeEventSink</code> <code>backend/src/qts/runtime/sinks/live.py:25</code></li>
+            <li><code>StateSnapshot</code> <code>backend/src/qts/runtime/state_recovery.py:10</code></li>
+            <li><code>InMemorySnapshotStore</code> <code>backend/src/qts/runtime/state_recovery.py:25</code></li>
+            <li><code>StrategyExecutionResult</code> <code>backend/src/qts/runtime/strategy_execution_pipeline.py:36</code></li>
+            <li><code>StrategyExecutionPipeline</code> <code>backend/src/qts/runtime/strategy_execution_pipeline.py:43</code></li>
             <li><code>StrategyRuntimeSpec</code> <code>backend/src/qts/runtime/topology.py:15</code></li>
             <li><code>AccountRuntimeSpec</code> <code>backend/src/qts/runtime/topology.py:58</code></li>
             <li><code>BrokerRouteSpec</code> <code>backend/src/qts/runtime/topology.py:92</code></li>
             <li><code>MarketDataRouteSpec</code> <code>backend/src/qts/runtime/topology.py:125</code></li>
             <li><code>RuntimePartitionKey</code> <code>backend/src/qts/runtime/topology.py:158</code></li>
             <li><code>RuntimeTopology</code> <code>backend/src/qts/runtime/topology.py:170</code></li>
+            <li><code>AssetRef</code> <code>backend/src/qts/strategy_sdk/asset_ref.py:13</code></li>
+            <li><code>SymbolResolver</code> <code>backend/src/qts/strategy_sdk/asset_resolver.py:15</code></li>
+            <li><code>FutureContractResolver</code> <code>backend/src/qts/strategy_sdk/asset_resolver.py:21</code></li>
+            <li><code>ContinuousFutureResolver</code> <code>backend/src/qts/strategy_sdk/asset_resolver.py:28</code></li>
+            <li><code>OptionContractRef</code> <code>backend/src/qts/strategy_sdk/asset_resolver.py:34</code></li>
+            <li><code>OptionContractResolver</code> <code>backend/src/qts/strategy_sdk/asset_resolver.py:41</code></li>
+            <li><code>StrategyAssetResolver</code> <code>backend/src/qts/strategy_sdk/asset_resolver.py:54</code></li>
+            <li><code>StrategyContext</code> <code>backend/src/qts/strategy_sdk/context.py:30</code></li>
+            <li><code>DataView</code> <code>backend/src/qts/strategy_sdk/data_view.py:16</code></li>
+            <li><code>FactorFactory</code> <code>backend/src/qts/strategy_sdk/factors.py:11</code></li>
+            <li><code>AssetIndicator</code> <code>backend/src/qts/strategy_sdk/indicators.py:14</code></li>
+            <li><code>IndicatorFactory</code> <code>backend/src/qts/strategy_sdk/indicators.py:36</code></li>
+            <li><code>PortfolioPosition</code> <code>backend/src/qts/strategy_sdk/portfolio_view.py:15</code></li>
+            <li><code>PortfolioView</code> <code>backend/src/qts/strategy_sdk/portfolio_view.py:23</code></li>
+            <li><code>Strategy</code> <code>backend/src/qts/strategy_sdk/strategy.py:6</code></li>
+            <li><code>DataSubscription</code> <code>backend/src/qts/strategy_sdk/subscription_registry.py:11</code></li>
+            <li><code>StrategySubscriptionRegistry</code> <code>backend/src/qts/strategy_sdk/subscription_registry.py:26</code></li>
+            <li><code>TargetIntentType</code> <code>backend/src/qts/strategy_sdk/target.py:12</code></li>
+            <li><code>TargetIntent</code> <code>backend/src/qts/strategy_sdk/target.py:22</code></li>
+            <li><code>TargetIntentEmitter</code> <code>backend/src/qts/strategy_sdk/target_emitter.py:8</code></li>
           </ul>
         </details>
 

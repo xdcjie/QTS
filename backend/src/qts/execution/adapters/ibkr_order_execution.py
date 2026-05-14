@@ -88,6 +88,7 @@ class IbkrOrderExecutionAdapter:
         )
         self._pending_executions: dict[str, IbkrExecutionPayload] = {}
         self._commissions: dict[str, IbkrCommissionPayload] = {}
+        self._completed_execution_ids: set[str] = set()
 
     def to_order_request(
         self,
@@ -149,6 +150,8 @@ class IbkrOrderExecutionAdapter:
     def on_execution(self, payload: IbkrExecutionPayload) -> ExecutionReport | None:
         """Stage a raw IBKR execution callback until its commission arrives."""
 
+        if payload.execution_id in self._completed_execution_ids:
+            return None
         self._pending_executions[payload.execution_id] = payload
         commission = self._commissions.get(payload.execution_id)
         if commission is None:
@@ -161,6 +164,12 @@ class IbkrOrderExecutionAdapter:
     ) -> ExecutionReport | IbkrCommissionReport:
         """Normalize a raw IBKR commission callback and complete matching fills."""
 
+        if payload.execution_id in self._completed_execution_ids:
+            return IbkrCommissionReport(
+                execution_id=payload.execution_id,
+                commission=payload.commission,
+                currency=payload.currency,
+            )
         self._commissions[payload.execution_id] = payload
         report = self._pop_commissioned_execution(payload.execution_id)
         if report is not None:
@@ -255,6 +264,7 @@ class IbkrOrderExecutionAdapter:
             return None
         self._pending_executions.pop(execution_id)
         self._commissions.pop(execution_id)
+        self._completed_execution_ids.add(execution_id)
         return self.normalize_execution_report(
             IbkrExecutionReport(
                 report_id=execution.report_id,

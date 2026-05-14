@@ -225,3 +225,53 @@ def test_ibkr_execution_report_waits_for_commission_before_fill_report() -> None
     assert isinstance(completed, ExecutionReport)
     assert completed.fill_id == "fill-001"
     assert completed.commission == Decimal("1.23")
+
+
+def test_ibkr_duplicate_execution_callback_does_not_emit_second_fill_report() -> None:
+    from qts.core.ids import BrokerId, InstrumentId
+    from qts.execution.adapters.ibkr_order_execution import (
+        IbkrOrderExecutionAdapter,
+        IbkrOrderExecutionConnection,
+    )
+    from qts.execution.adapters.ibkr_transport import (
+        IbkrCommissionPayload,
+        IbkrCommissionReport,
+        IbkrExecutionPayload,
+    )
+    from qts.execution.order_manager import ExecutionReport
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    adapter = IbkrOrderExecutionAdapter(
+        connection=IbkrOrderExecutionConnection(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+            broker_id=BrokerId("IBKR"),
+            account_id="DU1234567",
+        ),
+        symbol_mapping=mapping,
+    )
+    execution = IbkrExecutionPayload(
+        report_id="exec-001",
+        broker_order_id="runtime-broker-001",
+        execution_id="fill-001",
+        filled_quantity=Decimal("10"),
+        fill_price=Decimal("101.25"),
+    )
+    commission = IbkrCommissionPayload(
+        execution_id="fill-001",
+        commission=Decimal("1.23"),
+        currency="USD",
+    )
+
+    adapter.on_execution(execution)
+    first = adapter.on_commission(commission)
+    duplicate_execution = adapter.on_execution(execution)
+    duplicate_commission = adapter.on_commission(commission)
+
+    assert isinstance(first, ExecutionReport)
+    assert duplicate_execution is None
+    assert isinstance(duplicate_commission, IbkrCommissionReport)

@@ -6,8 +6,9 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Protocol
 
-from qts.core.ids import OrderId
+from qts.core.ids import BrokerId, OrderId
 from qts.domain.orders import OrderSide
+from qts.execution.broker import BrokerCapabilities, BrokerOrderType
 from qts.execution.order_manager import ExecutionReport, ExecutionReportStatus, OrderIntent
 
 
@@ -30,11 +31,21 @@ class SimulatedExecutionAdapter:
     """Apply deterministic commission and slippage assumptions for backtests."""
 
     cost_model: SimulatedExecutionCostModel
+    capabilities: BrokerCapabilities | None = None
 
     def __post_init__(self) -> None:
         """Validate and normalize cost-model-backed configuration."""
         if self.cost_model is None:
             raise ValueError("cost_model is required")
+        if self.capabilities is None:
+            object.__setattr__(
+                self,
+                "capabilities",
+                BrokerCapabilities(
+                    broker_id=BrokerId("simulated"),
+                    supports_fractional=True,
+                ),
+            )
 
     def execute_market_order(
         self,
@@ -46,6 +57,7 @@ class SimulatedExecutionAdapter:
         """Execute a market order with cost-model adjustments."""
         if market_price < Decimal("0"):
             raise ValueError("market_price must be non-negative")
+        self._validate_market_order(intent)
         slippage = market_price * self.cost_model.slippage_bps / Decimal("10000")
         fill_price = (
             market_price + slippage if intent.side is OrderSide.BUY else market_price - slippage
@@ -61,6 +73,23 @@ class SimulatedExecutionAdapter:
             commission=commission,
             slippage=abs(fill_price - market_price),
         )
+
+    def _validate_market_order(self, intent: OrderIntent) -> None:
+        capabilities = self.capabilities
+        if capabilities is None:
+            raise RuntimeError("simulated execution capabilities are not configured")
+        if not capabilities.supports_order_type(BrokerOrderType.MARKET):
+            raise ValueError("market orders are not supported by broker capabilities")
+        if (
+            not capabilities.supports_fractional
+            and intent.quantity != intent.quantity.to_integral_value()
+        ):
+            raise ValueError("fractional quantity is not supported")
+        if (
+            capabilities.max_order_quantity is not None
+            and intent.quantity > capabilities.max_order_quantity
+        ):
+            raise ValueError("quantity exceeds max order quantity")
 
     def cancel_order(self, order_id: OrderId, *, broker_order_id: str) -> ExecutionReport:
         """Return a deterministic cancellation report for actor parity."""

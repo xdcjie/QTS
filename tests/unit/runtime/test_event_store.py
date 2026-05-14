@@ -57,6 +57,33 @@ def test_file_event_store_survives_restart(tmp_path: Path) -> None:
     assert restored.by_correlation_id(CorrelationId("corr-001")) == (event,)
 
 
+def test_file_event_store_detects_missing_event_sequence(tmp_path: Path) -> None:
+    from qts.runtime.event_store import FileEventStore
+
+    path = tmp_path / "events.jsonl"
+    path.write_text(
+        "\n".join(
+            (
+                '{"event": {"causation_id": null, "correlation_id": null, '
+                '"event_id": "evt-001", "event_time": "2026-01-02T14:30:00+00:00", '
+                '"event_type": "order.accepted", "partition_key": "ord-001", '
+                '"source": "OrderManagerActor"}, "sequence": 1}',
+                '{"event": {"causation_id": null, "correlation_id": null, '
+                '"event_id": "evt-003", "event_time": "2026-01-02T14:32:00+00:00", '
+                '"event_type": "order.filled", "partition_key": "ord-001", '
+                '"source": "OrderManagerActor"}, "sequence": 3}',
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    report = FileEventStore(path).validate_sequence()
+
+    assert not report.valid
+    assert report.missing_sequences == (2,)
+    assert report.duplicate_sequences == ()
+
+
 def test_event_store_keeps_json_conversion_inside_file_store() -> None:
     tree = ast.parse(Path("backend/src/qts/runtime/event_store.py").read_text(encoding="utf-8"))
 

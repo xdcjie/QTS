@@ -90,6 +90,43 @@ def test_order_manager_processes_normalized_fill_report_once() -> None:
     assert second.fills == ()
 
 
+def test_duplicate_order_status_report_is_idempotent() -> None:
+    from qts.core.ids import InstrumentId, OrderId
+    from qts.domain.risk import RiskDecision
+    from qts.execution.order_manager import (
+        ExecutionReport,
+        ExecutionReportStatus,
+        OrderIntent,
+        OrderManager,
+        OrderSide,
+    )
+    from qts.execution.order_state_machine import OrderState
+
+    manager = OrderManager()
+    order = manager.create_order(
+        OrderIntent(
+            order_id=OrderId("ord-001"),
+            instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+            side=OrderSide.BUY,
+            quantity=Decimal("10"),
+        ),
+        risk_decision=RiskDecision.approve(),
+    )
+    manager.mark_sent(order.order_id, broker_order_id="broker-001")
+    report = ExecutionReport(
+        report_id="status-001",
+        broker_order_id="broker-001",
+        status=ExecutionReportStatus.ACCEPTED,
+    )
+
+    first = manager.process_report(report)
+    duplicate = manager.process_report(report)
+
+    assert first.order.state is OrderState.ACCEPTED
+    assert duplicate.order.state is OrderState.ACCEPTED
+    assert duplicate.fills == ()
+
+
 def test_order_manager_can_discard_terminal_order_state_for_streaming_backtests() -> None:
     from qts.core.ids import InstrumentId, OrderId
     from qts.domain.risk import RiskDecision

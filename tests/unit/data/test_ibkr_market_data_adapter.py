@@ -70,3 +70,34 @@ def test_ibkr_market_data_adapter_normalizes_tick_quote_and_bar_without_order_me
     assert not hasattr(adapter, "submit_order")
     assert not hasattr(adapter, "cancel_order")
     assert LiveMarketDataAdapter is IbkrMarketDataAdapter
+
+
+def test_ibkr_market_data_type_sets_permission_state() -> None:
+    from qts.core.ids import BrokerId, InstrumentId
+    from qts.data.adapters.ibkr_market_data import (
+        IbkrMarketDataAdapter,
+        IbkrMarketDataConnection,
+        MarketDataPermissionState,
+    )
+    from qts.data.adapters.ibkr_transport import IbkrMarketDataTypePayload
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    adapter = IbkrMarketDataAdapter(
+        connection=IbkrMarketDataConnection(
+            host="127.0.0.1",
+            port=4002,
+            client_id=101,
+            source_id="ibkr-paper-md",
+        ),
+        symbol_mapping=mapping,
+    )
+
+    event = adapter.on_market_data_type(IbkrMarketDataTypePayload(request_id=7, market_data_type=3))
+
+    assert event.source_id == "ibkr-paper-md"
+    assert event.provider_market_data_type == 3
+    assert event.permission_state is MarketDataPermissionState.DELAYED
+    assert adapter.permission_state is MarketDataPermissionState.DELAYED

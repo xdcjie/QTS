@@ -8,8 +8,17 @@ from datetime import UTC, datetime, timedelta
 
 from qts.core.ids import InstrumentId
 from qts.core.time import require_aware_datetime
-from qts.data.adapters.ibkr_market_data import IbkrMarketDataAdapter, IbkrMarketDataSubscription
-from qts.data.adapters.ibkr_transport import IbkrBarPayload, IbkrQuotePayload, IbkrTickPayload
+from qts.data.adapters.ibkr_market_data import (
+    IbkrMarketDataAdapter,
+    IbkrMarketDataSubscription,
+)
+from qts.data.adapters.ibkr_transport import (
+    IbkrBarPayload,
+    IbkrMarketDataTypePayload,
+    IbkrQuotePayload,
+    IbkrTickPayload,
+)
+from qts.data.permissions import MarketDataPermissionEvent, MarketDataPermissionState
 from qts.data.subscriptions import (
     LogicalSubscription,
     LogicalSubscriptionKey,
@@ -76,7 +85,15 @@ class StreamingMarketDataSource:
         self._subscriptions: dict[LogicalSubscriptionKey, StreamingMarketDataSubscription] = {}
         self._last_event_at: dict[LogicalSubscriptionKey, datetime] = {}
         self._stale_emitted: set[LogicalSubscriptionKey] = set()
-        self._pending: list[Tick | Quote | Bar | StreamingMarketDataDegradation] = []
+        self._pending: list[
+            Tick | Quote | Bar | StreamingMarketDataDegradation | MarketDataPermissionEvent
+        ] = []
+
+    @property
+    def permission_state(self) -> MarketDataPermissionState:
+        """Return the latest provider permission state."""
+
+        return self._adapter.permission_state
 
     def subscribe(
         self,
@@ -146,9 +163,18 @@ class StreamingMarketDataSource:
             self._pending.append(bar)
         return bar
 
+    def on_market_data_type(self, payload: IbkrMarketDataTypePayload) -> MarketDataPermissionEvent:
+        """Normalize and enqueue a provider permission-state callback."""
+
+        event = self._adapter.on_market_data_type(payload)
+        self._pending.append(event)
+        return event
+
     def drain(
         self, *, observed_at: datetime | None = None
-    ) -> tuple[Tick | Quote | Bar | StreamingMarketDataDegradation, ...]:
+    ) -> tuple[
+        Tick | Quote | Bar | StreamingMarketDataDegradation | MarketDataPermissionEvent, ...
+    ]:
         """Return queued events and one-shot stale-data degradation signals."""
 
         self._append_stale_degradations(observed_at or datetime.now(UTC))
