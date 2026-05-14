@@ -144,6 +144,7 @@ class OrderManagerSnapshot:
     orders: tuple[Order, ...]
     broker_to_order: tuple[tuple[str, OrderId], ...]
     seen_fill_ids: tuple[str, ...] = ()
+    seen_report_ids: tuple[str, ...] = ()
 
 
 __all__ = [

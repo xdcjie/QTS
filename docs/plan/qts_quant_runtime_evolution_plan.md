@@ -181,9 +181,9 @@ OBSERVATION:
    - ExecutionEnvironment
    - AccountEnvironment
 
-2. 修改 LiveMode
-   - 如果 LiveMode 只用于 live 权限，改名为 LivePermissionMode。
-   - 如果 LiveMode 表示运行模式，则迁移到 RuntimeMode。
+2. 拆分 live 权限模式和 runtime 执行模式
+   - live 权限语义使用 LivePermissionMode。
+   - runtime 执行语义使用 RuntimeMode。
 
 3. 修改 LiveRuntimeConfig
    - 添加 mode: RuntimeMode。
@@ -251,7 +251,7 @@ OBSERVATION:
 
 ### Review 项
 
-当前存在 `ReplayMarketDataAdapter`、`FakeMarketDataAdapter` 等容易和 live/source/transport 混用的命名。`qts.data.live` 中如果出现 replay/fake 概念，会让 reviewer 难以判断这个类到底是生产 live、测试 fake，还是 backtest replay。
+此前存在 replay/fake adapter 命名和 live/source/transport 边界混用的风险。`qts.data.live` 中如果出现 replay/fake 概念，会让 reviewer 难以判断这个类到底是生产 live、测试 fake，还是 backtest replay。
 
 ### 目标
 
@@ -299,12 +299,10 @@ qts/data/
      qts/data/sources/base.py
      qts/data/adapters/base.py
 
-3. 迁移 ReplayMarketDataAdapter
+3. 迁移 replay market-data 概念
    推荐：
      qts.data.sources.replay_market_data_source.ReplayMarketDataSource
-   或：
-     qts.data.adapters.replay_market_data_adapter.ReplayMarketDataAdapter
-   但不应放在 qts.data.live。
+   并禁止 replay adapter class 出现在 qts.data.live。
 
 4. 迁移 FakeMarketDataAdapter
    如果用于测试：
@@ -351,7 +349,7 @@ qts/data/
 
 ### Review 项
 
-当前 `BacktestRunId` 能表达 backtest run，但统一 runtime 需要跨 backtest/paper/live 的 run identity。否则 event store、report、reconciliation 和排查工具会按模式割裂。
+backtest/paper/live 统一 runtime 需要跨模式的 run identity。否则 event store、report、reconciliation 和排查工具会按模式割裂。
 
 ### 目标
 
@@ -392,10 +390,9 @@ class RuntimeEvent:
    - RuntimeRunId
    - RuntimeInstanceId
 
-2. 保留 BacktestRunId
-   - 作为历史兼容 alias。
-   - 或仅作为 BacktestRuntimeConfig 内部字段。
-   - reporting/runtime event 使用 RuntimeRunId。
+2. 移除 BacktestRunId
+   - 不保留历史兼容 alias。
+   - backtest reporting/runtime event 全部使用 RuntimeRunId。
 
 3. 修改 RuntimeEvent
    - 添加 run_id。
@@ -472,7 +469,7 @@ class RuntimeEvent:
 
 3. 修改 LiveRuntime docstring
    如果保留：
-     明确它是 facade、legacy wrapper 还是 beta test runtime。
+     明确它是 facade、runtime wrapper 还是 beta test runtime。
    如果不用：
      删除或迁移到 tests/support。
 
@@ -1924,4 +1921,3 @@ MVP 完成后，系统至少可以达到：
 5. IBKR paper/live callback 不会重复入账。
 6. 每个 run 的事件和 report 可被统一分析。
 ```
-

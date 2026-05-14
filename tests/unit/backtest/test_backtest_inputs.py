@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -80,6 +81,10 @@ historical_data:
     assert inputs.dataset_metadata[0].instrument_id == InstrumentId("DATASET.EQUITY")
     assert inputs.dataset_metadata[0].timezone_policy == "custom_exchange_policy"
     assert inputs.dataset_metadata[0].adjustment_policy == "vendor_adjusted"
+    assert inputs.dataset_metadata[0].content_hash == _sha256(
+        historical_root / "data" / "equity.csv"
+    )
+    assert inputs.dataset_metadata[0].row_count == 1
     assert inputs.instrument_registry.resolve("AAPL") == InstrumentId("EQUITY.US.NASDAQ.AAPL")
     assert inputs.future_roll_registry is None
     assert inputs.exchange_timezone_by_instrument == {}
@@ -103,3 +108,7 @@ def _write_fixture_csv(path: Path) -> None:
                 "symbol": "AAPL",
             }
         )
+
+
+def _sha256(path: Path) -> str:
+    return f"sha256:{hashlib.sha256(path.read_bytes()).hexdigest()}"

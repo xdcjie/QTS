@@ -3,20 +3,25 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from decimal import Decimal
 
-from qts.core.ids import BrokerId
-from qts.domain.orders import ExecutionReport, OrderIntent
+from qts.core.ids import AccountId, BrokerId, OrderId, StrategyId
+from qts.domain.orders import ExecutionReport, OrderIntent, OrderSide
+from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
 from qts.execution.adapters.ibkr_transport import (
+    IbkrAccountSummaryPayload,
     IbkrCommissionPayload,
     IbkrCommissionReport,
     IbkrConnectionEvent,
     IbkrConnectionEventPayload,
     IbkrErrorPayload,
     IbkrExecutionPayload,
+    IbkrOpenOrderPayload,
     IbkrOrderContractSpec,
     IbkrOrderRequest,
     IbkrOrderStatusPayload,
+    IbkrPositionPayload,
     IbkrTransportError,
 )
 from qts.execution.broker import (
@@ -25,6 +30,12 @@ from qts.execution.broker import (
     BrokerOrderType,
     TimeInForce,
     normalize_broker_status,
+)
+from qts.reconciliation.snapshots import (
+    CashSnapshot,
+    OrderSnapshot,
+    PositionSnapshot,
+    ReconciliationSnapshot,
 )
 from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
@@ -64,6 +75,29 @@ class IbkrExecutionReport:
     commission: Decimal = Decimal("0")
 
 
+@dataclass(frozen=True, slots=True)
+class IbkrOrderCallbackEvent:
+    """Audit event for normalized IBKR order callback handling."""
+
+    kind: str
+    report_id: str | None = None
+    broker_order_id: str | None = None
+    execution_id: str | None = None
+    reason: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.kind.strip():
+            raise ValueError("kind must not be empty")
+        for field_name, value in (
+            ("report_id", self.report_id),
+            ("broker_order_id", self.broker_order_id),
+            ("execution_id", self.execution_id),
+            ("reason", self.reason),
+        ):
+            if value is not None and not value.strip():
+                raise ValueError(f"{field_name} must not be empty when provided")
+
+
 class IbkrOrderExecutionAdapter:
     """Maps internal orders to IBKR order requests and normalizes reports."""
 
@@ -73,10 +107,12 @@ class IbkrOrderExecutionAdapter:
         connection: IbkrOrderExecutionConnection,
         symbol_mapping: BrokerSymbolMapping,
         capabilities: BrokerCapabilities | None = None,
+        order_map: BrokerOrderMap | None = None,
     ) -> None:
         """Perform __init__."""
         self.connection = connection
         self._symbol_mapping = symbol_mapping
+        self._order_map = order_map
         self._capabilities = capabilities or BrokerCapabilities(
             broker_id=connection.broker_id,
             supports_market_orders=True,
@@ -88,11 +124,41 @@ class IbkrOrderExecutionAdapter:
         )
         self._pending_executions: dict[str, IbkrExecutionPayload] = {}
         self._commissions: dict[str, IbkrCommissionPayload] = {}
+        self._completed_execution_ids: set[str] = set()
+        self._quarantined_executions: list[IbkrExecutionPayload] = []
+        self._quarantined_open_orders: list[IbkrOpenOrderPayload] = []
+        self._quarantined_order_statuses: list[IbkrOrderStatusPayload] = []
+        self._callback_events: list[IbkrOrderCallbackEvent] = []
+        self._broker_open_orders: dict[OrderId, OrderSnapshot] = {}
+        self._broker_positions: dict[str, PositionSnapshot] = {}
+        self._broker_cash: dict[str, CashSnapshot] = {}
+
+    @property
+    def quarantined_executions(self) -> tuple[IbkrExecutionPayload, ...]:
+        """Read-only unresolved IBKR execution callbacks."""
+        return tuple(self._quarantined_executions)
+
+    @property
+    def quarantined_open_orders(self) -> tuple[IbkrOpenOrderPayload, ...]:
+        """Read-only unresolved IBKR openOrder callbacks."""
+        return tuple(self._quarantined_open_orders)
+
+    @property
+    def quarantined_order_statuses(self) -> tuple[IbkrOrderStatusPayload, ...]:
+        """Read-only unresolved IBKR order-status callbacks."""
+        return tuple(self._quarantined_order_statuses)
+
+    @property
+    def callback_events(self) -> tuple[IbkrOrderCallbackEvent, ...]:
+        """Read-only IBKR callback audit events."""
+        return tuple(self._callback_events)
 
     def to_order_request(
         self,
         intent: OrderIntent,
         *,
+        client_order_id: str,
+        strategy_id: StrategyId | None = None,
         order_type: BrokerOrderType = BrokerOrderType.MARKET,
         time_in_force: TimeInForce = TimeInForce.DAY,
         limit_price: Decimal | None = None,
@@ -102,6 +168,8 @@ class IbkrOrderExecutionAdapter:
         outside_regular_trading_hours: bool = False,
     ) -> IbkrOrderRequest:
         """Perform to_order_request."""
+        if not client_order_id.strip():
+            raise ValueError("client_order_id must not be empty")
         self._validate_order_request(
             intent,
             order_type=order_type,
@@ -111,7 +179,10 @@ class IbkrOrderExecutionAdapter:
             opens_short=opens_short,
         )
         return IbkrOrderRequest(
-            client_order_id=intent.order_id.value,
+            internal_order_id=intent.order_id,
+            client_order_id=client_order_id,
+            internal_account_id=intent.account_id,
+            strategy_id=strategy_id,
             account_id=self.connection.account_id,
             broker_symbol=self._symbol_mapping.to_broker_symbol(intent.instrument_id),
             side=intent.side.value,
@@ -122,6 +193,50 @@ class IbkrOrderExecutionAdapter:
             contract=contract,
             outside_regular_trading_hours=outside_regular_trading_hours,
         )
+
+    def record_submitted_order(
+        self,
+        request: IbkrOrderRequest,
+        *,
+        ibkr_order_id: str,
+        submitted_at: datetime | None = None,
+    ) -> None:
+        """Record a submitted IBKR order id for callback reconciliation."""
+        if self._order_map is None:
+            return
+        if request.internal_account_id is None:
+            raise ValueError("internal_account_id is required to record IBKR order mapping")
+        submitted_at = submitted_at or datetime.now(UTC)
+        self._order_map.record_pending_submission(
+            internal_order_id=request.internal_order_id,
+            client_order_id=request.client_order_id,
+            account_id=request.internal_account_id,
+            strategy_id=request.strategy_id,
+            submitted_at=submitted_at,
+        )
+        self._order_map.attach_ibkr_order_id(
+            client_order_id=request.client_order_id,
+            ibkr_order_id=ibkr_order_id,
+        )
+
+    def resolve_cancel_broker_order_id(
+        self,
+        *,
+        internal_order_id: OrderId,
+        client_order_id: str,
+    ) -> str:
+        """Resolve the IBKR order id for a cancel request through route metadata."""
+        self.validate_cancel_supported()
+        if not client_order_id.strip():
+            raise ValueError("client_order_id must not be empty")
+        if self._order_map is None:
+            raise RuntimeError("BrokerOrderMap is required to resolve IBKR cancel order id")
+        record = self._order_map.by_internal_order_id(internal_order_id)
+        if record.client_order_id != client_order_id:
+            raise ValueError("client_order_id does not match internal_order_id route")
+        if record.ibkr_order_id is None:
+            raise RuntimeError("IBKR order id is not known for cancel request")
+        return record.ibkr_order_id
 
     def normalize_execution_report(self, report: IbkrExecutionReport) -> ExecutionReport:
         """Perform normalize_execution_report."""
@@ -135,9 +250,35 @@ class IbkrOrderExecutionAdapter:
             commission=report.commission,
         )
 
-    def on_order_status(self, payload: IbkrOrderStatusPayload) -> ExecutionReport:
+    def on_order_status(self, payload: IbkrOrderStatusPayload) -> ExecutionReport | None:
         """Normalize a raw IBKR order-status callback."""
 
+        self._record_callback_event(
+            "ibkr_order_status_received",
+            report_id=payload.report_id,
+            broker_order_id=payload.broker_order_id,
+        )
+        if self._order_map is not None:
+            try:
+                if payload.perm_id is not None:
+                    self._order_map.attach_perm_id(
+                        ibkr_order_id=payload.broker_order_id,
+                        perm_id=payload.perm_id,
+                    )
+                self._order_map.mark_status(
+                    ibkr_order_id=payload.broker_order_id,
+                    status=payload.status,
+                    last_broker_status_at=datetime.now(UTC),
+                )
+            except KeyError:
+                self._quarantined_order_statuses.append(payload)
+                self._record_callback_event(
+                    "ibkr_order_callback_unresolved_quarantined",
+                    report_id=payload.report_id,
+                    broker_order_id=payload.broker_order_id,
+                    reason="unknown_ibkr_order_id",
+                )
+                return None
         return self.normalize_execution_report(
             IbkrExecutionReport(
                 report_id=payload.report_id,
@@ -146,9 +287,138 @@ class IbkrOrderExecutionAdapter:
             )
         )
 
+    def on_open_order(self, payload: IbkrOpenOrderPayload) -> None:
+        """Record an IBKR openOrder callback against the broker-order map."""
+
+        self._record_callback_event(
+            "ibkr_open_order_received",
+            report_id=payload.report_id,
+            broker_order_id=payload.broker_order_id,
+        )
+        if self._order_map is None:
+            return
+        if payload.client_order_id is None:
+            self._quarantined_open_orders.append(payload)
+            self._record_callback_event(
+                "ibkr_order_callback_unresolved_quarantined",
+                report_id=payload.report_id,
+                broker_order_id=payload.broker_order_id,
+                reason="missing_client_order_id",
+            )
+            return
+        try:
+            record = self._order_map.by_client_order_id(payload.client_order_id)
+            self._order_map.attach_ibkr_order_id(
+                client_order_id=payload.client_order_id,
+                ibkr_order_id=payload.broker_order_id,
+            )
+            if payload.perm_id is not None:
+                self._order_map.attach_perm_id(
+                    ibkr_order_id=payload.broker_order_id,
+                    perm_id=payload.perm_id,
+                )
+            if payload.status is not None:
+                self._order_map.mark_status(
+                    ibkr_order_id=payload.broker_order_id,
+                    status=payload.status,
+                    last_broker_status_at=datetime.now(UTC),
+                )
+            if (
+                payload.broker_symbol is not None
+                and payload.side is not None
+                and payload.quantity is not None
+                and payload.status is not None
+            ):
+                self._broker_open_orders[record.internal_order_id] = OrderSnapshot(
+                    order_id=record.internal_order_id,
+                    instrument_id=self._symbol_mapping.to_instrument_id(payload.broker_symbol),
+                    side=self._order_side_from_ibkr(payload.side),
+                    quantity=payload.quantity,
+                    status=payload.status,
+                )
+        except KeyError:
+            self._quarantined_open_orders.append(payload)
+            self._record_callback_event(
+                "ibkr_order_callback_unresolved_quarantined",
+                report_id=payload.report_id,
+                broker_order_id=payload.broker_order_id,
+                reason="unknown_client_order_id",
+            )
+
+    def on_position(self, payload: IbkrPositionPayload) -> None:
+        """Record an IBKR position callback for broker reconciliation."""
+
+        if payload.account_id != self.connection.account_id:
+            return
+        instrument_id = self._symbol_mapping.to_instrument_id(payload.broker_symbol)
+        self._broker_positions[instrument_id.value] = PositionSnapshot(
+            instrument_id=instrument_id,
+            quantity=payload.quantity,
+        )
+
+    def on_account_summary(self, payload: IbkrAccountSummaryPayload) -> None:
+        """Record an IBKR account summary callback for broker reconciliation."""
+
+        if payload.account_id != self.connection.account_id:
+            return
+        if payload.tag != "TotalCashValue":
+            return
+        self._broker_cash[payload.currency] = CashSnapshot(
+            currency=payload.currency,
+            balance=payload.value,
+        )
+
+    def broker_reconciliation_snapshot(
+        self,
+        *,
+        account_id: AccountId,
+    ) -> ReconciliationSnapshot:
+        """Return the latest normalized broker-side snapshot for reconciliation."""
+
+        return ReconciliationSnapshot(
+            account_id=account_id,
+            orders=tuple(
+                self._broker_open_orders[order_id]
+                for order_id in sorted(self._broker_open_orders, key=lambda item: item.value)
+            ),
+            positions=tuple(
+                self._broker_positions[instrument_id]
+                for instrument_id in sorted(self._broker_positions)
+            ),
+            cash=tuple(self._broker_cash[currency] for currency in sorted(self._broker_cash)),
+        )
+
     def on_execution(self, payload: IbkrExecutionPayload) -> ExecutionReport | None:
         """Stage a raw IBKR execution callback until its commission arrives."""
 
+        self._record_callback_event(
+            "ibkr_execution_details_received",
+            report_id=payload.report_id,
+            broker_order_id=payload.broker_order_id,
+            execution_id=payload.execution_id,
+        )
+        if payload.execution_id in self._completed_execution_ids:
+            self._record_callback_event(
+                "ibkr_order_callback_duplicate_dropped",
+                report_id=payload.report_id,
+                broker_order_id=payload.broker_order_id,
+                execution_id=payload.execution_id,
+                reason="execution_already_completed",
+            )
+            return None
+        if self._order_map is not None:
+            try:
+                self._order_map.by_ibkr_order_id(payload.broker_order_id)
+            except KeyError:
+                self._quarantined_executions.append(payload)
+                self._record_callback_event(
+                    "ibkr_order_callback_unresolved_quarantined",
+                    report_id=payload.report_id,
+                    broker_order_id=payload.broker_order_id,
+                    execution_id=payload.execution_id,
+                    reason="unknown_ibkr_order_id",
+                )
+                return None
         self._pending_executions[payload.execution_id] = payload
         commission = self._commissions.get(payload.execution_id)
         if commission is None:
@@ -161,6 +431,21 @@ class IbkrOrderExecutionAdapter:
     ) -> ExecutionReport | IbkrCommissionReport:
         """Normalize a raw IBKR commission callback and complete matching fills."""
 
+        self._record_callback_event(
+            "ibkr_commission_report_received",
+            execution_id=payload.execution_id,
+        )
+        if payload.execution_id in self._completed_execution_ids:
+            self._record_callback_event(
+                "ibkr_order_callback_duplicate_dropped",
+                execution_id=payload.execution_id,
+                reason="commission_for_completed_execution",
+            )
+            return IbkrCommissionReport(
+                execution_id=payload.execution_id,
+                commission=payload.commission,
+                currency=payload.currency,
+            )
         self._commissions[payload.execution_id] = payload
         report = self._pop_commissioned_execution(payload.execution_id)
         if report is not None:
@@ -208,6 +493,15 @@ class IbkrOrderExecutionAdapter:
         except KeyError as exc:
             raise ValueError(f"unsupported IBKR order status: {status}") from exc
 
+    @staticmethod
+    def _order_side_from_ibkr(side: str) -> OrderSide:
+        normalized = side.strip().lower()
+        if normalized in {"buy", "bot"}:
+            return OrderSide.BUY
+        if normalized in {"sell", "sld"}:
+            return OrderSide.SELL
+        raise ValueError(f"unsupported IBKR order side: {side}")
+
     def validate_cancel_supported(self) -> None:
         """Validate cancel support before sending an IBKR cancel request."""
 
@@ -245,6 +539,7 @@ class IbkrOrderExecutionAdapter:
             and intent.quantity != intent.quantity.to_integral_value()
         ):
             raise ValueError("fractional quantity is not supported")
+        self._capabilities.validate_order_quantity(intent.quantity)
         if opens_short and not self._capabilities.supports_short:
             raise ValueError("short orders are not supported")
 
@@ -255,6 +550,7 @@ class IbkrOrderExecutionAdapter:
             return None
         self._pending_executions.pop(execution_id)
         self._commissions.pop(execution_id)
+        self._completed_execution_ids.add(execution_id)
         return self.normalize_execution_report(
             IbkrExecutionReport(
                 report_id=execution.report_id,
@@ -267,9 +563,29 @@ class IbkrOrderExecutionAdapter:
             )
         )
 
+    def _record_callback_event(
+        self,
+        kind: str,
+        *,
+        report_id: str | None = None,
+        broker_order_id: str | None = None,
+        execution_id: str | None = None,
+        reason: str | None = None,
+    ) -> None:
+        self._callback_events.append(
+            IbkrOrderCallbackEvent(
+                kind=kind,
+                report_id=report_id,
+                broker_order_id=broker_order_id,
+                execution_id=execution_id,
+                reason=reason,
+            )
+        )
+
 
 __all__ = [
     "IbkrExecutionReport",
+    "IbkrOrderCallbackEvent",
     "IbkrOrderExecutionAdapter",
     "IbkrOrderExecutionConnection",
     "IbkrOrderContractSpec",

@@ -4,12 +4,22 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol
 
 from qts.core.ids import CausationId, CorrelationId, EventId
 from qts.domain.events import BaseEvent
+
+
+@dataclass(frozen=True, slots=True)
+class EventSequenceValidationReport:
+    """Validation result for persisted event sequence numbers."""
+
+    valid: bool
+    missing_sequences: tuple[int, ...] = ()
+    duplicate_sequences: tuple[int, ...] = ()
 
 
 class EventStore(Protocol):
@@ -21,6 +31,15 @@ class EventStore(Protocol):
 
     def replay(self, *, partition_key: str | None = None) -> tuple[BaseEvent, ...]:
         """Replay events from the store, optionally filtered by partition key."""
+        ...
+
+    def replay_after(
+        self,
+        sequence: int,
+        *,
+        partition_key: str | None = None,
+    ) -> tuple[BaseEvent, ...]:
+        """Replay events after a persisted sequence number."""
         ...
 
     def by_correlation_id(self, correlation_id: CorrelationId) -> tuple[BaseEvent, ...]:
@@ -50,6 +69,20 @@ class InMemoryEventStore:
         if partition_key is None:
             return tuple(self._events)
         return tuple(event for event in self._events if event.partition_key == partition_key)
+
+    def replay_after(
+        self,
+        sequence: int,
+        *,
+        partition_key: str | None = None,
+    ) -> tuple[BaseEvent, ...]:
+        """Replay events appended after a 1-indexed sequence number."""
+        if sequence < 0:
+            raise ValueError("sequence must be non-negative")
+        events = tuple(self._events[sequence:])
+        if partition_key is None:
+            return events
+        return tuple(event for event in events if event.partition_key == partition_key)
 
     def by_correlation_id(self, correlation_id: CorrelationId) -> tuple[BaseEvent, ...]:
         """Perform by_correlation_id."""
@@ -87,9 +120,52 @@ class FileEventStore:
                     events.append(event)
         return tuple(events)
 
+    def replay_after(
+        self,
+        sequence: int,
+        *,
+        partition_key: str | None = None,
+    ) -> tuple[BaseEvent, ...]:
+        """Replay persisted events after a 1-indexed sequence number."""
+        if sequence < 0:
+            raise ValueError("sequence must be non-negative")
+        if not self._path.exists():
+            return ()
+        events: list[BaseEvent] = []
+        with self._path.open(encoding="utf-8") as handle:
+            for line in handle:
+                if not line.strip():
+                    continue
+                record = json.loads(line)
+                if int(record["sequence"]) <= sequence:
+                    continue
+                event = self._event_from_json(record["event"])
+                if partition_key is None or event.partition_key == partition_key:
+                    events.append(event)
+        return tuple(events)
+
     def by_correlation_id(self, correlation_id: CorrelationId) -> tuple[BaseEvent, ...]:
         """Perform by_correlation_id."""
         return tuple(event for event in self.replay() if event.correlation_id == correlation_id)
+
+    def validate_sequence(self) -> EventSequenceValidationReport:
+        """Detect missing or duplicate persisted sequence numbers."""
+
+        sequences = self._read_sequences()
+        seen: set[int] = set()
+        duplicates: list[int] = []
+        for sequence in sequences:
+            if sequence in seen and sequence not in duplicates:
+                duplicates.append(sequence)
+            seen.add(sequence)
+        highest = max(sequences, default=0)
+        missing = tuple(sequence for sequence in range(1, highest + 1) if sequence not in seen)
+        duplicate_tuple = tuple(sorted(duplicates))
+        return EventSequenceValidationReport(
+            valid=not missing and not duplicate_tuple,
+            missing_sequences=missing,
+            duplicate_sequences=duplicate_tuple,
+        )
 
     @staticmethod
     def _event_to_json(event: BaseEvent) -> dict[str, Any]:
@@ -119,5 +195,20 @@ class FileEventStore:
             causation_id=None if causation_id is None else CausationId(str(causation_id)),
         )
 
+    def _read_sequences(self) -> tuple[int, ...]:
+        if not self._path.exists():
+            return ()
+        sequences: list[int] = []
+        with self._path.open(encoding="utf-8") as handle:
+            for line in handle:
+                if line.strip():
+                    sequences.append(int(json.loads(line)["sequence"]))
+        return tuple(sequences)
 
-__all__ = ["EventStore", "FileEventStore", "InMemoryEventStore"]
+
+__all__ = [
+    "EventSequenceValidationReport",
+    "EventStore",
+    "FileEventStore",
+    "InMemoryEventStore",
+]

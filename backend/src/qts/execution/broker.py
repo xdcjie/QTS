@@ -8,7 +8,7 @@ stable and small.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import ROUND_FLOOR, ROUND_HALF_UP, Decimal
 from enum import StrEnum
 from typing import Protocol
 
@@ -28,12 +28,21 @@ class BrokerCapabilities:
     supports_replace: bool = False
     supports_fractional: bool = False
     supports_short: bool = False
+    min_order_quantity: Decimal | None = None
+    lot_size: Decimal | None = None
+    min_tick: Decimal | None = None
     max_order_quantity: Decimal | None = None
     supported_asset_classes: frozenset[str] = frozenset()
     supported_order_types: frozenset[BrokerOrderType] = frozenset()
     supported_time_in_force: frozenset[TimeInForce] = frozenset()
 
     def __post_init__(self) -> None:
+        if self.min_order_quantity is not None and self.min_order_quantity <= Decimal("0"):
+            raise ValueError("min_order_quantity must be positive")
+        if self.lot_size is not None and self.lot_size <= Decimal("0"):
+            raise ValueError("lot_size must be positive")
+        if self.min_tick is not None and self.min_tick <= Decimal("0"):
+            raise ValueError("min_tick must be positive")
         if self.max_order_quantity is not None and self.max_order_quantity <= Decimal("0"):
             raise ValueError("max_order_quantity must be positive")
         if any(not item.strip() for item in self.supported_asset_classes):
@@ -59,6 +68,40 @@ class BrokerCapabilities:
         """Perform supports_tif."""
         return not self.supported_time_in_force or time_in_force in self.supported_time_in_force
 
+    def validate_order_quantity(self, quantity: Decimal) -> None:
+        """Validate quantity against broker size constraints."""
+        if quantity <= Decimal("0"):
+            raise ValueError("quantity must be positive")
+        if self.min_order_quantity is not None and quantity < self.min_order_quantity:
+            raise ValueError("quantity is below minimum order quantity")
+        if self.max_order_quantity is not None and quantity > self.max_order_quantity:
+            raise ValueError("quantity exceeds max order quantity")
+        if self.lot_size is not None and quantity % self.lot_size != Decimal("0"):
+            raise ValueError("quantity does not conform to broker lot size")
+
+    def round_price(self, price: Decimal) -> Decimal:
+        """Round a price to the nearest configured minimum tick."""
+
+        if price < Decimal("0"):
+            raise ValueError("price must be non-negative")
+        if self.min_tick is None:
+            return price
+        ticks = (price / self.min_tick).to_integral_value(rounding=ROUND_HALF_UP)
+        return ticks * self.min_tick
+
+    def round_quantity(self, quantity: Decimal) -> Decimal:
+        """Round a quantity down to the configured lot size."""
+
+        if quantity <= Decimal("0"):
+            raise ValueError("quantity must be positive")
+        if self.lot_size is None:
+            return quantity
+        lots = (quantity / self.lot_size).to_integral_value(rounding=ROUND_FLOOR)
+        rounded = lots * self.lot_size
+        if rounded <= Decimal("0"):
+            raise ValueError("quantity is below minimum broker lot size")
+        return rounded
+
 
 class BrokerOrderType(StrEnum):
     """Order types modeled before broker submission."""
@@ -81,6 +124,7 @@ class BrokerOrderRequest:
     """Internal order request sent to the broker adapter boundary."""
 
     order_id: OrderId
+    client_order_id: str
     account_id: AccountId
     strategy_id: StrategyId | None
     instrument_id: InstrumentId
@@ -88,6 +132,8 @@ class BrokerOrderRequest:
     quantity: Decimal
 
     def __post_init__(self) -> None:
+        if not self.client_order_id.strip():
+            raise ValueError("client_order_id must not be empty")
         if self.quantity <= Decimal("0"):
             raise ValueError("quantity must be positive")
 
@@ -180,6 +226,10 @@ class FakeBrokerAdapter:
             broker_order_id=self._broker_order_ids[order_id],
             status=BrokerExecutionReportStatus.CANCELLED,
         )
+
+    def order_request(self, order_id: OrderId) -> BrokerOrderRequest:
+        """Return a submitted broker order request for assertions/reconciliation."""
+        return self._orders[order_id]
 
     def emit_fill(
         self,

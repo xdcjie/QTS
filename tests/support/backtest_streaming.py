@@ -12,6 +12,7 @@ from qts.backtest.engine import BacktestEngine, BacktestStreamResult
 class CapturedBacktestStream:
     result: BacktestStreamResult
     manifest: dict[str, Any]
+    events: tuple[dict[str, Any], ...]
     orders: tuple[dict[str, Any], ...]
     fills: tuple[dict[str, Any], ...]
     trade_ledger: tuple[dict[str, Any], ...]
@@ -30,6 +31,7 @@ def capture_stream_result(result: BacktestStreamResult) -> CapturedBacktestStrea
     return CapturedBacktestStream(
         result=result,
         manifest=json.loads(Path(result.manifest_path).read_text(encoding="utf-8")),
+        events=_read_ndjson(Path(result.artifact_paths["events"])),
         orders=_read_ndjson(Path(result.artifact_paths["orders"])),
         fills=_read_ndjson(Path(result.artifact_paths["fills"])),
         trade_ledger=_read_ndjson(Path(result.artifact_paths["trade_ledger"])),

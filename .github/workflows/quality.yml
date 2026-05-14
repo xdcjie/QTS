@@ -1,0 +1,23 @@
+name: quality
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  python-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: uv sync --group dev
+      - run: make format
+      - run: make lint
+      - run: make guardrails
+      - run: make typecheck
+      - run: make test-unit

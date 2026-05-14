@@ -8,10 +8,10 @@ from pathlib import Path
 from typing import Any
 
 from qts.backtest.engine import BacktestEngine
-from qts.core.ids import InstrumentId, OrderId
+from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
 from qts.data.historical.adapter import HistoricalMarketDataAdapter
 from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
-from qts.data.live_feed import FeedSubscription
+from qts.data.live import FeedSubscription
 from qts.domain.market_data import Bar
 from qts.domain.risk import RiskDecision
 from qts.execution.order_manager import (
@@ -48,7 +48,12 @@ class RecordingExecutionAdapter:
         *,
         broker_order_id: str,
         market_price: Decimal,
+        account_id: AccountId,
+        strategy_id: StrategyId,
+        client_order_id: str,
+        correlation_id: CorrelationId,
     ) -> ExecutionReport:
+        _ = account_id, strategy_id, client_order_id, correlation_id
         self.seen.append(intent)
         return ExecutionReport(
             report_id=f"{broker_order_id}-report",
@@ -59,8 +64,17 @@ class RecordingExecutionAdapter:
             fill_id=f"{broker_order_id}-fill",
         )
 
-    def cancel_order(self, order_id: OrderId, *, broker_order_id: str) -> ExecutionReport:
-        _ = order_id
+    def cancel_order(
+        self,
+        order_id: OrderId,
+        *,
+        broker_order_id: str,
+        account_id: AccountId,
+        strategy_id: StrategyId,
+        client_order_id: str,
+        correlation_id: CorrelationId,
+    ) -> ExecutionReport:
+        _ = order_id, account_id, strategy_id, client_order_id, correlation_id
         return ExecutionReport(
             report_id=f"{broker_order_id}-cancel",
             broker_order_id=broker_order_id,
@@ -71,7 +85,9 @@ class RecordingExecutionAdapter:
 def test_shared_actor_order_flow_uses_same_messages_for_execution_adapters() -> None:
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
     adapter = RecordingExecutionAdapter()
-    account_actor = AccountActor(initial_cash={"USD": Decimal("1000")})
+    account_id = AccountId("acct-parity")
+    strategy_id = StrategyId("strategy-parity")
+    account_actor = AccountActor(initial_cash={"USD": Decimal("1000")}, account_id=account_id)
     account_ref = ActorRef(actor=account_actor, mailbox=Mailbox())
     execution_mailbox = Mailbox()
     order_manager_mailbox = Mailbox()
@@ -79,6 +95,7 @@ def test_shared_actor_order_flow_uses_same_messages_for_execution_adapters() -> 
         execution_ref=ActorRef(mailbox=execution_mailbox),
         account_ref=account_ref,
         multiplier_by_instrument={instrument_id: Decimal("1")},
+        account_id=account_id,
     )
     order_manager_ref = ActorRef(actor=order_manager_actor, mailbox=order_manager_mailbox)
     execution_ref = ActorRef(
@@ -87,6 +104,7 @@ def test_shared_actor_order_flow_uses_same_messages_for_execution_adapters() -> 
     )
     intent = OrderIntent(
         order_id=OrderId("order-1"),
+        account_id=account_id,
         instrument_id=instrument_id,
         side=OrderSide.BUY,
         quantity=Decimal("2"),
@@ -98,6 +116,10 @@ def test_shared_actor_order_flow_uses_same_messages_for_execution_adapters() -> 
             risk_decision=RiskDecision.approve(),
             broker_order_id="adapter-order-1",
             market_price=Decimal("100"),
+            account_id=account_id,
+            strategy_id=strategy_id,
+            client_order_id="client-001",
+            correlation_id=CorrelationId("corr-001"),
         )
     )
     order_manager_ref.process_all()

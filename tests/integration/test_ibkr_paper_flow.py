@@ -6,14 +6,14 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from qts.core.ids import OrderId
+    from qts.core.ids import AccountId, CorrelationId, OrderId, StrategyId
     from qts.domain.market_data import Tick
     from qts.execution.adapters.ibkr_order_execution import IbkrOrderRequest
     from qts.execution.order_manager import ExecutionReport, OrderIntent
 
 
 def test_ibkr_paper_market_data_and_order_execution_use_separate_fake_transports() -> None:
-    from qts.core.ids import BrokerId, InstrumentId, OrderId
+    from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
     from qts.data.adapters.ibkr_market_data import (
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
@@ -74,13 +74,19 @@ def test_ibkr_paper_market_data_and_order_execution_use_separate_fake_transports
     )
     assert market_data_subscriber.get() == tick
 
-    account_actor = AccountActor(initial_cash={"USD": Decimal("10000")})
+    account_id = AccountId("acct-ibkr-paper")
+    strategy_id = StrategyId("strategy-ibkr-paper")
+    account_actor = AccountActor(
+        initial_cash={"USD": Decimal("10000")},
+        account_id=account_id,
+    )
     account_ref = ActorRef(actor=account_actor, mailbox=Mailbox())
     execution_mailbox = Mailbox()
     order_manager_mailbox = Mailbox()
     order_manager_actor = OrderManagerActor(
         execution_ref=ActorRef(mailbox=execution_mailbox),
         account_ref=account_ref,
+        account_id=account_id,
     )
     order_manager_ref = ActorRef(actor=order_manager_actor, mailbox=order_manager_mailbox)
     fake_execution = _FakeIbkrOrderExecutionTransport(adapter=order_adapter)
@@ -102,6 +108,7 @@ def test_ibkr_paper_market_data_and_order_execution_use_separate_fake_transports
     )
     intent = OrderIntent(
         order_id=OrderId("ord-001"),
+        account_id=account_id,
         instrument_id=instrument_id,
         side=OrderSide.BUY,
         quantity=Decimal("10"),
@@ -113,6 +120,10 @@ def test_ibkr_paper_market_data_and_order_execution_use_separate_fake_transports
             risk_decision=risk_decision,
             broker_order_id="ibkr-001",
             market_price=tick.price,
+            account_id=account_id,
+            strategy_id=strategy_id,
+            client_order_id="client-ibkr-001",
+            correlation_id=CorrelationId("corr-ibkr-001"),
         )
     )
     order_manager_ref.process_all()
@@ -168,6 +179,10 @@ class _FakeIbkrOrderExecutionTransport:
         *,
         broker_order_id: str,
         market_price: Decimal,
+        account_id: AccountId,
+        strategy_id: StrategyId,
+        client_order_id: str,
+        correlation_id: CorrelationId,
     ) -> ExecutionReport:
         from qts.execution.adapters.ibkr_order_execution import (
             IbkrExecutionReport,
@@ -176,7 +191,8 @@ class _FakeIbkrOrderExecutionTransport:
         from qts.execution.broker import BrokerExecutionReportStatus
 
         assert isinstance(self.adapter, IbkrOrderExecutionAdapter)
-        request = self.adapter.to_order_request(intent)
+        _ = account_id, strategy_id, correlation_id
+        request = self.adapter.to_order_request(intent, client_order_id=client_order_id)
         self.requests.append(request)
         return self.adapter.normalize_execution_report(
             IbkrExecutionReport(
@@ -189,10 +205,19 @@ class _FakeIbkrOrderExecutionTransport:
             )
         )
 
-    def cancel_order(self, order_id: OrderId, *, broker_order_id: str) -> ExecutionReport:
+    def cancel_order(
+        self,
+        order_id: OrderId,
+        *,
+        broker_order_id: str,
+        account_id: AccountId,
+        strategy_id: StrategyId,
+        client_order_id: str,
+        correlation_id: CorrelationId,
+    ) -> ExecutionReport:
         from qts.execution.order_manager import ExecutionReport, ExecutionReportStatus
 
-        _ = order_id
+        _ = order_id, account_id, strategy_id, client_order_id, correlation_id
         return ExecutionReport(
             report_id=f"rpt-cancel-{broker_order_id}",
             broker_order_id=broker_order_id,

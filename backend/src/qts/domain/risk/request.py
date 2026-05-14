@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 
-from qts.core.ids import InstrumentId
+from qts.core.ids import InstrumentId, StrategyId
 from qts.core.time import require_aware_datetime
 
 
@@ -19,6 +19,7 @@ class OrderRiskRequest:
     price: Decimal
     multiplier: Decimal
     order_time: datetime | None = None
+    contributing_strategy_ids: tuple[StrategyId, ...] = ()
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""
@@ -30,6 +31,9 @@ class OrderRiskRequest:
             raise ValueError("multiplier must be positive")
         if self.order_time is not None:
             require_aware_datetime(self.order_time, name="order_time")
+        for strategy_id in self.contributing_strategy_ids:
+            if not isinstance(strategy_id, StrategyId):
+                raise TypeError("contributing_strategy_ids must contain StrategyId values")
 
     @property
     def notional(self) -> Decimal:

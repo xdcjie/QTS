@@ -7,7 +7,8 @@ from pathlib import Path
 
 import pytest
 from qts.core.ids import InstrumentId
-from qts.runtime.config import BacktestRuntimeConfig
+from qts.runtime.config import BacktestRuntimeConfig, ConfigMigration
+from qts.runtime.config_loader import BacktestConfigLoader
 
 
 def test_backtest_run_config_loads_example_yaml_with_stable_hash() -> None:
@@ -38,6 +39,63 @@ def test_backtest_run_config_loads_example_yaml_with_stable_hash() -> None:
 
     changed = replace(config, initial_cash=Decimal("2000000"))
     assert changed.config_hash != config.config_hash
+
+
+def test_backtest_config_schema_version_is_part_of_config_hash() -> None:
+    config = BacktestRuntimeConfig.from_yaml(Path("configs/backtest.gc_si.example.yaml"))
+
+    changed = replace(config, schema_version="2")
+
+    assert config.schema_version == "1"
+    assert config.to_payload()["schema_version"] == "1"
+    assert config.to_payload()["risk_config"]["schema_version"] == "1"
+    assert changed.config_hash != config.config_hash
+
+
+def test_config_migration_v1_to_v2_adds_schema_versions_and_changelog() -> None:
+    payload = {
+        "schema_version": "1",
+        "risk_config": {"max_notional": "100000"},
+    }
+
+    result = ConfigMigration.migrate(payload, target_version="2")
+
+    assert payload["schema_version"] == "1"
+    assert result.from_version == "1"
+    assert result.to_version == "2"
+    assert result.payload["schema_version"] == "2"
+    assert result.payload["risk_config"]["schema_version"] == "2"
+    assert result.change_log == (
+        "schema_version: 1 -> 2",
+        "risk_config.schema_version: 1 -> 2",
+    )
+
+
+def test_backtest_loader_consumes_migrated_config_schema_version() -> None:
+    payload = {
+        "schema_version": "1",
+        "market_data": {
+            "source": "local_historical",
+            "config": "configs/data/historical.local.yaml",
+            "catalog": "research_futures",
+        },
+        "roots": ["GC"],
+        "symbols": ["GC"],
+        "start": "2026-01-02T14:30:00Z",
+        "end": "2026-01-02T14:31:00Z",
+        "timeframe": "1m",
+        "initial_cash": "100000",
+        "strategy_class": "tests.integration.test_backtest_gc_si:RollingGcStrategy",
+        "risk_config": {"max_notional": "100000"},
+    }
+
+    migrated = ConfigMigration.migrate(payload, target_version="2")
+    config = BacktestConfigLoader.from_payload(migrated.payload)
+
+    assert config.schema_version == "2"
+    assert config.risk_config.schema_version == "2"
+    assert config.to_payload()["schema_version"] == "2"
+    assert config.to_payload()["risk_config"]["schema_version"] == "2"
 
 
 def test_backtest_run_config_loads_gc_full_example_yaml() -> None:

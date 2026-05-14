@@ -1,26 +1,12 @@
 from __future__ import annotations
 
-import importlib.util
 import json
 from pathlib import Path
-from types import ModuleType
-from typing import Any, cast
 
-
-def _load_collector_module() -> ModuleType:
-    module_path = Path("scripts/ibkr_collect_environment_evidence.py")
-    spec = importlib.util.spec_from_file_location("ibkr_collect_environment_evidence", module_path)
-    assert spec is not None
-    assert spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+from qts.application.commands.ibkr_environment_evidence import collect_environment_evidence
 
 
 def test_dry_run_writes_observe_only_evidence_without_network(tmp_path: Path) -> None:
-    collector = _load_collector_module()
-    collect_environment_evidence = cast(Any, collector).collect_environment_evidence
-
     output_dir = tmp_path / "evidence" / "ibkr"
 
     evidence_path = collect_environment_evidence(
@@ -52,8 +38,8 @@ def test_dry_run_writes_observe_only_evidence_without_network(tmp_path: Path) ->
     assert "password" not in json.dumps(payload).lower()
 
 
-def test_collector_module_exposes_no_order_placement_api() -> None:
-    collector = _load_collector_module()
+def test_collector_command_module_exposes_no_order_placement_api() -> None:
+    import qts.application.commands.ibkr_environment_evidence as collector
 
     forbidden_fragments = ("place_order", "submit_order", "cancel_order", "replace_order")
 
@@ -66,9 +52,6 @@ def test_collector_module_exposes_no_order_placement_api() -> None:
 def test_evidence_records_separate_gateway_targets_and_secret_statuses(
     tmp_path: Path,
 ) -> None:
-    collector = _load_collector_module()
-    collect_environment_evidence = cast(Any, collector).collect_environment_evidence
-
     config_path = tmp_path / "paper.ibkr.local.yaml"
     config_path.write_text(
         """

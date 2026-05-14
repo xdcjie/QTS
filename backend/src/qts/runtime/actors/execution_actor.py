@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Protocol
 
-from qts.core.ids import AccountId, OrderId
+from qts.core.ids import AccountId, CorrelationId, OrderId, StrategyId
 from qts.execution.order_manager import ExecutionReport, OrderIntent
 from qts.execution.simulator.simulated_broker import SimulatedBroker
 from qts.runtime.actor import Actor
@@ -22,11 +22,24 @@ class ExecutionAdapter(Protocol):
         *,
         broker_order_id: str,
         market_price: Decimal,
+        account_id: AccountId,
+        strategy_id: StrategyId,
+        client_order_id: str,
+        correlation_id: CorrelationId,
     ) -> ExecutionReport:
         """Execute a market order."""
         ...
 
-    def cancel_order(self, order_id: OrderId, *, broker_order_id: str) -> ExecutionReport:
+    def cancel_order(
+        self,
+        order_id: OrderId,
+        *,
+        broker_order_id: str,
+        account_id: AccountId,
+        strategy_id: StrategyId,
+        client_order_id: str,
+        correlation_id: CorrelationId,
+    ) -> ExecutionReport:
         """Cancel an active order."""
         ...
 
@@ -38,7 +51,15 @@ class OrderExecutionRequest:
     intent: OrderIntent
     broker_order_id: str
     market_price: Decimal
-    account_id: AccountId | None = None
+    account_id: AccountId
+    strategy_id: StrategyId
+    client_order_id: str
+    correlation_id: CorrelationId
+
+    def __post_init__(self) -> None:
+        """Validate execution request identity fields."""
+        if not self.client_order_id.strip():
+            raise ValueError("client_order_id must not be empty")
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,7 +68,15 @@ class OrderCancelRequest:
 
     order_id: OrderId
     broker_order_id: str
-    account_id: AccountId | None = None
+    account_id: AccountId
+    strategy_id: StrategyId
+    client_order_id: str
+    correlation_id: CorrelationId
+
+    def __post_init__(self) -> None:
+        """Validate cancel request identity fields."""
+        if not self.client_order_id.strip():
+            raise ValueError("client_order_id must not be empty")
 
 
 class ExecutionActor(Actor):
@@ -69,6 +98,10 @@ class ExecutionActor(Actor):
                 message.intent,
                 broker_order_id=message.broker_order_id,
                 market_price=message.market_price,
+                account_id=message.account_id,
+                strategy_id=message.strategy_id,
+                client_order_id=message.client_order_id,
+                correlation_id=message.correlation_id,
             )
             self._order_manager_ref.tell(report)
             return
@@ -76,6 +109,10 @@ class ExecutionActor(Actor):
             report = self._execution_adapter.cancel_order(
                 message.order_id,
                 broker_order_id=message.broker_order_id,
+                account_id=message.account_id,
+                strategy_id=message.strategy_id,
+                client_order_id=message.client_order_id,
+                correlation_id=message.correlation_id,
             )
             self._order_manager_ref.tell(report)
             return

@@ -25,15 +25,23 @@ class SignalContribution:
 
     strategy_id: StrategyId
     intent: TargetIntent
+    aggregation_policy: SignalAggregationPolicy = SignalAggregationPolicy.SUM_TARGETS
     priority: int = 0
     weight: Decimal = Decimal("1")
     conflict_group: str = "default"
 
     def __post_init__(self) -> None:
         """Validate contribution metadata."""
+        object.__setattr__(
+            self,
+            "aggregation_policy",
+            SignalAggregationPolicy(self.aggregation_policy),
+        )
         object.__setattr__(self, "weight", Decimal(str(self.weight)))
         if self.weight < Decimal("0"):
             raise ValueError("signal weight must be non-negative")
+        if not self.conflict_group.strip():
+            raise ValueError("conflict_group must not be empty")
 
 
 @dataclass(frozen=True, slots=True)

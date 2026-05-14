@@ -6,7 +6,7 @@ import pytest
 
 
 def test_order_manager_actor_sends_broker_request_and_emits_validated_fill() -> None:
-    from qts.core.ids import AccountId, InstrumentId, OrderId
+    from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
     from qts.domain.risk import RiskDecision
     from qts.execution.order_manager import (
         ExecutionReport,
@@ -42,11 +42,19 @@ def test_order_manager_actor_sends_broker_request_and_emits_validated_fill() -> 
             risk_decision=RiskDecision.approve(),
             broker_order_id="broker-001",
             market_price=Decimal("101"),
+            account_id=account_id,
+            strategy_id=StrategyId("strategy-a"),
+            client_order_id="client-001",
+            correlation_id=CorrelationId("corr-001"),
         )
     )
     execution_request = execution.get()
     assert isinstance(execution_request, OrderExecutionRequest)
     assert execution_request.intent == intent
+    assert execution_request.account_id == account_id
+    assert execution_request.strategy_id == StrategyId("strategy-a")
+    assert execution_request.client_order_id == "client-001"
+    assert execution_request.correlation_id == CorrelationId("corr-001")
 
     actor.handle(
         ExecutionReport(
@@ -67,7 +75,7 @@ def test_order_manager_actor_sends_broker_request_and_emits_validated_fill() -> 
 
 
 def test_order_manager_actor_does_not_send_risk_rejected_order_to_execution() -> None:
-    from qts.core.ids import InstrumentId, OrderId
+    from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
     from qts.domain.risk import RiskDecision
     from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.runtime.actor_ref import ActorRef
@@ -75,12 +83,15 @@ def test_order_manager_actor_does_not_send_risk_rejected_order_to_execution() ->
     from qts.runtime.mailbox import Mailbox
 
     execution = Mailbox()
+    account_id = AccountId("acct-a")
     actor = OrderManagerActor(
+        account_id=account_id,
         execution_ref=ActorRef(mailbox=execution),
         account_ref=ActorRef(mailbox=Mailbox()),
     )
     intent = OrderIntent(
         order_id=OrderId("ord-rejected"),
+        account_id=account_id,
         instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
         side=OrderSide.BUY,
         quantity=Decimal("10"),
@@ -93,6 +104,10 @@ def test_order_manager_actor_does_not_send_risk_rejected_order_to_execution() ->
                 risk_decision=RiskDecision.rejected("BLOCKED", "blocked by test"),
                 broker_order_id="broker-001",
                 market_price=Decimal("101"),
+                account_id=account_id,
+                strategy_id=StrategyId("strategy-a"),
+                client_order_id="client-001",
+                correlation_id=CorrelationId("corr-001"),
             )
         )
 
@@ -100,7 +115,7 @@ def test_order_manager_actor_does_not_send_risk_rejected_order_to_execution() ->
 
 
 def test_order_for_account_a_routes_to_account_a_execution_actor() -> None:
-    from qts.core.ids import AccountId, InstrumentId, OrderId
+    from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
     from qts.domain.risk import RiskDecision
     from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.runtime.actor_ref import ActorRef
@@ -128,6 +143,10 @@ def test_order_for_account_a_routes_to_account_a_execution_actor() -> None:
             risk_decision=RiskDecision.approve(),
             broker_order_id="broker-001",
             market_price=Decimal("101"),
+            account_id=account_id,
+            strategy_id=StrategyId("strategy-a"),
+            client_order_id="client-001",
+            correlation_id=CorrelationId("corr-001"),
         )
     )
 
@@ -137,7 +156,7 @@ def test_order_for_account_a_routes_to_account_a_execution_actor() -> None:
 
 
 def test_order_for_wrong_account_is_rejected() -> None:
-    from qts.core.ids import AccountId, InstrumentId, OrderId
+    from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
     from qts.domain.risk import RiskDecision
     from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.runtime.actor_ref import ActorRef
@@ -163,5 +182,9 @@ def test_order_for_wrong_account_is_rejected() -> None:
                 risk_decision=RiskDecision.approve(),
                 broker_order_id="broker-001",
                 market_price=Decimal("101"),
+                account_id=AccountId("acct-b"),
+                strategy_id=StrategyId("strategy-a"),
+                client_order_id="client-001",
+                correlation_id=CorrelationId("corr-001"),
             )
         )

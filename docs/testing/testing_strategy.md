@@ -65,6 +65,7 @@ where written standards are otherwise easy to miss:
   application, API, or workers;
 - market-data adapters importing execution/risk/portfolio/runtime;
 - order-execution adapters importing data;
+- provider SDK imports outside adapter or transport boundaries;
 - shared roll/session/resolution modules placed under source-specific
   boundaries such as `qts.backtest` or `qts.data.historical`;
 - new module-level public factory functions for stable concepts instead of
@@ -74,6 +75,8 @@ where written standards are otherwise easy to miss:
 
 Guardrail exceptions must be narrow and expressed in `scripts/verify_guardrails.py`
 with tests that prove both the allowed boundary and the forbidden shortcut.
+CI and pre-commit must run `make guardrails`, and guardrail reports must include
+remediation text for each violation.
 
 ## Bar aggregation test expectations
 

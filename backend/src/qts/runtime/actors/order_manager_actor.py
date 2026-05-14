@@ -6,8 +6,8 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal
 
-from qts.core.ids import AccountId, InstrumentId, OrderId
-from qts.domain.orders import CancelIntent
+from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
+from qts.domain.orders import CancelIntent, ReplaceIntent
 from qts.domain.risk import RiskDecision
 from qts.execution.order_manager import (
     ExecutionReport,
@@ -31,6 +31,15 @@ class SubmitOrder:
     risk_decision: RiskDecision
     broker_order_id: str
     market_price: Decimal
+    account_id: AccountId
+    strategy_id: StrategyId
+    client_order_id: str
+    correlation_id: CorrelationId
+
+    def __post_init__(self) -> None:
+        """Validate order submission identity fields."""
+        if not self.client_order_id.strip():
+            raise ValueError("client_order_id must not be empty")
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,6 +47,42 @@ class CancelOrder:
     """Message to cancel an active order through the execution actor."""
 
     intent: CancelIntent
+    account_id: AccountId
+    strategy_id: StrategyId
+    client_order_id: str
+    correlation_id: CorrelationId
+
+    def __post_init__(self) -> None:
+        """Validate order cancellation identity fields."""
+        if not self.client_order_id.strip():
+            raise ValueError("client_order_id must not be empty")
+
+
+@dataclass(frozen=True, slots=True)
+class ReplaceOrder:
+    """Message to replace an active order through the execution actor."""
+
+    intent: ReplaceIntent
+    risk_decision: RiskDecision
+    account_id: AccountId
+    strategy_id: StrategyId
+    client_order_id: str
+    correlation_id: CorrelationId
+
+    def __post_init__(self) -> None:
+        """Validate order replacement identity fields."""
+        if not self.client_order_id.strip():
+            raise ValueError("client_order_id must not be empty")
+
+
+@dataclass(frozen=True, slots=True)
+class OrderRouteMetadata:
+    """Route and trace metadata captured when an order is submitted."""
+
+    account_id: AccountId
+    strategy_id: StrategyId
+    client_order_id: str
+    correlation_id: CorrelationId
 
 
 class OrderManagerActor(Actor):
@@ -59,8 +104,10 @@ class OrderManagerActor(Actor):
             order_manager=self._manager,
             account_ref=account_ref,
             multiplier_by_instrument=multiplier_by_instrument,
+            account_id=account_id,
         )
         self._fills: list[OrderFill] = []
+        self._route_metadata_by_order_id: dict[OrderId, OrderRouteMetadata] = {}
 
     def handle(self, message: object) -> None:
         """Perform handle."""
@@ -69,6 +116,9 @@ class OrderManagerActor(Actor):
             return
         if isinstance(message, CancelOrder):
             self._handle_cancel(message)
+            return
+        if isinstance(message, ReplaceOrder):
+            self._handle_replace(message)
             return
         if isinstance(message, ExecutionReport):
             self._handle_report(message)
@@ -97,6 +147,10 @@ class OrderManagerActor(Actor):
         """Return actor-owned order manager snapshot."""
         return self._manager.snapshot()
 
+    def route_metadata(self, order_id: OrderId) -> OrderRouteMetadata:
+        """Return route metadata captured for an active order."""
+        return self._route_metadata_by_order_id[order_id]
+
     def compact_for_streaming(self, order_ids: Iterable[OrderId]) -> None:
         """Perform compact_for_streaming."""
         for order_id in order_ids:
@@ -105,22 +159,45 @@ class OrderManagerActor(Actor):
 
     def _handle_submit(self, message: SubmitOrder) -> None:
         """Perform _handle_submit."""
+        if message.intent.account_id != message.account_id:
+            raise ValueError("order account_id does not match SubmitOrder account_id")
         if self._account_id is not None and message.intent.account_id != self._account_id:
             raise ValueError("order account_id does not match OrderManagerActor account_id")
         order = self._manager.create_order(message.intent, risk_decision=message.risk_decision)
+        self._route_metadata_by_order_id[message.intent.order_id] = OrderRouteMetadata(
+            account_id=message.account_id,
+            strategy_id=message.strategy_id,
+            client_order_id=message.client_order_id,
+            correlation_id=message.correlation_id,
+        )
         self._manager.mark_sent(order.order_id, broker_order_id=message.broker_order_id)
         self._execution_ref.tell(
             OrderExecutionRequest(
                 intent=message.intent,
                 broker_order_id=message.broker_order_id,
                 market_price=message.market_price,
-                account_id=self._account_id,
+                account_id=message.account_id,
+                strategy_id=message.strategy_id,
+                client_order_id=message.client_order_id,
+                correlation_id=message.correlation_id,
             )
         )
 
     def _handle_cancel(self, message: CancelOrder) -> None:
         """Perform _handle_cancel."""
         current = self._manager.get_order(message.intent.order_id)
+        metadata = self._route_metadata_by_order_id[message.intent.order_id]
+        if current.intent.account_id != message.account_id:
+            raise ValueError("cancel account_id does not match order account_id")
+        if metadata != OrderRouteMetadata(
+            account_id=message.account_id,
+            strategy_id=message.strategy_id,
+            client_order_id=message.client_order_id,
+            correlation_id=message.correlation_id,
+        ):
+            raise ValueError("cancel route metadata does not match submitted order")
+        if self._account_id is not None and message.account_id != self._account_id:
+            raise ValueError("cancel account_id does not match OrderManagerActor account_id")
         if current.broker_order_id is None:
             raise RuntimeError("order must have broker_order_id before cancellation")
         order = self._manager.request_cancel(message.intent)
@@ -129,13 +206,39 @@ class OrderManagerActor(Actor):
             OrderCancelRequest(
                 order_id=order.order_id,
                 broker_order_id=order.broker_order_id,
-                account_id=self._account_id,
+                account_id=message.account_id,
+                strategy_id=message.strategy_id,
+                client_order_id=message.client_order_id,
+                correlation_id=message.correlation_id,
             )
         )
+
+    def _handle_replace(self, message: ReplaceOrder) -> None:
+        """Apply replacement state when the execution boundary supports it."""
+        current = self._manager.get_order(message.intent.order_id)
+        metadata = self._route_metadata_by_order_id[message.intent.order_id]
+        if current.intent.account_id != message.account_id:
+            raise ValueError("replace account_id does not match order account_id")
+        if metadata != OrderRouteMetadata(
+            account_id=message.account_id,
+            strategy_id=message.strategy_id,
+            client_order_id=message.client_order_id,
+            correlation_id=message.correlation_id,
+        ):
+            raise ValueError("replace route metadata does not match submitted order")
+        if self._account_id is not None and message.account_id != self._account_id:
+            raise ValueError("replace account_id does not match OrderManagerActor account_id")
+        raise NotImplementedError("replace order execution is not implemented")
 
     def _handle_report(self, message: ExecutionReport) -> None:
         """Perform _handle_report."""
         self._fills.extend(self._execution_report_handler.handle(message))
 
 
-__all__ = ["CancelOrder", "OrderManagerActor", "SubmitOrder"]
+__all__ = [
+    "CancelOrder",
+    "OrderManagerActor",
+    "OrderRouteMetadata",
+    "ReplaceOrder",
+    "SubmitOrder",
+]

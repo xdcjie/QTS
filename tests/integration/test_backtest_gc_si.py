@@ -110,6 +110,8 @@ def test_backtest_engine_runs_from_config_with_deterministic_run_id(tmp_path: Pa
     assert left.result.config_hash == _config().config_hash
     assert left.result.run_id == right.result.run_id
     assert left.manifest["config_hash"] == _config().config_hash
+    assert left.manifest["runtime_topology"]["mode"] == "backtest"
+    assert left.manifest["runtime_topology"]["topology_hash"].startswith("sha256:")
 
 
 def test_backtest_engine_from_config_does_not_require_chain_for_static_instrument_ids(
@@ -822,7 +824,7 @@ def test_backtest_writes_partitioned_artifacts(tmp_path: Path) -> None:
     assert summary["processed_bars"] == 6
     assert manifest["report_hash"] == run.report_hash
     assert summary["report_hash"] == run.report_hash
-    assert set(run.artifact_paths) == {"orders", "fills", "trade_ledger", "equity_curve"}
+    assert set(run.artifact_paths) == {"events", "orders", "fills", "trade_ledger", "equity_curve"}
     assert manifest["artifacts"]["equity_curve"]["rows"] == 6
     assert manifest["artifacts"]["orders"]["rows"] == manifest["artifacts"]["fills"]["rows"]
     assert manifest["artifacts"]["fills"]["rows"] == manifest["artifacts"]["trade_ledger"]["rows"]

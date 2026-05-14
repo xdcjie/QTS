@@ -13,6 +13,16 @@ class RuntimeCommandResponseSchema(BaseModel):
     state: str
 
 
+class RuntimeCommandResultResponseSchema(BaseModel):
+    """Payload for auditable runtime command results."""
+
+    command_id: str
+    idempotency_key: str
+    status: str
+    evidence: dict[str, object]
+    failure_reason: str | None = None
+
+
 class KillSwitchScopeSchema(StrEnum):
     """Kill-switch scoping model."""
 
@@ -51,6 +61,7 @@ class KillSwitchResponseSchema(BaseModel):
 
 
 RuntimeCommandResponse = RuntimeCommandResponseSchema
+RuntimeCommandResultResponse = RuntimeCommandResultResponseSchema
 KillSwitchCommand = KillSwitchCommandSchema
 KillSwitchResponse = KillSwitchResponseSchema
 
@@ -58,6 +69,8 @@ KillSwitchResponse = KillSwitchResponseSchema
 __all__ = [
     "RuntimeCommandResponse",
     "RuntimeCommandResponseSchema",
+    "RuntimeCommandResultResponse",
+    "RuntimeCommandResultResponseSchema",
     "KillSwitchScopeSchema",
     "KillSwitchCommand",
     "KillSwitchCommandSchema",

@@ -6,7 +6,11 @@ from typing import Any
 
 from qts.api.schemas.backtest_schema import BacktestRequestSchema, BacktestRunSchema
 from qts.application.dto.backtest import BacktestRequestDTO, BacktestRunDTO
-from qts.application.dto.operations import KillSwitchStateDTO, RuntimeStateDTO
+from qts.application.dto.operations import (
+    KillSwitchStateDTO,
+    RuntimeCommandResultDTO,
+    RuntimeStateDTO,
+)
 
 
 def map_backtest_request_schema(request: BacktestRequestSchema) -> BacktestRequestDTO:
@@ -27,6 +31,18 @@ def map_runtime_state_dto(state: RuntimeStateDTO) -> dict[str, Any]:
     return {"state": state.state}
 
 
+def map_runtime_command_result_dto(result: RuntimeCommandResultDTO) -> dict[str, Any]:
+    """Map runtime command result DTO into response payload."""
+
+    return {
+        "command_id": result.command_id,
+        "idempotency_key": result.idempotency_key,
+        "status": result.status,
+        "evidence": dict(result.evidence),
+        "failure_reason": result.failure_reason,
+    }
+
+
 def map_kill_switch_state_dto(state: KillSwitchStateDTO) -> dict[str, Any]:
     """Map kill-switch state DTO into response payload."""
 
@@ -42,5 +58,6 @@ __all__ = [
     "map_backtest_request_schema",
     "map_backtest_run_dto",
     "map_kill_switch_state_dto",
+    "map_runtime_command_result_dto",
     "map_runtime_state_dto",
 ]

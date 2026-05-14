@@ -48,7 +48,7 @@ the same normalized actor-facing events.
   requested-to-source timeframe planning.
 - Extend `tests/unit/data/test_live_feed_contract.py`: capability behavior and
   fake feed subscription count.
-- Add `tests/unit/data/test_historical_market_data_service.py`: historical
+- Add `tests/unit/data/test_historical_market_data_adapter.py`: historical
   service capability checks and deterministic replay.
 - Extend `tests/unit/runtime/test_market_data_actor.py`: message-driven
   subscription deduplication, aggregation, and fan-out.
@@ -95,7 +95,7 @@ Add `tests/unit/data/test_subscription_planning.py`:
 from __future__ import annotations
 
 from qts.core.ids import InstrumentId
-from qts.data.live_feed import FeedCapabilities
+from qts.data.live import FeedCapabilities
 from qts.data.subscriptions import (
     LogicalSubscription,
     PhysicalSubscriptionKey,
@@ -195,7 +195,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 
 from qts.core.ids import InstrumentId
-from qts.data.live_feed import FeedCapabilities
+from qts.data.live import FeedCapabilities
 
 
 class SourceStreamType(StrEnum):
@@ -364,7 +364,7 @@ Extend `tests/unit/runtime/test_market_data_actor.py`:
 ```python
 def test_market_data_actor_deduplicates_physical_subscription_and_fans_out() -> None:
     from qts.core.ids import InstrumentId
-    from qts.data.live_feed import FakeLiveFeedAdapter, FeedCapabilities
+    from qts.data.live import FakeLiveFeedAdapter, FeedCapabilities
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.market_data_actor import MarketDataActor, SubscribeMarketData
     from qts.runtime.mailbox import Mailbox
@@ -484,11 +484,11 @@ git commit -m "feat: deduplicate market data actor subscriptions"
 **Files:**
 - Create: `backend/src/qts/data/historical/service.py`
 - Modify: `backend/src/qts/data/historical/__init__.py`
-- Test: `tests/unit/data/test_historical_market_data_service.py`
+- Test: `tests/unit/data/test_historical_market_data_adapter.py`
 
 - [ ] **Step 1: Write failing historical adapter tests**
 
-Add `tests/unit/data/test_historical_market_data_service.py` with deterministic
+Add `tests/unit/data/test_historical_market_data_adapter.py` with deterministic
 CSV fixture rows. Test:
 
 ```python
@@ -541,7 +541,7 @@ def test_historical_market_data_adapter_rejects_finer_than_source_request() -> N
 Run:
 
 ```bash
-uv run pytest tests/unit/data/test_historical_market_data_service.py -q
+uv run pytest tests/unit/data/test_historical_market_data_adapter.py -q
 ```
 
 Expected: failure for missing `qts.data.historical.adapter`.
@@ -562,7 +562,7 @@ from pathlib import Path
 
 from qts.core.ids import InstrumentId
 from qts.data.historical.csv_dataset import iter_historical_bars
-from qts.data.live_feed import FeedCapabilities, FeedSubscription, LiveFeedEvent, LiveFeedSubscribed
+from qts.data.live import FeedCapabilities, FeedSubscription, LiveFeedEvent, MarketDataSubscribed
 from qts.registry.symbol_resolution import SourceSymbolResolver
 
 
@@ -585,9 +585,9 @@ class HistoricalMarketDataAdapter:
             supported_timeframes=frozenset({self.source_timeframe}),
         )
 
-    def subscribe(self, subscription: FeedSubscription) -> LiveFeedSubscribed:
+    def subscribe(self, subscription: FeedSubscription) -> MarketDataSubscribed:
         self.capabilities.source_timeframe_for(subscription.timeframe)
-        return LiveFeedSubscribed(subscription=subscription, source_id=self.source_id)
+        return MarketDataSubscribed(subscription=subscription, source_id=self.source_id)
 
     def events(self, subscription_id: str) -> Iterator[LiveFeedEvent]:
         if not subscription_id.strip():
@@ -611,7 +611,7 @@ Export `HistoricalMarketDataAdapter` from
 Run:
 
 ```bash
-uv run pytest tests/unit/data/test_historical_market_data_service.py -q
+uv run pytest tests/unit/data/test_historical_market_data_adapter.py -q
 ```
 
 Expected: all selected tests pass.
@@ -621,7 +621,7 @@ Expected: all selected tests pass.
 ```bash
 git add backend/src/qts/data/historical/adapter.py \
   backend/src/qts/data/historical/__init__.py \
-  tests/unit/data/test_historical_market_data_service.py
+  tests/unit/data/test_historical_market_data_adapter.py
 git commit -m "feat: add historical market data adapter"
 ```
 
@@ -639,7 +639,7 @@ Add `tests/anchor/test_market_data_subscription_anchors.py`:
 from __future__ import annotations
 
 from qts.core.ids import InstrumentId
-from qts.data.live_feed import FeedCapabilities
+from qts.data.live import FeedCapabilities
 from qts.data.subscriptions import LogicalSubscription, plan_physical_subscription
 
 

@@ -6,7 +6,7 @@ import pytest
 
 
 def test_execution_actor_wraps_simulator_and_emits_execution_report() -> None:
-    from qts.core.ids import InstrumentId, OrderId
+    from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
     from qts.execution.order_manager import ExecutionReport, OrderIntent, OrderSide
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.execution_actor import ExecutionActor, OrderExecutionRequest
@@ -26,6 +26,10 @@ def test_execution_actor_wraps_simulator_and_emits_execution_report() -> None:
             intent=intent,
             broker_order_id="sim-001",
             market_price=Decimal("101.25"),
+            account_id=AccountId("acct-a"),
+            strategy_id=StrategyId("strategy-a"),
+            client_order_id="client-001",
+            correlation_id=CorrelationId("corr-001"),
         )
     )
 
@@ -33,6 +37,96 @@ def test_execution_actor_wraps_simulator_and_emits_execution_report() -> None:
     assert isinstance(report, ExecutionReport)
     assert report.broker_order_id == "sim-001"
     assert report.fill_price == Decimal("101.25")
+
+
+def test_execution_actor_forwards_route_metadata_to_execution_adapter() -> None:
+    from dataclasses import dataclass
+    from typing import Any
+
+    from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
+    from qts.execution.order_manager import (
+        ExecutionReport,
+        ExecutionReportStatus,
+        OrderIntent,
+        OrderSide,
+    )
+    from qts.runtime.actor_ref import ActorRef
+    from qts.runtime.actors.execution_actor import ExecutionActor, OrderExecutionRequest
+    from qts.runtime.mailbox import Mailbox
+
+    @dataclass(slots=True)
+    class RecordingAdapter:
+        seen: dict[str, Any] | None = None
+
+        def execute_market_order(
+            self,
+            intent: OrderIntent,
+            *,
+            broker_order_id: str,
+            market_price: Decimal,
+            account_id: AccountId,
+            strategy_id: StrategyId,
+            client_order_id: str,
+            correlation_id: CorrelationId,
+        ) -> ExecutionReport:
+            self.seen = {
+                "intent": intent,
+                "broker_order_id": broker_order_id,
+                "market_price": market_price,
+                "account_id": account_id,
+                "strategy_id": strategy_id,
+                "client_order_id": client_order_id,
+                "correlation_id": correlation_id,
+            }
+            return ExecutionReport(
+                report_id="rpt-001",
+                broker_order_id=broker_order_id,
+                status=ExecutionReportStatus.ACCEPTED,
+            )
+
+        def cancel_order(
+            self,
+            order_id: OrderId,
+            *,
+            broker_order_id: str,
+            account_id: AccountId,
+            strategy_id: StrategyId,
+            client_order_id: str,
+            correlation_id: CorrelationId,
+        ) -> ExecutionReport:
+            raise AssertionError("cancel should not be called")
+
+    out = Mailbox()
+    adapter = RecordingAdapter()
+    actor = ExecutionActor(order_manager_ref=ActorRef(mailbox=out), execution_adapter=adapter)
+    intent = OrderIntent(
+        order_id=OrderId("ord-001"),
+        instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+        side=OrderSide.BUY,
+        quantity=Decimal("10"),
+    )
+
+    actor.handle(
+        OrderExecutionRequest(
+            intent=intent,
+            broker_order_id="broker-001",
+            market_price=Decimal("101.25"),
+            account_id=AccountId("acct-a"),
+            strategy_id=StrategyId("strategy-a"),
+            client_order_id="client-001",
+            correlation_id=CorrelationId("corr-001"),
+        )
+    )
+
+    assert adapter.seen == {
+        "intent": intent,
+        "broker_order_id": "broker-001",
+        "market_price": Decimal("101.25"),
+        "account_id": AccountId("acct-a"),
+        "strategy_id": StrategyId("strategy-a"),
+        "client_order_id": "client-001",
+        "correlation_id": CorrelationId("corr-001"),
+    }
 
 
 def test_execution_actor_rejects_market_data_messages() -> None:

@@ -13,7 +13,7 @@
 |---|---|
 | Dataset provenance | `DatasetMetadata` model and backtest report dataset references |
 | Validation | Severity-aware validation for duplicate bars, missing bars, gaps, ordering, overlap, and session containment |
-| Backtest determinism | `BacktestRunId`, config hash, cost model, dataset metadata, and deterministic report hash |
+| Backtest determinism | `RuntimeRunId`, config hash, cost model, dataset metadata, and deterministic report hash |
 | Live safety | live startup guard and observation-mode order-submission block |
 | Broker capabilities | order type, time-in-force, fractional, and short capability model |
 | Replay | `make test-replay` |

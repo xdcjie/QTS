@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from enum import StrEnum
 
 from qts.core.ids import InstrumentId
-from qts.data.live_feed import FeedCapabilities
+from qts.core.time import require_aware_datetime
+from qts.data.live import FeedCapabilities
 
 
 class SourceStreamType(StrEnum):
@@ -15,6 +17,15 @@ class SourceStreamType(StrEnum):
     BAR = "bar"
     TICK = "tick"
     QUOTE = "quote"
+
+
+class MarketDataSubscriptionEventType(StrEnum):
+    """Source subscription lifecycle event types visible to runtime."""
+
+    SUBSCRIBED = "subscribed"
+    UNSUBSCRIBED = "unsubscribed"
+    RESUBSCRIBED = "resubscribed"
+    FAILED = "failed"
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,6 +52,32 @@ class LogicalSubscriptionKey:
     instrument_id: InstrumentId
     requested_timeframe: str
     stream_type: SourceStreamType = SourceStreamType.BAR
+
+
+@dataclass(frozen=True, slots=True)
+class MarketDataSubscriptionEvent:
+    """Source-owned subscription lifecycle signal."""
+
+    event_type: MarketDataSubscriptionEventType
+    source_id: str
+    instrument_id: InstrumentId
+    subscription: LogicalSubscriptionKey
+    broker_symbol: str
+    observed_at: datetime
+    reason: str | None = None
+
+    def __post_init__(self) -> None:
+        """Validate source lifecycle event fields."""
+        if not self.source_id.strip():
+            raise ValueError("source_id must not be empty")
+        if not self.broker_symbol.strip():
+            raise ValueError("broker_symbol must not be empty")
+        require_aware_datetime(self.observed_at, name="observed_at")
+        if self.event_type is MarketDataSubscriptionEventType.FAILED:
+            if self.reason is None or not self.reason.strip():
+                raise ValueError("reason is required for failed subscription events")
+        elif self.reason is not None and not self.reason.strip():
+            raise ValueError("reason must not be empty when provided")
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,6 +127,8 @@ def plan_physical_subscription(
 __all__ = [
     "LogicalSubscription",
     "LogicalSubscriptionKey",
+    "MarketDataSubscriptionEvent",
+    "MarketDataSubscriptionEventType",
     "PhysicalSubscriptionKey",
     "SourceStreamType",
     "logical_key",

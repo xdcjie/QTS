@@ -1,15 +1,15 @@
 from qts.data.historical import HistoricalMarketDataAdapter
-from qts.data.live_feed import (
+from qts.data.live import (
     FeedCapabilities,
     FeedSubscription,
     LiveFeedAdapter,
     LiveFeedEvent,
     LiveFeedFailure,
-    LiveFeedSubscribed,
     MarketDataAdapter,
     MarketDataSubscribed,
     ReconnectPolicy,
 )
+from qts.data.permissions import MarketDataPermissionEvent, MarketDataPermissionState
 from qts.data.provenance import DatasetMetadata
 from qts.data.subscriptions import (
     LogicalSubscription,
@@ -19,19 +19,25 @@ from qts.data.subscriptions import (
     logical_key,
     plan_physical_subscription,
 )
-from qts.data.validation_report import DataValidationIssue, DataValidationReport
+from qts.data.validation_report import (
+    DataValidationError,
+    DataValidationIssue,
+    DataValidationReport,
+)
 
 __all__ = [
     "MarketDataAdapter",
+    "MarketDataPermissionEvent",
+    "MarketDataPermissionState",
     "HistoricalMarketDataAdapter",
     "FeedCapabilities",
     "FeedSubscription",
     "LiveFeedAdapter",
     "LiveFeedEvent",
     "LiveFeedFailure",
-    "LiveFeedSubscribed",
     "MarketDataSubscribed",
     "ReconnectPolicy",
+    "DataValidationError",
     "DataValidationIssue",
     "DataValidationReport",
     "DatasetMetadata",

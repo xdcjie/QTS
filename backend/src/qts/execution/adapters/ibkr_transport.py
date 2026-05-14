@@ -6,12 +6,16 @@ import queue
 import threading
 from contextlib import suppress
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 from importlib import import_module
+from pathlib import Path
 from time import monotonic
 from typing import Any, Literal, Protocol
 
+from qts.core.ids import AccountId, OrderId, StrategyId
 from qts.domain.orders import ExecutionReport, ExecutionReportStatus
+from qts.execution.adapters.ibkr_order_ids import IbkrOrderIdAllocator
 from qts.execution.broker import BrokerOrderType, TimeInForce
 
 _IBKR_INFO_ERROR_CODES = frozenset(
@@ -84,6 +88,8 @@ class IbkrTwsOrderExecutionTransportConfig:
     port: int
     client_id: int
     timeout_seconds: float = 20.0
+    order_id_store_path: str | Path | None = None
+    request_all_open_orders_on_reconnect: bool = False
 
     def __post_init__(self) -> None:
         if not self.host.strip():
@@ -100,7 +106,10 @@ class IbkrTwsOrderExecutionTransportConfig:
 class IbkrOrderRequest:
     """IBKR order request produced at the adapter boundary."""
 
+    internal_order_id: OrderId
     client_order_id: str
+    internal_account_id: AccountId | None
+    strategy_id: StrategyId | None
     account_id: str
     broker_symbol: str
     side: str
@@ -148,6 +157,7 @@ class IbkrOrderRequest:
         order.totalQuantity = self.quantity
         order.tif = self.time_in_force.value.upper()
         order.account = self.account_id
+        order.orderRef = self.client_order_id
         order.transmit = True
         order.outsideRth = self.outside_regular_trading_hours
         if self.order_type is BrokerOrderType.MARKET:
@@ -167,6 +177,7 @@ class IbkrOrderStatusPayload:
     report_id: str
     broker_order_id: str
     status: str
+    perm_id: str | None = None
 
     def __post_init__(self) -> None:
         if not self.report_id.strip():
@@ -175,6 +186,73 @@ class IbkrOrderStatusPayload:
             raise ValueError("broker_order_id must not be empty")
         if not self.status.strip():
             raise ValueError("status must not be empty")
+        if self.perm_id is not None and not self.perm_id.strip():
+            raise ValueError("perm_id must not be empty when provided")
+
+
+@dataclass(frozen=True, slots=True)
+class IbkrOpenOrderPayload:
+    """Raw IBKR openOrder callback payload."""
+
+    report_id: str
+    broker_order_id: str
+    client_order_id: str | None
+    perm_id: str | None = None
+    status: str | None = None
+    broker_symbol: str | None = None
+    side: str | None = None
+    quantity: Decimal | None = None
+
+    def __post_init__(self) -> None:
+        if not self.report_id.strip():
+            raise ValueError("report_id must not be empty")
+        if not self.broker_order_id.strip():
+            raise ValueError("broker_order_id must not be empty")
+        if self.client_order_id is not None and not self.client_order_id.strip():
+            raise ValueError("client_order_id must not be empty when provided")
+        if self.perm_id is not None and not self.perm_id.strip():
+            raise ValueError("perm_id must not be empty when provided")
+        if self.status is not None and not self.status.strip():
+            raise ValueError("status must not be empty when provided")
+        if self.broker_symbol is not None and not self.broker_symbol.strip():
+            raise ValueError("broker_symbol must not be empty when provided")
+        if self.side is not None and not self.side.strip():
+            raise ValueError("side must not be empty when provided")
+        if self.quantity is not None and self.quantity <= Decimal("0"):
+            raise ValueError("quantity must be positive when provided")
+
+
+@dataclass(frozen=True, slots=True)
+class IbkrPositionPayload:
+    """Raw IBKR position callback payload for reconciliation."""
+
+    account_id: str
+    broker_symbol: str
+    quantity: Decimal
+
+    def __post_init__(self) -> None:
+        if not self.account_id.strip():
+            raise ValueError("account_id must not be empty")
+        if not self.broker_symbol.strip():
+            raise ValueError("broker_symbol must not be empty")
+
+
+@dataclass(frozen=True, slots=True)
+class IbkrAccountSummaryPayload:
+    """Raw IBKR accountSummary callback payload for reconciliation."""
+
+    account_id: str
+    tag: str
+    value: Decimal
+    currency: str
+
+    def __post_init__(self) -> None:
+        if not self.account_id.strip():
+            raise ValueError("account_id must not be empty")
+        if not self.tag.strip():
+            raise ValueError("tag must not be empty")
+        if not self.currency.strip():
+            raise ValueError("currency must not be empty")
 
 
 @dataclass(frozen=True, slots=True)
@@ -270,8 +348,30 @@ class IbkrConnectionEvent:
 class IbkrOrderExecutionCallbackSink(Protocol):
     """IBKR order-execution callback sink owned by the execution adapter."""
 
-    def on_order_status(self, payload: IbkrOrderStatusPayload) -> ExecutionReport:
+    def record_submitted_order(
+        self,
+        request: IbkrOrderRequest,
+        *,
+        ibkr_order_id: str,
+        submitted_at: datetime | None = None,
+    ) -> None:
+        """Record the broker order id assigned during submission."""
+        ...
+
+    def on_order_status(self, payload: IbkrOrderStatusPayload) -> ExecutionReport | None:
         """Normalize a raw order-status callback."""
+        ...
+
+    def on_open_order(self, payload: IbkrOpenOrderPayload) -> None:
+        """Record a raw openOrder callback."""
+        ...
+
+    def on_position(self, payload: IbkrPositionPayload) -> None:
+        """Record a raw position callback."""
+        ...
+
+    def on_account_summary(self, payload: IbkrAccountSummaryPayload) -> None:
+        """Record a raw account summary callback."""
         ...
 
     def on_execution(self, payload: IbkrExecutionPayload) -> ExecutionReport | None:
@@ -322,7 +422,7 @@ class IbkrOrderExecutionTransport(Protocol):
         """Cancel a broker order by broker order id."""
         ...
 
-    def emit_order_status(self, payload: IbkrOrderStatusPayload) -> ExecutionReport:
+    def emit_order_status(self, payload: IbkrOrderStatusPayload) -> ExecutionReport | None:
         """Dispatch a raw order-status callback to the adapter sink."""
         ...
 
@@ -358,19 +458,23 @@ class IbkrTwsOrderExecutionTransport:
         *,
         config: IbkrTwsOrderExecutionTransportConfig,
         sink: IbkrOrderExecutionCallbackSink,
+        order_id_allocator: IbkrOrderIdAllocator | None = None,
     ) -> None:
         self.config = config
         self._sink = sink
         self._app: Any | None = None
         self._thread: threading.Thread | None = None
         self._ready = threading.Event()
-        self._next_order_id: int | None = None
+        self._order_id_allocator = order_id_allocator or IbkrOrderIdAllocator(
+            config.order_id_store_path
+        )
         self._reports: queue.Queue[ExecutionReport | IbkrTransportError | IbkrConnectionEvent] = (
             queue.Queue()
         )
         self._seen_errors: list[IbkrTransportError] = []
         self._managed_accounts: tuple[str, ...] = ()
         self._submitted_requests: dict[str, IbkrOrderRequest] = {}
+        self._request_sequence = 0
 
     @property
     def connected(self) -> bool:
@@ -444,6 +548,7 @@ class IbkrTwsOrderExecutionTransport:
             request.to_ibapi_contract(),
             request.to_ibapi_order(),
         )
+        self._sink.record_submitted_order(request, ibkr_order_id=broker_order_id)
         return broker_order_id
 
     def cancel_order(self, broker_order_id: str) -> None:
@@ -454,6 +559,22 @@ class IbkrTwsOrderExecutionTransport:
         app = self._require_connected_app()
         order_cancel_class = _ibapi_attr("ibapi.order_cancel", "OrderCancel")
         app.cancelOrder(int(broker_order_id), order_cancel_class())
+
+    def request_startup_reconciliation(self) -> None:
+        """Request broker state needed to reconcile after startup or reconnect."""
+
+        app = self._require_connected_app()
+        app.reqOpenOrders()
+        if self.config.request_all_open_orders_on_reconnect:
+            app.reqAllOpenOrders()
+        app.reqPositions()
+        execution_filter_class = _ibapi_attr("ibapi.execution", "ExecutionFilter")
+        app.reqExecutions(self._reserve_request_id(), execution_filter_class())
+        app.reqAccountSummary(
+            self._reserve_request_id(),
+            "All",
+            "NetLiquidation,TotalCashValue,AvailableFunds",
+        )
 
     def wait_for_order_status(
         self,
@@ -529,7 +650,13 @@ class IbkrTwsOrderExecutionTransport:
             ):
                 return event
 
-    def handle_order_status(self, *, order_id: int, status: str) -> ExecutionReport:
+    def handle_order_status(
+        self,
+        *,
+        order_id: int,
+        status: str,
+        perm_id: int | None = None,
+    ) -> ExecutionReport | None:
         """Handle an IBKR orderStatus callback."""
 
         return self.emit_order_status(
@@ -537,6 +664,67 @@ class IbkrTwsOrderExecutionTransport:
                 report_id=f"{_ORDER_STATUS_REPORT_PREFIX}-{order_id}-{status.lower()}",
                 broker_order_id=str(order_id),
                 status=status,
+                perm_id=None if perm_id is None else str(perm_id),
+            )
+        )
+
+    def handle_open_order(
+        self,
+        *,
+        order_id: int,
+        order: Any,
+        order_state: Any,
+        contract: Any | None = None,
+    ) -> None:
+        """Handle an IBKR openOrder callback."""
+
+        order_ref = str(getattr(order, "orderRef", "")).strip()
+        perm_id = getattr(order, "permId", None)
+        status = str(getattr(order_state, "status", "")).strip()
+        total_quantity = order.totalQuantity if hasattr(order, "totalQuantity") else None
+        self.emit_open_order(
+            IbkrOpenOrderPayload(
+                report_id=f"ibkr-open-order-{order_id}",
+                broker_order_id=str(order_id),
+                client_order_id=order_ref or None,
+                perm_id=None if perm_id in {None, 0, ""} else str(perm_id),
+                status=status or None,
+                broker_symbol=(
+                    str(getattr(contract, "symbol", "")).strip() if contract is not None else None
+                )
+                or None,
+                side=str(getattr(order, "action", "")).strip() or None,
+                quantity=None if total_quantity in {None, ""} else _to_decimal(total_quantity),
+            )
+        )
+
+    def handle_position(self, *, account_id: str, contract: Any, position: object) -> None:
+        """Handle an IBKR position callback."""
+
+        self._sink.on_position(
+            IbkrPositionPayload(
+                account_id=account_id,
+                broker_symbol=str(getattr(contract, "symbol", "")).strip(),
+                quantity=_to_decimal(position),
+            )
+        )
+
+    def handle_account_summary(
+        self,
+        *,
+        account_id: str,
+        tag: str,
+        value: object,
+        currency: str,
+    ) -> None:
+        """Handle an IBKR accountSummary callback."""
+
+        self._sink.on_account_summary(
+            IbkrAccountSummaryPayload(
+                account_id=account_id,
+                tag=tag,
+                value=_to_decimal(value),
+                currency=currency,
             )
         )
 
@@ -599,8 +787,10 @@ class IbkrTwsOrderExecutionTransport:
 
         if order_id <= 0:
             raise ValueError("order_id must be positive")
-        if self._next_order_id is None or order_id > self._next_order_id:
-            self._next_order_id = order_id
+        self._order_id_allocator.reconcile_next_valid_id(
+            client_id=self.config.client_id,
+            broker_next_valid_id=order_id,
+        )
         self._ready.set()
 
     def set_managed_accounts(self, accounts: str) -> None:
@@ -610,12 +800,18 @@ class IbkrTwsOrderExecutionTransport:
             account.strip() for account in accounts.split(",") if account.strip()
         )
 
-    def emit_order_status(self, payload: IbkrOrderStatusPayload) -> ExecutionReport:
+    def emit_order_status(self, payload: IbkrOrderStatusPayload) -> ExecutionReport | None:
         """Dispatch a raw order-status callback to the adapter sink."""
 
         report = self._sink.on_order_status(payload)
-        self._reports.put(report)
+        if report is not None:
+            self._reports.put(report)
         return report
+
+    def emit_open_order(self, payload: IbkrOpenOrderPayload) -> None:
+        """Dispatch a raw openOrder callback to the adapter sink."""
+
+        self._sink.on_open_order(payload)
 
     def emit_execution(self, payload: IbkrExecutionPayload) -> ExecutionReport | None:
         """Dispatch a raw execution callback to the adapter sink."""
@@ -649,11 +845,13 @@ class IbkrTwsOrderExecutionTransport:
         return self._sink.on_reconnect(payload)
 
     def _reserve_order_id(self) -> int:
-        order_id = self._next_order_id
-        if order_id is None:
+        if self._order_id_allocator.next_id(client_id=self.config.client_id) is None:
             raise RuntimeError("IBKR order-execution transport has no next order id")
-        self._next_order_id = order_id + 1
-        return order_id
+        return self._order_id_allocator.allocate(client_id=self.config.client_id)
+
+    def _reserve_request_id(self) -> int:
+        self._request_sequence += 1
+        return self._request_sequence
 
     def _require_connected_app(self) -> Any:
         app = self._app
@@ -669,11 +867,14 @@ __all__ = [
     "IbkrConnectionEventPayload",
     "IbkrErrorPayload",
     "IbkrExecutionPayload",
+    "IbkrAccountSummaryPayload",
+    "IbkrOpenOrderPayload",
     "IbkrOrderContractSpec",
     "IbkrOrderExecutionCallbackSink",
     "IbkrOrderExecutionTransport",
     "IbkrOrderRequest",
     "IbkrOrderStatusPayload",
+    "IbkrPositionPayload",
     "IbkrTransportError",
     "IbkrTwsOrderExecutionTransport",
     "IbkrTwsOrderExecutionTransportConfig",
@@ -712,14 +913,41 @@ def _new_order_execution_app(owner: IbkrTwsOrderExecutionTransport) -> Any:
             filled,
             remaining,
             avg_fill_price,
-            perm_id,
             parent_id,
             last_fill_price,
             client_id,
             why_held,
             mkt_cap_price,
         )
-        owner.handle_order_status(order_id=order_id, status=status)
+        owner.handle_order_status(order_id=order_id, status=status, perm_id=perm_id)
+
+    def open_order(self: Any, order_id: int, contract: Any, order: Any, order_state: Any) -> None:
+        owner.handle_open_order(
+            order_id=order_id,
+            contract=contract,
+            order=order,
+            order_state=order_state,
+        )
+
+    def position(self: Any, account: str, contract: Any, pos: Decimal, avg_cost: float) -> None:
+        del avg_cost
+        owner.handle_position(account_id=account, contract=contract, position=pos)
+
+    def account_summary(
+        self: Any,
+        req_id: int,
+        account: str,
+        tag: str,
+        value: str,
+        currency: str,
+    ) -> None:
+        del req_id
+        owner.handle_account_summary(
+            account_id=account,
+            tag=tag,
+            value=value,
+            currency=currency,
+        )
 
     def exec_details(self: Any, req_id: int, contract: Any, execution: Any) -> None:
         del req_id, contract
@@ -753,6 +981,9 @@ def _new_order_execution_app(owner: IbkrTwsOrderExecutionTransport) -> Any:
             "nextValidId": next_valid_id,
             "managedAccounts": managed_accounts,
             "orderStatus": order_status,
+            "openOrder": open_order,
+            "position": position,
+            "accountSummary": account_summary,
             "execDetails": exec_details,
             "commissionAndFeesReport": commission_and_fees_report,
             "commissionReport": commission_report,

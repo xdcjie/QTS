@@ -11,10 +11,13 @@ from pathlib import Path
 from typing import Any
 
 from qts.core.hashing import stable_json_default, stable_json_hash
+from qts.core.ids import RuntimeRunId
 from qts.data.provenance import DatasetMetadata
 
+RUNTIME_EVENT_SCHEMA_VERSION = "1"
 
-def dataset_metadata_payload(item: DatasetMetadata) -> dict[str, str | None]:
+
+def dataset_metadata_payload(item: DatasetMetadata) -> dict[str, str | int | None]:
     """Serialize one dataset provenance row for reporting."""
     return {
         "dataset_id": item.dataset_id,
@@ -26,6 +29,7 @@ def dataset_metadata_payload(item: DatasetMetadata) -> dict[str, str | None]:
         "normalization_version": item.normalization_version,
         "created_at": item.created_at.isoformat(),
         "content_hash": item.content_hash,
+        "row_count": item.row_count,
     }
 
 
@@ -151,11 +155,12 @@ class _NdjsonArtifact:
 class BacktestArtifactWriter:
     """Write large backtest outputs as line-delimited artifacts."""
 
-    _KINDS = ("orders", "fills", "trade_ledger", "equity_curve")
+    _KINDS = ("events", "orders", "fills", "trade_ledger", "equity_curve")
 
-    def __init__(self, output_dir: Path) -> None:
-        """Perform __init__."""
+    def __init__(self, output_dir: Path, *, run_id: RuntimeRunId | None = None) -> None:
+        """Create a writer for partitioned backtest artifacts."""
         self._output_dir = output_dir
+        self._run_id = run_id
         self._output_dir.mkdir(parents=True, exist_ok=True)
         self._artifacts = {
             kind: _NdjsonArtifact(self._output_dir / f".{kind}.partial.ndjson")
@@ -166,6 +171,10 @@ class BacktestArtifactWriter:
     def write_order(self, payload: dict[str, Any]) -> None:
         """Perform write_order."""
         self._artifacts["orders"].write(payload)
+
+    def write_runtime_event(self, payload: dict[str, Any]) -> None:
+        """Write one normalized runtime event envelope."""
+        self._artifacts["events"].write(payload)
 
     def write_fill(self, payload: dict[str, Any]) -> None:
         """Perform write_fill."""
@@ -203,6 +212,8 @@ class BacktestArtifactWriter:
         trading_bars: int,
         final_cash: Decimal,
         strategy_version: str,
+        runtime_topology_payload: dict[str, Any] | None = None,
+        brokerage_model: str | None = None,
     ) -> tuple[str, str, dict[str, Any], BacktestArtifacts]:
         """Perform finalize."""
         for artifact in self._artifacts.values():
@@ -213,27 +224,33 @@ class BacktestArtifactWriter:
         artifact_hashes = {
             kind: artifact.content_hash for kind, artifact in self._artifacts.items()
         }
-        report_hash = _stable_hash(
-            {
-                "config_hash": config_hash,
-                "cost_model": cost_model,
-                "dataset_metadata": dataset_metadata,
-                "final_cash": str(final_cash),
-                "processed_bars": processed_bars,
-                "warmup_bars": warmup_bars,
-                "trading_bars": trading_bars,
-                "strategy_version": strategy_version,
-                "metrics": metrics,
-                "artifacts": {
-                    kind: {
-                        "rows": artifact_rows[kind],
-                        "sha256": artifact_hashes[kind],
-                    }
-                    for kind in self._KINDS
-                },
-            }
+        report_payload: dict[str, Any] = {
+            "config_hash": config_hash,
+            "cost_model": cost_model,
+            "dataset_metadata": dataset_metadata,
+            "final_cash": str(final_cash),
+            "processed_bars": processed_bars,
+            "warmup_bars": warmup_bars,
+            "trading_bars": trading_bars,
+            "strategy_version": strategy_version,
+            "brokerage_model": brokerage_model,
+            "metrics": metrics,
+            "artifacts": {
+                kind: {
+                    "rows": artifact_rows[kind],
+                    "sha256": artifact_hashes[kind],
+                }
+                for kind in self._KINDS
+            },
+        }
+        if runtime_topology_payload is not None:
+            report_payload["runtime_topology"] = runtime_topology_payload
+        report_hash = _stable_hash(report_payload)
+        run_id = (
+            self._run_id.value
+            if self._run_id is not None
+            else f"bt-{report_hash.removeprefix('sha256:')[:12]}"
         )
-        run_id = f"bt-{report_hash.removeprefix('sha256:')[:12]}"
         artifact_paths: dict[str, Path] = {}
         for kind, artifact in self._artifacts.items():
             final_path = self._output_dir / f"{run_id}.{kind}.ndjson"
@@ -242,6 +259,8 @@ class BacktestArtifactWriter:
 
         manifest_payload: dict[str, Any] = {
             "run_id": run_id,
+            "runtime_mode": "backtest",
+            "event_schema_version": RUNTIME_EVENT_SCHEMA_VERSION,
             "config_hash": config_hash,
             "report_hash": report_hash,
             "dataset_metadata": dataset_metadata,
@@ -249,6 +268,7 @@ class BacktestArtifactWriter:
             "processed_bars": processed_bars,
             "warmup_bars": warmup_bars,
             "trading_bars": trading_bars,
+            "brokerage_model": brokerage_model,
             "metrics": metrics,
             "artifacts": {
                 kind: {
@@ -259,6 +279,8 @@ class BacktestArtifactWriter:
                 for kind in self._KINDS
             },
         }
+        if runtime_topology_payload is not None:
+            manifest_payload["runtime_topology"] = runtime_topology_payload
         manifest_path = self._output_dir / f"{run_id}.manifest.json"
         manifest_path.write_text(
             json.dumps(

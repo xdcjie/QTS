@@ -84,6 +84,7 @@ def test_ibkr_gateway_order_lifecycle_anchor_requires_paper_and_real_transport(
                 side=OrderSide.BUY,
                 quantity=Decimal("1"),
             ),
+            client_order_id="client-ibkr-paper-anchor-aapl-buy-1",
             order_type=BrokerOrderType.LIMIT,
             limit_price=Decimal("0.01"),
             contract=IbkrOrderContractSpec.stock("AAPL", primary_exchange="ISLAND"),

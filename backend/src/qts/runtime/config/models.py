@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
@@ -37,6 +37,82 @@ class TradingRuntimeConfig:
         if not normalized:
             raise ValueError("mode must not be empty")
         object.__setattr__(self, "mode", normalized)
+
+
+@dataclass(frozen=True, slots=True)
+class ConfigMigrationResult:
+    """Result of an explicit runtime config schema migration."""
+
+    payload: dict[str, Any]
+    from_version: str
+    to_version: str
+    change_log: tuple[str, ...]
+
+
+class ConfigMigration:
+    """Migrate runtime config payloads between explicit schema versions."""
+
+    @classmethod
+    def migrate(
+        cls,
+        payload: Mapping[str, Any],
+        *,
+        target_version: str,
+    ) -> ConfigMigrationResult:
+        """Return a migrated payload copy and an audit-oriented changelog."""
+        from_version = cls._normalize_version(payload.get("schema_version", "1"))
+        to_version = cls._normalize_version(target_version)
+        migrated = cls._copy_payload(payload)
+        change_log: list[str] = []
+
+        if from_version == to_version:
+            return ConfigMigrationResult(
+                payload=migrated,
+                from_version=from_version,
+                to_version=to_version,
+                change_log=(),
+            )
+        if (from_version, to_version) != ("1", "2"):
+            raise ValueError(f"unsupported config migration: {from_version} -> {to_version}")
+
+        cls._migrate_v1_to_v2(migrated, change_log=change_log)
+        return ConfigMigrationResult(
+            payload=migrated,
+            from_version=from_version,
+            to_version=to_version,
+            change_log=tuple(change_log),
+        )
+
+    @classmethod
+    def _migrate_v1_to_v2(cls, payload: dict[str, Any], *, change_log: list[str]) -> None:
+        """Add explicit schema versions without changing runtime semantics."""
+        payload["schema_version"] = "2"
+        change_log.append("schema_version: 1 -> 2")
+
+        risk_payload = payload.get("risk_config", {})
+        if not isinstance(risk_payload, Mapping):
+            raise ValueError("risk_config must be a mapping")
+        risk_payload = dict(risk_payload)
+        risk_version = cls._normalize_version(risk_payload.get("schema_version", "1"))
+        risk_payload["schema_version"] = "2"
+        payload["risk_config"] = risk_payload
+        change_log.append(f"risk_config.schema_version: {risk_version} -> 2")
+
+    @staticmethod
+    def _copy_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
+        """Copy the top-level payload and mapping values that migrations may edit."""
+        return {
+            key: dict(value) if isinstance(value, Mapping) else value
+            for key, value in payload.items()
+        }
+
+    @staticmethod
+    def _normalize_version(value: object) -> str:
+        """Normalize schema version labels for deterministic migrations."""
+        version = str(value).strip()
+        if not version:
+            raise ValueError("schema_version must not be empty")
+        return version
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,29 +179,6 @@ class BacktestEngineConfig:
         object.__setattr__(self, "dataset_metadata", tuple(self.dataset_metadata))
         object.__setattr__(self, "config_payload", dict(self.config_payload))
 
-    @classmethod
-    def from_legacy_kwargs(
-        cls,
-        *,
-        initial_cash: Decimal,
-        warmup_bars: int = 0,
-        target_timeframe: str | None = None,
-        strategy_version: str | None = None,
-        config: dict[str, Any] | None = None,
-        cost_model: BacktestCostModel | None = None,
-        dataset_metadata: Iterable[DatasetMetadata] = (),
-    ) -> BacktestEngineConfig:
-        """Build from constructor-style legacy fields."""
-        return cls(
-            initial_cash=initial_cash,
-            warmup_bars=warmup_bars,
-            target_timeframe=target_timeframe,
-            strategy_version=strategy_version or "",
-            config_payload=dict(config or {}),
-            dataset_metadata=tuple(dataset_metadata),
-            cost_model=cost_model or BacktestCostModel(),
-        )
-
     def to_payload(self) -> dict[str, Any]:
         """Serialize this engine config for stable hashing."""
         payload = {
@@ -177,16 +230,23 @@ class RiskConfig:
     """Backtest risk settings."""
 
     max_notional: Decimal
+    schema_version: str = "1"
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""
+        if not self.schema_version.strip():
+            raise ValueError("schema_version must not be empty")
+        object.__setattr__(self, "schema_version", self.schema_version.strip())
         object.__setattr__(self, "max_notional", Decimal(str(self.max_notional)))
         if self.max_notional <= Decimal("0"):
             raise ValueError("max_notional must be positive")
 
     def to_payload(self) -> dict[str, str]:
         """Perform to_payload."""
-        return {"max_notional": str(self.max_notional)}
+        return {
+            "max_notional": str(self.max_notional),
+            "schema_version": self.schema_version,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -338,9 +398,14 @@ class BacktestRuntimeConfig:
     mode: RuntimeMode | str = RuntimeMode.BACKTEST
     execution_environment: ExecutionEnvironment | str = ExecutionEnvironment.SIMULATED
     market_data_environment: MarketDataEnvironment | str = MarketDataEnvironment.REPLAY
+    schema_version: str = "1"
+    brokerage_model: str = "CUSTOM"
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""
+        if not self.schema_version.strip():
+            raise ValueError("schema_version must not be empty")
+        object.__setattr__(self, "schema_version", self.schema_version.strip())
         mode = RuntimeMode.from_value(self.mode)
         if mode is not RuntimeMode.BACKTEST:
             raise ValueError("BacktestRuntimeConfig mode must be backtest")
@@ -406,6 +471,10 @@ class BacktestRuntimeConfig:
             raise ValueError("warmup_bars must be non-negative")
         if not self.market_data.is_configured:
             raise ValueError("market_data must be configured")
+        brokerage_model = self.brokerage_model.strip().upper()
+        if not brokerage_model:
+            raise ValueError("brokerage_model must not be empty")
+        object.__setattr__(self, "brokerage_model", brokerage_model)
 
     @classmethod
     def from_yaml(cls, path: Path) -> BacktestRuntimeConfig:
@@ -422,6 +491,7 @@ class BacktestRuntimeConfig:
     def to_payload(self) -> dict[str, Any]:
         """Perform to_payload."""
         payload = {
+            "schema_version": self.schema_version,
             "mode": RuntimeMode.from_value(self.mode).value,
             "execution_environment": ExecutionEnvironment.from_value(
                 self.execution_environment,
@@ -447,6 +517,7 @@ class BacktestRuntimeConfig:
             "risk_config": self.risk_config.to_payload(),
             "roll_policy": self.roll_policy.to_payload(),
             "warmup_bars": self.warmup_bars,
+            "brokerage_model": self.brokerage_model,
         }
         market_data = self.market_data.to_payload()
         if market_data is not None:
@@ -486,9 +557,17 @@ class LiveRuntimeConfig:
     broker_port: int | None = None
     broker_port_override_reason: str | None = None
     operator_signoff_id: str | None = None
+    market_data_permission_live: bool = True
+    reconciliation_passed: bool = True
+    event_sink_writable: bool = True
+    snapshot_store_configured: bool = True
+    schema_version: str = "1"
 
     def __post_init__(self) -> None:
         """Validate the live runtime mode label."""
+        if not self.schema_version.strip():
+            raise ValueError("schema_version must not be empty")
+        object.__setattr__(self, "schema_version", self.schema_version.strip())
         mode = RuntimeMode.from_value(self.mode)
         if mode is RuntimeMode.BACKTEST:
             raise ValueError("LiveRuntimeConfig mode cannot be backtest")
@@ -514,13 +593,57 @@ class LiveRuntimeConfig:
             object.__setattr__(self, "broker_account_code", self.broker_account_code.strip())
         if self.operator_signoff_id is not None:
             object.__setattr__(self, "operator_signoff_id", self.operator_signoff_id.strip())
-        if self.broker_port_override_reason is not None:
-            object.__setattr__(
-                self,
-                "broker_port_override_reason",
-                self.broker_port_override_reason.strip(),
-            )
+            if self.broker_port_override_reason is not None:
+                object.__setattr__(
+                    self,
+                    "broker_port_override_reason",
+                    self.broker_port_override_reason.strip(),
+                )
         self._validate_mode_contract(mode)
+
+    @property
+    def config_hash(self) -> str:
+        """Return the stable identity hash for this live runtime config."""
+        return stable_json_hash(self.to_payload())
+
+    def to_payload(self) -> dict[str, Any]:
+        """Serialize startup gates and environment identity for evidence artifacts."""
+        mode = RuntimeMode.from_value(self.mode)
+        execution_environment = ExecutionEnvironment.from_value(
+            self.execution_environment,
+            mode=mode,
+        )
+        market_data_environment = MarketDataEnvironment.from_value(
+            self.market_data_environment,
+            mode=mode,
+        )
+        account_environment = AccountEnvironment.from_value(
+            self.account_environment,
+            mode=mode,
+        )
+        return {
+            "schema_version": self.schema_version,
+            "mode": mode.value,
+            "broker_configured": self.broker_configured,
+            "account_configured": self.account_configured,
+            "risk_configured": self.risk_configured,
+            "calendar_configured": self.calendar_configured,
+            "kill_switch_configured": self.kill_switch_configured,
+            "allow_live_orders": self.allow_live_orders,
+            "observation_only": self.observation_only,
+            "broker_account_kind": self.broker_account_kind,
+            "execution_environment": execution_environment.value,
+            "market_data_environment": market_data_environment.value,
+            "account_environment": account_environment.value,
+            "broker_account_code": self.broker_account_code,
+            "broker_port": self.broker_port,
+            "broker_port_override_reason": self.broker_port_override_reason,
+            "operator_signoff_id": self.operator_signoff_id,
+            "market_data_permission_live": self.market_data_permission_live,
+            "reconciliation_passed": self.reconciliation_passed,
+            "event_sink_writable": self.event_sink_writable,
+            "snapshot_store_configured": self.snapshot_store_configured,
+        }
 
     @staticmethod
     def _normalize_broker_account_kind(
@@ -593,6 +716,8 @@ class LiveRuntimeConfig:
 
 __all__ = [
     "TradingRuntimeConfig",
+    "ConfigMigration",
+    "ConfigMigrationResult",
     "BacktestMarketDataReference",
     "BacktestRuntimeConfig",
     "LiveRuntimeConfig",

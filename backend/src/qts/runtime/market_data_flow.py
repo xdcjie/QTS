@@ -6,7 +6,13 @@ from dataclasses import dataclass
 from datetime import tzinfo
 
 from qts.core.ids import InstrumentId
-from qts.data.sources.streaming_market_data_source import StreamingMarketDataDegradation
+from qts.data.permissions import MarketDataPermissionEvent, MarketDataPermissionState
+from qts.data.provenance import ReplayDataAnomalyEvent, ReplayDataAnomalyType
+from qts.data.sources.streaming_market_data_source import (
+    StreamingMarketDataDegradation,
+    StreamingMarketDataSubscriptionEvent,
+    StreamingMarketDataSubscriptionEventType,
+)
 from qts.domain.market_data import Bar
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.market_data_actor import MarketDataActor, MarketDataEvent
@@ -53,7 +59,11 @@ class MarketDataFlow:
 
     def publish_source_event(
         self,
-        event: Bar | StreamingMarketDataDegradation,
+        event: Bar
+        | StreamingMarketDataDegradation
+        | StreamingMarketDataSubscriptionEvent
+        | ReplayDataAnomalyEvent
+        | MarketDataPermissionEvent,
     ) -> MarketDataFlowResult:
         """Publish a source event through runtime market-data orchestration."""
 
@@ -61,6 +71,12 @@ class MarketDataFlow:
             return MarketDataFlowResult(market_data=self.publish_bar(event))
         if isinstance(event, StreamingMarketDataDegradation):
             return MarketDataFlowResult(runtime_events=(self._runtime_degradation_event(event),))
+        if isinstance(event, StreamingMarketDataSubscriptionEvent):
+            return MarketDataFlowResult(runtime_events=self._runtime_subscription_events(event))
+        if isinstance(event, ReplayDataAnomalyEvent):
+            return MarketDataFlowResult(runtime_events=self._runtime_replay_anomaly_events(event))
+        if isinstance(event, MarketDataPermissionEvent):
+            return MarketDataFlowResult(runtime_events=self._runtime_permission_events(event))
         raise TypeError(f"unsupported market data source event: {type(event).__name__}")
 
     def _market_data_ref_for(self, bar: Bar) -> ActorRef:
@@ -108,6 +124,126 @@ class MarketDataFlow:
                 "observed_at": degradation.observed_at.isoformat(),
             },
         )
+
+    @staticmethod
+    def _runtime_permission_events(event: MarketDataPermissionEvent) -> tuple[RuntimeEvent, ...]:
+        """Convert provider permission callbacks to runtime events."""
+
+        permission_event = RuntimeEvent(
+            kind="market_data_permission_changed",
+            payload=MarketDataFlow._permission_payload(event),
+        )
+        if event.permission_state is MarketDataPermissionState.LIVE:
+            return (permission_event,)
+        return (
+            permission_event,
+            RuntimeEvent(
+                kind="runtime.degraded",
+                payload={
+                    **MarketDataFlow._permission_payload(event),
+                    "reason": "market_data_permission_not_live",
+                },
+            ),
+        )
+
+    @staticmethod
+    def _runtime_subscription_events(
+        event: StreamingMarketDataSubscriptionEvent,
+    ) -> tuple[RuntimeEvent, ...]:
+        """Convert source subscription lifecycle signals to runtime events."""
+
+        lifecycle_event = RuntimeEvent(
+            kind=MarketDataFlow._subscription_event_kind(event.event_type),
+            payload=MarketDataFlow._subscription_payload(event),
+        )
+        if event.event_type is not StreamingMarketDataSubscriptionEventType.FAILED:
+            return (lifecycle_event,)
+        return (
+            lifecycle_event,
+            RuntimeEvent(
+                kind="runtime.degraded",
+                payload={
+                    **MarketDataFlow._subscription_payload(event),
+                    "reason": "market_data_subscription_failed",
+                    "subscription_failure_reason": event.reason,
+                },
+            ),
+        )
+
+    @staticmethod
+    def _runtime_replay_anomaly_events(event: ReplayDataAnomalyEvent) -> tuple[RuntimeEvent, ...]:
+        """Convert replay data-quality diagnostics to runtime-visible events."""
+
+        anomaly_event = RuntimeEvent(
+            kind=event.anomaly_type.value,
+            payload=MarketDataFlow._replay_anomaly_payload(event),
+        )
+        if event.anomaly_type not in {
+            ReplayDataAnomalyType.GAP_DETECTED,
+            ReplayDataAnomalyType.OUT_OF_ORDER_REJECTED,
+            ReplayDataAnomalyType.DATA_SCHEMA_ERROR,
+        }:
+            return (anomaly_event,)
+        return (
+            anomaly_event,
+            RuntimeEvent(
+                kind="runtime.degraded",
+                payload={
+                    **MarketDataFlow._replay_anomaly_payload(event),
+                    "reason": event.anomaly_type.value,
+                },
+            ),
+        )
+
+    @staticmethod
+    def _subscription_event_kind(event_type: StreamingMarketDataSubscriptionEventType) -> str:
+        return {
+            StreamingMarketDataSubscriptionEventType.SUBSCRIBED: "market_data_subscribed",
+            StreamingMarketDataSubscriptionEventType.UNSUBSCRIBED: "market_data_unsubscribed",
+            StreamingMarketDataSubscriptionEventType.RESUBSCRIBED: "market_data_resubscribed",
+            StreamingMarketDataSubscriptionEventType.FAILED: "market_data_subscription_failed",
+        }[event_type]
+
+    @staticmethod
+    def _subscription_payload(
+        event: StreamingMarketDataSubscriptionEvent,
+    ) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "source_id": event.source_id,
+            "instrument_id": event.instrument_id.value,
+            "requested_timeframe": event.subscription.requested_timeframe,
+            "stream_type": event.subscription.stream_type.value,
+            "broker_symbol": event.broker_symbol,
+            "observed_at": event.observed_at.isoformat(),
+        }
+        if event.reason is not None:
+            payload["reason"] = event.reason
+        return payload
+
+    @staticmethod
+    def _permission_payload(event: MarketDataPermissionEvent) -> dict[str, object]:
+        return {
+            "source_id": event.source_id,
+            "permission_state": event.permission_state.value,
+            "provider_market_data_type": event.provider_market_data_type,
+            "request_id": event.request_id,
+        }
+
+    @staticmethod
+    def _replay_anomaly_payload(event: ReplayDataAnomalyEvent) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "source_id": event.source_id,
+            "instrument_id": event.instrument_id.value,
+            "timeframe": event.timeframe,
+            "bar_start": event.bar_start.isoformat(),
+            "bar_end": event.bar_end.isoformat(),
+            "observed_at": event.observed_at.isoformat(),
+        }
+        if event.previous_end is not None:
+            payload["previous_end"] = event.previous_end.isoformat()
+        if event.reason is not None:
+            payload["detail"] = event.reason
+        return payload
 
 
 __all__ = ["MarketDataFlow", "MarketDataFlowResult"]

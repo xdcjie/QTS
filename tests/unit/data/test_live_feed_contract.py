@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import pytest
 from qts.core.ids import InstrumentId
-from qts.data.live_feed import (
+from qts.data.live import (
     FeedCapabilities,
     FeedSubscription,
     LiveFeedFailure,

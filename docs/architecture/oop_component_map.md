@@ -90,9 +90,7 @@ Owner: bootstrap/replay data generation helpers.
 
 ## Immediate placeholders to resolve
 
-- `backend/src/qts/data/bars/builder.py`: placeholder module with no symbols.
-- `backend/src/qts/data/bars/validation.py`: placeholder module with no symbols.
-- `scripts/run_api.py`, `scripts/run_paper_ibkr.py`, `scripts/run_worker.py`: placeholders with no production logic.
+- None currently tracked in production code.
 
 ## Next validation checkpoints
 

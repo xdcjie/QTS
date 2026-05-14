@@ -11,6 +11,7 @@ from typing import Protocol, cast
 QTS_ROOT = Path("backend/src/qts")
 PRODUCT_SYMBOLS = frozenset({"GC", "SI", "ES", "NQ", "CL", "HG", "ZN", "ZB", "YM", "RTY"})
 BROKER_TOKENS = frozenset({"IBKR", "TWS"})
+PROVIDER_SDK_MODULE_PREFIXES = ("ib_async", "ibapi")
 TEST_SUPPORT_TOKENS = frozenset({"ANCHOR", "FIXTURE"})
 SHARED_CAPABILITY_MODULE_TOKENS = frozenset({"ROLL", "SESSION", "RESOLUTION"})
 SOURCE_SPECIFIC_BOUNDARY_PREFIXES = (
@@ -52,6 +53,16 @@ BROKER_FACT_ALLOWED_PREFIXES = (
     ("data", "adapters"),
     ("execution", "adapters"),
     ("application", "commands"),
+)
+BROKER_SYMBOL_MAPPING_ALLOWED_PREFIXES = (
+    ("registry",),
+    ("data", "adapters"),
+    ("execution", "adapters"),
+    ("application", "commands"),
+)
+PROVIDER_SDK_ALLOWED_PREFIXES = (
+    ("data", "adapters"),
+    ("execution", "adapters"),
 )
 BROKER_ADAPTER_FORBIDDEN_IMPORT_PREFIXES = (
     "qts.portfolio",
@@ -112,6 +123,55 @@ BACKTEST_ENGINE_FORBIDDEN_HELPERS = frozenset(
         "_contract_multipliers_from_config",
     }
 )
+GUARDRAIL_REMEDIATIONS = {
+    "ADAPTER_BOUNDARY": (
+        "Move cross-service behavior behind the correct data or execution adapter boundary."
+    ),
+    "ADAPTER_STATE_DEPENDENCY": (
+        "Keep mutable runtime state in actors and pass normalized DTOs through adapters."
+    ),
+    "BACKTEST_ENGINE_COHESION": (
+        "Move historical replay assembly into a backtest input or data source boundary."
+    ),
+    "BACKTEST_INPUT_COHESION": (
+        "Consume loaded catalog/input objects instead of constructing source data locally."
+    ),
+    "BACKTEST_RUNNER_COHESION": (
+        "Keep runners as orchestration and delegate reusable input assembly."
+    ),
+    "BROKER_SPECIFIC_IMPLEMENTATION": (
+        "Move broker-specific facts to config, registry mapping, or adapter modules."
+    ),
+    "BROKER_SYMBOL_BOUNDARY": (
+        "Resolve broker symbols at registry, adapter, or application command boundaries."
+    ),
+    "IMPORT_BOUNDARY": (
+        "Move the dependency to the owning lower layer or introduce a boundary DTO/protocol."
+    ),
+    "LIVE_PACKAGE_REPLAY_CLASS": (
+        "Place replay concepts under data sources or historical boundaries."
+    ),
+    "OOP_HELPER_OWNERSHIP": "Move one-class private helpers onto the owning class.",
+    "OOP_PUBLIC_FACTORY_FUNCTION": "Use class-owned construction or a config-owned constructor.",
+    "PIPELINE_ACTOR_IMPORT": "Keep data pipelines pure and connect actors from runtime flow code.",
+    "PLACEHOLDER_DOCSTRING": "Replace placeholder text with the artifact or behavior contract.",
+    "PRODUCT_SPECIFIC_IMPLEMENTATION": (
+        "Move product facts to registry, session, valuation, or risk data boundaries."
+    ),
+    "PRODUCTION_FAKE_CLASS": "Move fakes under tests/support.",
+    "PROVIDER_SDK_IMPORT": "Import provider SDKs only from adapter or transport boundaries.",
+    "SHARED_CAPABILITY_IN_SOURCE_BOUNDARY": (
+        "Move shared roll/session/resolution logic to a shared package."
+    ),
+    "SHARED_RUNTIME_WORDING": "Use mode-neutral runtime wording.",
+    "STRATEGY_SDK_INTERNAL_LEAK": (
+        "Expose only Strategy SDK public facades and readonly value types."
+    ),
+    "TEST_SUPPORT_IN_PRODUCTION": "Move test support helpers under tests.",
+    "TRANSPORT_ACTOR_IMPORT": (
+        "Keep transports free of runtime actors and emit normalized callbacks instead."
+    ),
+}
 
 
 @dataclass(frozen=True, order=True, slots=True)
@@ -122,10 +182,26 @@ class GuardrailViolation:
     path: str
     line: int
     message: str
+    remediation: str = ""
+
+    def __post_init__(self) -> None:
+        """Attach a default remediation for report consumers."""
+        if self.remediation:
+            return
+        object.__setattr__(
+            self,
+            "remediation",
+            GUARDRAIL_REMEDIATIONS.get(
+                self.code,
+                "Move the behavior to the documented owner boundary.",
+            ),
+        )
 
     def format(self) -> str:
         """Perform format."""
-        return f"{self.path}:{self.line}: {self.code}: {self.message}"
+        return (
+            f"{self.path}:{self.line}: {self.code}: {self.message} remediation: {self.remediation}"
+        )
 
 
 class Rule(Protocol):
@@ -328,6 +404,74 @@ class BrokerSpecificRule:
         return _check_broker_specific_code(relative_path, qts_relative_path, tree)
 
 
+class BrokerSymbolBoundaryRule:
+    """Reject broker symbol mapping imports outside approved boundary modules."""
+
+    code = "BROKER_SYMBOL_BOUNDARY"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform check."""
+        if _has_allowed_prefix(qts_relative_path, BROKER_SYMBOL_MAPPING_ALLOWED_PREFIXES):
+            return []
+        violations: list[GuardrailViolation] = []
+        violation_lines: set[int] = set()
+        for imported_module, line in _iter_imports(tree):
+            if imported_module == "qts.registry.broker_symbol_mapping":
+                violation_lines.add(line)
+        for imported_module, imported_name, line in _iter_imported_names(tree):
+            if imported_module == "qts.registry" and imported_name == "BrokerSymbolMapping":
+                violation_lines.add(line)
+        for line in sorted(violation_lines):
+            violations.append(
+                GuardrailViolation(
+                    code=self.code,
+                    path=str(relative_path),
+                    line=line,
+                    message="BrokerSymbolMapping must stay at registry or adapter boundaries",
+                )
+            )
+        return violations
+
+
+class ProviderSdkImportRule:
+    """Reject provider SDK imports outside adapter and transport boundaries."""
+
+    code = "PROVIDER_SDK_IMPORT"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform check."""
+        if _has_allowed_prefix(qts_relative_path, PROVIDER_SDK_ALLOWED_PREFIXES):
+            return []
+        violations: list[GuardrailViolation] = []
+        for imported_module, line in _iter_imports(tree):
+            if not _is_provider_sdk_module(imported_module):
+                continue
+            violations.append(
+                GuardrailViolation(
+                    code=self.code,
+                    path=str(relative_path),
+                    line=line,
+                    message=(
+                        "provider SDK imports must stay inside adapter or transport boundaries: "
+                        f"{imported_module}"
+                    ),
+                )
+            )
+        return violations
+
+
 class TestSupportRule:
     """Reject test/anchor support in production source."""
 
@@ -464,6 +608,8 @@ class GuardrailSuite:
             ImportBoundaryRule(),
             ProductSpecificRule(),
             BrokerSpecificRule(),
+            BrokerSymbolBoundaryRule(),
+            ProviderSdkImportRule(),
             TestSupportRule(),
             SharedCapabilityRule(),
             OOPPublicFactoryRule(),
@@ -667,6 +813,13 @@ def _is_runtime_actor_module(imported_module: str) -> bool:
             "qts.runtime.actors",
             "qts.runtime.mailbox",
         )
+    )
+
+
+def _is_provider_sdk_module(imported_module: str) -> bool:
+    return any(
+        imported_module == prefix or imported_module.startswith(f"{prefix}.")
+        for prefix in PROVIDER_SDK_MODULE_PREFIXES
     )
 
 

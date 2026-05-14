@@ -20,9 +20,11 @@ def test_dataset_metadata_requires_provenance_fields_and_stable_reference() -> N
         normalization_version="bars-v1",
         created_at=datetime(2026, 1, 2, tzinfo=UTC),
         content_hash="sha256:abc123",
+        row_count=42,
     )
 
     assert metadata.reference == "vendor-x:aapl-1m-2026-01-02:sha256:abc123"
+    assert metadata.row_count == 42
 
 
 def test_dataset_metadata_rejects_missing_required_provenance() -> None:

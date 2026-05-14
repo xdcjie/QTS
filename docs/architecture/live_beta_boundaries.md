@@ -11,7 +11,7 @@ can affect `OrderManager`.
 
 ## Live Market Data
 
-`qts.data.live_feed` defines `FeedCapabilities`, `LiveFeedAdapter`, `FeedSubscription`,
+`qts.data.live` defines `FeedCapabilities`, `LiveFeedAdapter`, `FeedSubscription`,
 `ReconnectPolicy`, and `FakeLiveFeedAdapter`.
 
 Feed events carry normalized `Tick`, `Quote`, or `Bar` payloads. Bar aggregation remains owned by

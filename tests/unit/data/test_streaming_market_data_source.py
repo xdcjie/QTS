@@ -37,6 +37,7 @@ def test_streaming_market_data_source_normalizes_callbacks_and_drains_complete_e
         LogicalSubscription("strategy-a", instrument_id, "quote", SourceStreamType.QUOTE)
     )
     source.subscribe(LogicalSubscription("strategy-a", instrument_id, "1m", SourceStreamType.BAR))
+    source.drain(observed_at=datetime(2026, 1, 2, 14, 30, tzinfo=UTC))
     tick = source.on_tick(
         IbkrTickPayload(
             broker_symbol="AAPL",
@@ -101,6 +102,7 @@ def test_streaming_market_data_source_holds_partial_bars_until_complete() -> Non
         )
     )
     source.subscribe(LogicalSubscription("strategy-a", instrument_id, "1m"))
+    source.drain(observed_at=datetime(2026, 1, 2, 14, 30, tzinfo=UTC))
 
     partial_bar = source.on_bar(
         IbkrBarPayload(
@@ -152,6 +154,7 @@ def test_streaming_market_data_source_emits_stale_data_degradation() -> None:
         default_max_age=timedelta(seconds=5),
     )
     source.subscribe(subscription, subscribed_at=subscribed_at)
+    source.drain(observed_at=subscribed_at)
 
     [degradation] = source.drain(observed_at=subscribed_at + timedelta(seconds=6))
 
@@ -160,6 +163,118 @@ def test_streaming_market_data_source_emits_stale_data_degradation() -> None:
     assert degradation.reason == "stale_market_data"
     assert degradation.age == timedelta(seconds=6)
     assert degradation.max_age == timedelta(seconds=5)
+
+
+def test_streaming_market_data_source_emits_subscription_lifecycle_events() -> None:
+    from qts.core.ids import BrokerId, InstrumentId
+    from qts.data.adapters.ibkr_market_data import (
+        IbkrMarketDataAdapter,
+        IbkrMarketDataConnection,
+    )
+    from qts.data.sources.streaming_market_data_source import (
+        StreamingMarketDataSource,
+        StreamingMarketDataSubscriptionEvent,
+        StreamingMarketDataSubscriptionEventType,
+    )
+    from qts.data.subscriptions import LogicalSubscription
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    subscribed_at = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    subscription = LogicalSubscription("strategy-a", instrument_id, "1m")
+    source = StreamingMarketDataSource(
+        adapter=IbkrMarketDataAdapter(
+            connection=IbkrMarketDataConnection(
+                host="127.0.0.1",
+                port=4002,
+                client_id=101,
+                source_id="ibkr-paper-md",
+            ),
+            symbol_mapping=mapping,
+        ),
+        default_max_age=timedelta(minutes=5),
+    )
+
+    source.subscribe(subscription, subscribed_at=subscribed_at)
+    source.unsubscribe(subscription, observed_at=subscribed_at + timedelta(seconds=1))
+
+    subscribed, unsubscribed = source.drain(observed_at=subscribed_at + timedelta(seconds=2))
+    assert isinstance(subscribed, StreamingMarketDataSubscriptionEvent)
+    assert isinstance(unsubscribed, StreamingMarketDataSubscriptionEvent)
+    assert subscribed.event_type is StreamingMarketDataSubscriptionEventType.SUBSCRIBED
+    assert unsubscribed.event_type is StreamingMarketDataSubscriptionEventType.UNSUBSCRIBED
+    assert subscribed.source_id == "ibkr-paper-md"
+    assert subscribed.instrument_id == instrument_id
+    assert subscribed.broker_symbol == "AAPL"
+    assert subscribed.subscription.requested_timeframe == "1m"
+    assert unsubscribed.subscription == subscribed.subscription
+
+
+def test_market_data_permission_event_is_visible_from_streaming_source() -> None:
+    from qts.core.ids import BrokerId, InstrumentId
+    from qts.data.adapters.ibkr_market_data import (
+        IbkrMarketDataAdapter,
+        IbkrMarketDataConnection,
+        MarketDataPermissionEvent,
+        MarketDataPermissionState,
+    )
+    from qts.data.adapters.ibkr_transport import IbkrMarketDataTypePayload
+    from qts.data.sources.streaming_market_data_source import StreamingMarketDataSource
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    source = StreamingMarketDataSource(
+        adapter=IbkrMarketDataAdapter(
+            connection=IbkrMarketDataConnection(
+                host="127.0.0.1",
+                port=4002,
+                client_id=101,
+                source_id="ibkr-paper-md",
+            ),
+            symbol_mapping=mapping,
+        )
+    )
+
+    event = source.on_market_data_type(IbkrMarketDataTypePayload(request_id=7, market_data_type=3))
+
+    assert isinstance(event, MarketDataPermissionEvent)
+    assert event.permission_state is MarketDataPermissionState.DELAYED
+    assert source.permission_state is MarketDataPermissionState.DELAYED
+    assert source.drain(observed_at=datetime(2026, 1, 2, 14, 31, tzinfo=UTC)) == (event,)
+
+
+def test_market_data_permission_event_enters_runtime_flow() -> None:
+    from qts.data.adapters.ibkr_market_data import (
+        MarketDataPermissionEvent,
+        MarketDataPermissionState,
+    )
+    from qts.runtime.market_data_flow import MarketDataFlow
+
+    event = MarketDataPermissionEvent(
+        source_id="ibkr-paper-md",
+        permission_state=MarketDataPermissionState.DELAYED,
+        provider_market_data_type=3,
+        request_id=7,
+    )
+
+    result = MarketDataFlow(
+        target_timeframe=None,
+        exchange_timezone_by_instrument={},
+    ).publish_source_event(event)
+
+    assert result.market_data == ()
+    permission_event, degradation_event = result.runtime_events
+    assert permission_event.kind == "market_data_permission_changed"
+    assert permission_event.payload["source_id"] == "ibkr-paper-md"
+    assert permission_event.payload["permission_state"] == "delayed"
+    assert permission_event.payload["provider_market_data_type"] == 3
+    assert degradation_event.kind == "runtime.degraded"
+    assert degradation_event.payload["reason"] == "market_data_permission_not_live"
+    assert degradation_event.payload["permission_state"] == "delayed"
 
 
 def test_stale_market_data_degradation_enters_runtime_flow() -> None:
@@ -196,6 +311,7 @@ def test_stale_market_data_degradation_enters_runtime_flow() -> None:
         LogicalSubscription("strategy-a", instrument_id, "1m"),
         subscribed_at=subscribed_at,
     )
+    source.drain(observed_at=subscribed_at)
     [degradation] = source.drain(observed_at=subscribed_at + timedelta(seconds=6))
     assert isinstance(degradation, StreamingMarketDataDegradation)
 
@@ -209,3 +325,74 @@ def test_stale_market_data_degradation_enters_runtime_flow() -> None:
     assert runtime_event.kind == "runtime.degraded"
     assert runtime_event.payload["reason"] == "stale_market_data"
     assert runtime_event.payload["instrument_id"] == instrument_id.value
+
+
+def test_subscription_lifecycle_events_enter_runtime_flow() -> None:
+    from qts.core.ids import InstrumentId
+    from qts.data.sources.streaming_market_data_source import (
+        StreamingMarketDataSubscriptionEvent,
+        StreamingMarketDataSubscriptionEventType,
+    )
+    from qts.data.subscriptions import LogicalSubscription, logical_key
+    from qts.runtime.market_data_flow import MarketDataFlow
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    observed_at = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    subscription = LogicalSubscription("strategy-a", instrument_id, "1m")
+    event = StreamingMarketDataSubscriptionEvent(
+        event_type=StreamingMarketDataSubscriptionEventType.RESUBSCRIBED,
+        source_id="ibkr-paper-md",
+        instrument_id=instrument_id,
+        subscription=logical_key(subscription),
+        broker_symbol="AAPL",
+        observed_at=observed_at,
+    )
+
+    result = MarketDataFlow(
+        target_timeframe=None,
+        exchange_timezone_by_instrument={},
+    ).publish_source_event(event)
+
+    assert result.market_data == ()
+    [runtime_event] = result.runtime_events
+    assert runtime_event.kind == "market_data_resubscribed"
+    assert runtime_event.payload["source_id"] == "ibkr-paper-md"
+    assert runtime_event.payload["instrument_id"] == instrument_id.value
+    assert runtime_event.payload["requested_timeframe"] == "1m"
+    assert runtime_event.payload["stream_type"] == "bar"
+    assert runtime_event.payload["broker_symbol"] == "AAPL"
+    assert runtime_event.payload["observed_at"] == observed_at.isoformat()
+
+
+def test_subscription_failure_enters_runtime_flow_as_degradation() -> None:
+    from qts.core.ids import InstrumentId
+    from qts.data.sources.streaming_market_data_source import (
+        StreamingMarketDataSubscriptionEvent,
+        StreamingMarketDataSubscriptionEventType,
+    )
+    from qts.data.subscriptions import LogicalSubscription, logical_key
+    from qts.runtime.market_data_flow import MarketDataFlow
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    subscription = LogicalSubscription("strategy-a", instrument_id, "1m")
+    event = StreamingMarketDataSubscriptionEvent(
+        event_type=StreamingMarketDataSubscriptionEventType.FAILED,
+        source_id="ibkr-paper-md",
+        instrument_id=instrument_id,
+        subscription=logical_key(subscription),
+        broker_symbol="AAPL",
+        observed_at=datetime(2026, 1, 2, 14, 30, tzinfo=UTC),
+        reason="reqMktData failed",
+    )
+
+    result = MarketDataFlow(
+        target_timeframe=None,
+        exchange_timezone_by_instrument={},
+    ).publish_source_event(event)
+
+    failure_event, degradation_event = result.runtime_events
+    assert failure_event.kind == "market_data_subscription_failed"
+    assert failure_event.payload["reason"] == "reqMktData failed"
+    assert degradation_event.kind == "runtime.degraded"
+    assert degradation_event.payload["reason"] == "market_data_subscription_failed"
+    assert degradation_event.payload["subscription_failure_reason"] == "reqMktData failed"

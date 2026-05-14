@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from qts.core.ids import InstrumentId
-from qts.data.live_feed import FeedCapabilities
+from qts.data.live import FeedCapabilities
 from qts.data.subscriptions import LogicalSubscription, plan_physical_subscription
 
 
@@ -65,7 +65,10 @@ def test_streaming_source_stale_degradation_uses_internal_instrument_id() -> Non
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
     )
-    from qts.data.sources.streaming_market_data_source import StreamingMarketDataSource
+    from qts.data.sources.streaming_market_data_source import (
+        StreamingMarketDataDegradation,
+        StreamingMarketDataSource,
+    )
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
@@ -87,8 +90,10 @@ def test_streaming_source_stale_degradation_uses_internal_instrument_id() -> Non
     source.subscribe(
         LogicalSubscription("strategy-a", instrument_id, "1m"), subscribed_at=subscribed_at
     )
+    source.drain(observed_at=subscribed_at)
 
     [degradation] = source.drain(observed_at=subscribed_at + timedelta(seconds=6))
 
+    assert isinstance(degradation, StreamingMarketDataDegradation)
     assert degradation.instrument_id == instrument_id
     assert not hasattr(degradation, "broker_symbol")

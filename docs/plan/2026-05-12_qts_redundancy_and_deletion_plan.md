@@ -109,7 +109,7 @@ qts/reconciliation/
   startup_gate.py
 ```
 
-### `qts.data.live_feed`
+### `qts.data.live`
 
 Contains live feed capabilities, subscription DTOs, live events, failure types, reconnect policy, protocol, and fake adapter. Split by concept; do not delete until compatibility re-exports are in place.
 

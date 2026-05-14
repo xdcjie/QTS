@@ -9,8 +9,7 @@ import pytest
 from qts.core.ids import InstrumentId
 from qts.data.historical.adapter import HistoricalMarketDataAdapter
 from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
-from qts.data.historical.service import HistoricalMarketDataService
-from qts.data.live_feed import FeedSubscription
+from qts.data.live import FeedSubscription
 from qts.domain.market_data import Bar
 from qts.registry.symbol_resolution import StaticSymbolResolver
 
@@ -41,18 +40,13 @@ def test_historical_market_data_adapter_is_primary_historical_source_name(
     assert tuple(adapter.events(subscription.subscription_id))[0].source_id == "historical-gc"
 
 
-def test_historical_market_data_service_name_remains_compatibility_alias() -> None:
-    assert HistoricalMarketDataService is HistoricalMarketDataAdapter
-
-
-def test_replay_market_data_adapter_is_not_historical_public_alias() -> None:
+def test_historical_adapter_has_no_replay_or_service_aliases() -> None:
     import qts.data as data
     import qts.data.historical as historical
-    from qts.data.historical import service
 
-    assert service.ReplayMarketDataAdapter is HistoricalMarketDataAdapter
     assert not hasattr(data, "ReplayMarketDataAdapter")
     assert not hasattr(historical, "ReplayMarketDataAdapter")
+    assert not hasattr(historical, "HistoricalMarketDataService")
 
 
 def test_historical_market_data_adapter_replays_normalized_bars_for_subscription(

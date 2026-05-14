@@ -26,6 +26,10 @@ def test_broker_execution_adapter_normalizes_submit_and_callback_reports() -> No
         intent,
         broker_order_id="runtime-broker-001",
         market_price=Decimal("100"),
+        account_id=AccountId("acct-a"),
+        strategy_id=StrategyId("strategy-a"),
+        client_order_id="client-001",
+        correlation_id=None,
     )
     callback = broker.emit_fill(
         order_id=intent.order_id,
@@ -37,6 +41,7 @@ def test_broker_execution_adapter_normalizes_submit_and_callback_reports() -> No
 
     assert accepted.status is ExecutionReportStatus.ACCEPTED
     assert accepted.broker_order_id == "runtime-broker-001"
+    assert broker.order_request(intent.order_id).client_order_id == "client-001"
     assert filled.status is ExecutionReportStatus.FILLED
     assert filled.broker_order_id == "runtime-broker-001"
     assert filled.fill_price == Decimal("101")
@@ -64,15 +69,54 @@ def test_broker_execution_adapter_normalizes_cancel_reports_with_runtime_order_i
         intent,
         broker_order_id="runtime-broker-001",
         market_price=Decimal("100"),
+        account_id=AccountId("acct-a"),
+        strategy_id=StrategyId("strategy-a"),
+        client_order_id="client-001",
+        correlation_id=None,
     )
 
     cancelled = adapter.cancel_order(
         intent.order_id,
         broker_order_id="runtime-broker-001",
+        account_id=AccountId("acct-a"),
+        strategy_id=StrategyId("strategy-a"),
+        client_order_id="client-001",
+        correlation_id=None,
     )
 
     assert cancelled.status is ExecutionReportStatus.CANCELLED
     assert cancelled.broker_order_id == "runtime-broker-001"
+
+
+def test_broker_execution_adapter_rejects_intent_account_route_mismatch() -> None:
+    import pytest
+    from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+    from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
+    from qts.execution.broker import FakeBrokerAdapter
+    from qts.execution.order_manager import OrderIntent, OrderSide
+
+    adapter = BrokerExecutionAdapter(
+        broker=FakeBrokerAdapter(broker_id=BrokerId("paper")),
+        account_id=AccountId("acct-a"),
+    )
+    intent = OrderIntent(
+        order_id=OrderId("ord-001"),
+        instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+        side=OrderSide.BUY,
+        quantity=Decimal("2"),
+        account_id=AccountId("acct-b"),
+    )
+
+    with pytest.raises(ValueError, match="intent account_id"):
+        adapter.execute_market_order(
+            intent,
+            broker_order_id="runtime-broker-001",
+            market_price=Decimal("100"),
+            account_id=AccountId("acct-a"),
+            strategy_id=StrategyId("strategy-a"),
+            client_order_id="client-001",
+            correlation_id=None,
+        )
 
 
 def test_broker_execution_adapter_rejects_unknown_broker_order_id() -> None:

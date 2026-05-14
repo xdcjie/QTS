@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from qts.core.ids import BrokerId, InstrumentId, OrderId
+from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
 from qts.domain.market_data import Bar
 from qts.execution.order_manager import ExecutionReportStatus, OrderSide
 from qts.registry.instrument_registry import InstrumentRegistry
@@ -204,14 +204,14 @@ def test_ibkr_gateway_full_chain_anchor_requires_real_paper_evidence(
     final_position = final_quantity.quantity if final_quantity is not None else Decimal("0")
     manifest = LiveReportWriter(evidence_dir).write_manifest(
         config_payload={
-            "mode": "paper",
+            "mode": "paper_broker",
             "gateway": gateway,
             "transport": transport_name,
             "client_ids": {"market_data": 102, "order_execution": 202},
             "account_id": account_id,
             "configured_account_id": config_account_id,
         },
-        runtime_mode="paper",
+        runtime_mode="paper_broker",
         account_id=account_id,
         connection_metadata={"host": host, "port": port},
         event_sink=event_sink,
@@ -298,12 +298,18 @@ class _IbkrRuntimeExecutionAdapter:
         *,
         broker_order_id: str,
         market_price: Decimal,
+        account_id: AccountId,
+        strategy_id: StrategyId,
+        client_order_id: str,
+        correlation_id: CorrelationId,
     ) -> Any:
         from qts.execution.broker import BrokerOrderType
 
+        _ = account_id, strategy_id, correlation_id
         limit_price = _marketable_limit(intent.side, market_price)
         request = self.request_adapter.to_order_request(
             intent,
+            client_order_id=client_order_id,
             order_type=BrokerOrderType.LIMIT,
             limit_price=limit_price,
             outside_regular_trading_hours=True,
@@ -323,8 +329,18 @@ class _IbkrRuntimeExecutionAdapter:
         self.fill_reports.append(runtime_report)
         return runtime_report
 
-    def cancel_order(self, order_id: OrderId, *, broker_order_id: str) -> Any:
+    def cancel_order(
+        self,
+        order_id: OrderId,
+        *,
+        broker_order_id: str,
+        account_id: AccountId,
+        strategy_id: StrategyId,
+        client_order_id: str,
+        correlation_id: CorrelationId,
+    ) -> Any:
         del order_id
+        _ = account_id, strategy_id, client_order_id, correlation_id
         external_broker_order_id = self._external_by_runtime[broker_order_id]
         self.transport.cancel_order(external_broker_order_id)
         report = self.transport.wait_for_order_status(
@@ -475,6 +491,7 @@ def _submit_and_cancel_non_marketable_order(
     )
     cancel_request = request_adapter.to_order_request(
         cancel_intent,
+        client_order_id=f"client-{cancel_intent.order_id.value}",
         order_type=BrokerOrderType.LIMIT,
         limit_price=Decimal("0.01"),
         outside_regular_trading_hours=True,

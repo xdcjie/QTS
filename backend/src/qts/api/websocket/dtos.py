@@ -4,6 +4,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from enum import StrEnum
+
+
+class StreamEventType(StrEnum):
+    """Public WebSocket event types emitted by runtime operations."""
+
+    RUNTIME_STATE_CHANGED = "runtime_state_changed"
+    COMMAND_ACCEPTED = "command_accepted"
+    COMMAND_COMPLETED = "command_completed"
+    RISK_EVENT = "risk_event"
+    ORDER_EVENT = "order_event"
+    ACCOUNT_EVENT = "account_event"
+    RECONCILIATION_EVENT = "reconciliation_event"
+    MARKET_DATA_STATUS_EVENT = "market_data_status_event"
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,4 +34,4 @@ class StreamEventDTO:
             raise ValueError("event_type must not be empty")
 
 
-__all__ = ["StreamEventDTO"]
+__all__ = ["StreamEventDTO", "StreamEventType"]

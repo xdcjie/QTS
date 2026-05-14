@@ -35,6 +35,8 @@ class OrderManager:
         self._broker_to_order: dict[str, OrderId] = {}
         self._fill_ids = FillIdempotencyStore()
         self._fill_ids_by_order: dict[OrderId, set[str]] = {}
+        self._seen_report_ids: set[str] = set()
+        self._report_ids_by_order: dict[OrderId, set[str]] = {}
 
     def create_order(self, intent: OrderIntent, *, risk_decision: RiskDecision) -> Order:
         """Perform create_order."""
@@ -86,8 +88,12 @@ class OrderManager:
     def process_report(self, report: ExecutionReport) -> OrderManagerResult:
         """Perform process_report."""
         order_id = self._broker_to_order[report.broker_order_id]
+        if report.report_id in self._seen_report_ids:
+            return OrderManagerResult(order=self._orders[order_id])
         state = self._machines[order_id].apply(self._event_for_report(report.status))
         order = self._replace_order(order_id, state=state)
+        self._seen_report_ids.add(report.report_id)
+        self._report_ids_by_order.setdefault(order_id, set()).add(report.report_id)
         fills = self._fills_for_report(order, report)
         return OrderManagerResult(order=order, fills=fills)
 
@@ -106,6 +112,8 @@ class OrderManager:
             self._broker_to_order.pop(order.broker_order_id, None)
         for fill_id in self._fill_ids_by_order.pop(order_id, set()):
             self._fill_ids.discard(fill_id)
+        for report_id in self._report_ids_by_order.pop(order_id, set()):
+            self._seen_report_ids.discard(report_id)
 
     def snapshot(self) -> OrderManagerSnapshot:
         """Perform snapshot."""
@@ -113,6 +121,7 @@ class OrderManager:
             orders=tuple(self._orders.values()),
             broker_to_order=tuple(self._broker_to_order.items()),
             seen_fill_ids=self._fill_ids.snapshot(),
+            seen_report_ids=tuple(sorted(self._seen_report_ids)),
         )
 
     @classmethod
@@ -126,6 +135,8 @@ class OrderManager:
         manager._broker_to_order = dict(snapshot.broker_to_order)
         manager._fill_ids = FillIdempotencyStore.restore(snapshot.seen_fill_ids)
         manager._fill_ids_by_order = {}
+        manager._seen_report_ids = set(snapshot.seen_report_ids)
+        manager._report_ids_by_order = {}
         return manager
 
     def _replace_order(

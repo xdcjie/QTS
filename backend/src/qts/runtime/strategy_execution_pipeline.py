@@ -7,7 +7,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal
 
-from qts.core.ids import InstrumentId
+from qts.core.ids import InstrumentId, StrategyId
 from qts.domain.market_data import Bar
 from qts.registry.future_roll import FutureRollRegistry
 from qts.registry.instrument_registry import InstrumentRegistry
@@ -26,6 +26,7 @@ from qts.runtime.actors.strategy_actor import (
     StrategyFinalized,
 )
 from qts.runtime.mailbox import Mailbox
+from qts.runtime.signal_policy import SignalAggregationPolicy
 from qts.strategy_sdk import PortfolioView, Strategy, StrategyContext, TargetIntent
 from qts.strategy_sdk.data_view import DataView
 
@@ -38,6 +39,15 @@ class StrategyExecutionResult:
 
     bar: Bar
     intents: tuple[TargetIntent, ...]
+    raw_intents: tuple[TargetIntent, ...] = ()
+    contributing_strategy_ids: tuple[StrategyId, ...] = ()
+    rejected_strategy_ids: tuple[StrategyId, ...] = ()
+    signal_batches: tuple[AggregatedSignalBatch, ...] = ()
+    conflict_group: str = "default"
+    conflict_reason: str = ""
+    aggregation_policy: SignalAggregationPolicy = SignalAggregationPolicy.SUM_TARGETS
+    target_before_risk: Decimal | None = None
+    target_after_aggregation: Decimal | None = None
 
 
 class StrategyExecutionPipeline:
@@ -47,14 +57,22 @@ class StrategyExecutionPipeline:
         self,
         *,
         strategy: Strategy,
+        strategy_id: StrategyId | None = None,
         instrument_registry: InstrumentRegistry | None,
         future_chain_registry: FutureRollRegistry | None,
         portfolio_view: PortfolioViewBuilder,
         prune_history: bool,
         strategy_actor_type: type = StrategyActor,
         signal_aggregator_actor_type: type = SignalAggregatorActor,
+        signal_aggregation_policy: SignalAggregationPolicy | str = (
+            SignalAggregationPolicy.SUM_TARGETS
+        ),
+        signal_priority: int = 0,
+        signal_weight: Decimal = Decimal("1"),
+        conflict_group: str = "default",
     ) -> None:
         """Create a mode-agnostic strategy execution pipeline."""
+        self._strategy_id = strategy_id
         self._portfolio_view = portfolio_view
         self._strategy_bars_by_instrument: dict[InstrumentId, list[Bar]] = defaultdict(list)
         self._ctx = StrategyContext(
@@ -77,6 +95,10 @@ class StrategyExecutionPipeline:
             ),
             mailbox=Mailbox(),
         )
+        self._signal_aggregation_policy = SignalAggregationPolicy(signal_aggregation_policy)
+        self._signal_priority = signal_priority
+        self._signal_weight = Decimal(signal_weight)
+        self._conflict_group = conflict_group
         self._history_limit = self._history_limit_from_subscriptions() if prune_history else None
 
     def execute_bar(
@@ -108,17 +130,60 @@ class StrategyExecutionPipeline:
         self._strategy_ref.process_all()
         strategy_result = self._take_strategy_bar_result()
         if not aggregate_signals:
-            return StrategyExecutionResult(bar=bar, intents=())
+            return StrategyExecutionResult(
+                bar=bar,
+                intents=(),
+                raw_intents=strategy_result.intents,
+            )
+        if not strategy_result.intents:
+            return StrategyExecutionResult(
+                bar=bar,
+                intents=(),
+                raw_intents=strategy_result.intents,
+                signal_batches=(),
+            )
 
         self._signal_ref.tell(
             StrategySignalEvent(
                 bar=bar,
                 intents=strategy_result.intents,
+                strategy_id=self._strategy_id,
+                signal_weight=self._signal_weight,
+                signal_priority=self._signal_priority,
+                conflict_group=self._conflict_group,
+                signal_aggregation_policy=self._signal_aggregation_policy,
             )
         )
         self._signal_ref.process_all()
-        signal_batch = self._take_signal_batch()
-        return StrategyExecutionResult(bar=bar, intents=signal_batch.intents)
+        signal_batches = self._take_signal_batches()
+        aggregated_intents = tuple(intent for batch in signal_batches for intent in batch.intents)
+        return StrategyExecutionResult(
+            bar=bar,
+            intents=aggregated_intents,
+            raw_intents=strategy_result.intents,
+            signal_batches=signal_batches,
+            contributing_strategy_ids=tuple(
+                strategy_id
+                for batch in signal_batches
+                for strategy_id in batch.contributing_strategy_ids
+            ),
+            rejected_strategy_ids=tuple(
+                strategy_id
+                for batch in signal_batches
+                for strategy_id in batch.rejected_strategy_ids
+            ),
+            conflict_group=",".join(
+                dict.fromkeys(
+                    batch.conflict_group for batch in signal_batches if batch.conflict_group
+                )
+            ),
+            conflict_reason="; ".join(
+                batch.conflict_reason for batch in signal_batches if batch.conflict_reason
+            ),
+            aggregation_policy=signal_batches[0].aggregation_policy,
+            target_before_risk=signal_batches[0].target_before_risk,
+            target_after_aggregation=signal_batches[0].target_after_aggregation,
+        )
 
     def finalize(self) -> tuple[TargetIntent, ...]:
         """Finalize the strategy and return finalization intents."""
@@ -143,16 +208,17 @@ class StrategyExecutionPipeline:
             raise RuntimeError("strategy actor emitted more than one bar result")
         return result
 
-    def _take_signal_batch(self) -> AggregatedSignalBatch:
-        """Return the single signal aggregation result for one bar."""
-        if self._signal_result_mailbox.empty():
+    def _take_signal_batches(self) -> tuple[AggregatedSignalBatch, ...]:
+        """Return all signal aggregation batches for one strategy-facing bar."""
+        batches: list[AggregatedSignalBatch] = []
+        while not self._signal_result_mailbox.empty():
+            result = self._signal_result_mailbox.get()
+            if not isinstance(result, AggregatedSignalBatch):
+                raise TypeError(f"unexpected signal aggregator result: {type(result).__name__}")
+            batches.append(result)
+        if not batches:
             raise RuntimeError("signal aggregator actor did not emit a batch")
-        result = self._signal_result_mailbox.get()
-        if not isinstance(result, AggregatedSignalBatch):
-            raise TypeError(f"unexpected signal aggregator result: {type(result).__name__}")
-        if not self._signal_result_mailbox.empty():
-            raise RuntimeError("signal aggregator actor emitted more than one batch")
-        return result
+        return tuple(batches)
 
     def _take_strategy_finalized(self) -> StrategyFinalized:
         """Return the single strategy finalization result."""

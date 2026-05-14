@@ -41,3 +41,32 @@ def test_market_data_flow_requires_timezone_for_target_aggregation() -> None:
 
     with pytest.raises(RuntimeError, match="exchange timezone is required"):
         flow.publish_bar(bar)
+
+
+def test_market_data_flow_exposes_replay_data_anomalies_as_runtime_events() -> None:
+    from qts.data.provenance import ReplayDataAnomalyEvent, ReplayDataAnomalyType
+    from qts.runtime.market_data_flow import MarketDataFlow
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    start = datetime(2026, 1, 2, 14, 33, tzinfo=UTC)
+    event = ReplayDataAnomalyEvent(
+        anomaly_type=ReplayDataAnomalyType.GAP_DETECTED,
+        source_id="replay-source",
+        instrument_id=instrument_id,
+        timeframe="1m",
+        bar_start=start,
+        bar_end=start + timedelta(minutes=1),
+        observed_at=start,
+        previous_end=datetime(2026, 1, 2, 14, 31, tzinfo=UTC),
+    )
+    flow = MarketDataFlow(target_timeframe=None, exchange_timezone_by_instrument={})
+
+    result = flow.publish_source_event(event)
+
+    assert [runtime_event.kind for runtime_event in result.runtime_events] == [
+        "replay_gap_detected",
+        "runtime.degraded",
+    ]
+    assert result.runtime_events[0].payload["source_id"] == "replay-source"
+    assert result.runtime_events[0].payload["instrument_id"] == instrument_id.value
+    assert result.runtime_events[1].payload["reason"] == "replay_gap_detected"

@@ -98,13 +98,15 @@ class BacktestConfigLoader:
                 slippage_bps=Decimal(str(cost_payload.get("slippage_bps", "0"))),
             ),
             risk_config=RiskConfig(
-                max_notional=Decimal(str(risk_payload.get("max_notional", "1")))
+                max_notional=Decimal(str(risk_payload.get("max_notional", "1"))),
+                schema_version=str(risk_payload.get("schema_version", "1")),
             ),
             roll_policy=RollPolicyConfig(
                 enabled=bool(roll_payload.get("enabled", False)),
                 method=str(roll_payload.get("method", "highest_volume")),
             ),
             warmup_bars=int(payload.get("warmup_bars", 0)),
+            schema_version=str(payload.get("schema_version", "1")),
         )
 
     @staticmethod
