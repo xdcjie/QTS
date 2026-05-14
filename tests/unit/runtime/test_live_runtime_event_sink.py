@@ -22,6 +22,7 @@ def test_live_runtime_event_sink_writes_stable_append_only_ndjson(tmp_path: Path
                 "risk_decision_id": "risk-1",
                 "order_id": "ord-1",
                 "broker_order_id": "broker-1",
+                "client_order_id": "client-1",
             },
             correlation_id=CorrelationId("corr-1"),
         )
@@ -35,6 +36,7 @@ def test_live_runtime_event_sink_writes_stable_append_only_ndjson(tmp_path: Path
                 "risk_decision_id": "risk-1",
                 "intent_id": "intent-1",
                 "trace_id": "trace-1",
+                "client_order_id": "client-1",
             },
             correlation_id=CorrelationId("corr-1"),
         )
@@ -58,7 +60,7 @@ def test_runtime_event_sink_writes_mode_and_execution_environment(tmp_path: Path
     sink.write(
         RuntimeEvent(
             kind="runtime.order_submitted",
-            payload={"order_id": "order-1"},
+            payload={"order_id": "order-1", "client_order_id": "client-order-1"},
             mode="live",
             execution_environment="broker",
             correlation_id=CorrelationId("corr-1"),
@@ -87,7 +89,7 @@ def test_runtime_event_sink_writes_unified_runtime_envelope(tmp_path: Path) -> N
     sink.write(
         RuntimeEvent(
             kind="runtime.fill_applied",
-            payload={"fill_id": "fill-1"},
+            payload={"fill_id": "fill-1", "client_order_id": "client-order-1"},
             event_id=EventId("evt-1"),
             run_id=RuntimeRunId("run-1"),
             mode="paper_broker",
@@ -172,6 +174,15 @@ def test_backtest_and_live_event_sinks_share_runtime_envelope(tmp_path: Path) ->
     assert backtest_row["sequence_no"] == live_row["sequence_no"] == 1
 
 
+def test_runtime_event_context_rejects_permission_mode_label() -> None:
+    import pytest
+    from qts.core.ids import RuntimeRunId
+    from qts.runtime.sinks.base import RuntimeEventContext
+
+    with pytest.raises(ValueError, match="paper"):
+        RuntimeEventContext(run_id=RuntimeRunId("run-paper"), mode="paper")
+
+
 def test_runtime_event_envelope_writes_parent_event_id(tmp_path: Path) -> None:
     from qts.core.ids import CorrelationId, EventId
     from qts.runtime.sinks.live import LiveRuntimeEventSink
@@ -180,7 +191,7 @@ def test_runtime_event_envelope_writes_parent_event_id(tmp_path: Path) -> None:
     sink.write(
         RuntimeEvent(
             kind="runtime.order_submitted",
-            payload={"order_id": "order-1"},
+            payload={"order_id": "order-1", "client_order_id": "client-order-1"},
             event_id=EventId("evt-order-1"),
             parent_event_id=EventId("evt-risk-1"),
             correlation_id=CorrelationId("corr-1"),
@@ -197,6 +208,33 @@ def test_every_order_event_requires_correlation_id() -> None:
 
     with pytest.raises(ValueError, match="correlation_id"):
         RuntimeEvent(kind="runtime.order_submitted", payload={"order_id": "order-1"})
+
+
+def test_broker_report_requires_correlation_id() -> None:
+    import pytest
+
+    with pytest.raises(ValueError, match="correlation_id"):
+        RuntimeEvent(
+            kind="runtime.broker_report",
+            payload={"order_id": "order-1", "client_order_id": "client-order-1"},
+        )
+
+
+def test_order_broker_and_fill_events_require_client_order_id() -> None:
+    import pytest
+    from qts.core.ids import CorrelationId
+
+    for kind in (
+        "runtime.order_submitted",
+        "runtime.broker_report",
+        "runtime.fill_applied",
+    ):
+        with pytest.raises(ValueError, match="client_order_id"):
+            RuntimeEvent(
+                kind=kind,
+                payload={"order_id": "order-1"},
+                correlation_id=CorrelationId("corr-1"),
+            )
 
 
 def test_live_runtime_event_sink_rejects_secret_payload_values(tmp_path: Path) -> None:

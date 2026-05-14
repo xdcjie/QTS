@@ -9,6 +9,7 @@ GuardrailSuite = _guardrails.GuardrailSuite
 ImportBoundaryRule = _guardrails.ImportBoundaryRule
 ProductSpecificRule = _guardrails.ProductSpecificRule
 BrokerSpecificRule = _guardrails.BrokerSpecificRule
+BrokerSymbolBoundaryRule = _guardrails.BrokerSymbolBoundaryRule
 ProviderSdkImportRule = _guardrails.ProviderSdkImportRule
 TestSupportRule = _guardrails.TestSupportRule
 SharedCapabilityRule = _guardrails.SharedCapabilityRule

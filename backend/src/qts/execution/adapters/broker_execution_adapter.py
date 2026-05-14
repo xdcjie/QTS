@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 from decimal import Decimal
 
-from qts.core.ids import AccountId, OrderId, StrategyId
+from qts.core.ids import AccountId, CorrelationId, OrderId, StrategyId
 from qts.execution.broker import (
     BrokerAdapter,
     BrokerExecutionReport,
@@ -37,14 +37,22 @@ class BrokerExecutionAdapter:
         *,
         broker_order_id: str,
         market_price: Decimal,
+        account_id: AccountId,
+        strategy_id: StrategyId,
+        client_order_id: str,
+        correlation_id: CorrelationId | None = None,
     ) -> ExecutionReport:
         """Submit a market order and normalize the broker acknowledgement."""
-        _ = market_price
+        _ = market_price, correlation_id
+        if intent.account_id is not None and intent.account_id != account_id:
+            raise ValueError("intent account_id does not match execution route account_id")
+        self._validate_route(account_id=account_id, strategy_id=strategy_id)
         broker_report = self._broker.submit_order(
             BrokerOrderRequest(
                 order_id=intent.order_id,
-                account_id=self._account_id,
-                strategy_id=self._strategy_id,
+                client_order_id=client_order_id,
+                account_id=account_id,
+                strategy_id=strategy_id,
                 instrument_id=intent.instrument_id,
                 side=intent.side,
                 quantity=intent.quantity,
@@ -79,12 +87,31 @@ class BrokerExecutionAdapter:
                 runtime_broker_order_id
             )
 
-    def cancel_order(self, order_id: OrderId, *, broker_order_id: str) -> ExecutionReport:
+    def cancel_order(
+        self,
+        order_id: OrderId,
+        *,
+        broker_order_id: str,
+        account_id: AccountId,
+        strategy_id: StrategyId,
+        client_order_id: str,
+        correlation_id: CorrelationId | None = None,
+    ) -> ExecutionReport:
         """Cancel an active broker order and normalize the broker callback."""
         if not broker_order_id.strip():
             raise ValueError("broker_order_id must not be empty")
+        if not client_order_id.strip():
+            raise ValueError("client_order_id must not be empty")
+        _ = correlation_id
+        self._validate_route(account_id=account_id, strategy_id=strategy_id)
         broker_report = self._broker.cancel_order(order_id)
         return self._normalize_with_runtime_broker_order_id(broker_report)
+
+    def _validate_route(self, *, account_id: AccountId, strategy_id: StrategyId) -> None:
+        if account_id != self._account_id:
+            raise ValueError("account_id does not match BrokerExecutionAdapter account_id")
+        if self._strategy_id is not None and strategy_id != self._strategy_id:
+            raise ValueError("strategy_id does not match BrokerExecutionAdapter strategy_id")
 
     def _normalize_with_runtime_broker_order_id(
         self,

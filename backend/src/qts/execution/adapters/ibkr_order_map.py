@@ -54,7 +54,14 @@ class BrokerOrderMap:
         """Record an order before the IBKR broker order id is known."""
 
         if client_order_id in self._by_client_order_id:
-            return self._by_client_order_id[client_order_id]
+            record = self._by_client_order_id[client_order_id]
+            if (
+                record.internal_order_id != internal_order_id
+                or record.account_id != account_id
+                or record.strategy_id != strategy_id
+            ):
+                raise ValueError("client_order_id already maps to a different order route")
+            return record
         record = BrokerOrderRecord(
             internal_order_id=internal_order_id,
             client_order_id=client_order_id,
@@ -115,6 +122,23 @@ class BrokerOrderMap:
         """Look up a record by IBKR permanent id."""
 
         return self._by_client_order_id[self._client_by_perm_id[perm_id]]
+
+    def snapshot(self) -> tuple[BrokerOrderRecord, ...]:
+        """Return a deterministic snapshot suitable for durable recovery."""
+
+        return tuple(
+            self._by_client_order_id[client_order_id]
+            for client_order_id in sorted(self._by_client_order_id)
+        )
+
+    @classmethod
+    def restore(cls, snapshot: tuple[BrokerOrderRecord, ...]) -> BrokerOrderMap:
+        """Restore all lookup indexes from a broker-order-map snapshot."""
+
+        order_map = cls()
+        for record in snapshot:
+            order_map._store(record)
+        return order_map
 
     def _store(self, record: BrokerOrderRecord) -> BrokerOrderRecord:
         self._by_client_order_id[record.client_order_id] = record

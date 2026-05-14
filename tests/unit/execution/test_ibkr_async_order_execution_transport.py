@@ -51,6 +51,7 @@ def test_ib_async_order_execution_transport_normalizes_fill_with_commission() ->
             side=OrderSide.BUY,
             quantity=Decimal("1"),
         ),
+        client_order_id="client-ord-001",
         order_type=BrokerOrderType.LIMIT,
         limit_price=Decimal("101.25"),
         outside_regular_trading_hours=True,
@@ -128,6 +129,7 @@ def test_ib_async_order_execution_transport_raises_broker_error() -> None:
             side=OrderSide.BUY,
             quantity=Decimal("1"),
         ),
+        client_order_id="client-ord-001",
         order_type=BrokerOrderType.LIMIT,
         limit_price=Decimal("101.25"),
         contract=IbkrOrderContractSpec.stock("AAPL", primary_exchange="ISLAND"),
@@ -140,6 +142,74 @@ def test_ib_async_order_execution_transport_raises_broker_error() -> None:
 
     with pytest.raises(RuntimeError, match="Potential Pattern Day Trade"):
         transport.wait_for_fill_report(broker_order_id, timeout_seconds=1)
+
+
+def test_ib_async_order_execution_transport_records_submitted_order_mapping() -> None:
+    from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+    from qts.execution.adapters.ibkr_async_transport import (
+        IbAsyncOrderExecutionTransport,
+        IbAsyncOrderExecutionTransportConfig,
+    )
+    from qts.execution.adapters.ibkr_order_execution import (
+        IbkrOrderExecutionAdapter,
+        IbkrOrderExecutionConnection,
+    )
+    from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
+    from qts.execution.adapters.ibkr_transport import IbkrOrderContractSpec
+    from qts.execution.broker import BrokerOrderType
+    from qts.execution.order_manager import OrderIntent, OrderSide
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    order_map = BrokerOrderMap()
+    adapter = IbkrOrderExecutionAdapter(
+        connection=IbkrOrderExecutionConnection(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+            broker_id=BrokerId("IBKR"),
+            account_id="DU1234567",
+        ),
+        symbol_mapping=mapping,
+        order_map=order_map,
+    )
+    fake_ib = _FakeIb()
+    transport = IbAsyncOrderExecutionTransport(
+        config=IbAsyncOrderExecutionTransportConfig(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+            timeout_seconds=1,
+        ),
+        sink=adapter,
+        ib_factory=lambda: fake_ib,
+    )
+    request = adapter.to_order_request(
+        OrderIntent(
+            order_id=OrderId("ord-001"),
+            account_id=AccountId("acct-ibkr"),
+            instrument_id=instrument_id,
+            side=OrderSide.BUY,
+            quantity=Decimal("1"),
+        ),
+        client_order_id="client-ord-001",
+        strategy_id=StrategyId("strategy-ibkr"),
+        order_type=BrokerOrderType.LIMIT,
+        limit_price=Decimal("101.25"),
+        contract=IbkrOrderContractSpec.stock("AAPL", primary_exchange="ISLAND"),
+    )
+
+    transport.connect()
+    broker_order_id = transport.submit_order_with_broker_id(request)
+
+    record = order_map.by_ibkr_order_id(broker_order_id)
+    assert record.internal_order_id == OrderId("ord-001")
+    assert record.client_order_id == "client-ord-001"
+    assert record.account_id == AccountId("acct-ibkr")
+    assert record.strategy_id == StrategyId("strategy-ibkr")
+    assert fake_ib.placed_orders[0].orderRef == "client-ord-001"
 
 
 @dataclass(slots=True)
@@ -155,6 +225,7 @@ class _FakeOrder:
     lmtPrice: float | None = None
     account: str = ""
     tif: str = "DAY"
+    orderRef: str = ""
     outsideRth: bool = False
     orderId: int = 77
 

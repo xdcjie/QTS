@@ -14,6 +14,7 @@ class RuntimeCounterMetric(StrEnum):
 
     MARKET_DATA_EVENTS_TOTAL = "market_data_events_total"
     MARKET_DATA_STALE_TOTAL = "market_data_stale_total"
+    MARKET_DATA_SUBSCRIPTION_FAILURES_TOTAL = "market_data_subscription_failures_total"
     STRATEGY_INTENTS_TOTAL = "strategy_intents_total"
     SIGNAL_CONFLICTS_TOTAL = "signal_conflicts_total"
     RISK_REJECTIONS_TOTAL = "risk_rejections_total"
@@ -22,6 +23,7 @@ class RuntimeCounterMetric(StrEnum):
     FILLS_TOTAL = "fills_total"
     RECONCILIATION_DRIFTS_TOTAL = "reconciliation_drifts_total"
     KILL_SWITCH_ACTIVATIONS_TOTAL = "kill_switch_activations_total"
+    RUNTIME_RECOVERY_BLOCKS_TOTAL = "runtime_recovery_blocks_total"
 
 
 class RuntimeLatencyMetric(StrEnum):
@@ -84,6 +86,8 @@ class MetricsRegistry:
     def record_runtime_event(self, event: RuntimeMetricEvent) -> None:
         """Increment standard metrics for normalized runtime events."""
         kind = event.kind.lower()
+        if kind.startswith("market_data.") or kind == "runtime.market_data":
+            self.increment(RuntimeCounterMetric.MARKET_DATA_EVENTS_TOTAL)
         if kind in {"risk.rejected", "runtime.risk_rejected"}:
             self.increment(
                 RuntimeCounterMetric.RISK_REJECTIONS_TOTAL,
@@ -91,6 +95,11 @@ class MetricsRegistry:
             )
         elif kind in {"market_data.stale", "runtime.market_data_stale"}:
             self.increment(RuntimeCounterMetric.MARKET_DATA_STALE_TOTAL)
+        elif kind == "market_data_subscription_failed":
+            self.increment(
+                RuntimeCounterMetric.MARKET_DATA_SUBSCRIPTION_FAILURES_TOTAL,
+                tags=self._reason_code_tags(event.payload),
+            )
         elif kind in {"runtime.order_submitted", "execution.order.submitted"}:
             self.increment(RuntimeCounterMetric.ORDERS_SUBMITTED_TOTAL)
         elif kind in {"broker.order_rejected", "execution.broker_rejected"}:
@@ -102,6 +111,11 @@ class MetricsRegistry:
             self.increment(RuntimeCounterMetric.FILLS_TOTAL)
         elif kind in {"runtime.reconciliation_drift", "reconciliation.drift"}:
             self.increment(RuntimeCounterMetric.RECONCILIATION_DRIFTS_TOTAL)
+        elif kind == "runtime.recovery_blocked":
+            self.increment(
+                RuntimeCounterMetric.RUNTIME_RECOVERY_BLOCKS_TOTAL,
+                tags=self._reason_code_tags(event.payload),
+            )
         elif kind == "risk.kill_switch_activated":
             self.increment(RuntimeCounterMetric.KILL_SWITCH_ACTIVATIONS_TOTAL)
 

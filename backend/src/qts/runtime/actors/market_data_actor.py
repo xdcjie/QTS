@@ -9,7 +9,7 @@ from datetime import tzinfo
 from qts.core.ids import InstrumentId
 from qts.data.bars.pipeline import BarAggregationPipeline
 from qts.data.bars.timeframe import Timeframe
-from qts.data.live_feed import FeedSubscription, LiveFeedAdapter
+from qts.data.live import FeedSubscription, LiveFeedAdapter
 from qts.data.subscriptions import (
     LogicalSubscription,
     LogicalSubscriptionKey,

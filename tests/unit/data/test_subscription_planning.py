@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 from qts.core.ids import InstrumentId
-from qts.data.live_feed import FeedCapabilities
+from qts.data.live import FeedCapabilities
 from qts.data.subscriptions import (
     LogicalSubscription,
     PhysicalSubscriptionKey,

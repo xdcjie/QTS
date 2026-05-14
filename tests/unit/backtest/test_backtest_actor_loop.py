@@ -6,7 +6,43 @@ from pathlib import Path
 from typing import Any
 
 from qts.domain.market_data import Bar
+from qts.execution.order_manager import Order, OrderFill
+from qts.reporting.backtest import EquityCurvePoint
+from qts.runtime.actors.account_actor import AccountSnapshot
+from qts.runtime.sinks.base import RuntimeEvent
 from qts.strategy_sdk import Strategy
+
+
+class _RecordingBacktestSink:
+    """Collects runtime events without writing artifacts."""
+
+    def __init__(self) -> None:
+        """Create an in-memory backtest sink."""
+        self.events: list[RuntimeEvent] = []
+        self._order_count = 0
+
+    @property
+    def order_count(self) -> int:
+        """Perform order_count."""
+        return self._order_count
+
+    def write(self, event: RuntimeEvent) -> None:
+        """Record one runtime event."""
+        self.events.append(event)
+
+    def write_processed(
+        self, *, orders: tuple[Order, ...], fills: tuple[OrderFill, ...], bar: Bar
+    ) -> None:
+        """Record processed payload sizes."""
+        self._order_count += len(orders)
+
+    def write_equity_point(self, point: EquityCurvePoint) -> None:
+        """Ignore equity points in this in-memory sink."""
+        del point
+
+    def write_account_snapshot(self, point: AccountSnapshot) -> None:
+        """Ignore account snapshots in this in-memory sink."""
+        del point
 
 
 def _bar(start: datetime, close: str = "100") -> Bar:
@@ -33,7 +69,7 @@ def test_backtest_actor_loop_processes_bars_and_returns_runtime_result(tmp_path:
     from qts.backtest.engine import BacktestCostModel
     from qts.backtest.instrument_context import BacktestInstrumentContext
     from qts.backtest.portfolio_projection import BacktestPortfolioProjector
-    from qts.core.ids import InstrumentId
+    from qts.core.ids import AccountId, InstrumentId, StrategyId
     from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
     from qts.reporting.backtest import BacktestArtifactWriter
     from qts.risk.risk_engine import RiskEngine
@@ -78,6 +114,8 @@ def test_backtest_actor_loop_processes_bars_and_returns_runtime_result(tmp_path:
             equity_point=portfolio_projector.equity_point,
             update_rolling_prices=instrument_context.update_rolling_prices,
         ),
+        account_id=AccountId("acct-backtest"),
+        strategy_id=StrategyId("strategy-backtest"),
     )
     writer = BacktestArtifactWriter(tmp_path)
     sink = BacktestRuntimeEventSink(writer)
@@ -101,3 +139,134 @@ def test_backtest_actor_loop_processes_bars_and_returns_runtime_result(tmp_path:
         InstrumentId("EQUITY.US.NASDAQ.AAPL")
     ].quantity == Decimal("1")
     assert sink.order_count == 1
+
+
+def test_backtest_actor_loop_emits_signal_events() -> None:
+    from qts.backtest.actor_loop import BacktestActorLoop
+    from qts.backtest.dependencies import BacktestActorLoopConfig, BacktestActorLoopDependencies
+    from qts.backtest.engine import BacktestCostModel
+    from qts.backtest.instrument_context import BacktestInstrumentContext
+    from qts.backtest.portfolio_projection import BacktestPortfolioProjector
+    from qts.core.ids import AccountId, StrategyId
+    from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
+    from qts.risk.risk_engine import RiskEngine
+    from qts.risk.rules.max_notional import MaxNotionalRule
+    from qts.runtime.intent_processing import TargetIntentProcessor
+
+    class OneOrderStrategy(Strategy):
+        def initialize(self, ctx: Any) -> None:
+            self.asset = ctx.symbol("AAPL")
+            self.placed = False
+
+        def on_bar(self, ctx: Any, bar: object) -> None:
+            if not self.placed:
+                ctx.target_quantity(self.asset, Decimal("1"))
+                self.placed = True
+
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    bars = [_bar(start, "100")]
+    strategy = OneOrderStrategy()
+    instrument_context = BacktestInstrumentContext(instrument_registry=None, registry_bars=bars)
+    portfolio_projector = BacktestPortfolioProjector()
+    intent_processor = TargetIntentProcessor(
+        risk_engine=RiskEngine([MaxNotionalRule(max_notional=Decimal("1000000"))]),
+        instrument_context=instrument_context,
+        multiplier_for=portfolio_projector.multiplier_for,
+    )
+
+    loop = BacktestActorLoop(
+        strategy=strategy,
+        bars=bars,
+        config=BacktestActorLoopConfig(initial_cash=Decimal("10000"), warmup_bars=0),
+        dependencies=BacktestActorLoopDependencies(
+            instrument_registry=instrument_context.instrument_registry(),
+            contract_multipliers={},
+            execution_adapter=SimulatedExecutionAdapter(BacktestCostModel()),
+            process_intent=intent_processor.process_intent,
+            portfolio_view=portfolio_projector.portfolio_view,
+            equity_point=portfolio_projector.equity_point,
+            update_rolling_prices=instrument_context.update_rolling_prices,
+        ),
+        account_id=AccountId("acct-backtest"),
+        strategy_id=StrategyId("strategy-backtest"),
+    )
+    sink = _RecordingBacktestSink()
+    loop.run(sink=sink, prune_history=True, compact_orders=True)
+
+    kinds = [event.kind for event in sink.events]
+    assert kinds == [
+        "runtime.market_data",
+        "runtime.signal_received",
+        "runtime.strategy_intent",
+        "runtime.signal_aggregated",
+        "runtime.order_submitted",
+        "runtime.broker_report",
+        "runtime.fill_applied",
+        "runtime.account_snapshot",
+    ]
+    order_event = next(event for event in sink.events if event.kind == "runtime.order_submitted")
+    broker_event = next(event for event in sink.events if event.kind == "runtime.broker_report")
+    fill_event = next(event for event in sink.events if event.kind == "runtime.fill_applied")
+    assert order_event.payload["client_order_id"] == "bt-client-000001"
+    assert broker_event.payload["client_order_id"] == "bt-client-000001"
+    assert fill_event.payload["client_order_id"] == "bt-client-000001"
+    assert fill_event.payload["order_id"] == "bt-000001"
+    assert fill_event.correlation_id == order_event.correlation_id
+
+
+def test_backtest_actor_loop_emits_conflict_reject_events_when_policy_rejects() -> None:
+    from qts.backtest.actor_loop import BacktestActorLoop
+    from qts.backtest.dependencies import BacktestActorLoopConfig, BacktestActorLoopDependencies
+    from qts.backtest.engine import BacktestCostModel
+    from qts.backtest.instrument_context import BacktestInstrumentContext
+    from qts.backtest.portfolio_projection import BacktestPortfolioProjector
+    from qts.core.ids import AccountId, StrategyId
+    from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
+    from qts.risk.risk_engine import RiskEngine
+    from qts.risk.rules.max_notional import MaxNotionalRule
+    from qts.runtime.intent_processing import TargetIntentProcessor
+
+    class ConflictStrategy(Strategy):
+        def initialize(self, ctx: Any) -> None:
+            self.asset = ctx.symbol("AAPL")
+
+        def on_bar(self, ctx: Any, bar: object) -> None:
+            ctx.target_quantity(self.asset, Decimal("1"))
+            ctx.target_quantity(self.asset, Decimal("-1"))
+
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    bars = [_bar(start, "100")]
+    strategy = ConflictStrategy()
+    instrument_context = BacktestInstrumentContext(instrument_registry=None, registry_bars=bars)
+    portfolio_projector = BacktestPortfolioProjector()
+    intent_processor = TargetIntentProcessor(
+        risk_engine=RiskEngine([MaxNotionalRule(max_notional=Decimal("1000000"))]),
+        instrument_context=instrument_context,
+        multiplier_for=portfolio_projector.multiplier_for,
+    )
+
+    loop = BacktestActorLoop(
+        strategy=strategy,
+        bars=bars,
+        config=BacktestActorLoopConfig(initial_cash=Decimal("10000"), warmup_bars=0),
+        dependencies=BacktestActorLoopDependencies(
+            instrument_registry=instrument_context.instrument_registry(),
+            contract_multipliers={},
+            execution_adapter=SimulatedExecutionAdapter(BacktestCostModel()),
+            process_intent=intent_processor.process_intent,
+            portfolio_view=portfolio_projector.portfolio_view,
+            equity_point=portfolio_projector.equity_point,
+            update_rolling_prices=instrument_context.update_rolling_prices,
+        ),
+        account_id=AccountId("acct-backtest"),
+        strategy_id=StrategyId("strat-backtest-conflict"),
+        signal_aggregation_policy="reject_conflict",
+    )
+    sink = _RecordingBacktestSink()
+    loop.run(sink=sink, prune_history=True, compact_orders=True)
+
+    kinds = [event.kind for event in sink.events]
+    assert "runtime.signal_conflict_detected" in kinds
+    assert "runtime.signal_rejected" in kinds
+    assert "runtime.order_submitted" not in kinds
+    assert sink.order_count == 0

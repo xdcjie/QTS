@@ -22,11 +22,16 @@ def test_error_taxonomy_includes_core_runtime_incident_codes() -> None:
 
     assert {code.value for code in OperationalErrorCode} >= {
         "MARKET_DATA_PERMISSION_ERROR",
+        "MARKET_DATA_SUBSCRIPTION_FAILED",
         "MARKET_DATA_STALE",
         "BROKER_DISCONNECTED",
         "ORDER_REJECTED_BY_RISK",
         "ORDER_REJECTED_BY_BROKER",
         "EXECUTION_REPORT_UNRESOLVED",
         "RECONCILIATION_DRIFT",
+        "EVENT_SEQUENCE_GAP",
+        "EVENT_SEQUENCE_DUPLICATE",
+        "RECOVERY_OBSERVATION_REQUIRED",
+        "RECOVERY_RECONCILIATION_REQUIRED",
         "EVENT_STORE_WRITE_FAILED",
     }

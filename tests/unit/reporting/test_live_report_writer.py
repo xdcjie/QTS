@@ -60,3 +60,67 @@ def test_live_report_writer_manifest_names_artifacts_counts_and_redacted_connect
         "secret_ref": "<configured>",
     }
     assert "should-not-render" not in manifest.manifest_path.read_text(encoding="utf-8")
+
+
+def test_live_report_writer_includes_runtime_topology_payload(tmp_path: Path) -> None:
+    from qts.core.ids import InstrumentId, RuntimeRunId
+    from qts.reporting.live import LiveReportWriter
+    from qts.runtime.config import LiveRuntimeConfig
+    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.topology import RuntimeTopologyBuilder
+
+    config = LiveRuntimeConfig(
+        mode="paper_simulated",
+        broker_configured=True,
+        account_configured=True,
+        risk_configured=True,
+        calendar_configured=True,
+        kill_switch_configured=True,
+        allow_live_orders=False,
+    )
+    runtime_topology = RuntimeTopologyBuilder.from_live_config(
+        config,
+        RuntimeRunId("live-topology-test"),
+        account_id="acct-paper",
+        strategy_id="paper-strategy",
+        strategy_class="examples.strategies.paper:PaperStrategy",
+        subscriptions=(InstrumentId("F.US.CME.GC"),),
+        base_currency="USD",
+    )
+
+    sink = LiveRuntimeEventSink(tmp_path)
+    sink.close()
+
+    manifest = LiveReportWriter(tmp_path).write_manifest(
+        config_payload={"mode": "paper_simulated"},
+        runtime_mode="paper_simulated",
+        account_id="acct-paper",
+        connection_metadata={"host": "127.0.0.1", "port": 4002},
+        event_sink=sink,
+        runtime_topology_payload=runtime_topology.to_manifest_payload(),
+    )
+
+    payload = json.loads(manifest.manifest_path.read_text(encoding="utf-8"))
+
+    assert payload["runtime_topology"]["mode"] == "paper_simulated"
+    assert payload["runtime_topology"]["account_count"] == 1
+    assert payload["runtime_topology"]["strategy_count"] == 1
+    assert payload["runtime_topology"]["topology_hash"].startswith("sha256:")
+
+
+def test_live_report_writer_rejects_permission_mode_label(tmp_path: Path) -> None:
+    import pytest
+    from qts.reporting.live import LiveReportWriter
+    from qts.runtime.sinks.live import LiveRuntimeEventSink
+
+    sink = LiveRuntimeEventSink(tmp_path)
+    sink.close()
+
+    with pytest.raises(ValueError, match="paper"):
+        LiveReportWriter(tmp_path).write_manifest(
+            config_payload={"mode": "paper"},
+            runtime_mode="paper",
+            account_id="DU1234567",
+            connection_metadata={"host": "127.0.0.1", "port": 4002},
+            event_sink=sink,
+        )

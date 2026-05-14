@@ -32,6 +32,16 @@ class DataValidationSeverity(StrEnum):
     ERROR = "error"
 
 
+class DataValidationError(ValueError):
+    """Raised when validation issues contain hard-gate errors."""
+
+    def __init__(self, issues: tuple[DataValidationIssue, ...]) -> None:
+        """Create an exception with the blocking validation issues."""
+        self.issues = issues
+        message = "; ".join(issue.message for issue in issues)
+        super().__init__(message)
+
+
 @dataclass(frozen=True, slots=True)
 class DataValidationIssue:
     """One validation issue for a bar sequence."""
@@ -53,6 +63,13 @@ class DataValidationReport:
         return not any(issue.severity is DataValidationSeverity.ERROR for issue in self.issues)
 
     @property
+    def error_issues(self) -> tuple[DataValidationIssue, ...]:
+        """Return hard-gate validation issues."""
+        return tuple(
+            issue for issue in self.issues if issue.severity is DataValidationSeverity.ERROR
+        )
+
+    @property
     def max_severity(self) -> DataValidationSeverity | None:
         """Perform max_severity."""
         if not self.issues:
@@ -63,6 +80,12 @@ class DataValidationReport:
             DataValidationSeverity.ERROR: 2,
         }
         return max((issue.severity for issue in self.issues), key=lambda severity: rank[severity])
+
+    def raise_for_errors(self) -> None:
+        """Raise when validation contains ERROR-severity issues."""
+        error_issues = self.error_issues
+        if error_issues:
+            raise DataValidationError(error_issues)
 
 
 def validate_bars(
@@ -158,6 +181,7 @@ def _append_ohlc_issue(issues: list[DataValidationIssue], bar: Bar) -> None:
 
 
 __all__ = [
+    "DataValidationError",
     "DataValidationIssue",
     "DataValidationIssueCode",
     "DataValidationReport",

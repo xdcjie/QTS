@@ -12,6 +12,7 @@ def test_live_broker_boundary_preserves_internal_identifiers() -> None:
     adapter = FakeBrokerAdapter(broker_id=BrokerId("fake"))
     request = BrokerOrderRequest(
         order_id=OrderId("internal-order"),
+        client_order_id="client-internal-order",
         account_id=AccountId("internal-account"),
         strategy_id=None,
         instrument_id=InstrumentId("FUTURE.CME.GC.202606"),

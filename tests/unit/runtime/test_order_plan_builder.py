@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
-from qts.core.ids import InstrumentId
+from qts.core.ids import AccountId, InstrumentId
 from qts.domain.market_data import Bar
 from qts.portfolio.position_book import Position
 from qts.strategy_sdk import TargetIntent, TargetIntentType
@@ -42,6 +42,7 @@ def test_order_plan_builder_converts_quantity_target_to_delta_plan() -> None:
 
     plans = builder.build(
         TargetIntent(intent_type=TargetIntentType.QUANTITY, asset=_asset(), value=Decimal("3")),
+        account_id=AccountId("acct-backtest"),
         bar=bar,
         positions={
             bar.instrument_id: Position(instrument_id=bar.instrument_id, quantity=Decimal("1"))
@@ -49,6 +50,7 @@ def test_order_plan_builder_converts_quantity_target_to_delta_plan() -> None:
     )
 
     assert len(plans) == 1
+    assert plans[0].account_id == AccountId("acct-backtest")
     assert plans[0].instrument_id == bar.instrument_id
     assert plans[0].quantity_delta == Decimal("2")
     assert plans[0].market_price == Decimal("100")
@@ -64,6 +66,7 @@ def test_order_plan_builder_returns_no_plan_when_target_already_matches_position
 
     plans = builder.build(
         TargetIntent(intent_type=TargetIntentType.QUANTITY, asset=_asset(), value=Decimal("1")),
+        account_id=AccountId("acct-backtest"),
         bar=bar,
         positions={
             bar.instrument_id: Position(instrument_id=bar.instrument_id, quantity=Decimal("1"))

@@ -120,6 +120,7 @@ def test_backtest_artifact_contract_contains_auditable_inputs_outputs_and_hashes
 
     assert set(manifest) == {
         "artifacts",
+        "brokerage_model",
         "config_hash",
         "cost_model",
         "dataset_metadata",
@@ -129,6 +130,7 @@ def test_backtest_artifact_contract_contains_auditable_inputs_outputs_and_hashes
         "report_hash",
         "run_id",
         "runtime_mode",
+        "runtime_topology",
         "trading_bars",
         "warmup_bars",
     }
@@ -142,6 +144,7 @@ def test_backtest_artifact_contract_contains_auditable_inputs_outputs_and_hashes
     assert manifest["run_id"] == run.result.run_id.value
     assert manifest["runtime_mode"] == "backtest"
     assert manifest["event_schema_version"] == "1"
+    assert manifest["brokerage_model"] == "CUSTOM"
     assert manifest["config_hash"] == run.result.config_hash
     assert manifest["report_hash"] == run.result.report_hash
     assert manifest["processed_bars"] == len(captured.equity_curve)

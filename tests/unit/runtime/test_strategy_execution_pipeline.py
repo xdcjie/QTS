@@ -112,3 +112,34 @@ def test_strategy_execution_pipeline_suppresses_warmup_signals() -> None:
     )
 
     assert result.intents == ()
+
+
+def test_strategy_execution_pipeline_no_signal_when_strategy_idle() -> None:
+    from qts.runtime.strategy_execution_pipeline import StrategyExecutionPipeline
+
+    class IdleStrategy(Strategy):
+        def initialize(self, ctx: Any) -> None:
+            pass
+
+        def on_bar(self, ctx: Any, bar: object) -> None:
+            return None
+
+    bar = _bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC))
+    pipeline = StrategyExecutionPipeline(
+        strategy=IdleStrategy(),
+        instrument_registry=_registry(),
+        future_chain_registry=None,
+        portfolio_view=_portfolio_view,
+        prune_history=True,
+    )
+
+    result = pipeline.execute_bar(
+        bar,
+        account_snapshot=object(),
+        latest_prices={bar.instrument_id: bar.close},
+        aggregate_signals=True,
+    )
+
+    assert result.intents == ()
+    assert result.raw_intents == ()
+    assert result.signal_batches == ()

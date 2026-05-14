@@ -64,7 +64,7 @@ def test_ibkr_order_execution_transport_dispatches_callbacks_to_adapter() -> Non
     )
 
     transport.connect()
-    request = adapter.to_order_request(intent)
+    request = adapter.to_order_request(intent, client_order_id="client-ord-001")
     transport.submit_order(request)
     accepted = transport.emit_order_status(
         IbkrOrderStatusPayload(
@@ -98,6 +98,7 @@ def test_ibkr_order_execution_transport_dispatches_callbacks_to_adapter() -> Non
 
     assert fake_transport.submitted_requests == [request]
     assert isinstance(request, IbkrOrderRequest)
+    assert accepted is not None
     assert accepted.broker_order_id == "ibkr-001"
     assert accepted.status.value == "accepted"
     assert fill is None
@@ -155,6 +156,7 @@ def test_ibkr_tws_order_execution_transport_builds_limit_order_and_normalizes_ca
             side=OrderSide.BUY,
             quantity=Decimal("1"),
         ),
+        client_order_id="client-ord-002",
         order_type=BrokerOrderType.LIMIT,
         limit_price=Decimal("0.01"),
         outside_regular_trading_hours=True,
@@ -180,7 +182,9 @@ def test_ibkr_tws_order_execution_transport_builds_limit_order_and_normalizes_ca
     assert order.totalQuantity == Decimal("1")
     assert order.lmtPrice == 0.01
     assert order.account == "DU1234567"
+    assert order.orderRef == "client-ord-002"
     assert order.outsideRth is True
+    assert cancel_report is not None
     assert cancel_report.status.value == "cancelled"
     assert cancel_report.broker_order_id == "777"
 
@@ -313,6 +317,188 @@ def test_ibkr_tws_order_execution_transport_waits_through_transient_connectivity
     assert report.status is ExecutionReportStatus.ACCEPTED
 
 
+def test_ibkr_tws_order_execution_transport_does_not_queue_unknown_status() -> None:
+    from qts.core.ids import BrokerId, InstrumentId
+    from qts.execution.adapters.ibkr_order_execution import (
+        IbkrOrderExecutionAdapter,
+        IbkrOrderExecutionConnection,
+    )
+    from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
+    from qts.execution.adapters.ibkr_transport import (
+        IbkrOrderStatusPayload,
+        IbkrTwsOrderExecutionTransport,
+        IbkrTwsOrderExecutionTransportConfig,
+    )
+    from qts.execution.order_manager import ExecutionReportStatus
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    adapter = IbkrOrderExecutionAdapter(
+        connection=IbkrOrderExecutionConnection(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+            broker_id=BrokerId("IBKR"),
+            account_id="DU1234567",
+        ),
+        symbol_mapping=mapping,
+        order_map=BrokerOrderMap(),
+    )
+    transport = IbkrTwsOrderExecutionTransport(
+        config=IbkrTwsOrderExecutionTransportConfig(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+            timeout_seconds=0.01,
+        ),
+        sink=adapter,
+    )
+    status = IbkrOrderStatusPayload(
+        report_id="status-unknown",
+        broker_order_id="999",
+        status="Submitted",
+    )
+
+    result = transport.emit_order_status(status)
+
+    assert result is None
+    assert adapter.quarantined_order_statuses == (status,)
+    with pytest.raises(TimeoutError, match="timed out waiting"):
+        transport.wait_for_order_status(
+            "999",
+            statuses={ExecutionReportStatus.ACCEPTED},
+            timeout_seconds=0.01,
+        )
+
+
+def test_ibkr_tws_order_execution_transport_handles_open_order_callback() -> None:
+    from datetime import UTC, datetime
+
+    from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+    from qts.execution.adapters.ibkr_order_execution import (
+        IbkrOrderExecutionAdapter,
+        IbkrOrderExecutionConnection,
+    )
+    from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
+    from qts.execution.adapters.ibkr_transport import (
+        IbkrTwsOrderExecutionTransport,
+        IbkrTwsOrderExecutionTransportConfig,
+    )
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    class OpenOrder:
+        orderRef = "client-ord-001"
+        permId = 99001
+
+    class OpenOrderState:
+        status = "Submitted"
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    order_map = BrokerOrderMap()
+    order_map.record_pending_submission(
+        internal_order_id=OrderId("ord-001"),
+        client_order_id="client-ord-001",
+        account_id=AccountId("acct-ibkr"),
+        strategy_id=StrategyId("strategy-ibkr"),
+        submitted_at=datetime(2026, 5, 14, 12, 0, tzinfo=UTC),
+    )
+    adapter = IbkrOrderExecutionAdapter(
+        connection=IbkrOrderExecutionConnection(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+            broker_id=BrokerId("IBKR"),
+            account_id="DU1234567",
+        ),
+        symbol_mapping=mapping,
+        order_map=order_map,
+    )
+    transport = IbkrTwsOrderExecutionTransport(
+        config=IbkrTwsOrderExecutionTransportConfig(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+        ),
+        sink=adapter,
+    )
+
+    transport.handle_open_order(order_id=100, order=OpenOrder(), order_state=OpenOrderState())
+
+    assert order_map.by_ibkr_order_id("100").client_order_id == "client-ord-001"
+    assert order_map.by_perm_id("99001").status == "Submitted"
+
+
+def test_ibkr_tws_order_execution_transport_requests_startup_reconciliation() -> None:
+    from qts.core.ids import BrokerId, InstrumentId
+    from qts.execution.adapters.ibkr_order_execution import (
+        IbkrOrderExecutionAdapter,
+        IbkrOrderExecutionConnection,
+    )
+    from qts.execution.adapters.ibkr_transport import (
+        IbkrTwsOrderExecutionTransport,
+        IbkrTwsOrderExecutionTransportConfig,
+    )
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    adapter = IbkrOrderExecutionAdapter(
+        connection=IbkrOrderExecutionConnection(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+            broker_id=BrokerId("IBKR"),
+            account_id="DU1234567",
+        ),
+        symbol_mapping=mapping,
+    )
+    app = _StartupReconciliationApp()
+    transport = IbkrTwsOrderExecutionTransport(
+        config=IbkrTwsOrderExecutionTransportConfig(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+            request_all_open_orders_on_reconnect=True,
+        ),
+        sink=adapter,
+    )
+    transport._app = app
+
+    transport.request_startup_reconciliation()
+
+    assert app.calls[0] == ("reqOpenOrders",)
+    assert app.calls[1] == ("reqAllOpenOrders",)
+    assert app.calls[2] == ("reqPositions",)
+    assert app.calls[3][0] == "reqExecutions"
+    assert app.calls[3][1] == 1
+    assert app.calls[4] == (
+        "reqAccountSummary",
+        2,
+        "All",
+        "NetLiquidation,TotalCashValue,AvailableFunds",
+    )
+
+    default_app = _StartupReconciliationApp()
+    default_transport = IbkrTwsOrderExecutionTransport(
+        config=IbkrTwsOrderExecutionTransportConfig(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+        ),
+        sink=adapter,
+    )
+    default_transport._app = default_app
+
+    default_transport.request_startup_reconciliation()
+
+    assert ("reqAllOpenOrders",) not in default_app.calls
+
+
 def test_ibkr_tws_order_execution_transport_bounds_blocking_ibapi_connect(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -381,7 +567,7 @@ class _FakeOrderExecutionTransport:
         if not broker_order_id.strip():
             raise ValueError("broker_order_id must not be empty")
 
-    def emit_order_status(self, payload: IbkrOrderStatusPayload) -> ExecutionReport:
+    def emit_order_status(self, payload: IbkrOrderStatusPayload) -> ExecutionReport | None:
         return self.sink.on_order_status(payload)
 
     def emit_execution(self, payload: IbkrExecutionPayload) -> ExecutionReport | None:
@@ -421,3 +607,26 @@ class _BlockingConnectApp:
 
     def run(self) -> None:
         return None
+
+
+@dataclass(slots=True)
+class _StartupReconciliationApp:
+    calls: list[tuple[object, ...]] = field(default_factory=list)
+
+    def isConnected(self) -> bool:
+        return True
+
+    def reqOpenOrders(self) -> None:
+        self.calls.append(("reqOpenOrders",))
+
+    def reqAllOpenOrders(self) -> None:
+        self.calls.append(("reqAllOpenOrders",))
+
+    def reqPositions(self) -> None:
+        self.calls.append(("reqPositions",))
+
+    def reqExecutions(self, request_id: int, execution_filter: object) -> None:
+        self.calls.append(("reqExecutions", request_id, type(execution_filter).__name__))
+
+    def reqAccountSummary(self, request_id: int, group_name: str, tags: str) -> None:
+        self.calls.append(("reqAccountSummary", request_id, group_name, tags))

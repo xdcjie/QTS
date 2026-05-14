@@ -20,8 +20,8 @@ The cleanup after OOP refactors is based on:
 |---|---|---|
 | `scripts/run_api.py` | Needed thin CLI wrapper | No deletion |
 | `scripts/run_paper_ibkr.py` | Needed script entrypoint for paper drill workflow | No deletion |
-| `scripts/run_worker.py` | Compatibility shim retained as explicit placeholder | No deletion |
-| `backend/src/qts/strategy_sdk/context.py` | Strategy API compatibility and initialization semantics still in use | No deletion |
+| `scripts/run_worker.py` | Obsolete placeholder script | Deleted |
+| `backend/src/qts/strategy_sdk/context.py` | Current Strategy SDK facade and initialization semantics still in use | No deletion |
 | `backend/src/qts/execution/order_manager.py` | Domain-facing orchestrator for order lifecycle; retained as shared execution service | No deletion |
 
 ## Verification gates completed before finalization
@@ -37,4 +37,4 @@ The cleanup after OOP refactors is based on:
 - Backtest and API tests pass with the current tree.
 
 ## Change request for downstream cleanup
-- Revisit `scripts/run_worker.py` once runtime worker entrypoint ownership is finalized. It remains a controlled compatibility shim and is outside this deletion batch.
+- `scripts/run_worker.py` has been removed; runtime worker ownership should be added through a concrete command when needed.

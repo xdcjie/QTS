@@ -52,9 +52,9 @@ def test_ids_are_typed_even_when_values_match() -> None:
     assert AccountId("same") != instrument_id
 
 
-def test_backtest_run_id_is_runtime_run_id() -> None:
-    from qts.core.ids import BacktestRunId, RuntimeRunId
+def test_runtime_run_id_covers_backtest_runs() -> None:
+    from qts.core.ids import RuntimeRunId
 
-    run_id = BacktestRunId("bt-001")
+    run_id = RuntimeRunId("bt-001")
 
-    assert isinstance(run_id, RuntimeRunId)
+    assert run_id.value == "bt-001"

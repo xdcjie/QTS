@@ -156,6 +156,49 @@ def test_backtest_runtime_event_sink_writes_events_and_manifest_contract(
     assert manifest["artifacts"]["events"]["rows"] == 1
 
 
+def test_backtest_finalize_includes_runtime_topology_payload(tmp_path: Path) -> None:
+    from qts.core.ids import RuntimeRunId
+    from qts.reporting.backtest import BacktestArtifactWriter, EquityCurvePoint
+
+    topology = {
+        "run_id": "bt-run-1",
+        "mode": "backtest",
+        "accounts": [],
+        "strategies": [
+            {
+                "strategy_id": "strategy-a",
+                "strategy_class": "tests.StrategyA",
+                "account_id": "acct-a",
+            }
+        ],
+        "broker_routes": [],
+        "market_data_routes": [],
+        "topology_hash": "sha256:example",
+    }
+    writer = BacktestArtifactWriter(tmp_path, run_id=RuntimeRunId("bt-run-1"))
+    writer.write_equity_point(
+        EquityCurvePoint(
+            time=datetime(2026, 1, 2, 14, 30, tzinfo=UTC),
+            equity=Decimal("10000"),
+        )
+    )
+
+    _, _, manifest, _ = writer.finalize(
+        config_hash="cfg",
+        dataset_metadata=(),
+        cost_model={},
+        processed_bars=1,
+        warmup_bars=0,
+        trading_bars=1,
+        final_cash=Decimal("10000"),
+        strategy_version="test",
+        runtime_topology_payload=topology,
+    )
+
+    assert manifest["runtime_topology"]["run_id"] == "bt-run-1"
+    assert manifest["runtime_topology"]["topology_hash"] == "sha256:example"
+
+
 def _read_ndjson_lines(path: Path) -> list[dict[str, Any]]:
     import json
 

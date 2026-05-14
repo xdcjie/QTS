@@ -13,6 +13,9 @@ def test_broker_capabilities_model_order_types_tif_short_and_fractional_support(
         supported_time_in_force=frozenset({TimeInForce.DAY, TimeInForce.GTC}),
         supports_fractional=False,
         supports_short=True,
+        min_order_quantity=Decimal("1"),
+        lot_size=Decimal("1"),
+        min_tick=Decimal("0.01"),
         max_order_quantity=Decimal("1000"),
     )
 
@@ -20,3 +23,6 @@ def test_broker_capabilities_model_order_types_tif_short_and_fractional_support(
     assert not capabilities.supports_order_type(BrokerOrderType.STOP)
     assert capabilities.supports_tif(TimeInForce.GTC)
     assert capabilities.supports_short is True
+    assert capabilities.min_order_quantity == Decimal("1")
+    assert capabilities.lot_size == Decimal("1")
+    assert capabilities.min_tick == Decimal("0.01")

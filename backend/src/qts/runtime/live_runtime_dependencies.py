@@ -17,6 +17,7 @@ from qts.runtime.actors.execution_actor import ExecutionAdapter
 from qts.runtime.intent_processing import InstrumentExecutionContext
 from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
 from qts.runtime.sinks.base import RuntimeEventSink
+from qts.runtime.topology import RuntimeTopology
 from qts.strategy_sdk import PortfolioView, Strategy
 
 PortfolioViewBuilder = Callable[
@@ -29,13 +30,14 @@ PortfolioViewBuilder = Callable[
 class LiveRuntimeDependencies:
     """Cohesive dependencies needed to run one paper/live runtime session."""
 
-    strategy: Strategy
     risk_engine: RiskEngine
     instrument_context: InstrumentExecutionContext
     execution_adapter: ExecutionAdapter
     account_actor: AccountActor
     portfolio_view: Callable[..., PortfolioView]
     multiplier_for: Callable[[InstrumentId], Decimal]
+    strategy: Strategy | None = None
+    strategies: tuple[Strategy, ...] | None = None
     run_id: RuntimeRunId = field(default_factory=lambda: RuntimeRunId("local-live-run"))
     mode: RuntimeMode = RuntimeMode.PAPER_SIMULATED
     execution_environment: ExecutionEnvironment = ExecutionEnvironment.SIMULATED
@@ -43,6 +45,8 @@ class LiveRuntimeDependencies:
     strategy_id: StrategyId | None = None
     market_data_source: StreamingMarketDataSource | None = None
     sink: RuntimeEventSink | None = None
+    runtime_topology: RuntimeTopology | None = None
+    account_actors: dict[AccountId, AccountActor] | None = None
     instrument_registry: InstrumentRegistry | None = None
     future_roll_registry: FutureRollRegistry | None = None
     contract_multipliers: dict[InstrumentId, Decimal] | None = None
@@ -54,8 +58,34 @@ class LiveRuntimeDependencies:
 
     def __post_init__(self) -> None:
         """Validate runtime construction invariants."""
+        if self.strategies is not None:
+            if self.strategy is not None:
+                raise ValueError("provide either strategy or strategies, not both")
+            if len(self.strategies) == 0:
+                raise ValueError("strategies must not be empty when provided")
+            if self.runtime_topology is None:
+                raise ValueError("runtime topology is required when strategies are provided")
+        if self.strategy is None and (self.strategies is None or len(self.strategies) == 0):
+            raise ValueError("strategy or strategies is required")
         if self.warmup_bars < 0:
             raise ValueError("warmup_bars must be non-negative")
+        if (
+            self.runtime_topology is not None
+            and len(self.runtime_topology.accounts) > 1
+            and self.account_actors is None
+        ):
+            raise ValueError("multi-account runtime topology requires account_actors mapping")
+        if self.runtime_topology is not None and self.account_actors is not None:
+            missing_accounts = [
+                str(account.account_id)
+                for account in self.runtime_topology.accounts
+                if account.account_id not in self.account_actors
+            ]
+            if missing_accounts:
+                raise ValueError(
+                    "account_actors missing for topology accounts: "
+                    + ", ".join(sorted(missing_accounts))
+                )
         if not self.order_id_prefix.strip():
             raise ValueError("order_id_prefix must not be empty")
 

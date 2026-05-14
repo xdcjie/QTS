@@ -166,6 +166,19 @@ def test_guardrails_reject_broker_specific_identifiers_outside_boundaries(
     assert _codes(root) == {"BROKER_SPECIFIC_IMPLEMENTATION"}
 
 
+def test_guardrails_reject_broker_symbol_mapping_outside_boundary(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/runtime/bad.py",
+        "from qts.registry.broker_symbol_mapping import BrokerSymbolMapping\n",
+    )
+
+    assert "BROKER_SYMBOL_BOUNDARY" in _codes(root)
+
+
 def test_guardrails_reject_anchor_helpers_in_backend_source(tmp_path: Path) -> None:
     root = tmp_path
     _write(

@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 from qts.data.historical.csv_dataset import iter_historical_bars
-from qts.data.live_feed import (
+from qts.data.live import (
     FeedCapabilities,
     FeedSubscription,
     LiveFeedEvent,

@@ -41,6 +41,7 @@ def _metadata(dataset_id: str) -> DatasetMetadata:
         normalization_version="bars-v1",
         created_at=datetime(2026, 1, 2, tzinfo=UTC),
         content_hash=f"sha256:{dataset_id}",
+        row_count=10,
     )
 
 

@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 from decimal import Decimal
 from typing import Protocol
 
-from qts.core.ids import InstrumentId, OrderId
+from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
 from qts.domain.market_data import Bar
 from qts.domain.risk import OrderRiskRequest
 from qts.execution.order_manager import Order, OrderFill, OrderIntent, OrderSide
@@ -61,6 +61,7 @@ class ProcessedIntent:
 class OrderPlan:
     """One concrete order delta planned from a strategy target intent."""
 
+    account_id: AccountId
     instrument_id: InstrumentId
     quantity_delta: Decimal
     market_price: Decimal
@@ -78,6 +79,7 @@ class OrderPlanBuilder:
         self,
         intent: TargetIntent,
         *,
+        account_id: AccountId,
         bar: Bar,
         positions: Mapping[InstrumentId, Position],
     ) -> tuple[OrderPlan, ...]:
@@ -101,6 +103,7 @@ class OrderPlanBuilder:
                 if quantity != Decimal("0"):
                     order_plans.append(
                         OrderPlan(
+                            account_id=account_id,
                             instrument_id=instrument_id,
                             quantity_delta=-quantity,
                             market_price=self._instrument_context.market_price_for_intent(
@@ -125,6 +128,7 @@ class OrderPlanBuilder:
         if quantity_delta != Decimal("0"):
             order_plans.append(
                 OrderPlan(
+                    account_id=account_id,
                     instrument_id=target_instrument,
                     quantity_delta=quantity_delta,
                     market_price=self._instrument_context.market_price_for_intent(
@@ -197,13 +201,20 @@ class TargetIntentProcessor:
         order_manager_ref: ActorRef,
         execution_ref: ActorRef,
         account_ref: ActorRef,
+        account_id: AccountId | None,
+        strategy_id: StrategyId,
+        correlation_id: CorrelationId,
+        contributing_strategy_ids: tuple[StrategyId, ...] = (),
         order_number: int,
     ) -> ProcessedIntent:
-        """Process a single target intent and return produced orders/fills."""
+        """Process a single target intent; account_id is required for routing."""
+        if account_id is None:
+            raise ValueError("account_id is required")
 
         snapshot = account_actor.snapshot()
         order_plans = self._order_plan_builder.build(
             intent,
+            account_id=account_id,
             bar=bar,
             positions=snapshot.positions,
         )
@@ -222,6 +233,10 @@ class TargetIntentProcessor:
                 order_manager_ref=order_manager_ref,
                 execution_ref=execution_ref,
                 account_ref=account_ref,
+                account_id=plan.account_id,
+                strategy_id=strategy_id,
+                correlation_id=correlation_id,
+                contributing_strategy_ids=contributing_strategy_ids,
                 order_number=order_number + index,
             )
             orders.extend(processed.orders)
@@ -240,6 +255,10 @@ class TargetIntentProcessor:
         order_manager_ref: ActorRef,
         execution_ref: ActorRef,
         account_ref: ActorRef,
+        account_id: AccountId,
+        strategy_id: StrategyId,
+        correlation_id: CorrelationId,
+        contributing_strategy_ids: tuple[StrategyId, ...] = (),
         order_number: int,
     ) -> ProcessedIntent:
         """Perform _process_order_delta."""
@@ -255,19 +274,27 @@ class TargetIntentProcessor:
                 price=market_price,
                 multiplier=self._multiplier_for(instrument_id),
                 order_time=order_time,
+                contributing_strategy_ids=contributing_strategy_ids,
             )
         )
+        if risk_decision.contributing_strategy_ids != contributing_strategy_ids:
+            risk_decision = replace(
+                risk_decision,
+                contributing_strategy_ids=contributing_strategy_ids,
+            )
 
         if not risk_decision.approved:
             return ProcessedIntent(orders=(), fills=())
 
         before_fill_count = order_manager_actor.fill_count
         order_id = OrderId(f"{self._order_id_prefix}-{order_number:06d}")
+        client_order_id = f"{self._order_id_prefix}-client-{order_number:06d}"
         order_intent = OrderIntent(
             order_id=order_id,
             instrument_id=instrument_id,
             side=side,
             quantity=quantity,
+            account_id=account_id,
         )
         order_manager_ref.tell(
             SubmitOrder(
@@ -275,6 +302,10 @@ class TargetIntentProcessor:
                 risk_decision=risk_decision,
                 broker_order_id=f"{self._broker_order_id_prefix}-{order_number:06d}",
                 market_price=market_price,
+                account_id=account_id,
+                strategy_id=strategy_id,
+                client_order_id=client_order_id,
+                correlation_id=correlation_id,
             )
         )
         order_manager_ref.process_all()

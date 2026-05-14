@@ -72,7 +72,7 @@ def test_backtest_streaming_emits_stable_artifacts(tmp_path: Path) -> None:
         "trade_ledger",
     }
     assert captured.result.artifact_rows == {
-        "events": 7,
+        "events": 10,
         "orders": 1,
         "fills": 1,
         "trade_ledger": 1,
@@ -85,6 +85,14 @@ def test_backtest_streaming_emits_stable_artifacts(tmp_path: Path) -> None:
 
     assert len(captured.orders) == 1
     assert captured.orders[0]["state"] == "filled"
+    fill_event = next(event for event in captured.events if event["kind"] == "runtime.fill_applied")
+    assert fill_event["payload"]["client_order_id"] == "bt-client-000001"
+    assert (
+        fill_event["correlation_id"]
+        == next(event for event in captured.events if event["kind"] == "runtime.order_submitted")[
+            "correlation_id"
+        ]
+    )
     assert captured.fills
     assert captured.trade_ledger and len(captured.trade_ledger) == 1
     assert Decimal(captured.trade_ledger[0]["fill_price"]) == Decimal("100")

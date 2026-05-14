@@ -33,6 +33,15 @@ class EventStore(Protocol):
         """Replay events from the store, optionally filtered by partition key."""
         ...
 
+    def replay_after(
+        self,
+        sequence: int,
+        *,
+        partition_key: str | None = None,
+    ) -> tuple[BaseEvent, ...]:
+        """Replay events after a persisted sequence number."""
+        ...
+
     def by_correlation_id(self, correlation_id: CorrelationId) -> tuple[BaseEvent, ...]:
         """Replay all events with a given correlation identifier."""
         ...
@@ -60,6 +69,20 @@ class InMemoryEventStore:
         if partition_key is None:
             return tuple(self._events)
         return tuple(event for event in self._events if event.partition_key == partition_key)
+
+    def replay_after(
+        self,
+        sequence: int,
+        *,
+        partition_key: str | None = None,
+    ) -> tuple[BaseEvent, ...]:
+        """Replay events appended after a 1-indexed sequence number."""
+        if sequence < 0:
+            raise ValueError("sequence must be non-negative")
+        events = tuple(self._events[sequence:])
+        if partition_key is None:
+            return events
+        return tuple(event for event in events if event.partition_key == partition_key)
 
     def by_correlation_id(self, correlation_id: CorrelationId) -> tuple[BaseEvent, ...]:
         """Perform by_correlation_id."""
@@ -93,6 +116,30 @@ class FileEventStore:
                 if not line.strip():
                     continue
                 event = self._event_from_json(json.loads(line)["event"])
+                if partition_key is None or event.partition_key == partition_key:
+                    events.append(event)
+        return tuple(events)
+
+    def replay_after(
+        self,
+        sequence: int,
+        *,
+        partition_key: str | None = None,
+    ) -> tuple[BaseEvent, ...]:
+        """Replay persisted events after a 1-indexed sequence number."""
+        if sequence < 0:
+            raise ValueError("sequence must be non-negative")
+        if not self._path.exists():
+            return ()
+        events: list[BaseEvent] = []
+        with self._path.open(encoding="utf-8") as handle:
+            for line in handle:
+                if not line.strip():
+                    continue
+                record = json.loads(line)
+                if int(record["sequence"]) <= sequence:
+                    continue
+                event = self._event_from_json(record["event"])
                 if partition_key is None or event.partition_key == partition_key:
                     events.append(event)
         return tuple(events)

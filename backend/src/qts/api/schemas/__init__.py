@@ -7,6 +7,8 @@ from qts.api.schemas.operations import (
     KillSwitchScopeSchema,
     RuntimeCommandResponse,
     RuntimeCommandResponseSchema,
+    RuntimeCommandResultResponse,
+    RuntimeCommandResultResponseSchema,
 )
 
 __all__ = [
@@ -17,6 +19,8 @@ __all__ = [
     "KillSwitchResponse",
     "KillSwitchResponseSchema",
     "KillSwitchScopeSchema",
+    "RuntimeCommandResultResponse",
+    "RuntimeCommandResultResponseSchema",
     "RuntimeCommandResponse",
     "RuntimeCommandResponseSchema",
 ]

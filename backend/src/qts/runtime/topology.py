@@ -8,6 +8,7 @@ from typing import Any
 
 from qts.core.hashing import stable_json_hash
 from qts.core.ids import AccountId, BrokerId, InstrumentId, RuntimeRunId, StrategyId
+from qts.runtime.config import BacktestRuntimeConfig, LiveRuntimeConfig
 from qts.runtime.mode import AccountEnvironment, ExecutionEnvironment, RuntimeMode
 
 
@@ -234,11 +235,203 @@ class RuntimeTopology:
                 raise ValueError(f"missing broker route for account: {account.account_id}")
 
 
+@dataclass(frozen=True, slots=True)
+class RuntimeTopologyManifest:
+    """Auditable manifest wrapper for a runtime topology."""
+
+    payload: dict[str, Any]
+
+    @classmethod
+    def from_topology(cls, topology: RuntimeTopology) -> RuntimeTopologyManifest:
+        """Create a manifest payload from one validated topology."""
+
+        return cls(payload=topology.to_manifest_payload())
+
+    @property
+    def topology_hash(self) -> str:
+        """Return the topology hash referenced by reports."""
+
+        return str(self.payload["topology_hash"])
+
+
+class RuntimeTopologyBuilder:
+    """Build validated runtime topologies from runtime configs and route specs."""
+
+    @staticmethod
+    def _short_name(value: str) -> str:
+        return value.rsplit(":", 1)[-1].rsplit(".", 1)[-1]
+
+    @classmethod
+    def from_backtest_config(
+        cls,
+        config: BacktestRuntimeConfig,
+        run_id: RuntimeRunId,
+        *,
+        account_id: str = "acct-backtest",
+    ) -> RuntimeTopology:
+        """Build a backtest topology from one normalized backtest config."""
+        strategy_class = config.strategy_class
+        strategy_id = StrategyId(cls._short_name(strategy_class))
+        strategy_allocation = Decimal("1")
+        strategy_enabled = True
+        account_id_value = account_id
+        if config.strategy is not None:
+            strategy_class = config.strategy.class_path
+            strategy_id = StrategyId(config.strategy.strategy_id or cls._short_name(strategy_class))
+            strategy_allocation = config.strategy.allocation
+            strategy_enabled = config.strategy.enabled
+            if config.strategy.account_id is not None and config.strategy.account_id.strip():
+                account_id_value = config.strategy.account_id
+
+        raw_symbols = tuple(config.instrument_ids.values()) or tuple(
+            InstrumentId(symbol) for symbol in config.symbols
+        )
+        if not raw_symbols:
+            raise ValueError("backtest topology requires at least one instrument")
+        subscriptions = tuple(dict.fromkeys(raw_symbols))
+        return RuntimeTopology(
+            run_id=run_id,
+            mode=RuntimeMode.BACKTEST,
+            accounts=(
+                AccountRuntimeSpec(
+                    account_id=AccountId(account_id_value),
+                    initial_cash=config.initial_cash,
+                    account_environment=AccountEnvironment.SIMULATED,
+                ),
+            ),
+            strategies=(
+                StrategyRuntimeSpec(
+                    strategy_id=strategy_id,
+                    strategy_class=strategy_class,
+                    account_id=AccountId(account_id_value),
+                    subscriptions=subscriptions,
+                    capital_allocation=strategy_allocation,
+                    enabled=strategy_enabled,
+                ),
+            ),
+            broker_routes=(),
+            market_data_routes=(
+                MarketDataRouteSpec(
+                    source_id=config.market_data.source,
+                    source_type="replay",
+                    provider=config.market_data.source,
+                    subscriptions=subscriptions,
+                ),
+            ),
+        )
+
+    @classmethod
+    def from_live_config(
+        cls,
+        config: LiveRuntimeConfig,
+        run_id: RuntimeRunId,
+        *,
+        account_id: str,
+        strategy_id: str,
+        strategy_class: str,
+        subscriptions: tuple[InstrumentId, ...],
+        broker_id: str | None = None,
+        broker_account_code: str | None = None,
+        base_currency: str = "USD",
+        initial_cash: Decimal = Decimal("0"),
+        execution_adapter_type: str | None = None,
+        order_transport_type: str | None = None,
+        execution_environment: ExecutionEnvironment | None = None,
+        market_data_source_id: str = "streaming",
+        market_data_source_type: str = "streaming",
+        market_data_provider: str = "streaming",
+        market_data_subscriptions: tuple[InstrumentId, ...] | None = None,
+    ) -> RuntimeTopology:
+        """Build a live/paper topology from explicit session routing specs."""
+        if not strategy_id.strip():
+            raise ValueError("strategy_id must not be empty")
+        if not strategy_class.strip():
+            raise ValueError("strategy_class must not be empty")
+        if not account_id.strip():
+            raise ValueError("account_id must not be empty")
+        if not subscriptions:
+            raise ValueError("subscriptions must not be empty")
+        normalized_subscriptions = tuple(
+            dict.fromkeys(
+                market_data_subscriptions
+                if market_data_subscriptions is not None
+                else subscriptions
+            )
+        )
+
+        mode = RuntimeMode.from_value(config.mode)
+        execution_environment = ExecutionEnvironment.from_value(
+            execution_environment,
+            mode=mode,
+        )
+        broker_route: tuple[BrokerRouteSpec, ...] = ()
+        broker_route_required = execution_environment is ExecutionEnvironment.BROKER
+        account_broker_id = BrokerId(broker_id) if broker_id is not None else None
+        if broker_route_required:
+            if account_broker_id is None:
+                raise ValueError("broker route requires broker_id")
+            if not execution_adapter_type:
+                raise ValueError("broker route requires execution_adapter_type")
+            if not order_transport_type:
+                raise ValueError("broker route requires order_transport_type")
+            broker_route = (
+                BrokerRouteSpec(
+                    broker_id=account_broker_id,
+                    account_id=AccountId(account_id),
+                    execution_adapter_type=execution_adapter_type,
+                    order_transport_type=order_transport_type,
+                    execution_environment=execution_environment,
+                ),
+            )
+        elif account_broker_id is not None:
+            # Keep explicit broker_id only when route is provided to satisfy
+            # invariant checks in RuntimeTopology.
+            raise ValueError("account_broker_id requires broker route in broker mode")
+
+        return RuntimeTopology(
+            run_id=run_id,
+            mode=mode,
+            accounts=(
+                AccountRuntimeSpec(
+                    account_id=AccountId(account_id),
+                    broker_id=account_broker_id,
+                    base_currency=base_currency,
+                    initial_cash=initial_cash,
+                    broker_account_code=broker_account_code,
+                    account_environment=AccountEnvironment.from_value(
+                        config.account_environment,
+                        mode=mode,
+                    ),
+                ),
+            ),
+            strategies=(
+                StrategyRuntimeSpec(
+                    strategy_id=StrategyId(strategy_id),
+                    strategy_class=strategy_class,
+                    account_id=AccountId(account_id),
+                    subscriptions=normalized_subscriptions,
+                ),
+            ),
+            broker_routes=broker_route,
+            market_data_routes=(
+                MarketDataRouteSpec(
+                    source_id=market_data_source_id,
+                    source_type=market_data_source_type,
+                    provider=market_data_provider,
+                    subscriptions=normalized_subscriptions,
+                ),
+            ),
+        )
+
+
 __all__ = [
     "AccountRuntimeSpec",
     "BrokerRouteSpec",
     "MarketDataRouteSpec",
     "RuntimePartitionKey",
+    "RuntimeMode",
+    "RuntimeTopologyManifest",
+    "RuntimeTopologyBuilder",
     "RuntimeTopology",
     "StrategyRuntimeSpec",
 ]

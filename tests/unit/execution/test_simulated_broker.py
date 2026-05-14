@@ -4,7 +4,7 @@ from decimal import Decimal
 
 
 def test_simulated_broker_fills_market_order_from_provided_market_data() -> None:
-    from qts.core.ids import InstrumentId, OrderId
+    from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
     from qts.execution.order_manager import ExecutionReportStatus, OrderIntent, OrderSide
     from qts.execution.simulator.simulated_broker import SimulatedBroker
 
@@ -20,6 +20,10 @@ def test_simulated_broker_fills_market_order_from_provided_market_data() -> None
         intent,
         broker_order_id="sim-001",
         market_price=Decimal("101.25"),
+        account_id=AccountId("acct-sim"),
+        strategy_id=StrategyId("strategy-sim"),
+        client_order_id="client-sim-001",
+        correlation_id=CorrelationId("corr-sim-001"),
     )
 
     assert report.broker_order_id == "sim-001"
@@ -31,7 +35,7 @@ def test_simulated_broker_fills_market_order_from_provided_market_data() -> None
 
 def test_simulated_execution_adapter_rejects_orders_blocked_by_broker_capabilities() -> None:
     import pytest
-    from qts.core.ids import BrokerId, InstrumentId, OrderId
+    from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
     from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
     from qts.execution.broker import BrokerCapabilities
     from qts.execution.order_manager import OrderIntent, OrderSide
@@ -43,6 +47,8 @@ def test_simulated_execution_adapter_rejects_orders_blocked_by_broker_capabiliti
             broker_id=BrokerId("ibkr-equity"),
             supports_market_orders=True,
             supports_fractional=False,
+            min_order_quantity=Decimal("1"),
+            lot_size=Decimal("1"),
             max_order_quantity=Decimal("100"),
         ),
     )
@@ -57,6 +63,10 @@ def test_simulated_execution_adapter_rejects_orders_blocked_by_broker_capabiliti
             ),
             broker_order_id="sim-001",
             market_price=Decimal("101.25"),
+            account_id=AccountId("acct-sim"),
+            strategy_id=StrategyId("strategy-sim"),
+            client_order_id="client-sim-001",
+            correlation_id=CorrelationId("corr-sim-001"),
         )
 
     with pytest.raises(ValueError, match="max order quantity"):
@@ -69,4 +79,60 @@ def test_simulated_execution_adapter_rejects_orders_blocked_by_broker_capabiliti
             ),
             broker_order_id="sim-002",
             market_price=Decimal("101.25"),
+            account_id=AccountId("acct-sim"),
+            strategy_id=StrategyId("strategy-sim"),
+            client_order_id="client-sim-002",
+            correlation_id=CorrelationId("corr-sim-002"),
+        )
+
+    min_size_adapter = SimulatedExecutionAdapter(
+        cost_model=BacktestCostModel(),
+        capabilities=BrokerCapabilities(
+            broker_id=BrokerId("ibkr-equity"),
+            supports_market_orders=True,
+            supports_fractional=True,
+            min_order_quantity=Decimal("1"),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="minimum order quantity"):
+        min_size_adapter.execute_market_order(
+            OrderIntent(
+                order_id=OrderId("ord-too-small"),
+                instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+                side=OrderSide.BUY,
+                quantity=Decimal("0.5"),
+            ),
+            broker_order_id="sim-003",
+            market_price=Decimal("101.25"),
+            account_id=AccountId("acct-sim"),
+            strategy_id=StrategyId("strategy-sim"),
+            client_order_id="client-sim-003",
+            correlation_id=CorrelationId("corr-sim-003"),
+        )
+
+    whole_lot_adapter = SimulatedExecutionAdapter(
+        cost_model=BacktestCostModel(),
+        capabilities=BrokerCapabilities(
+            broker_id=BrokerId("ibkr-futures"),
+            supports_market_orders=True,
+            supports_fractional=True,
+            lot_size=Decimal("5"),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="lot size"):
+        whole_lot_adapter.execute_market_order(
+            OrderIntent(
+                order_id=OrderId("ord-bad-lot"),
+                instrument_id=InstrumentId("FUT.CME.GC.M2026"),
+                side=OrderSide.BUY,
+                quantity=Decimal("3"),
+            ),
+            broker_order_id="sim-004",
+            market_price=Decimal("101.25"),
+            account_id=AccountId("acct-sim"),
+            strategy_id=StrategyId("strategy-sim"),
+            client_order_id="client-sim-004",
+            correlation_id=CorrelationId("corr-sim-004"),
         )

@@ -7,7 +7,6 @@ from .events import (
     LiveFeedEvent,
     LiveFeedFailure,
     LiveFeedPayload,
-    LiveFeedSubscribed,
     MarketDataSubscribed,
 )
 from .reconnect import ReconnectPolicy
@@ -19,7 +18,6 @@ __all__ = [
     "LiveFeedEvent",
     "LiveFeedFailure",
     "LiveFeedPayload",
-    "LiveFeedSubscribed",
     "MarketDataSubscribed",
     "LiveFeedAdapter",
     "MarketDataAdapter",

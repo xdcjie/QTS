@@ -16,7 +16,7 @@ That matches the project rules: construction and validation of stable concepts s
 
 ## Evidence from inventory
 
-The uploaded inventory reports a large Python codebase: `1075` total symbols, `311` classes, `764` functions/methods, `138` module-level functions, and `626` methods/properties. The highest-density files include `qts.quality.guardrails`, `qts.reconciliation`, `qts.data.historical.config`, `qts.execution.broker`, `qts.backtest.config`, `qts.data.live_feed`, `qts.data.historical.csv_dataset`, and `qts.backtest.report`.
+The uploaded inventory reports a large Python codebase: `1075` total symbols, `311` classes, `764` functions/methods, `138` module-level functions, and `626` methods/properties. The highest-density files include `qts.quality.guardrails`, `qts.reconciliation`, `qts.data.historical.config`, `qts.execution.broker`, `qts.backtest.config`, `qts.data.live`, `qts.data.historical.csv_dataset`, and `qts.backtest.report`.
 
 The important findings are:
 
@@ -26,7 +26,7 @@ The important findings are:
 4. `StrategyContext` is correctly acting as the user-facing facade, but its `option(...)` API accepts `InstrumentId` for the underlying. Since the Strategy SDK should hide internal trading complexity, this should be adjusted to accept `AssetRef` or user-level symbols, while the internal resolver may still use `InstrumentId`.
 5. `qts.api.routes.operations` contains Pydantic schemas and route handlers in one route module. API routes should be thin entrypoints; request/response schemas should move to `qts.api.schemas.operations` and application DTOs should remain in `qts.application.dto`.
 6. `qts.reconciliation` is a single large module containing snapshots, reports, decisions, engine, and helper comparisons. Reconciliation is a stable production concept and should become a package with cohesive files.
-7. `qts.data.live_feed` contains capabilities, subscription requests, event DTOs, reconnect policy, adapter protocol, and fake adapter in one file. That is still coherent as “live feed,” but it is now too dense and mixes protocol, DTO, policy, and fake adapter. It should become a package or at least split into concept modules.
+7. `qts.data.live` contains capabilities, subscription requests, event DTOs, reconnect policy, adapter protocol, and fake adapter in one file. That is still coherent as “live feed,” but it is now too dense and mixes protocol, DTO, policy, and fake adapter. It should become a package or at least split into concept modules.
 8. `qts.quality.guardrails` is large but conceptually acceptable because it is the architecture-gate owner. It should not be deleted; however, its helper algorithms should be reviewed for ownership and eventually split by stable rule families if it grows further.
 9. Several scripts are now thin or empty wrappers. Empty non-`__init__` files should not remain ambiguous. They must either be implemented as thin CLI entrypoints delegating to application commands or removed if no documented entrypoint depends on them.
 10. Many public classes and methods have no docstring, causing the inventory generator to infer generic descriptions like “Perform x.” Public APIs should have concise docstrings; private methods do not need ceremonial docstrings.
@@ -43,7 +43,7 @@ Recommended rule: keep domain models free of API, runtime, broker, and storage d
 
 `qts.data.historical.config` is large but mostly conceptually coherent: historical store defaults, store config, catalog config, dataset config, and resolution behavior belong together if they form a stable historical-data configuration model. However, source parsing should remain in `HistoricalMarketDataConfigLoader`, and runtime iteration should remain outside config objects.
 
-`qts.data.live_feed` needs concept splits because it combines protocol, DTOs, reconnect policy, and fake adapter.
+`qts.data.live` needs concept splits because it combines protocol, DTOs, reconnect policy, and fake adapter.
 
 ### Bars
 
@@ -86,7 +86,7 @@ The guardrails module is important and should be treated as an architecture gate
 ### P1 — Fix during next refactor milestone
 
 1. Split `qts.reconciliation` into a package.
-2. Split `qts.data.live_feed` into cohesive concepts.
+2. Split `qts.data.live` into cohesive concepts.
 3. Move API operation schemas out of route module.
 4. Add public docstrings for stable public APIs.
 5. Strengthen guardrails for Strategy SDK and backtest/live parity boundaries.

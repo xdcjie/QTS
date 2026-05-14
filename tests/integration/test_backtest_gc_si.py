@@ -110,6 +110,8 @@ def test_backtest_engine_runs_from_config_with_deterministic_run_id(tmp_path: Pa
     assert left.result.config_hash == _config().config_hash
     assert left.result.run_id == right.result.run_id
     assert left.manifest["config_hash"] == _config().config_hash
+    assert left.manifest["runtime_topology"]["mode"] == "backtest"
+    assert left.manifest["runtime_topology"]["topology_hash"].startswith("sha256:")
 
 
 def test_backtest_engine_from_config_does_not_require_chain_for_static_instrument_ids(

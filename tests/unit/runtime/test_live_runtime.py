@@ -45,6 +45,7 @@ def test_live_runtime_degrades_from_runtime_event_and_rejects_new_orders() -> No
     result = runtime.submit_order(
         BrokerOrderRequest(
             order_id=OrderId("ord-001"),
+            client_order_id="client-ord-001",
             account_id=AccountId("DU1234567"),
             strategy_id=None,
             instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),

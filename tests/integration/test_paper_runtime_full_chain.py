@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
-from qts.core.ids import InstrumentId, OrderId
+from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
 from qts.domain.market_data import Bar
 from qts.execution.order_manager import (
     ExecutionReport,
@@ -44,17 +44,22 @@ def test_paper_runtime_processes_strategy_order_fill_and_account_snapshot() -> N
         ),
     )
     execution = _FillingExecutionAdapter()
+    account_id = AccountId("acct-paper-full-chain")
     session = LiveRuntimeSession(
         LiveRuntimeDependencies(
             strategy=_BuyOnceStrategy(),
             risk_engine=RiskEngine([]),
             instrument_context=_InstrumentContext(),
             execution_adapter=execution,
-            account_actor=AccountActor(initial_cash={"USD": Decimal("10000")}),
+            account_actor=AccountActor(
+                initial_cash={"USD": Decimal("10000")},
+                account_id=account_id,
+            ),
             instrument_registry=registry,
             portfolio_view=_portfolio_view,
             multiplier_for=lambda instrument_id: Decimal("1"),
             order_submission_enabled=True,
+            account_id=account_id,
         )
     )
 
@@ -112,7 +117,12 @@ class _FillingExecutionAdapter:
         *,
         broker_order_id: str,
         market_price: Decimal,
+        account_id: AccountId,
+        strategy_id: StrategyId,
+        client_order_id: str,
+        correlation_id: CorrelationId,
     ) -> ExecutionReport:
+        _ = account_id, strategy_id, client_order_id, correlation_id
         self.seen.append(intent)
         return ExecutionReport(
             report_id=f"{broker_order_id}-filled",
@@ -123,7 +133,17 @@ class _FillingExecutionAdapter:
             fill_id=f"{broker_order_id}-fill",
         )
 
-    def cancel_order(self, order_id: OrderId, *, broker_order_id: str) -> ExecutionReport:
+    def cancel_order(
+        self,
+        order_id: OrderId,
+        *,
+        broker_order_id: str,
+        account_id: AccountId,
+        strategy_id: StrategyId,
+        client_order_id: str,
+        correlation_id: CorrelationId,
+    ) -> ExecutionReport:
+        _ = order_id, account_id, strategy_id, client_order_id, correlation_id
         return ExecutionReport(
             report_id=f"{broker_order_id}-cancelled",
             broker_order_id=broker_order_id,

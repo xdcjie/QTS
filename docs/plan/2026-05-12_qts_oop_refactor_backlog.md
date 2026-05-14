@@ -382,11 +382,11 @@ make test-integration
 
 ### OOP-06-T01 — Split live feed protocol, DTOs, policy, and fake adapter
 
-Goal: reduce density in `qts.data.live_feed` while preserving the live feed boundary.
+Goal: reduce density in `qts.data.live` while preserving the live feed boundary.
 
 Scope:
 - Move `FeedCapabilities` to `qts.data.live.capabilities`.
-- Move `FeedSubscription`, `LiveFeedSubscribed`, `LiveFeedEvent`, `LiveFeedFailure` to `qts.data.live.events` or `subscriptions`.
+- Move `FeedSubscription`, `MarketDataSubscribed`, `LiveFeedEvent`, `LiveFeedFailure` to `qts.data.live.events` or `subscriptions`.
 - Move `ReconnectPolicy` to `qts.data.live.reconnect`.
 - Move `LiveFeedAdapter` Protocol to `qts.data.live.adapter`.
 - Move `FakeLiveFeedAdapter` to `qts.data.live.fake_adapter` or `qts.data.live.testing` depending on production use.
@@ -457,7 +457,7 @@ Priority modules:
 - `qts.backtest.actor_loop`
 - `qts.strategy_sdk.context`
 - `qts.execution.order_manager`
-- `qts.data.live_feed` or new live package
+- `qts.data.live` or new live package
 - `qts.reconciliation` or new reconciliation package
 
 Acceptance:

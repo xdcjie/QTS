@@ -17,7 +17,7 @@ from qts.data.provenance import DatasetMetadata
 RUNTIME_EVENT_SCHEMA_VERSION = "1"
 
 
-def dataset_metadata_payload(item: DatasetMetadata) -> dict[str, str | None]:
+def dataset_metadata_payload(item: DatasetMetadata) -> dict[str, str | int | None]:
     """Serialize one dataset provenance row for reporting."""
     return {
         "dataset_id": item.dataset_id,
@@ -29,6 +29,7 @@ def dataset_metadata_payload(item: DatasetMetadata) -> dict[str, str | None]:
         "normalization_version": item.normalization_version,
         "created_at": item.created_at.isoformat(),
         "content_hash": item.content_hash,
+        "row_count": item.row_count,
     }
 
 
@@ -211,6 +212,8 @@ class BacktestArtifactWriter:
         trading_bars: int,
         final_cash: Decimal,
         strategy_version: str,
+        runtime_topology_payload: dict[str, Any] | None = None,
+        brokerage_model: str | None = None,
     ) -> tuple[str, str, dict[str, Any], BacktestArtifacts]:
         """Perform finalize."""
         for artifact in self._artifacts.values():
@@ -221,26 +224,28 @@ class BacktestArtifactWriter:
         artifact_hashes = {
             kind: artifact.content_hash for kind, artifact in self._artifacts.items()
         }
-        report_hash = _stable_hash(
-            {
-                "config_hash": config_hash,
-                "cost_model": cost_model,
-                "dataset_metadata": dataset_metadata,
-                "final_cash": str(final_cash),
-                "processed_bars": processed_bars,
-                "warmup_bars": warmup_bars,
-                "trading_bars": trading_bars,
-                "strategy_version": strategy_version,
-                "metrics": metrics,
-                "artifacts": {
-                    kind: {
-                        "rows": artifact_rows[kind],
-                        "sha256": artifact_hashes[kind],
-                    }
-                    for kind in self._KINDS
-                },
-            }
-        )
+        report_payload: dict[str, Any] = {
+            "config_hash": config_hash,
+            "cost_model": cost_model,
+            "dataset_metadata": dataset_metadata,
+            "final_cash": str(final_cash),
+            "processed_bars": processed_bars,
+            "warmup_bars": warmup_bars,
+            "trading_bars": trading_bars,
+            "strategy_version": strategy_version,
+            "brokerage_model": brokerage_model,
+            "metrics": metrics,
+            "artifacts": {
+                kind: {
+                    "rows": artifact_rows[kind],
+                    "sha256": artifact_hashes[kind],
+                }
+                for kind in self._KINDS
+            },
+        }
+        if runtime_topology_payload is not None:
+            report_payload["runtime_topology"] = runtime_topology_payload
+        report_hash = _stable_hash(report_payload)
         run_id = (
             self._run_id.value
             if self._run_id is not None
@@ -263,6 +268,7 @@ class BacktestArtifactWriter:
             "processed_bars": processed_bars,
             "warmup_bars": warmup_bars,
             "trading_bars": trading_bars,
+            "brokerage_model": brokerage_model,
             "metrics": metrics,
             "artifacts": {
                 kind: {
@@ -273,6 +279,8 @@ class BacktestArtifactWriter:
                 for kind in self._KINDS
             },
         }
+        if runtime_topology_payload is not None:
+            manifest_payload["runtime_topology"] = runtime_topology_payload
         manifest_path = self._output_dir / f"{run_id}.manifest.json"
         manifest_path.write_text(
             json.dumps(

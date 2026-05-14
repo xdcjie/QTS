@@ -62,7 +62,7 @@ def test_event_router_unknown_route_is_explicit_error() -> None:
 
 
 def test_event_router_routes_market_data_and_execution_messages_to_separate_actor_types() -> None:
-    from qts.core.ids import InstrumentId, OrderId
+    from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
     from qts.domain.market_data import Tick
     from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.runtime.actor_ref import ActorRef
@@ -110,6 +110,10 @@ def test_event_router_routes_market_data_and_execution_messages_to_separate_acto
             ),
             broker_order_id="ibkr-001",
             market_price=Decimal("100"),
+            account_id=AccountId("DU1234567"),
+            strategy_id=StrategyId("strategy-a"),
+            client_order_id="client-001",
+            correlation_id=CorrelationId("corr-001"),
         ),
     )
 

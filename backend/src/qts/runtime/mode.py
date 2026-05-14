@@ -16,13 +16,14 @@ class RuntimeMode(StrEnum):
 
     @classmethod
     def from_value(cls, value: RuntimeMode | str) -> RuntimeMode:
-        """Normalize current and legacy runtime mode labels."""
+        """Normalize runtime mode labels."""
         if isinstance(value, cls):
             return value
         normalized = value.strip().lower().replace("-", "_")
-        if normalized == "paper":
-            normalized = cls.PAPER_BROKER.value
-        return cls(normalized)
+        try:
+            return cls(normalized)
+        except ValueError as exc:
+            raise ValueError(f"Unsupported runtime mode: {value}") from exc
 
 
 class MarketDataEnvironment(StrEnum):

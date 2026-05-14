@@ -6,7 +6,7 @@ from decimal import Decimal
 from fastapi.testclient import TestClient
 from qts.api.app import create_app
 from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
-from qts.data.live_feed import FeedSubscription
+from qts.data.live import FeedSubscription
 from qts.domain.market_data import Bar
 from qts.execution.broker import BrokerOrderRequest, FakeBrokerAdapter
 from qts.execution.order_manager import OrderSide
@@ -30,6 +30,7 @@ def test_live_runtime_start_pause_resume_and_fake_broker_flow() -> None:
     blocked = runtime.submit_order(
         BrokerOrderRequest(
             order_id=OrderId("order-1"),
+            client_order_id="client-order-1",
             account_id=AccountId("acct-a"),
             strategy_id=StrategyId("strat-a"),
             instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from typing import Any
 
-from qts.data.live_feed import LiveFeedAdapter
+from qts.core.hashing import stable_json_hash
+from qts.data.live import LiveFeedAdapter
 from qts.execution.broker import BrokerAdapter, BrokerExecutionReport, BrokerOrderRequest
 from qts.runtime.config import LiveRuntimeConfig
 from qts.runtime.mode import RuntimeMode
@@ -30,7 +32,13 @@ class LivePermissionMode(StrEnum):
     LIVE = "live"
 
 
-LiveMode = LivePermissionMode
+class LiveStartupDecisionStatus(StrEnum):
+    """Explicit startup decision for paper/live capable runtimes."""
+
+    ALLOW_OBSERVATION = "allow_observation"
+    ALLOW_PAPER = "allow_paper"
+    ALLOW_LIVE = "allow_live"
+    BLOCK = "block"
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,6 +91,52 @@ class LiveStartupChecklist:
                     remediation="none" if configured else remediation,
                 )
             )
+        mode = RuntimeMode.from_value(config.mode)
+        for check_name, passed, evidence, remediation in (
+            (
+                "market_data_permission_check",
+                config.market_data_permission_live,
+                f"market_data_permission_live={config.market_data_permission_live}",
+                "obtain live market-data permission or switch to observation-only",
+            ),
+            (
+                "reconciliation_check",
+                config.reconciliation_passed,
+                f"reconciliation_passed={config.reconciliation_passed}",
+                "run broker/internal reconciliation and resolve drift",
+            ),
+            (
+                "event_sink_check",
+                config.event_sink_writable,
+                f"event_sink_writable={config.event_sink_writable}",
+                "configure a writable runtime event sink",
+            ),
+            (
+                "snapshot_store_check",
+                config.snapshot_store_configured,
+                f"snapshot_store_configured={config.snapshot_store_configured}",
+                "configure a runtime snapshot store",
+            ),
+            (
+                "operator_signoff_check",
+                mode is not RuntimeMode.LIVE or bool(config.operator_signoff_id),
+                (
+                    f"operator_signoff_id={config.operator_signoff_id}"
+                    if mode is RuntimeMode.LIVE
+                    else "operator_signoff_id=not_required"
+                ),
+                "record operator signoff before enabling live orders",
+            ),
+        ):
+            checks.append(
+                LiveStartupCheck(
+                    check_name=check_name,
+                    status="PASS" if passed else "FAIL",
+                    severity="INFO" if passed else "BLOCKER",
+                    evidence=evidence,
+                    remediation="none" if passed else remediation,
+                )
+            )
         return cls(checks=tuple(checks))
 
     @property
@@ -99,13 +153,41 @@ class LiveStartupChecklist:
                 return check
         raise KeyError(check_name)
 
+    @property
+    def checklist_hash(self) -> str:
+        """Return a stable hash of startup checklist evidence."""
+
+        return stable_json_hash(self.to_payload(include_hash=False))
+
+    def to_payload(self, *, include_hash: bool = True) -> dict[str, Any]:
+        """Serialize checklist evidence for manifests and startup artifacts."""
+
+        payload: dict[str, Any] = {
+            "passed": self.passed,
+            "checks": [
+                {
+                    "check_name": check.check_name,
+                    "status": check.status,
+                    "severity": check.severity,
+                    "evidence": check.evidence,
+                    "remediation": check.remediation,
+                }
+                for check in self.checks
+            ],
+        }
+        if include_hash:
+            payload["checklist_hash"] = self.checklist_hash
+        return payload
+
 
 @dataclass(frozen=True, slots=True)
 class LiveStartupDecision:
     """Result of startup guard validation."""
 
+    status: LiveStartupDecisionStatus
     mode: RuntimeMode
     real_order_submission_enabled: bool
+    checklist: LiveStartupChecklist
 
 
 def validate_live_startup(config: LiveRuntimeConfig) -> LiveStartupDecision:
@@ -116,12 +198,27 @@ def validate_live_startup(config: LiveRuntimeConfig) -> LiveStartupDecision:
     if missing:
         raise ValueError("live startup missing required config: " + ", ".join(missing))
     mode = RuntimeMode.from_value(config.mode)
+    status = _startup_decision_status(mode)
     return LiveStartupDecision(
+        status=status,
         mode=mode,
         real_order_submission_enabled=(
-            mode is RuntimeMode.LIVE and config.allow_live_orders and not config.observation_only
+            status is LiveStartupDecisionStatus.ALLOW_LIVE
+            and config.allow_live_orders
+            and not config.observation_only
         ),
+        checklist=checklist,
     )
+
+
+def _startup_decision_status(mode: RuntimeMode) -> LiveStartupDecisionStatus:
+    if mode is RuntimeMode.LIVE:
+        return LiveStartupDecisionStatus.ALLOW_LIVE
+    if mode in {RuntimeMode.PAPER_BROKER, RuntimeMode.PAPER_SIMULATED}:
+        return LiveStartupDecisionStatus.ALLOW_PAPER
+    if mode is RuntimeMode.OBSERVATION:
+        return LiveStartupDecisionStatus.ALLOW_OBSERVATION
+    return LiveStartupDecisionStatus.BLOCK
 
 
 _TRANSITIONS: dict[LiveRuntimeState, dict[str, LiveRuntimeState]] = {
@@ -246,7 +343,7 @@ __all__ = [
     "LivePermissionMode",
     "LiveStartupCheck",
     "LiveStartupChecklist",
-    "LiveMode",
+    "LiveStartupDecisionStatus",
     "LiveRuntime",
     "LiveRuntimeState",
     "LiveRuntimeStateMachine",

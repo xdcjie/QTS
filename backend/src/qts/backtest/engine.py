@@ -17,7 +17,12 @@ from qts.backtest.dependencies import (
 from qts.backtest.instrument_context import BacktestInstrumentContext
 from qts.backtest.portfolio_projection import BacktestPortfolioProjector
 from qts.core.hashing import stable_json_hash
-from qts.core.ids import BacktestRunId, InstrumentId
+from qts.core.ids import (
+    AccountId,
+    InstrumentId,
+    RuntimeRunId,
+    StrategyId,
+)
 from qts.data.provenance import DatasetMetadata
 from qts.domain.market_data import Bar
 from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
@@ -48,6 +53,7 @@ from qts.runtime.config import BacktestCostModel, BacktestEngineConfig, Backtest
 from qts.runtime.intent_processing import TargetIntentProcessor
 from qts.runtime.sinks.backtest import BacktestRuntimeEventSink
 from qts.runtime.sinks.base import RuntimeEventContext
+from qts.runtime.topology import RuntimeTopologyBuilder
 from qts.strategy_sdk import Strategy
 
 
@@ -59,7 +65,7 @@ class BacktestStreamResult:
     warmup_bars: int
     trading_bars: int
     final_account: AccountSnapshot
-    run_id: BacktestRunId
+    run_id: RuntimeRunId
     strategy_version: str
     config_hash: str
     dataset_metadata: tuple[DatasetMetadata, ...]
@@ -93,6 +99,7 @@ class BacktestEngine:
         target_timeframe: str | None = None,
         exchange_timezone_by_instrument: Mapping[InstrumentId, str | tzinfo] | None = None,
         instrument_registry: InstrumentRegistry | None = None,
+        backtest_runtime_config: BacktestRuntimeConfig | None = None,
     ) -> None:
         """Create an engine from explicit config and dependency objects.
 
@@ -110,14 +117,14 @@ class BacktestEngine:
         if engine_config is None:
             if initial_cash is None:
                 raise ValueError("initial_cash is required when engine_config is not provided")
-            engine_config = BacktestEngineConfig.from_legacy_kwargs(
+            engine_config = BacktestEngineConfig(
                 initial_cash=initial_cash,
                 warmup_bars=warmup_bars,
                 target_timeframe=target_timeframe,
-                strategy_version=strategy_version or strategy.__class__.__qualname__,
-                config=config,
-                cost_model=cost_model,
-                dataset_metadata=dataset_metadata,
+                strategy_version=strategy_version or "",
+                config_payload=dict(config or {}),
+                dataset_metadata=tuple(dataset_metadata),
+                cost_model=cost_model or BacktestCostModel(),
             )
         elif initial_cash is not None and Decimal(str(initial_cash)) != engine_config.initial_cash:
             raise ValueError("initial_cash must match engine_config.initial_cash")
@@ -172,6 +179,7 @@ class BacktestEngine:
             instrument_context=self._instrument_context,
             multiplier_for=self._portfolio_projector.multiplier_for,
         )
+        self._backtest_runtime_config = backtest_runtime_config
 
     @classmethod
     def from_config(
@@ -213,12 +221,26 @@ class BacktestEngine:
             bars=bars,
             engine_config=engine_config,
             dependencies=dependencies,
+            backtest_runtime_config=config,
         )
 
     def run_streaming(self, output_dir: Any) -> BacktestStreamResult:
         """Run the backtest and write streaming artifacts."""
         config_hash = stable_json_hash(self._config_hash_payload)
-        runtime_run_id = BacktestRunId(f"bt-{config_hash.removeprefix('sha256:')[:12]}")
+        runtime_run_id = RuntimeRunId(f"bt-{config_hash.removeprefix('sha256:')[:12]}")
+        runtime_topology_payload = None
+        strategy_id = StrategyId("strategy")
+        account_id = AccountId("acct-backtest")
+        if self._backtest_runtime_config is not None:
+            runtime_topology = RuntimeTopologyBuilder.from_backtest_config(
+                self._backtest_runtime_config,
+                runtime_run_id,
+            )
+            runtime_topology_payload = runtime_topology.to_manifest_payload()
+            if runtime_topology.accounts:
+                account_id = runtime_topology.accounts[0].account_id
+            if runtime_topology.strategies:
+                strategy_id = runtime_topology.strategies[0].strategy_id
         writer = BacktestArtifactWriter(output_dir, run_id=runtime_run_id)
         sink = BacktestRuntimeEventSink(
             writer,
@@ -226,6 +248,8 @@ class BacktestEngine:
                 run_id=runtime_run_id,
                 mode="backtest",
                 execution_environment="simulated",
+                account_id=account_id,
+                strategy_id=strategy_id,
             ),
         )
         actor_loop = BacktestActorLoop(
@@ -247,6 +271,8 @@ class BacktestEngine:
                 equity_point=self._portfolio_projector.equity_point,
                 update_rolling_prices=self._instrument_context.update_rolling_prices,
             ),
+            strategy_id=strategy_id,
+            account_id=account_id,
         )
         runtime = actor_loop.run(
             sink=sink,
@@ -262,6 +288,11 @@ class BacktestEngine:
                 )
             )
         processed_bar_count = runtime.processed_bars
+        brokerage_model = (
+            self._backtest_runtime_config.brokerage_model
+            if self._backtest_runtime_config is not None
+            else "CUSTOM"
+        )
         run_id_value, report_hash, _, artifacts = writer.finalize(
             config_hash=config_hash,
             dataset_metadata=tuple(
@@ -273,13 +304,15 @@ class BacktestEngine:
             trading_bars=runtime.trading_bars,
             final_cash=runtime.final_account.cash["USD"],
             strategy_version=self._strategy_version,
+            runtime_topology_payload=runtime_topology_payload,
+            brokerage_model=brokerage_model,
         )
         return BacktestStreamResult(
             processed_bars=processed_bar_count,
             warmup_bars=runtime.warmup_bars,
             trading_bars=runtime.trading_bars,
             final_account=runtime.final_account,
-            run_id=BacktestRunId(run_id_value),
+            run_id=RuntimeRunId(run_id_value),
             strategy_version=self._strategy_version,
             config_hash=config_hash,
             dataset_metadata=self._dataset_metadata,

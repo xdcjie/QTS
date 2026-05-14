@@ -54,6 +54,12 @@ BROKER_FACT_ALLOWED_PREFIXES = (
     ("execution", "adapters"),
     ("application", "commands"),
 )
+BROKER_SYMBOL_MAPPING_ALLOWED_PREFIXES = (
+    ("registry",),
+    ("data", "adapters"),
+    ("execution", "adapters"),
+    ("application", "commands"),
+)
 PROVIDER_SDK_ALLOWED_PREFIXES = (
     ("data", "adapters"),
     ("execution", "adapters"),
@@ -135,6 +141,9 @@ GUARDRAIL_REMEDIATIONS = {
     ),
     "BROKER_SPECIFIC_IMPLEMENTATION": (
         "Move broker-specific facts to config, registry mapping, or adapter modules."
+    ),
+    "BROKER_SYMBOL_BOUNDARY": (
+        "Resolve broker symbols at registry, adapter, or application command boundaries."
     ),
     "IMPORT_BOUNDARY": (
         "Move the dependency to the owning lower layer or introduce a boundary DTO/protocol."
@@ -395,6 +404,41 @@ class BrokerSpecificRule:
         return _check_broker_specific_code(relative_path, qts_relative_path, tree)
 
 
+class BrokerSymbolBoundaryRule:
+    """Reject broker symbol mapping imports outside approved boundary modules."""
+
+    code = "BROKER_SYMBOL_BOUNDARY"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform check."""
+        if _has_allowed_prefix(qts_relative_path, BROKER_SYMBOL_MAPPING_ALLOWED_PREFIXES):
+            return []
+        violations: list[GuardrailViolation] = []
+        violation_lines: set[int] = set()
+        for imported_module, line in _iter_imports(tree):
+            if imported_module == "qts.registry.broker_symbol_mapping":
+                violation_lines.add(line)
+        for imported_module, imported_name, line in _iter_imported_names(tree):
+            if imported_module == "qts.registry" and imported_name == "BrokerSymbolMapping":
+                violation_lines.add(line)
+        for line in sorted(violation_lines):
+            violations.append(
+                GuardrailViolation(
+                    code=self.code,
+                    path=str(relative_path),
+                    line=line,
+                    message="BrokerSymbolMapping must stay at registry or adapter boundaries",
+                )
+            )
+        return violations
+
+
 class ProviderSdkImportRule:
     """Reject provider SDK imports outside adapter and transport boundaries."""
 
@@ -564,6 +608,7 @@ class GuardrailSuite:
             ImportBoundaryRule(),
             ProductSpecificRule(),
             BrokerSpecificRule(),
+            BrokerSymbolBoundaryRule(),
             ProviderSdkImportRule(),
             TestSupportRule(),
             SharedCapabilityRule(),

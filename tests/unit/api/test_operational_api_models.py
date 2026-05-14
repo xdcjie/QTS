@@ -24,3 +24,13 @@ def test_command_idempotency_returns_first_result_for_duplicate_key() -> None:
 
     assert first == {"status": "paused"}
     assert second == {"status": "paused"}
+
+
+def test_command_idempotency_is_scoped_by_command_kind() -> None:
+    store = CommandIdempotencyStore()
+
+    runtime_result = store.run("key-1", lambda: {"status": "paused"}, scope="runtime")
+    order_result = store.run("key-1", lambda: {"status": "cancelled"}, scope="cancel")
+
+    assert runtime_result == {"status": "paused"}
+    assert order_result == {"status": "cancelled"}

@@ -57,6 +57,34 @@ def test_file_event_store_survives_restart(tmp_path: Path) -> None:
     assert restored.by_correlation_id(CorrelationId("corr-001")) == (event,)
 
 
+def test_event_store_replays_events_after_snapshot_sequence(tmp_path: Path) -> None:
+    from qts.runtime.event_store import FileEventStore, InMemoryEventStore
+
+    first = BaseEvent(
+        event_id=EventId("evt-001"),
+        event_type="order.accepted",
+        event_time=datetime(2026, 1, 2, 14, 30, tzinfo=UTC),
+        source="OrderManagerActor",
+        partition_key="ord-001",
+    )
+    second = BaseEvent(
+        event_id=EventId("evt-002"),
+        event_type="execution.fill",
+        event_time=datetime(2026, 1, 2, 14, 31, tzinfo=UTC),
+        source="ExecutionActor",
+        partition_key="ord-001",
+    )
+    memory_store = InMemoryEventStore()
+    file_store = FileEventStore(tmp_path / "events.jsonl")
+    for store in (memory_store, file_store):
+        store.append(first)
+        store.append(second)
+
+    assert memory_store.replay_after(1) == (second,)
+    assert file_store.replay_after(1) == (second,)
+    assert file_store.replay_after(0, partition_key="ord-001") == (first, second)
+
+
 def test_file_event_store_detects_missing_event_sequence(tmp_path: Path) -> None:
     from qts.runtime.event_store import FileEventStore
 
@@ -82,6 +110,34 @@ def test_file_event_store_detects_missing_event_sequence(tmp_path: Path) -> None
     assert not report.valid
     assert report.missing_sequences == (2,)
     assert report.duplicate_sequences == ()
+
+
+def test_file_event_store_detects_duplicate_event_sequence(tmp_path: Path) -> None:
+    from qts.runtime.event_store import FileEventStore
+
+    path = tmp_path / "events.jsonl"
+    path.write_text(
+        "\n".join(
+            (
+                '{"event": {"causation_id": null, "correlation_id": null, '
+                '"event_id": "evt-001", "event_time": "2026-01-02T14:30:00+00:00", '
+                '"event_type": "order.accepted", "partition_key": "ord-001", '
+                '"source": "OrderManagerActor"}, "sequence": 1}',
+                '{"event": {"causation_id": null, "correlation_id": null, '
+                '"event_id": "evt-001-duplicate", '
+                '"event_time": "2026-01-02T14:30:01+00:00", '
+                '"event_type": "order.accepted", "partition_key": "ord-001", '
+                '"source": "OrderManagerActor"}, "sequence": 1}',
+            )
+        ),
+        encoding="utf-8",
+    )
+
+    report = FileEventStore(path).validate_sequence()
+
+    assert not report.valid
+    assert report.missing_sequences == ()
+    assert report.duplicate_sequences == (1,)
 
 
 def test_event_store_keeps_json_conversion_inside_file_store() -> None:

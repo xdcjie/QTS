@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
 
+from qts.core.ids import StrategyId
+
 
 class RiskDecisionStatus(StrEnum):
     """Risk check outcome."""
@@ -24,6 +26,7 @@ class RiskDecision:
     reason: str | None = None
     rule_id: str | None = None
     checked_at: datetime | None = None
+    contributing_strategy_ids: tuple[StrategyId, ...] = ()
 
     @classmethod
     def approve(
@@ -31,9 +34,17 @@ class RiskDecision:
         *,
         rule_id: str | None = None,
         checked_at: datetime | None = None,
+        contributing_strategy_ids: tuple[StrategyId, ...] | None = None,
     ) -> RiskDecision:
         """Perform approve."""
-        return cls(status=RiskDecisionStatus.APPROVED, rule_id=rule_id, checked_at=checked_at)
+        return cls(
+            status=RiskDecisionStatus.APPROVED,
+            rule_id=rule_id,
+            checked_at=checked_at,
+            contributing_strategy_ids=contributing_strategy_ids
+            if contributing_strategy_ids is not None
+            else (),
+        )
 
     @classmethod
     def rejected(
@@ -43,6 +54,7 @@ class RiskDecision:
         *,
         rule_id: str | None = None,
         checked_at: datetime | None = None,
+        contributing_strategy_ids: tuple[StrategyId, ...] | None = None,
     ) -> RiskDecision:
         """Perform rejected."""
         if not reason_code.strip():
@@ -55,6 +67,9 @@ class RiskDecision:
             reason=reason,
             rule_id=rule_id,
             checked_at=checked_at,
+            contributing_strategy_ids=contributing_strategy_ids
+            if contributing_strategy_ids is not None
+            else (),
         )
 
     @property

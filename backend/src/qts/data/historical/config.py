@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from qts.data.historical.csv_format import DEFAULT_HISTORICAL_CSV_SCHEMA, HistoricalCsvSchema
-from qts.data.live_feed import FeedCapabilities
+from qts.data.live import FeedCapabilities
 
 
 @dataclass(frozen=True, slots=True)

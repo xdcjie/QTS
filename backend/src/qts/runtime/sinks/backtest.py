@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from qts.core.hashing import stable_json_hash
@@ -14,6 +16,8 @@ from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventContext, RuntimeEve
 
 class BacktestRuntimeEventSink(RuntimeEventSink):
     """Write engine stream artifacts through a shared writer."""
+
+    _INGEST_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
     def __init__(
         self,
@@ -37,6 +41,10 @@ class BacktestRuntimeEventSink(RuntimeEventSink):
         self._event_count += 1
         if self._context is not None:
             event = self._context.apply(event, sequence_no=self._event_count)
+        event = replace(
+            event,
+            ts_ingest=self._INGEST_EPOCH + timedelta(microseconds=self._event_count),
+        )
         row = event.to_envelope(sequence_no=self._event_count)
         row["event_hash"] = stable_json_hash(
             {key: value for key, value in row.items() if key not in {"sequence_no", "ts_ingest"}}

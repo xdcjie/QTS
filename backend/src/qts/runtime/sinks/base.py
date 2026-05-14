@@ -19,6 +19,7 @@ from qts.core.ids import (
     RuntimeRunId,
     StrategyId,
 )
+from qts.runtime.mode import RuntimeMode
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +50,10 @@ class RuntimeEvent:
         object.__setattr__(self, "payload", dict(self.payload))
         if self._requires_correlation_id() and self.correlation_id is None:
             raise ValueError("correlation_id is required for order, risk, and fill events")
+        if self._requires_client_order_id():
+            client_order_id = self.payload.get("client_order_id")
+            if not isinstance(client_order_id, str) or not client_order_id.strip():
+                raise ValueError("client_order_id is required for order and fill events")
         if self.sequence_no is not None and self.sequence_no <= 0:
             raise ValueError("sequence_no must be positive")
         if self.ts_ingest is None:
@@ -78,7 +83,12 @@ class RuntimeEvent:
 
     def _requires_correlation_id(self) -> bool:
         normalized = self.kind.lower()
-        trace_tokens = ("order", "risk", "fill")
+        trace_tokens = ("order", "risk", "fill", "broker_report", "broker_rejected")
+        return any(token in normalized for token in trace_tokens)
+
+    def _requires_client_order_id(self) -> bool:
+        normalized = self.kind.lower()
+        trace_tokens = ("order", "broker_report", "fill")
         return any(token in normalized for token in trace_tokens)
 
     @staticmethod
@@ -102,17 +112,15 @@ class RuntimeEventContext:
     """Run-scoped defaults applied to every emitted runtime event."""
 
     run_id: RuntimeRunId
-    mode: object
+    mode: RuntimeMode | str
     execution_environment: object | None = None
     account_id: AccountId | None = None
     strategy_id: StrategyId | None = None
 
     def __post_init__(self) -> None:
         """Normalize enum-backed runtime context fields."""
-        mode = self._normalize_label(self.mode)
-        if mode == "paper":
-            mode = "paper_broker"
-        object.__setattr__(self, "mode", mode)
+        mode = RuntimeMode.from_value(self.mode)
+        object.__setattr__(self, "mode", mode.value)
         if self.execution_environment is not None:
             execution_environment = self._normalize_label(self.execution_environment)
             if not execution_environment:

@@ -162,7 +162,7 @@ Acceptance:
 
 Acceptance:
 
-- BacktestRunId exists.
+- RuntimeRunId exists and is used for backtest runs.
 - Report includes strategy version, config hash, and dataset metadata.
 
 ## S4-03-T02 — Enforce Time-Sliced DataView

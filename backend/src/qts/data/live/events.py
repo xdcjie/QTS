@@ -61,5 +61,3 @@ __all__ = [
     "LiveFeedFailure",
     "LiveFeedPayload",
 ]
-
-LiveFeedSubscribed = MarketDataSubscribed

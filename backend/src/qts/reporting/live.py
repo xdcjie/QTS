@@ -5,11 +5,15 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from qts.core.hashing import stable_json_default, stable_json_hash
+from qts.runtime.mode import RuntimeMode
 from qts.runtime.sinks.base import RuntimeEvent
 from qts.runtime.sinks.live import LiveRuntimeEventSink
+
+if TYPE_CHECKING:
+    from qts.runtime.live import LiveStartupChecklist
 
 _SECRET_KEY_PARTS = ("password", "token", "credential")
 
@@ -44,11 +48,13 @@ class LiveReportWriter:
         broker_account_kind: str | None = None,
         allow_live_orders: bool = False,
         operator_signoff_id: str | None = None,
+        market_data_permission_state: str | None = None,
+        startup_checklist: LiveStartupChecklist | None = None,
         extra_artifacts: dict[str, Path] | None = None,
+        runtime_topology_payload: dict[str, Any] | None = None,
     ) -> LiveReportManifest:
         """Write a manifest naming event and evidence artifacts."""
-        if not runtime_mode.strip():
-            raise ValueError("runtime_mode must not be empty")
+        runtime_mode_value = RuntimeMode.from_value(runtime_mode).value
         if not account_id.strip():
             raise ValueError("account_id must not be empty")
         artifacts = {
@@ -60,8 +66,22 @@ class LiveReportWriter:
         }
         for name, path in (extra_artifacts or {}).items():
             artifacts[name] = self._artifact_payload(path)
+        startup_checklist_payload: dict[str, Any] | None = None
+        if startup_checklist is not None:
+            startup_checklist_payload = startup_checklist.to_payload()
+            startup_checklist_path = self._output_dir / "startup_checklist.json"
+            startup_checklist_path.write_text(
+                json.dumps(
+                    startup_checklist_payload,
+                    default=stable_json_default,
+                    indent=2,
+                    sort_keys=True,
+                ),
+                encoding="utf-8",
+            )
+            artifacts["startup_checklist"] = self._artifact_payload(startup_checklist_path)
         payload = {
-            "runtime_mode": runtime_mode,
+            "runtime_mode": runtime_mode_value,
             "account_id": account_id,
             "event_schema_version": RuntimeEvent.SCHEMA_VERSION,
             "market_data_environment": self._non_empty_or_default(
@@ -80,12 +100,20 @@ class LiveReportWriter:
                 broker_account_kind,
                 default="unknown",
             ),
+            "market_data_permission_state": self._non_empty_or_default(
+                market_data_permission_state,
+                default="unknown",
+            ),
             "allow_live_orders": allow_live_orders,
             "operator_signoff_id": operator_signoff_id,
             "config_hash": stable_json_hash(config_payload),
             "connection_metadata": self._redacted_connection_metadata(connection_metadata),
             "artifacts": artifacts,
         }
+        if runtime_topology_payload is not None:
+            payload["runtime_topology"] = runtime_topology_payload
+        if startup_checklist_payload is not None:
+            payload["startup_checklist"] = startup_checklist_payload
         report_hash = stable_json_hash(payload)
         payload["report_hash"] = report_hash
         run_id = f"live-{report_hash.removeprefix('sha256:')[:12]}"

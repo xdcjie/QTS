@@ -71,6 +71,7 @@ def run_paper_order_lifecycle_drill(
     )
     broker_request = BrokerOrderRequest(
         order_id=order_id,
+        client_order_id=f"client-{order_id.value}",
         account_id=account_id,
         strategy_id=StrategyId("paper-order-lifecycle-drill"),
         instrument_id=instrument,

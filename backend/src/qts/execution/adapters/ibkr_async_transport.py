@@ -121,6 +121,7 @@ class IbAsyncOrderExecutionTransport:
         trade = ib.placeOrder(contract, order)
         broker_order_id = str(trade.order.orderId)
         self._trades_by_broker_order_id[broker_order_id] = trade
+        self._sink.record_submitted_order(request, ibkr_order_id=broker_order_id)
         self._drain_trade_reports(trade)
         return broker_order_id
 
@@ -220,15 +221,15 @@ class IbAsyncOrderExecutionTransport:
         status_key = (broker_order_id, status)
         if status_key not in self._emitted_statuses:
             self._emitted_statuses.add(status_key)
-            self._reports.put(
-                self._sink.on_order_status(
-                    IbkrOrderStatusPayload(
-                        report_id=f"ib-async-status-{broker_order_id}-{status.lower()}",
-                        broker_order_id=broker_order_id,
-                        status=status,
-                    )
+            status_report = self._sink.on_order_status(
+                IbkrOrderStatusPayload(
+                    report_id=f"ib-async-status-{broker_order_id}-{status.lower()}",
+                    broker_order_id=broker_order_id,
+                    status=status,
                 )
             )
+            if status_report is not None:
+                self._reports.put(status_report)
         for fill in tuple(trade.fills):
             execution_id = str(fill.execution.execId)
             if execution_id in self._emitted_executions:
@@ -296,6 +297,7 @@ def _to_ib_async_order(request: IbkrOrderRequest) -> Any:
     else:
         order = MarketOrder(request.side.upper(), float(request.quantity))
     order.account = request.account_id
+    order.orderRef = request.client_order_id
     order.tif = request.time_in_force.value.upper()
     order.outsideRth = request.outside_regular_trading_hours
     return order

@@ -31,6 +31,7 @@ class AccountSnapshot:
     cash: Mapping[str, Decimal]
     positions: Mapping[InstrumentId, Position]
     account_id: AccountId | None = None
+    seen_fill_ids: tuple[str, ...] = ()
 
 
 class AccountActor(Actor):
@@ -61,7 +62,18 @@ class AccountActor(Actor):
             cash=MappingProxyType({"USD": self._cash.balance("USD")}),
             positions=self._positions.snapshot(),
             account_id=self._account_id,
+            seen_fill_ids=self._fill_ids.snapshot(),
         )
+
+    @classmethod
+    def restore(cls, snapshot: AccountSnapshot) -> AccountActor:
+        """Restore account-owned state from an actor snapshot."""
+        actor = cls(initial_cash=snapshot.cash, account_id=snapshot.account_id)
+        actor._positions = PositionBook(
+            {position.instrument_id: position.quantity for position in snapshot.positions.values()}
+        )
+        actor._fill_ids = FillIdempotencyStore.restore(snapshot.seen_fill_ids)
+        return actor
 
     def _apply_fill(self, message: ApplyFill) -> None:
         """Perform _apply_fill."""

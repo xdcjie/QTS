@@ -75,3 +75,37 @@ def test_validation_report_classifies_duplicates_missing_bars_and_gaps() -> None
         DataValidationSeverity.ERROR,
         DataValidationSeverity.WARNING,
     }
+
+
+def test_validation_report_hard_gate_blocks_errors_but_not_warnings() -> None:
+    import pytest
+    from qts.data.validation_report import (
+        DataValidationError,
+        DataValidationIssue,
+        DataValidationIssueCode,
+        DataValidationReport,
+        DataValidationSeverity,
+    )
+
+    warning_report = DataValidationReport(
+        issues=(
+            DataValidationIssue(
+                code=DataValidationIssueCode.MISSING_BAR,
+                message="one expected bar missing",
+                severity=DataValidationSeverity.WARNING,
+            ),
+        )
+    )
+    error_report = DataValidationReport(
+        issues=(
+            DataValidationIssue(
+                code=DataValidationIssueCode.INVALID_OHLC,
+                message="invalid high/low",
+                severity=DataValidationSeverity.ERROR,
+            ),
+        )
+    )
+
+    warning_report.raise_for_errors()
+    with pytest.raises(DataValidationError, match="invalid high/low"):
+        error_report.raise_for_errors()
