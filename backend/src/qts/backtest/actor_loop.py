@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Protocol
+from typing import Protocol, cast
 
 from qts.backtest.dependencies import BacktestActorLoopConfig, BacktestActorLoopDependencies
 from qts.core.ids import AccountId, CausationId, CorrelationId, InstrumentId, StrategyId
@@ -207,6 +207,8 @@ class BacktestActorLoop:
                     account_snapshot=account_actor.snapshot(),
                     latest_prices=latest_prices,
                     aggregate_signals=event_index >= self._warmup_bars,
+                    account_id=self._account_id,
+                    correlation_id=correlation_id,
                 )
                 for intent in strategy_result.raw_intents:
                     sink.write(
@@ -256,6 +258,7 @@ class BacktestActorLoop:
                             RuntimeEvent(
                                 kind="runtime.signal_aggregated",
                                 payload={
+                                    "aggregation_decision_id": batch.aggregation_decision_id,
                                     "aggregation_policy": batch.aggregation_policy.value,
                                     "contributing_strategy_ids": [
                                         strategy_id.value
@@ -286,9 +289,21 @@ class BacktestActorLoop:
                                     kind="runtime.signal_conflict_detected",
                                     payload={
                                         "conflict_reason": batch.conflict_reason,
+                                        "aggregation_decision_id": batch.aggregation_decision_id,
                                         "rejected_strategy_ids": [
                                             strategy_id.value
                                             for strategy_id in batch.rejected_strategy_ids
+                                        ],
+                                        "conflicts": [
+                                            {
+                                                "instrument_key": conflict.instrument_key,
+                                                "strategy_ids": [
+                                                    strategy_id.value
+                                                    for strategy_id in conflict.strategy_ids
+                                                ],
+                                                "reason": conflict.reason,
+                                            }
+                                            for conflict in batch.conflicts
                                         ],
                                         "conflict_group": batch.conflict_group,
                                         "aggregation_policy": batch.aggregation_policy.value,
@@ -304,6 +319,7 @@ class BacktestActorLoop:
                                     kind="runtime.signal_rejected",
                                     payload={
                                         "conflict_reason": batch.conflict_reason,
+                                        "aggregation_decision_id": batch.aggregation_decision_id,
                                         "rejected_strategy_ids": [
                                             strategy_id.value
                                             for strategy_id in batch.rejected_strategy_ids
@@ -329,20 +345,45 @@ class BacktestActorLoop:
                             )
 
                 for intent in strategy_result.intents:
-                    processed = self._process_intent(
-                        intent,
-                        bar=bar,
-                        account_actor=account_actor,
-                        order_manager_actor=order_manager_actor,
-                        order_manager_ref=order_manager_ref,
-                        execution_ref=execution_ref,
-                        account_ref=account_ref,
-                        account_id=self._account_id,
-                        strategy_id=self._strategy_id,
-                        correlation_id=correlation_id,
-                        order_number=sink.order_count + 1,
-                        contributing_strategy_ids=strategy_result.contributing_strategy_ids,
-                    )
+                    try:
+                        processed = self._process_intent(
+                            intent,
+                            bar=bar,
+                            account_actor=account_actor,
+                            order_manager_actor=order_manager_actor,
+                            order_manager_ref=order_manager_ref,
+                            execution_ref=execution_ref,
+                            account_ref=account_ref,
+                            account_id=self._account_id,
+                            strategy_id=self._strategy_id,
+                            correlation_id=correlation_id,
+                            order_number=sink.order_count + 1,
+                            contributing_strategy_ids=strategy_result.contributing_strategy_ids,
+                            aggregation_decision_id=strategy_result.aggregation_decision_id,
+                            conflict_reason=(
+                                strategy_result.conflict_reason
+                                if strategy_result.conflict_reason
+                                else None
+                            ),
+                        )
+                    except ValueError as exc:
+                        if not self._is_broker_capability_reject(exc):
+                            raise
+                        sink.write(
+                            RuntimeEvent(
+                                kind="runtime.broker_rejected",
+                                payload={
+                                    "reason_code": "unsupported_order_type",
+                                    "reason": str(exc),
+                                    "broker_capability_model": (self._broker_capability_payload()),
+                                },
+                                correlation_id=correlation_id,
+                                instrument_id=intent.asset.instrument_id,
+                                account_id=self._account_id,
+                                strategy_id=self._strategy_id,
+                            )
+                        )
+                        continue
                     order_payload = processed.orders
                     fill_payload = processed.fills
                     sink.write_processed(
@@ -360,6 +401,11 @@ class BacktestActorLoop:
                                     "broker_order_id": order.broker_order_id,
                                     "client_order_id": metadata.client_order_id,
                                     "instrument_id": order.intent.instrument_id.value,
+                                    "aggregation_decision_id": metadata.aggregation_decision_id,
+                                    "contributing_strategy_ids": [
+                                        strategy_id.value
+                                        for strategy_id in metadata.contributing_strategy_ids
+                                    ],
                                 },
                                 correlation_id=metadata.correlation_id,
                                 instrument_id=order.intent.instrument_id,
@@ -375,6 +421,7 @@ class BacktestActorLoop:
                                     "state": order.state.value,
                                     "broker_order_id": order.broker_order_id,
                                     "client_order_id": metadata.client_order_id,
+                                    "aggregation_decision_id": metadata.aggregation_decision_id,
                                 },
                                 correlation_id=metadata.correlation_id,
                                 instrument_id=order.intent.instrument_id,
@@ -453,6 +500,16 @@ class BacktestActorLoop:
                 },
             )
         )
+
+    @staticmethod
+    def _is_broker_capability_reject(exc: ValueError) -> bool:
+        return "not supported by broker capabilities" in str(exc)
+
+    def _broker_capability_payload(self) -> dict[str, object]:
+        payload = getattr(self._execution_adapter, "broker_capability_payload", None)
+        if payload is None:
+            return {}
+        return cast(dict[str, object], payload())
 
 
 __all__ = ["BacktestActorLoop", "BacktestActorLoopResult"]

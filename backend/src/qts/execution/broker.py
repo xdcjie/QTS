@@ -102,6 +102,34 @@ class BrokerCapabilities:
             raise ValueError("quantity is below minimum broker lot size")
         return rounded
 
+    def to_manifest_payload(self) -> dict[str, object]:
+        """Serialize auditable broker capability assumptions."""
+        return {
+            "broker_id": self.broker_id.value,
+            "supports_market_orders": self.supports_market_orders,
+            "supports_limit_orders": self.supports_limit_orders,
+            "supports_stop_orders": self.supports_stop_orders,
+            "supports_cancel": self.supports_cancel,
+            "supports_replace": self.supports_replace,
+            "supports_fractional": self.supports_fractional,
+            "supports_short": self.supports_short,
+            "min_order_quantity": (
+                str(self.min_order_quantity) if self.min_order_quantity is not None else None
+            ),
+            "lot_size": str(self.lot_size) if self.lot_size is not None else None,
+            "min_tick": str(self.min_tick) if self.min_tick is not None else None,
+            "max_order_quantity": (
+                str(self.max_order_quantity) if self.max_order_quantity is not None else None
+            ),
+            "supported_asset_classes": sorted(self.supported_asset_classes),
+            "supported_order_types": sorted(
+                order_type.value for order_type in self.supported_order_types
+            ),
+            "supported_time_in_force": sorted(
+                time_in_force.value for time_in_force in self.supported_time_in_force
+            ),
+        }
+
 
 class BrokerOrderType(StrEnum):
     """Order types modeled before broker submission."""

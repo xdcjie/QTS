@@ -74,3 +74,23 @@ def test_order_plan_builder_returns_no_plan_when_target_already_matches_position
     )
 
     assert plans == ()
+
+
+def test_order_plan_builder_carries_aggregation_decision_id() -> None:
+    from qts.backtest.instrument_context import BacktestInstrumentContext
+    from qts.runtime.intent_processing import OrderPlanBuilder
+
+    bar = _bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC))
+    builder = OrderPlanBuilder(instrument_context=BacktestInstrumentContext(registry_bars=(bar,)))
+
+    plans = builder.build(
+        TargetIntent(intent_type=TargetIntentType.QUANTITY, asset=_asset(), value=Decimal("3")),
+        account_id=AccountId("acct-backtest"),
+        bar=bar,
+        positions={
+            bar.instrument_id: Position(instrument_id=bar.instrument_id, quantity=Decimal("1"))
+        },
+        aggregation_decision_id="sigagg-plan",
+    )
+
+    assert plans[0].aggregation_decision_id == "sigagg-plan"

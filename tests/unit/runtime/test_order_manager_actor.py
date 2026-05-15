@@ -188,3 +188,121 @@ def test_order_for_wrong_account_is_rejected() -> None:
                 correlation_id=CorrelationId("corr-001"),
             )
         )
+
+
+def test_cancel_for_account_a_cannot_cancel_account_b_order() -> None:
+    from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import CancelIntent
+    from qts.domain.risk import RiskDecision
+    from qts.execution.order_manager import OrderIntent, OrderSide
+    from qts.runtime.actor_ref import ActorRef
+    from qts.runtime.actors.order_manager_actor import CancelOrder, OrderManagerActor, SubmitOrder
+    from qts.runtime.mailbox import Mailbox
+
+    execution = Mailbox()
+    account_id = AccountId("acct-b")
+    actor = OrderManagerActor(
+        account_id=account_id,
+        execution_ref=ActorRef(mailbox=execution),
+        account_ref=ActorRef(mailbox=Mailbox()),
+    )
+    order_id = OrderId("ord-001")
+    actor.handle(
+        SubmitOrder(
+            intent=OrderIntent(
+                order_id=order_id,
+                account_id=account_id,
+                instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+                side=OrderSide.BUY,
+                quantity=Decimal("10"),
+            ),
+            risk_decision=RiskDecision.approve(),
+            broker_order_id="broker-001",
+            market_price=Decimal("101"),
+            account_id=account_id,
+            strategy_id=StrategyId("strategy-b"),
+            client_order_id="client-b",
+            correlation_id=CorrelationId("corr-b"),
+        )
+    )
+    assert execution.get() is not None
+
+    with pytest.raises(ValueError, match="cancel account_id"):
+        actor.handle(
+            CancelOrder(
+                intent=CancelIntent(order_id=order_id),
+                account_id=AccountId("acct-a"),
+                strategy_id=StrategyId("strategy-b"),
+                client_order_id="client-b",
+                correlation_id=CorrelationId("corr-b"),
+            )
+        )
+
+    assert execution.empty()
+
+
+def test_order_route_metadata_round_trips_for_recovery() -> None:
+    from qts.core.ids import AccountId, CorrelationId, StrategyId
+    from qts.runtime.actors.order_manager_actor import OrderRouteMetadata
+
+    metadata = OrderRouteMetadata(
+        account_id=AccountId("acct-a"),
+        strategy_id=StrategyId("strategy-a"),
+        client_order_id="client-a",
+        correlation_id=CorrelationId("corr-a"),
+    )
+
+    restored = OrderRouteMetadata.from_payload(metadata.to_payload())
+
+    assert restored == metadata
+
+
+def test_order_route_metadata_references_signal_aggregation_decision() -> None:
+    from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
+    from qts.domain.risk import RiskDecision
+    from qts.execution.order_manager import OrderIntent, OrderSide
+    from qts.runtime.actor_ref import ActorRef
+    from qts.runtime.actors.order_manager_actor import OrderManagerActor, SubmitOrder
+    from qts.runtime.mailbox import Mailbox
+
+    execution = Mailbox()
+    account_id = AccountId("acct-a")
+    contributing_strategy_ids = (
+        StrategyId("strategy-a"),
+        StrategyId("strategy-b"),
+    )
+    aggregation_decision_id = "sigagg-abc123"
+    actor = OrderManagerActor(
+        account_id=account_id,
+        execution_ref=ActorRef(mailbox=execution),
+        account_ref=ActorRef(mailbox=Mailbox()),
+    )
+    intent = OrderIntent(
+        order_id=OrderId("ord-aggregation"),
+        account_id=account_id,
+        instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+        side=OrderSide.BUY,
+        quantity=Decimal("10"),
+    )
+
+    actor.handle(
+        SubmitOrder(
+            intent=intent,
+            risk_decision=RiskDecision.approve(
+                contributing_strategy_ids=contributing_strategy_ids,
+                aggregation_decision_id=aggregation_decision_id,
+            ),
+            broker_order_id="broker-aggregation",
+            market_price=Decimal("101"),
+            account_id=account_id,
+            strategy_id=StrategyId("strategy-a"),
+            client_order_id="client-aggregation",
+            correlation_id=CorrelationId("corr-aggregation"),
+            contributing_strategy_ids=contributing_strategy_ids,
+            aggregation_decision_id=aggregation_decision_id,
+        )
+    )
+
+    metadata = actor.route_metadata(intent.order_id)
+    assert metadata.contributing_strategy_ids == contributing_strategy_ids
+    assert metadata.aggregation_decision_id == aggregation_decision_id

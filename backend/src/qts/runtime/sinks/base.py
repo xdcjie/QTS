@@ -54,6 +54,8 @@ class RuntimeEvent:
             client_order_id = self.payload.get("client_order_id")
             if not isinstance(client_order_id, str) or not client_order_id.strip():
                 raise ValueError("client_order_id is required for order and fill events")
+        if self._requires_causation_id() and self.causation_id is None:
+            raise ValueError("causation_id is required for fill events")
         if self.sequence_no is not None and self.sequence_no <= 0:
             raise ValueError("sequence_no must be positive")
         if self.ts_ingest is None:
@@ -69,6 +71,7 @@ class RuntimeEvent:
             "parent_event_id": self._id_value(self.parent_event_id),
             "run_id": self._id_value(self.run_id),
             "mode": self.mode,
+            "runtime_mode": self.mode,
             "sequence_no": effective_sequence_no,
             "ts_event": self.ts_event.isoformat() if self.ts_event is not None else None,
             "ts_ingest": self.ts_ingest.isoformat() if self.ts_ingest is not None else None,
@@ -86,13 +89,55 @@ class RuntimeEvent:
 
     def _requires_correlation_id(self) -> bool:
         normalized = self.kind.lower()
-        trace_tokens = ("order", "risk", "fill", "broker_report", "broker_rejected")
-        return any(token in normalized for token in trace_tokens)
+        trace_prefixes = (
+            "runtime.order",
+            "order.",
+            "order_",
+            "runtime.risk",
+            "risk.",
+            "risk_",
+            "runtime.fill",
+            "fill.",
+            "fill_",
+            "runtime.broker_report",
+            "broker_report",
+            "runtime.broker_rejected",
+            "broker_rejected",
+        )
+        return any(normalized.startswith(prefix) for prefix in trace_prefixes)
 
     def _requires_client_order_id(self) -> bool:
         normalized = self.kind.lower()
-        trace_tokens = ("order", "broker_report", "fill")
-        return any(token in normalized for token in trace_tokens)
+        trace_prefixes = (
+            "runtime.order",
+            "order.",
+            "order_",
+            "runtime.broker_report",
+            "broker_report",
+            "runtime.fill",
+            "fill.",
+            "fill_",
+        )
+        return any(normalized.startswith(prefix) for prefix in trace_prefixes)
+
+    def _requires_causation_id(self) -> bool:
+        normalized = self.kind.lower()
+        return normalized.startswith(("runtime.fill", "fill.", "fill_"))
+
+    @staticmethod
+    def require_canonical_envelope(row: dict[str, Any]) -> None:
+        """Require identity, mode, and sequence fields before persistence."""
+        required_fields = (
+            "run_id",
+            "runtime_mode",
+            "sequence_no",
+            "event_id",
+            "payload_schema_version",
+        )
+        for field_name in required_fields:
+            value = row.get(field_name)
+            if value is None or (isinstance(value, str) and not value.strip()):
+                raise ValueError(f"{field_name} is required for runtime event envelope")
 
     @staticmethod
     def _id_value(identifier: object) -> str | None:

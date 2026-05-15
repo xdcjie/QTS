@@ -28,6 +28,8 @@ class RiskDecision:
     rule_id: str | None = None
     checked_at: datetime | None = None
     contributing_strategy_ids: tuple[StrategyId, ...] = ()
+    aggregation_decision_id: str | None = None
+    conflict_reason: str | None = None
     evidence: Mapping[str, object] = field(default_factory=dict)
 
     @classmethod
@@ -37,6 +39,8 @@ class RiskDecision:
         rule_id: str | None = None,
         checked_at: datetime | None = None,
         contributing_strategy_ids: tuple[StrategyId, ...] | None = None,
+        aggregation_decision_id: str | None = None,
+        conflict_reason: str | None = None,
         evidence: Mapping[str, object] | None = None,
     ) -> RiskDecision:
         """Perform approve."""
@@ -47,6 +51,8 @@ class RiskDecision:
             contributing_strategy_ids=contributing_strategy_ids
             if contributing_strategy_ids is not None
             else (),
+            aggregation_decision_id=aggregation_decision_id,
+            conflict_reason=conflict_reason,
             evidence={} if evidence is None else dict(evidence),
         )
 
@@ -59,6 +65,8 @@ class RiskDecision:
         rule_id: str | None = None,
         checked_at: datetime | None = None,
         contributing_strategy_ids: tuple[StrategyId, ...] | None = None,
+        aggregation_decision_id: str | None = None,
+        conflict_reason: str | None = None,
         evidence: Mapping[str, object] | None = None,
     ) -> RiskDecision:
         """Perform rejected."""
@@ -75,6 +83,8 @@ class RiskDecision:
             contributing_strategy_ids=contributing_strategy_ids
             if contributing_strategy_ids is not None
             else (),
+            aggregation_decision_id=aggregation_decision_id,
+            conflict_reason=conflict_reason,
             evidence={} if evidence is None else dict(evidence),
         )
 

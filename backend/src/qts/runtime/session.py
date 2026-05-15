@@ -28,8 +28,8 @@ from qts.runtime.dependencies import RuntimeSessionDependencies
 from qts.runtime.intent_processing import ProcessedIntent, TargetIntentProcessor
 from qts.runtime.live_runtime_topology import (
     AccountRuntimePartition,
-    _LiveRuntimeTopologyBuilder,
-    _StrategyRuntimeBinding,
+    BrokerRuntimeTopologyResolver,
+    StrategyRuntimeBinding,
 )
 from qts.runtime.mailbox import Mailbox
 from qts.runtime.market_data_flow import MarketDataFlow
@@ -88,7 +88,7 @@ class RuntimeSession:
         self._topology = dependencies.runtime_topology
         self._resolved_account_id = dependencies.account_id
         self._resolved_strategy_id = dependencies.strategy_id
-        self._strategy_bindings: tuple[_StrategyRuntimeBinding, ...] = ()
+        self._strategy_bindings: tuple[StrategyRuntimeBinding, ...] = ()
         self._strategy_subscriptions: tuple[InstrumentId, ...] = ()
         self._account_partitions: dict[AccountId | None, AccountRuntimePartition] = {}
         self._intent_processors: dict[AccountId | None, TargetIntentProcessor] = {}
@@ -97,7 +97,7 @@ class RuntimeSession:
         self._runtime_event_sequence = 0
         self._order_sequence = 0
         self._kill_switch_active = False
-        resolved_topology = _LiveRuntimeTopologyBuilder(dependencies).build()
+        resolved_topology = BrokerRuntimeTopologyResolver(dependencies).build()
         self._strategy_bindings = resolved_topology.strategy_bindings
         self._strategy_subscriptions = resolved_topology.strategy_subscriptions
         self._account_partitions = resolved_topology.account_partitions
@@ -272,6 +272,8 @@ class RuntimeSession:
         correlation_id: CorrelationId,
         partition: AccountRuntimePartition,
         contributing_strategy_ids: tuple[StrategyId, ...] = (),
+        aggregation_decision_id: str | None = None,
+        conflict_reason: str | None = None,
     ) -> ProcessedIntent:
         self._order_sequence += 1
         try:
@@ -290,6 +292,8 @@ class RuntimeSession:
             strategy_id=strategy_id,
             correlation_id=correlation_id,
             contributing_strategy_ids=contributing_strategy_ids,
+            aggregation_decision_id=aggregation_decision_id,
+            conflict_reason=conflict_reason,
             market_data_context=self._market_data_flow.risk_context_for(bar.instrument_id),
             order_number=self._order_sequence,
         )
@@ -298,10 +302,20 @@ class RuntimeSession:
         self,
         bar: Bar,
         contributions: tuple[SignalContribution, ...],
+        *,
+        account_id: AccountId | None = None,
+        correlation_id: CorrelationId | None = None,
     ) -> tuple[AggregatedSignalBatch, ...]:
         if not contributions:
             return ()
-        self._signal_aggregator_ref.tell(StrategySignalEvent(bar=bar, contributions=contributions))
+        self._signal_aggregator_ref.tell(
+            StrategySignalEvent(
+                bar=bar,
+                contributions=contributions,
+                account_id=account_id,
+                correlation_id=correlation_id,
+            )
+        )
         self._signal_aggregator_ref.process_all()
         batches: list[AggregatedSignalBatch] = []
         while not self._signal_result_mailbox.empty():

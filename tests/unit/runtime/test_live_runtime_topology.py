@@ -18,7 +18,10 @@ from qts.domain.orders import ExecutionReport, ExecutionReportStatus, OrderInten
 from qts.risk.risk_engine import RiskEngine
 from qts.runtime.actors.account_actor import AccountActor, AccountSnapshot
 from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
-from qts.runtime.live_runtime_topology import _LiveRuntimeTopologyBuilder
+from qts.runtime.live_runtime_topology import (
+    BrokerRuntimeTopologyResolver,
+    _LiveRuntimeTopologyBuilder,
+)
 from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
 from qts.runtime.topology import (
     AccountRuntimeSpec,
@@ -132,13 +135,16 @@ def _portfolio_view(
 def _deps(
     strategy: Strategy,
     *,
+    strategies: tuple[Strategy, ...] | None = None,
     runtime_topology: RuntimeTopology | None = None,
     account_id: AccountId | None = None,
     strategy_id: StrategyId | None = None,
     account_actors: dict[AccountId, AccountActor] | None = None,
+    risk_engines: dict[AccountId, RiskEngine] | None = None,
 ) -> LiveRuntimeDependencies:
     return LiveRuntimeDependencies(
-        strategy=strategy,
+        strategy=None if strategies is not None else strategy,
+        strategies=strategies,
         risk_engine=RiskEngine([]),
         instrument_context=_InstrumentContext(),
         execution_adapter=_ExecutionAdapter(),
@@ -152,6 +158,7 @@ def _deps(
         multiplier_for=lambda instrument_id: Decimal("1"),
         runtime_topology=runtime_topology,
         account_actors=account_actors,
+        risk_engines=risk_engines,
         account_id=account_id,
         strategy_id=strategy_id,
     )
@@ -220,6 +227,43 @@ def test_live_runtime_topology_builder_defaults_for_non_topology_execution() -> 
     assert resolved.resolved_account_id == AccountId("acct-default")
     assert resolved.resolved_strategy_id == StrategyId("strategy")
     assert resolved.strategy_bindings[0].strategy_id == StrategyId("strategy")
+
+
+def test_runtime_topology_resolver_uses_account_scoped_risk_engines() -> None:
+    account_a = AccountId("acct-a")
+    account_b = AccountId("acct-b")
+    risk_a = RiskEngine([])
+    risk_b = RiskEngine([])
+    topology = _topology(
+        mode=RuntimeMode.PAPER_SIMULATED,
+        account_ids=(account_a, account_b),
+        strategy_specs=(
+            ("strategy-a", (InstrumentId("EQUITY.US.NASDAQ.AAPL"),)),
+            ("strategy-b", (InstrumentId("EQUITY.US.NASDAQ.MSFT"),)),
+        ),
+    )
+
+    resolved = BrokerRuntimeTopologyResolver(
+        _deps(
+            strategy=_Strategy(),
+            strategies=(_Strategy(), _Strategy()),
+            runtime_topology=topology,
+            account_actors={
+                account_a: AccountActor(
+                    initial_cash={"USD": Decimal("10000")},
+                    account_id=account_a,
+                ),
+                account_b: AccountActor(
+                    initial_cash={"USD": Decimal("10000")},
+                    account_id=account_b,
+                ),
+            },
+            risk_engines={account_a: risk_a, account_b: risk_b},
+        )
+    ).build()
+
+    assert resolved.account_partitions[account_a].risk_engine is risk_a
+    assert resolved.account_partitions[account_b].risk_engine is risk_b
 
 
 def test_live_runtime_topology_builder_uses_topology_fallback_subscriptions() -> None:

@@ -162,3 +162,22 @@ def test_architecture_import_graph_snapshot_smoke(tmp_path: Path) -> None:
     assert isinstance(payload, dict)
     assert payload
     assert all(isinstance(key, str) for key in payload.keys())
+
+
+def test_runtime_topology_live_private_builder_is_not_canonical() -> None:
+    import ast
+
+    topology_tree = ast.parse(
+        Path("backend/src/qts/runtime/live_runtime_topology.py").read_text(encoding="utf-8")
+    )
+    session_source = Path("backend/src/qts/runtime/session.py").read_text(encoding="utf-8")
+    class_names = {node.name for node in topology_tree.body if isinstance(node, ast.ClassDef)}
+
+    assert "_LiveRuntimeTopologyBuilder" not in class_names
+    assert "_ResolvedLiveRuntimeTopology" not in class_names
+    assert "_StrategyRuntimeBinding" not in class_names
+    assert "_LiveRuntimeTopologyBuilder" not in session_source
+    assert "_StrategyRuntimeBinding" not in session_source
+    assert "BrokerRuntimeTopologyResolver" in class_names
+    assert "ResolvedRuntimeTopology" in class_names
+    assert "StrategyRuntimeBinding" in class_names

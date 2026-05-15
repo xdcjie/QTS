@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -61,6 +62,12 @@ def _bar(start: datetime, close: str = "100") -> Bar:
         volume=Decimal("100"),
         is_complete=True,
     )
+
+
+def _read_ndjson(path: Path) -> list[dict[str, Any]]:
+    return [
+        json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()
+    ]
 
 
 def test_backtest_actor_loop_processes_bars_and_returns_runtime_result(tmp_path: Path) -> None:
@@ -222,6 +229,95 @@ def test_backtest_actor_loop_emits_signal_events() -> None:
     assert fill_event.payload["client_order_id"] == "bt-client-000001"
     assert fill_event.payload["order_id"] == "bt-000001"
     assert fill_event.correlation_id == order_event.correlation_id
+
+
+def test_backtest_actor_loop_emits_broker_reject_event_for_capability_reject(
+    tmp_path: Path,
+) -> None:
+    from qts.backtest.actor_loop import BacktestActorLoop
+    from qts.backtest.dependencies import BacktestActorLoopConfig, BacktestActorLoopDependencies
+    from qts.backtest.engine import BacktestCostModel
+    from qts.backtest.instrument_context import BacktestInstrumentContext
+    from qts.backtest.portfolio_projection import BacktestPortfolioProjector
+    from qts.core.ids import AccountId, BrokerId, RuntimeRunId, StrategyId
+    from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
+    from qts.execution.broker import BrokerCapabilities
+    from qts.reporting.backtest import BacktestArtifactWriter
+    from qts.risk.risk_engine import RiskEngine
+    from qts.risk.rules.max_notional import MaxNotionalRule
+    from qts.runtime.intent_processing import TargetIntentProcessor
+    from qts.runtime.sinks.backtest import BacktestRuntimeEventSink
+    from qts.runtime.sinks.base import RuntimeEventContext
+
+    class OneOrderStrategy(Strategy):
+        def initialize(self, ctx: Any) -> None:
+            self.asset = ctx.symbol("AAPL")
+
+        def on_bar(self, ctx: Any, bar: object) -> None:
+            ctx.target_quantity(self.asset, Decimal("1"))
+
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    bars = [_bar(start, "100")]
+    instrument_context = BacktestInstrumentContext(instrument_registry=None, registry_bars=bars)
+    portfolio_projector = BacktestPortfolioProjector()
+    intent_processor = TargetIntentProcessor(
+        risk_engine=RiskEngine([MaxNotionalRule(max_notional=Decimal("1000000"))]),
+        instrument_context=instrument_context,
+        multiplier_for=portfolio_projector.multiplier_for,
+    )
+    loop = BacktestActorLoop(
+        strategy=OneOrderStrategy(),
+        bars=bars,
+        config=BacktestActorLoopConfig(initial_cash=Decimal("10000"), warmup_bars=0),
+        dependencies=BacktestActorLoopDependencies(
+            instrument_registry=instrument_context.instrument_registry(),
+            contract_multipliers={},
+            execution_adapter=SimulatedExecutionAdapter(
+                BacktestCostModel(),
+                capabilities=BrokerCapabilities(
+                    broker_id=BrokerId("simulated"),
+                    supports_market_orders=False,
+                ),
+            ),
+            process_intent=intent_processor.process_intent,
+            portfolio_view=portfolio_projector.portfolio_view,
+            equity_point=portfolio_projector.equity_point,
+            update_rolling_prices=instrument_context.update_rolling_prices,
+        ),
+        account_id=AccountId("acct-backtest"),
+        strategy_id=StrategyId("strategy-backtest"),
+    )
+    writer = BacktestArtifactWriter(tmp_path, run_id=RuntimeRunId("bt-capability-reject"))
+    sink = BacktestRuntimeEventSink(
+        writer,
+        context=RuntimeEventContext(
+            run_id=RuntimeRunId("bt-capability-reject"),
+            mode="backtest",
+            execution_environment="simulated",
+            account_id=AccountId("acct-backtest"),
+            strategy_id=StrategyId("strategy-backtest"),
+        ),
+    )
+
+    runtime = loop.run(sink=sink, prune_history=True, compact_orders=True)
+    writer.finalize(
+        config_hash="cfg",
+        dataset_metadata=(),
+        cost_model={},
+        processed_bars=runtime.processed_bars,
+        warmup_bars=runtime.warmup_bars,
+        trading_bars=runtime.trading_bars,
+        final_cash=runtime.final_account.cash["USD"],
+        strategy_version="test",
+    )
+
+    rows = _read_ndjson(next(tmp_path.glob("*.events.ndjson")))
+    reject_event = next(row for row in rows if row["kind"] == "runtime.broker_rejected")
+    assert reject_event["payload"]["reason_code"] == "unsupported_order_type"
+    assert reject_event["payload"]["broker_capability_model"]["supports_market_orders"] is False
+    assert "runtime.fill_applied" not in [row["kind"] for row in rows]
+    assert runtime.final_account.positions == {}
+    assert runtime.final_account.cash["USD"] == Decimal("10000")
 
 
 def test_backtest_actor_loop_emits_market_data_provenance() -> None:

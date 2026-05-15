@@ -135,11 +135,11 @@ Backtest 使用 `ReplayMarketDataSource + SimulatedExecutionAdapter`，paper/liv
 ### 验收条件
 
 ```text
-[ ] 可以通过一条命令生成 class inventory。
-[ ] 可以通过一条命令生成 import graph。
-[ ] 当前 backtest smoke test 通过。
-[ ] 当前 paper/runtime fake-boundary smoke test 通过。
-[ ] 后续 task 的 PR 都能和 baseline 做 diff。
+[x] 可以通过一条命令生成 class inventory。
+[x] 可以通过一条命令生成 import graph。
+[x] 当前 backtest smoke test 通过。
+[x] 当前 paper/runtime fake-boundary smoke test 通过。
+[x] 后续 task 的 PR 都能和 baseline 做 diff。
 ```
 
 ---
@@ -215,12 +215,12 @@ pytest tests/quality/test_guardrails.py
 ### 验收条件
 
 ```text
-[ ] `grep -R "class Fake" backend/src/qts` 无结果，除非路径在 `qts/testing`。
-[ ] `grep -R "placeholder" backend/src/qts` 无 production docstring 结果。
-[ ] `grep -R "beta" backend/src/qts` 无 production docstring 结果。
-[ ] `grep -R "intended to be owned" backend/src/qts` 无结果。
-[ ] guardrail 在 CI 中必跑且违规会 fail。
-[ ] 所有 moved fake 的 import 已迁移或有 deprecated shim。
+[x] `grep -R "class Fake" backend/src/qts` 无结果，除非路径在 `qts/testing`。
+[x] `grep -R "placeholder" backend/src/qts` 无 production docstring 结果。
+[x] `grep -R "beta" backend/src/qts` 无 production docstring 结果。
+[x] `grep -R "intended to be owned" backend/src/qts` 无结果。
+[x] guardrail 在 CI 中必跑且违规会 fail。
+[x] 所有 moved fake 的 import 已迁移或有 deprecated shim。
 ```
 
 ---
@@ -275,11 +275,11 @@ from qts.runtime.session import RuntimeSession as LiveRuntimeSession
 ### 验收条件
 
 ```text
-[ ] production code 不再 import `qts.runtime.live_runtime_session.LiveRuntimeSession`。
-[ ] class inventory canonical name 显示 `RuntimeSession`。
-[ ] 旧 import shim 可用，但测试中只有 compatibility test 使用。
-[ ] `RuntimeSession` docstring 明确：broker-capable runtime session，不代表 live capital enabled。
-[ ] backtest smoke、paper smoke、runtime command smoke 全部通过。
+[x] production code 不再 import `qts.runtime.live_runtime_session.LiveRuntimeSession`。
+[x] class inventory canonical name 显示 `RuntimeSession`。
+[x] 旧 import shim 可用，但测试中只有 compatibility test 使用。
+[x] `RuntimeSession` docstring 明确：broker-capable runtime session，不代表 live capital enabled。
+[x] backtest smoke、paper smoke、runtime command smoke 全部通过。
 ```
 
 ---
@@ -340,11 +340,11 @@ live_order_permission
 ### 验收条件
 
 ```text
-[ ] `LivePermissionMode` 不再是 canonical class。
-[ ] live order path 不再直接用 RuntimeMode 判断是否可下单。
-[ ] `LIVE_OBSERVATION` 模式下所有 submit order 被拒绝，并记录 reason_code。
-[ ] `PAPER_BROKER` 模式不能获得 `LIVE_ORDERS_ALLOWED`。
-[ ] `LIVE` 模式没有显式 `LIVE_ORDERS_ALLOWED` 时不能下单。
+[x] `LivePermissionMode` 不再是 canonical class。
+[x] live order path 不再直接用 RuntimeMode 判断是否可下单。
+[x] `LIVE_OBSERVATION` 模式下所有 submit order 被拒绝，并记录 reason_code。
+[x] `PAPER_BROKER` 模式不能获得 `LIVE_ORDERS_ALLOWED`。
+[x] `LIVE` 模式没有显式 `LIVE_ORDERS_ALLOWED` 时不能下单。
 ```
 
 ---
@@ -405,11 +405,11 @@ PAPER_SIMULATED:
 ### 验收条件
 
 ```text
-[ ] production docstring 不再出现 “paper without real broker credentials” 这种模糊描述。
-[ ] PAPER_BROKER 使用 DU account + 4002 默认端口。
-[ ] PAPER_SIMULATED 永远不会构造 IBKR order transport。
-[ ] manifest 能一眼区分 paper broker 和 paper simulated。
-[ ] 至少有 2 个配置样例：paper_broker.yaml、paper_simulated.yaml。
+[x] production docstring 不再出现 “paper without real broker credentials” 这种模糊描述。
+[x] PAPER_BROKER 使用 DU account + 4002 默认端口。
+[x] PAPER_SIMULATED 永远不会构造 IBKR order transport。
+[x] manifest 能一眼区分 paper broker 和 paper simulated。
+[x] 至少有 2 个配置样例：paper_broker.yaml、paper_simulated.yaml。
 ```
 
 ---
@@ -460,11 +460,11 @@ qts/data/live/ibkr_specific.py   # 如确实有 provider-specific 内容
 ### 验收条件
 
 ```text
-[ ] `MarketDataAdapter` canonical path 是 `qts.data.interfaces`。
-[ ] `ReplayMarketDataSource` 不依赖 `qts.data.live`。
-[ ] `StreamingMarketDataSource` 可通过新 shared contract 运行。
-[ ] `qts.data.live` 中不再有 shared contract class。
-[ ] architecture test 禁止 replay 依赖 live package。
+[x] `MarketDataAdapter` canonical path 是 `qts.data.interfaces`。
+[x] `ReplayMarketDataSource` 不依赖 `qts.data.live`。
+[x] `StreamingMarketDataSource` 可通过新 shared contract 运行。
+[x] `qts.data.live` 中不再有 shared contract class。
+[x] architecture test 禁止 replay 依赖 live package。
 ```
 
 ---
@@ -506,11 +506,11 @@ qts/simulation/broker.py
 ### 验收条件
 
 ```text
-[ ] `backend/src/qts/data/live/fake_adapter.py` 删除或仅作为 deprecated test shim。
-[ ] production package 不再含 `Fake*` class。
-[ ] tests 中 fake import 全部来自 `qts.testing.fakes`。
-[ ] paper_simulated runtime 使用 `Simulated*`，不是 `Fake*`。
-[ ] CI guardrail 覆盖 production no-fake rule。
+[x] `backend/src/qts/data/live/fake_adapter.py` 删除或仅作为 deprecated test shim。
+[x] production package 不再含 `Fake*` class。
+[x] tests 中 fake import 全部来自 `qts.testing.fakes`。
+[x] paper_simulated runtime 使用 `Simulated*`，不是 `Fake*`。
+[x] CI guardrail 覆盖 production no-fake rule。
 ```
 
 ---
@@ -1017,12 +1017,12 @@ test_replay_out_of_order_rejected_with_event
 ### 验收条件
 
 ```text
-[ ] 策略在 10:00 不能看到 [10:00, 10:01) bar close。
-[ ] 中途 subscribe 前的数据不会被发送。
-[ ] unsubscribe 后不再发送该 subscription 数据。
-[ ] 多标的同 timestamp 的 replay 顺序可重复。
-[ ] 数据 gap 不会静默补齐。
-[ ] ReplayDataAnomalyEvent 进入 RuntimeEventSink。
+[x] 策略在 10:00 不能看到 [10:00, 10:01) bar close。
+[x] 中途 subscribe 前的数据不会被发送。
+[x] unsubscribe 后不再发送该 subscription 数据。
+[x] 多标的同 timestamp 的 replay 顺序可重复。
+[x] 数据 gap 不会静默补齐。
+[x] ReplayDataAnomalyEvent 进入 RuntimeEventSink。
 ```
 
 ---
@@ -1064,10 +1064,10 @@ market_data_latency_model
 ### 验收条件
 
 ```text
-[ ] 任意 backtest manifest 都能看到 fill/slippage/commission/capability 假设。
-[ ] 不同 fill model 的报告可通过 manifest 区分。
-[ ] unsupported order 在 backtest 中按 broker capability reject。
-[ ] broker capability reject 会进入 RuntimeEventSink。
+[x] 任意 backtest manifest 都能看到 fill/slippage/commission/capability 假设。
+[x] 不同 fill model 的报告可通过 manifest 区分。
+[x] unsupported order 在 backtest 中按 broker capability reject。
+[x] broker capability reject 会进入 RuntimeEventSink。
 ```
 
 ---
@@ -1115,11 +1115,11 @@ payload
 ### 验收条件
 
 ```text
-[ ] 所有 runtime event 都有 run_id、runtime_mode、sequence_no。
-[ ] order/fill/risk/account event 都有 correlation_id。
-[ ] fill event 的 causation_id 指向 order event 或 broker callback event。
-[ ] recovery replay 能按 sequence_no 重建顺序。
-[ ] backtest sink 和 live sink 使用同一 envelope schema。
+[x] 所有 runtime event 都有 run_id、runtime_mode、sequence_no。
+[x] order/fill/risk/account event 都有 correlation_id。
+[x] fill event 的 causation_id 指向 order event 或 broker callback event。
+[x] recovery replay 能按 sequence_no 重建顺序。
+[x] backtest sink 和 live sink 使用同一 envelope schema。
 ```
 
 ---
@@ -1166,12 +1166,12 @@ signal_aggregation_policy
 ### 验收条件
 
 ```text
-[ ] 只有一个 public topology builder。
-[ ] paper/live/backtest topology 都能生成 RuntimeTopologyManifest。
-[ ] duplicate strategy_id 会 fail。
-[ ] missing account route 会 fail。
-[ ] missing broker route 会 fail。
-[ ] class inventory 不再把 `_LiveRuntimeTopologyBuilder` 作为主要实现。
+[x] 只有一个 public topology builder。
+[x] paper/live/backtest topology 都能生成 RuntimeTopologyManifest。
+[x] duplicate strategy_id 会 fail。
+[x] missing account route 会 fail。
+[x] missing broker route 会 fail。
+[x] class inventory 不再把 `_LiveRuntimeTopologyBuilder` 作为主要实现。
 ```
 
 ---
@@ -1220,11 +1220,11 @@ produce BrokerRuntimeRecoveryDecision
 ### 验收条件
 
 ```text
-[ ] snapshot 写入中断不会留下被误读的半文件。
-[ ] event sequence gap 会导致 recovery decision = BLOCK。
-[ ] recovery replay 后必须执行 broker reconciliation。
-[ ] reconciliation 未通过不能恢复 order submission。
-[ ] recovery decision 写入 RuntimeEventSink 和 manifest。
+[x] snapshot 写入中断不会留下被误读的半文件。
+[x] event sequence gap 会导致 recovery decision = BLOCK。
+[x] recovery replay 后必须执行 broker reconciliation。
+[x] reconciliation 未通过不能恢复 order submission。
+[x] recovery decision 写入 RuntimeEventSink 和 manifest。
 ```
 
 ---
@@ -1270,11 +1270,11 @@ correlation_id
 ### 验收条件
 
 ```text
-[ ] 任意 fill 都不能跨账户 apply。
-[ ] 任意 cancel 都不能跨账户 cancel。
-[ ] wrong-account broker callback 进入 quarantine。
-[ ] 缺失 account route fail-fast。
-[ ] recovery 后 route metadata 仍能恢复。
+[x] 任意 fill 都不能跨账户 apply。
+[x] 任意 cancel 都不能跨账户 cancel。
+[x] wrong-account broker callback 进入 quarantine。
+[x] 缺失 account route fail-fast。
+[x] recovery 后 route metadata 仍能恢复。
 ```
 
 ---
@@ -1327,11 +1327,11 @@ conflict_reason optional
 ### 验收条件
 
 ```text
-[ ] 两个策略同账户同标的反向 target 时行为 deterministic。
-[ ] REJECT_CONFLICT 策略会拒绝冲突并记录原因。
-[ ] PRIORITY_WINS 策略会记录 winner 和 rejected strategy。
-[ ] SUM_TARGETS / WEIGHTED_NET 能记录每个策略贡献。
-[ ] RiskDecision 和最终 OrderPlan 能反查 aggregation decision。
+[x] 两个策略同账户同标的反向 target 时行为 deterministic。
+[x] REJECT_CONFLICT 策略会拒绝冲突并记录原因。
+[x] PRIORITY_WINS 策略会记录 winner 和 rejected strategy。
+[x] SUM_TARGETS / WEIGHTED_NET 能记录每个策略贡献。
+[x] RiskDecision 和最终 OrderPlan 能反查 aggregation decision。
 ```
 
 ---
@@ -1389,11 +1389,11 @@ finalized_at
 ### 验收条件
 
 ```text
-[ ] `ReportWriter` 有显式核心方法。
-[ ] `RuntimeArtifactWriter` 有显式核心方法。
-[ ] backtest/live manifest 使用同一 RuntimeManifest contract。
-[ ] manifest 包含 config_hash、topology_hash、event_schema_version。
-[ ] writer contract tests 对 backtest/live writer 都通过。
+[x] `ReportWriter` 有显式核心方法。
+[x] `RuntimeArtifactWriter` 有显式核心方法。
+[x] backtest/live manifest 使用同一 RuntimeManifest contract。
+[x] manifest 包含 config_hash、topology_hash、event_schema_version。
+[x] writer contract tests 对 backtest/live writer 都通过。
 ```
 
 ---
@@ -1440,11 +1440,11 @@ from qts.runtime.config.live import BrokerRuntimeConfig
 ### 验收条件
 
 ```text
-[ ] class inventory 中 canonical config path 只显示 config package。
-[ ] production code 不再 import `qts.runtime.config` 旧 flat module。
-[ ] 旧路径 compatibility test 单独覆盖。
-[ ] 文档中的推荐目录和实际目录一致。
-[ ] config hash 生成不受 import path 影响。
+[x] class inventory 中 canonical config path 只显示 config package。
+[x] production code 不再 import `qts.runtime.config` 旧 flat module。
+[x] 旧路径 compatibility test 单独覆盖。
+[x] 文档中的推荐目录和实际目录一致。
+[x] config hash 生成不受 import path 影响。
 ```
 
 ---
@@ -1594,11 +1594,11 @@ import_graph_after_post_review.json
 ### 验收条件
 
 ```text
-[ ] 文档不再把 `LiveRuntimeSession` 作为 canonical session。
-[ ] 文档不再把 `MarketDataAdapter` 放在 `qts.data.live`。
-[ ] 文档不再显示 production Fake* class。
-[ ] 推荐目录和实际 source path 一致。
-[ ] inventory 中 deprecated alias 被标记为 compatibility，不作为主类。
+[x] 文档不再把 `LiveRuntimeSession` 作为 canonical session。
+[x] 文档不再把 `MarketDataAdapter` 放在 `qts.data.live`。
+[x] 文档不再显示 production Fake* class。
+[x] 推荐目录和实际 source path 一致。
+[x] inventory 中 deprecated alias 被标记为 compatibility，不作为主类。
 ```
 
 ---
@@ -1656,12 +1656,12 @@ python -m qts.quality.guardrails --strict
 ### 验收条件
 
 ```text
-[ ] CI strict mode 下所有 guardrail 通过。
-[ ] 新增 Fake* 到 production package 会 fail。
-[ ] 新增 *Transport 到 adapters 目录会 fail。
-[ ] strategy_sdk import broker/execution internals 会 fail。
-[ ] domain import runtime 会 fail。
-[ ] deprecated shim 过期后仍被 import 会 fail。
+[x] CI strict mode 下所有 guardrail 通过。
+[x] 新增 Fake* 到 production package 会 fail。
+[x] 新增 *Transport 到 adapters 目录会 fail。
+[x] strategy_sdk import broker/execution internals 会 fail。
+[x] domain import runtime 会 fail。
+[x] deprecated shim 过期后仍被 import 会 fail。
 ```
 
 ---
@@ -1675,10 +1675,10 @@ python -m qts.quality.guardrails --strict
 ### 验收
 
 ```text
-[ ] canonical class names 和目录语义一致。
-[ ] production no fake / no placeholder / no beta。
-[ ] paper broker / paper simulated / live observation / live 语义清晰。
-[ ] 文档和 inventory 不再显示旧 canonical path。
+[x] canonical class names 和目录语义一致。
+[x] production no fake / no placeholder / no beta。
+[x] paper broker / paper simulated / live observation / live 语义清晰。
+[x] 文档和 inventory 不再显示旧 canonical path。
 ```
 
 ## Milestone 2 — Broker runtime safety
@@ -1702,12 +1702,12 @@ python -m qts.quality.guardrails --strict
 ### 验收
 
 ```text
-[ ] RuntimeEvent envelope 统一。
-[ ] topology builder 单一化。
-[ ] 多账户隔离测试通过。
-[ ] signal aggregation 可审计。
-[ ] recovery 必须经过 event replay + broker reconciliation。
-[ ] report/manifest contract 完整。
+[x] RuntimeEvent envelope 统一。
+[x] topology builder 单一化。
+[x] 多账户隔离测试通过。
+[x] signal aggregation 可审计。
+[x] recovery 必须经过 event replay + broker reconciliation。
+[x] report/manifest contract 完整。
 ```
 
 ## Milestone 4 — 回测真实性与生产可复现
@@ -1717,9 +1717,9 @@ python -m qts.quality.guardrails --strict
 ### 验收
 
 ```text
-[ ] replay 无未来函数 contract tests 通过。
-[ ] simulated execution 假设写入 manifest。
-[ ] backtest/paper/live event artifact 可统一解析。
+[x] replay 无未来函数 contract tests 通过。
+[x] simulated execution 假设写入 manifest。
+[x] backtest/paper/live event artifact 可统一解析。
 ```
 
 ---
@@ -1729,18 +1729,18 @@ python -m qts.quality.guardrails --strict
 当所有 task 完成后，系统需要满足：
 
 ```text
-[ ] Backtest / PAPER_SIMULATED / PAPER_BROKER / LIVE_OBSERVATION / LIVE 使用同一核心 runtime contract。
-[ ] LIVE capital 只有在 startup checklist、reconciliation、market-data permission、operator signoff、kill switch、event/snapshot store 都通过后才能下单。
-[ ] paper broker 与 paper simulated 语义完全分离。
-[ ] production package 中没有 Fake*、placeholder、beta、intended later wording。
-[ ] Source / Adapter / Transport / Flow / Actor / Sink / ReportWriter 目录和命名一致。
-[ ] IBKR callback 重复、乱序、延迟、wrong account 都有 deterministic behavior。
-[ ] 多账户 fill/cancel/order route 不串账户。
-[ ] 多策略 signal conflict 可审计。
-[ ] Replay source 服从 subscription 和 visible_at，不允许未来函数。
-[ ] RuntimeEvent envelope 统一，event store 可恢复，snapshot 可验证。
-[ ] Report manifest 含 config_hash、topology_hash、event_schema_version、execution assumptions、startup/reconciliation evidence。
-[ ] CI guardrail strict mode 必过。
+[x] Backtest / PAPER_SIMULATED / PAPER_BROKER / LIVE_OBSERVATION / LIVE 使用同一核心 runtime contract。
+[x] LIVE capital 只有在 startup checklist、reconciliation、market-data permission、operator signoff、kill switch、event/snapshot store 都通过后才能下单。
+[x] paper broker 与 paper simulated 语义完全分离。
+[x] production package 中没有 Fake*、placeholder、beta、intended later wording。
+[x] Source / Adapter / Transport / Flow / Actor / Sink / ReportWriter 目录和命名一致。
+[x] IBKR callback 重复、乱序、延迟、wrong account 都有 deterministic behavior。
+[x] 多账户 fill/cancel/order route 不串账户。
+[x] 多策略 signal conflict 可审计。
+[x] Replay source 服从 subscription 和 visible_at，不允许未来函数。
+[x] RuntimeEvent envelope 统一，event store 可恢复，snapshot 可验证。
+[x] Report manifest 含 config_hash、topology_hash、event_schema_version、execution assumptions、startup/reconciliation evidence。
+[x] CI guardrail strict mode 必过。
 ```
 
 ---

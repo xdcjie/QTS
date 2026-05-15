@@ -349,7 +349,8 @@
   "qts.execution.adapters.simulated_execution_adapter": [
     "qts.core.ids",
     "qts.execution.broker",
-    "qts.execution.order_manager"
+    "qts.execution.order_manager",
+    "qts.execution.simulator.fill_model"
   ],
   "qts.execution.broker": [
     "qts.core.ids"
@@ -483,11 +484,14 @@
   "qts.reporting.backtest": [
     "qts.core.hashing",
     "qts.core.ids",
-    "qts.data.provenance"
+    "qts.data.provenance",
+    "qts.reporting.base"
   ],
   "qts.reporting.base": [],
   "qts.reporting.live": [
     "qts.core.hashing",
+    "qts.execution.adapters.simulated_execution_adapter",
+    "qts.reporting.base",
     "qts.runtime.mode",
     "qts.runtime.sinks.base",
     "qts.runtime.sinks.live"
@@ -617,7 +621,8 @@
     "qts.runtime.topology"
   ],
   "qts.runtime.event_store": [
-    "qts.core.ids"
+    "qts.core.ids",
+    "qts.runtime.sinks.base"
   ],
   "qts.runtime.execution_report_handler": [
     "qts.core.ids",
@@ -768,7 +773,9 @@
   "qts.runtime.state": [],
   "qts.runtime.state_recovery": [
     "qts.core.hashing",
-    "qts.runtime.event_store"
+    "qts.core.ids",
+    "qts.runtime.event_store",
+    "qts.runtime.sinks.base"
   ],
   "qts.runtime.strategy_execution_pipeline": [
     "qts.core.ids",

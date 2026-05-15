@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -13,6 +13,7 @@ from typing import Any
 from qts.core.hashing import stable_json_default, stable_json_hash
 from qts.core.ids import RuntimeRunId
 from qts.data.provenance import DatasetMetadata
+from qts.reporting.base import RUNTIME_ARTIFACT_SCHEMA_VERSION, RuntimeManifest
 
 RUNTIME_EVENT_SCHEMA_VERSION = "1"
 
@@ -61,11 +62,6 @@ class TradeLedgerEntry:
     slippage: Decimal
     fill_time: datetime
     source_bar_time: datetime
-
-
-def _stable_hash(payload: Any) -> str:
-    """Perform _stable_hash."""
-    return stable_json_hash(payload)
 
 
 class StreamingEquityMetrics:
@@ -176,6 +172,24 @@ class BacktestArtifactWriter:
         """Write one normalized runtime event envelope."""
         self._artifacts["events"].write(payload)
 
+    def write_event(self, payload: dict[str, Any]) -> None:
+        """Write one normalized runtime event through the artifact contract."""
+        self.write_runtime_event(dict(payload))
+
+    def write_snapshot(self, payload: dict[str, Any]) -> None:
+        """Write one runtime snapshot evidence row through the event artifact."""
+        self.write_runtime_event({"kind": "runtime.snapshot", "payload": dict(payload)})
+
+    def write_manifest(self, manifest: RuntimeManifest | dict[str, Any]) -> Path:
+        """Write a shared manifest payload for contract-level callers."""
+        payload = manifest.to_payload() if isinstance(manifest, RuntimeManifest) else dict(manifest)
+        manifest_path = self._output_dir / f"{payload['run_id']}.manifest.json"
+        manifest_path.write_text(
+            json.dumps(payload, default=stable_json_default, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+        return manifest_path
+
     def write_fill(self, payload: dict[str, Any]) -> None:
         """Perform write_fill."""
         self._artifacts["fills"].write(payload)
@@ -214,8 +228,10 @@ class BacktestArtifactWriter:
         strategy_version: str,
         runtime_topology_payload: dict[str, Any] | None = None,
         brokerage_model: str | None = None,
+        execution_assumptions: dict[str, Any] | None = None,
     ) -> tuple[str, str, dict[str, Any], BacktestArtifacts]:
         """Perform finalize."""
+        finalized_at = datetime.now(UTC)
         for artifact in self._artifacts.values():
             artifact.close()
 
@@ -234,6 +250,7 @@ class BacktestArtifactWriter:
             "trading_bars": trading_bars,
             "strategy_version": strategy_version,
             "brokerage_model": brokerage_model,
+            "execution_assumptions": execution_assumptions,
             "metrics": metrics,
             "artifacts": {
                 kind: {
@@ -245,7 +262,7 @@ class BacktestArtifactWriter:
         }
         if runtime_topology_payload is not None:
             report_payload["runtime_topology"] = runtime_topology_payload
-        report_hash = _stable_hash(report_payload)
+        report_hash = stable_json_hash(report_payload)
         run_id = (
             self._run_id.value
             if self._run_id is not None
@@ -261,7 +278,16 @@ class BacktestArtifactWriter:
             "run_id": run_id,
             "runtime_mode": "backtest",
             "event_schema_version": RUNTIME_EVENT_SCHEMA_VERSION,
+            "artifact_schema_version": RUNTIME_ARTIFACT_SCHEMA_VERSION,
             "config_hash": config_hash,
+            "topology_hash": (
+                str(runtime_topology_payload["topology_hash"])
+                if runtime_topology_payload is not None
+                and runtime_topology_payload.get("topology_hash") is not None
+                else None
+            ),
+            "created_at": finalized_at.isoformat(),
+            "finalized_at": finalized_at.isoformat(),
             "report_hash": report_hash,
             "dataset_metadata": dataset_metadata,
             "cost_model": cost_model,
@@ -269,6 +295,7 @@ class BacktestArtifactWriter:
             "warmup_bars": warmup_bars,
             "trading_bars": trading_bars,
             "brokerage_model": brokerage_model,
+            "execution_assumptions": execution_assumptions,
             "metrics": metrics,
             "artifacts": {
                 kind: {

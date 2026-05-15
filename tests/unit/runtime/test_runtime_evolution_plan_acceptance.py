@@ -465,6 +465,7 @@ def test_market_data_sources_expose_subscription_snapshot() -> None:
 
 def test_fill_models_include_next_bar_quote_volume_and_partial_variants() -> None:
     from qts.execution.simulator.fill_model import (
+        ImmediateFillModel,
         NextBarOpenFillModel,
         PartialFillModel,
         QuoteAwareFillModel,
@@ -475,6 +476,22 @@ def test_fill_models_include_next_bar_quote_volume_and_partial_variants() -> Non
     assert QuoteAwareFillModel()
     assert VolumeParticipationFillModel(max_participation_rate=Decimal("0.1"))
     assert PartialFillModel(max_fill_quantity=Decimal("2"))
+    assert (
+        ImmediateFillModel().to_manifest_payload()["fill_model_name"]
+        != NextBarOpenFillModel().to_manifest_payload()["fill_model_name"]
+    )
+    assert (
+        VolumeParticipationFillModel(max_participation_rate=Decimal("0.1")).to_manifest_payload()[
+            "volume_participation_limit"
+        ]
+        == "0.1"
+    )
+    assert (
+        PartialFillModel(max_fill_quantity=Decimal("2")).to_manifest_payload()[
+            "partial_fill_policy"
+        ]
+        == "max_fill_quantity"
+    )
 
 
 def test_min_tick_rounding() -> None:

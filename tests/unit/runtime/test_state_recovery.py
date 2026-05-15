@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 
@@ -48,6 +50,69 @@ def test_file_snapshot_store_persists_latest_actor_snapshot(tmp_path: Path) -> N
     assert restored_snapshot is not None
     assert restored_snapshot.last_sequence == 5
     assert restored.load("account:missing") is None
+
+
+def test_state_snapshot_carries_recovery_manifest_metadata() -> None:
+    from qts.core.ids import RuntimeRunId
+    from qts.runtime.state_recovery import StateSnapshot
+
+    snapshot = StateSnapshot(
+        snapshot_id="snapshot-001",
+        actor_id="account:acct-001",
+        run_id=RuntimeRunId("run-001"),
+        schema_version="2",
+        created_at=datetime(2026, 1, 2, 14, 30, tzinfo=UTC),
+        state_version=3,
+        last_sequence=8,
+        topology_hash="sha256:topology",
+        config_hash="sha256:config",
+        payload={"cash": {"USD": "9000"}},
+    )
+
+    assert snapshot.snapshot_id == "snapshot-001"
+    assert snapshot.run_id == RuntimeRunId("run-001")
+    assert snapshot.schema_version == "2"
+    assert snapshot.topology_hash == "sha256:topology"
+    assert snapshot.config_hash == "sha256:config"
+
+
+def test_file_snapshot_store_ignores_trailing_partial_snapshot(tmp_path: Path) -> None:
+    from qts.runtime.state_recovery import FileSnapshotStore, StateSnapshot
+
+    path = tmp_path / "snapshots.jsonl"
+    latest = StateSnapshot(
+        snapshot_id="snapshot-001",
+        actor_id="account:acct-001",
+        state_version=2,
+        last_sequence=5,
+        payload={"cash": {"USD": "9000"}},
+    )
+    store = FileSnapshotStore(path)
+    store.save(latest)
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write('{"snapshot_id":"partial"')
+
+    assert FileSnapshotStore(path).load("account:acct-001") == latest
+
+
+def test_file_snapshot_store_writes_complete_json_records(tmp_path: Path) -> None:
+    from qts.runtime.state_recovery import FileSnapshotStore, StateSnapshot
+
+    path = tmp_path / "snapshots.jsonl"
+    snapshot = StateSnapshot(
+        snapshot_id="snapshot-001",
+        actor_id="account:acct-001",
+        state_version=2,
+        last_sequence=5,
+        payload={"cash": {"USD": "9000"}},
+    )
+
+    FileSnapshotStore(path).save(snapshot)
+
+    records = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+    assert records[-1]["snapshot_id"] == "snapshot-001"
+    assert records[-1]["schema_version"] == "1"
+    assert records[-1]["last_event_sequence_no"] == 5
 
 
 def test_snapshot_store_rejects_empty_actor_lookup(tmp_path: Path) -> None:
@@ -126,3 +191,27 @@ def test_live_recovery_blocks_when_event_sequence_is_invalid() -> None:
     assert decision.status is LiveRecoveryDecisionStatus.BLOCK
     assert decision.real_order_submission_enabled is False
     assert decision.reason_code == "EVENT_SEQUENCE_GAP"
+
+
+def test_live_recovery_decision_writes_manifest_payload_and_runtime_event() -> None:
+    from qts.runtime.state_recovery import (
+        LiveRecoveryDecision,
+        LiveRecoveryDecisionStatus,
+    )
+
+    decision = LiveRecoveryDecision(
+        status=LiveRecoveryDecisionStatus.ENTER_OBSERVATION,
+        real_order_submission_enabled=False,
+        reason_code="RECOVERY_RECONCILIATION_REQUIRED",
+    )
+
+    manifest = decision.to_manifest_payload()
+    event = decision.to_runtime_event()
+
+    assert manifest == {
+        "status": "enter_observation",
+        "real_order_submission_enabled": False,
+        "reason_code": "RECOVERY_RECONCILIATION_REQUIRED",
+    }
+    assert event.kind == "runtime.recovery_decision"
+    assert event.payload == manifest

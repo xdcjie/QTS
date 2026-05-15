@@ -157,6 +157,71 @@ def test_weighted_net_targets() -> None:
     assert decision.target_after_aggregation == Decimal("4.0")
 
 
+def test_aggregated_signal_batch_carries_audit_identity() -> None:
+    from qts.core.ids import AccountId, CorrelationId, StrategyId
+    from qts.domain.market_data import Bar
+    from qts.runtime.actor_ref import ActorRef
+    from qts.runtime.actors.signal_aggregator_actor import (
+        AggregatedSignalBatch,
+        SignalAggregatorActor,
+        StrategySignalEvent,
+    )
+    from qts.runtime.mailbox import Mailbox
+    from qts.runtime.signal_policy import SignalAggregationPolicy, SignalContribution
+
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    bar = Bar(
+        instrument_id=_quantity_intent(1).asset.instrument_id,
+        start_time=start,
+        end_time=start + timedelta(minutes=1),
+        timeframe="1m",
+        session_id="2026-01-02",
+        open=Decimal("100"),
+        high=Decimal("100"),
+        low=Decimal("100"),
+        close=Decimal("100"),
+        is_complete=True,
+    )
+    outbox = Mailbox()
+    actor = SignalAggregatorActor(result_ref=ActorRef(mailbox=outbox))
+    account_id = AccountId("acct-a")
+    correlation_id = CorrelationId("corr-a")
+
+    actor.handle(
+        StrategySignalEvent(
+            bar=bar,
+            account_id=account_id,
+            correlation_id=correlation_id,
+            contributions=(
+                SignalContribution(
+                    strategy_id=StrategyId("strategy-long"),
+                    intent=_quantity_intent(10),
+                    aggregation_policy=SignalAggregationPolicy.REJECT_CONFLICT,
+                ),
+                SignalContribution(
+                    strategy_id=StrategyId("strategy-short"),
+                    intent=_quantity_intent(-5),
+                    aggregation_policy=SignalAggregationPolicy.REJECT_CONFLICT,
+                ),
+            ),
+        )
+    )
+
+    result = outbox.get()
+    assert isinstance(result, AggregatedSignalBatch)
+    assert result.account_id == account_id
+    assert result.instrument_id == bar.instrument_id
+    assert result.correlation_id == correlation_id
+    assert result.aggregation_decision_id is not None
+    assert result.aggregation_decision_id.startswith("sigagg-")
+    assert result.rejected_strategy_ids == (
+        StrategyId("strategy-long"),
+        StrategyId("strategy-short"),
+    )
+    assert result.conflicts
+    assert result.conflict_reason == result.conflicts[0].reason
+
+
 def _quantity_intent(value: Decimal | int) -> TargetIntent:
     from qts.core.ids import InstrumentId
     from qts.strategy_sdk import AssetRef, TargetIntent

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import cast
 
 
 def test_bar_to_fill_flow_can_be_traced_by_correlation_id() -> None:
@@ -28,7 +29,9 @@ def test_bar_to_fill_flow_can_be_traced_by_correlation_id() -> None:
             )
         )
 
-    assert [event.event_type for event in store.by_correlation_id(correlation_id)] == [
+    events = cast(tuple[BaseEvent, ...], store.by_correlation_id(correlation_id))
+
+    assert [event.event_type for event in events] == [
         "market_data.bar.closed",
         "strategy.target",
         "order.sent",

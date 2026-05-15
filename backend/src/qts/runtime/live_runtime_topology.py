@@ -22,7 +22,7 @@ from qts.strategy_sdk import Strategy
 
 
 @dataclass(frozen=True, slots=True)
-class _StrategyRuntimeBinding:
+class StrategyRuntimeBinding:
     """Runtime-local strategy instance with its bound execution pipeline."""
 
     strategy_id: StrategyId
@@ -53,17 +53,17 @@ class AccountRuntimePartition:
 
 
 @dataclass(frozen=True, slots=True)
-class _ResolvedLiveRuntimeTopology:
+class ResolvedRuntimeTopology:
     """Topology-dependent objects resolved for one runtime session."""
 
-    strategy_bindings: tuple[_StrategyRuntimeBinding, ...]
+    strategy_bindings: tuple[StrategyRuntimeBinding, ...]
     strategy_subscriptions: tuple[InstrumentId, ...]
     account_partitions: dict[AccountId | None, AccountRuntimePartition]
     resolved_account_id: AccountId | None
     resolved_strategy_id: StrategyId | None
 
 
-class _LiveRuntimeTopologyBuilder:
+class BrokerRuntimeTopologyResolver:
     """Build strategy bindings and per-account partitions from a runtime topology."""
 
     def __init__(self, dependencies: RuntimeSessionDependencies) -> None:
@@ -72,7 +72,7 @@ class _LiveRuntimeTopologyBuilder:
         self._resolved_account_id = dependencies.account_id
         self._resolved_strategy_id = dependencies.strategy_id
 
-    def build(self) -> _ResolvedLiveRuntimeTopology:
+    def build(self) -> ResolvedRuntimeTopology:
         """Return strategy bindings and partitions ready for session execution."""
         if self._topology is None:
             strategy_bindings = self._build_default_strategy_bindings()
@@ -91,7 +91,7 @@ class _LiveRuntimeTopologyBuilder:
                 strategy_bindings,
             )
 
-        return _ResolvedLiveRuntimeTopology(
+        return ResolvedRuntimeTopology(
             strategy_bindings=strategy_bindings,
             strategy_subscriptions=strategy_subscriptions,
             account_partitions=account_partitions,
@@ -99,7 +99,7 @@ class _LiveRuntimeTopologyBuilder:
             resolved_strategy_id=self._resolved_strategy_id,
         )
 
-    def _build_default_strategy_bindings(self) -> tuple[_StrategyRuntimeBinding, ...]:
+    def _build_default_strategy_bindings(self) -> tuple[StrategyRuntimeBinding, ...]:
         """Build one binding for non-topology execution mode."""
         if self._dependencies.strategy is None:
             raise ValueError("default mode requires a concrete strategy")
@@ -115,7 +115,7 @@ class _LiveRuntimeTopologyBuilder:
             strategy_id=self._resolved_strategy_id,
         )
         return (
-            _StrategyRuntimeBinding(
+            StrategyRuntimeBinding(
                 strategy_id=self._resolved_strategy_id,
                 account_id=self._resolved_account_id,
                 strategy=self._dependencies.strategy,
@@ -148,7 +148,7 @@ class _LiveRuntimeTopologyBuilder:
 
     def _build_topology_strategy_bindings(
         self, topology: RuntimeTopology
-    ) -> tuple[_StrategyRuntimeBinding, ...]:
+    ) -> tuple[StrategyRuntimeBinding, ...]:
         """Build runtime bindings from topology specs and injected strategies."""
         strategy_instances = self._dependencies.strategies
         if strategy_instances is None:
@@ -167,7 +167,7 @@ class _LiveRuntimeTopologyBuilder:
         )
         default_subscriptions = tuple(dict.fromkeys(default_subscriptions))
 
-        bindings: list[_StrategyRuntimeBinding] = []
+        bindings: list[StrategyRuntimeBinding] = []
         for index, strategy_spec in enumerate(topology.strategies):
             strategy = strategy_instances[index]
             subscriptions = tuple(strategy_spec.subscriptions)
@@ -185,7 +185,7 @@ class _LiveRuntimeTopologyBuilder:
                 conflict_group=strategy_spec.conflict_group,
             )
             bindings.append(
-                _StrategyRuntimeBinding(
+                StrategyRuntimeBinding(
                     strategy_id=strategy_spec.strategy_id,
                     account_id=strategy_spec.account_id,
                     strategy=strategy,
@@ -208,7 +208,7 @@ class _LiveRuntimeTopologyBuilder:
     def _build_topology_account_partitions(
         self,
         topology: RuntimeTopology,
-        bindings: tuple[_StrategyRuntimeBinding, ...],
+        bindings: tuple[StrategyRuntimeBinding, ...],
     ) -> dict[AccountId | None, AccountRuntimePartition]:
         """Build one partition per account required by topology-bound strategies."""
         needed_account_ids: list[AccountId] = []
@@ -376,8 +376,14 @@ class _LiveRuntimeTopologyBuilder:
         )
 
 
+_LiveRuntimeTopologyBuilder = BrokerRuntimeTopologyResolver
+_ResolvedLiveRuntimeTopology = ResolvedRuntimeTopology
+_StrategyRuntimeBinding = StrategyRuntimeBinding
+
+
 __all__ = [
     "AccountRuntimePartition",
-    "_LiveRuntimeTopologyBuilder",
-    "_ResolvedLiveRuntimeTopology",
+    "BrokerRuntimeTopologyResolver",
+    "ResolvedRuntimeTopology",
+    "StrategyRuntimeBinding",
 ]

@@ -76,17 +76,7 @@ class ReplayEventSequencer:
         events: list[ReplaySequencedEvent] = []
         seen_bars: set[tuple[InstrumentId, str, datetime, datetime]] = set()
         last_end_by_stream: dict[tuple[InstrumentId, str], datetime] = {}
-        ordered_bars = sorted(
-            enumerate(tuple(bars)),
-            key=lambda item: (
-                item[1].end_time,
-                item[1].instrument_id.value,
-                item[1].timeframe,
-                item[1].start_time,
-                item[0],
-            ),
-        )
-        for source_sequence, bar in ordered_bars:
+        for source_sequence, bar in enumerate(tuple(bars)):
             bar_key = (bar.instrument_id, bar.timeframe, bar.start_time, bar.end_time)
             stream_key = (bar.instrument_id, bar.timeframe)
             previous_end = last_end_by_stream.get(stream_key)

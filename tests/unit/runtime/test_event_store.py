@@ -57,6 +57,28 @@ def test_file_event_store_survives_restart(tmp_path: Path) -> None:
     assert restored.by_correlation_id(CorrelationId("corr-001")) == (event,)
 
 
+def test_file_event_store_appends_and_replays_runtime_event_envelopes(tmp_path: Path) -> None:
+    from qts.core.ids import RuntimeRunId
+    from qts.runtime.event_store import FileEventStore
+    from qts.runtime.sinks.base import RuntimeEvent
+
+    path = tmp_path / "runtime-events.jsonl"
+    event = RuntimeEvent(
+        event_id=EventId("evt-runtime-001"),
+        kind="runtime.state",
+        payload={"state": "running"},
+        run_id=RuntimeRunId("run-runtime-001"),
+        mode="paper_broker",
+        sequence_no=1,
+    )
+
+    assert FileEventStore(path).append(event) == 1
+
+    restored = FileEventStore(path)
+    assert restored.replay() == (event,)
+    assert restored.replay_after(0) == (event,)
+
+
 def test_event_store_replays_events_after_snapshot_sequence(tmp_path: Path) -> None:
     from qts.runtime.event_store import FileEventStore, InMemoryEventStore
 

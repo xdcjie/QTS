@@ -113,6 +113,33 @@ def test_live_report_writer_includes_runtime_topology_payload(tmp_path: Path) ->
     assert payload["runtime_topology"]["topology_hash"].startswith("sha256:")
 
 
+def test_paper_simulated_live_manifest_includes_execution_assumptions(
+    tmp_path: Path,
+) -> None:
+    from qts.reporting.live import LiveReportWriter
+    from qts.runtime.sinks.live import LiveRuntimeEventSink
+
+    sink = LiveRuntimeEventSink(tmp_path)
+    sink.close()
+
+    manifest = LiveReportWriter(tmp_path).write_manifest(
+        config_payload={"mode": "paper_simulated"},
+        runtime_mode="paper_simulated",
+        account_id="acct-paper",
+        connection_metadata={"host": "127.0.0.1", "port": 4002},
+        event_sink=sink,
+    )
+
+    assumptions = manifest.payload["execution_assumptions"]
+
+    assert assumptions["fill_model_name"] == "immediate_market_fill"
+    assert assumptions["slippage_model_name"] == "zero"
+    assert assumptions["commission_model_name"] == "zero"
+    assert assumptions["partial_fill_policy"] == "none"
+    assert assumptions["broker_capability_model"]["broker_id"] == "simulated"
+    assert assumptions["unsupported_order_rejection_policy"] == "reject_and_emit_runtime_event"
+
+
 def test_live_report_writer_rejects_permission_mode_label(tmp_path: Path) -> None:
     import pytest
     from qts.reporting.live import LiveReportWriter

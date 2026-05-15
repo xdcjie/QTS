@@ -90,6 +90,7 @@ def test_runtime_event_sink_writes_mode_and_execution_environment(tmp_path: Path
 
     row = json.loads(sink.path.read_text(encoding="utf-8").strip())
     assert row["mode"] == "live"
+    assert row["runtime_mode"] == "live"
     assert row["execution_environment"] == "broker"
 
 
@@ -127,6 +128,7 @@ def test_runtime_event_sink_writes_unified_runtime_envelope(tmp_path: Path) -> N
     row = json.loads(sink.path.read_text(encoding="utf-8").strip())
     assert row["event_id"] == "evt-1"
     assert row["run_id"] == "run-1"
+    assert row["runtime_mode"] == "paper_broker"
     assert row["sequence_no"] == 7
     assert row["account_id"] == "DU1234567"
     assert row["strategy_id"] == "strategy-a"
@@ -227,6 +229,25 @@ def test_runtime_event_envelope_writes_parent_event_id(tmp_path: Path) -> None:
     assert row["parent_event_id"] == "evt-risk-1"
 
 
+def test_runtime_event_sink_requires_event_id_without_context(tmp_path: Path) -> None:
+    import pytest
+    from qts.core.ids import RuntimeRunId
+    from qts.runtime.sinks.live import LiveRuntimeEventSink
+
+    sink = LiveRuntimeEventSink(tmp_path)
+
+    with pytest.raises(ValueError, match="event_id"):
+        sink.write(
+            RuntimeEvent(
+                kind="runtime.state",
+                payload={"state": "running"},
+                run_id=RuntimeRunId("run-1"),
+                mode="paper_broker",
+                sequence_no=1,
+            )
+        )
+
+
 def test_every_order_event_requires_correlation_id() -> None:
     import pytest
 
@@ -259,6 +280,18 @@ def test_order_broker_and_fill_events_require_client_order_id() -> None:
                 payload={"order_id": "order-1"},
                 correlation_id=CorrelationId("corr-1"),
             )
+
+
+def test_fill_events_require_causation_id() -> None:
+    import pytest
+    from qts.core.ids import CorrelationId
+
+    with pytest.raises(ValueError, match="causation_id"):
+        RuntimeEvent(
+            kind="runtime.fill_applied",
+            payload={"fill_id": "fill-1", "client_order_id": "client-order-1"},
+            correlation_id=CorrelationId("corr-1"),
+        )
 
 
 def test_live_runtime_event_sink_rejects_secret_payload_values(tmp_path: Path) -> None:

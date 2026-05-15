@@ -132,6 +132,8 @@ class RuntimeMarketDataCoordinator:
                     ).account_actor.snapshot(),
                     latest_prices=session._latest_prices,
                     aggregate_signals=aggregate_signals,
+                    account_id=binding.account_id,
+                    correlation_id=correlation_id,
                 )
                 for intent in strategy_result.raw_intents:
                     session._write_event(
@@ -183,6 +185,8 @@ class RuntimeMarketDataCoordinator:
                     aggregated_batches = session._aggregate_signal_batches(
                         bar,
                         tuple(contributions),
+                        account_id=account_id,
+                        correlation_id=correlation_id,
                     )
                     for batch in aggregated_batches:
                         if batch.conflict_reason:
@@ -190,9 +194,21 @@ class RuntimeMarketDataCoordinator:
                                 "runtime.signal_conflict_detected",
                                 {
                                     "conflict_reason": batch.conflict_reason,
+                                    "aggregation_decision_id": batch.aggregation_decision_id,
                                     "rejected_strategy_ids": [
                                         strategy_id.value
                                         for strategy_id in batch.rejected_strategy_ids
+                                    ],
+                                    "conflicts": [
+                                        {
+                                            "instrument_key": conflict.instrument_key,
+                                            "strategy_ids": [
+                                                strategy_id.value
+                                                for strategy_id in conflict.strategy_ids
+                                            ],
+                                            "reason": conflict.reason,
+                                        }
+                                        for conflict in batch.conflicts
                                     ],
                                     "conflict_group": batch.conflict_group,
                                     "aggregation_policy": batch.aggregation_policy.value,
@@ -205,6 +221,7 @@ class RuntimeMarketDataCoordinator:
                                 "runtime.signal_rejected",
                                 {
                                     "conflict_reason": batch.conflict_reason,
+                                    "aggregation_decision_id": batch.aggregation_decision_id,
                                     "rejected_strategy_ids": [
                                         strategy_id.value
                                         for strategy_id in batch.rejected_strategy_ids
@@ -229,6 +246,7 @@ class RuntimeMarketDataCoordinator:
                         session._write_event(
                             "runtime.signal_aggregated",
                             {
+                                "aggregation_decision_id": batch.aggregation_decision_id,
                                 "aggregation_policy": batch.aggregation_policy.value,
                                 "contributing_strategy_ids": [
                                     strategy_id.value
@@ -272,6 +290,10 @@ class RuntimeMarketDataCoordinator:
                                 correlation_id=correlation_id,
                                 partition=partition,
                                 contributing_strategy_ids=batch.contributing_strategy_ids,
+                                aggregation_decision_id=batch.aggregation_decision_id,
+                                conflict_reason=(
+                                    batch.conflict_reason if batch.conflict_reason else None
+                                ),
                             )
                             all_orders.extend(processed.orders)
                             all_fills.extend(processed.fills)
@@ -351,8 +373,12 @@ class RuntimeMarketDataCoordinator:
                     "broker_order_id": order.broker_order_id,
                     "client_order_id": metadata.client_order_id,
                     "instrument_id": order.intent.instrument_id.value,
+                    "aggregation_decision_id": metadata.aggregation_decision_id,
                     "contributing_strategy_ids": [
-                        strategy_id.value for strategy_id in contributing_strategy_ids
+                        strategy_id.value
+                        for strategy_id in (
+                            metadata.contributing_strategy_ids or contributing_strategy_ids
+                        )
                     ],
                 },
                 correlation_id=metadata.correlation_id,
@@ -367,6 +393,7 @@ class RuntimeMarketDataCoordinator:
                     "state": order.state.value,
                     "broker_order_id": order.broker_order_id,
                     "client_order_id": metadata.client_order_id,
+                    "aggregation_decision_id": metadata.aggregation_decision_id,
                 },
                 correlation_id=metadata.correlation_id,
                 instrument_id=order.intent.instrument_id,

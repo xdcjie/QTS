@@ -6,7 +6,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import tzinfo
 from decimal import Decimal
-from typing import Any
+from typing import Any, cast
 
 from qts.backtest.actor_loop import BacktestActorLoop
 from qts.backtest.dependencies import (
@@ -313,6 +313,7 @@ class BacktestEngine:
             strategy_version=self._strategy_version,
             runtime_topology_payload=runtime_topology_payload,
             brokerage_model=brokerage_model,
+            execution_assumptions=self._execution_assumptions_payload(),
         )
         return BacktestStreamResult(
             processed_bars=processed_bar_count,
@@ -330,6 +331,13 @@ class BacktestEngine:
             artifact_rows=artifacts.artifact_rows,
             artifact_hashes=artifacts.artifact_hashes,
         )
+
+    def _execution_assumptions_payload(self) -> dict[str, Any] | None:
+        """Return simulated execution assumptions when the adapter exposes them."""
+        payload = getattr(self._execution_adapter, "execution_assumptions_payload", None)
+        if payload is None:
+            return None
+        return cast(dict[str, Any], payload())
 
     def _market_data_provenance_for(self, bar: Bar) -> dict[str, str | int | None]:
         """Return replay provenance for a market-data runtime event."""

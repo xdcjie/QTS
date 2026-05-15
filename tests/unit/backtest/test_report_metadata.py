@@ -80,6 +80,74 @@ def test_backtest_report_includes_run_identity_dataset_and_cost_assumptions(
     assert result.report_hash.startswith("sha256:")
 
 
+def test_backtest_manifest_includes_simulated_execution_assumptions(
+    tmp_path: Path,
+) -> None:
+    from qts.runtime.config import BacktestCostModel
+
+    stream = run_engine_streaming(
+        BacktestEngine(
+            strategy=BuyOnceStrategy(),
+            bars=[_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC), "100")],
+            initial_cash=Decimal("10000"),
+            cost_model=BacktestCostModel(
+                fixed_commission_per_contract=Decimal("2.50"),
+                slippage_bps=Decimal("5"),
+            ),
+        ),
+        tmp_path / "execution-assumptions",
+    )
+
+    assumptions = stream.manifest["execution_assumptions"]
+
+    assert assumptions["fill_model_name"] == "immediate_market_fill"
+    assert assumptions["fill_model_version"] == "1"
+    assert assumptions["slippage_model_name"] == "basis_points"
+    assert assumptions["slippage_model_version"] == "1"
+    assert assumptions["commission_model_name"] == "fixed_per_contract"
+    assert assumptions["commission_model_version"] == "1"
+    assert assumptions["volume_participation_limit"] is None
+    assert assumptions["partial_fill_policy"] == "none"
+    assert assumptions["unsupported_order_rejection_policy"] == "reject_and_emit_runtime_event"
+    assert assumptions["market_data_latency_model"] == "zero_latency_replay"
+    assert assumptions["broker_capability_model"]["broker_id"] == "custom"
+    assert assumptions["broker_capability_model"]["supports_market_orders"] is True
+
+
+def test_backtest_report_hash_changes_with_execution_assumptions(tmp_path: Path) -> None:
+    from qts.runtime.config import BacktestCostModel
+
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+
+    zero_cost = run_engine_streaming(
+        BacktestEngine(
+            strategy=BuyOnceStrategy(),
+            bars=[_bar(start, "100")],
+            initial_cash=Decimal("10000"),
+            cost_model=BacktestCostModel(),
+        ),
+        tmp_path / "zero-cost",
+    )
+    nonzero_cost = run_engine_streaming(
+        BacktestEngine(
+            strategy=BuyOnceStrategy(),
+            bars=[_bar(start, "100")],
+            initial_cash=Decimal("10000"),
+            cost_model=BacktestCostModel(
+                fixed_commission_per_contract=Decimal("1"),
+                slippage_bps=Decimal("10"),
+            ),
+        ),
+        tmp_path / "nonzero-cost",
+    )
+
+    assert (
+        zero_cost.manifest["execution_assumptions"]
+        != nonzero_cost.manifest["execution_assumptions"]
+    )
+    assert zero_cost.result.report_hash != nonzero_cost.result.report_hash
+
+
 def test_backtest_report_hash_changes_when_dataset_changes(tmp_path: Path) -> None:
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
 

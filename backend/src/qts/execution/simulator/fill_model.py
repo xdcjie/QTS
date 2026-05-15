@@ -10,6 +10,18 @@ from qts.execution.order_manager import ExecutionReport, ExecutionReportStatus, 
 class ImmediateFillModel:
     """Fills market orders at the provided market price."""
 
+    model_name = "immediate_market_fill"
+    model_version = "1"
+
+    def to_manifest_payload(self) -> dict[str, object]:
+        """Serialize fill-model assumptions for run manifests."""
+        return {
+            "fill_model_name": self.model_name,
+            "fill_model_version": self.model_version,
+            "volume_participation_limit": None,
+            "partial_fill_policy": "none",
+        }
+
     def fill(
         self,
         intent: OrderIntent,
@@ -32,6 +44,18 @@ class ImmediateFillModel:
 
 class NextBarOpenFillModel:
     """Fills orders at the next visible bar open price."""
+
+    model_name = "next_bar_open_fill"
+    model_version = "1"
+
+    def to_manifest_payload(self) -> dict[str, object]:
+        """Serialize fill-model assumptions for run manifests."""
+        return {
+            "fill_model_name": self.model_name,
+            "fill_model_version": self.model_version,
+            "volume_participation_limit": None,
+            "partial_fill_policy": "none",
+        }
 
     def fill(
         self,
@@ -58,6 +82,18 @@ class NextBarOpenFillModel:
 
 class QuoteAwareFillModel:
     """Fills buy orders at ask and sell orders at bid when quote data is present."""
+
+    model_name = "quote_aware_fill"
+    model_version = "1"
+
+    def to_manifest_payload(self) -> dict[str, object]:
+        """Serialize fill-model assumptions for run manifests."""
+        return {
+            "fill_model_name": self.model_name,
+            "fill_model_version": self.model_version,
+            "volume_participation_limit": None,
+            "partial_fill_policy": "none",
+        }
 
     def fill(
         self,
@@ -93,12 +129,24 @@ class QuoteAwareFillModel:
 class VolumeParticipationFillModel:
     """Caps simulated fill quantity by visible volume participation."""
 
+    model_name = "volume_participation_fill"
+    model_version = "1"
+
     def __init__(self, *, max_participation_rate: Decimal) -> None:
         self._max_participation_rate = Decimal(str(max_participation_rate))
         if self._max_participation_rate <= Decimal("0") or self._max_participation_rate > Decimal(
             "1"
         ):
             raise ValueError("max_participation_rate must be in (0, 1]")
+
+    def to_manifest_payload(self) -> dict[str, object]:
+        """Serialize fill-model assumptions for run manifests."""
+        return {
+            "fill_model_name": self.model_name,
+            "fill_model_version": self.model_version,
+            "volume_participation_limit": str(self._max_participation_rate),
+            "partial_fill_policy": "volume_participation",
+        }
 
     def fill(
         self,
@@ -135,10 +183,23 @@ class VolumeParticipationFillModel:
 class PartialFillModel:
     """Caps simulated fill quantity at a deterministic maximum."""
 
+    model_name = "partial_fill"
+    model_version = "1"
+
     def __init__(self, *, max_fill_quantity: Decimal) -> None:
         self._max_fill_quantity = Decimal(str(max_fill_quantity))
         if self._max_fill_quantity <= Decimal("0"):
             raise ValueError("max_fill_quantity must be positive")
+
+    def to_manifest_payload(self) -> dict[str, object]:
+        """Serialize fill-model assumptions for run manifests."""
+        return {
+            "fill_model_name": self.model_name,
+            "fill_model_version": self.model_version,
+            "volume_participation_limit": None,
+            "partial_fill_policy": "max_fill_quantity",
+            "max_fill_quantity": str(self._max_fill_quantity),
+        }
 
     def fill(
         self,

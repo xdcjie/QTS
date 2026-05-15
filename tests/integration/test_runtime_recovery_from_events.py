@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from decimal import Decimal
+from typing import cast
 
 from qts.core.ids import CorrelationId, EventId, InstrumentId, OrderId
 from qts.domain.events import BaseEvent
@@ -34,7 +35,7 @@ def test_replayed_events_reconstruct_expected_order_sequence() -> None:
     )
     store.append_many(events)
 
-    replayed = store.replay(partition_key="ord-001")
+    replayed = cast(tuple[BaseEvent, ...], store.replay(partition_key="ord-001"))
 
     assert [event.event_type for event in replayed] == ["order.sent", "execution.fill"]
     assert store.by_correlation_id(correlation_id) == events
@@ -89,7 +90,7 @@ def test_replayed_events_reconstruct_order_and_position_state() -> None:
         "execution.fill": OrderEvent.FILLED,
     }
 
-    replayed = store.replay(partition_key=order_id.value)
+    replayed = cast(tuple[BaseEvent, ...], store.replay(partition_key=order_id.value))
     manager = OrderManager()
     intent = OrderIntent(
         order_id=order_id,

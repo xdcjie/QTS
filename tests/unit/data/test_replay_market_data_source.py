@@ -57,7 +57,7 @@ def test_replay_event_sequencer_orders_by_visible_time_and_tie_breaker() -> None
     msft_first = _bar(msft, "2026-01-02T14:30:00+00:00", "2026-01-02T14:31:00+00:00")
 
     sequencer = ReplayEventSequencer(source_id="replay-source")
-    events = sequencer.sequence((msft_first, later, aapl_first))
+    events = sequencer.sequence((msft_first, aapl_first, later))
 
     assert [event.bar for event in events] == [aapl_first, msft_first, later]
     assert [event.visible_at for event in events] == [
@@ -66,6 +66,23 @@ def test_replay_event_sequencer_orders_by_visible_time_and_tie_breaker() -> None
         later.end_time,
     ]
     assert sequencer.drain_diagnostic_events() == ()
+
+
+def test_subscription_replay_source_unsubscribe_stops_later_delivery() -> None:
+    from qts.data.sources.replay_market_data_source import SubscriptionReplayMarketDataSource
+    from qts.data.subscriptions import LogicalSubscription
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    first = _bar(instrument_id, "2026-01-02T14:30:00+00:00", "2026-01-02T14:31:00+00:00")
+    second = _bar(instrument_id, "2026-01-02T14:31:00+00:00", "2026-01-02T14:32:00+00:00")
+    subscription = LogicalSubscription("strategy-a", instrument_id, "1m")
+    source = SubscriptionReplayMarketDataSource(bars=(first, second))
+
+    source.subscribe(subscription)
+    assert source.poll_next() == first
+    source.unsubscribe(subscription, observed_at=first.end_time)
+
+    assert source.poll_next() is None
 
 
 def test_subscription_replay_source_mid_run_subscribe_only_emits_future_bars() -> None:
@@ -85,6 +102,23 @@ def test_subscription_replay_source_mid_run_subscribe_only_emits_future_bars() -
 
     assert source.poll_next() == second
     assert source.poll_next() is None
+
+
+def test_replay_event_sequencer_rejects_out_of_order_source_bar() -> None:
+    from qts.data.provenance import ReplayDataAnomalyType
+    from qts.data.sources.replay_market_data_source import ReplayEventSequencer
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    first = _bar(instrument_id, "2026-01-02T14:30:00+00:00", "2026-01-02T14:31:00+00:00")
+    second = _bar(instrument_id, "2026-01-02T14:31:00+00:00", "2026-01-02T14:32:00+00:00")
+    sequencer = ReplayEventSequencer(source_id="replay-source")
+
+    events = sequencer.sequence((second, first))
+
+    assert [event.bar for event in events] == [second]
+    [diagnostic] = sequencer.drain_diagnostic_events()
+    assert diagnostic.anomaly_type is ReplayDataAnomalyType.OUT_OF_ORDER_REJECTED
+    assert diagnostic.previous_end == second.end_time
 
 
 def test_subscription_replay_source_emits_subscription_lifecycle_events() -> None:
@@ -142,7 +176,7 @@ def test_subscription_replay_source_drops_duplicates_and_reports_gaps() -> None:
         "2026-01-02T14:34:00+00:00",
     )
     source = SubscriptionReplayMarketDataSource(
-        bars=(duplicate, after_gap, first),
+        bars=(first, duplicate, after_gap),
         source_id="replay-source",
     )
 

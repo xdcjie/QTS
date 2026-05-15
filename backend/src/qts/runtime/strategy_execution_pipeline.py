@@ -7,7 +7,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal
 
-from qts.core.ids import InstrumentId, StrategyId
+from qts.core.ids import AccountId, CorrelationId, InstrumentId, StrategyId
 from qts.domain.market_data import Bar
 from qts.registry.future_roll import FutureRollRegistry
 from qts.registry.instrument_registry import InstrumentRegistry
@@ -46,6 +46,7 @@ class StrategyExecutionResult:
     conflict_group: str = "default"
     conflict_reason: str = ""
     aggregation_policy: SignalAggregationPolicy = SignalAggregationPolicy.SUM_TARGETS
+    aggregation_decision_id: str | None = None
     target_before_risk: Decimal | None = None
     target_after_aggregation: Decimal | None = None
 
@@ -108,6 +109,8 @@ class StrategyExecutionPipeline:
         account_snapshot: AccountSnapshot | object,
         latest_prices: Mapping[InstrumentId, Decimal],
         aggregate_signals: bool,
+        account_id: AccountId | None = None,
+        correlation_id: CorrelationId | None = None,
     ) -> StrategyExecutionResult:
         """Execute strategy logic for one completed strategy-facing bar."""
         history = self._strategy_bars_by_instrument[bar.instrument_id]
@@ -147,6 +150,8 @@ class StrategyExecutionPipeline:
             StrategySignalEvent(
                 bar=bar,
                 intents=strategy_result.intents,
+                account_id=account_id,
+                correlation_id=correlation_id,
                 strategy_id=self._strategy_id,
                 signal_weight=self._signal_weight,
                 signal_priority=self._signal_priority,
@@ -181,6 +186,7 @@ class StrategyExecutionPipeline:
                 batch.conflict_reason for batch in signal_batches if batch.conflict_reason
             ),
             aggregation_policy=signal_batches[0].aggregation_policy,
+            aggregation_decision_id=signal_batches[0].aggregation_decision_id,
             target_before_risk=signal_batches[0].target_before_risk,
             target_after_aggregation=signal_batches[0].target_after_aggregation,
         )

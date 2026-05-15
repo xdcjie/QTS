@@ -67,6 +67,7 @@ class OrderPlan:
     quantity_delta: Decimal
     market_price: Decimal
     order_time: datetime | None
+    aggregation_decision_id: str | None = None
 
 
 class OrderPlanBuilder:
@@ -83,6 +84,7 @@ class OrderPlanBuilder:
         account_id: AccountId,
         bar: Bar,
         positions: Mapping[InstrumentId, Position],
+        aggregation_decision_id: str | None = None,
     ) -> tuple[OrderPlan, ...]:
         """Build concrete order plans for a target intent."""
         target_instrument = self._instrument_context.order_instrument_for_intent(
@@ -113,6 +115,7 @@ class OrderPlanBuilder:
                                 bar=bar,
                             ),
                             order_time=bar.end_time,
+                            aggregation_decision_id=aggregation_decision_id,
                         )
                     )
 
@@ -138,6 +141,7 @@ class OrderPlanBuilder:
                         bar=bar,
                     ),
                     order_time=bar.end_time,
+                    aggregation_decision_id=aggregation_decision_id,
                 )
             )
 
@@ -206,6 +210,8 @@ class TargetIntentProcessor:
         strategy_id: StrategyId,
         correlation_id: CorrelationId,
         contributing_strategy_ids: tuple[StrategyId, ...] = (),
+        aggregation_decision_id: str | None = None,
+        conflict_reason: str | None = None,
         market_data_context: MarketDataRiskContext | None = None,
         order_number: int,
     ) -> ProcessedIntent:
@@ -219,6 +225,7 @@ class TargetIntentProcessor:
             account_id=account_id,
             bar=bar,
             positions=snapshot.positions,
+            aggregation_decision_id=aggregation_decision_id,
         )
         if not order_plans:
             return ProcessedIntent(orders=(), fills=())
@@ -240,6 +247,8 @@ class TargetIntentProcessor:
                 strategy_id=strategy_id,
                 correlation_id=correlation_id,
                 contributing_strategy_ids=contributing_strategy_ids,
+                aggregation_decision_id=plan.aggregation_decision_id,
+                conflict_reason=conflict_reason,
                 market_data_context=market_data_context,
                 order_number=order_number + index,
             )
@@ -268,6 +277,8 @@ class TargetIntentProcessor:
         strategy_id: StrategyId,
         correlation_id: CorrelationId,
         contributing_strategy_ids: tuple[StrategyId, ...] = (),
+        aggregation_decision_id: str | None = None,
+        conflict_reason: str | None = None,
         market_data_context: MarketDataRiskContext | None = None,
         order_number: int,
     ) -> ProcessedIntent:
@@ -285,13 +296,21 @@ class TargetIntentProcessor:
                 multiplier=self._multiplier_for(instrument_id),
                 order_time=order_time,
                 contributing_strategy_ids=contributing_strategy_ids,
+                aggregation_decision_id=aggregation_decision_id,
+                conflict_reason=conflict_reason,
                 market_data=market_data_context,
             )
         )
-        if risk_decision.contributing_strategy_ids != contributing_strategy_ids:
+        if (
+            risk_decision.contributing_strategy_ids != contributing_strategy_ids
+            or risk_decision.aggregation_decision_id != aggregation_decision_id
+            or risk_decision.conflict_reason != conflict_reason
+        ):
             risk_decision = replace(
                 risk_decision,
                 contributing_strategy_ids=contributing_strategy_ids,
+                aggregation_decision_id=aggregation_decision_id,
+                conflict_reason=conflict_reason,
             )
 
         if not risk_decision.approved:
@@ -317,6 +336,8 @@ class TargetIntentProcessor:
                 strategy_id=strategy_id,
                 client_order_id=client_order_id,
                 correlation_id=correlation_id,
+                contributing_strategy_ids=contributing_strategy_ids,
+                aggregation_decision_id=aggregation_decision_id,
             )
         )
         order_manager_ref.process_all()

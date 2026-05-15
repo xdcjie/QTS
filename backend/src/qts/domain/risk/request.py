@@ -21,6 +21,8 @@ class OrderRiskRequest:
     multiplier: Decimal
     order_time: datetime | None = None
     contributing_strategy_ids: tuple[StrategyId, ...] = ()
+    aggregation_decision_id: str | None = None
+    conflict_reason: str | None = None
     market_data: MarketDataRiskContext | None = None
 
     def __post_init__(self) -> None:
@@ -36,6 +38,10 @@ class OrderRiskRequest:
         for strategy_id in self.contributing_strategy_ids:
             if not isinstance(strategy_id, StrategyId):
                 raise TypeError("contributing_strategy_ids must contain StrategyId values")
+        if self.aggregation_decision_id is not None and not self.aggregation_decision_id.strip():
+            raise ValueError("aggregation_decision_id must not be empty")
+        if self.conflict_reason is not None and not self.conflict_reason.strip():
+            raise ValueError("conflict_reason must not be empty")
 
     @property
     def notional(self) -> Decimal:

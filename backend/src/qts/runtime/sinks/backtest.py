@@ -41,15 +41,14 @@ class BacktestRuntimeEventSink(RuntimeEventSink):
         self._event_count += 1
         if self._context is not None:
             event = self._context.apply(event, sequence_no=self._event_count)
+        deterministic_timestamp = self._INGEST_EPOCH + timedelta(microseconds=self._event_count)
         event = replace(
             event,
-            ts_ingest=self._INGEST_EPOCH + timedelta(microseconds=self._event_count),
+            ts_event=deterministic_timestamp,
+            ts_ingest=deterministic_timestamp,
         )
         row = event.to_envelope(sequence_no=self._event_count)
-        if row["run_id"] is None:
-            raise ValueError("run_id is required for runtime event sink writes")
-        if row["mode"] is None:
-            raise ValueError("mode is required for runtime event sink writes")
+        RuntimeEvent.require_canonical_envelope(row)
         row["event_hash"] = stable_json_hash(
             {key: value for key, value in row.items() if key not in {"sequence_no", "ts_ingest"}}
         )
