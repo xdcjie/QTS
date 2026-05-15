@@ -8,6 +8,7 @@ from decimal import Decimal
 
 from qts.core.ids import InstrumentId, StrategyId
 from qts.core.time import require_aware_datetime
+from qts.domain.risk.market_data_context import MarketDataRiskContext
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,6 +21,7 @@ class OrderRiskRequest:
     multiplier: Decimal
     order_time: datetime | None = None
     contributing_strategy_ids: tuple[StrategyId, ...] = ()
+    market_data: MarketDataRiskContext | None = None
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""

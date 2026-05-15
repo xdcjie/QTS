@@ -8,7 +8,7 @@ from decimal import Decimal
 
 @dataclass(frozen=True, slots=True)
 class PaperRuntimeConfig:
-    """Paper runtime configuration without real broker credentials."""
+    """Local simulated paper runtime configuration."""
 
     account_id: str
     initial_cash: Decimal
@@ -34,7 +34,7 @@ class PaperRuntime:
 
 
 def start_paper(config: PaperRuntimeConfig) -> PaperRuntime:
-    """Construct the paper runtime boundary without connecting to a real broker."""
+    """Construct the local simulated paper runtime boundary."""
 
     return PaperRuntime(config=config)
 

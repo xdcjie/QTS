@@ -6,8 +6,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from qts.data.capabilities import MarketDataFeedCapabilities
 from qts.data.historical.csv_format import DEFAULT_HISTORICAL_CSV_SCHEMA, HistoricalCsvSchema
-from qts.data.live import FeedCapabilities
 
 
 @dataclass(frozen=True, slots=True)
@@ -316,7 +316,7 @@ class HistoricalMarketDataConfig:
         timeframes = frozenset(bar.timeframe for bar in bars if bar.timeframe is not None)
         if not timeframes:
             return bars[0]
-        source_timeframe = FeedCapabilities(
+        source_timeframe = MarketDataFeedCapabilities(
             source_id=f"{catalog_name}:{root}",
             supports_ticks=False,
             supports_quotes=False,

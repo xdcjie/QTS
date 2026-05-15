@@ -3,9 +3,10 @@ from __future__ import annotations
 from decimal import Decimal
 
 from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId
-from qts.execution.broker import BrokerOrderRequest, FakeBrokerAdapter
+from qts.execution.broker import BrokerOrderRequest
 from qts.execution.order_manager import OrderSide
 from qts.reconciliation import OrderSnapshot, ReconciliationSnapshot, reconcile_snapshots
+from qts.testing.fakes.broker import FakeBrokerAdapter
 
 
 def test_live_broker_boundary_preserves_internal_identifiers() -> None:

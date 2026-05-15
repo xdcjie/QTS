@@ -26,7 +26,7 @@ def test_ibkr_gateway_market_data_subscription_anchor_requires_real_transport(
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
     )
-    from qts.data.adapters.ibkr_transport import IbkrMarketDataContractSpec
+    from qts.data.transports.ibkr_tws_market_data_transport import IbkrMarketDataContractSpec
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("CASH.IDEALPRO.EUR.USD")

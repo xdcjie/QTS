@@ -40,6 +40,7 @@ def map_runtime_command_result_dto(result: RuntimeCommandResultDTO) -> dict[str,
         "status": result.status,
         "evidence": dict(result.evidence),
         "failure_reason": result.failure_reason,
+        "reason_code": result.reason_code,
     }
 
 

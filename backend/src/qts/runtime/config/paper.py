@@ -7,14 +7,40 @@ from qts.runtime.mode import RuntimeMode
 
 
 @dataclass(frozen=True, slots=True)
-class PaperRuntimeConfig(LiveRuntimeConfig):
-    """Configuration for paper broker or paper simulated runtime modes."""
+class PaperBrokerRuntimeConfig(LiveRuntimeConfig):
+    """Configuration for paper-account broker runtime mode."""
 
     def __post_init__(self) -> None:
-        super().__post_init__()
+        LiveRuntimeConfig.__post_init__(self)
+        mode = RuntimeMode.from_value(self.mode)
+        if mode is not RuntimeMode.PAPER_BROKER:
+            raise ValueError("PaperBrokerRuntimeConfig mode must be paper_broker")
+
+
+@dataclass(frozen=True, slots=True)
+class PaperSimulatedRuntimeConfig(LiveRuntimeConfig):
+    """Configuration for local simulated execution runtime mode."""
+
+    def __post_init__(self) -> None:
+        LiveRuntimeConfig.__post_init__(self)
+        mode = RuntimeMode.from_value(self.mode)
+        if mode is not RuntimeMode.PAPER_SIMULATED:
+            raise ValueError("PaperSimulatedRuntimeConfig mode must be paper_simulated")
+
+
+@dataclass(frozen=True, slots=True)
+class PaperRuntimeConfig(LiveRuntimeConfig):
+    """Deprecated compatibility config for paper runtime modes."""
+
+    def __post_init__(self) -> None:
+        LiveRuntimeConfig.__post_init__(self)
         mode = RuntimeMode.from_value(self.mode)
         if mode not in {RuntimeMode.PAPER_BROKER, RuntimeMode.PAPER_SIMULATED}:
             raise ValueError("PaperRuntimeConfig mode must be paper_broker or paper_simulated")
 
 
-__all__ = ["PaperRuntimeConfig"]
+__all__ = [
+    "PaperBrokerRuntimeConfig",
+    "PaperRuntimeConfig",
+    "PaperSimulatedRuntimeConfig",
+]

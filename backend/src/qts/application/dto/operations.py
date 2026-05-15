@@ -22,6 +22,7 @@ class RuntimeCommandResultDTO:
     status: str
     evidence: Mapping[str, object] = field(default_factory=dict)
     failure_reason: str | None = None
+    reason_code: str | None = None
 
     def __post_init__(self) -> None:
         """Normalize evidence into an immutable DTO payload."""

@@ -22,8 +22,8 @@ def test_paper_runtime_processes_strategy_order_fill_and_account_snapshot() -> N
     from qts.registry.instrument_registry import InstrumentRegistry
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.live_runtime_dependencies import LiveRuntimeDependencies
-    from qts.runtime.live_runtime_session import LiveRuntimeSession
+    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
+    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
     registry = InstrumentRegistry()

@@ -1,57 +1,35 @@
-"""Live feed subscription and event DTOs."""
+"""Deprecated live event exports.
+
+Shared DTOs now live in :mod:`qts.data.events`.
+"""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import warnings
 
-from qts.core.ids import InstrumentId
-from qts.domain.market_data import Bar, Quote, Tick
+from qts.data.events import (
+    MarketDataPayload as LiveFeedPayload,
+)
+from qts.data.events import (
+    MarketDataSourceEvent as LiveFeedEvent,
+)
+from qts.data.events import (
+    MarketDataSourceFailure as LiveFeedFailure,
+)
+from qts.data.events import (
+    MarketDataSubscribed,
+)
+from qts.data.events import (
+    MarketDataSubscription as FeedSubscription,
+)
 
-LiveFeedPayload = Bar | Quote | Tick
-
-
-@dataclass(frozen=True, slots=True)
-class FeedSubscription:
-    """Internal live feed subscription request."""
-
-    subscription_id: str
-    instrument_id: InstrumentId
-    timeframe: str
-
-    def __post_init__(self) -> None:
-        if not self.subscription_id.strip():
-            raise ValueError("subscription_id must not be empty")
-        if not self.timeframe.strip():
-            raise ValueError("timeframe must not be empty")
-
-
-@dataclass(frozen=True, slots=True)
-class MarketDataSubscribed:
-    """Successful market-data source subscription acknowledgement."""
-
-    subscription: FeedSubscription
-    source_id: str
-
-
-@dataclass(frozen=True, slots=True)
-class LiveFeedEvent:
-    """Live feed payload emitted by a subscription."""
-
-    payload: LiveFeedPayload
-    source_id: str
-
-
-@dataclass(frozen=True, slots=True)
-class LiveFeedFailure:
-    """Live feed failure notification."""
-
-    subscription_id: str
-    source_id: str
-    reason: str
-
-    def __post_init__(self) -> None:
-        if not self.reason.strip():
-            raise ValueError("reason must not be empty")
+# Keep backward-compatible names for one release only.
+warnings.warn(
+    "qts.data.live.events.* is deprecated and will be removed in the next release; "
+    "use qts.data.events instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 
 __all__ = [

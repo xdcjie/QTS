@@ -9,10 +9,15 @@ from qts.runtime.sinks.base import RuntimeEvent
 def test_live_report_writer_manifest_names_artifacts_counts_and_redacted_connection(
     tmp_path: Path,
 ) -> None:
+    from qts.core.ids import RuntimeRunId
     from qts.reporting.live import LiveReportWriter
+    from qts.runtime.sinks.base import RuntimeEventContext
     from qts.runtime.sinks.live import LiveRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(tmp_path)
+    sink = LiveRuntimeEventSink(
+        tmp_path,
+        context=RuntimeEventContext(run_id=RuntimeRunId("live-report-test"), mode="paper_broker"),
+    )
     sink.write(RuntimeEvent(kind="runtime.state_transition", payload={"state": "running"}))
     sink.close()
 

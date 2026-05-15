@@ -8,11 +8,25 @@ from pathlib import Path
 from qts.runtime.sinks.base import RuntimeEvent
 
 
-def test_live_runtime_event_sink_writes_stable_append_only_ndjson(tmp_path: Path) -> None:
-    from qts.core.ids import CorrelationId
+def test_live_runtime_event_sink_requires_run_context(tmp_path: Path) -> None:
+    import pytest
     from qts.runtime.sinks.live import LiveRuntimeEventSink
 
     sink = LiveRuntimeEventSink(tmp_path)
+
+    with pytest.raises(ValueError, match="run_id"):
+        sink.write(RuntimeEvent(kind="runtime.state", payload={"state": "running"}))
+
+
+def test_live_runtime_event_sink_writes_stable_append_only_ndjson(tmp_path: Path) -> None:
+    from qts.core.ids import CorrelationId, RuntimeRunId
+    from qts.runtime.sinks.base import RuntimeEventContext
+    from qts.runtime.sinks.live import LiveRuntimeEventSink
+
+    sink = LiveRuntimeEventSink(
+        tmp_path,
+        context=RuntimeEventContext(run_id=RuntimeRunId("run-stable"), mode="paper_broker"),
+    )
     first = sink.write(
         RuntimeEvent(
             kind="runtime.order_submitted",
@@ -53,16 +67,22 @@ def test_live_runtime_event_sink_writes_stable_append_only_ndjson(tmp_path: Path
 
 
 def test_runtime_event_sink_writes_mode_and_execution_environment(tmp_path: Path) -> None:
-    from qts.core.ids import CorrelationId
+    from qts.core.ids import CorrelationId, RuntimeRunId
+    from qts.runtime.sinks.base import RuntimeEventContext
     from qts.runtime.sinks.live import LiveRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(tmp_path)
+    sink = LiveRuntimeEventSink(
+        tmp_path,
+        context=RuntimeEventContext(
+            run_id=RuntimeRunId("run-mode"),
+            mode="live",
+            execution_environment="broker",
+        ),
+    )
     sink.write(
         RuntimeEvent(
             kind="runtime.order_submitted",
             payload={"order_id": "order-1", "client_order_id": "client-order-1"},
-            mode="live",
-            execution_environment="broker",
             correlation_id=CorrelationId("corr-1"),
         )
     )
@@ -184,10 +204,14 @@ def test_runtime_event_context_rejects_permission_mode_label() -> None:
 
 
 def test_runtime_event_envelope_writes_parent_event_id(tmp_path: Path) -> None:
-    from qts.core.ids import CorrelationId, EventId
+    from qts.core.ids import CorrelationId, EventId, RuntimeRunId
+    from qts.runtime.sinks.base import RuntimeEventContext
     from qts.runtime.sinks.live import LiveRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(tmp_path)
+    sink = LiveRuntimeEventSink(
+        tmp_path,
+        context=RuntimeEventContext(run_id=RuntimeRunId("run-parent"), mode="paper_broker"),
+    )
     sink.write(
         RuntimeEvent(
             kind="runtime.order_submitted",

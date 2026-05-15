@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 
 from qts.core.time import require_aware_datetime
@@ -56,6 +56,12 @@ class RuntimeCommand:
     command_type: RuntimeCommandType
     idempotency_key: str
     operator_id: str
+    runtime_instance_id: str = "local-runtime"
+    operator_role: str = "operator"
+    authorization_scope: str = "runtime:operator"
+    requested_at: datetime | None = None
+    approved_by: str | None = None
+    approval_required: bool = False
     reason: str | None = None
     payload: Mapping[str, object] = field(default_factory=dict)
 
@@ -64,9 +70,16 @@ class RuntimeCommand:
         self._require_text(self.command_id, "command_id")
         self._require_text(self.idempotency_key, "idempotency_key")
         self._require_text(self.operator_id, "operator_id")
+        self._require_text(self.runtime_instance_id, "runtime_instance_id")
+        self._require_text(self.operator_role, "operator_role")
+        self._require_text(self.authorization_scope, "authorization_scope")
         object.__setattr__(self, "payload", dict(self.payload))
         if self.reason is not None:
             self._require_text(self.reason, "reason")
+        if self.requested_at is not None:
+            require_aware_datetime(self.requested_at, name="requested_at")
+        if self.approved_by is not None:
+            self._require_text(self.approved_by, "approved_by")
 
     def accepted_event(self, *, accepted_at: datetime) -> RuntimeCommandStreamEvent:
         """Return a stream event proving this command was accepted."""
@@ -77,12 +90,58 @@ class RuntimeCommand:
             event_time=accepted_at,
             payload={
                 "command_id": self.command_id,
+                "runtime_instance_id": self.runtime_instance_id,
                 "idempotency_key": self.idempotency_key,
                 "command_type": self.command_type.value,
                 "operator_id": self.operator_id,
+                "operator_role": self.operator_role,
+                "authorization_scope": self.authorization_scope,
+                "requested_at": (
+                    self.requested_at.isoformat() if self.requested_at is not None else None
+                ),
+                "approved_by": self.approved_by,
+                "approval_required": self.approval_required,
                 **dict(self.payload),
             },
         )
+
+    @property
+    def idempotency_scope(self) -> tuple[str, str, RuntimeCommandType, str]:
+        """Return the runtime/operator/type/key scope for idempotent command results."""
+        return (
+            self.runtime_instance_id,
+            self.operator_id,
+            self.command_type,
+            self.idempotency_key,
+        )
+
+    def authorization_failure_reason(self) -> tuple[str, str] | None:
+        """Return reason code and text when command authorization fails."""
+        if (
+            self.command_type is RuntimeCommandType.DEACTIVATE_KILL_SWITCH
+            and self.authorization_scope != "runtime:safety:write"
+        ):
+            return (
+                "COMMAND_PERMISSION_DENIED",
+                "kill-switch deactivation requires runtime:safety:write scope",
+            )
+        if self.payload.get("enable_live_orders") is True and (
+            self.approved_by is None or self.approved_by == self.operator_id
+        ):
+            return (
+                "DUAL_CONTROL_REQUIRED",
+                "live order enablement requires a second approver",
+            )
+        if (
+            self.command_type is RuntimeCommandType.RESUME
+            and self.payload.get("reconnect_reconciliation_required") is True
+            and self.payload.get("reconciliation_passed") is not True
+        ):
+            return (
+                "RECONNECT_RECONCILIATION_REQUIRED",
+                "resume after reconnect requires reconciliation",
+            )
+        return None
 
     @staticmethod
     def _require_text(value: str, name: str) -> None:
@@ -101,6 +160,7 @@ class RuntimeCommandResult:
     completed_at: datetime | None = None
     evidence: Mapping[str, object] = field(default_factory=dict)
     failure_reason: str | None = None
+    reason_code: str | None = None
 
     def __post_init__(self) -> None:
         """Validate command result evidence."""
@@ -113,6 +173,8 @@ class RuntimeCommandResult:
         if self.result_status is RuntimeCommandResultStatus.REJECTED:
             if self.failure_reason is None or not self.failure_reason.strip():
                 raise ValueError("failure_reason is required for rejected commands")
+            if self.reason_code is not None:
+                RuntimeCommand._require_text(self.reason_code, "reason_code")
         elif self.failure_reason is not None and not self.failure_reason.strip():
             raise ValueError("failure_reason must not be empty when provided")
 
@@ -131,6 +193,8 @@ class RuntimeCommandResult:
         }
         if self.failure_reason is not None:
             payload["failure_reason"] = self.failure_reason
+        if self.reason_code is not None:
+            payload["reason_code"] = self.reason_code
         return RuntimeCommandStreamEvent(
             event_type="command_completed",
             event_time=event_time,
@@ -144,13 +208,32 @@ class RuntimeCommandBus:
     def __init__(self, *, handler: Callable[[RuntimeCommand], RuntimeCommandResult]) -> None:
         """Perform __init__."""
         self._handler = handler
-        self._results: dict[tuple[RuntimeCommandType, str], RuntimeCommandResult] = {}
+        self._results: dict[tuple[str, str, RuntimeCommandType, str], RuntimeCommandResult] = {}
 
     def submit(self, command: RuntimeCommand) -> RuntimeCommandResult:
         """Submit a command once per idempotency key."""
-        result_key = (command.command_type, command.idempotency_key)
+        result_key = command.idempotency_scope
         if result_key in self._results:
             return self._results[result_key]
+        authorization_failure = command.authorization_failure_reason()
+        if authorization_failure is not None:
+            reason_code, failure_reason = authorization_failure
+            result = RuntimeCommandResult(
+                command_id=command.command_id,
+                idempotency_key=command.idempotency_key,
+                accepted_at=datetime.now(UTC),
+                result_status=RuntimeCommandResultStatus.REJECTED,
+                failure_reason=failure_reason,
+                reason_code=reason_code,
+                evidence={
+                    "runtime_instance_id": command.runtime_instance_id,
+                    "operator_id": command.operator_id,
+                    "operator_role": command.operator_role,
+                    "authorization_scope": command.authorization_scope,
+                },
+            )
+            self._results[result_key] = result
+            return result
         result = self._handler(command)
         self._results[result_key] = result
         return result

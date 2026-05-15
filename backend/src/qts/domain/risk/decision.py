@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 
@@ -27,6 +28,7 @@ class RiskDecision:
     rule_id: str | None = None
     checked_at: datetime | None = None
     contributing_strategy_ids: tuple[StrategyId, ...] = ()
+    evidence: Mapping[str, object] = field(default_factory=dict)
 
     @classmethod
     def approve(
@@ -35,6 +37,7 @@ class RiskDecision:
         rule_id: str | None = None,
         checked_at: datetime | None = None,
         contributing_strategy_ids: tuple[StrategyId, ...] | None = None,
+        evidence: Mapping[str, object] | None = None,
     ) -> RiskDecision:
         """Perform approve."""
         return cls(
@@ -44,6 +47,7 @@ class RiskDecision:
             contributing_strategy_ids=contributing_strategy_ids
             if contributing_strategy_ids is not None
             else (),
+            evidence={} if evidence is None else dict(evidence),
         )
 
     @classmethod
@@ -55,6 +59,7 @@ class RiskDecision:
         rule_id: str | None = None,
         checked_at: datetime | None = None,
         contributing_strategy_ids: tuple[StrategyId, ...] | None = None,
+        evidence: Mapping[str, object] | None = None,
     ) -> RiskDecision:
         """Perform rejected."""
         if not reason_code.strip():
@@ -70,6 +75,7 @@ class RiskDecision:
             contributing_strategy_ids=contributing_strategy_ids
             if contributing_strategy_ids is not None
             else (),
+            evidence={} if evidence is None else dict(evidence),
         )
 
     @property

@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 import pytest
 
 if TYPE_CHECKING:
-    from qts.data.adapters.ibkr_transport import (
+    from qts.data.transports.ibkr_tws_market_data_transport import (
         IbkrBarPayload,
         IbkrMarketDataCallbackSink,
         IbkrQuotePayload,
@@ -24,7 +24,7 @@ def test_ibkr_market_data_transport_dispatches_raw_callbacks_to_adapter() -> Non
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
     )
-    from qts.data.adapters.ibkr_transport import (
+    from qts.data.transports.ibkr_tws_market_data_transport import (
         IbkrBarPayload,
         IbkrMarketDataTransport,
         IbkrQuotePayload,
@@ -96,7 +96,7 @@ def test_ibkr_tws_market_data_transport_builds_stock_contract_and_normalizes_tic
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
     )
-    from qts.data.adapters.ibkr_transport import (
+    from qts.data.transports.ibkr_tws_market_data_transport import (
         IbkrMarketDataContractSpec,
         IbkrTwsMarketDataTransport,
         IbkrTwsMarketDataTransportConfig,
@@ -146,7 +146,7 @@ def test_ibkr_tws_market_data_transport_waits_through_transient_connectivity_sta
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
     )
-    from qts.data.adapters.ibkr_transport import (
+    from qts.data.transports.ibkr_tws_market_data_transport import (
         IbkrTwsMarketDataTransport,
         IbkrTwsMarketDataTransportConfig,
     )
@@ -195,7 +195,7 @@ def test_ibkr_tws_market_data_transport_permission_error_fails_fast() -> None:
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
     )
-    from qts.data.adapters.ibkr_transport import (
+    from qts.data.transports.ibkr_tws_market_data_transport import (
         IbkrTwsMarketDataTransport,
         IbkrTwsMarketDataTransportConfig,
     )
@@ -237,7 +237,7 @@ def test_ibkr_tws_market_data_transport_pacing_violation_enters_backoff() -> Non
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
     )
-    from qts.data.adapters.ibkr_transport import (
+    from qts.data.transports.ibkr_tws_market_data_transport import (
         IbkrMarketDataContractSpec,
         IbkrTwsMarketDataTransport,
         IbkrTwsMarketDataTransportConfig,
@@ -278,7 +278,7 @@ def test_ibkr_tws_market_data_transport_ignores_late_ticks_after_unsubscribe() -
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
     )
-    from qts.data.adapters.ibkr_transport import (
+    from qts.data.transports.ibkr_tws_market_data_transport import (
         IbkrTwsMarketDataTransport,
         IbkrTwsMarketDataTransportConfig,
     )
@@ -316,7 +316,7 @@ def test_ibkr_tws_market_data_transport_resubscribes_active_requests_after_recon
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
     )
-    from qts.data.adapters.ibkr_transport import (
+    from qts.data.transports.ibkr_tws_market_data_transport import (
         IbkrMarketDataContractSpec,
         IbkrTwsMarketDataTransport,
         IbkrTwsMarketDataTransportConfig,
@@ -372,7 +372,7 @@ def test_ibkr_tws_market_data_transport_bounds_blocking_ibapi_connect(
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
     )
-    from qts.data.adapters.ibkr_transport import (
+    from qts.data.transports.ibkr_tws_market_data_transport import (
         IbkrTwsMarketDataTransport,
         IbkrTwsMarketDataTransportConfig,
     )
@@ -391,7 +391,9 @@ def test_ibkr_tws_market_data_transport_bounds_blocking_ibapi_connect(
         symbol_mapping=mapping,
     )
     app = _BlockingConnectApp()
-    monkeypatch.setattr("qts.data.adapters.ibkr_transport._new_market_data_app", lambda owner: app)
+    monkeypatch.setattr(
+        "qts.data.transports.ibkr_tws_market_data_transport._new_market_data_app", lambda owner: app
+    )
     transport = IbkrTwsMarketDataTransport(
         config=IbkrTwsMarketDataTransportConfig(
             host="127.0.0.1",

@@ -6,8 +6,8 @@ from decimal import Decimal
 def test_broker_execution_adapter_normalizes_submit_and_callback_reports() -> None:
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
     from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
-    from qts.execution.broker import FakeBrokerAdapter
     from qts.execution.order_manager import ExecutionReportStatus, OrderIntent, OrderSide
+    from qts.testing.fakes.broker import FakeBrokerAdapter
 
     broker = FakeBrokerAdapter(broker_id=BrokerId("paper"))
     adapter = BrokerExecutionAdapter(
@@ -50,8 +50,8 @@ def test_broker_execution_adapter_normalizes_submit_and_callback_reports() -> No
 def test_broker_execution_adapter_normalizes_cancel_reports_with_runtime_order_id() -> None:
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
     from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
-    from qts.execution.broker import FakeBrokerAdapter
     from qts.execution.order_manager import ExecutionReportStatus, OrderIntent, OrderSide
+    from qts.testing.fakes.broker import FakeBrokerAdapter
 
     broker = FakeBrokerAdapter(broker_id=BrokerId("paper"))
     adapter = BrokerExecutionAdapter(
@@ -92,8 +92,8 @@ def test_broker_execution_adapter_rejects_intent_account_route_mismatch() -> Non
     import pytest
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
     from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
-    from qts.execution.broker import FakeBrokerAdapter
     from qts.execution.order_manager import OrderIntent, OrderSide
+    from qts.testing.fakes.broker import FakeBrokerAdapter
 
     adapter = BrokerExecutionAdapter(
         broker=FakeBrokerAdapter(broker_id=BrokerId("paper")),
@@ -125,8 +125,8 @@ def test_broker_execution_adapter_rejects_unknown_broker_order_id() -> None:
     from qts.execution.broker import (
         BrokerExecutionReport,
         BrokerExecutionReportStatus,
-        FakeBrokerAdapter,
     )
+    from qts.testing.fakes.broker import FakeBrokerAdapter
 
     adapter = BrokerExecutionAdapter(
         broker=FakeBrokerAdapter(broker_id=BrokerId("paper")),
@@ -159,10 +159,10 @@ def test_broker_execution_adapter_can_recover_runtime_broker_order_mapping() -> 
     from qts.execution.broker import (
         BrokerExecutionReport,
         BrokerExecutionReportStatus,
-        FakeBrokerAdapter,
     )
     from qts.execution.order_manager import Order, OrderIntent, OrderManagerSnapshot, OrderSide
     from qts.execution.order_state_machine import OrderState
+    from qts.testing.fakes.broker import FakeBrokerAdapter
 
     order_id = OrderId("ord-001")
     adapter = BrokerExecutionAdapter(

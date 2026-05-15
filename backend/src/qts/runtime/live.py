@@ -1,4 +1,4 @@
-"""Live runtime lifecycle and fake-adapter orchestration."""
+"""Paper/live runtime lifecycle and startup safety orchestration."""
 
 from __future__ import annotations
 
@@ -7,32 +7,20 @@ from enum import StrEnum
 from typing import Any
 
 from qts.core.hashing import stable_json_hash
-from qts.data.live import LiveFeedAdapter
+from qts.data.interfaces import StreamingFeedAdapter
 from qts.execution.broker import BrokerAdapter, BrokerExecutionReport, BrokerOrderRequest
 from qts.runtime.config import LiveRuntimeConfig
-from qts.runtime.mode import RuntimeMode
+from qts.runtime.mode import AccountEnvironment, RuntimeMode
+from qts.runtime.permissions import LiveOrderPermission
 from qts.runtime.sinks.base import RuntimeEvent
+from qts.runtime.state import RuntimeSessionState, RuntimeStateMachine
+
+LiveRuntimeState = RuntimeSessionState
+LiveRuntimeStateMachine = RuntimeStateMachine
+LivePermissionMode = LiveOrderPermission
 
 
-class LiveRuntimeState(StrEnum):
-    """Live runtime lifecycle states."""
-
-    STOPPED = "stopped"
-    STARTING = "starting"
-    RUNNING = "running"
-    PAUSED = "paused"
-    DEGRADED = "degraded"
-
-
-class LivePermissionMode(StrEnum):
-    """Runtime mode with explicit live-trading permissions."""
-
-    PAPER = "paper"
-    OBSERVATION = "observation"
-    LIVE = "live"
-
-
-class LiveStartupDecisionStatus(StrEnum):
+class BrokerRuntimeStartupDecisionStatus(StrEnum):
     """Explicit startup decision for paper/live capable runtimes."""
 
     ALLOW_OBSERVATION = "allow_observation"
@@ -42,7 +30,7 @@ class LiveStartupDecisionStatus(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
-class LiveStartupCheck:
+class BrokerRuntimeStartupCheck:
     """One structured live startup checklist item."""
 
     check_name: str
@@ -65,33 +53,96 @@ class LiveStartupCheck:
 
 
 @dataclass(frozen=True, slots=True)
-class LiveStartupChecklist:
+class BrokerRuntimeStartupChecklist:
     """Structured startup checklist evidence for paper/live modes."""
 
-    checks: tuple[LiveStartupCheck, ...]
+    checks: tuple[BrokerRuntimeStartupCheck, ...]
 
     @classmethod
-    def from_config(cls, config: LiveRuntimeConfig) -> LiveStartupChecklist:
+    def from_config(cls, config: LiveRuntimeConfig) -> BrokerRuntimeStartupChecklist:
         """Build structured startup evidence without changing startup state."""
 
-        checks: list[LiveStartupCheck] = []
-        for field_name, configured, remediation in (
-            ("broker_configured", config.broker_configured, "configure broker connection"),
-            ("account_configured", config.account_configured, "configure account mapping"),
-            ("risk_configured", config.risk_configured, "configure risk limits"),
-            ("calendar_configured", config.calendar_configured, "configure trading calendar"),
-            ("kill_switch_configured", config.kill_switch_configured, "configure kill switch"),
+        checks: list[BrokerRuntimeStartupCheck] = []
+        mode = RuntimeMode.from_value(config.mode)
+        account_environment = AccountEnvironment.from_value(config.account_environment, mode=mode)
+        for check_name, configured, evidence, remediation in (
+            (
+                "broker_configured",
+                config.broker_configured,
+                f"broker_configured={config.broker_configured}",
+                "configure broker connection",
+            ),
+            (
+                "account_configured",
+                config.account_configured,
+                f"account_configured={config.account_configured}",
+                "configure account mapping",
+            ),
+            (
+                "account_mode_check",
+                config.account_configured,
+                (
+                    f"account_environment={account_environment.value};"
+                    f"broker_account_kind={config.broker_account_kind};"
+                    f"broker_account_code={config.broker_account_code}"
+                ),
+                "configure account environment and broker account kind for the runtime mode",
+            ),
+            (
+                "port_check",
+                mode
+                not in {
+                    RuntimeMode.LIVE,
+                    RuntimeMode.PAPER_BROKER,
+                }
+                or config.broker_port is not None,
+                (
+                    f"broker_port={config.broker_port}"
+                    if mode in {RuntimeMode.LIVE, RuntimeMode.PAPER_BROKER}
+                    else "broker_port=not_required"
+                ),
+                "configure the broker port for the runtime mode",
+            ),
+            (
+                "api_read_only_check",
+                mode is not RuntimeMode.LIVE or not config.api_read_only,
+                f"api_read_only={config.api_read_only}",
+                "disable broker API read-only mode before enabling live orders",
+            ),
+            (
+                "broker_time_check",
+                config.broker_time_synced,
+                f"broker_time_synced={config.broker_time_synced}",
+                "synchronize broker/runtime clocks before startup",
+            ),
+            (
+                "risk_config_check",
+                config.risk_configured,
+                f"risk_configured={config.risk_configured}",
+                "configure risk limits",
+            ),
+            (
+                "calendar_configured",
+                config.calendar_configured,
+                f"calendar_configured={config.calendar_configured}",
+                "configure trading calendar",
+            ),
+            (
+                "kill_switch_check",
+                config.kill_switch_configured,
+                f"kill_switch_configured={config.kill_switch_configured}",
+                "configure kill switch",
+            ),
         ):
             checks.append(
-                LiveStartupCheck(
-                    check_name=field_name,
+                BrokerRuntimeStartupCheck(
+                    check_name=check_name,
                     status="PASS" if configured else "FAIL",
                     severity="INFO" if configured else "BLOCKER",
-                    evidence=f"{field_name}={configured}",
+                    evidence=evidence,
                     remediation="none" if configured else remediation,
                 )
             )
-        mode = RuntimeMode.from_value(config.mode)
         for check_name, passed, evidence, remediation in (
             (
                 "market_data_permission_check",
@@ -100,10 +151,22 @@ class LiveStartupChecklist:
                 "obtain live market-data permission or switch to observation-only",
             ),
             (
-                "reconciliation_check",
-                config.reconciliation_passed,
-                f"reconciliation_passed={config.reconciliation_passed}",
-                "run broker/internal reconciliation and resolve drift",
+                "open_order_reconciliation_check",
+                bool(config.open_order_reconciliation_passed),
+                f"open_order_reconciliation_passed={config.open_order_reconciliation_passed}",
+                "run open-order reconciliation and resolve drift",
+            ),
+            (
+                "position_reconciliation_check",
+                bool(config.position_reconciliation_passed),
+                f"position_reconciliation_passed={config.position_reconciliation_passed}",
+                "run position reconciliation and resolve drift",
+            ),
+            (
+                "cash_reconciliation_check",
+                bool(config.cash_reconciliation_passed),
+                f"cash_reconciliation_passed={config.cash_reconciliation_passed}",
+                "run cash reconciliation and resolve drift",
             ),
             (
                 "event_sink_check",
@@ -129,7 +192,7 @@ class LiveStartupChecklist:
             ),
         ):
             checks.append(
-                LiveStartupCheck(
+                BrokerRuntimeStartupCheck(
                     check_name=check_name,
                     status="PASS" if passed else "FAIL",
                     severity="INFO" if passed else "BLOCKER",
@@ -145,7 +208,7 @@ class LiveStartupChecklist:
 
         return all(check.status != "FAIL" for check in self.checks)
 
-    def by_name(self, check_name: str) -> LiveStartupCheck:
+    def by_name(self, check_name: str) -> BrokerRuntimeStartupCheck:
         """Return one checklist item by name."""
 
         for check in self.checks:
@@ -181,29 +244,35 @@ class LiveStartupChecklist:
 
 
 @dataclass(frozen=True, slots=True)
-class LiveStartupDecision:
+class BrokerRuntimeStartupDecision:
     """Result of startup guard validation."""
 
-    status: LiveStartupDecisionStatus
+    status: BrokerRuntimeStartupDecisionStatus
     mode: RuntimeMode
+    order_permission: LiveOrderPermission
     real_order_submission_enabled: bool
-    checklist: LiveStartupChecklist
+    checklist: BrokerRuntimeStartupChecklist
 
 
-def validate_live_startup(config: LiveRuntimeConfig) -> LiveStartupDecision:
+def validate_live_startup(config: LiveRuntimeConfig) -> BrokerRuntimeStartupDecision:
     """Fail closed unless all live safety prerequisites are explicit."""
 
-    checklist = LiveStartupChecklist.from_config(config)
-    missing = [check.check_name for check in checklist.checks if check.status == "FAIL"]
+    checklist = BrokerRuntimeStartupChecklist.from_config(config)
+    missing = [
+        f"{check.check_name} ({check.evidence})"
+        for check in checklist.checks
+        if check.status == "FAIL"
+    ]
     if missing:
         raise ValueError("live startup missing required config: " + ", ".join(missing))
     mode = RuntimeMode.from_value(config.mode)
     status = _startup_decision_status(mode)
-    return LiveStartupDecision(
+    return BrokerRuntimeStartupDecision(
         status=status,
         mode=mode,
+        order_permission=_order_permission_for_status(status),
         real_order_submission_enabled=(
-            status is LiveStartupDecisionStatus.ALLOW_LIVE
+            _order_permission_for_status(status).allows_live_orders
             and config.allow_live_orders
             and not config.observation_only
         ),
@@ -211,53 +280,30 @@ def validate_live_startup(config: LiveRuntimeConfig) -> LiveStartupDecision:
     )
 
 
-def _startup_decision_status(mode: RuntimeMode) -> LiveStartupDecisionStatus:
+def _startup_decision_status(mode: RuntimeMode) -> BrokerRuntimeStartupDecisionStatus:
     if mode is RuntimeMode.LIVE:
-        return LiveStartupDecisionStatus.ALLOW_LIVE
+        return BrokerRuntimeStartupDecisionStatus.ALLOW_LIVE
     if mode in {RuntimeMode.PAPER_BROKER, RuntimeMode.PAPER_SIMULATED}:
-        return LiveStartupDecisionStatus.ALLOW_PAPER
-    if mode is RuntimeMode.OBSERVATION:
-        return LiveStartupDecisionStatus.ALLOW_OBSERVATION
-    return LiveStartupDecisionStatus.BLOCK
+        return BrokerRuntimeStartupDecisionStatus.ALLOW_PAPER
+    if mode in {RuntimeMode.OBSERVATION, RuntimeMode.LIVE_OBSERVATION}:
+        return BrokerRuntimeStartupDecisionStatus.ALLOW_OBSERVATION
+    return BrokerRuntimeStartupDecisionStatus.BLOCK
 
 
-_TRANSITIONS: dict[LiveRuntimeState, dict[str, LiveRuntimeState]] = {
-    LiveRuntimeState.STOPPED: {"start": LiveRuntimeState.STARTING},
-    LiveRuntimeState.STARTING: {
-        "started": LiveRuntimeState.RUNNING,
-        "stop": LiveRuntimeState.STOPPED,
-    },
-    LiveRuntimeState.RUNNING: {
-        "pause": LiveRuntimeState.PAUSED,
-        "degrade": LiveRuntimeState.DEGRADED,
-        "stop": LiveRuntimeState.STOPPED,
-    },
-    LiveRuntimeState.PAUSED: {
-        "resume": LiveRuntimeState.RUNNING,
-        "degrade": LiveRuntimeState.DEGRADED,
-        "stop": LiveRuntimeState.STOPPED,
-    },
-    LiveRuntimeState.DEGRADED: {
-        "recover": LiveRuntimeState.RUNNING,
-        "pause": LiveRuntimeState.PAUSED,
-        "stop": LiveRuntimeState.STOPPED,
-    },
-}
+def _order_permission_for_status(
+    status: BrokerRuntimeStartupDecisionStatus,
+) -> LiveOrderPermission:
+    if status is BrokerRuntimeStartupDecisionStatus.ALLOW_LIVE:
+        return LiveOrderPermission.LIVE_ORDERS_ALLOWED
+    if status is BrokerRuntimeStartupDecisionStatus.ALLOW_PAPER:
+        return LiveOrderPermission.PAPER_ORDERS_ALLOWED
+    return LiveOrderPermission.OBSERVATION_ONLY
 
 
-@dataclass(slots=True)
-class LiveRuntimeStateMachine:
-    """Mutable live runtime state machine."""
-
-    state: LiveRuntimeState = LiveRuntimeState.STOPPED
-
-    def apply(self, command: str) -> LiveRuntimeState:
-        """Perform apply."""
-        next_state = _TRANSITIONS.get(self.state, {}).get(command)
-        if next_state is None:
-            raise ValueError(f"invalid live runtime transition: {self.state} -> {command}")
-        self.state = next_state
-        return self.state
+LiveStartupDecisionStatus = BrokerRuntimeStartupDecisionStatus
+LiveStartupCheck = BrokerRuntimeStartupCheck
+LiveStartupChecklist = BrokerRuntimeStartupChecklist
+LiveStartupDecision = BrokerRuntimeStartupDecision
 
 
 @dataclass(frozen=True, slots=True)
@@ -273,7 +319,7 @@ class RuntimeOrderResult:
 class LiveRuntime:
     """Runtime facade over broker and market-data boundary adapters."""
 
-    def __init__(self, *, broker: BrokerAdapter, feed: LiveFeedAdapter) -> None:
+    def __init__(self, *, broker: BrokerAdapter, feed: StreamingFeedAdapter) -> None:
         self._broker = broker
         self._feed = feed
         self._machine = LiveRuntimeStateMachine()
@@ -284,7 +330,7 @@ class LiveRuntime:
         return self._machine.state
 
     @property
-    def feed(self) -> LiveFeedAdapter:
+    def feed(self) -> StreamingFeedAdapter:
         """Perform feed."""
         return self._feed
 
@@ -340,6 +386,10 @@ class LiveRuntime:
 
 
 __all__ = [
+    "BrokerRuntimeStartupCheck",
+    "BrokerRuntimeStartupChecklist",
+    "BrokerRuntimeStartupDecision",
+    "BrokerRuntimeStartupDecisionStatus",
     "LivePermissionMode",
     "LiveStartupCheck",
     "LiveStartupChecklist",

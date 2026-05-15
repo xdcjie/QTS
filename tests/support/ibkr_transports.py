@@ -4,13 +4,13 @@ from importlib.util import find_spec
 from typing import Protocol
 
 import pytest
-from qts.data.adapters.ibkr_transport import (
+from qts.data.transports.ibkr_tws_market_data_transport import (
     IbkrMarketDataCallbackSink,
     IbkrMarketDataContractSpec,
 )
 from qts.domain.market_data import Bar, Quote, Tick
 from qts.domain.orders import ExecutionReport, ExecutionReportStatus
-from qts.execution.adapters.ibkr_transport import (
+from qts.execution.transports.ibkr_tws_order_execution_transport import (
     IbkrOrderExecutionCallbackSink,
     IbkrOrderRequest,
 )
@@ -105,7 +105,7 @@ def market_data_transport(
     market_data_type: int = 3,
 ) -> IbkrGatewayMarketDataTransport:
     if transport_name == "async":
-        from qts.data.adapters.ibkr_async_transport import (
+        from qts.data.transports.ib_async_market_data_transport import (
             IbAsyncMarketDataTransport,
             IbAsyncMarketDataTransportConfig,
         )
@@ -121,7 +121,7 @@ def market_data_transport(
             sink=sink,
         )
 
-    from qts.data.adapters.ibkr_transport import (
+    from qts.data.transports.ibkr_tws_market_data_transport import (
         IbkrTwsMarketDataTransport,
         IbkrTwsMarketDataTransportConfig,
     )
@@ -148,7 +148,7 @@ def order_execution_transport(
     timeout_seconds: float = 25,
 ) -> IbkrGatewayOrderExecutionTransport:
     if transport_name == "async":
-        from qts.execution.adapters.ibkr_async_transport import (
+        from qts.execution.transports.ib_async_order_execution_transport import (
             IbAsyncOrderExecutionTransport,
             IbAsyncOrderExecutionTransportConfig,
         )
@@ -163,7 +163,7 @@ def order_execution_transport(
             sink=sink,
         )
 
-    from qts.execution.adapters.ibkr_transport import (
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrTwsOrderExecutionTransport,
         IbkrTwsOrderExecutionTransportConfig,
     )

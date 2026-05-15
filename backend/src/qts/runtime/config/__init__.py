@@ -14,6 +14,11 @@ from qts.runtime.config.models import (
     RollPolicyConfig,
     TradingRuntimeConfig,
 )
+from qts.runtime.config.paper import (
+    PaperBrokerRuntimeConfig,
+    PaperRuntimeConfig,
+    PaperSimulatedRuntimeConfig,
+)
 
 __all__ = [
     "BacktestCostModel",
@@ -25,6 +30,9 @@ __all__ = [
     "ConfigMigrationResult",
     "CostModelConfig",
     "LiveRuntimeConfig",
+    "PaperBrokerRuntimeConfig",
+    "PaperRuntimeConfig",
+    "PaperSimulatedRuntimeConfig",
     "RiskConfig",
     "RollPolicyConfig",
     "TradingRuntimeConfig",

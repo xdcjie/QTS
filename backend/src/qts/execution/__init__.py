@@ -5,7 +5,6 @@ from qts.execution.broker import (
     BrokerExecutionReport,
     BrokerExecutionReportStatus,
     BrokerOrderRequest,
-    FakeBrokerAdapter,
     normalize_broker_execution_report,
 )
 from qts.execution.idempotency import FillIdempotencyStore
@@ -33,7 +32,6 @@ __all__ = [
     "BrokerOrderRequest",
     "ExecutionReport",
     "ExecutionReportStatus",
-    "FakeBrokerAdapter",
     "FillIdempotencyStore",
     "Order",
     "OrderEvent",

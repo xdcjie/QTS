@@ -1,4 +1,4 @@
-"""Backtest intent processing."""
+"""Runtime target-intent processing."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from typing import Protocol
 
 from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
 from qts.domain.market_data import Bar
-from qts.domain.risk import OrderRiskRequest
+from qts.domain.risk import MarketDataRiskContext, OrderRiskRequest, RiskDecision
 from qts.execution.order_manager import Order, OrderFill, OrderIntent, OrderSide
 from qts.portfolio.position_book import Position
 from qts.risk.risk_engine import RiskEngine
@@ -55,6 +55,7 @@ class ProcessedIntent:
 
     orders: tuple[Order, ...]
     fills: tuple[OrderFill, ...]
+    risk_decisions: tuple[RiskDecision, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -205,6 +206,7 @@ class TargetIntentProcessor:
         strategy_id: StrategyId,
         correlation_id: CorrelationId,
         contributing_strategy_ids: tuple[StrategyId, ...] = (),
+        market_data_context: MarketDataRiskContext | None = None,
         order_number: int,
     ) -> ProcessedIntent:
         """Process a single target intent; account_id is required for routing."""
@@ -223,6 +225,7 @@ class TargetIntentProcessor:
 
         orders: list[Order] = []
         fills: list[OrderFill] = []
+        risk_decisions: list[RiskDecision] = []
         for index, plan in enumerate(order_plans):
             processed = self._process_order_delta(
                 instrument_id=plan.instrument_id,
@@ -237,12 +240,18 @@ class TargetIntentProcessor:
                 strategy_id=strategy_id,
                 correlation_id=correlation_id,
                 contributing_strategy_ids=contributing_strategy_ids,
+                market_data_context=market_data_context,
                 order_number=order_number + index,
             )
             orders.extend(processed.orders)
             fills.extend(processed.fills)
+            risk_decisions.extend(processed.risk_decisions)
 
-        return ProcessedIntent(orders=tuple(orders), fills=tuple(fills))
+        return ProcessedIntent(
+            orders=tuple(orders),
+            fills=tuple(fills),
+            risk_decisions=tuple(risk_decisions),
+        )
 
     def _process_order_delta(
         self,
@@ -259,6 +268,7 @@ class TargetIntentProcessor:
         strategy_id: StrategyId,
         correlation_id: CorrelationId,
         contributing_strategy_ids: tuple[StrategyId, ...] = (),
+        market_data_context: MarketDataRiskContext | None = None,
         order_number: int,
     ) -> ProcessedIntent:
         """Perform _process_order_delta."""
@@ -275,6 +285,7 @@ class TargetIntentProcessor:
                 multiplier=self._multiplier_for(instrument_id),
                 order_time=order_time,
                 contributing_strategy_ids=contributing_strategy_ids,
+                market_data=market_data_context,
             )
         )
         if risk_decision.contributing_strategy_ids != contributing_strategy_ids:
@@ -284,7 +295,7 @@ class TargetIntentProcessor:
             )
 
         if not risk_decision.approved:
-            return ProcessedIntent(orders=(), fills=())
+            return ProcessedIntent(orders=(), fills=(), risk_decisions=(risk_decision,))
 
         before_fill_count = order_manager_actor.fill_count
         order_id = OrderId(f"{self._order_id_prefix}-{order_number:06d}")

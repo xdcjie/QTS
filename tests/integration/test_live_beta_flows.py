@@ -6,15 +6,16 @@ from decimal import Decimal
 from fastapi.testclient import TestClient
 from qts.api.app import create_app
 from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
-from qts.data.live import FeedSubscription
+from qts.data.events import MarketDataSubscription as FeedSubscription
 from qts.domain.market_data import Bar
-from qts.execution.broker import BrokerOrderRequest, FakeBrokerAdapter
+from qts.execution.broker import BrokerOrderRequest
 from qts.execution.order_manager import OrderSide
 from qts.reconciliation import OrderSnapshot, ReconciliationSnapshot, reconcile_snapshots
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.market_data_actor import MarketDataActor, MarketDataEvent
 from qts.runtime.live import LiveRuntime
 from qts.runtime.mailbox import Mailbox
+from qts.testing.fakes.broker import FakeBrokerAdapter
 
 from tests.support.live_feed import FakeLiveFeedAdapter
 

@@ -104,6 +104,7 @@ class BacktestActorLoop:
         self._portfolio_view = dependencies.portfolio_view
         self._equity_point = dependencies.equity_point
         self._update_rolling_prices = dependencies.update_rolling_prices
+        self._market_data_provenance_for = dependencies.market_data_provenance_for
         self._strategy_id = strategy_id
         self._account_id = account_id
         self._signal_aggregation_policy = signal_aggregation_policy
@@ -183,14 +184,16 @@ class BacktestActorLoop:
                     f"md:{bar.instrument_id.value}:{bar.timeframe}:{bar.end_time.isoformat()}"
                 )
                 latest_prices[bar.instrument_id] = bar.close
+                market_data_payload: dict[str, object] = {
+                    "instrument_id": bar.instrument_id.value,
+                    "timeframe": bar.timeframe,
+                    "end_time": bar.end_time.isoformat(),
+                }
+                market_data_payload.update(self._market_data_provenance_for(bar))
                 sink.write(
                     RuntimeEvent(
                         kind="runtime.market_data",
-                        payload={
-                            "instrument_id": bar.instrument_id.value,
-                            "timeframe": bar.timeframe,
-                            "end_time": bar.end_time.isoformat(),
-                        },
+                        payload=market_data_payload,
                         correlation_id=correlation_id,
                         instrument_id=bar.instrument_id,
                     )

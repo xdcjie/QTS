@@ -70,3 +70,29 @@ def test_market_data_flow_exposes_replay_data_anomalies_as_runtime_events() -> N
     assert result.runtime_events[0].payload["source_id"] == "replay-source"
     assert result.runtime_events[0].payload["instrument_id"] == instrument_id.value
     assert result.runtime_events[1].payload["reason"] == "replay_gap_detected"
+
+
+def test_market_data_flow_emits_explicit_stale_data_event() -> None:
+    from qts.data.sources.streaming_market_data_source import StreamingMarketDataDegradation
+    from qts.data.subscriptions import LogicalSubscriptionKey
+    from qts.runtime.market_data_flow import MarketDataFlow
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    observed_at = datetime(2026, 1, 2, 14, 35, tzinfo=UTC)
+    degradation = StreamingMarketDataDegradation(
+        instrument_id=instrument_id,
+        subscription=LogicalSubscriptionKey(instrument_id=instrument_id, requested_timeframe="1m"),
+        observed_at=observed_at,
+        age=timedelta(seconds=61),
+        max_age=timedelta(seconds=30),
+    )
+    flow = MarketDataFlow(target_timeframe=None, exchange_timezone_by_instrument={})
+
+    result = flow.publish_source_event(degradation)
+
+    assert [event.kind for event in result.runtime_events] == [
+        "market_data_stale_detected",
+        "runtime.degraded",
+    ]
+    assert result.runtime_events[0].payload["reason_code"] == "MARKET_DATA_STALE"
+    assert result.runtime_events[1].payload["reason_code"] == "MARKET_DATA_STALE"

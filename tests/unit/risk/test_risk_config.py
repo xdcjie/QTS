@@ -53,6 +53,27 @@ def test_risk_rule_registry_builds_rules_and_rejects_unknown_names() -> None:
         registry.build(RiskRuleConfig(rule_id="rule-002", name="unknown", params={}))
 
 
+def test_risk_rule_registry_builds_market_data_rules() -> None:
+    from qts.risk import RiskRuleConfig, RiskRuleRegistry
+    from qts.risk.rules.market_data_freshness import MarketDataFreshnessRiskRule
+    from qts.risk.rules.market_data_permission import MarketDataPermissionRiskRule
+
+    registry = RiskRuleRegistry()
+
+    assert isinstance(
+        registry.build(
+            RiskRuleConfig(rule_id="rule-md-permission", name="market_data_permission", params={})
+        ),
+        MarketDataPermissionRiskRule,
+    )
+    assert isinstance(
+        registry.build(
+            RiskRuleConfig(rule_id="rule-md-freshness", name="market_data_freshness", params={})
+        ),
+        MarketDataFreshnessRiskRule,
+    )
+
+
 def test_risk_rule_registry_keeps_param_lookup_inside_the_registry() -> None:
     tree = ast.parse(Path("backend/src/qts/risk/rule_registry.py").read_text(encoding="utf-8"))
 

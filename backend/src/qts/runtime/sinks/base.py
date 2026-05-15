@@ -58,6 +58,8 @@ class RuntimeEvent:
             raise ValueError("sequence_no must be positive")
         if self.ts_ingest is None:
             object.__setattr__(self, "ts_ingest", datetime.now(UTC))
+        if self.ts_event is None:
+            object.__setattr__(self, "ts_event", self.ts_ingest)
 
     def to_envelope(self, *, sequence_no: int | None = None) -> dict[str, Any]:
         """Serialize the runtime event envelope."""
@@ -76,6 +78,7 @@ class RuntimeEvent:
             "correlation_id": self._id_value(self.correlation_id),
             "causation_id": self._id_value(self.causation_id),
             "kind": self.kind,
+            "event_type": self.kind,
             "execution_environment": self.execution_environment,
             "payload_schema_version": self.payload_schema_version,
             "payload": self.payload,

@@ -34,3 +34,18 @@ def test_command_idempotency_is_scoped_by_command_kind() -> None:
 
     assert runtime_result == {"status": "paused"}
     assert order_result == {"status": "cancelled"}
+
+
+def test_runtime_command_result_schema_exposes_reason_code() -> None:
+    from qts.api.schemas.operations import RuntimeCommandResultResponseSchema
+
+    payload = RuntimeCommandResultResponseSchema(
+        command_id="cmd-001",
+        idempotency_key="key-1",
+        status="rejected",
+        evidence={},
+        failure_reason="permission denied",
+        reason_code="COMMAND_PERMISSION_DENIED",
+    )
+
+    assert payload.reason_code == "COMMAND_PERMISSION_DENIED"

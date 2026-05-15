@@ -409,6 +409,196 @@ def test_guardrails_reject_fake_classes_in_production_data_package(tmp_path: Pat
     assert _codes(root) == {"PRODUCTION_FAKE_CLASS"}
 
 
+def test_guardrails_reject_fake_classes_outside_testing_package(tmp_path: Path) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/runtime/fakes.py",
+        "class FakeRuntimeSession:\n    pass\n",
+    )
+    _write(
+        root,
+        "backend/src/qts/testing/fakes/runtime.py",
+        "class FakeRuntimeSession:\n    pass\n",
+    )
+
+    assert _codes_by_suite(root, guardrails.ProductionNoFakeClassRule()) == {
+        "PRODUCTION_FAKE_CLASS"
+    }
+
+
+def test_guardrails_reject_shared_contract_classes_in_data_live_package(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/data/live/adapter.py",
+        "class MarketDataAdapter:\n    pass\n\nclass StreamingFeedAdapter:\n    pass\n",
+    )
+    _write(
+        root,
+        "backend/src/qts/data/live/events.py",
+        "class MarketDataSourceEvent:\n    pass\n\nclass MarketDataSubscription:\n    pass\n",
+    )
+
+    assert _codes_by_suite(root, guardrails.DataLiveNoSharedContractRule()) == {
+        "DATA_LIVE_SHARED_CONTRACT"
+    }
+
+
+def test_default_guardrails_reject_shared_contract_classes_in_data_live_package(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/data/live/adapter.py",
+        "class MarketDataAdapter:\n    pass\n",
+    )
+
+    assert _codes(root) == {"DATA_LIVE_SHARED_CONTRACT"}
+
+
+def test_guardrails_reject_transport_canonical_classes_in_adapters(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/data/adapters/ibkr_transport.py",
+        "class IbkrTwsMarketDataTransport:\n    pass\n",
+    )
+    _write(
+        root,
+        "backend/src/qts/execution/adapters/ibkr_transport.py",
+        "class IbkrTwsOrderExecutionTransport:\n    pass\n",
+    )
+    _write(
+        root,
+        "backend/src/qts/data/transports/ibkr_tws_market_data_transport.py",
+        "class IbkrTwsMarketDataTransport:\n    pass\n",
+    )
+
+    assert _codes_by_suite(root, guardrails.TransportCanonicalPathRule()) == {
+        "TRANSPORT_CANONICAL_PATH"
+    }
+
+
+def test_default_guardrails_reject_transport_canonical_classes_in_adapters(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/data/adapters/ibkr_transport.py",
+        "class IbkrTwsMarketDataTransport:\n    pass\n",
+    )
+
+    assert _codes(root) == {"TRANSPORT_CANONICAL_PATH"}
+
+
+def test_guardrails_reject_deprecated_import_usage_outside_compatibility_modules(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/runtime/session_consumer.py",
+        "from qts.runtime.live_runtime_session import LiveRuntimeSession\n",
+    )
+    _write(
+        root,
+        "backend/src/qts/data/consumer.py",
+        "from qts.data.live.events import FeedSubscription\n",
+    )
+    _write(
+        root,
+        "backend/src/qts/runtime/live_runtime_session.py",
+        "from qts.runtime.session import RuntimeSession as LiveRuntimeSession\n",
+    )
+
+    assert _codes_by_suite(root, guardrails.DeprecatedImportNoNewUsageRule()) == {
+        "DEPRECATED_IMPORT_USAGE"
+    }
+
+
+def test_default_guardrails_reject_deprecated_import_usage_outside_compatibility_modules(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/runtime/session_consumer.py",
+        "from qts.runtime.live_runtime_session import LiveRuntimeSession\n",
+    )
+
+    assert _codes(root) == {"DEPRECATED_IMPORT_USAGE"}
+
+
+def test_default_guardrails_reject_deprecated_transport_import_usage(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/runtime/transport_consumer.py",
+        "from qts.data.adapters.ibkr_transport import IbkrTwsMarketDataTransport\n"
+        "from qts.execution.adapters.ibkr_async_transport import "
+        "IbAsyncOrderExecutionTransport\n",
+    )
+    _write(
+        root,
+        "backend/src/qts/data/adapters/ibkr_transport.py",
+        "from qts.data.transports.ibkr_tws_market_data_transport import "
+        "IbkrTwsMarketDataTransport\n",
+    )
+    _write(
+        root,
+        "backend/src/qts/execution/adapters/ibkr_async_transport.py",
+        "from qts.execution.transports.ib_async_order_execution_transport import "
+        "IbAsyncOrderExecutionTransport\n",
+    )
+
+    assert _codes(root) == {"DEPRECATED_IMPORT_USAGE"}
+
+
+def test_guardrails_reject_production_imports_from_qts_testing(tmp_path: Path) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/runtime/bad.py",
+        "from qts.testing.fakes.broker import FakeBrokerAdapter\n",
+    )
+    _write(
+        root,
+        "backend/src/qts/testing/consumer.py",
+        "from qts.testing.fakes.broker import FakeBrokerAdapter\n",
+    )
+
+    assert _codes_by_suite(root, guardrails.ProductionNoTestingImportRule()) == {
+        "PRODUCTION_TESTING_IMPORT"
+    }
+
+
+def test_default_guardrails_reject_production_imports_from_qts_testing(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/runtime/bad.py",
+        "from qts.testing.fakes.broker import FakeBrokerAdapter\n",
+    )
+
+    assert _codes(root) == {"PRODUCTION_TESTING_IMPORT"}
+
+
 def test_guardrails_reject_pipeline_importing_runtime_actor(tmp_path: Path) -> None:
     root = tmp_path
     _write(
@@ -462,6 +652,28 @@ def test_guardrails_reject_shared_runtime_backtest_only_docstring(tmp_path: Path
         "backend/src/qts/runtime/intent_processing.py",
         "class TargetIntentProcessor:\n"
         '    """Translate strategy target intents into validated backtest orders."""\n',
+    )
+
+    assert _codes(root) == {"SHARED_RUNTIME_WORDING"}
+
+
+def test_guardrails_reject_shared_runtime_module_mode_specific_wording(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/runtime/intent_processing.py",
+        '"""Backtest intent processing."""\n',
+    )
+
+    assert _codes(root) == {"SHARED_RUNTIME_WORDING"}
+
+
+def test_guardrails_reject_shared_runtime_fake_adapter_wording(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/runtime/live.py",
+        '"""Live runtime lifecycle and fake-adapter orchestration."""\n',
     )
 
     assert _codes(root) == {"SHARED_RUNTIME_WORDING"}

@@ -9,7 +9,8 @@ from datetime import tzinfo
 from qts.core.ids import InstrumentId
 from qts.data.bars.pipeline import BarAggregationPipeline
 from qts.data.bars.timeframe import Timeframe
-from qts.data.live import FeedSubscription, LiveFeedAdapter
+from qts.data.events import MarketDataSubscription
+from qts.data.interfaces import StreamingFeedAdapter
 from qts.data.subscriptions import (
     LogicalSubscription,
     LogicalSubscriptionKey,
@@ -58,7 +59,7 @@ class MarketDataActor(Actor):
         *,
         aggregate_timeframe: str | None = None,
         exchange_timezone: str | tzinfo | None = None,
-        feed: LiveFeedAdapter | None = None,
+        feed: StreamingFeedAdapter | None = None,
     ) -> None:
         """Perform __init__."""
         self._subscribers = tuple(subscribers)
@@ -131,7 +132,7 @@ class MarketDataActor(Actor):
         if physical_key in self._physical_subscriptions:
             return
         self._feed.subscribe(
-            FeedSubscription(
+            MarketDataSubscription(
                 subscription_id=self._subscription_id(physical_key),
                 instrument_id=physical_key.instrument_id,
                 timeframe=physical_key.source_timeframe,

@@ -14,6 +14,8 @@ from qts.data.sources.streaming_market_data_source import (
     StreamingMarketDataSubscriptionEventType,
 )
 from qts.domain.market_data import Bar
+from qts.domain.risk import MarketDataRiskContext
+from qts.observability.errors import OperationalErrorCode
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.market_data_actor import MarketDataActor, MarketDataEvent
 from qts.runtime.mailbox import Mailbox
@@ -43,9 +45,12 @@ class MarketDataFlow:
         self._mailbox = Mailbox()
         self._subscriber = ActorRef(mailbox=self._mailbox)
         self._refs: dict[tuple[str | None, str | tzinfo | None], ActorRef] = {}
+        self._permission_context = MarketDataRiskContext()
+        self._stale_context_by_instrument: dict[InstrumentId, MarketDataRiskContext] = {}
 
     def publish_bar(self, bar: Bar) -> tuple[Bar, ...]:
         """Publish one source bar through the market data actor boundary."""
+        self._stale_context_by_instrument.pop(bar.instrument_id, None)
         market_data_ref = self._market_data_ref_for(bar)
         market_data_ref.tell(MarketDataEvent(payload=bar))
         market_data_ref.process_all()
@@ -70,14 +75,38 @@ class MarketDataFlow:
         if isinstance(event, Bar):
             return MarketDataFlowResult(market_data=self.publish_bar(event))
         if isinstance(event, StreamingMarketDataDegradation):
-            return MarketDataFlowResult(runtime_events=(self._runtime_degradation_event(event),))
+            self._stale_context_by_instrument[event.instrument_id] = MarketDataRiskContext(
+                permission_state=self._permission_context.permission_state,
+                stale=True,
+                evidence=self._stale_data_payload(event),
+            )
+            return MarketDataFlowResult(runtime_events=self._runtime_degradation_events(event))
         if isinstance(event, StreamingMarketDataSubscriptionEvent):
             return MarketDataFlowResult(runtime_events=self._runtime_subscription_events(event))
         if isinstance(event, ReplayDataAnomalyEvent):
             return MarketDataFlowResult(runtime_events=self._runtime_replay_anomaly_events(event))
         if isinstance(event, MarketDataPermissionEvent):
+            self._permission_context = MarketDataRiskContext(
+                permission_state=event.permission_state.value,
+                stale=False,
+                evidence=self._permission_payload(event),
+            )
             return MarketDataFlowResult(runtime_events=self._runtime_permission_events(event))
         raise TypeError(f"unsupported market data source event: {type(event).__name__}")
+
+    def risk_context_for(self, instrument_id: InstrumentId) -> MarketDataRiskContext:
+        """Return latest market-data permission/freshness context for an instrument."""
+        stale_context = self._stale_context_by_instrument.get(instrument_id)
+        if stale_context is None:
+            return self._permission_context
+        return MarketDataRiskContext(
+            permission_state=stale_context.permission_state,
+            stale=True,
+            evidence={
+                **self._permission_context.evidence_payload(),
+                **stale_context.evidence_payload(),
+            },
+        )
 
     def _market_data_ref_for(self, bar: Bar) -> ActorRef:
         """Return the actor ref responsible for this bar's aggregation shape."""
@@ -107,23 +136,29 @@ class MarketDataFlow:
         return ref
 
     @staticmethod
-    def _runtime_degradation_event(
+    def _runtime_degradation_events(
         degradation: StreamingMarketDataDegradation,
-    ) -> RuntimeEvent:
+    ) -> tuple[RuntimeEvent, ...]:
         """Convert data-source stale signals to runtime degradation events."""
 
-        return RuntimeEvent(
-            kind="runtime.degraded",
-            payload={
-                "reason": degradation.reason,
-                "instrument_id": degradation.instrument_id.value,
-                "requested_timeframe": degradation.subscription.requested_timeframe,
-                "stream_type": degradation.subscription.stream_type.value,
-                "age_seconds": degradation.age.total_seconds(),
-                "max_age_seconds": degradation.max_age.total_seconds(),
-                "observed_at": degradation.observed_at.isoformat(),
-            },
+        payload = MarketDataFlow._stale_data_payload(degradation)
+        return (
+            RuntimeEvent(kind="market_data_stale_detected", payload=payload),
+            RuntimeEvent(kind="runtime.degraded", payload=payload),
         )
+
+    @staticmethod
+    def _stale_data_payload(degradation: StreamingMarketDataDegradation) -> dict[str, object]:
+        return {
+            "reason": degradation.reason,
+            "reason_code": OperationalErrorCode.MARKET_DATA_STALE.value,
+            "instrument_id": degradation.instrument_id.value,
+            "requested_timeframe": degradation.subscription.requested_timeframe,
+            "stream_type": degradation.subscription.stream_type.value,
+            "age_seconds": degradation.age.total_seconds(),
+            "max_age_seconds": degradation.max_age.total_seconds(),
+            "observed_at": degradation.observed_at.isoformat(),
+        }
 
     @staticmethod
     def _runtime_permission_events(event: MarketDataPermissionEvent) -> tuple[RuntimeEvent, ...]:
@@ -142,6 +177,7 @@ class MarketDataFlow:
                 payload={
                     **MarketDataFlow._permission_payload(event),
                     "reason": "market_data_permission_not_live",
+                    "reason_code": OperationalErrorCode.MARKET_DATA_PERMISSION_ERROR.value,
                 },
             ),
         )
@@ -165,6 +201,7 @@ class MarketDataFlow:
                 payload={
                     **MarketDataFlow._subscription_payload(event),
                     "reason": "market_data_subscription_failed",
+                    "reason_code": OperationalErrorCode.MARKET_DATA_SUBSCRIPTION_FAILED.value,
                     "subscription_failure_reason": event.reason,
                 },
             ),

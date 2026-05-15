@@ -14,6 +14,50 @@ BROKER_TOKENS = frozenset({"IBKR", "TWS"})
 PROVIDER_SDK_MODULE_PREFIXES = ("ib_async", "ibapi")
 TEST_SUPPORT_TOKENS = frozenset({"ANCHOR", "FIXTURE"})
 SHARED_CAPABILITY_MODULE_TOKENS = frozenset({"ROLL", "SESSION", "RESOLUTION"})
+SHARED_DATA_LIVE_CONTRACT_CLASSES = frozenset(
+    {
+        "FeedCapabilities",
+        "FeedSubscription",
+        "LiveFeedAdapter",
+        "LiveFeedEvent",
+        "LiveFeedFailure",
+        "MarketDataAdapter",
+        "MarketDataFeedCapabilities",
+        "MarketDataSourceEvent",
+        "MarketDataSourceFailure",
+        "MarketDataSubscribed",
+        "MarketDataSubscription",
+        "StreamingFeedAdapter",
+    }
+)
+DEPRECATED_IMPORT_MODULES = frozenset(
+    {
+        "qts.data.adapters.ibkr_async_transport",
+        "qts.data.adapters.ibkr_transport",
+        "qts.data.live.adapter",
+        "qts.data.live.capabilities",
+        "qts.data.live.events",
+        "qts.execution.adapters.ibkr_async_transport",
+        "qts.execution.adapters.ibkr_order_ids",
+        "qts.execution.adapters.ibkr_transport",
+        "qts.runtime.live_runtime_session",
+        "qts.runtime.live_runtime_dependencies",
+    }
+)
+DEPRECATED_IMPORT_COMPATIBILITY_PATHS = frozenset(
+    {
+        "data/adapters/ibkr_async_transport.py",
+        "data/adapters/ibkr_transport.py",
+        "data/live/adapter.py",
+        "data/live/capabilities.py",
+        "data/live/events.py",
+        "execution/adapters/ibkr_async_transport.py",
+        "execution/adapters/ibkr_order_ids.py",
+        "execution/adapters/ibkr_transport.py",
+        "runtime/live_runtime_session.py",
+        "runtime/live_runtime_dependencies.py",
+    }
+)
 SOURCE_SPECIFIC_BOUNDARY_PREFIXES = (
     ("backtest",),
     ("data", "historical"),
@@ -51,7 +95,9 @@ PRODUCT_FACT_ALLOWED_PREFIXES = (
 BROKER_FACT_ALLOWED_PREFIXES = (
     ("config",),
     ("data", "adapters"),
+    ("data", "transports"),
     ("execution", "adapters"),
+    ("execution", "transports"),
     ("application", "commands"),
 )
 BROKER_SYMBOL_MAPPING_ALLOWED_PREFIXES = (
@@ -62,7 +108,9 @@ BROKER_SYMBOL_MAPPING_ALLOWED_PREFIXES = (
 )
 PROVIDER_SDK_ALLOWED_PREFIXES = (
     ("data", "adapters"),
+    ("data", "transports"),
     ("execution", "adapters"),
+    ("execution", "transports"),
 )
 BROKER_ADAPTER_FORBIDDEN_IMPORT_PREFIXES = (
     "qts.portfolio",
@@ -158,7 +206,12 @@ GUARDRAIL_REMEDIATIONS = {
     "PRODUCT_SPECIFIC_IMPLEMENTATION": (
         "Move product facts to registry, session, valuation, or risk data boundaries."
     ),
-    "PRODUCTION_FAKE_CLASS": "Move fakes under tests/support.",
+    "DATA_LIVE_SHARED_CONTRACT": "Move shared market-data contracts out of qts.data.live.",
+    "DEPRECATED_IMPORT_USAGE": "Use the canonical module path outside compatibility shims.",
+    "PRODUCTION_FAKE_CLASS": "Move fakes under qts.testing or tests/support.",
+    "PRODUCTION_TESTING_IMPORT": (
+        "Production packages must depend on simulation or explicit interfaces."
+    ),
     "PROVIDER_SDK_IMPORT": "Import provider SDKs only from adapter or transport boundaries.",
     "SHARED_CAPABILITY_IN_SOURCE_BOUNDARY": (
         "Move shared roll/session/resolution logic to a shared package."
@@ -168,6 +221,7 @@ GUARDRAIL_REMEDIATIONS = {
         "Expose only Strategy SDK public facades and readonly value types."
     ),
     "TEST_SUPPORT_IN_PRODUCTION": "Move test support helpers under tests.",
+    "TRANSPORT_CANONICAL_PATH": "Move transport classes under a transports package.",
     "TRANSPORT_ACTOR_IMPORT": (
         "Keep transports free of runtime actors and emit normalized callbacks instead."
     ),
@@ -278,7 +332,7 @@ class LivePackageNoReplayClassRule:
 
 
 class ProductionNoFakeClassRule:
-    """Reject fake market-data classes from production data packages."""
+    """Reject fake classes from production packages."""
 
     code = "PRODUCTION_FAKE_CLASS"
 
@@ -290,7 +344,7 @@ class ProductionNoFakeClassRule:
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
         """Perform check."""
-        if qts_relative_path.parts[:1] != ("data",):
+        if qts_relative_path.parts[:1] in {("testing",), ("quality",)}:
             return []
         violations: list[GuardrailViolation] = []
         for node in ast.walk(tree):
@@ -300,9 +354,142 @@ class ProductionNoFakeClassRule:
                         code=self.code,
                         path=str(relative_path),
                         line=node.lineno,
-                        message="test market-data fakes belong under tests/support",
+                        message="test fakes belong under qts.testing or tests/support",
                     )
                 )
+        return violations
+
+
+class DataLiveNoSharedContractRule:
+    """Reject shared market-data contracts from the live package."""
+
+    code = "DATA_LIVE_SHARED_CONTRACT"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform check."""
+        if qts_relative_path.parts[:2] != ("data", "live"):
+            return []
+        violations: list[GuardrailViolation] = []
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ClassDef):
+                continue
+            if node.name not in SHARED_DATA_LIVE_CONTRACT_CLASSES:
+                continue
+            violations.append(
+                GuardrailViolation(
+                    code=self.code,
+                    path=str(relative_path),
+                    line=node.lineno,
+                    message=(
+                        "shared market-data contract class must live outside qts.data.live: "
+                        f"{node.name}"
+                    ),
+                )
+            )
+        return violations
+
+
+class TransportCanonicalPathRule:
+    """Reject transport class definitions from adapter packages."""
+
+    code = "TRANSPORT_CANONICAL_PATH"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform check."""
+        if qts_relative_path.parts[:2] not in {
+            ("data", "adapters"),
+            ("execution", "adapters"),
+        }:
+            return []
+        violations: list[GuardrailViolation] = []
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ClassDef):
+                continue
+            if not node.name.endswith("Transport"):
+                continue
+            violations.append(
+                GuardrailViolation(
+                    code=self.code,
+                    path=str(relative_path),
+                    line=node.lineno,
+                    message=(
+                        "transport class canonical definitions belong under transports: "
+                        f"{node.name}"
+                    ),
+                )
+            )
+        return violations
+
+
+class DeprecatedImportNoNewUsageRule:
+    """Reject deprecated import paths outside explicit compatibility shims."""
+
+    code = "DEPRECATED_IMPORT_USAGE"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform check."""
+        if qts_relative_path.as_posix() in DEPRECATED_IMPORT_COMPATIBILITY_PATHS:
+            return []
+        violations: list[GuardrailViolation] = []
+        for imported_module, line in _iter_imports(tree):
+            if imported_module not in DEPRECATED_IMPORT_MODULES:
+                continue
+            violations.append(
+                GuardrailViolation(
+                    code=self.code,
+                    path=str(relative_path),
+                    line=line,
+                    message=f"deprecated import path is not allowed: {imported_module}",
+                )
+            )
+        return violations
+
+
+class ProductionNoTestingImportRule:
+    """Reject production imports from qts.testing."""
+
+    code = "PRODUCTION_TESTING_IMPORT"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform check."""
+        if qts_relative_path.parts[:1] in {("testing",), ("quality",)}:
+            return []
+        violations: list[GuardrailViolation] = []
+        for imported_module, line in _iter_imports(tree):
+            if not imported_module.startswith("qts.testing"):
+                continue
+            violations.append(
+                GuardrailViolation(
+                    code=self.code,
+                    path=str(relative_path),
+                    line=line,
+                    message=f"production code must not import qts.testing: {imported_module}",
+                )
+            )
         return violations
 
 
@@ -322,7 +509,12 @@ class SharedRuntimeWordingRule:
         if qts_relative_path.parts[:1] != ("runtime",):
             return []
         violations: list[GuardrailViolation] = []
-        forbidden = ("backtest orders", "beta only")
+        forbidden = (
+            "backtest intent processing",
+            "backtest orders",
+            "beta only",
+            "fake-adapter",
+        )
         for node, docstring in _iter_docstrings(tree):
             normalized = docstring.lower()
             if not any(text in normalized for text in forbidden):
@@ -619,7 +811,11 @@ class GuardrailSuite:
             BacktestEngineCohesionRule(),
             StrategySdkPublicSurfaceRule(),
             LivePackageNoReplayClassRule(),
+            DataLiveNoSharedContractRule(),
+            TransportCanonicalPathRule(),
+            DeprecatedImportNoNewUsageRule(),
             ProductionNoFakeClassRule(),
+            ProductionNoTestingImportRule(),
             SharedRuntimeWordingRule(),
             ProductionPlaceholderDocstringRule(),
         )
@@ -653,7 +849,17 @@ class GuardrailSuite:
         for path in sorted(source_root.rglob("*.py")):
             if "__pycache__" in path.parts:
                 continue
-            violations.extend(_check_python_file(repo_root, path))
+            relative_path = path.relative_to(repo_root)
+            qts_relative_path = path.relative_to(repo_root / QTS_ROOT)
+            source = path.read_text(encoding="utf-8")
+            tree = ast.parse(source, filename=str(relative_path))
+            violations.extend(
+                self.check_file(
+                    relative_path=relative_path,
+                    qts_relative_path=qts_relative_path,
+                    tree=tree,
+                )
+            )
         return sorted(violations)
 
 

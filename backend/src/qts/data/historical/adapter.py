@@ -7,13 +7,13 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from qts.data.historical.csv_dataset import iter_historical_bars
-from qts.data.live import (
-    FeedCapabilities,
-    FeedSubscription,
-    LiveFeedEvent,
+from qts.data.capabilities import MarketDataFeedCapabilities
+from qts.data.events import (
+    MarketDataSourceEvent,
     MarketDataSubscribed,
+    MarketDataSubscription,
 )
+from qts.data.historical.csv_dataset import iter_historical_bars
 from qts.registry.symbol_resolution import SourceSymbolResolver
 
 
@@ -27,7 +27,7 @@ class HistoricalMarketDataAdapter:
     source_timeframe: str
     start: datetime | None = None
     end: datetime | None = None
-    _subscriptions: dict[str, FeedSubscription] = field(default_factory=dict, init=False)
+    _subscriptions: dict[str, MarketDataSubscription] = field(default_factory=dict, init=False)
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""
@@ -37,9 +37,9 @@ class HistoricalMarketDataAdapter:
             raise ValueError("source_timeframe must not be empty")
 
     @property
-    def capabilities(self) -> FeedCapabilities:
+    def capabilities(self) -> MarketDataFeedCapabilities:
         """Perform capabilities."""
-        return FeedCapabilities(
+        return MarketDataFeedCapabilities(
             source_id=self.source_id,
             supports_ticks=False,
             supports_quotes=False,
@@ -47,13 +47,13 @@ class HistoricalMarketDataAdapter:
             supported_timeframes=frozenset({self.source_timeframe}),
         )
 
-    def subscribe(self, subscription: FeedSubscription) -> MarketDataSubscribed:
+    def subscribe(self, subscription: MarketDataSubscription) -> MarketDataSubscribed:
         """Perform subscribe."""
         self.capabilities.source_timeframe_for(subscription.timeframe)
         self._subscriptions[subscription.subscription_id] = subscription
         return MarketDataSubscribed(subscription=subscription, source_id=self.source_id)
 
-    def events(self, subscription_id: str) -> Iterator[LiveFeedEvent]:
+    def events(self, subscription_id: str) -> Iterator[MarketDataSourceEvent]:
         """Perform events."""
         if not subscription_id.strip():
             raise ValueError("subscription_id must not be empty")
@@ -70,7 +70,7 @@ class HistoricalMarketDataAdapter:
         )
         for bar in stream:
             if bar.instrument_id == subscription.instrument_id:
-                yield LiveFeedEvent(payload=bar, source_id=self.source_id)
+                yield MarketDataSourceEvent(payload=bar, source_id=self.source_id)
 
 
 __all__ = ["HistoricalMarketDataAdapter"]

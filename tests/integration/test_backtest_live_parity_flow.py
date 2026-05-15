@@ -9,9 +9,9 @@ from typing import Any
 
 from qts.backtest.engine import BacktestEngine
 from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
+from qts.data.events import MarketDataSubscription as FeedSubscription
 from qts.data.historical.adapter import HistoricalMarketDataAdapter
 from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
-from qts.data.live import FeedSubscription
 from qts.domain.market_data import Bar
 from qts.domain.risk import RiskDecision
 from qts.execution.order_manager import (

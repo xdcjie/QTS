@@ -9,6 +9,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from qts.core.ids import InstrumentId
+from qts.domain.market_data import Bar
 from qts.registry.future_roll import FutureRollRegistry
 from qts.registry.instrument_registry import InstrumentRegistry
 from qts.risk.risk_engine import RiskEngine
@@ -24,6 +25,12 @@ ProcessIntentHandler = Callable[..., "ProcessedIntent"]
 PortfolioViewBuilder = Callable[..., "PortfolioView"]
 EquityPointBuilder = Callable[..., "EquityCurvePoint"]
 RollingPriceUpdater = Callable[..., None]
+MarketDataProvenanceProvider = Callable[[Bar], Mapping[str, object]]
+
+
+def empty_market_data_provenance(_: Bar) -> Mapping[str, object]:
+    """Return no replay provenance when a caller has none configured."""
+    return {}
 
 
 @dataclass(frozen=True, slots=True)
@@ -93,6 +100,7 @@ class BacktestActorLoopDependencies:
     portfolio_view: PortfolioViewBuilder
     equity_point: EquityPointBuilder
     update_rolling_prices: RollingPriceUpdater
+    market_data_provenance_for: MarketDataProvenanceProvider = empty_market_data_provenance
     contract_multipliers: Mapping[InstrumentId, Decimal] = field(default_factory=dict)
     exchange_timezone_by_instrument: Mapping[InstrumentId, str | tzinfo] = field(
         default_factory=dict

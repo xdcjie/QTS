@@ -11,6 +11,7 @@ def test_live_runtime_evidence_output_links_event_stream_and_manifest(tmp_path: 
     from qts.core.ids import InstrumentId, RuntimeRunId
     from qts.reporting.live import LiveReportWriter
     from qts.runtime.config import LiveRuntimeConfig
+    from qts.runtime.sinks.base import RuntimeEventContext
     from qts.runtime.sinks.live import LiveRuntimeEventSink
 
     topology = RuntimeTopologyBuilder.from_live_config(
@@ -30,7 +31,10 @@ def test_live_runtime_evidence_output_links_event_stream_and_manifest(tmp_path: 
         subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
     )
 
-    sink = LiveRuntimeEventSink(tmp_path)
+    sink = LiveRuntimeEventSink(
+        tmp_path,
+        context=RuntimeEventContext(run_id=RuntimeRunId("live-evidence-1"), mode="paper_broker"),
+    )
     sink.write(RuntimeEvent(kind="runtime.market_data", payload={"instrument_id": "AAPL"}))
     sink.write(RuntimeEvent(kind="runtime.account_snapshot", payload={"cash": {"USD": "1000"}}))
     sink.close()

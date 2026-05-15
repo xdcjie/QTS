@@ -32,8 +32,8 @@ def test_live_kill_switch_blocks_new_orders_and_cancels_active_orders() -> None:
     from qts.risk.kill_switch import RuntimeKillSwitchCommand
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.live_runtime_dependencies import LiveRuntimeDependencies
-    from qts.runtime.live_runtime_session import LiveRuntimeSession
+    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
+    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
     registry = InstrumentRegistry()
@@ -92,8 +92,8 @@ def test_live_kill_switch_with_multi_account_topology_cancels_all_active_orders(
     from qts.risk.kill_switch import RuntimeKillSwitchCommand
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.live_runtime_dependencies import LiveRuntimeDependencies
-    from qts.runtime.live_runtime_session import LiveRuntimeSession
+    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
+    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
     registry = InstrumentRegistry()
@@ -197,8 +197,9 @@ def test_live_rollback_records_operator_action_and_preserves_event_store_paths()
     from qts.registry.instrument_registry import InstrumentRegistry
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.live_runtime_dependencies import LiveRuntimeDependencies
-    from qts.runtime.live_runtime_session import LiveRuntimeSession, RuntimeRollbackCommand
+    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
+    from qts.runtime.session import RuntimeRollbackCommand
+    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
     registry = InstrumentRegistry()

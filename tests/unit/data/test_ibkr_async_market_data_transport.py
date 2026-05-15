@@ -8,15 +8,15 @@ from typing import Any
 
 def test_ib_async_market_data_transport_collects_normalized_quote() -> None:
     from qts.core.ids import BrokerId, InstrumentId
-    from qts.data.adapters.ibkr_async_transport import (
-        IbAsyncMarketDataTransport,
-        IbAsyncMarketDataTransportConfig,
-    )
     from qts.data.adapters.ibkr_market_data import (
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
     )
-    from qts.data.adapters.ibkr_transport import IbkrMarketDataContractSpec
+    from qts.data.transports.ib_async_market_data_transport import (
+        IbAsyncMarketDataTransport,
+        IbAsyncMarketDataTransportConfig,
+    )
+    from qts.data.transports.ibkr_tws_market_data_transport import IbkrMarketDataContractSpec
     from qts.domain.market_data import Quote
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
@@ -64,15 +64,15 @@ def test_ib_async_market_data_transport_collects_normalized_quote() -> None:
 
 def test_ib_async_market_data_transport_ignores_nan_initial_ticker_values() -> None:
     from qts.core.ids import BrokerId, InstrumentId
-    from qts.data.adapters.ibkr_async_transport import (
-        IbAsyncMarketDataTransport,
-        IbAsyncMarketDataTransportConfig,
-    )
     from qts.data.adapters.ibkr_market_data import (
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
     )
-    from qts.data.adapters.ibkr_transport import IbkrMarketDataContractSpec
+    from qts.data.transports.ib_async_market_data_transport import (
+        IbAsyncMarketDataTransport,
+        IbAsyncMarketDataTransportConfig,
+    )
+    from qts.data.transports.ibkr_tws_market_data_transport import IbkrMarketDataContractSpec
     from qts.domain.market_data import Quote
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
@@ -117,15 +117,15 @@ def test_ib_async_market_data_transport_ignores_nan_initial_ticker_values() -> N
 
 def test_ib_async_market_data_transport_does_not_reemit_unchanged_ticker_snapshot() -> None:
     from qts.core.ids import BrokerId, InstrumentId
-    from qts.data.adapters.ibkr_async_transport import (
-        IbAsyncMarketDataTransport,
-        IbAsyncMarketDataTransportConfig,
-    )
     from qts.data.adapters.ibkr_market_data import (
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
     )
-    from qts.data.adapters.ibkr_transport import IbkrMarketDataContractSpec
+    from qts.data.transports.ib_async_market_data_transport import (
+        IbAsyncMarketDataTransport,
+        IbAsyncMarketDataTransportConfig,
+    )
+    from qts.data.transports.ibkr_tws_market_data_transport import IbkrMarketDataContractSpec
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
@@ -172,15 +172,15 @@ def test_ib_async_market_data_transport_does_not_reemit_unchanged_ticker_snapsho
 
 def test_ib_async_market_data_transport_raises_broker_error() -> None:
     from qts.core.ids import BrokerId, InstrumentId
-    from qts.data.adapters.ibkr_async_transport import (
-        IbAsyncMarketDataTransport,
-        IbAsyncMarketDataTransportConfig,
-    )
     from qts.data.adapters.ibkr_market_data import (
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
     )
-    from qts.data.adapters.ibkr_transport import IbkrMarketDataContractSpec
+    from qts.data.transports.ib_async_market_data_transport import (
+        IbAsyncMarketDataTransport,
+        IbAsyncMarketDataTransportConfig,
+    )
+    from qts.data.transports.ibkr_tws_market_data_transport import IbkrMarketDataContractSpec
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")

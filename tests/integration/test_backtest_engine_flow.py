@@ -95,6 +95,47 @@ def test_backtest_engine_target_intents_must_pass_pre_trade_risk_before_order_ma
     assert result.final_account.positions == {}
 
 
+def test_backtest_engine_applies_brokerage_model_capabilities(tmp_path: Path) -> None:
+    import pytest
+    from qts.backtest.engine import BacktestEngine
+    from qts.runtime.config import BacktestMarketDataReference, BacktestRuntimeConfig
+    from qts.strategy_sdk import Strategy
+
+    class FractionalFutureStrategy(Strategy):
+        def initialize(self, ctx: Any) -> None:
+            self.asset = ctx.symbol("AAPL")
+
+        def on_bar(self, ctx: Any, bar: object) -> None:
+            ctx.target_quantity(self.asset, Decimal("1.5"))
+
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    runtime_config = BacktestRuntimeConfig(
+        roots=("AAPL",),
+        symbols=("AAPL",),
+        start=start,
+        end=start + timedelta(minutes=1),
+        timeframe="1m",
+        initial_cash=Decimal("10000"),
+        strategy_class="tests.FractionalFutureStrategy",
+        market_data=BacktestMarketDataReference(
+            config_path=tmp_path / "historical.yaml",
+            catalog="unit",
+        ),
+        brokerage_model="IBKR_FUTURES",
+    )
+
+    with pytest.raises(ValueError, match="fractional"):
+        run_engine_streaming(
+            BacktestEngine(
+                strategy=FractionalFutureStrategy(),
+                bars=[_bar(start, "100")],
+                initial_cash=Decimal("10000"),
+                backtest_runtime_config=runtime_config,
+            ),
+            tmp_path / "brokerage-model",
+        )
+
+
 def test_backtest_engine_routes_bars_through_strategy_actor(
     monkeypatch: Any,
     tmp_path: Path,

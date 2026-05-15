@@ -557,8 +557,13 @@ class LiveRuntimeConfig:
     broker_port: int | None = None
     broker_port_override_reason: str | None = None
     operator_signoff_id: str | None = None
+    api_read_only: bool = False
+    broker_time_synced: bool = True
     market_data_permission_live: bool = True
     reconciliation_passed: bool = True
+    open_order_reconciliation_passed: bool | None = None
+    position_reconciliation_passed: bool | None = None
+    cash_reconciliation_passed: bool | None = None
     event_sink_writable: bool = True
     snapshot_store_configured: bool = True
     schema_version: str = "1"
@@ -571,7 +576,7 @@ class LiveRuntimeConfig:
         mode = RuntimeMode.from_value(self.mode)
         if mode is RuntimeMode.BACKTEST:
             raise ValueError("LiveRuntimeConfig mode cannot be backtest")
-        object.__setattr__(self, "mode", mode.value)
+        object.__setattr__(self, "mode", mode)
         execution_environment = ExecutionEnvironment.from_value(
             self.execution_environment,
             mode=mode,
@@ -593,12 +598,35 @@ class LiveRuntimeConfig:
             object.__setattr__(self, "broker_account_code", self.broker_account_code.strip())
         if self.operator_signoff_id is not None:
             object.__setattr__(self, "operator_signoff_id", self.operator_signoff_id.strip())
-            if self.broker_port_override_reason is not None:
-                object.__setattr__(
-                    self,
-                    "broker_port_override_reason",
-                    self.broker_port_override_reason.strip(),
-                )
+        if self.broker_port_override_reason is not None:
+            object.__setattr__(
+                self,
+                "broker_port_override_reason",
+                self.broker_port_override_reason.strip(),
+            )
+        if self.broker_port is None:
+            if mode is RuntimeMode.LIVE:
+                object.__setattr__(self, "broker_port", 4001)
+            elif mode is RuntimeMode.PAPER_BROKER:
+                object.__setattr__(self, "broker_port", 4002)
+        if self.open_order_reconciliation_passed is None:
+            object.__setattr__(
+                self,
+                "open_order_reconciliation_passed",
+                self.reconciliation_passed,
+            )
+        if self.position_reconciliation_passed is None:
+            object.__setattr__(
+                self,
+                "position_reconciliation_passed",
+                self.reconciliation_passed,
+            )
+        if self.cash_reconciliation_passed is None:
+            object.__setattr__(
+                self,
+                "cash_reconciliation_passed",
+                self.reconciliation_passed,
+            )
         self._validate_mode_contract(mode)
 
     @property
@@ -639,8 +667,13 @@ class LiveRuntimeConfig:
             "broker_port": self.broker_port,
             "broker_port_override_reason": self.broker_port_override_reason,
             "operator_signoff_id": self.operator_signoff_id,
+            "api_read_only": self.api_read_only,
+            "broker_time_synced": self.broker_time_synced,
             "market_data_permission_live": self.market_data_permission_live,
             "reconciliation_passed": self.reconciliation_passed,
+            "open_order_reconciliation_passed": self.open_order_reconciliation_passed,
+            "position_reconciliation_passed": self.position_reconciliation_passed,
+            "cash_reconciliation_passed": self.cash_reconciliation_passed,
             "event_sink_writable": self.event_sink_writable,
             "snapshot_store_configured": self.snapshot_store_configured,
         }
@@ -708,10 +741,10 @@ class LiveRuntimeConfig:
                 raise ValueError("paper simulated mode requires broker_account_kind=simulated")
             return
 
-        if mode is RuntimeMode.OBSERVATION:
+        if mode in {RuntimeMode.OBSERVATION, RuntimeMode.LIVE_OBSERVATION}:
             object.__setattr__(self, "observation_only", True)
             if self.execution_environment is not ExecutionEnvironment.DISABLED:
-                raise ValueError("observation mode requires execution_environment=disabled")
+                raise ValueError(f"{mode.value} mode requires execution_environment=disabled")
 
 
 __all__ = [

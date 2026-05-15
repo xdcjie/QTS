@@ -11,15 +11,12 @@ from pathlib import Path
 from typing import Any
 
 from qts.config.ibkr import IbkrEnvironmentConfig, collect_validation_errors
-from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+from qts.core.ids import AccountId, InstrumentId, OrderId, StrategyId
 from qts.domain.orders import CancelIntent, ExecutionReport, OrderIntent, OrderSide
 from qts.domain.risk import RiskDecision
-from qts.execution.broker import (
-    BrokerOrderRequest,
-    FakeBrokerAdapter,
-    normalize_broker_execution_report,
-)
+from qts.execution.broker import BrokerOrderRequest, normalize_broker_execution_report
 from qts.execution.order_manager import OrderManager
+from qts.simulation.broker import SimulatedBrokerAdapter
 
 JsonObject = dict[str, Any]
 
@@ -57,7 +54,7 @@ def run_paper_order_lifecycle_drill(
     order_side = OrderSide(side)
 
     manager = OrderManager()
-    broker = FakeBrokerAdapter(broker_id=BrokerId("IBKR-PAPER"))
+    broker = SimulatedBrokerAdapter()
     intent = OrderIntent(
         order_id=order_id,
         instrument_id=instrument,

@@ -45,8 +45,8 @@ Dependency decision for this milestone:
   `tool.qts.ibkr_api`; deployments install it with `make install-ibkr-api`.
 - Include `ib-async` in `project.dependencies` as a supported alternate SDK for
   independent Gateway validation and operational cross-checks. Its imports must
-  stay isolated inside `qts.data.adapters.ibkr_async_transport` and
-  `qts.execution.adapters.ibkr_async_transport`.
+  stay isolated inside `qts.data.transports.ib_async_market_data_transport` and
+  `qts.execution.transports.ib_async_order_execution_transport`.
 
 The actual SDK imports must stay isolated inside `qts.data.adapters` or
 `qts.execution.adapters` transport modules when enabled, so core domain,

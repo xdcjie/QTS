@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 from qts.core.ids import InstrumentId
+from qts.data.events import MarketDataSubscription as FeedSubscription
 from qts.data.historical.adapter import HistoricalMarketDataAdapter
 from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
-from qts.data.live import FeedSubscription
 from qts.domain.market_data import Bar
 from qts.registry.symbol_resolution import StaticSymbolResolver
 

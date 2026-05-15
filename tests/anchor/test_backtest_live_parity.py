@@ -61,14 +61,14 @@ def test_backtest_engine_order_path_uses_shared_actor_chain() -> None:
 
 
 def test_live_runtime_session_uses_shared_actor_chain() -> None:
-    import qts.runtime.live_runtime_dependencies as live_runtime_dependencies
-    import qts.runtime.live_runtime_session as live_runtime_session
+    import qts.runtime.dependencies as live_runtime_dependencies
     import qts.runtime.live_runtime_topology as live_runtime_topology
+    import qts.runtime.session as runtime_session
 
     source = (
         inspect.getsource(live_runtime_dependencies)
         + inspect.getsource(live_runtime_topology)
-        + inspect.getsource(live_runtime_session.LiveRuntimeSession)
+        + inspect.getsource(runtime_session.RuntimeSession)
     )
 
     for required in (

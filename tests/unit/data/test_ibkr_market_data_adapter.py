@@ -77,7 +77,7 @@ def test_ibkr_market_data_type_sets_permission_state() -> None:
         IbkrMarketDataConnection,
         MarketDataPermissionState,
     )
-    from qts.data.adapters.ibkr_transport import IbkrMarketDataTypePayload
+    from qts.data.transports.ibkr_tws_market_data_transport import IbkrMarketDataTypePayload
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")

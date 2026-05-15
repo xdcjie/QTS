@@ -11,6 +11,7 @@ class RuntimeMode(StrEnum):
     BACKTEST = "backtest"
     PAPER_BROKER = "paper_broker"
     PAPER_SIMULATED = "paper_simulated"
+    LIVE_OBSERVATION = "live_observation"
     LIVE = "live"
     OBSERVATION = "observation"
 
@@ -63,7 +64,7 @@ class ExecutionEnvironment(StrEnum):
         if value is None:
             if mode in {RuntimeMode.BACKTEST, RuntimeMode.PAPER_SIMULATED}:
                 return cls.SIMULATED
-            if mode is RuntimeMode.OBSERVATION:
+            if mode in {RuntimeMode.OBSERVATION, RuntimeMode.LIVE_OBSERVATION}:
                 return cls.DISABLED
             return cls.BROKER
         return cls(value.strip().lower().replace("-", "_"))

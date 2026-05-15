@@ -21,6 +21,7 @@ class RuntimeCommandResultResponseSchema(BaseModel):
     status: str
     evidence: dict[str, object]
     failure_reason: str | None = None
+    reason_code: str | None = None
 
 
 class KillSwitchScopeSchema(StrEnum):

@@ -156,6 +156,18 @@ def test_backtest_runtime_event_sink_writes_events_and_manifest_contract(
     assert manifest["artifacts"]["events"]["rows"] == 1
 
 
+def test_backtest_runtime_event_sink_requires_run_context(tmp_path: Path) -> None:
+    import pytest
+    from qts.reporting.backtest import BacktestArtifactWriter
+    from qts.runtime.sinks.backtest import BacktestRuntimeEventSink
+    from qts.runtime.sinks.base import RuntimeEvent
+
+    sink = BacktestRuntimeEventSink(BacktestArtifactWriter(tmp_path))
+
+    with pytest.raises(ValueError, match="run_id is required"):
+        sink.write(RuntimeEvent(kind="runtime.state", payload={"state": "running"}))
+
+
 def test_backtest_finalize_includes_runtime_topology_payload(tmp_path: Path) -> None:
     from qts.core.ids import RuntimeRunId
     from qts.reporting.backtest import BacktestArtifactWriter, EquityCurvePoint

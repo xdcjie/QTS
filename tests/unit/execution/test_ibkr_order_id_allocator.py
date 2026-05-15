@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 def test_order_id_allocator_survives_restart_and_reconciles_by_client_id(tmp_path: Path) -> None:
-    from qts.execution.adapters.ibkr_order_ids import IbkrOrderIdAllocator
+    from qts.execution.transports.ibkr_order_ids import IbkrOrderIdAllocator
 
     store_path = tmp_path / "ibkr-order-ids.json"
     allocator = IbkrOrderIdAllocator(store_path)

@@ -10,9 +10,13 @@ def test_streaming_market_data_source_normalizes_callbacks_and_drains_complete_e
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
     )
-    from qts.data.adapters.ibkr_transport import IbkrBarPayload, IbkrQuotePayload, IbkrTickPayload
     from qts.data.sources.streaming_market_data_source import StreamingMarketDataSource
     from qts.data.subscriptions import LogicalSubscription, SourceStreamType
+    from qts.data.transports.ibkr_tws_market_data_transport import (
+        IbkrBarPayload,
+        IbkrQuotePayload,
+        IbkrTickPayload,
+    )
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
     from qts.runtime.market_data_flow import MarketDataFlow
 
@@ -82,9 +86,9 @@ def test_streaming_market_data_source_holds_partial_bars_until_complete() -> Non
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
     )
-    from qts.data.adapters.ibkr_transport import IbkrBarPayload
     from qts.data.sources.streaming_market_data_source import StreamingMarketDataSource
     from qts.data.subscriptions import LogicalSubscription
+    from qts.data.transports.ibkr_tws_market_data_transport import IbkrBarPayload
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
@@ -220,8 +224,8 @@ def test_market_data_permission_event_is_visible_from_streaming_source() -> None
         MarketDataPermissionEvent,
         MarketDataPermissionState,
     )
-    from qts.data.adapters.ibkr_transport import IbkrMarketDataTypePayload
     from qts.data.sources.streaming_market_data_source import StreamingMarketDataSource
+    from qts.data.transports.ibkr_tws_market_data_transport import IbkrMarketDataTypePayload
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
@@ -274,6 +278,7 @@ def test_market_data_permission_event_enters_runtime_flow() -> None:
     assert permission_event.payload["provider_market_data_type"] == 3
     assert degradation_event.kind == "runtime.degraded"
     assert degradation_event.payload["reason"] == "market_data_permission_not_live"
+    assert degradation_event.payload["reason_code"] == "MARKET_DATA_PERMISSION_ERROR"
     assert degradation_event.payload["permission_state"] == "delayed"
 
 
@@ -321,10 +326,14 @@ def test_stale_market_data_degradation_enters_runtime_flow() -> None:
     ).publish_source_event(degradation)
 
     assert result.market_data == ()
-    [runtime_event] = result.runtime_events
-    assert runtime_event.kind == "runtime.degraded"
-    assert runtime_event.payload["reason"] == "stale_market_data"
-    assert runtime_event.payload["instrument_id"] == instrument_id.value
+    stale_event, degradation_event = result.runtime_events
+    assert stale_event.kind == "market_data_stale_detected"
+    assert stale_event.payload["reason_code"] == "MARKET_DATA_STALE"
+    assert stale_event.payload["instrument_id"] == instrument_id.value
+    assert degradation_event.kind == "runtime.degraded"
+    assert degradation_event.payload["reason"] == "stale_market_data"
+    assert degradation_event.payload["reason_code"] == "MARKET_DATA_STALE"
+    assert degradation_event.payload["instrument_id"] == instrument_id.value
 
 
 def test_subscription_lifecycle_events_enter_runtime_flow() -> None:
@@ -395,4 +404,5 @@ def test_subscription_failure_enters_runtime_flow_as_degradation() -> None:
     assert failure_event.payload["reason"] == "reqMktData failed"
     assert degradation_event.kind == "runtime.degraded"
     assert degradation_event.payload["reason"] == "market_data_subscription_failed"
+    assert degradation_event.payload["reason_code"] == "MARKET_DATA_SUBSCRIPTION_FAILED"
     assert degradation_event.payload["subscription_failure_reason"] == "reqMktData failed"

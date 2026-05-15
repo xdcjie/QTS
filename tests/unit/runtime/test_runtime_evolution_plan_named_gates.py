@@ -57,19 +57,19 @@ def _guardrail_codes() -> set[str]:
 
 
 def test_data_pipeline_has_no_runtime_imports() -> None:
-    assert "pipeline_imports_actor" not in _guardrail_codes()
+    assert "PIPELINE_ACTOR_IMPORT" not in _guardrail_codes()
 
 
 def test_transport_has_no_strategy_imports() -> None:
-    assert "transport_imports_actor" not in _guardrail_codes()
+    assert "TRANSPORT_ACTOR_IMPORT" not in _guardrail_codes()
 
 
 def test_strategy_sdk_has_no_broker_imports() -> None:
-    assert "strategy_sdk_forbidden_import" not in _guardrail_codes()
+    assert "STRATEGY_SDK_INTERNAL_LEAK" not in _guardrail_codes()
 
 
 def test_runtime_has_no_provider_sdk_imports() -> None:
-    assert "provider_sdk_forbidden_import" not in _guardrail_codes()
+    assert "PROVIDER_SDK_IMPORT" not in _guardrail_codes()
 
 
 def test_backtest_and_live_events_share_envelope(tmp_path: Path) -> None:
@@ -163,11 +163,11 @@ def test_manifest_contains_runtime_run_id(tmp_path: Path) -> None:
 
 
 def test_shared_runtime_docstrings_are_mode_neutral() -> None:
-    assert "shared_runtime_backtest_only_docstring" not in _guardrail_codes()
+    assert "SHARED_RUNTIME_WORDING" not in _guardrail_codes()
 
 
 def test_no_placeholder_docstrings_in_production() -> None:
-    assert "production_placeholder_docstring" not in _guardrail_codes()
+    assert "PLACEHOLDER_DOCSTRING" not in _guardrail_codes()
 
 
 def test_two_accounts_one_strategy_each_topology() -> None:
@@ -388,8 +388,8 @@ def test_unknown_exec_id_is_quarantined() -> None:
 
 
 def test_delayed_market_data_sets_permission_state() -> None:
-    from qts.data.adapters.ibkr_transport import IbkrMarketDataTypePayload
     from qts.data.permissions import MarketDataPermissionState
+    from qts.data.transports.ibkr_tws_market_data_transport import IbkrMarketDataTypePayload
     from qts.runtime.market_data_flow import MarketDataFlow
 
     from tests.unit.runtime.test_runtime_evolution_plan_acceptance import (
@@ -416,9 +416,9 @@ def test_delayed_market_data_sets_permission_state() -> None:
 
 def test_stale_data_blocks_live_orders() -> None:
     from qts.core.ids import BrokerId
-    from qts.execution.broker import FakeBrokerAdapter
     from qts.runtime.live import LiveRuntime
     from qts.runtime.sinks.base import RuntimeEvent
+    from qts.testing.fakes.broker import FakeBrokerAdapter
 
     from tests.support.live_feed import FakeLiveFeedAdapter
 
@@ -458,7 +458,7 @@ def test_permission_error_does_not_retry_forever() -> None:
 
 
 def test_pacing_violation_enters_backoff() -> None:
-    from qts.data.adapters.ibkr_transport import IbkrMarketDataErrorPayload
+    from qts.data.transports.ibkr_tws_market_data_transport import IbkrMarketDataErrorPayload
 
     payload = IbkrMarketDataErrorPayload(request_id=1, code=420, message="pacing violation")
 
@@ -611,7 +611,11 @@ def test_live_blocks_with_reconciliation_drift() -> None:
         reconciliation_passed=False,
     )
 
-    assert LiveStartupChecklist.from_config(config).by_name("reconciliation_check").status == "FAIL"
+    checklist = LiveStartupChecklist.from_config(config)
+
+    assert checklist.by_name("open_order_reconciliation_check").status == "FAIL"
+    assert checklist.by_name("position_reconciliation_check").status == "FAIL"
+    assert checklist.by_name("cash_reconciliation_check").status == "FAIL"
 
 
 def test_live_blocks_when_event_sink_not_writable() -> None:
@@ -884,8 +888,8 @@ def test_duplicate_kill_switch_command_returns_same_result() -> None:
 
 def test_pause_blocks_new_order_but_keeps_market_data() -> None:
     from qts.core.ids import BrokerId
-    from qts.execution.broker import FakeBrokerAdapter
     from qts.runtime.live import LiveRuntime
+    from qts.testing.fakes.broker import FakeBrokerAdapter
 
     from tests.support.live_feed import FakeLiveFeedAdapter
 
@@ -911,16 +915,16 @@ def test_resume_requires_reconciliation_when_live() -> None:
 
 
 def test_no_replay_classes_in_live_package() -> None:
-    assert "live_package_replay_class" not in _guardrail_codes()
+    assert "LIVE_PACKAGE_REPLAY_CLASS" not in _guardrail_codes()
 
 
 def test_no_provider_sdk_import_in_domain() -> None:
-    assert "provider_sdk_forbidden_import" not in _guardrail_codes()
+    assert "PROVIDER_SDK_IMPORT" not in _guardrail_codes()
 
 
 def test_strategy_sdk_has_no_execution_adapter_import() -> None:
-    assert "strategy_sdk_forbidden_import" not in _guardrail_codes()
+    assert "STRATEGY_SDK_INTERNAL_LEAK" not in _guardrail_codes()
 
 
 def test_pipeline_has_no_actor_import() -> None:
-    assert "pipeline_imports_actor" not in _guardrail_codes()
+    assert "PIPELINE_ACTOR_IMPORT" not in _guardrail_codes()

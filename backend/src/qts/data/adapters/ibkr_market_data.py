@@ -7,14 +7,14 @@ from datetime import datetime
 from decimal import Decimal
 
 from qts.core.ids import InstrumentId
-from qts.data.adapters.ibkr_transport import (
+from qts.data.permissions import MarketDataPermissionEvent, MarketDataPermissionState
+from qts.data.transports.ibkr_tws_market_data_transport import (
     IbkrBarPayload,
     IbkrMarketDataTypePayload,
     IbkrProviderMarketDataType,
     IbkrQuotePayload,
     IbkrTickPayload,
 )
-from qts.data.permissions import MarketDataPermissionEvent, MarketDataPermissionState
 from qts.domain.market_data import Bar, Quote, Tick
 from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 

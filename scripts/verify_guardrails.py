@@ -18,6 +18,11 @@ OOPHelperOwnershipRule = _guardrails.OOPHelperOwnershipRule
 BacktestRunnerCohesionRule = _guardrails.BacktestRunnerCohesionRule
 BacktestInputCohesionRule = _guardrails.BacktestInputCohesionRule
 BacktestEngineCohesionRule = _guardrails.BacktestEngineCohesionRule
+DataLiveNoSharedContractRule = _guardrails.DataLiveNoSharedContractRule
+DeprecatedImportNoNewUsageRule = _guardrails.DeprecatedImportNoNewUsageRule
+ProductionNoFakeClassRule = _guardrails.ProductionNoFakeClassRule
+ProductionNoTestingImportRule = _guardrails.ProductionNoTestingImportRule
+TransportCanonicalPathRule = _guardrails.TransportCanonicalPathRule
 run_guardrails = _guardrails.run_guardrails
 main = _guardrails.main
 

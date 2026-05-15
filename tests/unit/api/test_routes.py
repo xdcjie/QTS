@@ -122,12 +122,20 @@ def test_operational_kill_switch_deactivate_route_is_idempotent() -> None:
     inactive = client.post(
         "/operations/kill-switches/deactivate",
         json={"scope": "global", "reason": "operator resume"},
-        headers={"Idempotency-Key": "kill-off-1", "X-QTS-Operator": "tester"},
+        headers={
+            "Idempotency-Key": "kill-off-1",
+            "X-QTS-Operator": "tester",
+            "X-QTS-Authorization-Scope": "runtime:safety:write",
+        },
     )
     duplicate = client.post(
         "/operations/kill-switches/deactivate",
         json={"scope": "global", "reason": "different reason"},
-        headers={"Idempotency-Key": "kill-off-1", "X-QTS-Operator": "tester"},
+        headers={
+            "Idempotency-Key": "kill-off-1",
+            "X-QTS-Operator": "tester",
+            "X-QTS-Authorization-Scope": "runtime:safety:write",
+        },
     )
 
     assert active.status_code == 200
@@ -136,6 +144,21 @@ def test_operational_kill_switch_deactivate_route_is_idempotent() -> None:
     assert inactive.json()["active"] is False
     assert inactive.json()["reason"] == "operator resume"
     assert duplicate.json() == inactive.json()
+
+
+def test_operational_kill_switch_deactivate_route_requires_safety_scope() -> None:
+    from fastapi.testclient import TestClient
+    from qts.api.app import create_app
+
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/operations/kill-switches/deactivate",
+        json={"scope": "global", "reason": "operator resume"},
+        headers={"Idempotency-Key": "kill-off-denied", "X-QTS-Operator": "tester"},
+    )
+
+    assert response.status_code == 403
 
 
 def test_operational_routes_scope_idempotency_by_command_kind() -> None:

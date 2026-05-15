@@ -12,12 +12,6 @@ from qts.data.adapters.ibkr_market_data import (
     IbkrMarketDataAdapter,
     IbkrMarketDataSubscription,
 )
-from qts.data.adapters.ibkr_transport import (
-    IbkrBarPayload,
-    IbkrMarketDataTypePayload,
-    IbkrQuotePayload,
-    IbkrTickPayload,
-)
 from qts.data.permissions import MarketDataPermissionEvent, MarketDataPermissionState
 from qts.data.subscriptions import (
     LogicalSubscription,
@@ -26,6 +20,12 @@ from qts.data.subscriptions import (
     MarketDataSubscriptionEventType,
     SourceStreamType,
     logical_key,
+)
+from qts.data.transports.ibkr_tws_market_data_transport import (
+    IbkrBarPayload,
+    IbkrMarketDataTypePayload,
+    IbkrQuotePayload,
+    IbkrTickPayload,
 )
 from qts.domain.market_data import Bar, Quote, Tick
 

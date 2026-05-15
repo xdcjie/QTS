@@ -37,9 +37,9 @@ def test_ibkr_gateway_order_lifecycle_anchor_requires_paper_and_real_transport(
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.adapters.ibkr_transport import IbkrOrderContractSpec
     from qts.execution.broker import BrokerOrderType
     from qts.execution.order_manager import OrderIntent, OrderSide
+    from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOrderContractSpec
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")

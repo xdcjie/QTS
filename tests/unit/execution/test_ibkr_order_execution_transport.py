@@ -3,24 +3,208 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from decimal import Decimal
 from threading import Event
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
 if TYPE_CHECKING:
-    from qts.execution.adapters.ibkr_transport import (
+    from qts.execution.order_manager import ExecutionReport
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
+        IbkrAccountSummaryPayload,
         IbkrCommissionPayload,
         IbkrCommissionReport,
         IbkrConnectionEvent,
         IbkrConnectionEventPayload,
         IbkrErrorPayload,
         IbkrExecutionPayload,
+        IbkrOpenOrderPayload,
         IbkrOrderExecutionCallbackSink,
         IbkrOrderRequest,
         IbkrOrderStatusPayload,
+        IbkrPositionPayload,
         IbkrTransportError,
     )
-    from qts.execution.order_manager import ExecutionReport
+
+
+def test_ibkr_tws_order_execution_transport_has_split_owners() -> None:
+    from qts.execution.transports.ibkr_tws_callback_dispatcher import (
+        IbkrTwsCallbackDispatcher,
+    )
+    from qts.execution.transports.ibkr_tws_connection import IbkrTwsConnection
+    from qts.execution.transports.ibkr_tws_execution_event_emitter import (
+        IbkrTwsExecutionEventEmitter,
+    )
+    from qts.execution.transports.ibkr_tws_order_client import IbkrTwsOrderClient
+    from qts.execution.transports.ibkr_tws_reconciliation_client import (
+        IbkrTwsReconciliationClient,
+    )
+
+    assert IbkrTwsConnection.__module__ == "qts.execution.transports.ibkr_tws_connection"
+    assert IbkrTwsOrderClient.__module__ == "qts.execution.transports.ibkr_tws_order_client"
+    assert IbkrTwsReconciliationClient.__module__ == (
+        "qts.execution.transports.ibkr_tws_reconciliation_client"
+    )
+    assert IbkrTwsCallbackDispatcher.__module__ == (
+        "qts.execution.transports.ibkr_tws_callback_dispatcher"
+    )
+    assert IbkrTwsExecutionEventEmitter.__module__ == (
+        "qts.execution.transports.ibkr_tws_execution_event_emitter"
+    )
+
+
+def test_execution_transports_package_exports_tws_split_owners() -> None:
+    from qts.execution.transports import (
+        IbkrTwsCallbackDispatcher,
+        IbkrTwsConnection,
+        IbkrTwsExecutionEventEmitter,
+        IbkrTwsOrderClient,
+        IbkrTwsReconciliationClient,
+    )
+
+    assert IbkrTwsConnection.__name__ == "IbkrTwsConnection"
+    assert IbkrTwsOrderClient.__name__ == "IbkrTwsOrderClient"
+    assert IbkrTwsReconciliationClient.__name__ == "IbkrTwsReconciliationClient"
+    assert IbkrTwsCallbackDispatcher.__name__ == "IbkrTwsCallbackDispatcher"
+    assert IbkrTwsExecutionEventEmitter.__name__ == "IbkrTwsExecutionEventEmitter"
+
+
+def test_ibkr_tws_order_execution_transport_facade_delegates_split_responsibilities() -> None:
+    import inspect
+
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
+        IbkrTwsOrderExecutionTransport,
+    )
+
+    source = inspect.getsource(IbkrTwsOrderExecutionTransport)
+
+    assert "placeOrder(" not in source
+    assert "cancelOrder(" not in source
+    assert "reqOpenOrders(" not in source
+    assert "IbkrOrderStatusPayload(" not in source
+    assert "IbkrOpenOrderPayload(" not in source
+    assert "IbkrExecutionPayload(" not in source
+
+
+def test_ibkr_tws_callback_dispatcher_converts_raw_callbacks_to_payloads() -> None:
+    import queue
+
+    from qts.execution.transports.ibkr_tws_callback_dispatcher import (
+        IbkrTwsCallbackDispatcher,
+    )
+    from qts.execution.transports.ibkr_tws_execution_event_emitter import (
+        IbkrTwsExecutionEventEmitter,
+    )
+
+    class Contract:
+        symbol = "AAPL"
+
+    class Order:
+        orderRef = "client-001"
+        permId = 999
+        action = "BUY"
+        totalQuantity = Decimal("2")
+
+    class OrderState:
+        status = "Submitted"
+
+    sink = _RecordingSink()
+    emitter = IbkrTwsExecutionEventEmitter(sink=sink, reports=queue.Queue())
+    dispatcher = IbkrTwsCallbackDispatcher(emitter=emitter)
+
+    dispatcher.handle_open_order(
+        order_id=123,
+        contract=Contract(),
+        order=Order(),
+        order_state=OrderState(),
+    )
+    dispatcher.handle_position(account_id="DU123", contract=Contract(), position=Decimal("2"))
+
+    open_order = sink.open_orders[0]
+    position = sink.positions[0]
+
+    assert open_order.broker_order_id == "123"
+    assert open_order.client_order_id == "client-001"
+    assert open_order.broker_symbol == "AAPL"
+    assert position.account_id == "DU123"
+    assert position.quantity == Decimal("2")
+
+
+def test_ibkr_tws_order_client_submits_and_cancels_without_callback_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from qts.execution.transports.ibkr_order_ids import IbkrOrderIdAllocator
+    from qts.execution.transports.ibkr_tws_order_client import IbkrTwsOrderClient
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
+        IbkrTwsOrderExecutionTransportConfig,
+    )
+
+    class OrderCancel:
+        pass
+
+    monkeypatch.setattr(
+        "qts.execution.transports.ibkr_tws_order_client._ibapi_attr",
+        lambda module_name, attribute_name: OrderCancel,
+    )
+    app = _OrderClientApp()
+    allocator = IbkrOrderIdAllocator()
+    allocator.reconcile_next_valid_id(client_id=201, broker_next_valid_id=700)
+    sink = _RecordingSink()
+    client = IbkrTwsOrderClient(
+        config=IbkrTwsOrderExecutionTransportConfig(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+        ),
+        sink=sink,
+        order_id_allocator=allocator,
+    )
+    request = cast(Any, _OrderClientRequest())
+
+    broker_order_id = client.submit_order_with_broker_id(app, request)
+    client.cancel_order(app, broker_order_id)
+
+    assert broker_order_id == "700"
+    assert app.placed_orders == [(700, "contract", "order")]
+    assert app.cancelled_orders[0][0] == 700
+    assert sink.submitted_orders == [(request, "700")]
+
+
+def test_ibkr_tws_reconciliation_client_requests_broker_state(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
+        IbkrTwsOrderExecutionTransportConfig,
+    )
+    from qts.execution.transports.ibkr_tws_reconciliation_client import (
+        IbkrTwsReconciliationClient,
+    )
+
+    class ExecutionFilter:
+        pass
+
+    monkeypatch.setattr(
+        "qts.execution.transports.ibkr_tws_reconciliation_client._ibapi_attr",
+        lambda module_name, attribute_name: ExecutionFilter,
+    )
+    app = _StartupReconciliationApp()
+    client = IbkrTwsReconciliationClient(
+        config=IbkrTwsOrderExecutionTransportConfig(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+            request_all_open_orders_on_reconnect=True,
+        )
+    )
+
+    client.request_startup_reconciliation(app)
+
+    assert app.calls[0] == ("reqOpenOrders",)
+    assert app.calls[1] == ("reqAllOpenOrders",)
+    assert app.calls[2] == ("reqPositions",)
+    assert app.calls[3][0] == "reqExecutions"
+    assert app.calls[3][1] == 1
+    assert app.calls[4][0] == "reqAccountSummary"
+    assert app.calls[4][1] == 2
 
 
 def test_ibkr_order_execution_transport_dispatches_callbacks_to_adapter() -> None:
@@ -29,7 +213,8 @@ def test_ibkr_order_execution_transport_dispatches_callbacks_to_adapter() -> Non
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.adapters.ibkr_transport import (
+    from qts.execution.order_manager import ExecutionReport, OrderIntent, OrderSide
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrCommissionPayload,
         IbkrConnectionEventPayload,
         IbkrErrorPayload,
@@ -38,7 +223,6 @@ def test_ibkr_order_execution_transport_dispatches_callbacks_to_adapter() -> Non
         IbkrOrderRequest,
         IbkrOrderStatusPayload,
     )
-    from qts.execution.order_manager import ExecutionReport, OrderIntent, OrderSide
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
@@ -118,14 +302,14 @@ def test_ibkr_tws_order_execution_transport_builds_limit_order_and_normalizes_ca
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.adapters.ibkr_transport import (
+    from qts.execution.broker import BrokerOrderType
+    from qts.execution.order_manager import OrderIntent, OrderSide
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrOrderContractSpec,
         IbkrOrderStatusPayload,
         IbkrTwsOrderExecutionTransport,
         IbkrTwsOrderExecutionTransportConfig,
     )
-    from qts.execution.broker import BrokerOrderType
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
@@ -195,12 +379,12 @@ def test_ibkr_tws_order_execution_transport_handles_legacy_commission_report() -
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.adapters.ibkr_transport import (
+    from qts.execution.order_manager import ExecutionReport
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrExecutionPayload,
         IbkrTwsOrderExecutionTransport,
         IbkrTwsOrderExecutionTransportConfig,
     )
-    from qts.execution.order_manager import ExecutionReport
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     class LegacyCommissionReport:
@@ -253,13 +437,13 @@ def test_ibkr_tws_order_execution_transport_waits_through_transient_connectivity
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.adapters.ibkr_transport import (
+    from qts.execution.order_manager import ExecutionReportStatus
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrErrorPayload,
         IbkrOrderStatusPayload,
         IbkrTwsOrderExecutionTransport,
         IbkrTwsOrderExecutionTransportConfig,
     )
-    from qts.execution.order_manager import ExecutionReportStatus
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
@@ -324,12 +508,12 @@ def test_ibkr_tws_order_execution_transport_does_not_queue_unknown_status() -> N
         IbkrOrderExecutionConnection,
     )
     from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
-    from qts.execution.adapters.ibkr_transport import (
+    from qts.execution.order_manager import ExecutionReportStatus
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrOrderStatusPayload,
         IbkrTwsOrderExecutionTransport,
         IbkrTwsOrderExecutionTransportConfig,
     )
-    from qts.execution.order_manager import ExecutionReportStatus
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
@@ -382,7 +566,7 @@ def test_ibkr_tws_order_execution_transport_handles_open_order_callback() -> Non
         IbkrOrderExecutionConnection,
     )
     from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
-    from qts.execution.adapters.ibkr_transport import (
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrTwsOrderExecutionTransport,
         IbkrTwsOrderExecutionTransportConfig,
     )
@@ -438,7 +622,7 @@ def test_ibkr_tws_order_execution_transport_requests_startup_reconciliation() ->
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.adapters.ibkr_transport import (
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrTwsOrderExecutionTransport,
         IbkrTwsOrderExecutionTransportConfig,
     )
@@ -507,7 +691,7 @@ def test_ibkr_tws_order_execution_transport_bounds_blocking_ibapi_connect(
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.adapters.ibkr_transport import (
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrTwsOrderExecutionTransport,
         IbkrTwsOrderExecutionTransportConfig,
     )
@@ -528,7 +712,7 @@ def test_ibkr_tws_order_execution_transport_bounds_blocking_ibapi_connect(
     )
     app = _BlockingConnectApp()
     monkeypatch.setattr(
-        "qts.execution.adapters.ibkr_transport._new_order_execution_app",
+        "qts.execution.transports.ibkr_tws_order_execution_transport._new_order_execution_app",
         lambda owner: app,
     )
     transport = IbkrTwsOrderExecutionTransport(
@@ -546,6 +730,100 @@ def test_ibkr_tws_order_execution_transport_bounds_blocking_ibapi_connect(
 
     assert app.disconnect_called
     assert not transport.connected
+
+
+@dataclass(slots=True)
+class _RecordingSink:
+    submitted_orders: list[tuple[IbkrOrderRequest, str]] = field(default_factory=list)
+    open_orders: list[IbkrOpenOrderPayload] = field(default_factory=list)
+    positions: list[IbkrPositionPayload] = field(default_factory=list)
+    account_summaries: list[IbkrAccountSummaryPayload] = field(default_factory=list)
+
+    def record_submitted_order(
+        self,
+        request: IbkrOrderRequest,
+        *,
+        ibkr_order_id: str,
+        submitted_at: object | None = None,
+    ) -> None:
+        del submitted_at
+        self.submitted_orders.append((request, ibkr_order_id))
+
+    def on_order_status(self, payload: IbkrOrderStatusPayload) -> ExecutionReport | None:
+        del payload
+        return None
+
+    def on_open_order(self, payload: IbkrOpenOrderPayload) -> None:
+        self.open_orders.append(payload)
+
+    def on_position(self, payload: IbkrPositionPayload) -> None:
+        self.positions.append(payload)
+
+    def on_account_summary(self, payload: IbkrAccountSummaryPayload) -> None:
+        self.account_summaries.append(payload)
+
+    def on_execution(self, payload: IbkrExecutionPayload) -> ExecutionReport | None:
+        del payload
+        return None
+
+    def on_commission(
+        self,
+        payload: IbkrCommissionPayload,
+    ) -> ExecutionReport | IbkrCommissionReport:
+        from qts.execution.transports.ibkr_tws_order_execution_transport import (
+            IbkrCommissionReport,
+        )
+
+        return IbkrCommissionReport(
+            execution_id=payload.execution_id,
+            commission=payload.commission,
+            currency=payload.currency,
+        )
+
+    def on_error(self, payload: IbkrErrorPayload) -> IbkrTransportError:
+        from qts.execution.transports.ibkr_tws_order_execution_transport import (
+            IbkrTransportError,
+        )
+
+        return IbkrTransportError(
+            request_id=payload.request_id,
+            code=payload.code,
+            message=payload.message,
+        )
+
+    def on_disconnect(self, payload: IbkrConnectionEventPayload) -> IbkrConnectionEvent:
+        from qts.execution.transports.ibkr_tws_order_execution_transport import (
+            IbkrConnectionEvent,
+        )
+
+        return IbkrConnectionEvent(kind="disconnect", reason=payload.reason)
+
+    def on_reconnect(self, payload: IbkrConnectionEventPayload) -> IbkrConnectionEvent:
+        from qts.execution.transports.ibkr_tws_order_execution_transport import (
+            IbkrConnectionEvent,
+        )
+
+        return IbkrConnectionEvent(kind="reconnect", reason=payload.reason)
+
+
+@dataclass(slots=True)
+class _OrderClientApp:
+    placed_orders: list[tuple[int, object, object]] = field(default_factory=list)
+    cancelled_orders: list[tuple[int, object]] = field(default_factory=list)
+
+    def placeOrder(self, order_id: int, contract: object, order: object) -> None:
+        self.placed_orders.append((order_id, contract, order))
+
+    def cancelOrder(self, order_id: int, order_cancel: object) -> None:
+        self.cancelled_orders.append((order_id, order_cancel))
+
+
+class _OrderClientRequest:
+    def to_ibapi_contract(self) -> str:
+        return "contract"
+
+    def to_ibapi_order(self) -> str:
+        return "order"
 
 
 @dataclass(slots=True)

@@ -135,12 +135,53 @@ class OperationsService:
         command: KillSwitchCommandDTO,
         *,
         operator_id: str = "system",
+        operator_role: str = "operator",
+        authorization_scope: str = "runtime:operator",
         idempotency_key: str | None = None,
     ) -> KillSwitchStateDTO:
         """Deactivate a kill switch through the command bus."""
-        result = self._submit_runtime_command(
+        result = self._submit_deactivate_kill_switch_command(
+            command,
+            operator_id=operator_id,
+            operator_role=operator_role,
+            authorization_scope=authorization_scope,
+            idempotency_key=idempotency_key,
+        )
+        return self._kill_switch_state_from_result(result)
+
+    def deactivate_kill_switch_result(
+        self,
+        command: KillSwitchCommandDTO,
+        *,
+        operator_id: str = "system",
+        operator_role: str = "operator",
+        authorization_scope: str = "runtime:operator",
+        idempotency_key: str | None = None,
+    ) -> RuntimeCommandResultDTO:
+        """Deactivate a kill switch and return the auditable command result."""
+        result = self._submit_deactivate_kill_switch_command(
+            command,
+            operator_id=operator_id,
+            operator_role=operator_role,
+            authorization_scope=authorization_scope,
+            idempotency_key=idempotency_key,
+        )
+        return self._command_result_dto(result)
+
+    def _submit_deactivate_kill_switch_command(
+        self,
+        command: KillSwitchCommandDTO,
+        *,
+        operator_id: str,
+        operator_role: str,
+        authorization_scope: str,
+        idempotency_key: str | None,
+    ) -> RuntimeCommandResult:
+        return self._submit_runtime_command(
             RuntimeCommandType.DEACTIVATE_KILL_SWITCH,
             operator_id=operator_id,
+            operator_role=operator_role,
+            authorization_scope=authorization_scope,
             idempotency_key=idempotency_key,
             reason=command.reason,
             payload={
@@ -149,7 +190,6 @@ class OperationsService:
                 "reason": command.reason,
             },
         )
-        return self._kill_switch_state_from_result(result)
 
     def reconcile_runtime(
         self,
@@ -201,6 +241,10 @@ class OperationsService:
         command_type: RuntimeCommandType,
         *,
         operator_id: str,
+        operator_role: str = "operator",
+        authorization_scope: str = "runtime:operator",
+        approved_by: str | None = None,
+        approval_required: bool = False,
         idempotency_key: str | None,
         reason: str | None = None,
         payload: Mapping[str, object] | None = None,
@@ -212,6 +256,10 @@ class OperationsService:
                 command_type=command_type,
                 idempotency_key=idempotency_key or command_id,
                 operator_id=operator_id,
+                operator_role=operator_role,
+                authorization_scope=authorization_scope,
+                approved_by=approved_by,
+                approval_required=approval_required,
                 reason=reason,
                 payload=payload or {},
             )
@@ -222,22 +270,22 @@ class OperationsService:
         evidence: dict[str, object]
         if command.command_type is RuntimeCommandType.START:
             self._runtime_state = "running"
-            evidence = {"state": self._runtime_state}
+            evidence = self._command_evidence(command, {"state": self._runtime_state})
         elif command.command_type is RuntimeCommandType.STOP:
             self._runtime_state = "stopped"
-            evidence = {"state": self._runtime_state}
+            evidence = self._command_evidence(command, {"state": self._runtime_state})
         elif command.command_type is RuntimeCommandType.PAUSE:
             self._runtime_state = "paused"
-            evidence = {"state": self._runtime_state}
+            evidence = self._command_evidence(command, {"state": self._runtime_state})
         elif command.command_type is RuntimeCommandType.RESUME:
             self._runtime_state = "running"
-            evidence = {"state": self._runtime_state}
+            evidence = self._command_evidence(command, {"state": self._runtime_state})
         elif command.command_type is RuntimeCommandType.ENTER_OBSERVATION:
             self._runtime_state = "observation"
-            evidence = {"state": self._runtime_state}
+            evidence = self._command_evidence(command, {"state": self._runtime_state})
         elif command.command_type is RuntimeCommandType.EXIT_OBSERVATION:
             self._runtime_state = "running"
-            evidence = {"state": self._runtime_state}
+            evidence = self._command_evidence(command, {"state": self._runtime_state})
         elif command.command_type is RuntimeCommandType.ACTIVATE_KILL_SWITCH:
             try:
                 scope = self._scope_from_payload(command.payload)
@@ -249,12 +297,15 @@ class OperationsService:
                     reason=str(exc),
                 )
             state = self._kill_switches.activate(scope, reason=reason)
-            evidence = {
-                "scope": state.scope.scope_type.value,
-                "scope_id": state.scope.scope_id,
-                "active": state.active,
-                "reason": state.reason,
-            }
+            evidence = self._command_evidence(
+                command,
+                {
+                    "scope": state.scope.scope_type.value,
+                    "scope_id": state.scope.scope_id,
+                    "active": state.active,
+                    "reason": state.reason,
+                },
+            )
         elif command.command_type is RuntimeCommandType.DEACTIVATE_KILL_SWITCH:
             try:
                 scope = self._scope_from_payload(command.payload)
@@ -266,16 +317,25 @@ class OperationsService:
                     reason=str(exc),
                 )
             state = self._kill_switches.deactivate(scope, reason=reason)
-            evidence = {
-                "scope": state.scope.scope_type.value,
-                "scope_id": state.scope.scope_id,
-                "active": state.active,
-                "reason": state.reason,
-            }
+            evidence = self._command_evidence(
+                command,
+                {
+                    "scope": state.scope.scope_type.value,
+                    "scope_id": state.scope.scope_id,
+                    "active": state.active,
+                    "reason": state.reason,
+                },
+            )
         elif command.command_type is RuntimeCommandType.RECONCILE:
-            evidence = {"state": self._runtime_state, "reconciliation": "requested"}
+            evidence = self._command_evidence(
+                command,
+                {"state": self._runtime_state, "reconciliation": "requested"},
+            )
         elif command.command_type is RuntimeCommandType.SNAPSHOT:
-            evidence = {"state": self._runtime_state, "snapshot": "requested"}
+            evidence = self._command_evidence(
+                command,
+                {"state": self._runtime_state, "snapshot": "requested"},
+            )
         else:
             return self._rejected_result(
                 command,
@@ -290,6 +350,19 @@ class OperationsService:
             result_status=RuntimeCommandResultStatus.COMPLETED,
             evidence=evidence,
         )
+
+    @staticmethod
+    def _command_evidence(
+        command: RuntimeCommand,
+        evidence: Mapping[str, object],
+    ) -> dict[str, object]:
+        return {
+            "runtime_instance_id": command.runtime_instance_id,
+            "operator_id": command.operator_id,
+            "operator_role": command.operator_role,
+            "authorization_scope": command.authorization_scope,
+            **dict(evidence),
+        }
 
     def _next_command_id(self, command_type: RuntimeCommandType) -> str:
         self._command_sequence += 1
@@ -356,6 +429,7 @@ class OperationsService:
             status=result.result_status.value,
             evidence=result.evidence,
             failure_reason=result.failure_reason,
+            reason_code=result.reason_code,
         )
 
 

@@ -1,40 +1,25 @@
-"""Adapter protocols for streaming market data feeds."""
+"""Live market-data protocols.
+
+Canonical protocol definitions now live in :mod:`qts.data.interfaces`.
+This module is a temporary compatibility layer for existing imports.
+"""
 
 from __future__ import annotations
 
-from typing import Protocol
+import warnings
 
-from .capabilities import FeedCapabilities
-from .events import FeedSubscription, MarketDataSubscribed
+from qts.data.interfaces import MarketDataAdapter, StreamingFeedAdapter
 
-
-class LiveFeedAdapter(Protocol):
-    """Live market data feed adapter boundary."""
-
-    @property
-    def capabilities(self) -> FeedCapabilities:
-        """Return feed capabilities."""
-        ...
-
-    def subscribe(self, subscription: FeedSubscription) -> MarketDataSubscribed:
-        """Subscribe to a live feed stream."""
-        ...
+# Keep backward-compatible names for one release only.
+warnings.warn(
+    "qts.data.live.adapter.* is deprecated and will be removed in the next release; "
+    "use qts.data.interfaces instead.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
 
-class MarketDataAdapter(Protocol):
-    """Canonical market-data source adapter contract."""
-
-    @property
-    def capabilities(self) -> FeedCapabilities:
-        """Return feed capabilities."""
-        ...
-
-    def subscribe(self, subscription: FeedSubscription) -> MarketDataSubscribed:
-        """Subscribe to a source stream."""
-        ...
+LiveFeedAdapter = StreamingFeedAdapter
 
 
-__all__ = [
-    "LiveFeedAdapter",
-    "MarketDataAdapter",
-]
+__all__ = ["LiveFeedAdapter", "MarketDataAdapter", "StreamingFeedAdapter"]

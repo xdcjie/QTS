@@ -136,14 +136,50 @@ def test_operations_service_deactivates_kill_switch_through_idempotent_command()
         KillSwitchCommandDTO(scope="global", reason="operator resume"),
         operator_id="ops-a",
         idempotency_key="kill-switch-off",
+        authorization_scope="runtime:safety:write",
     )
     duplicate_inactive = service.deactivate_kill_switch(
         KillSwitchCommandDTO(scope="global", reason="different reason"),
         operator_id="ops-a",
         idempotency_key="kill-switch-off",
+        authorization_scope="runtime:safety:write",
     )
 
     assert active.active is True
     assert inactive.active is False
     assert inactive.reason == "operator resume"
     assert duplicate_inactive == inactive
+
+
+def test_operations_service_rejects_kill_switch_deactivate_without_safety_scope() -> None:
+    from qts.application.dto import KillSwitchCommandDTO
+    from qts.application.services import OperationsService
+
+    service = OperationsService()
+    service.activate_kill_switch(
+        KillSwitchCommandDTO(scope="global", reason="operator stop"),
+        operator_id="ops-a",
+        idempotency_key="kill-switch-on",
+    )
+
+    result = service.deactivate_kill_switch_result(
+        KillSwitchCommandDTO(scope="global", reason="operator resume"),
+        operator_id="ops-a",
+        idempotency_key="kill-switch-off",
+    )
+
+    assert result.status == "rejected"
+    assert result.reason_code == "COMMAND_PERMISSION_DENIED"
+
+
+def test_operations_service_scopes_runtime_command_idempotency_by_operator() -> None:
+    from qts.application.services import OperationsService
+
+    service = OperationsService()
+
+    first = service.reconcile_runtime(operator_id="ops-a", idempotency_key="shared-key")
+    second = service.reconcile_runtime(operator_id="ops-b", idempotency_key="shared-key")
+
+    assert first.command_id != second.command_id
+    assert first.evidence["operator_id"] == "ops-a"
+    assert second.evidence["operator_id"] == "ops-b"

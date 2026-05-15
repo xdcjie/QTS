@@ -7,7 +7,6 @@ def test_live_broker_callbacks_reuse_shared_order_and_account_flow() -> None:
     from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
     from qts.domain.risk import RiskDecision
     from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
-    from qts.execution.broker import FakeBrokerAdapter
     from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.execution.order_state_machine import OrderState
     from qts.runtime.actor_ref import ActorRef
@@ -15,6 +14,7 @@ def test_live_broker_callbacks_reuse_shared_order_and_account_flow() -> None:
     from qts.runtime.actors.execution_actor import ExecutionActor
     from qts.runtime.actors.order_manager_actor import OrderManagerActor, SubmitOrder
     from qts.runtime.mailbox import Mailbox
+    from qts.testing.fakes.broker import FakeBrokerAdapter
 
     broker = FakeBrokerAdapter(broker_id=BrokerId("paper"))
     execution_adapter = BrokerExecutionAdapter(
@@ -90,7 +90,6 @@ def test_live_cancel_flow_uses_order_manager_and_execution_actor_path() -> None:
     from qts.domain.orders import CancelIntent
     from qts.domain.risk import RiskDecision
     from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
-    from qts.execution.broker import FakeBrokerAdapter
     from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.execution.order_state_machine import OrderState
     from qts.runtime.actor_ref import ActorRef
@@ -98,6 +97,7 @@ def test_live_cancel_flow_uses_order_manager_and_execution_actor_path() -> None:
     from qts.runtime.actors.execution_actor import ExecutionActor
     from qts.runtime.actors.order_manager_actor import CancelOrder, OrderManagerActor, SubmitOrder
     from qts.runtime.mailbox import Mailbox
+    from qts.testing.fakes.broker import FakeBrokerAdapter
 
     broker = FakeBrokerAdapter(broker_id=BrokerId("paper"))
     execution_adapter = BrokerExecutionAdapter(
@@ -174,9 +174,12 @@ def test_live_ibkr_fill_waits_for_commission_before_account_mutation() -> None:
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.adapters.ibkr_transport import IbkrCommissionPayload, IbkrExecutionPayload
     from qts.execution.order_manager import ExecutionReport, OrderIntent, OrderSide
     from qts.execution.order_state_machine import OrderState
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
+        IbkrCommissionPayload,
+        IbkrExecutionPayload,
+    )
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.account_actor import AccountActor

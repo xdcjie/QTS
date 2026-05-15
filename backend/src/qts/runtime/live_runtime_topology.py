@@ -6,16 +6,18 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from qts.core.ids import AccountId, InstrumentId, StrategyId
+from qts.risk.risk_engine import RiskEngine
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.account_actor import AccountActor
 from qts.runtime.actors.execution_actor import ExecutionActor
 from qts.runtime.actors.order_manager_actor import OrderManagerActor
-from qts.runtime.live_runtime_dependencies import LiveRuntimeDependencies
+from qts.runtime.dependencies import RuntimeSessionDependencies
 from qts.runtime.mailbox import Mailbox
 from qts.runtime.mode import RuntimeMode
 from qts.runtime.signal_policy import SignalAggregationPolicy
+from qts.runtime.state_recovery import SnapshotStore
 from qts.runtime.strategy_execution_pipeline import StrategyExecutionPipeline
-from qts.runtime.topology import RuntimeTopology
+from qts.runtime.topology import BrokerRouteSpec, RuntimeTopology
 from qts.strategy_sdk import Strategy
 
 
@@ -40,6 +42,9 @@ class AccountRuntimePartition:
     """Per-account actor partition for isolated runtime execution state."""
 
     account_id: AccountId | None
+    risk_engine: RiskEngine
+    broker_route: BrokerRouteSpec | None
+    snapshot_store: SnapshotStore | None
     account_actor: AccountActor
     account_ref: ActorRef
     order_manager_actor: OrderManagerActor
@@ -61,7 +66,7 @@ class _ResolvedLiveRuntimeTopology:
 class _LiveRuntimeTopologyBuilder:
     """Build strategy bindings and per-account partitions from a runtime topology."""
 
-    def __init__(self, dependencies: LiveRuntimeDependencies) -> None:
+    def __init__(self, dependencies: RuntimeSessionDependencies) -> None:
         self._dependencies = dependencies
         self._topology = dependencies.runtime_topology
         self._resolved_account_id = dependencies.account_id
@@ -136,6 +141,7 @@ class _LiveRuntimeTopologyBuilder:
             account_id: self._build_account_partition(
                 account_id,
                 self._dependencies.account_actor,
+                broker_route=None,
             )
         }
         return default_partitions
@@ -224,6 +230,7 @@ class _LiveRuntimeTopologyBuilder:
                 account_id: self._build_account_partition(
                     account_id,
                     topology_account_actor,
+                    broker_route=self._broker_route_for(topology, account_id),
                 )
             }
             return single_partition
@@ -237,13 +244,19 @@ class _LiveRuntimeTopologyBuilder:
             if actor is None:
                 raise ValueError(f"missing account actor for topology account: {account_id.value}")
             self._validate_account_actor_matches(account_id, actor)
-            partitions[account_id] = self._build_account_partition(account_id, actor)
+            partitions[account_id] = self._build_account_partition(
+                account_id,
+                actor,
+                broker_route=self._broker_route_for(topology, account_id),
+            )
         return partitions
 
     def _build_account_partition(
         self,
         account_id: AccountId | None,
         account_actor: AccountActor,
+        *,
+        broker_route: BrokerRouteSpec | None,
     ) -> AccountRuntimePartition:
         """Build one partition owning account/order/execution state."""
         execution_mailbox = Mailbox()
@@ -268,12 +281,40 @@ class _LiveRuntimeTopologyBuilder:
         )
         return AccountRuntimePartition(
             account_id=account_id,
+            risk_engine=self._risk_engine_for(account_id),
+            broker_route=broker_route,
+            snapshot_store=self._snapshot_store_for(account_id),
             account_actor=account_actor,
             account_ref=account_ref,
             order_manager_actor=order_manager_actor,
             order_manager_ref=order_manager_ref,
             execution_ref=execution_ref,
         )
+
+    def _risk_engine_for(self, account_id: AccountId | None) -> RiskEngine:
+        if account_id is not None and self._dependencies.risk_engines is not None:
+            return self._dependencies.risk_engines.get(account_id, self._dependencies.risk_engine)
+        return self._dependencies.risk_engine
+
+    def _snapshot_store_for(self, account_id: AccountId | None) -> SnapshotStore | None:
+        if account_id is not None and self._dependencies.snapshot_stores is not None:
+            return self._dependencies.snapshot_stores.get(
+                account_id,
+                self._dependencies.snapshot_store,
+            )
+        return self._dependencies.snapshot_store
+
+    @staticmethod
+    def _broker_route_for(
+        topology: RuntimeTopology,
+        account_id: AccountId,
+    ) -> BrokerRouteSpec | None:
+        routes = [route for route in topology.broker_routes if route.account_id == account_id]
+        if len(routes) > 1:
+            raise ValueError(f"multiple broker routes for account: {account_id.value}")
+        if not routes:
+            return None
+        return routes[0]
 
     def _validate_account_actor_matches(
         self,

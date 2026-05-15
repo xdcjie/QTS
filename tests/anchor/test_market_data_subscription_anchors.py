@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from qts.core.ids import InstrumentId
-from qts.data.live import FeedCapabilities
+from qts.data.capabilities import MarketDataFeedCapabilities as FeedCapabilities
 from qts.data.subscriptions import LogicalSubscription, plan_physical_subscription
 
 

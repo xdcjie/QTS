@@ -48,8 +48,8 @@ def _backtest_config_kwargs(tmp_path: Path) -> dict[str, Any]:
 
 def test_observation_mode_blocks_submit_order() -> None:
     from qts.core.ids import BrokerId
-    from qts.execution.broker import FakeBrokerAdapter
     from qts.runtime.live import LiveRuntime
+    from qts.testing.fakes.broker import FakeBrokerAdapter
 
     from tests.support.live_feed import FakeLiveFeedAdapter
 
@@ -123,13 +123,119 @@ def test_runtime_config_package_exposes_mode_specific_modules() -> None:
     from qts.runtime.config.backtest import BacktestRuntimeConfig
     from qts.runtime.config.base import ConfigMigration, TradingRuntimeConfig
     from qts.runtime.config.live import LiveRuntimeConfig
-    from qts.runtime.config.paper import PaperRuntimeConfig
+    from qts.runtime.config.paper import (
+        PaperBrokerRuntimeConfig,
+        PaperRuntimeConfig,
+        PaperSimulatedRuntimeConfig,
+    )
 
     assert BacktestRuntimeConfig.__name__ == "BacktestRuntimeConfig"
     assert LiveRuntimeConfig.__name__ == "LiveRuntimeConfig"
+    assert PaperBrokerRuntimeConfig.__name__ == "PaperBrokerRuntimeConfig"
+    assert PaperSimulatedRuntimeConfig.__name__ == "PaperSimulatedRuntimeConfig"
     assert PaperRuntimeConfig.__name__ == "PaperRuntimeConfig"
     assert ConfigMigration.__name__ == "ConfigMigration"
     assert TradingRuntimeConfig(mode="paper_broker").mode == "paper_broker"
+
+
+def test_paper_runtime_sample_configs_are_disjoint() -> None:
+    import yaml  # type: ignore[import-untyped]
+
+    broker = yaml.safe_load(Path("configs/paper_broker.yaml").read_text(encoding="utf-8"))
+    simulated = yaml.safe_load(Path("configs/paper_simulated.yaml").read_text(encoding="utf-8"))
+
+    assert broker["mode"] == "paper_broker"
+    assert broker["execution_environment"] == "broker"
+    assert broker["account_environment"] == "paper"
+    assert broker["broker_account_kind"] == "paper"
+    assert str(broker["broker_account_code"]).startswith("DU")
+    assert broker["broker_port"] == 4002
+    assert simulated["mode"] == "paper_simulated"
+    assert simulated["execution_environment"] == "simulated"
+    assert simulated["account_environment"] == "simulated"
+    assert simulated["broker_account_kind"] == "simulated"
+    assert "broker_account_code" not in simulated
+    assert "broker_port" not in simulated
+
+
+def test_runtime_session_canonical_names_are_mode_neutral() -> None:
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.live import LiveRuntimeState, LiveRuntimeStateMachine
+    from qts.runtime.live_runtime_session import (
+        LiveKillSwitchEvidence,
+        LiveRuntimeSession,
+        LiveRuntimeSessionResult,
+    )
+    from qts.runtime.safety import RuntimeKillSwitchEvidence
+    from qts.runtime.session import RuntimeSession, RuntimeSessionResult
+    from qts.runtime.state import RuntimeSessionState, RuntimeStateMachine
+
+    assert RuntimeSession.__name__ == "RuntimeSession"
+    assert RuntimeSession.__module__ == "qts.runtime.session"
+    assert RuntimeSessionResult.__module__ == "qts.runtime.session"
+    assert RuntimeSessionDependencies.__module__ == "qts.runtime.dependencies"
+    assert RuntimeSessionState.__module__ == "qts.runtime.state"
+    assert RuntimeStateMachine.__module__ == "qts.runtime.state"
+    assert RuntimeKillSwitchEvidence.__module__ == "qts.runtime.safety"
+
+    assert RuntimeStateMachine().apply("start") is RuntimeSessionState.STARTING
+    assert LiveRuntimeSession is RuntimeSession
+    assert LiveRuntimeSessionResult is RuntimeSessionResult
+    assert LiveKillSwitchEvidence is RuntimeKillSwitchEvidence
+    assert LiveRuntimeState is RuntimeSessionState
+    assert LiveRuntimeStateMachine is RuntimeStateMachine
+
+
+def test_transport_canonical_modules_are_under_transports() -> None:
+    from qts.data.transports.ib_async_market_data_transport import IbAsyncMarketDataTransport
+    from qts.data.transports.ibkr_tws_market_data_transport import IbkrTwsMarketDataTransport
+    from qts.execution.transports.ib_async_order_execution_transport import (
+        IbAsyncOrderExecutionTransport,
+    )
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
+        IbkrTwsOrderExecutionTransport,
+    )
+
+    assert IbkrTwsMarketDataTransport.__module__ == (
+        "qts.data.transports.ibkr_tws_market_data_transport"
+    )
+    assert IbAsyncMarketDataTransport.__module__ == (
+        "qts.data.transports.ib_async_market_data_transport"
+    )
+    assert IbkrTwsOrderExecutionTransport.__module__ == (
+        "qts.execution.transports.ibkr_tws_order_execution_transport"
+    )
+    assert IbAsyncOrderExecutionTransport.__module__ == (
+        "qts.execution.transports.ib_async_order_execution_transport"
+    )
+
+
+def test_transport_adapter_paths_are_compatibility_shims() -> None:
+    from qts.data.adapters.ibkr_async_transport import (
+        IbAsyncMarketDataTransport as LegacyAsyncMarketDataTransport,
+    )
+    from qts.data.adapters.ibkr_transport import (
+        IbkrTwsMarketDataTransport as LegacyTwsMarketDataTransport,
+    )
+    from qts.data.transports.ib_async_market_data_transport import IbAsyncMarketDataTransport
+    from qts.data.transports.ibkr_tws_market_data_transport import IbkrTwsMarketDataTransport
+    from qts.execution.adapters.ibkr_async_transport import (
+        IbAsyncOrderExecutionTransport as LegacyAsyncOrderExecutionTransport,
+    )
+    from qts.execution.adapters.ibkr_transport import (
+        IbkrTwsOrderExecutionTransport as LegacyTwsOrderExecutionTransport,
+    )
+    from qts.execution.transports.ib_async_order_execution_transport import (
+        IbAsyncOrderExecutionTransport,
+    )
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
+        IbkrTwsOrderExecutionTransport,
+    )
+
+    assert LegacyTwsMarketDataTransport is IbkrTwsMarketDataTransport
+    assert LegacyAsyncMarketDataTransport is IbAsyncMarketDataTransport
+    assert LegacyTwsOrderExecutionTransport is IbkrTwsOrderExecutionTransport
+    assert LegacyAsyncOrderExecutionTransport is IbAsyncOrderExecutionTransport
 
 
 def test_live_config_rejects_backtest_only_fields() -> None:

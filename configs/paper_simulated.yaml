@@ -1,0 +1,13 @@
+schema_version: "1"
+mode: paper_simulated
+execution_environment: simulated
+market_data_environment: realtime
+account_environment: simulated
+broker_account_kind: simulated
+broker_configured: true
+account_configured: true
+risk_configured: true
+calendar_configured: true
+kill_switch_configured: true
+allow_live_orders: false
+observation_only: false

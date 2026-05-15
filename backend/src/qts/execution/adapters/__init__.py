@@ -7,9 +7,9 @@ from qts.execution.adapters.ibkr_order_execution import (
     IbkrOrderExecutionConnection,
     IbkrOrderRequest,
 )
-from qts.execution.adapters.ibkr_order_ids import IbkrOrderIdAllocator
 from qts.execution.adapters.ibkr_order_map import BrokerOrderMap, BrokerOrderRecord
 from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
+from qts.execution.transports.ibkr_order_ids import IbkrOrderIdAllocator
 
 __all__ = [
     "BrokerOrderMap",

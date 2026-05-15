@@ -48,22 +48,22 @@ def test_ibkr_gateway_full_chain_anchor_requires_real_paper_evidence(
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
     )
-    from qts.data.adapters.ibkr_transport import (
+    from qts.data.transports.ibkr_tws_market_data_transport import (
         IbkrMarketDataContractSpec,
     )
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.adapters.ibkr_transport import (
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrOrderContractSpec,
     )
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
     from qts.reporting.live import LiveReportWriter
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.live_runtime_dependencies import LiveRuntimeDependencies
-    from qts.runtime.live_runtime_session import LiveRuntimeSession
+    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
+    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
     from qts.runtime.sinks.base import RuntimeEvent
     from qts.runtime.sinks.live import LiveRuntimeEventSink
 

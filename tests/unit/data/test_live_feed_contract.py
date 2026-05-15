@@ -5,12 +5,14 @@ from decimal import Decimal
 
 import pytest
 from qts.core.ids import InstrumentId
-from qts.data.live import (
-    FeedCapabilities,
-    FeedSubscription,
-    LiveFeedFailure,
-    ReconnectPolicy,
+from qts.data.capabilities import MarketDataFeedCapabilities as FeedCapabilities
+from qts.data.events import (
+    MarketDataSourceFailure as LiveFeedFailure,
 )
+from qts.data.events import (
+    MarketDataSubscription as FeedSubscription,
+)
+from qts.data.live.reconnect import ReconnectPolicy
 from qts.domain.market_data import Tick
 
 from tests.support.live_feed import FakeLiveFeedAdapter

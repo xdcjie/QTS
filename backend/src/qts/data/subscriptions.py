@@ -8,7 +8,7 @@ from enum import StrEnum
 
 from qts.core.ids import InstrumentId
 from qts.core.time import require_aware_datetime
-from qts.data.live import FeedCapabilities
+from qts.data.capabilities import MarketDataFeedCapabilities
 
 
 class SourceStreamType(StrEnum):
@@ -110,7 +110,7 @@ def logical_key(subscription: LogicalSubscription) -> LogicalSubscriptionKey:
 def plan_physical_subscription(
     subscription: LogicalSubscription,
     *,
-    capabilities: FeedCapabilities,
+    capabilities: MarketDataFeedCapabilities,
 ) -> PhysicalSubscriptionKey:
     """Map one logical subscription to its provider source subscription."""
 

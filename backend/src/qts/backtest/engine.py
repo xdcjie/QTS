@@ -25,6 +25,7 @@ from qts.core.ids import (
 )
 from qts.data.provenance import DatasetMetadata
 from qts.domain.market_data import Bar
+from qts.execution.adapters.brokerage_capabilities import broker_capabilities_for_model
 from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
 from qts.registry.future_roll import FutureRollRegistry
 from qts.registry.instrument_registry import InstrumentRegistry
@@ -107,6 +108,7 @@ class BacktestEngine:
         ``BacktestEngineDependencies`` when explicit objects are not supplied.
         """
         self._strategy = strategy
+        self._backtest_runtime_config = backtest_runtime_config
         if instrument_registry is None and isinstance(bars, Sequence):
             self._registry_bars = tuple(bars)
             self._bars = iter(self._registry_bars)
@@ -163,7 +165,12 @@ class BacktestEngine:
         self._exchange_timezone_by_instrument = dict(dependencies.exchange_timezone_by_instrument)
         self._risk_engine = dependencies.risk_engine
         self._execution_adapter = dependencies.execution_adapter or SimulatedExecutionAdapter(
-            self._cost_model
+            self._cost_model,
+            capabilities=broker_capabilities_for_model(
+                self._backtest_runtime_config.brokerage_model
+                if self._backtest_runtime_config is not None
+                else "CUSTOM"
+            ),
         )
         self._instrument_context = BacktestInstrumentContext(
             future_roll_registry=self._future_roll_registry,
@@ -179,7 +186,6 @@ class BacktestEngine:
             instrument_context=self._instrument_context,
             multiplier_for=self._portfolio_projector.multiplier_for,
         )
-        self._backtest_runtime_config = backtest_runtime_config
 
     @classmethod
     def from_config(
@@ -270,6 +276,7 @@ class BacktestEngine:
                 portfolio_view=self._portfolio_projector.portfolio_view,
                 equity_point=self._portfolio_projector.equity_point,
                 update_rolling_prices=self._instrument_context.update_rolling_prices,
+                market_data_provenance_for=self._market_data_provenance_for,
             ),
             strategy_id=strategy_id,
             account_id=account_id,
@@ -323,6 +330,31 @@ class BacktestEngine:
             artifact_rows=artifacts.artifact_rows,
             artifact_hashes=artifacts.artifact_hashes,
         )
+
+    def _market_data_provenance_for(self, bar: Bar) -> dict[str, str | int | None]:
+        """Return replay provenance for a market-data runtime event."""
+        candidates = [
+            metadata for metadata in self._dataset_metadata if metadata.timeframe == bar.timeframe
+        ]
+        for metadata in candidates:
+            if metadata.instrument_id == bar.instrument_id and metadata.timeframe == bar.timeframe:
+                return self._dataset_provenance_payload(metadata)
+        if len(candidates) == 1:
+            return self._dataset_provenance_payload(candidates[0])
+        return {}
+
+    @staticmethod
+    def _dataset_provenance_payload(metadata: DatasetMetadata) -> dict[str, str | int | None]:
+        """Serialize dataset metadata for a runtime market-data event."""
+        return {
+            "source_id": metadata.source,
+            "dataset_id": metadata.dataset_id,
+            "provider": metadata.source,
+            "permission_state": None,
+            "adjustment_mode": metadata.adjustment_policy,
+            "content_hash": metadata.content_hash,
+            "row_count": metadata.row_count,
+        }
 
 
 __all__ = [

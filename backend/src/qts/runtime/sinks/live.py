@@ -67,8 +67,16 @@ class LiveRuntimeEventSink(RuntimeEventSink):
         sequence = self._rows + 1
         event = self._context.apply(event, sequence_no=sequence) if self._context else event
         row = event.to_envelope(sequence_no=sequence)
+        if row["run_id"] is None:
+            raise ValueError("run_id is required for runtime event sink writes")
+        if row["mode"] is None:
+            raise ValueError("mode is required for runtime event sink writes")
         event_hash = stable_json_hash(
-            {key: value for key, value in row.items() if key not in {"sequence_no", "ts_ingest"}}
+            {
+                key: value
+                for key, value in row.items()
+                if key not in {"event_id", "sequence_no", "ts_event", "ts_ingest"}
+            }
         )
         row["event_hash"] = event_hash
         line = (

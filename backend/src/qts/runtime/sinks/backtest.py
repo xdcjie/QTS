@@ -46,6 +46,10 @@ class BacktestRuntimeEventSink(RuntimeEventSink):
             ts_ingest=self._INGEST_EPOCH + timedelta(microseconds=self._event_count),
         )
         row = event.to_envelope(sequence_no=self._event_count)
+        if row["run_id"] is None:
+            raise ValueError("run_id is required for runtime event sink writes")
+        if row["mode"] is None:
+            raise ValueError("mode is required for runtime event sink writes")
         row["event_hash"] = stable_json_hash(
             {key: value for key, value in row.items() if key not in {"sequence_no", "ts_ingest"}}
         )

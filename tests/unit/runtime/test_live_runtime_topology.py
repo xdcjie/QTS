@@ -17,7 +17,7 @@ from qts.core.ids import (
 from qts.domain.orders import ExecutionReport, ExecutionReportStatus, OrderIntent
 from qts.risk.risk_engine import RiskEngine
 from qts.runtime.actors.account_actor import AccountActor, AccountSnapshot
-from qts.runtime.live_runtime_dependencies import LiveRuntimeDependencies
+from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
 from qts.runtime.live_runtime_topology import _LiveRuntimeTopologyBuilder
 from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
 from qts.runtime.topology import (

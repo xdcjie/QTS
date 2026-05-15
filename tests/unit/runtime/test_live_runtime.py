@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 import pytest
-from qts.runtime.live import LiveRuntimeState, LiveRuntimeStateMachine
+from qts.runtime.state import (
+    RuntimeSessionState as LiveRuntimeState,
+)
+from qts.runtime.state import (
+    RuntimeStateMachine as LiveRuntimeStateMachine,
+)
 
 
 def test_live_runtime_state_machine_allows_only_operational_transitions() -> None:
@@ -15,7 +20,7 @@ def test_live_runtime_state_machine_allows_only_operational_transitions() -> Non
     assert machine.apply("recover") is LiveRuntimeState.RUNNING
     assert machine.apply("stop") is LiveRuntimeState.STOPPED
 
-    with pytest.raises(ValueError, match="invalid live runtime transition"):
+    with pytest.raises(ValueError, match="invalid runtime transition"):
         machine.apply("resume")
 
 
@@ -23,10 +28,11 @@ def test_live_runtime_degrades_from_runtime_event_and_rejects_new_orders() -> No
     from decimal import Decimal
 
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId
-    from qts.execution.broker import BrokerOrderRequest, FakeBrokerAdapter
+    from qts.execution.broker import BrokerOrderRequest
     from qts.execution.order_manager import OrderSide
     from qts.runtime.live import LiveRuntime
     from qts.runtime.sinks.base import RuntimeEvent
+    from qts.testing.fakes.broker import FakeBrokerAdapter
 
     from tests.support.live_feed import FakeLiveFeedAdapter
 

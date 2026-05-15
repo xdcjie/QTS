@@ -5,7 +5,10 @@ from dataclasses import replace
 import pytest
 from qts.runtime.config import LiveRuntimeConfig
 from qts.runtime.live import (
-    LivePermissionMode,
+    BrokerRuntimeStartupCheck,
+    BrokerRuntimeStartupChecklist,
+    BrokerRuntimeStartupDecision,
+    BrokerRuntimeStartupDecisionStatus,
     LiveStartupChecklist,
     LiveStartupDecisionStatus,
     validate_live_startup,
@@ -16,6 +19,20 @@ from qts.runtime.mode import (
     MarketDataEnvironment,
     RuntimeMode,
 )
+from qts.runtime.permissions import LiveOrderPermission
+
+
+def test_broker_runtime_startup_types_are_canonical_with_live_aliases() -> None:
+    from qts.runtime.live import LiveStartupCheck, LiveStartupDecision
+
+    assert BrokerRuntimeStartupCheck.__name__ == "BrokerRuntimeStartupCheck"
+    assert BrokerRuntimeStartupChecklist.__name__ == "BrokerRuntimeStartupChecklist"
+    assert BrokerRuntimeStartupDecision.__name__ == "BrokerRuntimeStartupDecision"
+    assert BrokerRuntimeStartupDecisionStatus.__name__ == "BrokerRuntimeStartupDecisionStatus"
+    assert LiveStartupCheck is BrokerRuntimeStartupCheck
+    assert LiveStartupChecklist is BrokerRuntimeStartupChecklist
+    assert LiveStartupDecision is BrokerRuntimeStartupDecision
+    assert LiveStartupDecisionStatus is BrokerRuntimeStartupDecisionStatus
 
 
 def test_live_startup_guard_requires_all_safety_controls_for_live_mode() -> None:
@@ -101,6 +118,48 @@ def test_live_runtime_config_hash_includes_schema_and_environment() -> None:
     assert changed.config_hash != config.config_hash
 
 
+def test_live_runtime_config_keeps_runtime_mode_enum() -> None:
+    config = LiveRuntimeConfig(
+        mode=RuntimeMode.PAPER_SIMULATED.value,
+        broker_configured=True,
+        account_configured=True,
+        risk_configured=True,
+        calendar_configured=True,
+        kill_switch_configured=True,
+    )
+
+    assert config.mode is RuntimeMode.PAPER_SIMULATED
+    assert config.to_payload()["mode"] == "paper_simulated"
+
+
+def test_broker_runtime_config_materializes_default_ports() -> None:
+    live = LiveRuntimeConfig(
+        mode=RuntimeMode.LIVE.value,
+        broker_configured=True,
+        account_configured=True,
+        risk_configured=True,
+        calendar_configured=True,
+        kill_switch_configured=True,
+        allow_live_orders=True,
+        broker_account_code="U1234567",
+        operator_signoff_id="ops-approval-1",
+    )
+    paper = LiveRuntimeConfig(
+        mode=RuntimeMode.PAPER_BROKER.value,
+        broker_configured=True,
+        account_configured=True,
+        risk_configured=True,
+        calendar_configured=True,
+        kill_switch_configured=True,
+        broker_account_code="DU1234567",
+    )
+
+    assert live.broker_port == 4001
+    assert live.to_payload()["broker_port"] == 4001
+    assert paper.broker_port == 4002
+    assert paper.to_payload()["broker_port"] == 4002
+
+
 def test_live_startup_checklist_includes_runtime_safety_gates() -> None:
     config = LiveRuntimeConfig(
         mode=RuntimeMode.OBSERVATION.value,
@@ -116,9 +175,27 @@ def test_live_startup_checklist_includes_runtime_safety_gates() -> None:
     )
 
     checklist = LiveStartupChecklist.from_config(config)
+    check_names = {check.check_name for check in checklist.checks}
 
+    assert {
+        "account_mode_check",
+        "port_check",
+        "api_read_only_check",
+        "market_data_permission_check",
+        "broker_time_check",
+        "open_order_reconciliation_check",
+        "position_reconciliation_check",
+        "cash_reconciliation_check",
+        "risk_config_check",
+        "kill_switch_check",
+        "event_sink_check",
+        "snapshot_store_check",
+        "operator_signoff_check",
+    } <= check_names
     assert checklist.by_name("market_data_permission_check").status == "FAIL"
-    assert checklist.by_name("reconciliation_check").status == "FAIL"
+    assert checklist.by_name("open_order_reconciliation_check").status == "FAIL"
+    assert checklist.by_name("position_reconciliation_check").status == "FAIL"
+    assert checklist.by_name("cash_reconciliation_check").status == "FAIL"
     assert checklist.by_name("event_sink_check").status == "FAIL"
     assert checklist.by_name("snapshot_store_check").status == "FAIL"
     assert checklist.by_name("operator_signoff_check").status == "PASS"
@@ -170,8 +247,28 @@ def test_live_startup_decision_statuses_are_explicit() -> None:
 
     assert live_decision.status is LiveStartupDecisionStatus.ALLOW_LIVE
     assert paper_decision.status is LiveStartupDecisionStatus.ALLOW_PAPER
+    assert live_decision.order_permission is LiveOrderPermission.LIVE_ORDERS_ALLOWED
+    assert paper_decision.order_permission is LiveOrderPermission.PAPER_ORDERS_ALLOWED
     assert live_decision.real_order_submission_enabled is True
     assert paper_decision.real_order_submission_enabled is False
+
+
+def test_live_observation_mode_uses_explicit_order_permission() -> None:
+    config = LiveRuntimeConfig(
+        mode=RuntimeMode.LIVE_OBSERVATION,
+        broker_configured=True,
+        account_configured=True,
+        risk_configured=True,
+        calendar_configured=True,
+        kill_switch_configured=True,
+    )
+
+    decision = validate_live_startup(config)
+
+    assert config.mode is RuntimeMode.LIVE_OBSERVATION
+    assert decision.status is LiveStartupDecisionStatus.ALLOW_OBSERVATION
+    assert decision.order_permission is LiveOrderPermission.OBSERVATION_ONLY
+    assert decision.real_order_submission_enabled is False
 
 
 def test_live_rejects_paper_account_code() -> None:
@@ -264,10 +361,63 @@ def test_paper_simulated_runtime_uses_simulated_execution_environment() -> None:
     assert validate_live_startup(config).real_order_submission_enabled is False
 
 
+def test_paper_runtime_configs_have_disjoint_semantics() -> None:
+    from qts.runtime.config.paper import PaperBrokerRuntimeConfig, PaperSimulatedRuntimeConfig
+
+    broker = PaperBrokerRuntimeConfig(
+        mode=RuntimeMode.PAPER_BROKER,
+        broker_configured=True,
+        account_configured=True,
+        risk_configured=True,
+        calendar_configured=True,
+        kill_switch_configured=True,
+        broker_account_code="DU1234567",
+    )
+    simulated = PaperSimulatedRuntimeConfig(
+        mode=RuntimeMode.PAPER_SIMULATED,
+        broker_configured=True,
+        account_configured=True,
+        risk_configured=True,
+        calendar_configured=True,
+        kill_switch_configured=True,
+    )
+
+    assert broker.execution_environment is ExecutionEnvironment.BROKER
+    assert broker.account_environment is AccountEnvironment.PAPER
+    assert broker.broker_account_kind == "paper"
+    assert broker.broker_port == 4002
+    assert simulated.execution_environment is ExecutionEnvironment.SIMULATED
+    assert simulated.account_environment is AccountEnvironment.SIMULATED
+    assert simulated.broker_account_kind == "simulated"
+    assert simulated.broker_port is None
+
+    with pytest.raises(ValueError, match="PaperBrokerRuntimeConfig mode must be paper_broker"):
+        PaperBrokerRuntimeConfig(
+            mode=RuntimeMode.PAPER_SIMULATED,
+            broker_configured=True,
+            account_configured=True,
+            risk_configured=True,
+            calendar_configured=True,
+            kill_switch_configured=True,
+        )
+    with pytest.raises(
+        ValueError, match="PaperSimulatedRuntimeConfig mode must be paper_simulated"
+    ):
+        PaperSimulatedRuntimeConfig(
+            mode=RuntimeMode.PAPER_BROKER,
+            broker_configured=True,
+            account_configured=True,
+            risk_configured=True,
+            calendar_configured=True,
+            kill_switch_configured=True,
+            broker_account_code="DU1234567",
+        )
+
+
 def test_permission_mode_label_is_not_runtime_mode_alias() -> None:
     with pytest.raises(ValueError, match="Unsupported runtime mode"):
         LiveRuntimeConfig(
-            mode=LivePermissionMode.PAPER.value,
+            mode=LiveOrderPermission.PAPER_ORDERS_ALLOWED.value,
             broker_configured=True,
             account_configured=True,
             risk_configured=True,
