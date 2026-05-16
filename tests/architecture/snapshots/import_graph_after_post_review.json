@@ -42,7 +42,10 @@
     "qts.execution.order_manager",
     "qts.simulation.broker"
   ],
-  "qts.application.commands.start_paper": [],
+  "qts.application.commands.start_runtime": [
+    "qts.runtime.live",
+    "qts.runtime.mode"
+  ],
   "qts.application.dto.backtest": [],
   "qts.application.dto.health": [],
   "qts.application.dto.operations": [],
@@ -125,17 +128,11 @@
   "qts.core.hashing": [],
   "qts.core.ids": [],
   "qts.core.time": [],
-  "qts.data.adapters.ibkr_async_transport": [
-    "qts.data.transports.ib_async_market_data_transport"
-  ],
   "qts.data.adapters.ibkr_market_data": [
     "qts.core.ids",
     "qts.data.permissions",
     "qts.data.transports.ibkr_tws_market_data_transport",
     "qts.registry.broker_symbol_mapping"
-  ],
-  "qts.data.adapters.ibkr_transport": [
-    "qts.data.transports.ibkr_tws_market_data_transport"
   ],
   "qts.data.bars.aggregator": [
     "qts.core.time",
@@ -214,15 +211,6 @@
   ],
   "qts.data.interfaces": [
     "qts.data.capabilities",
-    "qts.data.events"
-  ],
-  "qts.data.live.adapter": [
-    "qts.data.interfaces"
-  ],
-  "qts.data.live.capabilities": [
-    "qts.data.capabilities"
-  ],
-  "qts.data.live.events": [
     "qts.data.events"
   ],
   "qts.data.live.reconnect": [],
@@ -325,9 +313,6 @@
     "qts.core.ids",
     "qts.execution.broker"
   ],
-  "qts.execution.adapters.ibkr_async_transport": [
-    "qts.execution.transports.ib_async_order_execution_transport"
-  ],
   "qts.execution.adapters.ibkr_order_execution": [
     "qts.core.ids",
     "qts.execution.adapters.broker_callback_quarantine",
@@ -337,14 +322,8 @@
     "qts.reconciliation.snapshots",
     "qts.registry.broker_symbol_mapping"
   ],
-  "qts.execution.adapters.ibkr_order_ids": [
-    "qts.execution.transports.ibkr_order_ids"
-  ],
   "qts.execution.adapters.ibkr_order_map": [
     "qts.core.ids"
-  ],
-  "qts.execution.adapters.ibkr_transport": [
-    "qts.execution.transports.ibkr_tws_order_execution_transport"
   ],
   "qts.execution.adapters.simulated_execution_adapter": [
     "qts.core.ids",
@@ -570,6 +549,21 @@
   "qts.runtime.broker_lifecycle": [
     "qts.runtime.state"
   ],
+  "qts.runtime.broker_runtime_topology": [
+    "qts.core.ids",
+    "qts.risk.risk_engine",
+    "qts.runtime.actor_ref",
+    "qts.runtime.actors.account_actor",
+    "qts.runtime.actors.execution_actor",
+    "qts.runtime.actors.order_manager_actor",
+    "qts.runtime.dependencies",
+    "qts.runtime.mailbox",
+    "qts.runtime.mode",
+    "qts.runtime.signal_policy",
+    "qts.runtime.state_recovery",
+    "qts.runtime.strategy_execution_pipeline",
+    "qts.runtime.topology"
+  ],
   "qts.runtime.commands": [
     "qts.core.time"
   ],
@@ -658,28 +652,6 @@
     "qts.runtime.actors.account_actor",
     "qts.runtime.sinks.base"
   ],
-  "qts.runtime.live_runtime_dependencies": [
-    "qts.runtime.dependencies"
-  ],
-  "qts.runtime.live_runtime_session": [
-    "qts.runtime.safety",
-    "qts.runtime.session"
-  ],
-  "qts.runtime.live_runtime_topology": [
-    "qts.core.ids",
-    "qts.risk.risk_engine",
-    "qts.runtime.actor_ref",
-    "qts.runtime.actors.account_actor",
-    "qts.runtime.actors.execution_actor",
-    "qts.runtime.actors.order_manager_actor",
-    "qts.runtime.dependencies",
-    "qts.runtime.mailbox",
-    "qts.runtime.mode",
-    "qts.runtime.signal_policy",
-    "qts.runtime.state_recovery",
-    "qts.runtime.strategy_execution_pipeline",
-    "qts.runtime.topology"
-  ],
   "qts.runtime.mailbox": [],
   "qts.runtime.market_data_coordinator": [
     "qts.core.ids",
@@ -724,7 +696,7 @@
     "qts.execution.order_state_machine",
     "qts.risk.kill_switch",
     "qts.runtime.actors.order_manager_actor",
-    "qts.runtime.live_runtime_topology",
+    "qts.runtime.broker_runtime_topology",
     "qts.runtime.safety",
     "qts.runtime.startup_gate",
     "qts.runtime.state"
@@ -739,9 +711,9 @@
     "qts.runtime.actor_ref",
     "qts.runtime.actors.account_actor",
     "qts.runtime.actors.signal_aggregator_actor",
+    "qts.runtime.broker_runtime_topology",
     "qts.runtime.dependencies",
     "qts.runtime.intent_processing",
-    "qts.runtime.live_runtime_topology",
     "qts.runtime.mailbox",
     "qts.runtime.market_data_flow",
     "qts.runtime.safety",

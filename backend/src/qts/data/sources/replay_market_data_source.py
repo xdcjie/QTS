@@ -217,12 +217,17 @@ class SubscriptionReplayMarketDataSource:
             )
         )
 
-    def poll_next(self) -> Bar | None:
+    def poll_next(self, *, as_of: datetime | None = None) -> Bar | None:
         """Return the next visible bar for active subscriptions."""
 
+        if as_of is not None:
+            require_aware_datetime(as_of, name="as_of")
         if self._closed:
             return None
         while self._events:
+            _, _, next_bar = self._events[0]
+            if as_of is not None and next_bar.end_time > as_of:
+                return None
             _, _, bar = heapq.heappop(self._events)
             self._clock.advance_to_next_event(bar.end_time)
             if not self._is_active(bar):

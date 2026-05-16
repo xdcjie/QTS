@@ -1,5 +1,11 @@
 from pathlib import Path
 
+from scripts.update_project_panorama_source_index import (
+    END_MARKER,
+    START_MARKER,
+    render_source_inventory_section,
+)
+
 
 def test_project_panorama_explains_runtime_flow_stages() -> None:
     html = Path("project_panorama.html").read_text(encoding="utf-8")
@@ -31,3 +37,15 @@ def test_project_panorama_explains_runtime_flow_stages() -> None:
     ]
     for label in expected_contract_labels:
         assert label in html
+
+
+def test_project_panorama_source_inventory_is_current() -> None:
+    html = Path("project_panorama.html").read_text(encoding="utf-8")
+    start = html.index(START_MARKER)
+    end = html.index(END_MARKER) + len(END_MARKER)
+
+    assert html[start:end] == render_source_inventory_section(Path("."))
+    assert 'href="#source-inventory"' in html
+    assert "src 文件、类、函数清单" in html
+    assert "backend/src/qts/runtime/actors/market_data_actor.py" in html
+    assert "frontend/src/App.tsx" in html

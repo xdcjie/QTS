@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 from qts.core.ids import InstrumentId
-from qts.data.capabilities import MarketDataFeedCapabilities as FeedCapabilities
+from qts.data.capabilities import MarketDataFeedCapabilities
 from qts.data.subscriptions import (
     LogicalSubscription,
     PhysicalSubscriptionKey,
@@ -13,7 +13,7 @@ from qts.data.subscriptions import (
 
 def test_ibkr_style_capability_maps_requested_minutes_to_single_5s_source() -> None:
     instrument_id = InstrumentId("FUTURE.CME.GC.GCQ0")
-    capabilities = FeedCapabilities(
+    capabilities = MarketDataFeedCapabilities(
         source_id="ibkr-live-md",
         supports_bars=True,
         supported_timeframes=frozenset({"5s"}),
@@ -47,7 +47,7 @@ def test_ibkr_style_capability_maps_requested_minutes_to_single_5s_source() -> N
 
 
 def test_coarse_source_rejects_finer_requested_timeframe() -> None:
-    capabilities = FeedCapabilities(
+    capabilities = MarketDataFeedCapabilities(
         source_id="historical-1m",
         supports_bars=True,
         supported_timeframes=frozenset({"1m"}),

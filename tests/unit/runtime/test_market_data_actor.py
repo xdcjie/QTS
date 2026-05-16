@@ -102,16 +102,15 @@ def test_market_data_actor_owns_bar_aggregation_state_and_emits_completed_bars()
 
 def test_market_data_actor_deduplicates_physical_subscription_and_fans_out() -> None:
     from qts.core.ids import InstrumentId
-    from qts.data.capabilities import MarketDataFeedCapabilities as FeedCapabilities
+    from qts.data.capabilities import MarketDataFeedCapabilities
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.market_data_actor import MarketDataActor, SubscribeMarketData
     from qts.runtime.mailbox import Mailbox
+    from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter
 
-    from tests.support.live_feed import FakeLiveFeedAdapter
-
-    source = FakeLiveFeedAdapter(
+    source = FakeStreamingMarketDataAdapter(
         source_id="ibkr-live-md",
-        capabilities=FeedCapabilities(
+        capabilities=MarketDataFeedCapabilities(
             source_id="ibkr-live-md",
             supported_timeframes=frozenset({"5s"}),
         ),
@@ -144,7 +143,7 @@ def test_market_data_actor_deduplicates_physical_subscription_and_fans_out() -> 
 
 def test_market_data_actor_aggregates_one_source_stream_once_and_fans_out_to_strategies() -> None:
     from qts.core.ids import InstrumentId
-    from qts.data.capabilities import MarketDataFeedCapabilities as FeedCapabilities
+    from qts.data.capabilities import MarketDataFeedCapabilities
     from qts.domain.market_data import Bar
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.market_data_actor import (
@@ -153,12 +152,11 @@ def test_market_data_actor_aggregates_one_source_stream_once_and_fans_out_to_str
         SubscribeMarketData,
     )
     from qts.runtime.mailbox import Mailbox
+    from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter
 
-    from tests.support.live_feed import FakeLiveFeedAdapter
-
-    source = FakeLiveFeedAdapter(
+    source = FakeStreamingMarketDataAdapter(
         source_id="ibkr-live-md",
-        capabilities=FeedCapabilities(
+        capabilities=MarketDataFeedCapabilities(
             source_id="ibkr-live-md",
             supported_timeframes=frozenset({"5s"}),
         ),

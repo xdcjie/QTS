@@ -4,6 +4,12 @@ import ast
 import re
 from pathlib import Path
 
+from scripts.update_project_panorama_source_index import (
+    END_MARKER,
+    START_MARKER,
+    render_source_inventory_section,
+)
+
 
 def _production_classes() -> dict[str, set[str]]:
     classes: dict[str, set[str]] = {}
@@ -183,3 +189,16 @@ def test_backtest_live_parallel_sequence_documents_core_call_chains() -> None:
         token for token in required_tokens if f"<code>{token}</code>" not in call_chains
     )
     assert missing == []
+
+
+def test_backtest_live_parallel_sequence_source_inventory_is_current() -> None:
+    html = Path("docs/architecture/backtest_live_parallel_sequence.html").read_text(
+        encoding="utf-8"
+    )
+    start = html.index(START_MARKER)
+    end = html.index(END_MARKER) + len(END_MARKER)
+
+    assert html[start:end] == render_source_inventory_section(Path("."))
+    assert "src 文件、类、函数清单" in html
+    assert "backend/src/qts/runtime/actors/market_data_actor.py" in html
+    assert "frontend/src/App.tsx" in html

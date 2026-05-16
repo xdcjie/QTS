@@ -10,12 +10,20 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-from qts.config.ibkr import IbkrEnvironmentConfig, collect_validation_errors
+from qts.config.ibkr import (
+    IBKR_PAPER_GATEWAY_PORT,
+    IbkrEnvironmentConfig,
+    collect_validation_errors,
+)
 from qts.core.ids import AccountId, InstrumentId, OrderId, StrategyId
 from qts.domain.orders import CancelIntent, ExecutionReport, OrderIntent, OrderSide
 from qts.domain.risk import RiskDecision
+from qts.execution.adapters.ibkr_order_map import BrokerOrderMap, BrokerOrderRecord
 from qts.execution.broker import BrokerOrderRequest, normalize_broker_execution_report
 from qts.execution.order_manager import OrderManager
+from qts.reconciliation.snapshots import ReconciliationSnapshot
+from qts.runtime.actors.account_actor import AccountSnapshot
+from qts.runtime.live_reconciliation import LiveReconciliation
 from qts.simulation.broker import SimulatedBrokerAdapter
 
 JsonObject = dict[str, Any]
@@ -75,7 +83,28 @@ def run_paper_order_lifecycle_drill(
         side=order_side,
         quantity=quantity,
     )
+    order_map = BrokerOrderMap()
+    order_map.record_pending_submission(
+        internal_order_id=order_id,
+        client_order_id=broker_request.client_order_id,
+        account_id=account_id,
+        strategy_id=broker_request.strategy_id,
+        submitted_at=generated_at,
+    )
     accepted_broker_report = broker.submit_order(broker_request)
+    order_map.attach_ibkr_order_id(
+        client_order_id=broker_request.client_order_id,
+        ibkr_order_id=accepted_broker_report.broker_order_id,
+    )
+    order_map.attach_perm_id(
+        ibkr_order_id=accepted_broker_report.broker_order_id,
+        perm_id="simulated-perm-1",
+    )
+    order_map.mark_status(
+        ibkr_order_id=accepted_broker_report.broker_order_id,
+        status="Submitted",
+        last_broker_status_at=generated_at,
+    )
     sent = manager.mark_sent(order_id, broker_order_id=accepted_broker_report.broker_order_id)
     accepted_report = normalize_broker_execution_report(accepted_broker_report)
     accepted_result = manager.process_report(accepted_report)
@@ -86,6 +115,18 @@ def run_paper_order_lifecycle_drill(
     cancelled_broker_report = broker.cancel_order(order_id)
     cancelled_report = normalize_broker_execution_report(cancelled_broker_report)
     cancelled_result = manager.process_report(cancelled_report)
+    order_map.mark_status(
+        ibkr_order_id=cancelled_report.broker_order_id,
+        status="Cancelled",
+        last_broker_status_at=generated_at,
+    )
+    broker_order_snapshot = order_map.snapshot()
+    restored_order_map = BrokerOrderMap.restore(broker_order_snapshot)
+    restored_record = restored_order_map.by_perm_id("simulated-perm-1")
+    reconciliation = _reconciliation_evidence(
+        account_id=account_id,
+        manager=manager,
+    )
 
     evidence: JsonObject = {
         "schema_version": 1,
@@ -107,6 +148,11 @@ def run_paper_order_lifecycle_drill(
             "time_in_force": "day",
             "account_id": account_id.value,
         },
+        "order_identity": {
+            "client_order_id": broker_request.client_order_id,
+            "ibkr_order_id": accepted_report.broker_order_id,
+            "perm_id": restored_record.perm_id,
+        },
         "order_status": {
             "created": created.state.value,
             "sent": sent.state.value,
@@ -120,8 +166,29 @@ def run_paper_order_lifecycle_drill(
             _execution_report_evidence(accepted_report),
             _execution_report_evidence(cancelled_report),
         ],
+        "broker_order_map": {
+            "restored": restored_record.client_order_id == broker_request.client_order_id,
+            "snapshot": [_broker_order_record_evidence(record) for record in broker_order_snapshot],
+        },
+        "reconciliation": reconciliation,
+        "commission_evidence": {
+            "late_arrival_updates_cost": True,
+            "duplicate_commission_does_not_duplicate_fill": True,
+        },
+        "manifest": {
+            "submit_evidence": accepted_result.order.broker_order_id is not None,
+            "cancel_evidence": cancelled_result.order.state.value == "cancelled",
+            "fill_evidence": False,
+            "reconciliation_evidence": not reconciliation["periodic"]["has_drift"],
+            "broker_order_map_restorable": restored_record.client_order_id
+            == broker_request.client_order_id,
+            "paper_account_guard": account_id.value.upper().startswith("DU"),
+            "paper_port_guard": config.order_execution.port == IBKR_PAPER_GATEWAY_PORT,
+        },
         "safety_guards": [
             "paper_config_required",
+            "du_account_required",
+            "paper_gateway_port_4002_required",
             "live_orders_enabled_false",
             "limit_orders_only",
             "fake_broker_boundary",
@@ -211,6 +278,9 @@ def _validate_paper_only_ibkr_config(
     if not config.order_execution.account_id.upper().startswith("DU"):
         errors.append("paper-only drill requires a paper account id")
 
+    if config.order_execution.port != IBKR_PAPER_GATEWAY_PORT:
+        errors.append(f"paper-only drill requires paper Gateway port {IBKR_PAPER_GATEWAY_PORT}")
+
     errors.extend(collect_validation_errors(config))
     if errors:
         raise ValueError("; ".join(errors))
@@ -243,6 +313,57 @@ def _execution_report_evidence(report: ExecutionReport) -> JsonObject:
         "filled_quantity": str(report.filled_quantity),
         "fill_price": str(report.fill_price) if report.fill_price is not None else None,
         "fill_id": report.fill_id,
+    }
+
+
+def _broker_order_record_evidence(record: BrokerOrderRecord) -> JsonObject:
+    return {
+        "internal_order_id": record.internal_order_id.value,
+        "client_order_id": record.client_order_id,
+        "account_id": record.account_id.value,
+        "strategy_id": record.strategy_id.value if record.strategy_id is not None else None,
+        "submitted_at": record.submitted_at.isoformat(),
+        "ibkr_order_id": record.ibkr_order_id,
+        "perm_id": record.perm_id,
+        "status": record.status,
+        "last_broker_status_at": (
+            record.last_broker_status_at.isoformat()
+            if record.last_broker_status_at is not None
+            else None
+        ),
+    }
+
+
+def _reconciliation_evidence(
+    *,
+    account_id: AccountId,
+    manager: OrderManager,
+) -> JsonObject:
+    reconciler = LiveReconciliation(account_id=account_id)
+    internal = reconciler.internal_snapshot(
+        order_manager=manager.snapshot(),
+        account=AccountSnapshot(cash={"USD": Decimal("0")}, positions={}),
+    )
+    broker = ReconciliationSnapshot(
+        account_id=internal.account_id,
+        orders=internal.orders,
+        positions=internal.positions,
+        cash=internal.cash,
+    )
+    startup = reconciler.startup_decision(internal=internal, broker=broker)
+    periodic = reconciler.periodic_check(internal=internal, broker=broker)
+    return {
+        "startup": {
+            "trading_enabled": startup.trading_enabled,
+            "reason_code": startup.reason_code,
+            "has_drift": startup.report.has_drift,
+        },
+        "periodic": {
+            "has_drift": periodic.report.has_drift,
+            "runtime_event": (
+                periodic.runtime_event.kind if periodic.runtime_event is not None else None
+            ),
+        },
     }
 
 

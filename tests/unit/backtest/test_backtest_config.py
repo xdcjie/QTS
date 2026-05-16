@@ -148,7 +148,7 @@ strategy_class: "tests.integration.test_backtest_gc_si:RollingGcStrategy"
     assert not hasattr(config, "dataset_root")
 
 
-def test_backtest_run_config_rejects_legacy_historical_data_alias(
+def test_backtest_run_config_rejects_obsolete_historical_data_alias(
     tmp_path: Path,
 ) -> None:
     config_path = tmp_path / "backtest.yaml"
@@ -173,7 +173,7 @@ strategy_class: "tests.integration.test_backtest_gc_si:RollingGcStrategy"
         BacktestRuntimeConfig.from_yaml(config_path)
 
 
-def test_backtest_run_config_rejects_legacy_dataset_root(
+def test_backtest_run_config_rejects_obsolete_dataset_root(
     tmp_path: Path,
 ) -> None:
     config_path = tmp_path / "backtest.yaml"

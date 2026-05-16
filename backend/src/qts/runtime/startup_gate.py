@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from qts.runtime.live import LiveStartupDecision
+from qts.runtime.live import BrokerRuntimeStartupDecision
 from qts.runtime.mode import RuntimeMode
 
 
@@ -13,7 +13,7 @@ class BrokerRuntimeStartupGate:
     """Convert startup decisions into fail-closed order-block reason codes."""
 
     mode: RuntimeMode
-    startup_decision: LiveStartupDecision | None
+    startup_decision: BrokerRuntimeStartupDecision | None
 
     def blocked_reason(self) -> str | None:
         """Return the startup reason code that should block order submission."""

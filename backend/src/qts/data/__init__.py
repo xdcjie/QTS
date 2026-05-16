@@ -35,11 +35,6 @@ __all__ = [
     "MarketDataSourceFailure",
     "MarketDataSubscription",
     "MarketDataSubscribed",
-    "FeedCapabilities",
-    "FeedSubscription",
-    "LiveFeedAdapter",
-    "LiveFeedEvent",
-    "LiveFeedFailure",
     "ReconnectPolicy",
     "DataValidationError",
     "DataValidationIssue",
@@ -52,10 +47,3 @@ __all__ = [
     "logical_key",
     "plan_physical_subscription",
 ]
-
-# Backward-compatible aliases for pre-migration callers.
-FeedCapabilities = MarketDataFeedCapabilities
-FeedSubscription = MarketDataSubscription
-LiveFeedAdapter = StreamingFeedAdapter
-LiveFeedEvent = MarketDataSourceEvent
-LiveFeedFailure = MarketDataSourceFailure

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from qts.core.ids import InstrumentId
@@ -29,6 +29,21 @@ def test_subscription_replay_source_emits_only_active_subscriptions_at_bar_end()
     assert source.current_time == aapl_bar.end_time
     assert observed == [aapl_bar]
     assert drained is None
+
+
+def test_bar_close_visible_only_at_bar_end() -> None:
+    from qts.data.sources.replay_market_data_source import SubscriptionReplayMarketDataSource
+    from qts.data.subscriptions import LogicalSubscription
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    bar = _bar(instrument_id, "2026-01-02T14:30:00+00:00", "2026-01-02T14:31:00+00:00")
+    source = SubscriptionReplayMarketDataSource(bars=(bar,))
+    source.subscribe(LogicalSubscription("strategy-a", instrument_id, "1m"))
+
+    assert source.poll_next(as_of=bar.start_time) is None
+    assert source.current_time is None
+    assert source.poll_next(as_of=bar.end_time) == bar
+    assert source.current_time == bar.end_time
 
 
 def test_replay_clock_advances_monotonically_to_event_visibility_time() -> None:
@@ -68,6 +83,27 @@ def test_replay_event_sequencer_orders_by_visible_time_and_tie_breaker() -> None
     assert sequencer.drain_diagnostic_events() == ()
 
 
+def test_multi_instrument_same_timestamp_order_is_deterministic() -> None:
+    from qts.data.sources.replay_market_data_source import ReplayEventSequencer
+
+    aapl = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    msft = InstrumentId("EQUITY.US.NASDAQ.MSFT")
+    same_visible_at = "2026-01-02T14:31:00+00:00"
+    aapl_bar = _bar(aapl, "2026-01-02T14:30:00+00:00", same_visible_at)
+    msft_bar = _bar(msft, "2026-01-02T14:30:00+00:00", same_visible_at)
+
+    sequencer = ReplayEventSequencer(source_id="replay-source")
+
+    assert [event.bar for event in sequencer.sequence((msft_bar, aapl_bar))] == [
+        aapl_bar,
+        msft_bar,
+    ]
+    assert [event.bar for event in sequencer.sequence((aapl_bar, msft_bar))] == [
+        aapl_bar,
+        msft_bar,
+    ]
+
+
 def test_subscription_replay_source_unsubscribe_stops_later_delivery() -> None:
     from qts.data.sources.replay_market_data_source import SubscriptionReplayMarketDataSource
     from qts.data.subscriptions import LogicalSubscription
@@ -102,6 +138,33 @@ def test_subscription_replay_source_mid_run_subscribe_only_emits_future_bars() -
 
     assert source.poll_next() == second
     assert source.poll_next() is None
+
+
+def test_session_boundary_next_open_bar_not_visible_before_next_bar_end() -> None:
+    from qts.data.sources.replay_market_data_source import SubscriptionReplayMarketDataSource
+    from qts.data.subscriptions import LogicalSubscription
+
+    instrument_id = InstrumentId("FUT.US.COMEX.GC.202602")
+    session_close = datetime(2026, 1, 6, 22, 0, tzinfo=UTC)
+    next_open = datetime(2026, 1, 6, 23, 0, tzinfo=UTC)
+    next_bar = Bar(
+        instrument_id=instrument_id,
+        start_time=next_open,
+        end_time=next_open + timedelta(minutes=1),
+        timeframe="1m",
+        session_id="2026-01-07",
+        open=Decimal("2050"),
+        high=Decimal("2051"),
+        low=Decimal("2049"),
+        close=Decimal("2050.5"),
+        is_complete=True,
+    )
+    source = SubscriptionReplayMarketDataSource(bars=(next_bar,))
+    source.subscribe(LogicalSubscription("strategy-a", instrument_id, "1m"))
+
+    assert source.poll_next(as_of=session_close) is None
+    assert source.current_time is None
+    assert source.poll_next(as_of=next_bar.end_time) == next_bar
 
 
 def test_replay_event_sequencer_rejects_out_of_order_source_bar() -> None:

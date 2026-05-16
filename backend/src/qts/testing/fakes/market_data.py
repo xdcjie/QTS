@@ -65,15 +65,6 @@ class FakeStreamingMarketDataAdapter(StreamingFeedAdapter):
         )
 
 
-class FakeMarketDataAdapter(FakeStreamingMarketDataAdapter):
-    """Backwards-compatible fake market-data adapter alias."""
-
-
-# Local compatibility alias historically used by tests before migration.
-FakeLiveFeedAdapter = FakeStreamingMarketDataAdapter
-
 __all__ = [
     "FakeStreamingMarketDataAdapter",
-    "FakeMarketDataAdapter",
-    "FakeLiveFeedAdapter",
 ]

@@ -132,6 +132,7 @@ def test_backtest_artifact_contract_contains_auditable_inputs_outputs_and_hashes
         "metrics",
         "processed_bars",
         "report_hash",
+        "risk_config_hash",
         "run_id",
         "runtime_mode",
         "topology_hash",

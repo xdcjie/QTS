@@ -8,7 +8,7 @@ from qts.runtime.commands import (
     RuntimeCommandType,
 )
 from qts.runtime.event_store import InMemoryEventStore
-from qts.runtime.live import LiveRuntime, LiveRuntimeState
+from qts.runtime.live import LiveRuntime
 from qts.runtime.mailbox import Mailbox
 from qts.runtime.mode import (
     AccountEnvironment,
@@ -57,7 +57,7 @@ __all__ = [
     "LiveRecoveryDecisionStatus",
     "LiveOrderPermission",
     "LiveRuntime",
-    "LiveRuntimeState",
+    "RuntimeSessionState",
     "MarketDataEnvironment",
     "MarketDataRouteSpec",
     "Mailbox",

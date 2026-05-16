@@ -32,8 +32,8 @@ def test_live_kill_switch_blocks_new_orders_and_cancels_active_orders() -> None:
     from qts.risk.kill_switch import RuntimeKillSwitchCommand
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
     registry = InstrumentRegistry()
@@ -55,8 +55,8 @@ def test_live_kill_switch_blocks_new_orders_and_cancels_active_orders() -> None:
     )
     adapter = _AcceptedThenCancelledExecutionAdapter()
     account_id = AccountId("acct-kill")
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             strategy=_BuyEveryBarStrategy(),
             risk_engine=RiskEngine([]),
             instrument_context=_InstrumentContext(),
@@ -92,8 +92,8 @@ def test_live_kill_switch_with_multi_account_topology_cancels_all_active_orders(
     from qts.risk.kill_switch import RuntimeKillSwitchCommand
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
     registry = InstrumentRegistry()
@@ -147,8 +147,8 @@ def test_live_kill_switch_with_multi_account_topology_cancels_all_active_orders(
         ),
     )
     adapter = _AcceptedThenCancelledExecutionAdapter()
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             strategies=(_BuyEveryBarStrategy(), _BuyEveryBarStrategy()),
             risk_engine=RiskEngine([]),
             instrument_context=_InstrumentContext(),
@@ -197,9 +197,8 @@ def test_live_rollback_records_operator_action_and_preserves_event_store_paths()
     from qts.registry.instrument_registry import InstrumentRegistry
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
-    from qts.runtime.session import RuntimeRollbackCommand
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeRollbackCommand, RuntimeSession
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
     registry = InstrumentRegistry()
@@ -220,8 +219,8 @@ def test_live_rollback_records_operator_action_and_preserves_event_store_paths()
         ),
     )
     account_id = AccountId("acct-rollback")
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             strategy=_BuyEveryBarStrategy(),
             risk_engine=RiskEngine([]),
             instrument_context=_InstrumentContext(),

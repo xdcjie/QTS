@@ -28,19 +28,7 @@ class PaperSimulatedRuntimeConfig(LiveRuntimeConfig):
             raise ValueError("PaperSimulatedRuntimeConfig mode must be paper_simulated")
 
 
-@dataclass(frozen=True, slots=True)
-class PaperRuntimeConfig(LiveRuntimeConfig):
-    """Deprecated compatibility config for paper runtime modes."""
-
-    def __post_init__(self) -> None:
-        LiveRuntimeConfig.__post_init__(self)
-        mode = RuntimeMode.from_value(self.mode)
-        if mode not in {RuntimeMode.PAPER_BROKER, RuntimeMode.PAPER_SIMULATED}:
-            raise ValueError("PaperRuntimeConfig mode must be paper_broker or paper_simulated")
-
-
 __all__ = [
     "PaperBrokerRuntimeConfig",
-    "PaperRuntimeConfig",
     "PaperSimulatedRuntimeConfig",
 ]

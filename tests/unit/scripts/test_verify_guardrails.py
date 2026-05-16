@@ -501,7 +501,7 @@ def test_default_guardrails_reject_transport_canonical_classes_in_adapters(
     assert _codes(root) == {"TRANSPORT_CANONICAL_PATH"}
 
 
-def test_guardrails_reject_deprecated_import_usage_outside_compatibility_modules(
+def test_guardrails_reject_removed_import_usage(
     tmp_path: Path,
 ) -> None:
     root = tmp_path
@@ -518,16 +518,16 @@ def test_guardrails_reject_deprecated_import_usage_outside_compatibility_modules
     )
     _write(
         root,
-        "backend/src/qts/runtime/live_runtime_session.py",
-        "from qts.runtime.session import RuntimeSession as LiveRuntimeSession\n",
+        "backend/src/qts/runtime/start_runtime_consumer.py",
+        "from qts.application.commands.start_paper import start_paper\n",
     )
 
-    assert _codes_by_suite(root, guardrails.DeprecatedImportNoNewUsageRule()) == {
-        "DEPRECATED_IMPORT_USAGE"
+    assert _codes_by_suite(root, guardrails.RemovedImportNoNewUsageRule()) == {
+        "REMOVED_IMPORT_USAGE"
     }
 
 
-def test_default_guardrails_reject_deprecated_import_usage_outside_compatibility_modules(
+def test_default_guardrails_reject_removed_import_usage(
     tmp_path: Path,
 ) -> None:
     root = tmp_path
@@ -537,10 +537,10 @@ def test_default_guardrails_reject_deprecated_import_usage_outside_compatibility
         "from qts.runtime.live_runtime_session import LiveRuntimeSession\n",
     )
 
-    assert _codes(root) == {"DEPRECATED_IMPORT_USAGE"}
+    assert _codes(root) == {"REMOVED_IMPORT_USAGE"}
 
 
-def test_default_guardrails_reject_deprecated_transport_import_usage(
+def test_default_guardrails_reject_removed_transport_import_usage(
     tmp_path: Path,
 ) -> None:
     root = tmp_path
@@ -564,7 +564,7 @@ def test_default_guardrails_reject_deprecated_transport_import_usage(
         "IbAsyncOrderExecutionTransport\n",
     )
 
-    assert _codes(root) == {"DEPRECATED_IMPORT_USAGE"}
+    assert _codes(root) == {"REMOVED_IMPORT_USAGE"}
 
 
 def test_guardrails_reject_production_imports_from_qts_testing(tmp_path: Path) -> None:

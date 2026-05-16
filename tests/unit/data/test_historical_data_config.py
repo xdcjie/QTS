@@ -45,7 +45,7 @@ historical_data:
     )
 
 
-def test_historical_market_data_config_rejects_legacy_store_level_source_timeframe(
+def test_historical_market_data_config_rejects_obsolete_store_level_source_timeframe(
     tmp_path: Path,
 ) -> None:
     config_path = tmp_path / "historical.local.yaml"
@@ -166,7 +166,7 @@ def test_project_historical_data_example_resolves_gc_si_paths() -> None:
     assert gc.source_timeframe == "1m"
 
 
-def test_historical_market_data_config_rejects_legacy_dataset_file_overrides(
+def test_historical_market_data_config_rejects_obsolete_dataset_file_overrides(
     tmp_path: Path,
 ) -> None:
     config_path = tmp_path / "historical.local.yaml"

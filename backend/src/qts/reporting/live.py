@@ -17,7 +17,7 @@ from qts.runtime.sinks.base import RuntimeEvent
 from qts.runtime.sinks.live import LiveRuntimeEventSink
 
 if TYPE_CHECKING:
-    from qts.runtime.live import LiveStartupChecklist
+    from qts.runtime.live import BrokerRuntimeStartupChecklist
 
 _SECRET_KEY_PARTS = ("password", "token", "credential")
 
@@ -54,7 +54,7 @@ class LiveReportWriter:
         allow_live_orders: bool = False,
         operator_signoff_id: str | None = None,
         market_data_permission_state: str | None = None,
-        startup_checklist: LiveStartupChecklist | None = None,
+        startup_checklist: BrokerRuntimeStartupChecklist | None = None,
         extra_artifacts: dict[str, Path] | None = None,
         runtime_topology_payload: dict[str, Any] | None = None,
         execution_assumptions: dict[str, Any] | None = None,

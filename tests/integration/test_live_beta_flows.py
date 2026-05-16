@@ -6,7 +6,7 @@ from decimal import Decimal
 from fastapi.testclient import TestClient
 from qts.api.app import create_app
 from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
-from qts.data.events import MarketDataSubscription as FeedSubscription
+from qts.data.events import MarketDataSubscription
 from qts.domain.market_data import Bar
 from qts.execution.broker import BrokerOrderRequest
 from qts.execution.order_manager import OrderSide
@@ -16,14 +16,13 @@ from qts.runtime.actors.market_data_actor import MarketDataActor, MarketDataEven
 from qts.runtime.live import LiveRuntime
 from qts.runtime.mailbox import Mailbox
 from qts.testing.fakes.broker import FakeBrokerAdapter
-
-from tests.support.live_feed import FakeLiveFeedAdapter
+from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter
 
 
 def test_live_runtime_start_pause_resume_and_fake_broker_flow() -> None:
     runtime = LiveRuntime(
         broker=FakeBrokerAdapter(broker_id=BrokerId("fake")),
-        feed=FakeLiveFeedAdapter(source_id="fake-live"),
+        feed=FakeStreamingMarketDataAdapter(source_id="fake-live"),
     )
     runtime.start()
     runtime.pause()
@@ -54,9 +53,9 @@ def test_live_feed_routes_through_market_data_actor_aggregation_pipeline() -> No
         aggregate_timeframe="5m",
         exchange_timezone=UTC,
     )
-    feed = FakeLiveFeedAdapter(source_id="fake-live")
+    feed = FakeStreamingMarketDataAdapter(source_id="fake-live")
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
-    feed.subscribe(FeedSubscription("sub-1", instrument_id, timeframe="1m"))
+    feed.subscribe(MarketDataSubscription("sub-1", instrument_id, timeframe="1m"))
     start = datetime(2026, 5, 10, 9, 30, tzinfo=UTC)
 
     for offset in range(5):

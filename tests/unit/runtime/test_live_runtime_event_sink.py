@@ -7,6 +7,8 @@ from pathlib import Path
 
 from qts.runtime.sinks.base import RuntimeEvent
 
+from tests.support.backtest_manifest import m1_manifest_kwargs
+
 
 def test_live_runtime_event_sink_requires_run_context(tmp_path: Path) -> None:
     import pytest
@@ -175,7 +177,7 @@ def test_backtest_and_live_event_sinks_share_runtime_envelope(tmp_path: Path) ->
     live_sink.close()
     backtest_writer.finalize(
         config_hash="cfg",
-        dataset_metadata=(),
+        **m1_manifest_kwargs(),
         cost_model={},
         processed_bars=1,
         warmup_bars=0,

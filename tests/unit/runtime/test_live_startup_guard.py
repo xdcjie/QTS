@@ -9,8 +9,6 @@ from qts.runtime.live import (
     BrokerRuntimeStartupChecklist,
     BrokerRuntimeStartupDecision,
     BrokerRuntimeStartupDecisionStatus,
-    LiveStartupChecklist,
-    LiveStartupDecisionStatus,
     validate_live_startup,
 )
 from qts.runtime.mode import (
@@ -22,17 +20,11 @@ from qts.runtime.mode import (
 from qts.runtime.permissions import LiveOrderPermission
 
 
-def test_broker_runtime_startup_types_are_canonical_with_live_aliases() -> None:
-    from qts.runtime.live import LiveStartupCheck, LiveStartupDecision
-
+def test_broker_runtime_startup_types_are_canonical() -> None:
     assert BrokerRuntimeStartupCheck.__name__ == "BrokerRuntimeStartupCheck"
     assert BrokerRuntimeStartupChecklist.__name__ == "BrokerRuntimeStartupChecklist"
     assert BrokerRuntimeStartupDecision.__name__ == "BrokerRuntimeStartupDecision"
     assert BrokerRuntimeStartupDecisionStatus.__name__ == "BrokerRuntimeStartupDecisionStatus"
-    assert LiveStartupCheck is BrokerRuntimeStartupCheck
-    assert LiveStartupChecklist is BrokerRuntimeStartupChecklist
-    assert LiveStartupDecision is BrokerRuntimeStartupDecision
-    assert LiveStartupDecisionStatus is BrokerRuntimeStartupDecisionStatus
 
 
 def test_live_startup_guard_requires_all_safety_controls_for_live_mode() -> None:
@@ -63,7 +55,7 @@ def test_live_startup_checklist_reports_evidence_and_remediation() -> None:
         kill_switch_configured=True,
     )
 
-    checklist = LiveStartupChecklist.from_config(config)
+    checklist = BrokerRuntimeStartupChecklist.from_config(config)
     account_check = checklist.by_name("account_configured")
 
     assert not checklist.passed
@@ -174,7 +166,7 @@ def test_live_startup_checklist_includes_runtime_safety_gates() -> None:
         snapshot_store_configured=False,
     )
 
-    checklist = LiveStartupChecklist.from_config(config)
+    checklist = BrokerRuntimeStartupChecklist.from_config(config)
     check_names = {check.check_name for check in checklist.checks}
 
     assert {
@@ -213,7 +205,7 @@ def test_observation_mode_allows_connections_but_blocks_real_order_submission() 
 
     decision = validate_live_startup(config)
 
-    assert decision.status is LiveStartupDecisionStatus.ALLOW_OBSERVATION
+    assert decision.status is BrokerRuntimeStartupDecisionStatus.ALLOW_OBSERVATION
     assert decision.real_order_submission_enabled is False
 
 
@@ -245,8 +237,8 @@ def test_live_startup_decision_statuses_are_explicit() -> None:
         )
     )
 
-    assert live_decision.status is LiveStartupDecisionStatus.ALLOW_LIVE
-    assert paper_decision.status is LiveStartupDecisionStatus.ALLOW_PAPER
+    assert live_decision.status is BrokerRuntimeStartupDecisionStatus.ALLOW_LIVE
+    assert paper_decision.status is BrokerRuntimeStartupDecisionStatus.ALLOW_PAPER
     assert live_decision.order_permission is LiveOrderPermission.LIVE_ORDERS_ALLOWED
     assert paper_decision.order_permission is LiveOrderPermission.PAPER_ORDERS_ALLOWED
     assert live_decision.real_order_submission_enabled is True
@@ -266,7 +258,7 @@ def test_live_observation_mode_uses_explicit_order_permission() -> None:
     decision = validate_live_startup(config)
 
     assert config.mode is RuntimeMode.LIVE_OBSERVATION
-    assert decision.status is LiveStartupDecisionStatus.ALLOW_OBSERVATION
+    assert decision.status is BrokerRuntimeStartupDecisionStatus.ALLOW_OBSERVATION
     assert decision.order_permission is LiveOrderPermission.OBSERVATION_ONLY
     assert decision.real_order_submission_enabled is False
 

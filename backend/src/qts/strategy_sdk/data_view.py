@@ -12,12 +12,19 @@ from qts.domain.market_data import Bar
 from qts.strategy_sdk.asset_ref import AssetRef
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, init=False)
 class DataView:
     """Time-sliced market data exposed to strategies."""
 
-    bars: Mapping[InstrumentId, Sequence[Bar]]
+    _bars: Mapping[InstrumentId, tuple[Bar, ...]]
     as_of: datetime
+
+    def __init__(self, bars: Mapping[InstrumentId, Sequence[Bar]], as_of: datetime) -> None:
+        """Create a time-sliced strategy data view from platform-owned bars."""
+        object.__setattr__(
+            self, "_bars", {instrument_id: tuple(values) for instrument_id, values in bars.items()}
+        )
+        object.__setattr__(self, "as_of", as_of)
 
     def close(self, asset: AssetRef) -> Decimal:
         """Perform close."""
@@ -34,7 +41,7 @@ class DataView:
         """Perform history."""
         if bars <= 0:
             raise ValueError("bars must be positive")
-        values = self.bars.get(asset.instrument_id, ())
+        values = self._bars.get(asset.instrument_id, ())
         visible = [
             bar
             for bar in values

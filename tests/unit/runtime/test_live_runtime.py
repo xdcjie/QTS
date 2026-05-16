@@ -2,23 +2,23 @@ from __future__ import annotations
 
 import pytest
 from qts.runtime.state import (
-    RuntimeSessionState as LiveRuntimeState,
+    RuntimeSessionState as RuntimeSessionState,
 )
 from qts.runtime.state import (
-    RuntimeStateMachine as LiveRuntimeStateMachine,
+    RuntimeStateMachine as RuntimeStateMachine,
 )
 
 
 def test_live_runtime_state_machine_allows_only_operational_transitions() -> None:
-    machine = LiveRuntimeStateMachine()
+    machine = RuntimeStateMachine()
 
-    assert machine.apply("start") is LiveRuntimeState.STARTING
-    assert machine.apply("started") is LiveRuntimeState.RUNNING
-    assert machine.apply("pause") is LiveRuntimeState.PAUSED
-    assert machine.apply("resume") is LiveRuntimeState.RUNNING
-    assert machine.apply("degrade") is LiveRuntimeState.DEGRADED
-    assert machine.apply("recover") is LiveRuntimeState.RUNNING
-    assert machine.apply("stop") is LiveRuntimeState.STOPPED
+    assert machine.apply("start") is RuntimeSessionState.STARTING
+    assert machine.apply("started") is RuntimeSessionState.RUNNING
+    assert machine.apply("pause") is RuntimeSessionState.PAUSED
+    assert machine.apply("resume") is RuntimeSessionState.RUNNING
+    assert machine.apply("degrade") is RuntimeSessionState.DEGRADED
+    assert machine.apply("recover") is RuntimeSessionState.RUNNING
+    assert machine.apply("stop") is RuntimeSessionState.STOPPED
 
     with pytest.raises(ValueError, match="invalid runtime transition"):
         machine.apply("resume")
@@ -33,12 +33,11 @@ def test_live_runtime_degrades_from_runtime_event_and_rejects_new_orders() -> No
     from qts.runtime.live import LiveRuntime
     from qts.runtime.sinks.base import RuntimeEvent
     from qts.testing.fakes.broker import FakeBrokerAdapter
-
-    from tests.support.live_feed import FakeLiveFeedAdapter
+    from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter
 
     runtime = LiveRuntime(
         broker=FakeBrokerAdapter(broker_id=BrokerId("paper")),
-        feed=FakeLiveFeedAdapter(source_id="ibkr-paper-md"),
+        feed=FakeStreamingMarketDataAdapter(source_id="ibkr-paper-md"),
     )
     runtime.start()
 
@@ -60,6 +59,6 @@ def test_live_runtime_degrades_from_runtime_event_and_rejects_new_orders() -> No
         )
     )
 
-    assert state is LiveRuntimeState.DEGRADED
+    assert state is RuntimeSessionState.DEGRADED
     assert result.accepted is False
     assert result.reason_code == "RUNTIME_DEGRADED"

@@ -16,6 +16,31 @@ from qts.data.provenance import DatasetMetadata
 from qts.reporting.base import RUNTIME_ARTIFACT_SCHEMA_VERSION, RuntimeManifest
 
 RUNTIME_EVENT_SCHEMA_VERSION = "1"
+_REQUIRED_M1_MANIFEST_FIELDS = (
+    "runtime_mode",
+    "config_hash",
+    "topology_hash",
+    "event_schema_version",
+    "artifact_schema_version",
+    "risk_config_hash",
+)
+_REQUIRED_M1_DATASET_FIELDS = (
+    "dataset_id",
+    "file_hash",
+    "row_count",
+    "first_ts",
+    "last_ts",
+    "timezone",
+    "adjustment_mode",
+)
+_REQUIRED_M1_EXECUTION_FIELDS = (
+    "fill_model_name",
+    "fill_model_version",
+    "slippage_model",
+    "commission_model",
+    "partial_fill_policy",
+    "broker_capability_model",
+)
 
 
 def dataset_metadata_payload(item: DatasetMetadata) -> dict[str, str | int | None]:
@@ -26,10 +51,13 @@ def dataset_metadata_payload(item: DatasetMetadata) -> dict[str, str | int | Non
         "instrument_id": item.instrument_id.value,
         "timeframe": item.timeframe,
         "timezone_policy": item.timezone_policy,
+        "timezone": item.timezone_policy,
         "adjustment_policy": item.adjustment_policy,
+        "adjustment_mode": item.adjustment_policy,
         "normalization_version": item.normalization_version,
         "created_at": item.created_at.isoformat(),
         "content_hash": item.content_hash,
+        "file_hash": item.content_hash,
         "row_count": item.row_count,
     }
 
@@ -229,6 +257,7 @@ class BacktestArtifactWriter:
         runtime_topology_payload: dict[str, Any] | None = None,
         brokerage_model: str | None = None,
         execution_assumptions: dict[str, Any] | None = None,
+        risk_config_hash: str | None = None,
     ) -> tuple[str, str, dict[str, Any], BacktestArtifacts]:
         """Perform finalize."""
         finalized_at = datetime.now(UTC)
@@ -236,6 +265,12 @@ class BacktestArtifactWriter:
             artifact.close()
 
         metrics = self._equity_metrics.to_payload()
+        normalized_dataset_metadata = tuple(
+            _normalize_dataset_metadata_payload(item) for item in dataset_metadata
+        )
+        normalized_execution_assumptions = _normalize_execution_assumptions_payload(
+            execution_assumptions
+        )
         artifact_rows = {kind: artifact.rows for kind, artifact in self._artifacts.items()}
         artifact_hashes = {
             kind: artifact.content_hash for kind, artifact in self._artifacts.items()
@@ -243,14 +278,15 @@ class BacktestArtifactWriter:
         report_payload: dict[str, Any] = {
             "config_hash": config_hash,
             "cost_model": cost_model,
-            "dataset_metadata": dataset_metadata,
+            "dataset_metadata": normalized_dataset_metadata,
             "final_cash": str(final_cash),
             "processed_bars": processed_bars,
             "warmup_bars": warmup_bars,
             "trading_bars": trading_bars,
             "strategy_version": strategy_version,
             "brokerage_model": brokerage_model,
-            "execution_assumptions": execution_assumptions,
+            "execution_assumptions": normalized_execution_assumptions,
+            "risk_config_hash": risk_config_hash,
             "metrics": metrics,
             "artifacts": {
                 kind: {
@@ -289,13 +325,14 @@ class BacktestArtifactWriter:
             "created_at": finalized_at.isoformat(),
             "finalized_at": finalized_at.isoformat(),
             "report_hash": report_hash,
-            "dataset_metadata": dataset_metadata,
+            "dataset_metadata": normalized_dataset_metadata,
             "cost_model": cost_model,
             "processed_bars": processed_bars,
             "warmup_bars": warmup_bars,
             "trading_bars": trading_bars,
             "brokerage_model": brokerage_model,
-            "execution_assumptions": execution_assumptions,
+            "execution_assumptions": normalized_execution_assumptions,
+            "risk_config_hash": risk_config_hash,
             "metrics": metrics,
             "artifacts": {
                 kind: {
@@ -308,6 +345,7 @@ class BacktestArtifactWriter:
         }
         if runtime_topology_payload is not None:
             manifest_payload["runtime_topology"] = runtime_topology_payload
+        _validate_m1_backtest_manifest(manifest_payload)
         manifest_path = self._output_dir / f"{run_id}.manifest.json"
         manifest_path.write_text(
             json.dumps(
@@ -333,6 +371,60 @@ class BacktestArtifactWriter:
 
 class BacktestReportWriter(BacktestArtifactWriter):
     """Backtest report writer for partitioned artifacts."""
+
+
+def _normalize_dataset_metadata_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(payload)
+    if "file_hash" not in normalized and "content_hash" in normalized:
+        normalized["file_hash"] = normalized["content_hash"]
+    if "timezone" not in normalized and "timezone_policy" in normalized:
+        normalized["timezone"] = normalized["timezone_policy"]
+    if "adjustment_mode" not in normalized and "adjustment_policy" in normalized:
+        normalized["adjustment_mode"] = normalized["adjustment_policy"]
+    return normalized
+
+
+def _normalize_execution_assumptions_payload(
+    payload: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    if payload is None:
+        return None
+    normalized = dict(payload)
+    if "slippage_model" not in normalized and "slippage_model_name" in normalized:
+        normalized["slippage_model"] = normalized.pop("slippage_model_name")
+    if "commission_model" not in normalized and "commission_model_name" in normalized:
+        normalized["commission_model"] = normalized.pop("commission_model_name")
+    return normalized
+
+
+def _validate_m1_backtest_manifest(payload: dict[str, Any]) -> None:
+    for key in _REQUIRED_M1_MANIFEST_FIELDS:
+        _require_manifest_value(payload, key)
+
+    dataset_metadata = payload.get("dataset_metadata")
+    if not isinstance(dataset_metadata, tuple) or not dataset_metadata:
+        raise ValueError("missing required backtest manifest field: dataset_metadata")
+    for index, dataset in enumerate(dataset_metadata):
+        if not isinstance(dataset, dict):
+            raise ValueError(f"missing required backtest manifest field: dataset_metadata[{index}]")
+        for key in _REQUIRED_M1_DATASET_FIELDS:
+            _require_manifest_value(dataset, key, label=f"dataset_metadata[{index}].{key}")
+
+    execution_assumptions = payload.get("execution_assumptions")
+    if not isinstance(execution_assumptions, dict):
+        raise ValueError("missing required backtest manifest field: execution_assumptions")
+    for key in _REQUIRED_M1_EXECUTION_FIELDS:
+        _require_manifest_value(execution_assumptions, key, label=f"execution_assumptions.{key}")
+
+
+def _require_manifest_value(payload: dict[str, Any], key: str, *, label: str | None = None) -> None:
+    value: Any = payload
+    for part in key.split("."):
+        if not isinstance(value, dict) or part not in value:
+            raise ValueError(f"missing required backtest manifest field: {label or key}")
+        value = value[part]
+    if value is None or value == "":
+        raise ValueError(f"missing required backtest manifest field: {label or key}")
 
 
 __all__ = [

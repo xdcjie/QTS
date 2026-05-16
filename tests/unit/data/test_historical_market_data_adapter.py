@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 from qts.core.ids import InstrumentId
-from qts.data.events import MarketDataSubscription as FeedSubscription
+from qts.data.events import MarketDataSubscription
 from qts.data.historical.adapter import HistoricalMarketDataAdapter
 from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
 from qts.domain.market_data import Bar
@@ -29,7 +29,7 @@ def test_historical_market_data_adapter_is_primary_historical_source_name(
         start=start,
         end=start + timedelta(minutes=1),
     )
-    subscription = FeedSubscription(
+    subscription = MarketDataSubscription(
         subscription_id="hist-1",
         instrument_id=instrument_id,
         timeframe="1m",
@@ -71,7 +71,7 @@ def test_historical_market_data_adapter_replays_normalized_bars_for_subscription
         start=start,
         end=start + timedelta(minutes=2),
     )
-    subscription = FeedSubscription(
+    subscription = MarketDataSubscription(
         subscription_id="hist-1",
         instrument_id=instrument_id,
         timeframe="1m",
@@ -111,7 +111,7 @@ def test_historical_market_data_adapter_rejects_finer_than_source_request(
     )
 
     with pytest.raises(ValueError, match="cannot be derived"):
-        adapter.subscribe(FeedSubscription("hist-5s", instrument_id, timeframe="5s"))
+        adapter.subscribe(MarketDataSubscription("hist-5s", instrument_id, timeframe="5s"))
 
 
 def _write_rows(path: Path, rows: list[dict[str, str]]) -> None:

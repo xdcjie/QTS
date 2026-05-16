@@ -376,11 +376,6 @@ class BrokerRuntimeTopologyResolver:
         )
 
 
-_LiveRuntimeTopologyBuilder = BrokerRuntimeTopologyResolver
-_ResolvedLiveRuntimeTopology = ResolvedRuntimeTopology
-_StrategyRuntimeBinding = StrategyRuntimeBinding
-
-
 __all__ = [
     "AccountRuntimePartition",
     "BrokerRuntimeTopologyResolver",

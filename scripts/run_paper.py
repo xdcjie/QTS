@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from decimal import Decimal
-
-from qts.application.commands.start_paper import PaperRuntimeConfig, start_paper
+from qts.application.commands.start_runtime import StartRuntimeCommand, start_runtime
 
 
 def main() -> None:
     """Perform main."""
-    runtime = start_paper(
-        PaperRuntimeConfig(
-            account_id="paper-local",
-            initial_cash=Decimal("100000"),
-            data_source="replay",
+    runtime = start_runtime(
+        StartRuntimeCommand(
+            runtime_mode="paper_simulated",
+            config_ref="configs/paper_simulated.yaml",
+            operator_id="paper-local",
+            idempotency_key="run-paper-local",
+            reason="local paper runtime start",
         )
     )
     print(runtime.status)

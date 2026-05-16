@@ -17,11 +17,8 @@ from qts.core.ids import (
 from qts.domain.orders import ExecutionReport, ExecutionReportStatus, OrderIntent
 from qts.risk.risk_engine import RiskEngine
 from qts.runtime.actors.account_actor import AccountActor, AccountSnapshot
-from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
-from qts.runtime.live_runtime_topology import (
-    BrokerRuntimeTopologyResolver,
-    _LiveRuntimeTopologyBuilder,
-)
+from qts.runtime.broker_runtime_topology import BrokerRuntimeTopologyResolver
+from qts.runtime.dependencies import RuntimeSessionDependencies
 from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
 from qts.runtime.topology import (
     AccountRuntimeSpec,
@@ -141,8 +138,8 @@ def _deps(
     strategy_id: StrategyId | None = None,
     account_actors: dict[AccountId, AccountActor] | None = None,
     risk_engines: dict[AccountId, RiskEngine] | None = None,
-) -> LiveRuntimeDependencies:
-    return LiveRuntimeDependencies(
+) -> RuntimeSessionDependencies:
+    return RuntimeSessionDependencies(
         strategy=None if strategies is not None else strategy,
         strategies=strategies,
         risk_engine=RiskEngine([]),
@@ -183,7 +180,7 @@ def _topology(
         strategies=tuple(
             StrategyRuntimeSpec(
                 strategy_id=StrategyId(strategy_id),
-                strategy_class="tests.unit.runtime.test_live_runtime_topology._Strategy",
+                strategy_class="tests.unit.runtime.test_broker_runtime_topology._Strategy",
                 account_id=account_id,
                 subscriptions=subscription_ids,
             )
@@ -217,8 +214,8 @@ def _topology(
     )
 
 
-def test_live_runtime_topology_builder_defaults_for_non_topology_execution() -> None:
-    builder = _LiveRuntimeTopologyBuilder(
+def test_broker_runtime_topology_resolver_defaults_for_non_topology_execution() -> None:
+    builder = BrokerRuntimeTopologyResolver(
         _deps(strategy=_Strategy(), account_id=AccountId("acct-default"))
     )
     resolved = builder.build()
@@ -266,7 +263,7 @@ def test_runtime_topology_resolver_uses_account_scoped_risk_engines() -> None:
     assert resolved.account_partitions[account_b].risk_engine is risk_b
 
 
-def test_live_runtime_topology_builder_uses_topology_fallback_subscriptions() -> None:
+def test_broker_runtime_topology_resolver_uses_topology_fallback_subscriptions() -> None:
     topology = RuntimeTopology(
         run_id=RuntimeRunId("live-topology-fallback"),
         mode=RuntimeMode.PAPER_SIMULATED,
@@ -279,7 +276,7 @@ def test_live_runtime_topology_builder_uses_topology_fallback_subscriptions() ->
         strategies=(
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-topo"),
-                strategy_class="tests.unit.runtime.test_live_runtime_topology._Strategy",
+                strategy_class="tests.unit.runtime.test_broker_runtime_topology._Strategy",
                 account_id=AccountId("acct-topo"),
             ),
         ),
@@ -305,7 +302,7 @@ def test_live_runtime_topology_builder_uses_topology_fallback_subscriptions() ->
         ),
     )
 
-    builder = _LiveRuntimeTopologyBuilder(_deps(strategy=_Strategy(), runtime_topology=topology))
+    builder = BrokerRuntimeTopologyResolver(_deps(strategy=_Strategy(), runtime_topology=topology))
     resolved = builder.build()
 
     assert resolved.strategy_bindings[0].subscriptions == (
@@ -314,15 +311,13 @@ def test_live_runtime_topology_builder_uses_topology_fallback_subscriptions() ->
     )
 
 
-def test_live_runtime_topology_builder_builds_single_partition_from_matching_topology_account() -> (
-    None
-):
+def test_broker_runtime_topology_resolver_builds_single_partition() -> None:
     topology = _topology(
         mode=RuntimeMode.PAPER_SIMULATED,
         account_ids=(AccountId("acct-topo"),),
         strategy_specs=(("strat-topo", ()),),
     )
-    builder = _LiveRuntimeTopologyBuilder(
+    builder = BrokerRuntimeTopologyResolver(
         _deps(
             strategy=_Strategy(),
             runtime_topology=topology,
@@ -336,7 +331,7 @@ def test_live_runtime_topology_builder_builds_single_partition_from_matching_top
     assert resolved.strategy_bindings[0].account_id == AccountId("acct-topo")
 
 
-def test_live_runtime_topology_builder_builds_multi_account_partitions() -> None:
+def test_broker_runtime_topology_resolver_builds_multi_account_partitions() -> None:
     account_a = AccountId("acct-a")
     account_b = AccountId("acct-b")
     account_actors = {
@@ -359,13 +354,13 @@ def test_live_runtime_topology_builder_builds_multi_account_partitions() -> None
         strategies=(
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-a"),
-                strategy_class="tests.unit.runtime.test_live_runtime_topology._Strategy",
+                strategy_class="tests.unit.runtime.test_broker_runtime_topology._Strategy",
                 account_id=account_a,
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
             ),
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-b"),
-                strategy_class="tests.unit.runtime.test_live_runtime_topology._Strategy",
+                strategy_class="tests.unit.runtime.test_broker_runtime_topology._Strategy",
                 account_id=account_b,
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
             ),
@@ -381,8 +376,8 @@ def test_live_runtime_topology_builder_builds_multi_account_partitions() -> None
         ),
     )
 
-    builder = _LiveRuntimeTopologyBuilder(
-        LiveRuntimeDependencies(
+    builder = BrokerRuntimeTopologyResolver(
+        RuntimeSessionDependencies(
             strategies=(_Strategy(), _Strategy()),
             risk_engine=RiskEngine([]),
             instrument_context=_InstrumentContext(),
@@ -400,7 +395,7 @@ def test_live_runtime_topology_builder_builds_multi_account_partitions() -> None
     assert resolved.account_partitions.keys() == {account_a, account_b}
 
 
-def test_live_runtime_topology_builder_rejects_strategy_instance_count_mismatch() -> None:
+def test_broker_runtime_topology_resolver_rejects_strategy_instance_count_mismatch() -> None:
     topology = RuntimeTopology(
         run_id=RuntimeRunId("live-topology-mismatch"),
         mode=RuntimeMode.PAPER_SIMULATED,
@@ -413,7 +408,7 @@ def test_live_runtime_topology_builder_rejects_strategy_instance_count_mismatch(
         strategies=(
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-topo"),
-                strategy_class="tests.unit.runtime.test_live_runtime_topology._Strategy",
+                strategy_class="tests.unit.runtime.test_broker_runtime_topology._Strategy",
                 account_id=AccountId("acct-topo"),
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
             ),
@@ -430,8 +425,8 @@ def test_live_runtime_topology_builder_rejects_strategy_instance_count_mismatch(
     )
 
     with pytest.raises(ValueError, match="strategy count does not match"):
-        _LiveRuntimeTopologyBuilder(
-            LiveRuntimeDependencies(
+        BrokerRuntimeTopologyResolver(
+            RuntimeSessionDependencies(
                 strategies=(_Strategy(), _Strategy()),
                 risk_engine=RiskEngine([]),
                 instrument_context=_InstrumentContext(),
@@ -445,7 +440,7 @@ def test_live_runtime_topology_builder_rejects_strategy_instance_count_mismatch(
         ).build()
 
 
-def test_live_runtime_topology_builder_rejects_backtest_mode() -> None:
+def test_broker_runtime_topology_resolver_rejects_backtest_mode() -> None:
     topology = RuntimeTopology(
         run_id=RuntimeRunId("live-topology-backtest"),
         mode=RuntimeMode.BACKTEST,
@@ -458,7 +453,7 @@ def test_live_runtime_topology_builder_rejects_backtest_mode() -> None:
         strategies=(
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-topo"),
-                strategy_class="tests.unit.runtime.test_live_runtime_topology._Strategy",
+                strategy_class="tests.unit.runtime.test_broker_runtime_topology._Strategy",
                 account_id=AccountId("acct-topo"),
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
             ),
@@ -475,8 +470,8 @@ def test_live_runtime_topology_builder_rejects_backtest_mode() -> None:
     )
 
     with pytest.raises(ValueError, match="cannot run backtest topology"):
-        _LiveRuntimeTopologyBuilder(
-            LiveRuntimeDependencies(
+        BrokerRuntimeTopologyResolver(
+            RuntimeSessionDependencies(
                 strategy=_Strategy(),
                 risk_engine=RiskEngine([]),
                 instrument_context=_InstrumentContext(),
@@ -495,7 +490,7 @@ def test_live_runtime_topology_builder_rejects_backtest_mode() -> None:
         ).build()
 
 
-def test_live_runtime_topology_builder_rejects_multi_account_without_account_actors() -> None:
+def test_broker_runtime_topology_resolver_rejects_multi_account_without_account_actors() -> None:
     topology = RuntimeTopology(
         run_id=RuntimeRunId("live-topology-multi-no-actors"),
         mode=RuntimeMode.PAPER_SIMULATED,
@@ -512,13 +507,13 @@ def test_live_runtime_topology_builder_rejects_multi_account_without_account_act
         strategies=(
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-a"),
-                strategy_class="tests.unit.runtime.test_live_runtime_topology._Strategy",
+                strategy_class="tests.unit.runtime.test_broker_runtime_topology._Strategy",
                 account_id=AccountId("acct-a"),
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
             ),
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-b"),
-                strategy_class="tests.unit.runtime.test_live_runtime_topology._Strategy",
+                strategy_class="tests.unit.runtime.test_broker_runtime_topology._Strategy",
                 account_id=AccountId("acct-b"),
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
             ),
@@ -538,7 +533,7 @@ def test_live_runtime_topology_builder_rejects_multi_account_without_account_act
         ValueError,
         match="multi-account runtime topology requires account_actors mapping",
     ):
-        LiveRuntimeDependencies(
+        RuntimeSessionDependencies(
             strategies=(_Strategy(), _Strategy()),
             risk_engine=RiskEngine([]),
             instrument_context=_InstrumentContext(),
@@ -551,7 +546,7 @@ def test_live_runtime_topology_builder_rejects_multi_account_without_account_act
         )
 
 
-def test_live_runtime_topology_builder_rejects_topology_account_id_mismatch() -> None:
+def test_broker_runtime_topology_resolver_rejects_topology_account_id_mismatch() -> None:
     topology = RuntimeTopology(
         run_id=RuntimeRunId("live-topology-account-mismatch"),
         mode=RuntimeMode.PAPER_SIMULATED,
@@ -564,7 +559,7 @@ def test_live_runtime_topology_builder_rejects_topology_account_id_mismatch() ->
         strategies=(
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-topo"),
-                strategy_class="tests.unit.runtime.test_live_runtime_topology._Strategy",
+                strategy_class="tests.unit.runtime.test_broker_runtime_topology._Strategy",
                 account_id=AccountId("acct-topo"),
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
             ),
@@ -581,8 +576,8 @@ def test_live_runtime_topology_builder_rejects_topology_account_id_mismatch() ->
     )
 
     with pytest.raises(ValueError, match="dependency account_id does not match topology account"):
-        _LiveRuntimeTopologyBuilder(
-            LiveRuntimeDependencies(
+        BrokerRuntimeTopologyResolver(
+            RuntimeSessionDependencies(
                 strategy=_Strategy(),
                 risk_engine=RiskEngine([]),
                 instrument_context=_InstrumentContext(),
@@ -600,7 +595,7 @@ def test_live_runtime_topology_builder_rejects_topology_account_id_mismatch() ->
         ).build()
 
 
-def test_live_runtime_topology_builder_rejects_account_actor_id_mismatch() -> None:
+def test_broker_runtime_topology_resolver_rejects_account_actor_id_mismatch() -> None:
     topology = RuntimeTopology(
         run_id=RuntimeRunId("live-topology-actor-mismatch"),
         mode=RuntimeMode.PAPER_SIMULATED,
@@ -613,7 +608,7 @@ def test_live_runtime_topology_builder_rejects_account_actor_id_mismatch() -> No
         strategies=(
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-topo"),
-                strategy_class="tests.unit.runtime.test_live_runtime_topology._Strategy",
+                strategy_class="tests.unit.runtime.test_broker_runtime_topology._Strategy",
                 account_id=AccountId("acct-topo"),
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
             ),
@@ -630,8 +625,8 @@ def test_live_runtime_topology_builder_rejects_account_actor_id_mismatch() -> No
     )
 
     with pytest.raises(ValueError, match="account actor account_id mismatch"):
-        _LiveRuntimeTopologyBuilder(
-            LiveRuntimeDependencies(
+        BrokerRuntimeTopologyResolver(
+            RuntimeSessionDependencies(
                 strategy=_Strategy(),
                 risk_engine=RiskEngine([]),
                 instrument_context=_InstrumentContext(),
@@ -648,7 +643,7 @@ def test_live_runtime_topology_builder_rejects_account_actor_id_mismatch() -> No
         ).build()
 
 
-def test_live_runtime_topology_builder_rejects_multi_account_actor_id_mismatch() -> None:
+def test_broker_runtime_topology_resolver_rejects_multi_account_actor_id_mismatch() -> None:
     account_a = AccountId("acct-a")
     account_b = AccountId("acct-b")
     account_actors = {
@@ -671,13 +666,13 @@ def test_live_runtime_topology_builder_rejects_multi_account_actor_id_mismatch()
         strategies=(
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-a"),
-                strategy_class="tests.unit.runtime.test_live_runtime_topology._Strategy",
+                strategy_class="tests.unit.runtime.test_broker_runtime_topology._Strategy",
                 account_id=account_a,
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
             ),
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-b"),
-                strategy_class="tests.unit.runtime.test_live_runtime_topology._Strategy",
+                strategy_class="tests.unit.runtime.test_broker_runtime_topology._Strategy",
                 account_id=account_b,
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
             ),
@@ -694,8 +689,8 @@ def test_live_runtime_topology_builder_rejects_multi_account_actor_id_mismatch()
     )
 
     with pytest.raises(ValueError, match="account actor account_id mismatch"):
-        _LiveRuntimeTopologyBuilder(
-            LiveRuntimeDependencies(
+        BrokerRuntimeTopologyResolver(
+            RuntimeSessionDependencies(
                 strategies=(_Strategy(), _Strategy()),
                 risk_engine=RiskEngine([]),
                 instrument_context=_InstrumentContext(),
@@ -710,7 +705,7 @@ def test_live_runtime_topology_builder_rejects_multi_account_actor_id_mismatch()
         ).build()
 
 
-def test_live_runtime_topology_builder_rejects_empty_market_data_routes() -> None:
+def test_broker_runtime_topology_resolver_rejects_empty_market_data_routes() -> None:
     topology = RuntimeTopology(
         run_id=RuntimeRunId("live-topology-no-md-route"),
         mode=RuntimeMode.PAPER_SIMULATED,
@@ -723,7 +718,7 @@ def test_live_runtime_topology_builder_rejects_empty_market_data_routes() -> Non
         strategies=(
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-topo"),
-                strategy_class="tests.unit.runtime.test_live_runtime_topology._Strategy",
+                strategy_class="tests.unit.runtime.test_broker_runtime_topology._Strategy",
                 account_id=AccountId("acct-topo"),
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
             ),
@@ -733,8 +728,8 @@ def test_live_runtime_topology_builder_rejects_empty_market_data_routes() -> Non
     )
 
     with pytest.raises(ValueError, match="at least one market data route"):
-        _LiveRuntimeTopologyBuilder(
-            LiveRuntimeDependencies(
+        BrokerRuntimeTopologyResolver(
+            RuntimeSessionDependencies(
                 strategy=_Strategy(),
                 risk_engine=RiskEngine([]),
                 instrument_context=_InstrumentContext(),

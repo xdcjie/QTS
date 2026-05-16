@@ -4,13 +4,13 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from qts.core.ids import InstrumentId
-from qts.data.capabilities import MarketDataFeedCapabilities as FeedCapabilities
+from qts.data.capabilities import MarketDataFeedCapabilities
 from qts.data.subscriptions import LogicalSubscription, plan_physical_subscription
 
 
 def test_provider_5s_source_does_not_redefine_requested_1m_bar_semantics() -> None:
     instrument_id = InstrumentId("FUTURE.CME.GC.GCQ0")
-    capabilities = FeedCapabilities(
+    capabilities = MarketDataFeedCapabilities(
         source_id="ibkr-live-md",
         supported_timeframes=frozenset({"5s"}),
     )
@@ -25,7 +25,7 @@ def test_provider_5s_source_does_not_redefine_requested_1m_bar_semantics() -> No
 
 def test_multiple_derived_timeframes_share_one_5s_physical_subscription_key() -> None:
     instrument_id = InstrumentId("FUTURE.CME.GC.GCQ0")
-    capabilities = FeedCapabilities(
+    capabilities = MarketDataFeedCapabilities(
         source_id="ibkr-live-md",
         supported_timeframes=frozenset({"5s"}),
     )
@@ -43,7 +43,7 @@ def test_multiple_derived_timeframes_share_one_5s_physical_subscription_key() ->
 
 
 def test_coarse_historical_source_rejects_finer_requested_timeframe() -> None:
-    capabilities = FeedCapabilities(
+    capabilities = MarketDataFeedCapabilities(
         source_id="historical-1m",
         supported_timeframes=frozenset({"1m"}),
     )

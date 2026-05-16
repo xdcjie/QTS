@@ -30,7 +30,7 @@ SHARED_DATA_LIVE_CONTRACT_CLASSES = frozenset(
         "StreamingFeedAdapter",
     }
 )
-DEPRECATED_IMPORT_MODULES = frozenset(
+REMOVED_IMPORT_MODULES = frozenset(
     {
         "qts.data.adapters.ibkr_async_transport",
         "qts.data.adapters.ibkr_transport",
@@ -40,22 +40,10 @@ DEPRECATED_IMPORT_MODULES = frozenset(
         "qts.execution.adapters.ibkr_async_transport",
         "qts.execution.adapters.ibkr_order_ids",
         "qts.execution.adapters.ibkr_transport",
+        "qts.application.commands.start_paper",
         "qts.runtime.live_runtime_session",
         "qts.runtime.live_runtime_dependencies",
-    }
-)
-DEPRECATED_IMPORT_COMPATIBILITY_PATHS = frozenset(
-    {
-        "data/adapters/ibkr_async_transport.py",
-        "data/adapters/ibkr_transport.py",
-        "data/live/adapter.py",
-        "data/live/capabilities.py",
-        "data/live/events.py",
-        "execution/adapters/ibkr_async_transport.py",
-        "execution/adapters/ibkr_order_ids.py",
-        "execution/adapters/ibkr_transport.py",
-        "runtime/live_runtime_session.py",
-        "runtime/live_runtime_dependencies.py",
+        "qts.runtime.live_runtime_topology",
     }
 )
 SOURCE_SPECIFIC_BOUNDARY_PREFIXES = (
@@ -207,7 +195,7 @@ GUARDRAIL_REMEDIATIONS = {
         "Move product facts to registry, session, valuation, or risk data boundaries."
     ),
     "DATA_LIVE_SHARED_CONTRACT": "Move shared market-data contracts out of qts.data.live.",
-    "DEPRECATED_IMPORT_USAGE": "Use the canonical module path outside compatibility shims.",
+    "REMOVED_IMPORT_USAGE": "Use the canonical module path instead of removed modules.",
     "PRODUCTION_FAKE_CLASS": "Move fakes under qts.testing or tests/support.",
     "PRODUCTION_TESTING_IMPORT": (
         "Production packages must depend on simulation or explicit interfaces."
@@ -433,10 +421,10 @@ class TransportCanonicalPathRule:
         return violations
 
 
-class DeprecatedImportNoNewUsageRule:
-    """Reject deprecated import paths outside explicit compatibility shims."""
+class RemovedImportNoNewUsageRule:
+    """Reject imports from removed module paths."""
 
-    code = "DEPRECATED_IMPORT_USAGE"
+    code = "REMOVED_IMPORT_USAGE"
 
     def check(
         self,
@@ -446,18 +434,16 @@ class DeprecatedImportNoNewUsageRule:
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
         """Perform check."""
-        if qts_relative_path.as_posix() in DEPRECATED_IMPORT_COMPATIBILITY_PATHS:
-            return []
         violations: list[GuardrailViolation] = []
         for imported_module, line in _iter_imports(tree):
-            if imported_module not in DEPRECATED_IMPORT_MODULES:
+            if imported_module not in REMOVED_IMPORT_MODULES:
                 continue
             violations.append(
                 GuardrailViolation(
                     code=self.code,
                     path=str(relative_path),
                     line=line,
-                    message=f"deprecated import path is not allowed: {imported_module}",
+                    message=f"removed import path is not allowed: {imported_module}",
                 )
             )
         return violations
@@ -813,7 +799,7 @@ class GuardrailSuite:
             LivePackageNoReplayClassRule(),
             DataLiveNoSharedContractRule(),
             TransportCanonicalPathRule(),
-            DeprecatedImportNoNewUsageRule(),
+            RemovedImportNoNewUsageRule(),
             ProductionNoFakeClassRule(),
             ProductionNoTestingImportRule(),
             SharedRuntimeWordingRule(),

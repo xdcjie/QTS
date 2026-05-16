@@ -297,7 +297,7 @@ class RuntimeMarketDataCoordinator:
                             )
                             all_orders.extend(processed.orders)
                             all_fills.extend(processed.fills)
-                            self._write_risk_rejection_events(
+                            self._write_risk_decision_events(
                                 processed.risk_decisions,
                                 correlation_id=correlation_id,
                                 account_id=partition.account_id,
@@ -329,7 +329,7 @@ class RuntimeMarketDataCoordinator:
             reason_code=reason_code,
         )
 
-    def _write_risk_rejection_events(
+    def _write_risk_decision_events(
         self,
         risk_decisions: tuple[RiskDecision, ...],
         *,
@@ -341,7 +341,33 @@ class RuntimeMarketDataCoordinator:
         session = self._session
         for decision in risk_decisions:
             if decision.approved:
+                session._write_event(
+                    "runtime.risk_decision",
+                    {
+                        "approved": True,
+                        "rule_id": decision.rule_id,
+                        "evidence": dict(decision.evidence),
+                    },
+                    correlation_id=correlation_id,
+                    account_id=account_id,
+                    instrument_id=instrument_id,
+                    strategy_id=strategy_id,
+                )
                 continue
+            session._write_event(
+                "runtime.risk_decision",
+                {
+                    "approved": False,
+                    "reason_code": decision.reason_code,
+                    "reason": decision.reason,
+                    "rule_id": decision.rule_id,
+                    "evidence": dict(decision.evidence),
+                },
+                correlation_id=correlation_id,
+                account_id=account_id,
+                instrument_id=instrument_id,
+                strategy_id=strategy_id,
+            )
             session._write_event(
                 "runtime.risk_rejected",
                 {

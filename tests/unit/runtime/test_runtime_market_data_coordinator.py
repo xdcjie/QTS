@@ -12,7 +12,7 @@ from qts.runtime.topology import (
     StrategyRuntimeSpec,
 )
 
-from tests.unit.runtime.test_live_runtime_session import (
+from tests.unit.runtime.test_runtime_session import (
     _bar,
     _bar_for_instrument,
     _BuyOnceStrategy,
@@ -42,7 +42,7 @@ def test_runtime_market_data_coordinator_matches_session_unsubscribed_result() -
         strategies=(
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-coordinator"),
-                strategy_class="tests.unit.runtime.test_live_runtime_session._BuyOnceStrategy",
+                strategy_class="tests.unit.runtime.test_runtime_session._BuyOnceStrategy",
                 account_id=AccountId("acct-coordinator"),
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
             ),

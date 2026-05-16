@@ -347,11 +347,16 @@ class TargetIntentProcessor:
 
         fills = order_manager_actor.fills_since(before_fill_count)
         if not fills:
-            return ProcessedIntent(orders=(order_manager_actor.get_order(order_id),), fills=())
+            return ProcessedIntent(
+                orders=(order_manager_actor.get_order(order_id),),
+                fills=(),
+                risk_decisions=(risk_decision,),
+            )
 
         return ProcessedIntent(
             orders=(order_manager_actor.get_order(order_id),),
             fills=fills,
+            risk_decisions=(risk_decision,),
         )
 
 

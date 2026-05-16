@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
@@ -17,13 +19,16 @@ from qts.execution.order_manager import (
 from qts.strategy_sdk import PortfolioPosition, PortfolioView, Strategy, TargetIntent
 
 
-def test_paper_runtime_processes_strategy_order_fill_and_account_snapshot() -> None:
+def test_paper_runtime_processes_strategy_order_fill_and_account_snapshot(
+    tmp_path: Path,
+) -> None:
     from qts.domain.instruments import AssetClass, ContractSpec, Instrument, SettlementType
     from qts.registry.instrument_registry import InstrumentRegistry
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
+    from qts.runtime.sinks.live import LiveRuntimeEventSink
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
     registry = InstrumentRegistry()
@@ -45,8 +50,9 @@ def test_paper_runtime_processes_strategy_order_fill_and_account_snapshot() -> N
     )
     execution = _FillingExecutionAdapter()
     account_id = AccountId("acct-paper-full-chain")
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    sink = LiveRuntimeEventSink(tmp_path, filename="paper-events.ndjson")
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             strategy=_BuyOnceStrategy(),
             risk_engine=RiskEngine([]),
             instrument_context=_InstrumentContext(),
@@ -60,17 +66,57 @@ def test_paper_runtime_processes_strategy_order_fill_and_account_snapshot() -> N
             multiplier_for=lambda instrument_id: Decimal("1"),
             order_submission_enabled=True,
             account_id=account_id,
+            sink=sink,
         )
     )
 
-    session.start()
-    result = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC)))
+    try:
+        session.start()
+        result = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC)))
+    finally:
+        sink.close()
 
     assert [intent.side for intent in execution.seen] == [OrderSide.BUY]
     assert result.fills[0].fill_id == "live-000001-fill"
     assert result.account_snapshot is not None
     assert result.account_snapshot.positions[instrument_id].quantity == Decimal("1")
     assert result.account_snapshot.cash["USD"] == Decimal("9900")
+
+    rows = [
+        json.loads(line)
+        for line in sink.path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    _assert_ordered_subsequence(
+        [row["kind"] for row in rows],
+        [
+            "runtime.market_data",
+            "runtime.strategy_intent",
+            "runtime.risk_decision",
+            "runtime.order_submitted",
+            "runtime.fill_applied",
+            "runtime.account_snapshot",
+        ],
+    )
+    for row in rows:
+        assert row["run_id"]
+        assert row["runtime_mode"] == "paper_simulated"
+        assert isinstance(row["sequence_no"], int)
+        assert row["sequence_no"] > 0
+        assert row["correlation_id"] or row["kind"] in {
+            "runtime.state_transition",
+            "runtime.account_snapshot",
+        }
+
+
+def _assert_ordered_subsequence(items: list[str], expected: list[str]) -> None:
+    start = 0
+    for expected_item in expected:
+        try:
+            index = items.index(expected_item, start)
+        except ValueError as exc:
+            raise AssertionError(f"{expected_item} missing from event chain: {items}") from exc
+        start = index + 1
 
 
 class _BuyOnceStrategy(Strategy):

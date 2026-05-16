@@ -78,6 +78,24 @@ def test_data_view_only_exposes_complete_non_partial_bars() -> None:
     assert data.close(asset) == Decimal("100")
 
 
+def test_data_view_does_not_expose_raw_bar_store() -> None:
+    from qts.core.ids import InstrumentId
+    from qts.strategy_sdk import AssetRef
+    from qts.strategy_sdk.data_view import DataView
+
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    asset = AssetRef(InstrumentId("EQUITY.US.NASDAQ.AAPL"), "AAPL")
+    raw_bars = [
+        _bar(start, "100"),
+        _bar(start + timedelta(minutes=1), "101"),
+    ]
+
+    data = DataView(bars={asset.instrument_id: raw_bars}, as_of=start + timedelta(minutes=1))
+
+    assert not hasattr(data, "bars")
+    assert data.history(asset, bars=10) == (raw_bars[0],)
+
+
 def test_data_view_module_keeps_single_strategy_data_view_boundary() -> None:
     import qts.strategy_sdk.data_view as data_view_module
 

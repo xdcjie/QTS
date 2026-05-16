@@ -5,21 +5,18 @@ from decimal import Decimal
 
 import pytest
 from qts.core.ids import InstrumentId
-from qts.data.capabilities import MarketDataFeedCapabilities as FeedCapabilities
+from qts.data.capabilities import MarketDataFeedCapabilities
 from qts.data.events import (
-    MarketDataSourceFailure as LiveFeedFailure,
-)
-from qts.data.events import (
-    MarketDataSubscription as FeedSubscription,
+    MarketDataSourceFailure,
+    MarketDataSubscription,
 )
 from qts.data.live.reconnect import ReconnectPolicy
 from qts.domain.market_data import Tick
-
-from tests.support.live_feed import FakeLiveFeedAdapter
+from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter
 
 
 def test_feed_capabilities_are_typed_and_validate_limits() -> None:
-    capabilities = FeedCapabilities(
+    capabilities = MarketDataFeedCapabilities(
         source_id="fake-live",
         supports_ticks=True,
         supports_quotes=True,
@@ -31,11 +28,11 @@ def test_feed_capabilities_are_typed_and_validate_limits() -> None:
     assert capabilities.supports_timeframe("1m")
     assert not capabilities.supports_timeframe("1d")
     with pytest.raises(ValueError, match="max_subscriptions"):
-        FeedCapabilities(source_id="bad", max_subscriptions=0)
+        MarketDataFeedCapabilities(source_id="bad", max_subscriptions=0)
 
 
 def test_feed_capabilities_choose_source_timeframe_for_derived_bar_request() -> None:
-    capabilities = FeedCapabilities(
+    capabilities = MarketDataFeedCapabilities(
         source_id="ibkr-live",
         supported_timeframes=frozenset({"5s"}),
     )
@@ -46,24 +43,24 @@ def test_feed_capabilities_choose_source_timeframe_for_derived_bar_request() -> 
 
 def test_fake_live_feed_exposes_configured_capabilities_and_subscription_count() -> None:
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
-    adapter = FakeLiveFeedAdapter(
+    adapter = FakeStreamingMarketDataAdapter(
         source_id="fake-live",
-        capabilities=FeedCapabilities(
+        capabilities=MarketDataFeedCapabilities(
             source_id="fake-live",
             supported_timeframes=frozenset({"5s"}),
         ),
     )
 
-    adapter.subscribe(FeedSubscription("sub-1", instrument_id, timeframe="5s"))
-    adapter.subscribe(FeedSubscription("sub-1", instrument_id, timeframe="5s"))
+    adapter.subscribe(MarketDataSubscription("sub-1", instrument_id, timeframe="5s"))
+    adapter.subscribe(MarketDataSubscription("sub-1", instrument_id, timeframe="5s"))
 
     assert adapter.capabilities.source_timeframe_for("1m") == "5s"
     assert adapter.subscription_count == 1
 
 
 def test_fake_live_feed_subscribe_emit_and_failure_contract() -> None:
-    adapter = FakeLiveFeedAdapter(source_id="fake-live")
-    subscription = FeedSubscription(
+    adapter = FakeStreamingMarketDataAdapter(source_id="fake-live")
+    subscription = MarketDataSubscription(
         subscription_id="sub-1",
         instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
         timeframe="tick",
@@ -81,7 +78,7 @@ def test_fake_live_feed_subscribe_emit_and_failure_contract() -> None:
 
     assert subscribed.subscription == subscription
     assert emitted.payload == tick
-    assert isinstance(failure, LiveFeedFailure)
+    assert isinstance(failure, MarketDataSourceFailure)
     assert failure.subscription_id == subscription.subscription_id
 
 

@@ -7,6 +7,8 @@ from typing import Any
 
 from qts.domain.market_data import Bar
 
+from tests.support.backtest_manifest import m1_manifest_kwargs
+
 
 def _bar(start: datetime, close: str = "100") -> Bar:
     from qts.core.ids import InstrumentId
@@ -69,7 +71,7 @@ def test_backtest_streaming_sink_writes_orders_fills_ledger_and_points(tmp_path:
 
     writer.finalize(
         config_hash="cfg",
-        dataset_metadata=(),
+        **m1_manifest_kwargs(),
         cost_model={},
         processed_bars=1,
         warmup_bars=0,
@@ -135,7 +137,7 @@ def test_backtest_runtime_event_sink_writes_events_and_manifest_contract(
     )
     _, _, manifest, _ = writer.finalize(
         config_hash="cfg",
-        dataset_metadata=(),
+        **m1_manifest_kwargs(),
         cost_model={},
         processed_bars=1,
         warmup_bars=0,
@@ -190,7 +192,7 @@ def test_backtest_runtime_event_sink_uses_deterministic_event_timestamps(
         )
         writer.finalize(
             config_hash="cfg",
-            dataset_metadata=(),
+            **m1_manifest_kwargs(),
             cost_model={},
             processed_bars=1,
             warmup_bars=0,
@@ -263,7 +265,7 @@ def test_replay_anomalies_write_canonical_backtest_runtime_events(tmp_path: Path
     )
     writer.finalize(
         config_hash="cfg",
-        dataset_metadata=(),
+        **m1_manifest_kwargs(),
         cost_model={},
         processed_bars=1,
         warmup_bars=0,
@@ -312,17 +314,18 @@ def test_backtest_finalize_includes_runtime_topology_payload(tmp_path: Path) -> 
             equity=Decimal("10000"),
         )
     )
+    manifest_kwargs = m1_manifest_kwargs()
+    manifest_kwargs["runtime_topology_payload"] = topology
 
     _, _, manifest, _ = writer.finalize(
         config_hash="cfg",
-        dataset_metadata=(),
+        **manifest_kwargs,
         cost_model={},
         processed_bars=1,
         warmup_bars=0,
         trading_bars=1,
         final_cash=Decimal("10000"),
         strategy_version="test",
-        runtime_topology_payload=topology,
     )
 
     assert manifest["runtime_topology"]["run_id"] == "bt-run-1"

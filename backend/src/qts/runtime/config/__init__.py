@@ -16,7 +16,6 @@ from qts.runtime.config.models import (
 )
 from qts.runtime.config.paper import (
     PaperBrokerRuntimeConfig,
-    PaperRuntimeConfig,
     PaperSimulatedRuntimeConfig,
 )
 
@@ -31,7 +30,6 @@ __all__ = [
     "CostModelConfig",
     "LiveRuntimeConfig",
     "PaperBrokerRuntimeConfig",
-    "PaperRuntimeConfig",
     "PaperSimulatedRuntimeConfig",
     "RiskConfig",
     "RollPolicyConfig",

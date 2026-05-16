@@ -8,7 +8,8 @@ from qts.core.ids import InstrumentId
 from qts.domain.market_data import Bar
 
 
-def _bar(start: datetime, *, timeframe: str = "1m") -> Bar:
+def _bar(start: datetime, *, close: str = "100", timeframe: str = "1m") -> Bar:
+    close_value = Decimal(close)
     return Bar(
         instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
         start_time=start,
@@ -16,9 +17,9 @@ def _bar(start: datetime, *, timeframe: str = "1m") -> Bar:
         timeframe=timeframe,
         session_id="2026-01-02",
         open=Decimal("100"),
-        high=Decimal("100"),
-        low=Decimal("100"),
-        close=Decimal("100"),
+        high=max(Decimal("100"), close_value),
+        low=min(Decimal("100"), close_value),
+        close=close_value,
         volume=Decimal("10"),
         is_complete=True,
     )
@@ -41,6 +42,28 @@ def test_market_data_flow_requires_timezone_for_target_aggregation() -> None:
 
     with pytest.raises(RuntimeError, match="exchange timezone is required"):
         flow.publish_bar(bar)
+
+
+def test_resampled_bar_close_not_visible_before_bucket_end() -> None:
+    from qts.runtime.market_data_flow import MarketDataFlow
+
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    flow = MarketDataFlow(
+        target_timeframe="5m",
+        exchange_timezone_by_instrument={InstrumentId("EQUITY.US.NASDAQ.AAPL"): UTC},
+    )
+
+    for minute in range(4):
+        assert (
+            flow.publish_bar(_bar(start + timedelta(minutes=minute), close=str(100 + minute))) == ()
+        )
+
+    [resampled] = flow.publish_bar(_bar(start + timedelta(minutes=4), close="104"))
+
+    assert resampled.start_time == start
+    assert resampled.end_time == start + timedelta(minutes=5)
+    assert resampled.timeframe == "5m"
+    assert resampled.close == Decimal("104")
 
 
 def test_market_data_flow_exposes_replay_data_anomalies_as_runtime_events() -> None:

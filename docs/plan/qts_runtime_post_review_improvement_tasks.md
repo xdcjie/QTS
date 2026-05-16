@@ -40,11 +40,11 @@ Backtest 使用 `ReplayMarketDataSource + SimulatedExecutionAdapter`，paper/liv
 
 ## 1. 改名总表
 
-以下改名作为本计划的强制目标。允许短期保留 backward-compatible import shim，但 production inventory 和新代码必须使用新名。
+以下改名作为本计划的强制目标。当前已不再保留旧 import 入口；production inventory 和新代码必须使用新名。
 
 | 当前名称 | 新名称 | 新位置 | 处理方式 | 理由 |
 |---|---|---|---|---|
-| `LiveRuntimeSession` | `RuntimeSession` | `qts/runtime/session.py` | 改名 + 保留 deprecated alias 1 个 release | session 实际承载 paper/live broker-capable runtime，不应暗示 live capital。 |
+| `LiveRuntimeSession` | `RuntimeSession` | `qts/runtime/session.py` | 改名 + 旧入口已删除 | session 实际承载 paper/live broker-capable runtime，不应暗示 live capital。 |
 | `LiveRuntimeSessionResult` | `RuntimeSessionResult` | `qts/runtime/session.py` | 改名 | 结果对象模式无关。 |
 | `LiveRuntimeDependencies` | `RuntimeSessionDependencies` | `qts/runtime/dependencies.py` | 改名 | 依赖集合属于 runtime session，不属于 live 专属。 |
 | `LiveRuntimeState` | `RuntimeSessionState` | `qts/runtime/state.py` | 改名 | 状态机应跨 paper/live/observation 共用。 |
@@ -72,7 +72,7 @@ Backtest 使用 `ReplayMarketDataSource + SimulatedExecutionAdapter`，paper/liv
 | `IbkrTwsOrderExecutionTransport` | 拆成 5 个类 | `qts/execution/transports/` | 拆分 | 当前类职责过重。 |
 | `IbkrTwsMarketDataTransport` | 保持名称但移动 | `qts/data/transports/` | 迁移 | Transport 不应放在 adapters 目录。 |
 | `IbAsyncMarketDataTransport` | 保持名称但移动 | `qts/data/transports/` | 迁移 | 同上。 |
-| `IbkrTwsOrderExecutionTransport` | 保持 facade 名称，内部委托新类 | `qts/execution/transports/` | 迁移 + 拆分 | 兼容现有调用，同时拆职责。 |
+| `IbkrTwsOrderExecutionTransport` | 保持 facade 名称，内部委托新类 | `qts/execution/transports/` | 迁移 + 拆分 | 保持 facade 语义，同时拆职责。 |
 
 ---
 
@@ -220,7 +220,7 @@ pytest tests/quality/test_guardrails.py
 [x] `grep -R "beta" backend/src/qts` 无 production docstring 结果。
 [x] `grep -R "intended to be owned" backend/src/qts` 无结果。
 [x] guardrail 在 CI 中必跑且违规会 fail。
-[x] 所有 moved fake 的 import 已迁移或有 deprecated shim。
+[x] 所有 moved fake 的 import 已迁移，旧入口已删除。
 ```
 
 ---
@@ -258,14 +258,14 @@ qts/runtime/safety.py
 ### 实施步骤
 
 1. 新增新模块并迁移类定义。
-2. 原模块保留兼容 alias：
+2. 原模块旧入口删除：
 
 ```python
 # qts/runtime/live_runtime_session.py
 from qts.runtime.session import RuntimeSession as LiveRuntimeSession
 ```
 
-3. alias 上加 deprecation warning，期限 1 个 release。
+3. removed-import guardrail 阻止重新引用旧入口。
 4. 更新所有 production import，测试 import，文档 import。
 5. 更新 runtime event payload 字段：
    - `session_type` 不再写 live-only。
@@ -277,7 +277,7 @@ from qts.runtime.session import RuntimeSession as LiveRuntimeSession
 ```text
 [x] production code 不再 import `qts.runtime.live_runtime_session.LiveRuntimeSession`。
 [x] class inventory canonical name 显示 `RuntimeSession`。
-[x] 旧 import shim 可用，但测试中只有 compatibility test 使用。
+[x] removed import path 已删除；guardrail 样本证明重新引用会 fail。
 [x] `RuntimeSession` docstring 明确：broker-capable runtime session，不代表 live capital enabled。
 [x] backtest smoke、paper smoke、runtime command smoke 全部通过。
 ```
@@ -451,7 +451,7 @@ qts/data/live/ibkr_specific.py   # 如确实有 provider-specific 内容
 
 1. 新增共享 modules。
 2. 迁移类定义和 import。
-3. 原 `qts.data.live.*` 保留 deprecation shim 1 个 release。
+3. 原 `qts.data.live.*` 旧 contract path 已删除。
 4. 更新 `StreamingMarketDataSource` 和 `ReplayMarketDataSource`，统一引用新 contract。
 5. 更新 guardrail：
    - shared market-data contract 不能位于 `qts.data.live`。
@@ -506,7 +506,7 @@ qts/simulation/broker.py
 ### 验收条件
 
 ```text
-[x] `backend/src/qts/data/live/fake_adapter.py` 删除或仅作为 deprecated test shim。
+[x] `backend/src/qts/data/live/fake_adapter.py` 已删除。
 [x] production package 不再含 `Fake*` class。
 [x] tests 中 fake import 全部来自 `qts.testing.fakes`。
 [x] paper_simulated runtime 使用 `Simulated*`，不是 `Fake*`。
@@ -545,7 +545,7 @@ qts/data/adapters/ib_async_transport.py
 1. 新建 `qts/data/transports/__init__.py`。
 2. 移动 transport class。
 3. `IbkrMarketDataAdapter` 保留在 `qts/data/adapters/ibkr_market_data_adapter.py`。
-4. 原路径保留 deprecation shim。
+4. 原路径删除，并由 removed-import guardrail 拦截。
 5. import graph guardrail：`*Transport` class 不允许 canonical path 在 `adapters` 目录。
 
 ### 验收条件
@@ -555,7 +555,7 @@ qts/data/adapters/ib_async_transport.py
 [x] `IbAsyncMarketDataTransport` canonical path 是 `qts.data.transports`。
 [x] `IbkrMarketDataAdapter` 不拥有 network reconnect lifecycle。
 [x] source -> adapter -> transport 依赖方向清晰。
-[x] 旧 import 有 compatibility test，但新代码不再使用旧路径。
+[x] removed import path 已删除；新代码不再使用removed path。
 ```
 
 ---
@@ -594,7 +594,7 @@ qts/execution/adapters/ibkr_async_transport.py
 [x] order transport canonical path 是 `qts.execution.transports`。
 [x] adapter 只负责 provider shape mapping，不负责 socket lifecycle。
 [x] existing IBKR submit/cancel paper tests 通过。
-[x] old import path 仅作为 deprecated shim。
+[x] removed import path 已删除，并由 guardrail 拦截。
 [x] architecture import graph 通过。
 ```
 
@@ -1161,7 +1161,7 @@ risk_profile_id
 signal_aggregation_policy
 ```
 
-5. 删除 live-only topology 私有类或只保留非 canonical shim。
+5. 删除 live-only topology 私有类与旧入口。
 
 ### 验收条件
 
@@ -1425,7 +1425,7 @@ qts/runtime/config/
 ### 实施步骤
 
 1. 将 canonical config classes 移到 package。
-2. `qts/runtime/config.py` 只保留 deprecated shim，或彻底删除。
+2. `qts/runtime/config.py` 旧入口彻底删除或保持 canonical package。
 3. 更新所有 import：
 
 ```python
@@ -1434,7 +1434,7 @@ from qts.runtime.config.backtest import BacktestRuntimeConfig
 from qts.runtime.config.live import BrokerRuntimeConfig
 ```
 
-4. inventory generator 忽略 deprecated shim。
+4. inventory generator 不展示 removed import path。
 5. docs 中只出现 canonical path。
 
 ### 验收条件
@@ -1442,7 +1442,7 @@ from qts.runtime.config.live import BrokerRuntimeConfig
 ```text
 [x] class inventory 中 canonical config path 只显示 config package。
 [x] production code 不再 import `qts.runtime.config` 旧 flat module。
-[x] 旧路径 compatibility test 单独覆盖。
+[x] removed path removed-import guardrail 单独覆盖。
 [x] 文档中的推荐目录和实际目录一致。
 [x] config hash 生成不受 import path 影响。
 ```
@@ -1494,15 +1494,15 @@ reason_code
 ```
 
 3. paper broker / paper simulated 由 runtime config 决定，不由 application command 名称决定。
-4. 旧 `StartPaperCommand` 保留 deprecated alias。
+4. 删除旧 `start_paper` 入口；removed-import guardrail 阻止重新引用。
 
 ### 验收条件
 
 ```text
-[ ] application 层没有独立 paper runtime implementation。
-[ ] StartRuntimeCommand 可启动 BACKTEST/PAPER_BROKER/PAPER_SIMULATED/LIVE_OBSERVATION。
-[ ] LIVE 模式必须通过 safety gate 才能 order enabled。
-[ ] old start_paper path 仅作为 compatibility shim。
+[x] application 层没有独立 paper runtime implementation。
+[x] StartRuntimeCommand 可启动 BACKTEST/PAPER_BROKER/PAPER_SIMULATED/LIVE_OBSERVATION。
+[x] LIVE 模式必须通过 safety gate 才能 order enabled。
+[x] old start_paper path 已删除，并由 removed-import guardrail 拦截。
 ```
 
 ---
@@ -1570,7 +1570,7 @@ idempotency_key
 
 ### 目标
 
-确保 HTML 职责链、推荐目录、class inventory 不再展示旧路径、旧类名和旧缓存。
+确保 HTML 职责链、推荐目录、class inventory 不再展示removed path、旧类名和旧缓存。
 
 ### 实施步骤
 
@@ -1581,7 +1581,7 @@ idempotency_key
 2. 更新推荐目录：
    - `qts/runtime/config/models.py` 与实际一致。
    - transport canonical path 使用 `transports`。
-3. class inventory generator 忽略 deprecated alias。
+3. class inventory generator 不展示 removed alias。
 4. 增加 architecture snapshot：
 
 ```text
@@ -1598,7 +1598,7 @@ import_graph_after_post_review.json
 [x] 文档不再把 `MarketDataAdapter` 放在 `qts.data.live`。
 [x] 文档不再显示 production Fake* class。
 [x] 推荐目录和实际 source path 一致。
-[x] inventory 中 deprecated alias 被标记为 compatibility，不作为主类。
+[x] inventory 不再展示 removed alias。
 ```
 
 ---
@@ -1629,7 +1629,7 @@ StrategySdkNoBrokerImportRule
 PipelineNoActorImportRule
 AdapterNoActorMutationRule
 BrokerSymbolBoundaryRule
-DeprecatedImportNoNewUsageRule
+RemovedImportNoNewUsageRule
 ```
 
 ### 实施步骤
@@ -1638,15 +1638,16 @@ DeprecatedImportNoNewUsageRule
 2. CI 分两阶段：
    - warning mode：输出违规列表。
    - strict mode：违规直接 fail。
-3. 对 deprecated shim 添加白名单：
+3. 对 removed import path 添加禁止列表：
 
 ```text
 qts.runtime.live_runtime_session
-qts.runtime.config
+qts.runtime.live_runtime_dependencies
+qts.runtime.live_runtime_topology
 qts.data.live.adapter
+qts.application.commands.start_paper
 ```
 
-白名单必须带 expiry release。
 4. 新增 pre-commit hook：
 
 ```bash
@@ -1661,7 +1662,7 @@ python -m qts.quality.guardrails --strict
 [x] 新增 *Transport 到 adapters 目录会 fail。
 [x] strategy_sdk import broker/execution internals 会 fail。
 [x] domain import runtime 会 fail。
-[x] deprecated shim 过期后仍被 import 会 fail。
+[x] removed import path 被 import 会 fail。
 ```
 
 ---
@@ -1752,7 +1753,7 @@ python -m qts.quality.guardrails --strict
 ```text
 PR-01 baseline inventory + smoke tests
 PR-02 fake/placeholder/beta cleanup + guardrail warning mode
-PR-03 RuntimeSession rename with compatibility shims
+PR-03 RuntimeSession rename with removed removed imports
 PR-04 RuntimeMode / LiveOrderPermission / paper split
 PR-05 data shared contracts migration
 PR-06 transport package migration

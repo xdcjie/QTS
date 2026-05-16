@@ -234,7 +234,6 @@ class BacktestEngine:
         """Run the backtest and write streaming artifacts."""
         config_hash = stable_json_hash(self._config_hash_payload)
         runtime_run_id = RuntimeRunId(f"bt-{config_hash.removeprefix('sha256:')[:12]}")
-        runtime_topology_payload = None
         strategy_id = StrategyId("strategy")
         account_id = AccountId("acct-backtest")
         if self._backtest_runtime_config is not None:
@@ -247,6 +246,12 @@ class BacktestEngine:
                 account_id = runtime_topology.accounts[0].account_id
             if runtime_topology.strategies:
                 strategy_id = runtime_topology.strategies[0].strategy_id
+        else:
+            runtime_topology_payload = self._default_runtime_topology_payload(
+                runtime_run_id=runtime_run_id,
+                account_id=account_id,
+                strategy_id=strategy_id,
+            )
         writer = BacktestArtifactWriter(output_dir, run_id=runtime_run_id)
         sink = BacktestRuntimeEventSink(
             writer,
@@ -302,9 +307,7 @@ class BacktestEngine:
         )
         run_id_value, report_hash, _, artifacts = writer.finalize(
             config_hash=config_hash,
-            dataset_metadata=tuple(
-                dataset_metadata_payload(item) for item in self._dataset_metadata
-            ),
+            dataset_metadata=self._manifest_dataset_metadata_payloads(),
             cost_model=self._cost_model.to_payload(),
             processed_bars=processed_bar_count,
             warmup_bars=runtime.warmup_bars,
@@ -314,6 +317,7 @@ class BacktestEngine:
             runtime_topology_payload=runtime_topology_payload,
             brokerage_model=brokerage_model,
             execution_assumptions=self._execution_assumptions_payload(),
+            risk_config_hash=stable_json_hash(self._config_hash_payload.get("risk_config", {})),
         )
         return BacktestStreamResult(
             processed_bars=processed_bar_count,
@@ -338,6 +342,104 @@ class BacktestEngine:
         if payload is None:
             return None
         return cast(dict[str, Any], payload())
+
+    def _manifest_dataset_metadata_payloads(self) -> tuple[dict[str, Any], ...]:
+        """Return dataset provenance rows with the M1 manifest aliases."""
+        first_ts, last_ts = self._dataset_time_bounds()
+        if self._dataset_metadata:
+            return tuple(
+                self._enrich_dataset_manifest_payload(
+                    dataset_metadata_payload(item),
+                    first_ts=first_ts,
+                    last_ts=last_ts,
+                )
+                for item in self._dataset_metadata
+            )
+        return (self._inline_dataset_manifest_payload(first_ts=first_ts, last_ts=last_ts),)
+
+    def _dataset_time_bounds(self) -> tuple[str | None, str | None]:
+        start = self._config_hash_payload.get("start")
+        end = self._config_hash_payload.get("end")
+        if isinstance(start, str) and isinstance(end, str):
+            return start, end
+        if self._registry_bars:
+            return (
+                min(bar.start_time for bar in self._registry_bars).isoformat(),
+                max(bar.end_time for bar in self._registry_bars).isoformat(),
+            )
+        return None, None
+
+    @staticmethod
+    def _enrich_dataset_manifest_payload(
+        payload: dict[str, Any],
+        *,
+        first_ts: str | None,
+        last_ts: str | None,
+    ) -> dict[str, Any]:
+        enriched = dict(payload)
+        if first_ts is not None:
+            enriched.setdefault("first_ts", first_ts)
+        if last_ts is not None:
+            enriched.setdefault("last_ts", last_ts)
+        return enriched
+
+    def _inline_dataset_manifest_payload(
+        self,
+        *,
+        first_ts: str | None,
+        last_ts: str | None,
+    ) -> dict[str, Any]:
+        row_count = len(self._registry_bars)
+        source_payload = [
+            {
+                "instrument_id": bar.instrument_id.value,
+                "timeframe": bar.timeframe,
+                "start_time": bar.start_time.isoformat(),
+                "end_time": bar.end_time.isoformat(),
+                "open": str(bar.open),
+                "high": str(bar.high),
+                "low": str(bar.low),
+                "close": str(bar.close),
+                "volume": str(bar.volume) if bar.volume is not None else None,
+            }
+            for bar in self._registry_bars
+        ]
+        file_hash = stable_json_hash(source_payload)
+        return {
+            "dataset_id": "inline-bars",
+            "source": "inline",
+            "instrument_id": "MULTI",
+            "timeframe": self._target_timeframe or "source",
+            "timezone": "UTC",
+            "timezone_policy": "UTC",
+            "adjustment_mode": "none",
+            "adjustment_policy": "none",
+            "normalization_version": "inline-bars-v1",
+            "created_at": first_ts or zero_time().isoformat(),
+            "content_hash": file_hash,
+            "file_hash": file_hash,
+            "row_count": row_count,
+            "first_ts": first_ts or zero_time().isoformat(),
+            "last_ts": last_ts or zero_time().isoformat(),
+        }
+
+    @staticmethod
+    def _default_runtime_topology_payload(
+        *,
+        runtime_run_id: RuntimeRunId,
+        account_id: AccountId,
+        strategy_id: StrategyId,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "run_id": runtime_run_id.value,
+            "mode": "backtest",
+            "accounts": [{"account_id": account_id.value}],
+            "strategies": [{"strategy_id": strategy_id.value, "account_id": account_id.value}],
+            "broker_routes": [],
+            "market_data_routes": [],
+        }
+        payload["topology_hash"] = stable_json_hash(payload)
+        return payload
 
     def _market_data_provenance_for(self, bar: Bar) -> dict[str, str | int | None]:
         """Return replay provenance for a market-data runtime event."""

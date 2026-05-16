@@ -5,12 +5,12 @@ transport: official
 connections:
   market_data:
     host: 127.0.0.1
-    port: 7497
+    port: 4002
     client_id: 101
     source_id: ibkr-paper-md
   order_execution:
     host: 127.0.0.1
-    port: 7497
+    port: 4002
     client_id: 201
     broker_id: IBKR
 

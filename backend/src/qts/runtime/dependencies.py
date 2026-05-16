@@ -108,10 +108,6 @@ class RuntimeSessionDependencies:
         return dict(self.exchange_timezone_by_instrument or {})
 
 
-LiveRuntimeDependencies = RuntimeSessionDependencies
-
-
 __all__ = [
-    "LiveRuntimeDependencies",
     "RuntimeSessionDependencies",
 ]

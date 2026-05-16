@@ -297,19 +297,19 @@ def _registry() -> Any:
     return registry
 
 
-def test_live_runtime_session_submits_only_through_actor_execution_path() -> None:
+def test_runtime_session_submits_only_through_actor_execution_path() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.risk.rules.max_notional import MaxNotionalRule
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
-    from qts.runtime.state import RuntimeSessionState as LiveRuntimeState
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
+    from qts.runtime.state import RuntimeSessionState as RuntimeSessionState
 
     adapter = _RecordingExecutionAdapter()
     sink = _RecordingSink()
     account_id = AccountId("acct-live-default")
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             strategy=_BuyOnceStrategy(),
             risk_engine=RiskEngine([MaxNotionalRule(max_notional=Decimal("100000"))]),
             instrument_context=_InstrumentContext(),
@@ -326,7 +326,7 @@ def test_live_runtime_session_submits_only_through_actor_execution_path() -> Non
         )
     )
 
-    assert session.start() is LiveRuntimeState.RUNNING
+    assert session.start() is RuntimeSessionState.RUNNING
     result = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC)))
 
     assert len(adapter.seen) == 1
@@ -339,21 +339,22 @@ def test_live_runtime_session_submits_only_through_actor_execution_path() -> Non
         "runtime.signal_received",
         "runtime.strategy_intent",
         "runtime.signal_aggregated",
+        "runtime.risk_decision",
         "runtime.order_submitted",
         "runtime.broker_report",
         "runtime.account_snapshot",
     ]
 
 
-def test_live_runtime_session_writes_contextual_runtime_event_envelope() -> None:
+def test_runtime_session_writes_contextual_runtime_event_envelope() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.risk.rules.max_notional import MaxNotionalRule
     from qts.runtime.actors.account_actor import AccountActor
     from qts.runtime.config import LiveRuntimeConfig
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
+    from qts.runtime.dependencies import RuntimeSessionDependencies
     from qts.runtime.live import validate_live_startup
     from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.session import RuntimeSession
 
     account_id = AccountId("acct-live-1")
     strategy_id = StrategyId("strategy-live-1")
@@ -369,8 +370,8 @@ def test_live_runtime_session_writes_contextual_runtime_event_envelope() -> None
             broker_account_code="DU1234567",
         )
     )
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             run_id=RuntimeRunId("run-live-1"),
             mode=RuntimeMode.PAPER_BROKER,
             execution_environment=ExecutionEnvironment.BROKER,
@@ -407,17 +408,17 @@ def test_live_runtime_session_writes_contextual_runtime_event_envelope() -> None
     assert order_event["correlation_id"] == "md:EQUITY.US.NASDAQ.AAPL:1m:2026-01-02T14:31:00+00:00"
 
 
-def test_live_runtime_session_emits_order_and_fill_trace_metadata() -> None:
+def test_runtime_session_emits_order_and_fill_trace_metadata() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
 
     account_id = AccountId("acct-live-trace")
     strategy_id = StrategyId("strategy-live-trace")
     sink = _RecordingSink()
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             run_id=RuntimeRunId("run-live-trace"),
             account_id=account_id,
             strategy_id=strategy_id,
@@ -454,16 +455,16 @@ def test_live_runtime_session_emits_order_and_fill_trace_metadata() -> None:
     assert fill_event["strategy_id"] == strategy_id.value
 
 
-def test_live_runtime_session_blocks_intents_when_paused_or_degraded() -> None:
+def test_runtime_session_blocks_intents_when_paused_or_degraded() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
 
     adapter = _RecordingExecutionAdapter()
     account_id = AccountId("acct-live-default")
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             strategy=_BuyOnceStrategy(),
             risk_engine=RiskEngine([]),
             instrument_context=_InstrumentContext(),
@@ -491,18 +492,18 @@ def test_live_runtime_session_blocks_intents_when_paused_or_degraded() -> None:
     assert degraded.reason_code == "RUNTIME_DEGRADED"
 
 
-def test_live_runtime_session_reconnect_blocks_orders_until_reconciled() -> None:
+def test_runtime_session_reconnect_blocks_orders_until_reconciled() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
-    from qts.runtime.state import RuntimeSessionState as LiveRuntimeState
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
+    from qts.runtime.state import RuntimeSessionState as RuntimeSessionState
 
     adapter = _RecordingExecutionAdapter()
     sink = _RecordingSink()
     account_id = AccountId("acct-live-default")
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             strategy=_FixedTargetStrategy(Decimal("1")),
             risk_engine=RiskEngine([]),
             instrument_context=_InstrumentContext(),
@@ -534,9 +535,9 @@ def test_live_runtime_session_reconnect_blocks_orders_until_reconciled() -> None
     accepted = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 32, tzinfo=UTC)))
 
     event_kinds = [event.kind for event in sink.events]
-    assert disconnected_state is LiveRuntimeState.DEGRADED
-    assert failed_reconnect_state is LiveRuntimeState.DEGRADED
-    assert recovered_state is LiveRuntimeState.RUNNING
+    assert disconnected_state is RuntimeSessionState.DEGRADED
+    assert failed_reconnect_state is RuntimeSessionState.DEGRADED
+    assert recovered_state is RuntimeSessionState.RUNNING
     assert blocked.reason_code == "RUNTIME_DEGRADED"
     assert still_blocked.reason_code == "RUNTIME_DEGRADED"
     assert len(adapter.seen) == 1
@@ -545,18 +546,18 @@ def test_live_runtime_session_reconnect_blocks_orders_until_reconciled() -> None
     assert "runtime.broker_reconnected" in event_kinds
 
 
-def test_live_runtime_session_blocks_orders_after_delayed_market_data_permission() -> None:
+def test_runtime_session_blocks_orders_after_delayed_market_data_permission() -> None:
     from qts.data.permissions import MarketDataPermissionEvent, MarketDataPermissionState
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
 
     adapter = _RecordingExecutionAdapter()
     sink = _RecordingSink()
     account_id = AccountId("acct-live-default")
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             strategy=_FixedTargetStrategy(Decimal("1")),
             risk_engine=RiskEngine([]),
             instrument_context=_InstrumentContext(),
@@ -592,15 +593,15 @@ def test_live_runtime_session_blocks_orders_after_delayed_market_data_permission
     assert "runtime.degraded" in event_kinds
 
 
-def test_live_runtime_session_records_market_data_risk_rejection_evidence() -> None:
+def test_runtime_session_records_market_data_risk_rejection_evidence() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.risk.rules.market_data_permission import MarketDataPermissionRiskRule
     from qts.runtime.actors.account_actor import AccountActor
     from qts.runtime.config import LiveRuntimeConfig
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
+    from qts.runtime.dependencies import RuntimeSessionDependencies
     from qts.runtime.live import validate_live_startup
     from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.session import RuntimeSession
 
     adapter = _RecordingExecutionAdapter()
     sink = _RecordingSink()
@@ -618,8 +619,8 @@ def test_live_runtime_session_records_market_data_risk_rejection_evidence() -> N
             operator_signoff_id="ops-approval-md-risk",
         )
     )
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             mode=RuntimeMode.LIVE,
             execution_environment=ExecutionEnvironment.BROKER,
             startup_decision=startup_decision,
@@ -651,7 +652,7 @@ def test_live_runtime_session_records_market_data_risk_rejection_evidence() -> N
     assert "market_data" in risk_event["payload"]["evidence"]
 
 
-def test_live_runtime_session_blocks_orders_after_market_data_subscription_failure() -> None:
+def test_runtime_session_blocks_orders_after_market_data_subscription_failure() -> None:
     from qts.data.sources.streaming_market_data_source import (
         StreamingMarketDataSubscriptionEvent,
         StreamingMarketDataSubscriptionEventType,
@@ -659,16 +660,16 @@ def test_live_runtime_session_blocks_orders_after_market_data_subscription_failu
     from qts.data.subscriptions import LogicalSubscription, logical_key
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
 
     adapter = _RecordingExecutionAdapter()
     sink = _RecordingSink()
     account_id = AccountId("acct-live-default")
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
     subscription = LogicalSubscription("strategy-a", instrument_id, "1m")
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             strategy=_FixedTargetStrategy(Decimal("1")),
             risk_engine=RiskEngine([]),
             instrument_context=_InstrumentContext(),
@@ -710,11 +711,11 @@ def test_live_runtime_session_blocks_orders_after_market_data_subscription_failu
     assert failure_event.payload["reason"] == "reqMktData failed"
 
 
-def test_live_runtime_session_resolves_ids_and_filters_by_topology() -> None:
+def test_runtime_session_resolves_ids_and_filters_by_topology() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
 
     topology = RuntimeTopology(
         run_id=RuntimeRunId("topology-live-run"),
@@ -728,7 +729,7 @@ def test_live_runtime_session_resolves_ids_and_filters_by_topology() -> None:
         strategies=(
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-topo"),
-                strategy_class="tests.unit.runtime.test_live_runtime_session._BuyOnceStrategy",
+                strategy_class="tests.unit.runtime.test_runtime_session._BuyOnceStrategy",
                 account_id=AccountId("acct-topo"),
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
             ),
@@ -746,8 +747,8 @@ def test_live_runtime_session_resolves_ids_and_filters_by_topology() -> None:
 
     adapter = _RecordingExecutionAdapter()
     sink = _RecordingSink()
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             strategy=_BuyOnceStrategy(),
             risk_engine=RiskEngine([]),
             instrument_context=_InstrumentContext(),
@@ -779,11 +780,11 @@ def test_live_runtime_session_resolves_ids_and_filters_by_topology() -> None:
     assert {row["strategy_id"] for row in envelopes} == {"strat-topo"}
 
 
-def test_live_runtime_session_runs_multiple_strategies_in_one_account_topology() -> None:
+def test_runtime_session_runs_multiple_strategies_in_one_account_topology() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
 
     topology = RuntimeTopology(
         run_id=RuntimeRunId("topology-multi-strategy-run"),
@@ -797,13 +798,13 @@ def test_live_runtime_session_runs_multiple_strategies_in_one_account_topology()
         strategies=(
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-multi-a"),
-                strategy_class="tests.unit.runtime.test_live_runtime_session._FixedTargetStrategy",
+                strategy_class="tests.unit.runtime.test_runtime_session._FixedTargetStrategy",
                 account_id=AccountId("acct-topo-multi"),
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
             ),
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-multi-b"),
-                strategy_class="tests.unit.runtime.test_live_runtime_session._FixedTargetStrategy",
+                strategy_class="tests.unit.runtime.test_runtime_session._FixedTargetStrategy",
                 account_id=AccountId("acct-topo-multi"),
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
             ),
@@ -821,8 +822,8 @@ def test_live_runtime_session_runs_multiple_strategies_in_one_account_topology()
 
     adapter = _RecordingExecutionAdapter()
     sink = _RecordingSink()
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             strategies=(_FixedTargetStrategy(Decimal("1")), _FixedTargetStrategy(Decimal("2"))),
             risk_engine=RiskEngine([]),
             instrument_context=_InstrumentContext(),
@@ -869,11 +870,11 @@ def test_live_runtime_session_runs_multiple_strategies_in_one_account_topology()
     assert contributing_ids == {("strat-multi-a", "strat-multi-b")}
 
 
-def test_live_runtime_session_separate_conflict_groups_do_not_mix_targets() -> None:
+def test_runtime_session_separate_conflict_groups_do_not_mix_targets() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
 
     topology = RuntimeTopology(
         run_id=RuntimeRunId("topology-conflict-group-run"),
@@ -887,14 +888,14 @@ def test_live_runtime_session_separate_conflict_groups_do_not_mix_targets() -> N
         strategies=(
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-multi-a"),
-                strategy_class="tests.unit.runtime.test_live_runtime_session._FixedTargetStrategy",
+                strategy_class="tests.unit.runtime.test_runtime_session._FixedTargetStrategy",
                 account_id=AccountId("acct-topo-multi"),
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
                 conflict_group="group-a",
             ),
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-multi-b"),
-                strategy_class="tests.unit.runtime.test_live_runtime_session._FixedTargetStrategy",
+                strategy_class="tests.unit.runtime.test_runtime_session._FixedTargetStrategy",
                 account_id=AccountId("acct-topo-multi"),
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
                 conflict_group="group-b",
@@ -912,8 +913,8 @@ def test_live_runtime_session_separate_conflict_groups_do_not_mix_targets() -> N
     )
 
     adapter = _RecordingExecutionAdapter()
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             strategies=(_FixedTargetStrategy(Decimal("1")), _FixedTargetStrategy(Decimal("2"))),
             risk_engine=RiskEngine([]),
             instrument_context=_InstrumentContext(),
@@ -932,11 +933,11 @@ def test_live_runtime_session_separate_conflict_groups_do_not_mix_targets() -> N
     assert [order.quantity for order in adapter.seen] == [Decimal("1"), Decimal("2")]
 
 
-def test_live_runtime_session_rejects_conflicting_targets_with_reject_conflict_policy() -> None:
+def test_runtime_session_rejects_conflicting_targets_with_reject_conflict_policy() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
 
     topology = RuntimeTopology(
         run_id=RuntimeRunId("topology-conflict-reject-run"),
@@ -950,14 +951,14 @@ def test_live_runtime_session_rejects_conflicting_targets_with_reject_conflict_p
         strategies=(
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-multi-a"),
-                strategy_class="tests.unit.runtime.test_live_runtime_session._SignedTargetStrategy",
+                strategy_class="tests.unit.runtime.test_runtime_session._SignedTargetStrategy",
                 account_id=AccountId("acct-topo-multi"),
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
                 signal_aggregation_policy="reject_conflict",
             ),
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-multi-b"),
-                strategy_class="tests.unit.runtime.test_live_runtime_session._SignedTargetStrategy",
+                strategy_class="tests.unit.runtime.test_runtime_session._SignedTargetStrategy",
                 account_id=AccountId("acct-topo-multi"),
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
                 signal_aggregation_policy="reject_conflict",
@@ -976,8 +977,8 @@ def test_live_runtime_session_rejects_conflicting_targets_with_reject_conflict_p
 
     adapter = _RecordingExecutionAdapter()
     sink = _RecordingSink()
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             strategies=(_SignedTargetStrategy(Decimal("1")), _SignedTargetStrategy(Decimal("-1"))),
             risk_engine=RiskEngine([]),
             instrument_context=_InstrumentContext(),
@@ -999,11 +1000,11 @@ def test_live_runtime_session_rejects_conflicting_targets_with_reject_conflict_p
     assert any(event.kind == "runtime.signal_rejected" for event in sink.events)
 
 
-def test_live_runtime_session_routes_intents_to_multi_account_topology_partitions() -> None:
+def test_runtime_session_routes_intents_to_multi_account_topology_partitions() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
 
     account_a = AccountId("acct-topo-multi-a")
     account_b = AccountId("acct-topo-multi-b")
@@ -1025,13 +1026,13 @@ def test_live_runtime_session_routes_intents_to_multi_account_topology_partition
         strategies=(
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-multi-topology-a"),
-                strategy_class="tests.unit.runtime.test_live_runtime_session._FixedTargetStrategy",
+                strategy_class="tests.unit.runtime.test_runtime_session._FixedTargetStrategy",
                 account_id=account_a,
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
             ),
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-multi-topology-b"),
-                strategy_class="tests.unit.runtime.test_live_runtime_session._FixedTargetStrategy",
+                strategy_class="tests.unit.runtime.test_runtime_session._FixedTargetStrategy",
                 account_id=account_b,
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
             ),
@@ -1049,8 +1050,8 @@ def test_live_runtime_session_routes_intents_to_multi_account_topology_partition
 
     adapter = _FilledExecutionAdapter()
     sink = _RecordingSink()
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             strategies=(_FixedTargetStrategy(Decimal("1")), _FixedTargetStrategy(Decimal("2"))),
             risk_engine=RiskEngine([]),
             instrument_context=_InstrumentContext(),
@@ -1124,11 +1125,11 @@ def test_live_runtime_session_routes_intents_to_multi_account_topology_partition
         assert event["payload"]["aggregation_policy"] == "sum_targets"
 
 
-def test_live_runtime_session_uses_account_partition_risk_engine() -> None:
+def test_runtime_session_uses_account_partition_risk_engine() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
 
     account_a = AccountId("acct-risk-a")
     account_b = AccountId("acct-risk-b")
@@ -1144,13 +1145,13 @@ def test_live_runtime_session_uses_account_partition_risk_engine() -> None:
         strategies=(
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-risk-a"),
-                strategy_class="tests.unit.runtime.test_live_runtime_session._FixedTargetStrategy",
+                strategy_class="tests.unit.runtime.test_runtime_session._FixedTargetStrategy",
                 account_id=account_a,
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
             ),
             StrategyRuntimeSpec(
                 strategy_id=StrategyId("strat-risk-b"),
-                strategy_class="tests.unit.runtime.test_live_runtime_session._FixedTargetStrategy",
+                strategy_class="tests.unit.runtime.test_runtime_session._FixedTargetStrategy",
                 account_id=account_b,
                 subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
             ),
@@ -1166,8 +1167,8 @@ def test_live_runtime_session_uses_account_partition_risk_engine() -> None:
         ),
     )
     adapter = _FilledExecutionAdapter()
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             strategies=(_FixedTargetStrategy(Decimal("1")), _FixedTargetStrategy(Decimal("2"))),
             risk_engine=RiskEngine([]),
             risk_engines={
@@ -1196,16 +1197,16 @@ def test_live_runtime_session_uses_account_partition_risk_engine() -> None:
     assert [order.intent.account_id for order in result.orders] == [account_b]
 
 
-def test_live_runtime_session_observation_mode_keeps_market_data_without_orders() -> None:
+def test_runtime_session_observation_mode_keeps_market_data_without_orders() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
 
     adapter = _RecordingExecutionAdapter()
     account_id = AccountId("acct-live-default")
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             strategy=_BuyOnceStrategy(),
             risk_engine=RiskEngine([]),
             instrument_context=_InstrumentContext(),
@@ -1230,17 +1231,17 @@ def test_live_runtime_session_observation_mode_keeps_market_data_without_orders(
     assert result.market_data[0].instrument_id == InstrumentId("EQUITY.US.NASDAQ.AAPL")
 
 
-def test_live_runtime_session_live_mode_requires_startup_decision_for_orders() -> None:
+def test_runtime_session_live_mode_requires_startup_decision_for_orders() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
+    from qts.runtime.dependencies import RuntimeSessionDependencies
     from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.session import RuntimeSession
 
     adapter = _RecordingExecutionAdapter()
     account_id = AccountId("acct-live-startup")
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             mode=RuntimeMode.LIVE,
             execution_environment=ExecutionEnvironment.BROKER,
             strategy=_BuyOnceStrategy(),
@@ -1268,14 +1269,14 @@ def test_live_runtime_session_live_mode_requires_startup_decision_for_orders() -
 def test_paper_broker_runtime_session_requires_startup_decision_for_orders() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
+    from qts.runtime.dependencies import RuntimeSessionDependencies
     from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.session import RuntimeSession
 
     adapter = _RecordingExecutionAdapter()
     account_id = AccountId("acct-paper-broker-startup")
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             mode=RuntimeMode.PAPER_BROKER,
             execution_environment=ExecutionEnvironment.BROKER,
             strategy=_BuyOnceStrategy(),
@@ -1300,14 +1301,14 @@ def test_paper_broker_runtime_session_requires_startup_decision_for_orders() -> 
     assert result.reason_code == "BROKER_STARTUP_NOT_ALLOWED"
 
 
-def test_live_runtime_session_observation_permission_blocks_orders() -> None:
+def test_runtime_session_observation_permission_blocks_orders() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
     from qts.runtime.config import LiveRuntimeConfig
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
+    from qts.runtime.dependencies import RuntimeSessionDependencies
     from qts.runtime.live import validate_live_startup
     from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.session import RuntimeSession
 
     adapter = _RecordingExecutionAdapter()
     account_id = AccountId("acct-live-observation-permission")
@@ -1321,8 +1322,8 @@ def test_live_runtime_session_observation_permission_blocks_orders() -> None:
             kill_switch_configured=True,
         )
     )
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             mode=RuntimeMode.LIVE_OBSERVATION,
             execution_environment=ExecutionEnvironment.DISABLED,
             startup_decision=startup_decision,
@@ -1348,14 +1349,14 @@ def test_live_runtime_session_observation_permission_blocks_orders() -> None:
     assert result.reason_code == "OBSERVATION_ONLY"
 
 
-def test_live_runtime_session_live_mode_allows_orders_after_startup_decision() -> None:
+def test_runtime_session_live_mode_allows_orders_after_startup_decision() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
     from qts.runtime.config import LiveRuntimeConfig
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
+    from qts.runtime.dependencies import RuntimeSessionDependencies
     from qts.runtime.live import validate_live_startup
     from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.session import RuntimeSession
 
     adapter = _RecordingExecutionAdapter()
     account_id = AccountId("acct-live-startup-allowed")
@@ -1372,8 +1373,8 @@ def test_live_runtime_session_live_mode_allows_orders_after_startup_decision() -
             operator_signoff_id="ops-approval-1",
         )
     )
-    session = LiveRuntimeSession(
-        LiveRuntimeDependencies(
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
             mode=RuntimeMode.LIVE,
             execution_environment=ExecutionEnvironment.BROKER,
             startup_decision=startup_decision,

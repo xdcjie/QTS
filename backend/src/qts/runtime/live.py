@@ -15,10 +15,6 @@ from qts.runtime.permissions import LiveOrderPermission
 from qts.runtime.sinks.base import RuntimeEvent
 from qts.runtime.state import RuntimeSessionState, RuntimeStateMachine
 
-LiveRuntimeState = RuntimeSessionState
-LiveRuntimeStateMachine = RuntimeStateMachine
-LivePermissionMode = LiveOrderPermission
-
 
 class BrokerRuntimeStartupDecisionStatus(StrEnum):
     """Explicit startup decision for paper/live capable runtimes."""
@@ -300,12 +296,6 @@ def _order_permission_for_status(
     return LiveOrderPermission.OBSERVATION_ONLY
 
 
-LiveStartupDecisionStatus = BrokerRuntimeStartupDecisionStatus
-LiveStartupCheck = BrokerRuntimeStartupCheck
-LiveStartupChecklist = BrokerRuntimeStartupChecklist
-LiveStartupDecision = BrokerRuntimeStartupDecision
-
-
 @dataclass(frozen=True, slots=True)
 class RuntimeOrderResult:
     """Result of live runtime order submission."""
@@ -322,10 +312,10 @@ class LiveRuntime:
     def __init__(self, *, broker: BrokerAdapter, feed: StreamingFeedAdapter) -> None:
         self._broker = broker
         self._feed = feed
-        self._machine = LiveRuntimeStateMachine()
+        self._machine = RuntimeStateMachine()
 
     @property
-    def state(self) -> LiveRuntimeState:
+    def state(self) -> RuntimeSessionState:
         """Perform state."""
         return self._machine.state
 
@@ -334,49 +324,49 @@ class LiveRuntime:
         """Perform feed."""
         return self._feed
 
-    def start(self) -> LiveRuntimeState:
+    def start(self) -> RuntimeSessionState:
         """Perform start."""
         self._machine.apply("start")
         return self._machine.apply("started")
 
-    def stop(self) -> LiveRuntimeState:
+    def stop(self) -> RuntimeSessionState:
         """Perform stop."""
         return self._machine.apply("stop")
 
-    def pause(self) -> LiveRuntimeState:
+    def pause(self) -> RuntimeSessionState:
         """Perform pause."""
         return self._machine.apply("pause")
 
-    def resume(self) -> LiveRuntimeState:
+    def resume(self) -> RuntimeSessionState:
         """Perform resume."""
         return self._machine.apply("resume")
 
-    def degrade(self) -> LiveRuntimeState:
+    def degrade(self) -> RuntimeSessionState:
         """Perform degrade."""
         return self._machine.apply("degrade")
 
-    def recover(self) -> LiveRuntimeState:
+    def recover(self) -> RuntimeSessionState:
         """Perform recover."""
         return self._machine.apply("recover")
 
-    def apply_runtime_event(self, event: RuntimeEvent) -> LiveRuntimeState:
+    def apply_runtime_event(self, event: RuntimeEvent) -> RuntimeSessionState:
         """Apply runtime control events such as market-data degradation."""
 
         if event.kind == "runtime.degraded":
-            if self.state is LiveRuntimeState.DEGRADED:
+            if self.state is RuntimeSessionState.DEGRADED:
                 return self.state
             return self.degrade()
         return self.state
 
     def submit_order(self, request: BrokerOrderRequest) -> RuntimeOrderResult:
         """Perform submit_order."""
-        if self.state is LiveRuntimeState.PAUSED:
+        if self.state is RuntimeSessionState.PAUSED:
             return RuntimeOrderResult(request=request, accepted=False, reason_code="RUNTIME_PAUSED")
-        if self.state is LiveRuntimeState.DEGRADED:
+        if self.state is RuntimeSessionState.DEGRADED:
             return RuntimeOrderResult(
                 request=request, accepted=False, reason_code="RUNTIME_DEGRADED"
             )
-        if self.state is not LiveRuntimeState.RUNNING:
+        if self.state is not RuntimeSessionState.RUNNING:
             return RuntimeOrderResult(
                 request=request, accepted=False, reason_code="RUNTIME_NOT_RUNNING"
             )
@@ -390,14 +380,7 @@ __all__ = [
     "BrokerRuntimeStartupChecklist",
     "BrokerRuntimeStartupDecision",
     "BrokerRuntimeStartupDecisionStatus",
-    "LivePermissionMode",
-    "LiveStartupCheck",
-    "LiveStartupChecklist",
-    "LiveStartupDecisionStatus",
     "LiveRuntime",
-    "LiveRuntimeState",
-    "LiveRuntimeStateMachine",
-    "LiveStartupDecision",
     "RuntimeOrderResult",
     "validate_live_startup",
 ]

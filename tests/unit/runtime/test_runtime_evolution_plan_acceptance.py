@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
+from tests.support.backtest_manifest import m1_manifest_kwargs
+
 if TYPE_CHECKING:
     from qts.execution.broker import BrokerOrderRequest
 
@@ -50,12 +52,11 @@ def test_observation_mode_blocks_submit_order() -> None:
     from qts.core.ids import BrokerId
     from qts.runtime.live import LiveRuntime
     from qts.testing.fakes.broker import FakeBrokerAdapter
-
-    from tests.support.live_feed import FakeLiveFeedAdapter
+    from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter
 
     runtime = LiveRuntime(
         broker=FakeBrokerAdapter(broker_id=BrokerId("fake")),
-        feed=FakeLiveFeedAdapter(source_id="acceptance"),
+        feed=FakeStreamingMarketDataAdapter(source_id="acceptance"),
     )
 
     result = runtime.submit_order(_runtime_order_request())
@@ -125,7 +126,6 @@ def test_runtime_config_package_exposes_mode_specific_modules() -> None:
     from qts.runtime.config.live import LiveRuntimeConfig
     from qts.runtime.config.paper import (
         PaperBrokerRuntimeConfig,
-        PaperRuntimeConfig,
         PaperSimulatedRuntimeConfig,
     )
 
@@ -133,7 +133,6 @@ def test_runtime_config_package_exposes_mode_specific_modules() -> None:
     assert LiveRuntimeConfig.__name__ == "LiveRuntimeConfig"
     assert PaperBrokerRuntimeConfig.__name__ == "PaperBrokerRuntimeConfig"
     assert PaperSimulatedRuntimeConfig.__name__ == "PaperSimulatedRuntimeConfig"
-    assert PaperRuntimeConfig.__name__ == "PaperRuntimeConfig"
     assert ConfigMigration.__name__ == "ConfigMigration"
     assert TradingRuntimeConfig(mode="paper_broker").mode == "paper_broker"
 
@@ -160,12 +159,6 @@ def test_paper_runtime_sample_configs_are_disjoint() -> None:
 
 def test_runtime_session_canonical_names_are_mode_neutral() -> None:
     from qts.runtime.dependencies import RuntimeSessionDependencies
-    from qts.runtime.live import LiveRuntimeState, LiveRuntimeStateMachine
-    from qts.runtime.live_runtime_session import (
-        LiveKillSwitchEvidence,
-        LiveRuntimeSession,
-        LiveRuntimeSessionResult,
-    )
     from qts.runtime.safety import RuntimeKillSwitchEvidence
     from qts.runtime.session import RuntimeSession, RuntimeSessionResult
     from qts.runtime.state import RuntimeSessionState, RuntimeStateMachine
@@ -179,11 +172,6 @@ def test_runtime_session_canonical_names_are_mode_neutral() -> None:
     assert RuntimeKillSwitchEvidence.__module__ == "qts.runtime.safety"
 
     assert RuntimeStateMachine().apply("start") is RuntimeSessionState.STARTING
-    assert LiveRuntimeSession is RuntimeSession
-    assert LiveRuntimeSessionResult is RuntimeSessionResult
-    assert LiveKillSwitchEvidence is RuntimeKillSwitchEvidence
-    assert LiveRuntimeState is RuntimeSessionState
-    assert LiveRuntimeStateMachine is RuntimeStateMachine
 
 
 def test_transport_canonical_modules_are_under_transports() -> None:
@@ -210,32 +198,13 @@ def test_transport_canonical_modules_are_under_transports() -> None:
     )
 
 
-def test_transport_adapter_paths_are_compatibility_shims() -> None:
-    from qts.data.adapters.ibkr_async_transport import (
-        IbAsyncMarketDataTransport as LegacyAsyncMarketDataTransport,
-    )
-    from qts.data.adapters.ibkr_transport import (
-        IbkrTwsMarketDataTransport as LegacyTwsMarketDataTransport,
-    )
-    from qts.data.transports.ib_async_market_data_transport import IbAsyncMarketDataTransport
-    from qts.data.transports.ibkr_tws_market_data_transport import IbkrTwsMarketDataTransport
-    from qts.execution.adapters.ibkr_async_transport import (
-        IbAsyncOrderExecutionTransport as LegacyAsyncOrderExecutionTransport,
-    )
-    from qts.execution.adapters.ibkr_transport import (
-        IbkrTwsOrderExecutionTransport as LegacyTwsOrderExecutionTransport,
-    )
-    from qts.execution.transports.ib_async_order_execution_transport import (
-        IbAsyncOrderExecutionTransport,
-    )
-    from qts.execution.transports.ibkr_tws_order_execution_transport import (
-        IbkrTwsOrderExecutionTransport,
-    )
+def test_transport_adapter_paths_are_removed() -> None:
+    import importlib.util
 
-    assert LegacyTwsMarketDataTransport is IbkrTwsMarketDataTransport
-    assert LegacyAsyncMarketDataTransport is IbAsyncMarketDataTransport
-    assert LegacyTwsOrderExecutionTransport is IbkrTwsOrderExecutionTransport
-    assert LegacyAsyncOrderExecutionTransport is IbAsyncOrderExecutionTransport
+    assert importlib.util.find_spec("qts.data.adapters.ibkr_async_transport") is None
+    assert importlib.util.find_spec("qts.data.adapters.ibkr_transport") is None
+    assert importlib.util.find_spec("qts.execution.adapters.ibkr_async_transport") is None
+    assert importlib.util.find_spec("qts.execution.adapters.ibkr_transport") is None
 
 
 def test_live_config_rejects_backtest_only_fields() -> None:
@@ -278,7 +247,7 @@ def test_brokerage_model_written_to_manifest(tmp_path: Path) -> None:
 
     _, _, manifest, _ = writer.finalize(
         config_hash="cfg",
-        dataset_metadata=(),
+        **m1_manifest_kwargs(),
         cost_model={},
         processed_bars=0,
         warmup_bars=0,
@@ -294,7 +263,7 @@ def test_brokerage_model_written_to_manifest(tmp_path: Path) -> None:
 def test_checklist_written_to_manifest(tmp_path: Path) -> None:
     from qts.reporting.live import LiveReportWriter
     from qts.runtime.config import LiveRuntimeConfig
-    from qts.runtime.live import LiveStartupChecklist
+    from qts.runtime.live import BrokerRuntimeStartupChecklist
     from qts.runtime.sinks.live import LiveRuntimeEventSink
 
     config = LiveRuntimeConfig(
@@ -305,7 +274,7 @@ def test_checklist_written_to_manifest(tmp_path: Path) -> None:
         calendar_configured=True,
         kill_switch_configured=True,
     )
-    checklist = LiveStartupChecklist.from_config(config)
+    checklist = BrokerRuntimeStartupChecklist.from_config(config)
     sink = LiveRuntimeEventSink(tmp_path)
     sink.close()
 

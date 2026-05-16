@@ -373,7 +373,7 @@ def test_ibkr_tws_order_execution_transport_builds_limit_order_and_normalizes_ca
     assert cancel_report.broker_order_id == "777"
 
 
-def test_ibkr_tws_order_execution_transport_handles_legacy_commission_report() -> None:
+def test_ibkr_tws_order_execution_transport_handles_older_commission_report() -> None:
     from qts.core.ids import BrokerId, InstrumentId
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
@@ -387,7 +387,7 @@ def test_ibkr_tws_order_execution_transport_handles_legacy_commission_report() -
     )
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
-    class LegacyCommissionReport:
+    class OlderCommissionReport:
         execId = "fill-001"
         commission = 1.25
         currency = "USD"
@@ -423,7 +423,7 @@ def test_ibkr_tws_order_execution_transport_handles_legacy_commission_report() -
         )
     )
 
-    transport.handle_commission_report(LegacyCommissionReport())
+    transport.handle_commission_report(OlderCommissionReport())
     completed = transport.wait_for_fill_report("1", timeout_seconds=1)
 
     assert isinstance(completed, ExecutionReport)

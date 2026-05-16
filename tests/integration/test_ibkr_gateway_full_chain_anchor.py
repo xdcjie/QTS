@@ -62,8 +62,8 @@ def test_ibkr_gateway_full_chain_anchor_requires_real_paper_evidence(
     from qts.reporting.live import LiveReportWriter
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
-    from qts.runtime.dependencies import RuntimeSessionDependencies as LiveRuntimeDependencies
-    from qts.runtime.session import RuntimeSession as LiveRuntimeSession
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
     from qts.runtime.sinks.base import RuntimeEvent
     from qts.runtime.sinks.live import LiveRuntimeEventSink
 
@@ -116,7 +116,7 @@ def test_ibkr_gateway_full_chain_anchor_requires_real_paper_evidence(
         evidence_dir,
         filename=f"paper-full-chain-events-{generated_at:%Y%m%dT%H%M%SZ}.ndjson",
     )
-    session: LiveRuntimeSession | None = None
+    session: RuntimeSession | None = None
     runtime_execution: _IbkrRuntimeExecutionAdapter | None = None
     account_id = ""
     config_account_id: str | None = None
@@ -162,8 +162,8 @@ def test_ibkr_gateway_full_chain_anchor_requires_real_paper_evidence(
             request_adapter=request_adapter,
             contract=contract,
         )
-        session = LiveRuntimeSession(
-            LiveRuntimeDependencies(
+        session = RuntimeSession(
+            RuntimeSessionDependencies(
                 strategy=_RoundTripStrategy(),
                 risk_engine=RiskEngine([]),
                 instrument_context=_InstrumentContext(instrument_id),

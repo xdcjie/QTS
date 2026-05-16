@@ -13,6 +13,8 @@ from qts.runtime.actors.account_actor import AccountSnapshot
 from qts.runtime.sinks.base import RuntimeEvent
 from qts.strategy_sdk import Strategy
 
+from tests.support.backtest_manifest import m1_manifest_kwargs
+
 
 class _RecordingBacktestSink:
     """Collects runtime events without writing artifacts."""
@@ -140,7 +142,7 @@ def test_backtest_actor_loop_processes_bars_and_returns_runtime_result(tmp_path:
 
     writer.finalize(
         config_hash="cfg",
-        dataset_metadata=(),
+        **m1_manifest_kwargs(),
         cost_model={},
         processed_bars=runtime.processed_bars,
         warmup_bars=runtime.warmup_bars,
@@ -302,7 +304,7 @@ def test_backtest_actor_loop_emits_broker_reject_event_for_capability_reject(
     runtime = loop.run(sink=sink, prune_history=True, compact_orders=True)
     writer.finalize(
         config_hash="cfg",
-        dataset_metadata=(),
+        **m1_manifest_kwargs(),
         cost_model={},
         processed_bars=runtime.processed_bars,
         warmup_bars=runtime.warmup_bars,

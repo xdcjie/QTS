@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
+from tests.support.backtest_manifest import m1_manifest_kwargs
+
 if TYPE_CHECKING:
     from qts.domain.market_data import Bar
     from qts.strategy_sdk import TargetIntent
@@ -150,7 +152,7 @@ def test_manifest_contains_runtime_run_id(tmp_path: Path) -> None:
 
     _, _, manifest, _ = writer.finalize(
         config_hash="cfg",
-        dataset_metadata=(),
+        **m1_manifest_kwargs(),
         cost_model={},
         processed_bars=0,
         warmup_bars=0,
@@ -419,12 +421,11 @@ def test_stale_data_blocks_live_orders() -> None:
     from qts.runtime.live import LiveRuntime
     from qts.runtime.sinks.base import RuntimeEvent
     from qts.testing.fakes.broker import FakeBrokerAdapter
-
-    from tests.support.live_feed import FakeLiveFeedAdapter
+    from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter
 
     runtime = LiveRuntime(
         broker=FakeBrokerAdapter(broker_id=BrokerId("fake")),
-        feed=FakeLiveFeedAdapter(source_id="acceptance"),
+        feed=FakeStreamingMarketDataAdapter(source_id="acceptance"),
     )
     runtime.start()
     runtime.apply_runtime_event(RuntimeEvent(kind="runtime.degraded", payload={"reason": "stale"}))
@@ -599,7 +600,7 @@ def test_live_blocks_without_operator_signoff() -> None:
 
 def test_live_blocks_with_reconciliation_drift() -> None:
     from qts.runtime.config import LiveRuntimeConfig
-    from qts.runtime.live import LiveStartupChecklist
+    from qts.runtime.live import BrokerRuntimeStartupChecklist
 
     config = LiveRuntimeConfig(
         mode="paper_simulated",
@@ -611,7 +612,7 @@ def test_live_blocks_with_reconciliation_drift() -> None:
         reconciliation_passed=False,
     )
 
-    checklist = LiveStartupChecklist.from_config(config)
+    checklist = BrokerRuntimeStartupChecklist.from_config(config)
 
     assert checklist.by_name("open_order_reconciliation_check").status == "FAIL"
     assert checklist.by_name("position_reconciliation_check").status == "FAIL"
@@ -620,7 +621,7 @@ def test_live_blocks_with_reconciliation_drift() -> None:
 
 def test_live_blocks_when_event_sink_not_writable() -> None:
     from qts.runtime.config import LiveRuntimeConfig
-    from qts.runtime.live import LiveStartupChecklist
+    from qts.runtime.live import BrokerRuntimeStartupChecklist
 
     config = LiveRuntimeConfig(
         mode="paper_simulated",
@@ -632,12 +633,15 @@ def test_live_blocks_when_event_sink_not_writable() -> None:
         event_sink_writable=False,
     )
 
-    assert LiveStartupChecklist.from_config(config).by_name("event_sink_check").status == "FAIL"
+    assert (
+        BrokerRuntimeStartupChecklist.from_config(config).by_name("event_sink_check").status
+        == "FAIL"
+    )
 
 
 def test_observation_allowed_when_order_blocked() -> None:
     from qts.runtime.config import LiveRuntimeConfig
-    from qts.runtime.live import LiveStartupDecisionStatus, validate_live_startup
+    from qts.runtime.live import BrokerRuntimeStartupDecisionStatus, validate_live_startup
 
     config = LiveRuntimeConfig(
         mode="observation",
@@ -648,7 +652,9 @@ def test_observation_allowed_when_order_blocked() -> None:
         kill_switch_configured=True,
     )
 
-    assert validate_live_startup(config).status is LiveStartupDecisionStatus.ALLOW_OBSERVATION
+    assert (
+        validate_live_startup(config).status is BrokerRuntimeStartupDecisionStatus.ALLOW_OBSERVATION
+    )
 
 
 def test_live_blocks_when_market_data_stale() -> None:
@@ -765,7 +771,21 @@ def test_backtest_manifest_contains_dataset_hash(tmp_path: Path) -> None:
 
     _, _, manifest, _ = writer.finalize(
         config_hash="cfg",
-        dataset_metadata=({"dataset_id": "dataset", "content_hash": "sha256:data"},),
+        **{
+            **m1_manifest_kwargs(),
+            "dataset_metadata": (
+                {
+                    "dataset_id": "dataset",
+                    "content_hash": "sha256:data",
+                    "file_hash": "sha256:data",
+                    "row_count": 1,
+                    "first_ts": "2026-01-02T14:30:00+00:00",
+                    "last_ts": "2026-01-02T14:31:00+00:00",
+                    "timezone": "UTC",
+                    "adjustment_mode": "raw",
+                },
+            ),
+        },
         cost_model={},
         processed_bars=0,
         warmup_bars=0,
@@ -890,10 +910,9 @@ def test_pause_blocks_new_order_but_keeps_market_data() -> None:
     from qts.core.ids import BrokerId
     from qts.runtime.live import LiveRuntime
     from qts.testing.fakes.broker import FakeBrokerAdapter
+    from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter
 
-    from tests.support.live_feed import FakeLiveFeedAdapter
-
-    feed = FakeLiveFeedAdapter(source_id="acceptance")
+    feed = FakeStreamingMarketDataAdapter(source_id="acceptance")
     runtime = LiveRuntime(broker=FakeBrokerAdapter(broker_id=BrokerId("fake")), feed=feed)
     runtime.start()
     runtime.pause()

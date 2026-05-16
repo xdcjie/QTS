@@ -9,7 +9,7 @@ from typing import Any
 
 from qts.backtest.engine import BacktestEngine
 from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
-from qts.data.events import MarketDataSubscription as FeedSubscription
+from qts.data.events import MarketDataSubscription
 from qts.data.historical.adapter import HistoricalMarketDataAdapter
 from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
 from qts.domain.market_data import Bar
@@ -34,8 +34,7 @@ from qts.runtime.actors.market_data_actor import (
 from qts.runtime.actors.order_manager_actor import OrderManagerActor, SubmitOrder
 from qts.runtime.mailbox import Mailbox
 from qts.strategy_sdk import Strategy
-
-from tests.support.live_feed import FakeLiveFeedAdapter
+from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter
 
 
 @dataclass(slots=True)
@@ -195,8 +194,8 @@ def test_historical_and_fake_live_market_data_use_same_actor_event_contract(
         volume=Decimal("1"),
         is_complete=True,
     )
-    live_source = FakeLiveFeedAdapter(source_id="fake-live")
-    live_source.subscribe(FeedSubscription("live-1", instrument_id, timeframe="1m"))
+    live_source = FakeStreamingMarketDataAdapter(source_id="fake-live")
+    live_source.subscribe(MarketDataSubscription("live-1", instrument_id, timeframe="1m"))
 
     csv_path = tmp_path / "gc.csv"
     _write_historical_rows(
@@ -224,7 +223,7 @@ def test_historical_and_fake_live_market_data_use_same_actor_event_contract(
         start=start,
         end=start + timedelta(minutes=1),
     )
-    historical_source.subscribe(FeedSubscription("hist-1", instrument_id, timeframe="1m"))
+    historical_source.subscribe(MarketDataSubscription("hist-1", instrument_id, timeframe="1m"))
 
     live_payload = _route_market_data_event(live_source.emit(live_bar).payload)
     historical_payload = _route_market_data_event(next(historical_source.events("hist-1")).payload)

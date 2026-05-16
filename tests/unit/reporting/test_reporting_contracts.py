@@ -7,6 +7,8 @@ from pathlib import Path
 
 from qts.runtime.sinks.base import RuntimeEvent
 
+from tests.support.backtest_manifest import m1_manifest_kwargs
+
 
 def test_reporting_base_contracts_define_manifest_and_artifact_methods() -> None:
     from qts.reporting.base import ReportWriter, RuntimeArtifactWriter, RuntimeManifest
@@ -72,17 +74,18 @@ def test_backtest_manifest_validates_against_shared_runtime_manifest(tmp_path: P
     writer.write_equity_point(
         EquityCurvePoint(time=datetime(2026, 1, 2, 14, 30, tzinfo=UTC), equity=Decimal("10000"))
     )
+    manifest_kwargs = m1_manifest_kwargs()
+    manifest_kwargs["runtime_topology_payload"] = {"topology_hash": "sha256:backtest-topology"}
 
     _run_id, _report_hash, payload, _artifacts = writer.finalize(
         config_hash="sha256:config",
-        dataset_metadata=(),
+        **manifest_kwargs,
         cost_model={},
         processed_bars=1,
         warmup_bars=0,
         trading_bars=1,
         final_cash=Decimal("10000"),
         strategy_version="test",
-        runtime_topology_payload={"topology_hash": "sha256:backtest-topology"},
     )
     runtime_manifest = RuntimeManifest.from_payload(payload)
 
