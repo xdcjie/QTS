@@ -1444,10 +1444,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>311 files</span>
-      <span>537 classes</span>
-      <span>1702 functions</span>
-      <span>297 backend</span>
+      <span>313 files</span>
+      <span>550 classes</span>
+      <span>1754 functions</span>
+      <span>299 backend</span>
       <span>14 frontend</span>
     </div>
   </div>
@@ -6320,6 +6320,53 @@
     </details>
     <details class="inventory-file">
       <summary>
+        <code>backend/src/qts/indicators/technical.py</code>
+        <span class="inventory-counts">
+          <span>4 classes</span>
+          <span>14 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Incremental technical indicators derived from completed bars.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>AverageTrueRange</code></td><td>technical:13</td><td>Wilder average true range over completed bars.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>RSI</code></td><td>technical:55</td><td>Relative strength index using Wilder smoothing.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>SessionVWAP</code></td><td>technical:115</td><td>Session VWAP that resets on `Bar.session_id` changes.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>VolumeRatio</code></td><td>technical:146</td><td>Current volume divided by the rolling average volume.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>__post_init__</code></td><td>AverageTrueRange:21</td><td>Validate and initialize ATR state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>AverageTrueRange:26</td><td>Return whether ATR has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_bar</code></td><td>AverageTrueRange:30</td><td>Update ATR from a completed OHLC bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update</code></td><td>AverageTrueRange:34</td><td>Update ATR from OHLC values.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_true_range</code></td><td>AverageTrueRange:47</td><td>Return true range using the previous close when available.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>RSI:66</td><td>Validate and initialize RSI state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>RSI:72</td><td>Return whether RSI has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update</code></td><td>RSI:76</td><td>Update RSI from a close price.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_rsi_from_averages</code></td><td>RSI:104</td><td>Compute RSI from initialized average gain/loss values.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>SessionVWAP:124</td><td>Return whether the current session has a VWAP value.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_bar</code></td><td>SessionVWAP:128</td><td>Update VWAP from a completed OHLCV bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>VolumeRatio:153</td><td>Validate and initialize rolling volume state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>VolumeRatio:158</td><td>Return whether volume ratio has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update</code></td><td>VolumeRatio:162</td><td>Update the ratio from a volume observation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
         <code>backend/src/qts/load/__init__.py</code>
         <span class="inventory-counts">
           <span>0 classes</span>
@@ -7624,6 +7671,71 @@
               <tr><td><code>_normalize_execution_assumptions_payload</code></td><td>module:419</td><td>提供模块级 normalize execution assumptions payload 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>_validate_m1_backtest_manifest</code></td><td>module:432</td><td>提供模块级 validate m1 backtest manifest 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>_require_manifest_value</code></td><td>module:452</td><td>提供模块级 require manifest value 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
+        <code>backend/src/qts/reporting/backtest_analyst.py</code>
+        <span class="inventory-counts">
+          <span>9 classes</span>
+          <span>27 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Human-readable analyst reports for finalized backtest artifacts.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>BacktestReportError</code></td><td>backtest_analyst:16</td><td>Raised when finalized backtest artifacts cannot produce an analyst report.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ArtifactRows</code></td><td>backtest_analyst:21</td><td>Loaded rows from the finalized backtest artifact set.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestReportMetrics</code></td><td>backtest_analyst:32</td><td>Human-facing display metrics derived from finalized artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>AnalystBacktestReportArtifacts</code></td><td>backtest_analyst:47</td><td>Generated analyst report output paths.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestReportDataset</code></td><td>backtest_analyst:56</td><td>Validated report input loaded from a completed backtest run.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestRunReportLoader</code></td><td>backtest_analyst:95</td><td>Load finalized backtest artifacts for analyst report rendering.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>AnalystBacktestReportRenderer</code></td><td>backtest_analyst:218</td><td>Render a static analyst HTML report from finalized backtest artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestPdfExporter</code></td><td>backtest_analyst:421</td><td>Export analyst HTML reports to PDF through a local Chrome executable.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>AnalystBacktestReportGenerator</code></td><td>backtest_analyst:482</td><td>Generate analyst HTML and PDF reports from completed backtest runs.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>run_id</code></td><td>BacktestReportDataset:66</td><td>Return the finalized backtest run id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>metrics</code></td><td>BacktestReportDataset:71</td><td>Return display metrics derived from finalized artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_final_equity</code></td><td>BacktestReportDataset:89</td><td>实现 BacktestReportDataset 的 final equity 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>from_summary</code></td><td>BacktestRunReportLoader:101</td><td>Load a completed backtest report dataset from a summary artifact.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>from_run_directory</code></td><td>BacktestRunReportLoader:134</td><td>Load the only completed summary in a run directory.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_resolve_manifest_path</code></td><td>BacktestRunReportLoader:144</td><td>实现 BacktestRunReportLoader 的 resolve manifest path 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_validate_identity</code></td><td>BacktestRunReportLoader:156</td><td>实现 BacktestRunReportLoader 的 validate identity 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_read_artifact_rows</code></td><td>BacktestRunReportLoader:167</td><td>实现 BacktestRunReportLoader 的 read artifact rows 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_read_json_object</code></td><td>BacktestRunReportLoader:191</td><td>实现 BacktestRunReportLoader 的 read json object 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_read_ndjson</code></td><td>BacktestRunReportLoader:201</td><td>实现 BacktestRunReportLoader 的 read ndjson 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>render</code></td><td>AnalystBacktestReportRenderer:221</td><td>Return a complete static HTML report document.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_style</code></td><td>AnalystBacktestReportRenderer:292</td><td>实现 AnalystBacktestReportRenderer 的 style 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_metric_card</code></td><td>AnalystBacktestReportRenderer:325</td><td>实现 AnalystBacktestReportRenderer 的 metric card 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_strategy_name</code></td><td>AnalystBacktestReportRenderer:334</td><td>实现 AnalystBacktestReportRenderer 的 strategy name 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_artifact_links</code></td><td>AnalystBacktestReportRenderer:345</td><td>实现 AnalystBacktestReportRenderer 的 artifact links 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_equity_svg</code></td><td>AnalystBacktestReportRenderer:361</td><td>实现 AnalystBacktestReportRenderer 的 equity svg 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_decimal_value</code></td><td>module:392</td><td>提供模块级 decimal value 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_format_percent</code></td><td>module:401</td><td>提供模块级 format percent 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_format_decimal</code></td><td>module:407</td><td>提供模块级 format decimal 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_svg_number</code></td><td>module:414</td><td>提供模块级 svg number 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>BacktestPdfExporter:427</td><td>Create a PDF exporter with optional Chrome path override.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>export</code></td><td>BacktestPdfExporter:438</td><td>Export a local HTML file to PDF and return the PDF path.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_command</code></td><td>BacktestPdfExporter:460</td><td>实现 BacktestPdfExporter 的 command 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_detect_chrome</code></td><td>BacktestPdfExporter:472</td><td>实现 BacktestPdfExporter 的 detect chrome 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>AnalystBacktestReportGenerator:485</td><td>Create a report generator with injectable rendering boundaries.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>generate</code></td><td>AnalystBacktestReportGenerator:495</td><td>Generate an analyst report from a summary path or run directory.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_load_dataset</code></td><td>AnalystBacktestReportGenerator:518</td><td>实现 AnalystBacktestReportGenerator 的 load dataset 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10411,7 +10523,7 @@
         <code>backend/src/qts/strategy_sdk/indicators.py</code>
         <span class="inventory-counts">
           <span>2 classes</span>
-          <span>5 functions</span>
+          <span>16 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -10422,8 +10534,8 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>AssetIndicator</code></td><td>indicators:14</td><td>Indicator bound to a strategy asset reference.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>IndicatorFactory</code></td><td>indicators:36</td><td>Factory for user-created indicators.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>AssetIndicator</code></td><td>indicators:17</td><td>Indicator bound to a strategy asset reference.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>IndicatorFactory</code></td><td>indicators:49</td><td>Factory for user-created indicators.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10432,11 +10544,22 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>ready</code></td><td>AssetIndicator:21</td><td>Perform ready.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>value</code></td><td>AssetIndicator:26</td><td>Perform value.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update</code></td><td>AssetIndicator:30</td><td>Perform update.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>sma</code></td><td>IndicatorFactory:41</td><td>Perform sma.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update_from_bar</code></td><td>IndicatorFactory:47</td><td>Perform update_from_bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>ready</code></td><td>AssetIndicator:28</td><td>Perform ready.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>value</code></td><td>AssetIndicator:33</td><td>Perform value.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update</code></td><td>AssetIndicator:37</td><td>Perform update.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_from_bar</code></td><td>AssetIndicator:43</td><td>Update the bound indicator from a completed strategy-facing bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>sma</code></td><td>IndicatorFactory:54</td><td>Perform sma.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>ema</code></td><td>IndicatorFactory:58</td><td>Create an exponential moving average indicator for close prices.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>atr</code></td><td>IndicatorFactory:62</td><td>Create an average true range indicator for OHLC bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>rsi</code></td><td>IndicatorFactory:67</td><td>Create a relative strength index indicator for close prices.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>session_vwap</code></td><td>IndicatorFactory:71</td><td>Create a session VWAP indicator that resets on bar session changes.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>volume_ratio</code></td><td>IndicatorFactory:76</td><td>Create a current-volume to rolling-average-volume ratio indicator.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_from_bar</code></td><td>IndicatorFactory:81</td><td>Perform update_from_bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_bind_price_indicator</code></td><td>IndicatorFactory:87</td><td>Bind a close-price indicator to an asset.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>update_from_bar</code></td><td>IndicatorFactory._bind_price_indicator.&lt;locals&gt;:90</td><td>更新受控状态或记录事件。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_bind_bar_indicator</code></td><td>IndicatorFactory:104</td><td>Bind a full-bar indicator to an asset.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_bind_volume_indicator</code></td><td>IndicatorFactory:121</td><td>Bind a volume indicator to an asset.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>update_from_bar</code></td><td>IndicatorFactory._bind_volume_indicator.&lt;locals&gt;:124</td><td>更新受控状态或记录事件。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>

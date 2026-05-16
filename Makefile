@@ -1,4 +1,4 @@
-.PHONY: install install-ibkr-api format lint guardrails typecheck test-unit test-integration test-anchor test-replay test-backtest-replay test-reconciliation test-soak test quick-check check load-test soak-test readiness-smoke-local readiness-smoke-external readiness-check validate-historical-sample backtest-full-smoke backtest-acceptance backtest-gc-full
+.PHONY: install install-ibkr-api format lint guardrails typecheck test-unit test-integration test-anchor test-replay test-backtest-replay test-reconciliation test-soak test quick-check check load-test soak-test readiness-smoke-local readiness-smoke-external readiness-check validate-historical-sample backtest-full-smoke backtest-vwap-report-smoke backtest-acceptance backtest-gc-full
 
 QTS_EXTERNAL_EVIDENCE_DIR ?= evidence/ibkr
 
@@ -68,6 +68,10 @@ validate-historical-sample:
 
 backtest-full-smoke:
 	PYTHONPATH=backend/src uv run python scripts/run_backtest.py --config configs/backtest.gc_si.example.yaml --output-dir runs/backtests/full-smoke
+
+backtest-vwap-report-smoke:
+	PYTHONPATH=backend/src:. uv run python scripts/run_backtest.py --config configs/backtest.vwap.example.yaml --output-dir runs/backtests/vwap-report-smoke
+	PYTHONPATH=backend/src:. uv run python scripts/generate_backtest_report.py runs/backtests/vwap-report-smoke
 
 backtest-acceptance:
 	PYTHONPATH=backend/src uv run python scripts/validate_historical.py --config configs/data/historical.local.yaml --catalog research_futures --roots GC --sample-rows 1000 --output-dir evidence/historical

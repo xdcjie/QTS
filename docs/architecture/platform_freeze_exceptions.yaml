@@ -1089,3 +1089,68 @@ exceptions:
     reason: M6 experiment manifest writer owns artifacts/research manifest persistence
     owner: research
     expiry: 2026-12-31
+  - class_name: AverageTrueRange
+    module: qts.indicators.technical
+    reason: VWAP pullback strategy requires reusable bar-level ATR indicator behind the Strategy SDK
+    owner: strategy-sdk
+    expiry: 2026-12-31
+  - class_name: RSI
+    module: qts.indicators.technical
+    reason: VWAP pullback strategy requires reusable close-price RSI indicator behind the Strategy SDK
+    owner: strategy-sdk
+    expiry: 2026-12-31
+  - class_name: SessionVWAP
+    module: qts.indicators.technical
+    reason: VWAP pullback strategy requires session-id-reset VWAP behind the Strategy SDK
+    owner: strategy-sdk
+    expiry: 2026-12-31
+  - class_name: VolumeRatio
+    module: qts.indicators.technical
+    reason: VWAP pullback strategy requires reusable volume confirmation indicator behind the Strategy SDK
+    owner: strategy-sdk
+    expiry: 2026-12-31
+  - class_name: BacktestReportError
+    module: qts.reporting.backtest_analyst
+    reason: VWAP analyst report generator needs explicit fail-closed artifact validation errors
+    owner: research
+    expiry: 2026-12-31
+  - class_name: ArtifactRows
+    module: qts.reporting.backtest_analyst
+    reason: VWAP analyst report generator needs a typed container for finalized NDJSON artifact rows
+    owner: research
+    expiry: 2026-12-31
+  - class_name: BacktestReportMetrics
+    module: qts.reporting.backtest_analyst
+    reason: VWAP analyst report generator needs explicit display metrics derived from finalized artifacts
+    owner: research
+    expiry: 2026-12-31
+  - class_name: AnalystBacktestReportArtifacts
+    module: qts.reporting.backtest_analyst
+    reason: VWAP analyst report generator returns generated HTML/PDF artifact paths as evidence
+    owner: research
+    expiry: 2026-12-31
+  - class_name: BacktestReportDataset
+    module: qts.reporting.backtest_analyst
+    reason: VWAP analyst report generator needs a validated run dataset boundary over finalized artifacts
+    owner: research
+    expiry: 2026-12-31
+  - class_name: BacktestRunReportLoader
+    module: qts.reporting.backtest_analyst
+    reason: VWAP analyst report generator needs a cohesive loader for summary, manifest, and artifact validation
+    owner: research
+    expiry: 2026-12-31
+  - class_name: AnalystBacktestReportRenderer
+    module: qts.reporting.backtest_analyst
+    reason: VWAP analyst report generator needs a renderer boundary separate from artifact loading and PDF export
+    owner: research
+    expiry: 2026-12-31
+  - class_name: BacktestPdfExporter
+    module: qts.reporting.backtest_analyst
+    reason: VWAP analyst report generator needs a local Chrome PDF export boundary for the rendered HTML report
+    owner: research
+    expiry: 2026-12-31
+  - class_name: AnalystBacktestReportGenerator
+    module: qts.reporting.backtest_analyst
+    reason: VWAP analyst report generator orchestrates loader, renderer, and PDF exporter without owning backtest execution
+    owner: research
+    expiry: 2026-12-31

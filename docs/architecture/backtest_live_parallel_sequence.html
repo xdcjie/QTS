@@ -606,7 +606,7 @@
       <div class="surface class-inventory" aria-label="生产类全量索引">
         <h2>生产类全量索引（按阶段 / 模块）</h2>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">536 classes</span></summary>
+          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">549 classes</span></summary>
           <ul>
           <li><code>qts/api/schemas/backtest_schema.py</code> -> <code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span>, <code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span>, <code>BacktestRunResultSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:24</span>, <code>BacktestStrategyOptionSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:38</span></li>
           <li><code>qts/api/schemas/common.py</code> -> <code>StrategyStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:8</span>, <code>AccountSnapshotSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:15</span>, <code>OrderStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:22</span>, <code>RiskRuleSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:29</span>, <code>OperationalErrorSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:36</span></li>
@@ -703,6 +703,7 @@
           <li><code>qts/indicators/price/ema.py</code> -> <code>EMA</code> <span class="location">backend/src/qts/indicators/price/ema.py:12</span></li>
           <li><code>qts/indicators/price/sma.py</code> -> <code>SMA</code> <span class="location">backend/src/qts/indicators/price/sma.py:12</span></li>
           <li><code>qts/indicators/rolling.py</code> -> <code>RollingWindow</code> <span class="location">backend/src/qts/indicators/rolling.py:14</span></li>
+          <li><code>qts/indicators/technical.py</code> -> <code>AverageTrueRange</code> <span class="location">backend/src/qts/indicators/technical.py:13</span>, <code>RSI</code> <span class="location">backend/src/qts/indicators/technical.py:55</span>, <code>SessionVWAP</code> <span class="location">backend/src/qts/indicators/technical.py:115</span>, <code>VolumeRatio</code> <span class="location">backend/src/qts/indicators/technical.py:146</span></li>
           <li><code>qts/load/synthetic_market_data.py</code> -> <code>SyntheticMarketDataConfig</code> <span class="location">backend/src/qts/load/synthetic_market_data.py:14</span></li>
           <li><code>qts/observability/audit.py</code> -> <code>AuditEvent</code> <span class="location">backend/src/qts/observability/audit.py:10</span></li>
           <li><code>qts/observability/dashboard.py</code> -> <code>RuntimeSubscriptionSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:10</span>, <code>OpenOrderSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:31</span>, <code>PositionSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:50</span>, <code>CashSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:67</span>, <code>RiskStatusSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:84</span>, <code>BrokerConnectionSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:99</span>, <code>OperationalDashboardSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:114</span></li>
@@ -728,6 +729,7 @@
           <li><code>qts/registry/providers/exchange_calendar_provider.py</code> -> <code>ExchangeCalendarProvider</code> <span class="location">backend/src/qts/registry/providers/exchange_calendar_provider.py:14</span></li>
           <li><code>qts/registry/symbol_resolution.py</code> -> <code>SourceSymbolResolver</code> <span class="location">backend/src/qts/registry/symbol_resolution.py:12</span>, <code>StaticSymbolResolver</code> <span class="location">backend/src/qts/registry/symbol_resolution.py:25</span></li>
           <li><code>qts/reporting/backtest.py</code> -> <code>EquityCurvePoint</code> <span class="location">backend/src/qts/reporting/backtest.py:92</span>, <code>TradeLedgerEntry</code> <span class="location">backend/src/qts/reporting/backtest.py:100</span>, <code>StreamingEquityMetrics</code> <span class="location">backend/src/qts/reporting/backtest.py:114</span>, <code>BacktestArtifacts</code> <span class="location">backend/src/qts/reporting/backtest.py:154</span>, <code>_NdjsonArtifact</code> <span class="location">backend/src/qts/reporting/backtest.py:163</span>, <code>BacktestArtifactWriter</code> <span class="location">backend/src/qts/reporting/backtest.py:198</span>, <code>BacktestReportWriter</code> <span class="location">backend/src/qts/reporting/backtest.py:404</span></li>
+          <li><code>qts/reporting/backtest_analyst.py</code> -> <code>BacktestReportError</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:16</span>, <code>ArtifactRows</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:21</span>, <code>BacktestReportMetrics</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:32</span>, <code>AnalystBacktestReportArtifacts</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:47</span>, <code>BacktestReportDataset</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:56</span>, <code>BacktestRunReportLoader</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:95</span>, <code>AnalystBacktestReportRenderer</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:218</span>, <code>BacktestPdfExporter</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:421</span>, <code>AnalystBacktestReportGenerator</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:482</span></li>
           <li><code>qts/reporting/base.py</code> -> <code>RuntimeManifest</code> <span class="location">backend/src/qts/reporting/base.py:43</span>, <code>RuntimeManifestRecord</code> <span class="location">backend/src/qts/reporting/base.py:175</span>, <code>ReportWriter</code> <span class="location">backend/src/qts/reporting/base.py:206</span>, <code>RuntimeArtifactWriter</code> <span class="location">backend/src/qts/reporting/base.py:219</span></li>
           <li><code>qts/reporting/broker_runtime.py</code> -> <code>BrokerRuntimeReportManifest</code> <span class="location">backend/src/qts/reporting/broker_runtime.py:31</span>, <code>BrokerRuntimeReportWriter</code> <span class="location">backend/src/qts/reporting/broker_runtime.py:39</span>, <code>BrokerRuntimeEventReporter</code> <span class="location">backend/src/qts/reporting/broker_runtime.py:240</span></li>
           <li><code>qts/research/experiment_manifest.py</code> -> <code>ExperimentManifestConfig</code> <span class="location">backend/src/qts/research/experiment_manifest.py:17</span>, <code>ExperimentManifestResult</code> <span class="location">backend/src/qts/research/experiment_manifest.py:55</span>, <code>ExperimentManifestWriter</code> <span class="location">backend/src/qts/research/experiment_manifest.py:62</span></li>
@@ -793,7 +795,7 @@
           <li><code>qts/strategy_sdk/context.py</code> -> <code>StrategyContext</code> <span class="location">backend/src/qts/strategy_sdk/context.py:30</span></li>
           <li><code>qts/strategy_sdk/data_view.py</code> -> <code>DataView</code> <span class="location">backend/src/qts/strategy_sdk/data_view.py:16</span></li>
           <li><code>qts/strategy_sdk/factors.py</code> -> <code>FactorFactory</code> <span class="location">backend/src/qts/strategy_sdk/factors.py:11</span></li>
-          <li><code>qts/strategy_sdk/indicators.py</code> -> <code>AssetIndicator</code> <span class="location">backend/src/qts/strategy_sdk/indicators.py:14</span>, <code>IndicatorFactory</code> <span class="location">backend/src/qts/strategy_sdk/indicators.py:36</span></li>
+          <li><code>qts/strategy_sdk/indicators.py</code> -> <code>AssetIndicator</code> <span class="location">backend/src/qts/strategy_sdk/indicators.py:17</span>, <code>IndicatorFactory</code> <span class="location">backend/src/qts/strategy_sdk/indicators.py:49</span></li>
           <li><code>qts/strategy_sdk/portfolio_view.py</code> -> <code>PortfolioPosition</code> <span class="location">backend/src/qts/strategy_sdk/portfolio_view.py:15</span>, <code>PortfolioView</code> <span class="location">backend/src/qts/strategy_sdk/portfolio_view.py:23</span></li>
           <li><code>qts/strategy_sdk/strategy.py</code> -> <code>Strategy</code> <span class="location">backend/src/qts/strategy_sdk/strategy.py:6</span></li>
           <li><code>qts/strategy_sdk/subscription_registry.py</code> -> <code>DataSubscription</code> <span class="location">backend/src/qts/strategy_sdk/subscription_registry.py:11</span>, <code>StrategySubscriptionRegistry</code> <span class="location">backend/src/qts/strategy_sdk/subscription_registry.py:26</span></li>
@@ -804,7 +806,7 @@
           </ul>
         </details>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">536 classes</span></summary>
+          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">549 classes</span></summary>
           <ul class="method-index">
           <li><code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span> -> <span class="muted">no public/core methods</span></li>
@@ -1057,6 +1059,10 @@
           <li><code>EMA</code> <span class="location">backend/src/qts/indicators/price/ema.py:12</span> -> <code>__post_init__():19</code>, <code>ready property:24</code>, <code>update():28</code></li>
           <li><code>SMA</code> <span class="location">backend/src/qts/indicators/price/sma.py:12</span> -> <code>__post_init__():19</code>, <code>ready property:24</code>, <code>update():28</code></li>
           <li><code>RollingWindow</code> <span class="location">backend/src/qts/indicators/rolling.py:14</span> -> <code>__post_init__():20</code>, <code>ready property:27</code>, <code>append():31</code>, <code>snapshot():35</code>, <code>restore():39</code>, <code>__iter__():46</code>, <code>__len__():50</code></li>
+          <li><code>AverageTrueRange</code> <span class="location">backend/src/qts/indicators/technical.py:13</span> -> <code>__post_init__():21</code>, <code>ready property:26</code>, <code>update_bar():30</code>, <code>update():34</code></li>
+          <li><code>RSI</code> <span class="location">backend/src/qts/indicators/technical.py:55</span> -> <code>__post_init__():66</code>, <code>ready property:72</code>, <code>update():76</code></li>
+          <li><code>SessionVWAP</code> <span class="location">backend/src/qts/indicators/technical.py:115</span> -> <code>ready property:124</code>, <code>update_bar():128</code></li>
+          <li><code>VolumeRatio</code> <span class="location">backend/src/qts/indicators/technical.py:146</span> -> <code>__post_init__():153</code>, <code>ready property:158</code>, <code>update():162</code></li>
           <li><code>SyntheticMarketDataConfig</code> <span class="location">backend/src/qts/load/synthetic_market_data.py:14</span> -> <code>__post_init__():25</code></li>
           <li><code>AuditEvent</code> <span class="location">backend/src/qts/observability/audit.py:10</span> -> <code>__post_init__():19</code></li>
           <li><code>RuntimeSubscriptionSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:10</span> -> <code>to_schema():19</code></li>
@@ -1153,6 +1159,15 @@
           <li><code>_NdjsonArtifact</code> <span class="location">backend/src/qts/reporting/backtest.py:163</span> -> <code>__init__():166</code>, <code>write():173</code>, <code>close():188</code>, <code>content_hash property:193</code></li>
           <li><code>BacktestArtifactWriter</code> <span class="location">backend/src/qts/reporting/backtest.py:198</span> -> <code>__init__():203</code>, <code>write_order():214</code>, <code>write_runtime_event():218</code>, <code>write_event():222</code>, <code>write_snapshot():226</code>, <code>write_manifest():230</code>, <code>write_fill():242</code>, <code>write_trade_ledger():246</code>, <code>write_equity_point():262</code>, <code>finalize():267</code></li>
           <li><code>BacktestReportWriter</code> <span class="location">backend/src/qts/reporting/backtest.py:404</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>BacktestReportError</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:16</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>ArtifactRows</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:21</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>BacktestReportMetrics</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:32</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>AnalystBacktestReportArtifacts</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:47</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>BacktestReportDataset</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:56</span> -> <code>run_id property:66</code>, <code>metrics property:71</code></li>
+          <li><code>BacktestRunReportLoader</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:95</span> -> <code>from_summary():101</code>, <code>from_run_directory():134</code></li>
+          <li><code>AnalystBacktestReportRenderer</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:218</span> -> <code>render():221</code></li>
+          <li><code>BacktestPdfExporter</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:421</span> -> <code>__init__():427</code>, <code>export():438</code></li>
+          <li><code>AnalystBacktestReportGenerator</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:482</span> -> <code>__init__():485</code>, <code>generate():495</code></li>
           <li><code>RuntimeManifest</code> <span class="location">backend/src/qts/reporting/base.py:43</span> -> <code>from_payload():66</code>, <code>to_payload():108</code>, <code>validate_payload():134</code>, <code>hash_payload():142</code></li>
           <li><code>RuntimeManifestRecord</code> <span class="location">backend/src/qts/reporting/base.py:175</span> -> <code>load():183</code>, <code>manifest_hash property:192</code>, <code>query():196</code></li>
           <li><code>ReportWriter</code> <span class="location">backend/src/qts/reporting/base.py:206</span> -> <code>write_manifest():209</code>, <code>finalize():213</code></li>
@@ -1330,8 +1345,8 @@
           <li><code>StrategyContext</code> <span class="location">backend/src/qts/strategy_sdk/context.py:30</span> -> <code>__post_init__():46</code>, <code>intents property:55</code>, <code>subscriptions property:60</code>, <code>symbol():64</code>, <code>future():68</code>, <code>option():72</code>, <code>target_percent():88</code>, <code>target_quantity():94</code>, <code>target_value():100</code>, <code>close():106</code>, <code>rebalance():112</code>, <code>subscribe():116</code></li>
           <li><code>DataView</code> <span class="location">backend/src/qts/strategy_sdk/data_view.py:16</span> -> <code>__init__():22</code>, <code>close():29</code>, <code>bar():33</code>, <code>history():40</code></li>
           <li><code>FactorFactory</code> <span class="location">backend/src/qts/strategy_sdk/factors.py:11</span> -> <code>momentum():14</code></li>
-          <li><code>AssetIndicator</code> <span class="location">backend/src/qts/strategy_sdk/indicators.py:14</span> -> <code>ready property:21</code>, <code>value property:26</code>, <code>update():30</code></li>
-          <li><code>IndicatorFactory</code> <span class="location">backend/src/qts/strategy_sdk/indicators.py:36</span> -> <code>sma():41</code>, <code>update_from_bar():47</code></li>
+          <li><code>AssetIndicator</code> <span class="location">backend/src/qts/strategy_sdk/indicators.py:17</span> -> <code>ready property:28</code>, <code>value property:33</code>, <code>update():37</code>, <code>update_from_bar():43</code></li>
+          <li><code>IndicatorFactory</code> <span class="location">backend/src/qts/strategy_sdk/indicators.py:49</span> -> <code>sma():54</code>, <code>ema():58</code>, <code>atr():62</code>, <code>rsi():67</code>, <code>session_vwap():71</code>, <code>volume_ratio():76</code>, <code>update_from_bar():81</code></li>
           <li><code>PortfolioPosition</code> <span class="location">backend/src/qts/strategy_sdk/portfolio_view.py:15</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>PortfolioView</code> <span class="location">backend/src/qts/strategy_sdk/portfolio_view.py:23</span> -> <code>__post_init__():30</code>, <code>position():34</code>, <code>exposure():38</code>, <code>weight():42</code></li>
           <li><code>Strategy</code> <span class="location">backend/src/qts/strategy_sdk/strategy.py:6</span> -> <code>initialize():9</code>, <code>on_bar():13</code>, <code>on_tick():17</code>, <code>on_timer():21</code>, <code>on_order_update():25</code>, <code>on_fill():29</code>, <code>finalize():33</code></li>
@@ -3024,10 +3039,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>311 files</span>
-      <span>537 classes</span>
-      <span>1702 functions</span>
-      <span>297 backend</span>
+      <span>313 files</span>
+      <span>550 classes</span>
+      <span>1754 functions</span>
+      <span>299 backend</span>
       <span>14 frontend</span>
     </div>
   </div>
@@ -7900,6 +7915,53 @@
     </details>
     <details class="inventory-file">
       <summary>
+        <code>backend/src/qts/indicators/technical.py</code>
+        <span class="inventory-counts">
+          <span>4 classes</span>
+          <span>14 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Incremental technical indicators derived from completed bars.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>AverageTrueRange</code></td><td>technical:13</td><td>Wilder average true range over completed bars.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>RSI</code></td><td>technical:55</td><td>Relative strength index using Wilder smoothing.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>SessionVWAP</code></td><td>technical:115</td><td>Session VWAP that resets on `Bar.session_id` changes.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>VolumeRatio</code></td><td>technical:146</td><td>Current volume divided by the rolling average volume.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>__post_init__</code></td><td>AverageTrueRange:21</td><td>Validate and initialize ATR state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>AverageTrueRange:26</td><td>Return whether ATR has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_bar</code></td><td>AverageTrueRange:30</td><td>Update ATR from a completed OHLC bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update</code></td><td>AverageTrueRange:34</td><td>Update ATR from OHLC values.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_true_range</code></td><td>AverageTrueRange:47</td><td>Return true range using the previous close when available.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>RSI:66</td><td>Validate and initialize RSI state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>RSI:72</td><td>Return whether RSI has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update</code></td><td>RSI:76</td><td>Update RSI from a close price.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_rsi_from_averages</code></td><td>RSI:104</td><td>Compute RSI from initialized average gain/loss values.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>SessionVWAP:124</td><td>Return whether the current session has a VWAP value.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_bar</code></td><td>SessionVWAP:128</td><td>Update VWAP from a completed OHLCV bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>VolumeRatio:153</td><td>Validate and initialize rolling volume state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>VolumeRatio:158</td><td>Return whether volume ratio has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update</code></td><td>VolumeRatio:162</td><td>Update the ratio from a volume observation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
         <code>backend/src/qts/load/__init__.py</code>
         <span class="inventory-counts">
           <span>0 classes</span>
@@ -9204,6 +9266,71 @@
               <tr><td><code>_normalize_execution_assumptions_payload</code></td><td>module:419</td><td>提供模块级 normalize execution assumptions payload 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>_validate_m1_backtest_manifest</code></td><td>module:432</td><td>提供模块级 validate m1 backtest manifest 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>_require_manifest_value</code></td><td>module:452</td><td>提供模块级 require manifest value 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
+        <code>backend/src/qts/reporting/backtest_analyst.py</code>
+        <span class="inventory-counts">
+          <span>9 classes</span>
+          <span>27 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Human-readable analyst reports for finalized backtest artifacts.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>BacktestReportError</code></td><td>backtest_analyst:16</td><td>Raised when finalized backtest artifacts cannot produce an analyst report.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ArtifactRows</code></td><td>backtest_analyst:21</td><td>Loaded rows from the finalized backtest artifact set.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestReportMetrics</code></td><td>backtest_analyst:32</td><td>Human-facing display metrics derived from finalized artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>AnalystBacktestReportArtifacts</code></td><td>backtest_analyst:47</td><td>Generated analyst report output paths.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestReportDataset</code></td><td>backtest_analyst:56</td><td>Validated report input loaded from a completed backtest run.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestRunReportLoader</code></td><td>backtest_analyst:95</td><td>Load finalized backtest artifacts for analyst report rendering.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>AnalystBacktestReportRenderer</code></td><td>backtest_analyst:218</td><td>Render a static analyst HTML report from finalized backtest artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestPdfExporter</code></td><td>backtest_analyst:421</td><td>Export analyst HTML reports to PDF through a local Chrome executable.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>AnalystBacktestReportGenerator</code></td><td>backtest_analyst:482</td><td>Generate analyst HTML and PDF reports from completed backtest runs.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>run_id</code></td><td>BacktestReportDataset:66</td><td>Return the finalized backtest run id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>metrics</code></td><td>BacktestReportDataset:71</td><td>Return display metrics derived from finalized artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_final_equity</code></td><td>BacktestReportDataset:89</td><td>实现 BacktestReportDataset 的 final equity 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>from_summary</code></td><td>BacktestRunReportLoader:101</td><td>Load a completed backtest report dataset from a summary artifact.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>from_run_directory</code></td><td>BacktestRunReportLoader:134</td><td>Load the only completed summary in a run directory.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_resolve_manifest_path</code></td><td>BacktestRunReportLoader:144</td><td>实现 BacktestRunReportLoader 的 resolve manifest path 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_validate_identity</code></td><td>BacktestRunReportLoader:156</td><td>实现 BacktestRunReportLoader 的 validate identity 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_read_artifact_rows</code></td><td>BacktestRunReportLoader:167</td><td>实现 BacktestRunReportLoader 的 read artifact rows 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_read_json_object</code></td><td>BacktestRunReportLoader:191</td><td>实现 BacktestRunReportLoader 的 read json object 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_read_ndjson</code></td><td>BacktestRunReportLoader:201</td><td>实现 BacktestRunReportLoader 的 read ndjson 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>render</code></td><td>AnalystBacktestReportRenderer:221</td><td>Return a complete static HTML report document.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_style</code></td><td>AnalystBacktestReportRenderer:292</td><td>实现 AnalystBacktestReportRenderer 的 style 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_metric_card</code></td><td>AnalystBacktestReportRenderer:325</td><td>实现 AnalystBacktestReportRenderer 的 metric card 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_strategy_name</code></td><td>AnalystBacktestReportRenderer:334</td><td>实现 AnalystBacktestReportRenderer 的 strategy name 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_artifact_links</code></td><td>AnalystBacktestReportRenderer:345</td><td>实现 AnalystBacktestReportRenderer 的 artifact links 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_equity_svg</code></td><td>AnalystBacktestReportRenderer:361</td><td>实现 AnalystBacktestReportRenderer 的 equity svg 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_decimal_value</code></td><td>module:392</td><td>提供模块级 decimal value 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_format_percent</code></td><td>module:401</td><td>提供模块级 format percent 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_format_decimal</code></td><td>module:407</td><td>提供模块级 format decimal 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_svg_number</code></td><td>module:414</td><td>提供模块级 svg number 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>BacktestPdfExporter:427</td><td>Create a PDF exporter with optional Chrome path override.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>export</code></td><td>BacktestPdfExporter:438</td><td>Export a local HTML file to PDF and return the PDF path.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_command</code></td><td>BacktestPdfExporter:460</td><td>实现 BacktestPdfExporter 的 command 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_detect_chrome</code></td><td>BacktestPdfExporter:472</td><td>实现 BacktestPdfExporter 的 detect chrome 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>AnalystBacktestReportGenerator:485</td><td>Create a report generator with injectable rendering boundaries.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>generate</code></td><td>AnalystBacktestReportGenerator:495</td><td>Generate an analyst report from a summary path or run directory.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_load_dataset</code></td><td>AnalystBacktestReportGenerator:518</td><td>实现 AnalystBacktestReportGenerator 的 load dataset 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -11991,7 +12118,7 @@
         <code>backend/src/qts/strategy_sdk/indicators.py</code>
         <span class="inventory-counts">
           <span>2 classes</span>
-          <span>5 functions</span>
+          <span>16 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -12002,8 +12129,8 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>AssetIndicator</code></td><td>indicators:14</td><td>Indicator bound to a strategy asset reference.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>IndicatorFactory</code></td><td>indicators:36</td><td>Factory for user-created indicators.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>AssetIndicator</code></td><td>indicators:17</td><td>Indicator bound to a strategy asset reference.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>IndicatorFactory</code></td><td>indicators:49</td><td>Factory for user-created indicators.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -12012,11 +12139,22 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>ready</code></td><td>AssetIndicator:21</td><td>Perform ready.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>value</code></td><td>AssetIndicator:26</td><td>Perform value.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update</code></td><td>AssetIndicator:30</td><td>Perform update.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>sma</code></td><td>IndicatorFactory:41</td><td>Perform sma.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update_from_bar</code></td><td>IndicatorFactory:47</td><td>Perform update_from_bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>ready</code></td><td>AssetIndicator:28</td><td>Perform ready.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>value</code></td><td>AssetIndicator:33</td><td>Perform value.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update</code></td><td>AssetIndicator:37</td><td>Perform update.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_from_bar</code></td><td>AssetIndicator:43</td><td>Update the bound indicator from a completed strategy-facing bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>sma</code></td><td>IndicatorFactory:54</td><td>Perform sma.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>ema</code></td><td>IndicatorFactory:58</td><td>Create an exponential moving average indicator for close prices.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>atr</code></td><td>IndicatorFactory:62</td><td>Create an average true range indicator for OHLC bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>rsi</code></td><td>IndicatorFactory:67</td><td>Create a relative strength index indicator for close prices.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>session_vwap</code></td><td>IndicatorFactory:71</td><td>Create a session VWAP indicator that resets on bar session changes.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>volume_ratio</code></td><td>IndicatorFactory:76</td><td>Create a current-volume to rolling-average-volume ratio indicator.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_from_bar</code></td><td>IndicatorFactory:81</td><td>Perform update_from_bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_bind_price_indicator</code></td><td>IndicatorFactory:87</td><td>Bind a close-price indicator to an asset.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>update_from_bar</code></td><td>IndicatorFactory._bind_price_indicator.&lt;locals&gt;:90</td><td>更新受控状态或记录事件。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_bind_bar_indicator</code></td><td>IndicatorFactory:104</td><td>Bind a full-bar indicator to an asset.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_bind_volume_indicator</code></td><td>IndicatorFactory:121</td><td>Bind a volume indicator to an asset.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>update_from_bar</code></td><td>IndicatorFactory._bind_volume_indicator.&lt;locals&gt;:124</td><td>更新受控状态或记录事件。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
