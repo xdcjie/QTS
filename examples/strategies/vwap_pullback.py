@@ -4,11 +4,41 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Any, Literal
+from typing import Literal, TypedDict, Unpack
 
-from qts.strategy_sdk import AssetRef, Strategy
+from qts.domain.market_data import Bar
+from qts.strategy_sdk import AssetIndicator, AssetRef, Strategy, StrategyContext
 
 Direction = Literal["LONG", "SHORT"]
+
+
+class VwapPullbackConfigOverrides(TypedDict, total=False):
+    """Typed constructor overrides for the VWAP pullback example."""
+
+    symbol: str
+    timeframe: str
+    ma_20_window: int
+    ma_26_window: int
+    ma_32_window: int
+    atr_window: int
+    rsi_window: int
+    volume_ratio_window: int
+    opening_range_bars: int
+    target_quantity: Decimal
+    max_pullback_atr: Decimal
+    key_level_atr: Decimal
+    min_rsi: Decimal
+    max_rsi: Decimal
+    short_min_rsi: Decimal
+    short_max_rsi: Decimal
+    min_volume_ratio: Decimal
+    entry_threshold: int
+    l1_min: int
+    l2_min: int
+    l3_min: int
+    stop_atr_multiple: Decimal
+    take_profit_atr_multiple: Decimal
+    trailing_atr_multiple: Decimal
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,23 +118,50 @@ class VwapPullbackScore:
         return self.l1 + self.l2 + self.l3
 
 
+@dataclass(frozen=True, slots=True)
+class VwapPullbackIndicators:
+    """Initialized indicator set for the VWAP pullback strategy."""
+
+    MA_20: AssetIndicator
+    MA_26: AssetIndicator
+    MA_32: AssetIndicator
+    ATR_7: AssetIndicator
+    RSI_14: AssetIndicator
+    VWAP: AssetIndicator
+    volume_ratio: AssetIndicator
+
+    @property
+    def ready(self) -> bool:
+        """Return whether every indicator has a usable value."""
+        return all(
+            indicator.ready and indicator.value is not None
+            for indicator in (
+                self.MA_20,
+                self.MA_26,
+                self.MA_32,
+                self.ATR_7,
+                self.RSI_14,
+                self.VWAP,
+                self.volume_ratio,
+            )
+        )
+
+
 class VwapPullbackStrategy(Strategy):
     """Bar-level VWAP pullback strategy with SDK-managed indicators."""
 
-    def __init__(self, config: VwapPullbackConfig | None = None, **overrides: Any) -> None:
+    def __init__(
+        self,
+        config: VwapPullbackConfig | None = None,
+        **overrides: Unpack[VwapPullbackConfigOverrides],
+    ) -> None:
         if config is not None and overrides:
             raise ValueError("pass either config or constructor overrides, not both")
         if config is None:
             config = VwapPullbackConfig(**overrides)
         self._config = config
         self._asset: AssetRef | None = None
-        self._MA_20: Any = None
-        self._MA_26: Any = None
-        self._MA_32: Any = None
-        self._ATR_7: Any = None
-        self._RSI_14: Any = None
-        self._VWAP: Any = None
-        self._volume_ratio: Any = None
+        self._indicators: VwapPullbackIndicators | None = None
         self._session_id: str | None = None
         self._bars_in_session = 0
         self._opening_range_high: Decimal | None = None
@@ -130,19 +187,20 @@ class VwapPullbackStrategy(Strategy):
         """Return the most recent accepted entry score."""
         return self._last_score
 
-    def initialize(self, ctx: Any) -> None:
-        self._asset = ctx.symbol(self._config.symbol)
-        self._MA_20 = ctx.indicator.ema(self._asset, self._config.ma_20_window)
-        self._MA_26 = ctx.indicator.ema(self._asset, self._config.ma_26_window)
-        self._MA_32 = ctx.indicator.ema(self._asset, self._config.ma_32_window)
-        self._ATR_7 = ctx.indicator.atr(self._asset, self._config.atr_window)
-        self._RSI_14 = ctx.indicator.rsi(self._asset, self._config.rsi_window)
-        self._VWAP = ctx.indicator.session_vwap(self._asset)
-        self._volume_ratio = ctx.indicator.volume_ratio(
-            self._asset, self._config.volume_ratio_window
+    def initialize(self, ctx: StrategyContext) -> None:
+        asset = ctx.symbol(self._config.symbol)
+        self._asset = asset
+        self._indicators = VwapPullbackIndicators(
+            MA_20=ctx.indicator.ema(asset, self._config.ma_20_window),
+            MA_26=ctx.indicator.ema(asset, self._config.ma_26_window),
+            MA_32=ctx.indicator.ema(asset, self._config.ma_32_window),
+            ATR_7=ctx.indicator.atr(asset, self._config.atr_window),
+            RSI_14=ctx.indicator.rsi(asset, self._config.rsi_window),
+            VWAP=ctx.indicator.session_vwap(asset),
+            volume_ratio=ctx.indicator.volume_ratio(asset, self._config.volume_ratio_window),
         )
         ctx.subscribe(
-            self._asset,
+            asset,
             timeframe=self._config.timeframe,
             warmup=max(
                 self._config.ma_20_window,
@@ -154,7 +212,7 @@ class VwapPullbackStrategy(Strategy):
             ),
         )
 
-    def on_bar(self, ctx: Any, bar: Any) -> None:
+    def on_bar(self, ctx: StrategyContext, bar: Bar) -> None:
         if self._asset is None:
             raise RuntimeError("strategy must be initialized before on_bar")
 
@@ -171,7 +229,7 @@ class VwapPullbackStrategy(Strategy):
             return
         self._enter(ctx, bar, score)
 
-    def _record_session_bar(self, bar: Any) -> None:
+    def _record_session_bar(self, bar: Bar) -> None:
         session_id = str(bar.session_id)
         if session_id != self._session_id:
             self._prior_session_high = self._current_session_high
@@ -190,10 +248,10 @@ class VwapPullbackStrategy(Strategy):
             self._opening_range_high = self._max_decimal(self._opening_range_high, bar.high)
             self._opening_range_low = self._min_decimal(self._opening_range_low, bar.low)
 
-    def _manage_exit(self, ctx: Any, bar: Any) -> None:
+    def _manage_exit(self, ctx: StrategyContext, bar: Bar) -> None:
         if self._position_direction is None or self._entry_price is None:
             return
-        ATR_7 = self._ATR_7.value
+        ATR_7 = self._require_indicators().ATR_7.value
         if ATR_7 is None:
             return
 
@@ -211,22 +269,13 @@ class VwapPullbackStrategy(Strategy):
             hit_target = self._take_profit is not None and bar.low <= self._take_profit
 
         if hit_stop or hit_target:
-            ctx.close(self._asset)
+            ctx.close(self._require_asset())
             self._clear_position()
 
     def _indicators_ready(self) -> bool:
-        indicators = (
-            self._MA_20,
-            self._MA_26,
-            self._MA_32,
-            self._ATR_7,
-            self._RSI_14,
-            self._VWAP,
-            self._volume_ratio,
-        )
-        return all(indicator.ready and indicator.value is not None for indicator in indicators)
+        return self._require_indicators().ready
 
-    def _best_entry_score(self, bar: Any) -> VwapPullbackScore | None:
+    def _best_entry_score(self, bar: Bar) -> VwapPullbackScore | None:
         candidates = (
             self._score_direction("LONG", bar),
             self._score_direction("SHORT", bar),
@@ -243,7 +292,7 @@ class VwapPullbackStrategy(Strategy):
             return None
         return max(qualified, key=lambda item: item.total)
 
-    def _score_direction(self, direction: Direction, bar: Any) -> VwapPullbackScore:
+    def _score_direction(self, direction: Direction, bar: Bar) -> VwapPullbackScore:
         return VwapPullbackScore(
             direction=direction,
             l1=self._score_trend(direction, bar),
@@ -251,11 +300,12 @@ class VwapPullbackStrategy(Strategy):
             l3=self._score_confirmation(direction, bar),
         )
 
-    def _score_trend(self, direction: Direction, bar: Any) -> int:
-        MA_20 = self._MA_20.value
-        MA_26 = self._MA_26.value
-        MA_32 = self._MA_32.value
-        session_vwap = self._VWAP.value
+    def _score_trend(self, direction: Direction, bar: Bar) -> int:
+        indicators = self._require_indicators()
+        MA_20 = self._required_indicator_value(indicators.MA_20, "MA_20")
+        MA_26 = self._required_indicator_value(indicators.MA_26, "MA_26")
+        MA_32 = self._required_indicator_value(indicators.MA_32, "MA_32")
+        session_vwap = self._required_indicator_value(indicators.VWAP, "VWAP")
         score = 0
         if direction == "LONG":
             if MA_20 > MA_26 > MA_32:
@@ -273,9 +323,10 @@ class VwapPullbackStrategy(Strategy):
                 score += 5
         return min(score, 30)
 
-    def _score_position(self, direction: Direction, bar: Any) -> int:
-        ATR_7 = self._ATR_7.value
-        session_vwap = self._VWAP.value
+    def _score_position(self, direction: Direction, bar: Bar) -> int:
+        indicators = self._require_indicators()
+        ATR_7 = self._required_indicator_value(indicators.ATR_7, "ATR_7")
+        session_vwap = self._required_indicator_value(indicators.VWAP, "VWAP")
         score = 0
         if direction == "LONG":
             pullback_distance = abs(bar.low - session_vwap)
@@ -303,9 +354,10 @@ class VwapPullbackStrategy(Strategy):
                 score += 10
         return min(score, 30)
 
-    def _score_confirmation(self, direction: Direction, bar: Any) -> int:
-        RSI_14 = self._RSI_14.value
-        volume_ratio = self._volume_ratio.value
+    def _score_confirmation(self, direction: Direction, bar: Bar) -> int:
+        indicators = self._require_indicators()
+        RSI_14 = self._required_indicator_value(indicators.RSI_14, "RSI_14")
+        volume_ratio = self._required_indicator_value(indicators.volume_ratio, "volume_ratio")
         body = bar.close - bar.open
         score = 0
         if direction == "LONG" and body > Decimal("0"):
@@ -322,8 +374,9 @@ class VwapPullbackStrategy(Strategy):
             score += 10
         return min(score, 40)
 
-    def _enter(self, ctx: Any, bar: Any, score: VwapPullbackScore) -> None:
-        ATR_7 = self._ATR_7.value
+    def _enter(self, ctx: StrategyContext, bar: Bar, score: VwapPullbackScore) -> None:
+        asset = self._require_asset()
+        ATR_7 = self._required_indicator_value(self._require_indicators().ATR_7, "ATR_7")
         self._position_direction = score.direction
         self._entry_price = bar.close
         self._last_score = score
@@ -331,12 +384,12 @@ class VwapPullbackStrategy(Strategy):
             self._stop = bar.close - (ATR_7 * self._config.stop_atr_multiple)
             self._take_profit = bar.close + (ATR_7 * self._config.take_profit_atr_multiple)
             self._trailing_stop = self._stop
-            ctx.target_quantity(self._asset, self._config.target_quantity)
+            ctx.target_quantity(asset, self._config.target_quantity)
         else:
             self._stop = bar.close + (ATR_7 * self._config.stop_atr_multiple)
             self._take_profit = bar.close - (ATR_7 * self._config.take_profit_atr_multiple)
             self._trailing_stop = self._stop
-            ctx.target_quantity(self._asset, -self._config.target_quantity)
+            ctx.target_quantity(asset, -self._config.target_quantity)
 
     def _clear_position(self) -> None:
         self._position_direction = None
@@ -355,6 +408,23 @@ class VwapPullbackStrategy(Strategy):
             return False
         return abs(price - level) <= ATR_7 * self._config.key_level_atr
 
+    def _require_asset(self) -> AssetRef:
+        if self._asset is None:
+            raise RuntimeError("strategy must be initialized before using the asset")
+        return self._asset
+
+    def _require_indicators(self) -> VwapPullbackIndicators:
+        if self._indicators is None:
+            raise RuntimeError("strategy must be initialized before reading indicators")
+        return self._indicators
+
+    @staticmethod
+    def _required_indicator_value(indicator: AssetIndicator, name: str) -> Decimal:
+        value = indicator.value
+        if value is None:
+            raise RuntimeError(f"{name} indicator is not ready")
+        return value
+
     @staticmethod
     def _max_decimal(current: Decimal | None, candidate: Decimal) -> Decimal:
         if current is None:
@@ -368,4 +438,9 @@ class VwapPullbackStrategy(Strategy):
         return min(current, candidate)
 
 
-__all__ = ["VwapPullbackConfig", "VwapPullbackScore", "VwapPullbackStrategy"]
+__all__ = [
+    "VwapPullbackConfig",
+    "VwapPullbackIndicators",
+    "VwapPullbackScore",
+    "VwapPullbackStrategy",
+]

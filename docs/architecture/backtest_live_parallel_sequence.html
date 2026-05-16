@@ -606,7 +606,7 @@
       <div class="surface class-inventory" aria-label="生产类全量索引">
         <h2>生产类全量索引（按阶段 / 模块）</h2>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">549 classes</span></summary>
+          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">553 classes</span></summary>
           <ul>
           <li><code>qts/api/schemas/backtest_schema.py</code> -> <code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span>, <code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span>, <code>BacktestRunResultSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:24</span>, <code>BacktestStrategyOptionSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:38</span></li>
           <li><code>qts/api/schemas/common.py</code> -> <code>StrategyStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:8</span>, <code>AccountSnapshotSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:15</span>, <code>OrderStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:22</span>, <code>RiskRuleSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:29</span>, <code>OperationalErrorSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:36</span></li>
@@ -794,10 +794,11 @@
           <li><code>qts/strategy_sdk/asset_resolver.py</code> -> <code>SymbolResolver</code> <span class="location">backend/src/qts/strategy_sdk/asset_resolver.py:15</span>, <code>FutureContractResolver</code> <span class="location">backend/src/qts/strategy_sdk/asset_resolver.py:21</span>, <code>ContinuousFutureResolver</code> <span class="location">backend/src/qts/strategy_sdk/asset_resolver.py:28</span>, <code>OptionContractRef</code> <span class="location">backend/src/qts/strategy_sdk/asset_resolver.py:34</span>, <code>OptionContractResolver</code> <span class="location">backend/src/qts/strategy_sdk/asset_resolver.py:41</span>, <code>StrategyAssetResolver</code> <span class="location">backend/src/qts/strategy_sdk/asset_resolver.py:54</span></li>
           <li><code>qts/strategy_sdk/context.py</code> -> <code>StrategyContext</code> <span class="location">backend/src/qts/strategy_sdk/context.py:30</span></li>
           <li><code>qts/strategy_sdk/data_view.py</code> -> <code>DataView</code> <span class="location">backend/src/qts/strategy_sdk/data_view.py:16</span></li>
+          <li><code>qts/strategy_sdk/events.py</code> -> <code>TimerEvent</code> <span class="location">backend/src/qts/strategy_sdk/events.py:15</span>, <code>OrderUpdate</code> <span class="location">backend/src/qts/strategy_sdk/events.py:29</span>, <code>Fill</code> <span class="location">backend/src/qts/strategy_sdk/events.py:47</span></li>
           <li><code>qts/strategy_sdk/factors.py</code> -> <code>FactorFactory</code> <span class="location">backend/src/qts/strategy_sdk/factors.py:11</span></li>
           <li><code>qts/strategy_sdk/indicators.py</code> -> <code>AssetIndicator</code> <span class="location">backend/src/qts/strategy_sdk/indicators.py:17</span>, <code>IndicatorFactory</code> <span class="location">backend/src/qts/strategy_sdk/indicators.py:49</span></li>
           <li><code>qts/strategy_sdk/portfolio_view.py</code> -> <code>PortfolioPosition</code> <span class="location">backend/src/qts/strategy_sdk/portfolio_view.py:15</span>, <code>PortfolioView</code> <span class="location">backend/src/qts/strategy_sdk/portfolio_view.py:23</span></li>
-          <li><code>qts/strategy_sdk/strategy.py</code> -> <code>Strategy</code> <span class="location">backend/src/qts/strategy_sdk/strategy.py:6</span></li>
+          <li><code>qts/strategy_sdk/strategy.py</code> -> <code>Strategy</code> <span class="location">backend/src/qts/strategy_sdk/strategy.py:10</span></li>
           <li><code>qts/strategy_sdk/subscription_registry.py</code> -> <code>DataSubscription</code> <span class="location">backend/src/qts/strategy_sdk/subscription_registry.py:11</span>, <code>StrategySubscriptionRegistry</code> <span class="location">backend/src/qts/strategy_sdk/subscription_registry.py:26</span></li>
           <li><code>qts/strategy_sdk/target.py</code> -> <code>TargetIntentType</code> <span class="location">backend/src/qts/strategy_sdk/target.py:12</span>, <code>TargetIntent</code> <span class="location">backend/src/qts/strategy_sdk/target.py:22</span></li>
           <li><code>qts/strategy_sdk/target_emitter.py</code> -> <code>TargetIntentEmitter</code> <span class="location">backend/src/qts/strategy_sdk/target_emitter.py:8</span></li>
@@ -806,7 +807,7 @@
           </ul>
         </details>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">549 classes</span></summary>
+          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">553 classes</span></summary>
           <ul class="method-index">
           <li><code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span> -> <span class="muted">no public/core methods</span></li>
@@ -1344,12 +1345,15 @@
           <li><code>StrategyAssetResolver</code> <span class="location">backend/src/qts/strategy_sdk/asset_resolver.py:54</span> -> <code>__init__():57</code>, <code>resolve_symbol():68</code>, <code>resolve_future():75</code>, <code>resolve_option():93</code></li>
           <li><code>StrategyContext</code> <span class="location">backend/src/qts/strategy_sdk/context.py:30</span> -> <code>__post_init__():46</code>, <code>intents property:55</code>, <code>subscriptions property:60</code>, <code>symbol():64</code>, <code>future():68</code>, <code>option():72</code>, <code>target_percent():88</code>, <code>target_quantity():94</code>, <code>target_value():100</code>, <code>close():106</code>, <code>rebalance():112</code>, <code>subscribe():116</code></li>
           <li><code>DataView</code> <span class="location">backend/src/qts/strategy_sdk/data_view.py:16</span> -> <code>__init__():22</code>, <code>close():29</code>, <code>bar():33</code>, <code>history():40</code></li>
+          <li><code>TimerEvent</code> <span class="location">backend/src/qts/strategy_sdk/events.py:15</span> -> <code>__post_init__():21</code></li>
+          <li><code>OrderUpdate</code> <span class="location">backend/src/qts/strategy_sdk/events.py:29</span> -> <code>__post_init__():38</code></li>
+          <li><code>Fill</code> <span class="location">backend/src/qts/strategy_sdk/events.py:47</span> -> <code>__post_init__():60</code></li>
           <li><code>FactorFactory</code> <span class="location">backend/src/qts/strategy_sdk/factors.py:11</span> -> <code>momentum():14</code></li>
           <li><code>AssetIndicator</code> <span class="location">backend/src/qts/strategy_sdk/indicators.py:17</span> -> <code>ready property:28</code>, <code>value property:33</code>, <code>update():37</code>, <code>update_from_bar():43</code></li>
           <li><code>IndicatorFactory</code> <span class="location">backend/src/qts/strategy_sdk/indicators.py:49</span> -> <code>sma():54</code>, <code>ema():58</code>, <code>atr():62</code>, <code>rsi():67</code>, <code>session_vwap():71</code>, <code>volume_ratio():76</code>, <code>update_from_bar():81</code></li>
           <li><code>PortfolioPosition</code> <span class="location">backend/src/qts/strategy_sdk/portfolio_view.py:15</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>PortfolioView</code> <span class="location">backend/src/qts/strategy_sdk/portfolio_view.py:23</span> -> <code>__post_init__():30</code>, <code>position():34</code>, <code>exposure():38</code>, <code>weight():42</code></li>
-          <li><code>Strategy</code> <span class="location">backend/src/qts/strategy_sdk/strategy.py:6</span> -> <code>initialize():9</code>, <code>on_bar():13</code>, <code>on_tick():17</code>, <code>on_timer():21</code>, <code>on_order_update():25</code>, <code>on_fill():29</code>, <code>finalize():33</code></li>
+          <li><code>Strategy</code> <span class="location">backend/src/qts/strategy_sdk/strategy.py:10</span> -> <code>initialize():13</code>, <code>on_bar():17</code>, <code>on_tick():21</code>, <code>on_timer():25</code>, <code>on_order_update():29</code>, <code>on_fill():33</code>, <code>finalize():37</code></li>
           <li><code>DataSubscription</code> <span class="location">backend/src/qts/strategy_sdk/subscription_registry.py:11</span> -> <code>__post_init__():18</code></li>
           <li><code>StrategySubscriptionRegistry</code> <span class="location">backend/src/qts/strategy_sdk/subscription_registry.py:26</span> -> <code>__init__():29</code>, <code>subscriptions property:34</code>, <code>subscribe():38</code></li>
           <li><code>TargetIntentType</code> <span class="location">backend/src/qts/strategy_sdk/target.py:12</span> -> <span class="muted">no public/core methods</span></li>
@@ -2070,7 +2074,7 @@
               </tr>
               <tr>
                 <td><code>Strategy</code></td>
-                <td><code>backend/src/qts/strategy_sdk/strategy.py:6</code></td>
+                <td><code>backend/src/qts/strategy_sdk/strategy.py:10</code></td>
                 <td><span class="class-role">作用：Base class for user strategies。</span><br />价值：提供用户策略唯一稳定 API，隐藏 actor、broker、risk 和 registry 内部细节。</td>
               </tr>
               <tr>
@@ -3039,10 +3043,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>313 files</span>
-      <span>550 classes</span>
-      <span>1754 functions</span>
-      <span>299 backend</span>
+      <span>314 files</span>
+      <span>553 classes</span>
+      <span>1757 functions</span>
+      <span>300 backend</span>
       <span>14 frontend</span>
     </div>
   </div>
@@ -12084,6 +12088,41 @@
     </details>
     <details class="inventory-file">
       <summary>
+        <code>backend/src/qts/strategy_sdk/events.py</code>
+        <span class="inventory-counts">
+          <span>3 classes</span>
+          <span>3 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>User-facing Strategy SDK callback event types.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>TimerEvent</code></td><td>events:15</td><td>Scheduled strategy timer event.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
+              <tr><td><code>OrderUpdate</code></td><td>events:29</td><td>Strategy-facing order status update.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>Fill</code></td><td>events:47</td><td>Strategy-facing fill event.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>__post_init__</code></td><td>TimerEvent:21</td><td>Validate timer event fields.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>OrderUpdate:38</td><td>Validate order update quantities.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>Fill:60</td><td>Validate fill economics.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
         <code>backend/src/qts/strategy_sdk/factors.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
@@ -12211,7 +12250,7 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>Strategy</code></td><td>strategy:6</td><td>Base class for user strategies.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>Strategy</code></td><td>strategy:10</td><td>Base class for user strategies.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -12220,13 +12259,13 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>initialize</code></td><td>Strategy:9</td><td>Perform initialize.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_bar</code></td><td>Strategy:13</td><td>Perform on_bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_tick</code></td><td>Strategy:17</td><td>Perform on_tick.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_timer</code></td><td>Strategy:21</td><td>Perform on_timer.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_order_update</code></td><td>Strategy:25</td><td>Perform on_order_update.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_fill</code></td><td>Strategy:29</td><td>Perform on_fill.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>finalize</code></td><td>Strategy:33</td><td>Perform finalize.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>initialize</code></td><td>Strategy:13</td><td>Perform initialize.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_bar</code></td><td>Strategy:17</td><td>Perform on_bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_tick</code></td><td>Strategy:21</td><td>Perform on_tick.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_timer</code></td><td>Strategy:25</td><td>Perform on_timer.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_order_update</code></td><td>Strategy:29</td><td>Perform on_order_update.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_fill</code></td><td>Strategy:33</td><td>Perform on_fill.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>finalize</code></td><td>Strategy:37</td><td>Perform finalize.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>

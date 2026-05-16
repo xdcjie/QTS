@@ -4,9 +4,11 @@ import ast
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
+from typing import cast
 
 import pytest
-from qts.strategy_sdk import Strategy
+from qts.domain.market_data import Bar
+from qts.strategy_sdk import Strategy, StrategyContext
 
 
 @dataclass(frozen=True)
@@ -74,6 +76,14 @@ class FakeContext:
         self.intents.append(("close", asset, None))
 
 
+def _ctx(ctx: FakeContext) -> StrategyContext:
+    return cast(StrategyContext, ctx)
+
+
+def _bar(bar: FakeBar) -> Bar:
+    return cast(Bar, bar)
+
+
 def test_vwap_pullback_is_strategy_subclass() -> None:
     from examples.strategies.vwap_pullback import VwapPullbackStrategy
 
@@ -85,9 +95,9 @@ def test_no_entry_before_indicators_are_ready() -> None:
 
     ctx = FakeContext(ready=False)
     strategy = VwapPullbackStrategy(symbol="AAPL", target_quantity=Decimal("2"))
-    strategy.initialize(ctx)
+    strategy.initialize(_ctx(ctx))
 
-    strategy.on_bar(ctx, _long_setup_bar(session_id="session-1"))
+    strategy.on_bar(_ctx(ctx), _bar(_long_setup_bar(session_id="session-1")))
 
     assert ctx.intents == []
 
@@ -101,11 +111,11 @@ def test_long_entry_after_l1_l2_l3_scores_pass() -> None:
         target_quantity=Decimal("2"),
         opening_range_bars=1,
     )
-    strategy.initialize(ctx)
+    strategy.initialize(_ctx(ctx))
     _set_long_setup_indicators(ctx)
 
-    strategy.on_bar(ctx, _opening_range_bar(session_id="session-1"))
-    strategy.on_bar(ctx, _long_setup_bar(session_id="session-1"))
+    strategy.on_bar(_ctx(ctx), _bar(_opening_range_bar(session_id="session-1")))
+    strategy.on_bar(_ctx(ctx), _bar(_long_setup_bar(session_id="session-1")))
 
     assert ctx.intents == [("target_quantity", FakeAsset("AAPL"), Decimal("2"))]
     assert strategy.last_score is not None
@@ -124,11 +134,11 @@ def test_short_entry_after_l1_l2_l3_scores_pass() -> None:
         target_quantity=Decimal("2"),
         opening_range_bars=1,
     )
-    strategy.initialize(ctx)
+    strategy.initialize(_ctx(ctx))
     _set_short_setup_indicators(ctx)
 
-    strategy.on_bar(ctx, _opening_range_bar(session_id="session-1"))
-    strategy.on_bar(ctx, _short_setup_bar(session_id="session-1"))
+    strategy.on_bar(_ctx(ctx), _bar(_opening_range_bar(session_id="session-1")))
+    strategy.on_bar(_ctx(ctx), _bar(_short_setup_bar(session_id="session-1")))
 
     assert ctx.intents == [("target_quantity", FakeAsset("AAPL"), Decimal("-2"))]
     assert strategy.last_score is not None
@@ -177,12 +187,12 @@ def test_close_on_stop_or_take_profit(
         stop_atr_multiple=Decimal("1"),
         take_profit_atr_multiple=Decimal("2"),
     )
-    strategy.initialize(ctx)
+    strategy.initialize(_ctx(ctx))
     _set_long_setup_indicators(ctx)
-    strategy.on_bar(ctx, _opening_range_bar(session_id="session-1"))
-    strategy.on_bar(ctx, _long_setup_bar(session_id="session-1"))
+    strategy.on_bar(_ctx(ctx), _bar(_opening_range_bar(session_id="session-1")))
+    strategy.on_bar(_ctx(ctx), _bar(_long_setup_bar(session_id="session-1")))
 
-    strategy.on_bar(ctx, exit_bar)
+    strategy.on_bar(_ctx(ctx), _bar(exit_bar))
 
     assert ctx.intents[-1] == expected_intent
 
@@ -208,6 +218,34 @@ def test_strategy_does_not_import_runtime_execution_broker_or_update_indicators(
         if module.startswith(("qts.runtime", "qts.execution", "qts.broker"))
     }
     assert ".update(" not in source
+
+
+def test_vwap_pullback_example_does_not_use_any() -> None:
+    source = Path("examples/strategies/vwap_pullback.py").read_text()
+    tree = ast.parse(source)
+
+    imported_names = {
+        alias.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom) and node.module == "typing"
+        for alias in node.names
+    }
+    annotation_names = {
+        node.id for node in ast.walk(tree) if isinstance(node, ast.Name) and node.id == "Any"
+    }
+
+    assert "Any" not in imported_names
+    assert annotation_names == set()
+
+
+def test_vwap_pullback_indicators_use_one_lifecycle_boundary() -> None:
+    source = Path("examples/strategies/vwap_pullback.py").read_text()
+
+    assert "class VwapPullbackIndicators" in source
+    assert "self._indicators: VwapPullbackIndicators | None" in source
+    assert "AssetIndicator | None" not in source
+    assert "self._ATR_7" not in source
+    assert "def _indicator_value" not in source
 
 
 def _set_long_setup_indicators(ctx: FakeContext) -> None:

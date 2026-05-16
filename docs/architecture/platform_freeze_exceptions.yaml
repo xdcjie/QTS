@@ -1154,3 +1154,18 @@ exceptions:
     reason: VWAP analyst report generator orchestrates loader, renderer, and PDF exporter without owning backtest execution
     owner: research
     expiry: 2026-12-31
+  - class_name: TimerEvent
+    module: qts.strategy_sdk.events
+    reason: OPT-01 typed Strategy callbacks need a public SDK timer event without exposing runtime internals
+    owner: strategy-sdk
+    expiry: 2026-12-31
+  - class_name: OrderUpdate
+    module: qts.strategy_sdk.events
+    reason: OPT-01 typed Strategy callbacks need a public SDK order update event without exposing OrderManager internals
+    owner: strategy-sdk
+    expiry: 2026-12-31
+  - class_name: Fill
+    module: qts.strategy_sdk.events
+    reason: OPT-01 typed Strategy callbacks need a public SDK fill event without exposing execution internals
+    owner: strategy-sdk
+    expiry: 2026-12-31
