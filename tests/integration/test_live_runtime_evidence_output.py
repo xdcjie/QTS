@@ -10,12 +10,12 @@ from qts.runtime.topology import RuntimeTopologyBuilder
 def test_live_runtime_evidence_output_links_event_stream_and_manifest(tmp_path: Path) -> None:
     from qts.core.ids import InstrumentId, RuntimeRunId
     from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
-    from qts.runtime.config import LiveRuntimeConfig
+    from qts.runtime.config.paper import PaperSimulatedRuntimeConfig
     from qts.runtime.sinks.base import RuntimeEventContext
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
     topology = RuntimeTopologyBuilder.from_live_config(
-        LiveRuntimeConfig(
+        PaperSimulatedRuntimeConfig(
             mode="paper_simulated",
             broker_configured=True,
             account_configured=True,
@@ -31,7 +31,7 @@ def test_live_runtime_evidence_output_links_event_stream_and_manifest(tmp_path: 
         subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
     )
 
-    sink = LiveRuntimeEventSink(
+    sink = BrokerRuntimeEventSink(
         tmp_path,
         context=RuntimeEventContext(run_id=RuntimeRunId("live-evidence-1"), mode="paper_broker"),
     )

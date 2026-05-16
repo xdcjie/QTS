@@ -6,12 +6,14 @@ from typing import Any
 
 from qts.api.schemas.backtest_schema import (
     BacktestRequestSchema,
+    BacktestRunResultSchema,
     BacktestRunSchema,
     BacktestStrategyOptionSchema,
 )
 from qts.application.dto.backtest import (
     BacktestRequestDTO,
     BacktestRunDTO,
+    BacktestRunResultDTO,
     BacktestStrategyOptionDTO,
 )
 from qts.application.dto.operations import (
@@ -37,6 +39,20 @@ def map_backtest_run_dto(run: BacktestRunDTO) -> BacktestRunSchema:
         run_id=run.run_id,
         config_path=run.config_path,
         status=run.status,
+    )
+
+
+def map_backtest_run_result_dto(result: BacktestRunResultDTO) -> BacktestRunResultSchema:
+    """Map research backtest result DTO into API response schema."""
+
+    return BacktestRunResultSchema(
+        run_id=result.run_id,
+        manifest_path=result.manifest_path,
+        equity_curve_path=result.equity_curve_path,
+        orders_path=result.orders_path,
+        fills_path=result.fills_path,
+        metrics=dict(result.metrics),
+        artifact_hashes=dict(result.artifact_hashes),
     )
 
 
@@ -119,6 +135,7 @@ def _map_operator_value(value: object) -> object:
 __all__ = [
     "map_backtest_request_schema",
     "map_backtest_run_dto",
+    "map_backtest_run_result_dto",
     "map_backtest_strategy_option_dto",
     "map_kill_switch_state_dto",
     "map_operator_dashboard_status_dto",

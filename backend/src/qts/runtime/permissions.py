@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import StrEnum
 
 
-class LiveOrderPermission(StrEnum):
+class OrderSubmissionPermission(StrEnum):
     """Explicit order permission for broker-capable runtime modes."""
 
     OBSERVATION_ONLY = "observation_only"
@@ -15,14 +15,14 @@ class LiveOrderPermission(StrEnum):
     @property
     def allows_order_submission(self) -> bool:
         """Return whether any broker order submission is allowed."""
-        return self is not LiveOrderPermission.OBSERVATION_ONLY
+        return self is not OrderSubmissionPermission.OBSERVATION_ONLY
 
     @property
     def allows_live_orders(self) -> bool:
         """Return whether real-money live order submission is allowed."""
-        return self is LiveOrderPermission.LIVE_ORDERS_ALLOWED
+        return self is OrderSubmissionPermission.LIVE_ORDERS_ALLOWED
 
 
 __all__ = [
-    "LiveOrderPermission",
+    "OrderSubmissionPermission",
 ]

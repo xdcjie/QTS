@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,6 +37,19 @@ class BacktestRunDTO:
 
 
 @dataclass(frozen=True, slots=True)
+class BacktestRunResultDTO:
+    """Stable research-facing result for a completed backtest run."""
+
+    run_id: str
+    manifest_path: str
+    equity_curve_path: str
+    orders_path: str
+    fills_path: str
+    metrics: dict[str, Any]
+    artifact_hashes: dict[str, str]
+
+
+@dataclass(frozen=True, slots=True)
 class BacktestStrategyOptionDTO:
     """Configured backtest option exposed to UI/API clients."""
 
@@ -50,4 +64,9 @@ class BacktestStrategyOptionDTO:
             raise ValueError("config_path must not be empty")
 
 
-__all__ = ["BacktestRequestDTO", "BacktestRunDTO", "BacktestStrategyOptionDTO"]
+__all__ = [
+    "BacktestRequestDTO",
+    "BacktestRunDTO",
+    "BacktestRunResultDTO",
+    "BacktestStrategyOptionDTO",
+]

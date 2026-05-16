@@ -77,11 +77,11 @@ def test_runtime_has_no_provider_sdk_imports() -> None:
 def test_backtest_and_live_events_share_envelope(tmp_path: Path) -> None:
     from qts.core.ids import RuntimeRunId
     from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventContext
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
     backtest_context = RuntimeEventContext(run_id=RuntimeRunId("run-bt"), mode="backtest")
     live_context = RuntimeEventContext(run_id=RuntimeRunId("run-live"), mode="paper_broker")
-    live_sink = LiveRuntimeEventSink(tmp_path / "live", context=live_context)
+    live_sink = BrokerRuntimeEventSink(tmp_path / "live", context=live_context)
 
     backtest_event = backtest_context.apply(
         RuntimeEvent(kind="runtime.state", payload={"state": "running"}),
@@ -101,9 +101,9 @@ def test_runtime_event_contains_platform_baseline_version(tmp_path: Path) -> Non
     from qts.core.ids import RuntimeRunId
     from qts.reporting.base import PLATFORM_BASELINE_VERSION
     from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventContext
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(
+    sink = BrokerRuntimeEventSink(
         tmp_path,
         context=RuntimeEventContext(run_id=RuntimeRunId("run-baseline"), mode="live"),
     )
@@ -151,9 +151,9 @@ def test_fill_event_has_causation_order_event() -> None:
 def test_event_sequence_no_monotonic_per_run(tmp_path: Path) -> None:
     from qts.core.ids import RuntimeRunId
     from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventContext
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(
+    sink = BrokerRuntimeEventSink(
         tmp_path,
         context=RuntimeEventContext(run_id=RuntimeRunId("run-seq"), mode="paper_broker"),
     )
@@ -398,11 +398,11 @@ def test_reconnect_blocks_new_orders_until_reconciled() -> None:
     from qts.runtime.event_store import EventSequenceValidationReport
     from qts.runtime.state_recovery import (
         validate_event_sequence_for_recovery,
-        validate_live_recovery_gate,
+        validate_runtime_recovery_gate,
     )
 
     readiness = validate_event_sequence_for_recovery(EventSequenceValidationReport(valid=True))
-    decision = validate_live_recovery_gate(readiness, observation_entered=True)
+    decision = validate_runtime_recovery_gate(readiness, observation_entered=True)
 
     assert decision.real_order_submission_enabled is False
     assert decision.reason_code == "RECOVERY_RECONCILIATION_REQUIRED"
@@ -583,10 +583,10 @@ def test_backtest_rejects_order_type_not_supported_by_live_broker() -> None:
 
 
 def test_live_blocks_without_operator_signoff() -> None:
-    from qts.runtime.config import LiveRuntimeConfig
+    from qts.runtime.config import BrokerRuntimeConfig
 
     with pytest.raises(ValueError, match="operator_signoff_id"):
-        LiveRuntimeConfig(
+        BrokerRuntimeConfig(
             mode="live",
             broker_configured=True,
             account_configured=True,
@@ -598,15 +598,15 @@ def test_live_blocks_without_operator_signoff() -> None:
             account_environment="live",
             execution_environment="broker",
             market_data_environment="realtime",
-            broker_account_code="U1234567",
+            broker_account_code="DU1234567",
         )
 
 
 def test_live_blocks_with_reconciliation_drift() -> None:
     from qts.runtime.broker_startup import BrokerRuntimeStartupChecklist
-    from qts.runtime.config import LiveRuntimeConfig
+    from qts.runtime.config.paper import PaperSimulatedRuntimeConfig
 
-    config = LiveRuntimeConfig(
+    config = PaperSimulatedRuntimeConfig(
         mode="paper_simulated",
         broker_configured=True,
         account_configured=True,
@@ -625,9 +625,9 @@ def test_live_blocks_with_reconciliation_drift() -> None:
 
 def test_live_blocks_when_event_sink_not_writable() -> None:
     from qts.runtime.broker_startup import BrokerRuntimeStartupChecklist
-    from qts.runtime.config import LiveRuntimeConfig
+    from qts.runtime.config.paper import PaperSimulatedRuntimeConfig
 
-    config = LiveRuntimeConfig(
+    config = PaperSimulatedRuntimeConfig(
         mode="paper_simulated",
         broker_configured=True,
         account_configured=True,
@@ -645,9 +645,9 @@ def test_live_blocks_when_event_sink_not_writable() -> None:
 
 def test_observation_allowed_when_order_blocked() -> None:
     from qts.runtime.broker_startup import BrokerRuntimeStartupDecisionStatus, validate_live_startup
-    from qts.runtime.config import LiveRuntimeConfig
+    from qts.runtime.config import BrokerRuntimeConfig
 
-    config = LiveRuntimeConfig(
+    config = BrokerRuntimeConfig(
         mode="observation",
         broker_configured=True,
         account_configured=True,
@@ -720,16 +720,16 @@ def test_duplicate_event_sequence_blocks_recovery() -> None:
 def test_recovery_enters_observation_before_live() -> None:
     from qts.runtime.event_store import EventSequenceValidationReport
     from qts.runtime.state_recovery import (
-        LiveRecoveryDecisionStatus,
+        RuntimeRecoveryDecisionStatus,
         validate_event_sequence_for_recovery,
-        validate_live_recovery_gate,
+        validate_runtime_recovery_gate,
     )
 
     readiness = validate_event_sequence_for_recovery(EventSequenceValidationReport(valid=True))
 
     assert (
-        validate_live_recovery_gate(readiness).status
-        is LiveRecoveryDecisionStatus.ENTER_OBSERVATION
+        validate_runtime_recovery_gate(readiness).status
+        is RuntimeRecoveryDecisionStatus.ENTER_OBSERVATION
     )
 
 

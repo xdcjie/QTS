@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from decimal import Decimal
+from typing import Any, cast
 
 from qts.core.ids import AccountId, CorrelationId, OrderId, StrategyId
 from qts.execution.broker import (
@@ -24,11 +25,13 @@ class BrokerExecutionAdapter:
         broker: BrokerAdapter,
         account_id: AccountId,
         strategy_id: StrategyId | None = None,
+        live_capital_decision: object | None = None,
     ) -> None:
         """Create a broker-backed execution adapter."""
         self._broker = broker
         self._account_id = account_id
         self._strategy_id = strategy_id
+        self._live_capital_decision = live_capital_decision
         self._runtime_broker_order_id_by_broker_order_id: dict[str, str] = {}
 
     def execute_market_order(
@@ -44,6 +47,7 @@ class BrokerExecutionAdapter:
     ) -> ExecutionReport:
         """Submit a market order and normalize the broker acknowledgement."""
         _ = market_price, correlation_id
+        self._assert_live_capital_order_allowed()
         if intent.account_id is not None and intent.account_id != account_id:
             raise ValueError("intent account_id does not match execution route account_id")
         self._validate_route(account_id=account_id, strategy_id=strategy_id)
@@ -112,6 +116,12 @@ class BrokerExecutionAdapter:
             raise ValueError("account_id does not match BrokerExecutionAdapter account_id")
         if self._strategy_id is not None and strategy_id != self._strategy_id:
             raise ValueError("strategy_id does not match BrokerExecutionAdapter strategy_id")
+
+    def _assert_live_capital_order_allowed(self) -> None:
+        gate = self._live_capital_decision
+        if gate is None:
+            return
+        cast(Any, gate).assert_live_order_allowed()
 
     def _normalize_with_runtime_broker_order_id(
         self,

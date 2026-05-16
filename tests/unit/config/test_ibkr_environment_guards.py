@@ -23,7 +23,7 @@ def test_live_ibkr_config_rejects_paper_account_and_client_ids_without_leaking_s
             host="127.0.0.1",
             port=7496,
             client_id=201,
-            account_id="DU1234567",
+            account_id="DUP1234567",
             risk_profile="paper-default",
         ),
         secrets=IbkrSecretRefs(
@@ -63,7 +63,7 @@ def test_valid_live_ibkr_config_requires_distinct_market_data_and_order_clients(
             host="127.0.0.1",
             port=7496,
             client_id=211,
-            account_id="U1234567",
+            account_id="DU1234567",
             risk_profile="live-default",
         ),
         secrets=IbkrSecretRefs(
@@ -73,6 +73,49 @@ def test_valid_live_ibkr_config_requires_distinct_market_data_and_order_clients(
     )
 
     validate_ibkr_environment(config, paper_client_ids={101, 201})
+
+
+def test_ibkr_account_classification_distinguishes_dup_paper_from_du_live() -> None:
+    from qts.config.ibkr import (
+        IbkrConnectionConfig,
+        IbkrEnvironmentConfig,
+        IbkrOrderExecutionConfig,
+        IbkrSecretRefs,
+    )
+
+    paper = IbkrEnvironmentConfig(
+        mode="paper",
+        market_data=IbkrConnectionConfig(host="127.0.0.1", port=4002, client_id=101),
+        order_execution=IbkrOrderExecutionConfig(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+            account_id="DUP459545",
+            risk_profile="paper-default",
+        ),
+        secrets=IbkrSecretRefs(
+            username_env="IBKR_PAPER_USERNAME",
+            password_env="IBKR_PAPER_PASSWORD",
+        ),
+    )
+    live = IbkrEnvironmentConfig(
+        mode="live",
+        order_execution=IbkrOrderExecutionConfig(
+            host="127.0.0.1",
+            port=4001,
+            client_id=211,
+            account_id="DU1234567",
+            risk_profile="live-default",
+        ),
+        secrets=IbkrSecretRefs(
+            username_env="IBKR_LIVE_USERNAME",
+            password_env="IBKR_LIVE_PASSWORD",
+        ),
+        market_data=IbkrConnectionConfig(host="127.0.0.1", port=4001, client_id=111),
+    )
+
+    assert paper.account_classification() == "paper"
+    assert live.account_classification() == "live"
 
 
 def test_ibkr_config_rejects_shared_market_data_and_order_client_id() -> None:
@@ -95,7 +138,7 @@ def test_ibkr_config_rejects_shared_market_data_and_order_client_id() -> None:
             host="127.0.0.1",
             port=7497,
             client_id=101,
-            account_id="DU1234567",
+            account_id="DUP1234567",
             risk_profile="paper-default",
         ),
         secrets=IbkrSecretRefs(
@@ -129,7 +172,7 @@ def test_paper_ibkr_config_accepts_local_paper_gateway_on_distinct_clients() -> 
             host="127.0.0.1",
             port=4002,
             client_id=201,
-            account_id="DU1234567",
+            account_id="DUP1234567",
             risk_profile="paper-default",
         ),
         secrets=IbkrSecretRefs(
@@ -161,7 +204,7 @@ def test_live_ibkr_config_rejects_paper_gateway_port_unless_observe_only() -> No
             host="127.0.0.1",
             port=4002,
             client_id=211,
-            account_id="U1234567",
+            account_id="DU1234567",
             risk_profile="live-default",
         ),
         secrets=IbkrSecretRefs(
@@ -194,7 +237,7 @@ def test_ibkr_environment_config_reads_transport_with_official_default() -> None
             "market_data": {"host": "127.0.0.1", "port": 4002, "client_id": 101},
             "order_execution": {"host": "127.0.0.1", "port": 4002, "client_id": 201},
         },
-        "order_execution": {"account_id": "DU1234567", "risk_profile": "paper-default"},
+        "order_execution": {"account_id": "DUP1234567", "risk_profile": "paper-default"},
         "secrets": {
             "username_env": "IBKR_PAPER_USERNAME",
             "password_env": "IBKR_PAPER_PASSWORD",
@@ -219,7 +262,7 @@ def test_ibkr_environment_config_rejects_unknown_transport() -> None:
             "market_data": {"host": "127.0.0.1", "port": 4002, "client_id": 101},
             "order_execution": {"host": "127.0.0.1", "port": 4002, "client_id": 201},
         },
-        "order_execution": {"account_id": "DU1234567", "risk_profile": "paper-default"},
+        "order_execution": {"account_id": "DUP1234567", "risk_profile": "paper-default"},
         "secrets": {
             "username_env": "IBKR_PAPER_USERNAME",
             "password_env": "IBKR_PAPER_PASSWORD",

@@ -16,7 +16,7 @@ def test_ibkr_paper_config_separates_market_data_and_order_execution() -> None:
         config["connections"]["market_data"]["client_id"]
         != config["connections"]["order_execution"]["client_id"]
     )
-    assert config["order_execution"]["account_id"].startswith("DU")
+    assert config["order_execution"]["account_id"].startswith("DUP")
 
 
 def test_ibkr_live_config_separates_market_data_and_order_execution() -> None:
@@ -30,4 +30,5 @@ def test_ibkr_live_config_separates_market_data_and_order_execution() -> None:
         config["connections"]["market_data"]["client_id"]
         != config["connections"]["order_execution"]["client_id"]
     )
-    assert not config["order_execution"]["account_id"].startswith("DU")
+    assert config["order_execution"]["account_id"].startswith("DU")
+    assert not config["order_execution"]["account_id"].startswith("DUP")

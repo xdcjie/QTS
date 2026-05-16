@@ -8,7 +8,7 @@ from typing import Any
 
 from qts.core.hashing import stable_json_hash
 from qts.core.ids import AccountId, BrokerId, InstrumentId, RuntimeRunId, StrategyId
-from qts.runtime.config import BacktestRuntimeConfig, LiveRuntimeConfig
+from qts.runtime.config import BacktestRuntimeConfig, BrokerRuntimeConfig
 from qts.runtime.mode import AccountEnvironment, ExecutionEnvironment, RuntimeMode
 
 
@@ -345,7 +345,7 @@ class RuntimeTopologyBuilder:
     @classmethod
     def from_live_config(
         cls,
-        config: LiveRuntimeConfig,
+        config: BrokerRuntimeConfig,
         run_id: RuntimeRunId,
         *,
         account_id: str,

@@ -1,4 +1,4 @@
-"""Paper/live reconciliation orchestration."""
+"""Broker-runtime reconciliation orchestration."""
 
 from __future__ import annotations
 
@@ -21,15 +21,15 @@ from qts.runtime.sinks.base import RuntimeEvent
 
 
 @dataclass(frozen=True, slots=True)
-class LiveReconciliationResult:
-    """Result of a runtime reconciliation check."""
+class BrokerRuntimeReconciliationResult:
+    """Result of a broker runtime reconciliation check."""
 
     report: ReconciliationReport
     runtime_event: RuntimeEvent | None = None
 
 
-class LiveReconciliation:
-    """Build snapshots and gate paper/live trading on reconciliation drift."""
+class BrokerRuntimeReconciliation:
+    """Build snapshots and gate broker runtime trading on reconciliation drift."""
 
     def __init__(
         self,
@@ -38,7 +38,7 @@ class LiveReconciliation:
         engine: ReconciliationEngine | None = None,
         tolerance: Decimal = Decimal("0"),
     ) -> None:
-        """Create a live reconciliation boundary."""
+        """Create a broker reconciliation boundary."""
         self._account_id = account_id
         self._engine = engine or ReconciliationEngine(tolerance=tolerance)
 
@@ -88,12 +88,12 @@ class LiveReconciliation:
         *,
         internal: ReconciliationSnapshot,
         broker: ReconciliationSnapshot,
-    ) -> LiveReconciliationResult:
+    ) -> BrokerRuntimeReconciliationResult:
         """Run a periodic reconciliation and return an optional degradation event."""
         report = self._engine.reconcile(internal=internal, broker=broker)
         if not report.has_drift:
-            return LiveReconciliationResult(report=report)
-        return LiveReconciliationResult(
+            return BrokerRuntimeReconciliationResult(report=report)
+        return BrokerRuntimeReconciliationResult(
             report=report,
             runtime_event=RuntimeEvent(
                 kind="runtime.degraded",
@@ -106,4 +106,7 @@ class LiveReconciliation:
         )
 
 
-__all__ = ["LiveReconciliation", "LiveReconciliationResult"]
+__all__ = [
+    "BrokerRuntimeReconciliation",
+    "BrokerRuntimeReconciliationResult",
+]

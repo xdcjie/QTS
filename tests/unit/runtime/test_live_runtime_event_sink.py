@@ -12,9 +12,9 @@ from tests.support.backtest_manifest import m1_manifest_kwargs
 
 def test_live_runtime_event_sink_requires_run_context(tmp_path: Path) -> None:
     import pytest
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(tmp_path)
+    sink = BrokerRuntimeEventSink(tmp_path)
 
     with pytest.raises(ValueError, match="run_id"):
         sink.write(RuntimeEvent(kind="runtime.state", payload={"state": "running"}))
@@ -23,9 +23,9 @@ def test_live_runtime_event_sink_requires_run_context(tmp_path: Path) -> None:
 def test_live_runtime_event_sink_writes_stable_append_only_ndjson(tmp_path: Path) -> None:
     from qts.core.ids import CorrelationId, RuntimeRunId
     from qts.runtime.sinks.base import RuntimeEventContext
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(
+    sink = BrokerRuntimeEventSink(
         tmp_path,
         context=RuntimeEventContext(run_id=RuntimeRunId("run-stable"), mode="paper_broker"),
     )
@@ -71,9 +71,9 @@ def test_live_runtime_event_sink_writes_stable_append_only_ndjson(tmp_path: Path
 def test_runtime_event_sink_writes_mode_and_execution_environment(tmp_path: Path) -> None:
     from qts.core.ids import CorrelationId, RuntimeRunId
     from qts.runtime.sinks.base import RuntimeEventContext
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(
+    sink = BrokerRuntimeEventSink(
         tmp_path,
         context=RuntimeEventContext(
             run_id=RuntimeRunId("run-mode"),
@@ -102,9 +102,9 @@ def test_live_runtime_event_sink_contains_platform_baseline_version(tmp_path: Pa
     from qts.core.ids import CorrelationId, RuntimeRunId
     from qts.reporting.base import PLATFORM_BASELINE_VERSION
     from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventContext
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(
+    sink = BrokerRuntimeEventSink(
         tmp_path,
         context=RuntimeEventContext(
             run_id=RuntimeRunId("run-live-baseline"),
@@ -135,9 +135,9 @@ def test_runtime_event_sink_writes_unified_runtime_envelope(tmp_path: Path) -> N
         RuntimeRunId,
         StrategyId,
     )
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(tmp_path)
+    sink = BrokerRuntimeEventSink(tmp_path)
     sink.write(
         RuntimeEvent(
             kind="runtime.fill_applied",
@@ -174,7 +174,7 @@ def test_backtest_and_live_event_sinks_share_runtime_envelope(tmp_path: Path) ->
     from qts.reporting.backtest import BacktestArtifactWriter, EquityCurvePoint
     from qts.runtime.sinks.backtest import BacktestRuntimeEventSink
     from qts.runtime.sinks.base import RuntimeEventContext
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
     live_context = RuntimeEventContext(
         run_id=RuntimeRunId("run-live-1"),
@@ -186,7 +186,7 @@ def test_backtest_and_live_event_sinks_share_runtime_envelope(tmp_path: Path) ->
         mode="backtest",
         execution_environment="simulated",
     )
-    live_sink = LiveRuntimeEventSink(tmp_path / "live", context=live_context)
+    live_sink = BrokerRuntimeEventSink(tmp_path / "live", context=live_context)
     backtest_writer = BacktestArtifactWriter(tmp_path / "backtest", run_id=backtest_context.run_id)
     backtest_sink = BacktestRuntimeEventSink(backtest_writer, context=backtest_context)
 
@@ -239,9 +239,9 @@ def test_runtime_event_context_rejects_permission_mode_label() -> None:
 def test_runtime_event_envelope_writes_parent_event_id(tmp_path: Path) -> None:
     from qts.core.ids import CorrelationId, EventId, RuntimeRunId
     from qts.runtime.sinks.base import RuntimeEventContext
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(
+    sink = BrokerRuntimeEventSink(
         tmp_path,
         context=RuntimeEventContext(run_id=RuntimeRunId("run-parent"), mode="paper_broker"),
     )
@@ -263,9 +263,9 @@ def test_runtime_event_envelope_writes_parent_event_id(tmp_path: Path) -> None:
 def test_runtime_event_sink_requires_event_id_without_context(tmp_path: Path) -> None:
     import pytest
     from qts.core.ids import RuntimeRunId
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(tmp_path)
+    sink = BrokerRuntimeEventSink(tmp_path)
 
     with pytest.raises(ValueError, match="event_id"):
         sink.write(
@@ -327,9 +327,9 @@ def test_fill_events_require_causation_id() -> None:
 
 def test_live_runtime_event_sink_rejects_secret_payload_values(tmp_path: Path) -> None:
     import pytest
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(tmp_path)
+    sink = BrokerRuntimeEventSink(tmp_path)
 
     with pytest.raises(ValueError, match="secret"):
         sink.write(RuntimeEvent(kind="runtime.error", payload={"password": "not-allowed"}))

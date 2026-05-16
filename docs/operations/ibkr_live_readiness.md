@@ -9,7 +9,7 @@ This checklist must be completed before enabling live order execution.
 - Keep market data and order execution in separate config sections.
 - Keep market data and order execution on distinct IBKR client IDs.
 - Load credentials from environment variables or a secret manager, never from committed config.
-- Live observation config must reject `DU...` paper accounts and paper-only
+- Live observation config must reject `DUP...` paper accounts and paper-only
   client IDs or secret references.
 - Live observation mode must keep `orders_enabled: false` until signoff evidence exists.
 

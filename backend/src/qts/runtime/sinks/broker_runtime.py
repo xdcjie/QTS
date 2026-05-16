@@ -1,4 +1,4 @@
-"""Live runtime event sink."""
+"""Broker runtime event sink."""
 
 from __future__ import annotations
 
@@ -18,8 +18,8 @@ from qts.runtime.sinks.base import (
 _SECRET_KEY_PARTS = ("password", "secret", "token", "credential")
 
 
-class LiveRuntimeEventSink(RuntimeEventSink):
-    """Write append-only paper/live runtime events as deterministic NDJSON."""
+class BrokerRuntimeEventSink(RuntimeEventSink):
+    """Write append-only broker-capable runtime events as deterministic NDJSON."""
 
     def __init__(
         self,
@@ -28,7 +28,7 @@ class LiveRuntimeEventSink(RuntimeEventSink):
         filename: str = "events.ndjson",
         context: RuntimeEventContext | None = None,
     ) -> None:
-        """Create a live event sink under an artifact directory."""
+        """Create a broker-capable runtime event sink."""
         if not filename.strip():
             raise ValueError("filename must not be empty")
         self._output_dir = output_dir
@@ -108,4 +108,4 @@ class LiveRuntimeEventSink(RuntimeEventSink):
                 self._reject_secrets(item)
 
 
-__all__ = ["LiveRuntimeEventSink"]
+__all__ = ["BrokerRuntimeEventSink"]

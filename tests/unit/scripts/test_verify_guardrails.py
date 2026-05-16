@@ -664,6 +664,58 @@ def test_guardrails_reject_removed_live_runtime_import_usage(
     assert violations[0].symbol == "qts.runtime.live.LiveRuntime"
 
 
+def test_guardrails_reject_removed_m1_runtime_naming_imports(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/runtime/legacy_m1_consumer.py",
+        "from qts.runtime.config import LiveRuntimeConfig\n"
+        "from qts.runtime.config.paper import PaperBrokerRuntimeConfig\n"
+        "from qts.runtime.permissions import LiveOrderPermission\n"
+        "from qts.runtime.sinks.live import LiveRuntimeEventSink\n"
+        "from qts.runtime.live_reconciliation import LiveReconciliation\n"
+        "from qts.runtime.state_recovery import LiveRecoveryDecision\n",
+    )
+
+    assert _codes_by_suite(root, guardrails.RemovedImportNoNewUsageRule()) == {
+        "REMOVED_IMPORT_USAGE"
+    }
+
+
+def test_removed_live_alias_imports_fail(tmp_path: Path) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/runtime/removed_live_alias_consumer.py",
+        "from qts.runtime.config import LiveRuntimeConfig\n"
+        "from qts.runtime.sinks import LiveRuntimeEventSink\n"
+        "from qts.runtime.permissions import LiveOrderPermission\n"
+        "from qts.runtime.live_reconciliation import LiveReconciliation\n"
+        "from qts.runtime.state_recovery import LiveRecoveryDecision\n"
+        "from qts.runtime.sinks.live import LiveRuntimeEventSink as OldSink\n"
+        "from qts.reporting.live import LiveReportWriter\n",
+    )
+
+    violations = guardrails.GuardrailSuite(rules=(guardrails.RemovedImportNoNewUsageRule(),)).check(
+        root
+    )
+
+    assert {violation.code for violation in violations} == {"REMOVED_IMPORT_USAGE"}
+    assert {violation.symbol for violation in violations} == {
+        "qts.runtime.config.LiveRuntimeConfig",
+        "qts.runtime.sinks.LiveRuntimeEventSink",
+        "qts.runtime.permissions.LiveOrderPermission",
+        "qts.runtime.live_reconciliation.LiveReconciliation",
+        "qts.runtime.state_recovery.LiveRecoveryDecision",
+        "qts.runtime.sinks.live.LiveRuntimeEventSink",
+        "qts.reporting.live",
+    }
+
+
 def test_guardrails_allow_canonical_broker_startup_and_order_result_imports(
     tmp_path: Path,
 ) -> None:
@@ -882,11 +934,34 @@ def test_guardrails_reject_shared_runtime_fake_adapter_wording(tmp_path: Path) -
     assert _codes(root) == {"SHARED_RUNTIME_WORDING"}
 
 
+def test_runtime_session_complexity_budget_passes(tmp_path: Path) -> None:
+    root = tmp_path
+    branch_method = "\n".join(
+        f"        if value == {index}:\n            return {index}" for index in range(10)
+    )
+    public_methods = "\n".join(
+        (f"    def public_0(self, value):\n{branch_method}\n        return None")
+        if index == 0
+        else f"    def public_{index}(self):\n        pass"
+        for index in range(14)
+    )
+    private_helpers = "\n".join(
+        f"    def _helper_{index}(self):\n        pass" for index in range(8)
+    )
+    _write(
+        root,
+        "backend/src/qts/runtime/session.py",
+        f"class RuntimeSession:\n{public_methods}\n{private_helpers}\n",
+    )
+
+    assert _codes_by_suite(root, _load_guardrails_module().RuntimeSessionComplexityRule()) == set()
+
+
 def test_guardrails_reject_runtime_session_complexity_without_evidence(
     tmp_path: Path,
 ) -> None:
     root = tmp_path
-    methods = "\n".join(f"    def public_{index}(self):\n        pass" for index in range(13))
+    methods = "\n".join(f"    def public_{index}(self):\n        pass" for index in range(15))
     _write(
         root,
         "backend/src/qts/runtime/session.py",
@@ -894,6 +969,39 @@ def test_guardrails_reject_runtime_session_complexity_without_evidence(
     )
 
     assert _codes(root) == {"RUNTIME_SESSION_COMPLEXITY"}
+
+
+def test_runtime_session_does_not_import_ibkr_transport(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/runtime/session.py",
+        "from qts.execution.transports.ibkr_tws_order_client import IbkrTwsOrderClient\n\n"
+        "class RuntimeSession:\n"
+        "    def start(self):\n"
+        "        return IbkrTwsOrderClient\n",
+    )
+
+    assert _codes_by_suite(root, _load_guardrails_module().RuntimeSessionComplexityRule()) == {
+        "RUNTIME_SESSION_COMPLEXITY"
+    }
+
+
+def test_runtime_session_does_not_apply_account_mutation_directly(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/runtime/session.py",
+        "class RuntimeSession:\n"
+        "    def on_fill(self, partition, message):\n"
+        "        partition.account_actor._apply_fill(message)\n",
+    )
+
+    assert _codes_by_suite(root, _load_guardrails_module().RuntimeSessionComplexityRule()) == {
+        "RUNTIME_SESSION_COMPLEXITY"
+    }
 
 
 def test_guardrails_reject_runtime_coordinator_without_decision_evidence(
@@ -904,6 +1012,76 @@ def test_guardrails_reject_runtime_coordinator_without_decision_evidence(
         root,
         "backend/src/qts/runtime/recovery.py",
         "class RuntimeRecoveryCoordinator:\n    def recover(self):\n        pass\n",
+    )
+
+    assert _codes(root) == {"RUNTIME_COORDINATOR_DECISION"}
+
+
+def test_every_runtime_coordinator_has_decision_record(tmp_path: Path) -> None:
+    root = tmp_path
+    coordinator_sources = {
+        "backend/src/qts/runtime/recovery.py": "RuntimeRecoveryCoordinator",
+        "backend/src/qts/runtime/rollback.py": "RuntimeRollbackCoordinator",
+        "backend/src/qts/runtime/broker_lifecycle.py": "RuntimeBrokerLifecycleCoordinator",
+        "backend/src/qts/runtime/market_data_coordinator.py": "RuntimeMarketDataCoordinator",
+        "backend/src/qts/runtime/safety_controller.py": "RuntimeSafetyController",
+        "backend/src/qts/runtime/startup_gate.py": "BrokerRuntimeStartupGate",
+        "backend/src/qts/runtime/broker_runtime_topology.py": "BrokerRuntimeTopologyResolver",
+    }
+    for relative_path, class_name in coordinator_sources.items():
+        _write(root, relative_path, f"class {class_name}:\n    pass\n")
+    _write(
+        root,
+        "docs/architecture/runtime_coordinator_decisions.md",
+        "# Runtime Coordinator Decisions\n\n"
+        "| Candidate | Decision | Evidence | Gate |\n"
+        "| --- | --- | --- | --- |\n"
+        "| RuntimeRecoveryCoordinator | Keep | state/policy | gate |\n"
+        "| RuntimeRollbackCoordinator | Keep | safety boundary | gate |\n"
+        "| RuntimeBrokerLifecycleCoordinator | Keep | external boundary | gate |\n"
+        "| RuntimeMarketDataCoordinator | Keep | complexity threshold | gate |\n"
+        "| RuntimeSafetyController | Keep | safety boundary | gate |\n"
+        "| BrokerRuntimeStartupGate | Keep | independent test value | gate |\n",
+    )
+
+    assert _codes(root) == {"RUNTIME_COORDINATOR_DECISION"}
+
+
+def test_deleted_coordinator_has_no_production_import(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/runtime/session.py",
+        "from qts.runtime.recovery import RuntimeRecoveryCoordinator\n",
+    )
+    _write(
+        root,
+        "docs/architecture/runtime_coordinator_decisions.md",
+        "# Runtime Coordinator Decisions\n\n"
+        "| Candidate | Decision | Evidence | Gate |\n"
+        "| --- | --- | --- | --- |\n"
+        "| RuntimeRecoveryCoordinator | Delete | no production references | gate |\n",
+    )
+
+    assert _codes(root) == {"RUNTIME_COORDINATOR_DECISION"}
+
+
+def test_kept_coordinator_has_state_policy_or_evidence_responsibility(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/runtime/recovery.py",
+        "class RuntimeRecoveryCoordinator:\n    pass\n",
+    )
+    _write(
+        root,
+        "docs/architecture/runtime_coordinator_decisions.md",
+        "# Runtime Coordinator Decisions\n\n"
+        "| Candidate | Decision | Evidence | Gate |\n"
+        "| --- | --- | --- | --- |\n"
+        "| RuntimeRecoveryCoordinator | Keep | convenience wrapper | gate |\n",
     )
 
     assert _codes(root) == {"RUNTIME_COORDINATOR_DECISION"}

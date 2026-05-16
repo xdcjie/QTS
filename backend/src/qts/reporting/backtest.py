@@ -338,7 +338,7 @@ class BacktestArtifactWriter:
             "market_data_environment": "historical_replay",
             "execution_environment": "simulated",
             "account_environment": "simulated",
-            "live_order_permission": False,
+            "order_submission_permission": False,
             "event_schema_version": RUNTIME_EVENT_SCHEMA_VERSION,
             "artifact_schema_version": RUNTIME_ARTIFACT_SCHEMA_VERSION,
             "config_hash": config_hash,

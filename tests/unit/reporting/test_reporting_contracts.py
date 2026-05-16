@@ -18,7 +18,7 @@ def _canonical_manifest_payload() -> dict[str, object]:
         "market_data_environment": "realtime",
         "execution_environment": "broker",
         "account_environment": "paper",
-        "live_order_permission": False,
+        "order_submission_permission": False,
         "config_hash": "sha256:config",
         "topology_hash": "sha256:topology",
         "startup_checklist_hash": "sha256:startup",
@@ -108,9 +108,9 @@ def test_broker_runtime_manifest_contains_platform_baseline_version(tmp_path: Pa
     from qts.reporting.base import PLATFORM_BASELINE_VERSION, RuntimeManifest
     from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
     from qts.runtime.sinks.base import RuntimeEventContext
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(
+    sink = BrokerRuntimeEventSink(
         tmp_path,
         context=RuntimeEventContext(run_id=RuntimeRunId("broker-baseline"), mode="paper_broker"),
     )
@@ -138,9 +138,9 @@ def test_broker_runtime_manifest_validates_against_shared_runtime_manifest(tmp_p
     from qts.reporting.base import RuntimeManifest
     from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
     from qts.runtime.sinks.base import RuntimeEventContext
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(
+    sink = BrokerRuntimeEventSink(
         tmp_path,
         context=RuntimeEventContext(run_id=RuntimeRunId("live-shared-manifest"), mode="live"),
     )
@@ -168,7 +168,7 @@ def test_broker_runtime_manifest_validates_against_shared_runtime_manifest(tmp_p
     assert runtime_manifest.market_data_environment == "unknown"
     assert runtime_manifest.execution_environment == "unknown"
     assert runtime_manifest.account_environment == "unknown"
-    assert runtime_manifest.live_order_permission is False
+    assert runtime_manifest.order_submission_permission is False
     assert runtime_manifest.event_schema_version == RuntimeEvent.SCHEMA_VERSION
     assert runtime_manifest.artifact_schema_version == "1"
     assert runtime_manifest.config_hash.startswith("sha256:")
@@ -219,7 +219,7 @@ def test_backtest_manifest_validates_against_shared_runtime_manifest(tmp_path: P
     assert runtime_manifest.market_data_environment == "historical_replay"
     assert runtime_manifest.execution_environment == "simulated"
     assert runtime_manifest.account_environment == "simulated"
-    assert runtime_manifest.live_order_permission is False
+    assert runtime_manifest.order_submission_permission is False
     assert runtime_manifest.event_schema_version == RuntimeEvent.SCHEMA_VERSION
     assert runtime_manifest.artifact_schema_version == "1"
     assert runtime_manifest.config_hash == "sha256:config"

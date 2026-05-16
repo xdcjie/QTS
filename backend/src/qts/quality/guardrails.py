@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import json
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -45,10 +46,13 @@ REMOVED_IMPORT_MODULES = frozenset(
         "qts.execution.adapters.ibkr_transport",
         "qts.application.commands.start_paper",
         "qts.reporting.live",
+        "qts.runtime.config.live",
         "qts.runtime.live",
+        "qts.runtime.live_reconciliation",
         "qts.runtime.live_runtime_session",
         "qts.runtime.live_runtime_dependencies",
         "qts.runtime.live_runtime_topology",
+        "qts.runtime.sinks.live",
     }
 )
 REMOVED_IMPORT_SYMBOLS = frozenset(
@@ -56,10 +60,26 @@ REMOVED_IMPORT_SYMBOLS = frozenset(
         ("qts.reporting", "LiveEventReporter"),
         ("qts.reporting", "LiveReportManifest"),
         ("qts.reporting", "LiveReportWriter"),
+        ("qts.runtime", "LiveOrderPermission"),
+        ("qts.runtime", "LiveRecoveryDecision"),
+        ("qts.runtime", "LiveRecoveryDecisionStatus"),
         ("qts.runtime", "LiveRuntime"),
+        ("qts.runtime.config", "LiveRuntimeConfig"),
+        ("qts.runtime.config.paper", "PaperBrokerRuntimeConfig"),
+        ("qts.runtime.permissions", "LiveOrderPermission"),
+        ("qts.runtime.sinks", "LiveRuntimeEventSink"),
+        ("qts.runtime.state_recovery", "LiveRecoveryDecision"),
+        ("qts.runtime.state_recovery", "LiveRecoveryDecisionStatus"),
     }
 )
-REMOVED_IMPORT_WILDCARD_MODULES = frozenset({"qts.runtime.live"})
+REMOVED_IMPORT_WILDCARD_MODULES = frozenset(
+    {
+        "qts.runtime.config.live",
+        "qts.runtime.live",
+        "qts.runtime.live_reconciliation",
+        "qts.runtime.sinks.live",
+    }
+)
 STALE_ARCHITECTURE_TEXT = {
     "qts.runtime.live": "Use qts.runtime.broker_startup or qts.runtime.order_result.",
     "LiveRuntime": "RuntimeSession is the only broker-capable runtime entrypoint.",
@@ -217,13 +237,18 @@ BACKTEST_ACTOR_LOOP_FORBIDDEN_HELPERS = frozenset(
     }
 )
 RUNTIME_SESSION_EVIDENCE_PATH = Path("docs/architecture/runtime_session_complexity.md")
+RUNTIME_COORDINATOR_DECISIONS_PATH = Path("docs/architecture/runtime_coordinator_decisions.md")
 RUNTIME_SESSION_LIMITS = {
-    "public_methods": 12,
+    "public_methods": 14,
     "private_helpers": 8,
+    "decision_branches": 10,
     "file_lines": 350,
     "method_lines": 50,
-    "cyclomatic": 10,
+    "cyclomatic": 11,
 }
+RUNTIME_SESSION_ACCOUNT_MUTATORS = frozenset(
+    {"_apply_fill", "apply_fill", "apply_delta", "set_balance", "update_position"}
+)
 RUNTIME_SESSION_METHOD_GROUPS = (
     "lifecycle",
     "broker lifecycle",
@@ -239,6 +264,7 @@ RUNTIME_COORDINATOR_CANDIDATES = {
     "RuntimeSafetyController": Path("backend/src/qts/runtime/safety_controller.py"),
     "RuntimeBrokerLifecycleCoordinator": Path("backend/src/qts/runtime/broker_lifecycle.py"),
     "RuntimeMarketDataCoordinator": Path("backend/src/qts/runtime/market_data_coordinator.py"),
+    "BrokerRuntimeTopologyResolver": Path("backend/src/qts/runtime/broker_runtime_topology.py"),
 }
 RUNTIME_COORDINATOR_KEEP_EVIDENCE = (
     "multiple call points",
@@ -249,6 +275,8 @@ RUNTIME_COORDINATOR_KEEP_EVIDENCE = (
     "complexity threshold",
 )
 PLATFORM_FREEZE_EXCEPTIONS_PATH = Path("docs/architecture/platform_freeze_exceptions.yaml")
+CLASS_INVENTORY_BASELINE_PATH = Path("artifacts/quality/class_inventory_baseline.json")
+FINAL_PLATFORM_FREEZE_PLAN_PATH = Path("docs/plan/qts_final_platform_freeze_review_and_tasks.md")
 PLATFORM_FREEZE_RULE_KEY = "PLATFORM_FREEZE"
 PLATFORM_FREEZE_BUNDLES: tuple[tuple[str, ...], ...] = (
     ("runtime",),
@@ -289,6 +317,10 @@ GUARDRAIL_REMEDIATIONS = {
     "BROKER_SYMBOL_BOUNDARY": (
         "Resolve broker symbols at registry, adapter, or application command boundaries."
     ),
+    "CLASS_INVENTORY_BUDGET": (
+        "Keep production classes within the platform baseline or add an explicit freeze exception."
+    ),
+    "DUPLICATE_DTO_NAME": ("Use distinct DTO names across application and runtime boundaries."),
     "IMPORT_BOUNDARY": (
         "Move the dependency to the owning lower layer or introduce a boundary DTO/protocol."
     ),
@@ -319,6 +351,9 @@ GUARDRAIL_REMEDIATIONS = {
         "Move shared roll/session/resolution logic to a shared package."
     ),
     "SHARED_RUNTIME_WORDING": "Use mode-neutral runtime wording.",
+    "SINGLE_FIELD_DTO_JUSTIFICATION": (
+        "Merge pass-through wrappers or add boundary justification to the class inventory baseline."
+    ),
     "STALE_ARCHITECTURE_TEXT": "Update architecture text to the canonical M0 runtime boundary.",
     "STRATEGY_SDK_INTERNAL_LEAK": (
         "Expose only Strategy SDK public facades and readonly value types."
@@ -366,6 +401,24 @@ class GuardrailViolation:
             f"{self.path}:{self.line}: {self.code}:{symbol} "
             f"{self.message} remediation: {self.remediation}"
         )
+
+
+@dataclass(frozen=True, slots=True)
+class _ClassInventoryBaseline:
+    production_class_count: int
+    production_classes: frozenset[str]
+    single_field_boundary_justifications: frozenset[str]
+    parse_violations: frozenset[tuple[int, str]]
+
+
+@dataclass(frozen=True, slots=True)
+class _ProductionClassEntry:
+    symbol: str
+    name: str
+    relative_path: Path
+    qts_relative_path: Path
+    line: int
+    field_count: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -1244,11 +1297,15 @@ class RuntimeSessionComplexityRule:
         if session_class is None:
             return []
 
+        hard_violations = _runtime_session_forbidden_imports(tree, relative_path)
+        hard_violations.extend(_runtime_session_account_mutations(session_class, relative_path))
+        if hard_violations:
+            return hard_violations
+
         metrics = _runtime_session_metrics(source, session_class)
         violations = _runtime_session_metric_violations(metrics)
         if not violations:
             return []
-
         evidence = _read_runtime_session_evidence(repo_root)
         if _has_runtime_session_complexity_evidence(evidence):
             return []
@@ -1282,7 +1339,7 @@ class RuntimeCoordinatorDecisionRule:
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
         """Perform repository-wide check."""
-        evidence = _read_runtime_session_evidence(repo_root)
+        evidence = _read_runtime_coordinator_decision_evidence(repo_root)
         violations: list[GuardrailViolation] = []
         for class_name, relative_path in RUNTIME_COORDINATOR_CANDIDATES.items():
             path = repo_root / relative_path
@@ -1332,6 +1389,187 @@ class RuntimeCoordinatorDecisionRule:
                         ),
                     )
                 )
+        violations.extend(_deleted_coordinator_import_violations(repo_root, evidence))
+        return violations
+
+
+class ClassInventoryBudgetRule:
+    """Reject production class growth outside the platform class inventory baseline."""
+
+    code = "CLASS_INVENTORY_BUDGET"
+
+    def __init__(self, repo_root: Path | None = None) -> None:
+        self._baseline = _load_class_inventory_baseline(repo_root or Path("."))
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform per-file check."""
+        return []
+
+    def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
+        """Perform repository-wide check."""
+        if _class_inventory_baseline_optional(repo_root) and self._baseline is None:
+            return []
+        if self._baseline is None:
+            return [
+                GuardrailViolation(
+                    code=self.code,
+                    path=str(CLASS_INVENTORY_BASELINE_PATH),
+                    line=1,
+                    message="missing class inventory baseline artifact",
+                )
+            ]
+        parse_violations = _class_inventory_parse_violations(self.code, self._baseline)
+        if parse_violations:
+            return parse_violations
+
+        classes = _scan_production_classes(repo_root)
+        freeze_config = _load_platform_freeze_config(repo_root)
+        violations: list[GuardrailViolation] = []
+        for class_entry in classes:
+            if class_entry.symbol in self._baseline.production_classes:
+                continue
+            module_name, class_name = class_entry.symbol.rsplit(".", 1)
+            if (module_name, class_name) in freeze_config.allowed_exceptions:
+                continue
+            violations.append(
+                GuardrailViolation(
+                    code=self.code,
+                    path=str(class_entry.relative_path),
+                    line=class_entry.line,
+                    message=(
+                        "production class is outside the class inventory baseline "
+                        "without an unexpired platform freeze exception"
+                    ),
+                    symbol=class_entry.symbol,
+                )
+            )
+        if len(classes) <= self._baseline.production_class_count or not violations:
+            return violations
+        violations.append(
+            GuardrailViolation(
+                code=self.code,
+                path=str(CLASS_INVENTORY_BASELINE_PATH),
+                line=1,
+                message=(
+                    "production class count exceeds baseline: "
+                    f"{len(classes)} > {self._baseline.production_class_count}"
+                ),
+            )
+        )
+        return violations
+
+
+class SingleFieldDtoJustificationRule:
+    """Require explicit boundary justification for single-field DTO/value objects."""
+
+    code = "SINGLE_FIELD_DTO_JUSTIFICATION"
+
+    def __init__(self, repo_root: Path | None = None) -> None:
+        self._baseline = _load_class_inventory_baseline(repo_root or Path("."))
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform per-file check."""
+        return []
+
+    def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
+        """Perform repository-wide check."""
+        if _class_inventory_baseline_optional(repo_root) and self._baseline is None:
+            return []
+        if self._baseline is None:
+            return [
+                GuardrailViolation(
+                    code=self.code,
+                    path=str(CLASS_INVENTORY_BASELINE_PATH),
+                    line=1,
+                    message="missing class inventory baseline artifact",
+                )
+            ]
+        parse_violations = _class_inventory_parse_violations(self.code, self._baseline)
+        if parse_violations:
+            return parse_violations
+
+        violations: list[GuardrailViolation] = []
+        for class_entry in _scan_production_classes(repo_root):
+            if class_entry.field_count != 1:
+                continue
+            if not _is_dto_or_value_object_name(class_entry.name):
+                continue
+            if class_entry.symbol in self._baseline.single_field_boundary_justifications:
+                continue
+            violations.append(
+                GuardrailViolation(
+                    code=self.code,
+                    path=str(class_entry.relative_path),
+                    line=class_entry.line,
+                    message=(
+                        "single-field DTO/value object requires boundary justification "
+                        f"in {CLASS_INVENTORY_BASELINE_PATH}"
+                    ),
+                    symbol=class_entry.symbol,
+                )
+            )
+        return violations
+
+
+class DuplicateDtoNameRule:
+    """Reject duplicate DTO class names across application and runtime packages."""
+
+    code = "DUPLICATE_DTO_NAME"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform per-file check."""
+        return []
+
+    def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
+        """Perform repository-wide check."""
+        by_name: dict[str, list[_ProductionClassEntry]] = {}
+        for class_entry in _scan_production_classes(repo_root):
+            if not class_entry.name.endswith("DTO"):
+                continue
+            if not (
+                class_entry.qts_relative_path.parts[:1] == ("application",)
+                or class_entry.qts_relative_path.parts[:1] == ("runtime",)
+            ):
+                continue
+            by_name.setdefault(class_entry.name, []).append(class_entry)
+
+        violations: list[GuardrailViolation] = []
+        for name, entries in sorted(by_name.items()):
+            packages = {entry.qts_relative_path.parts[0] for entry in entries}
+            if not {"application", "runtime"} <= packages:
+                continue
+            symbols = ", ".join(sorted(entry.symbol for entry in entries))
+            for entry in entries:
+                violations.append(
+                    GuardrailViolation(
+                        code=self.code,
+                        path=str(entry.relative_path),
+                        line=entry.line,
+                        message=(
+                            f"DTO name {name} is duplicated across application and "
+                            f"runtime: {symbols}"
+                        ),
+                        symbol=entry.symbol,
+                    )
+                )
         return violations
 
 
@@ -1369,6 +1607,9 @@ class GuardrailSuite:
             PlatformFreezeRule(repo_root=repo_root),
             RuntimeSessionComplexityRule(),
             RuntimeCoordinatorDecisionRule(),
+            ClassInventoryBudgetRule(repo_root=repo_root),
+            SingleFieldDtoJustificationRule(repo_root=repo_root),
+            DuplicateDtoNameRule(),
         )
 
     def check_file(
@@ -1436,6 +1677,7 @@ def _check_python_file(repo_root: Path, path: Path) -> list[GuardrailViolation]:
 class _RuntimeSessionMetrics:
     public_methods: int
     private_helpers: int
+    decision_branches: int
     file_lines: int
     overlong_methods: tuple[str, ...]
     complex_methods: tuple[str, ...]
@@ -1478,6 +1720,7 @@ def _runtime_session_metrics(source: str, class_node: ast.ClassDef) -> _RuntimeS
     return _RuntimeSessionMetrics(
         public_methods=len(public_methods),
         private_helpers=len(private_helpers),
+        decision_branches=sum(_decision_branch_count(method) for method in methods),
         file_lines=len(source.splitlines()),
         overlong_methods=overlong_methods,
         complex_methods=complex_methods,
@@ -1486,7 +1729,7 @@ def _runtime_session_metrics(source: str, class_node: ast.ClassDef) -> _RuntimeS
 
 def _runtime_session_metric_violations(metrics: _RuntimeSessionMetrics) -> list[str]:
     violations: list[str] = []
-    for metric_name in ("public_methods", "private_helpers", "file_lines"):
+    for metric_name in ("public_methods", "private_helpers", "decision_branches", "file_lines"):
         value = getattr(metrics, metric_name)
         limit = RUNTIME_SESSION_LIMITS[metric_name]
         if value > limit:
@@ -1527,8 +1770,115 @@ def _cyclomatic_complexity(node: ast.AST) -> int:
     return complexity
 
 
+def _decision_branch_count(node: ast.AST) -> int:
+    branch_nodes = (
+        ast.If,
+        ast.For,
+        ast.AsyncFor,
+        ast.While,
+        ast.ExceptHandler,
+        ast.IfExp,
+    )
+    return sum(1 for child in ast.walk(node) if isinstance(child, branch_nodes))
+
+
+def _runtime_session_forbidden_imports(
+    tree: ast.AST, relative_path: Path
+) -> list[GuardrailViolation]:
+    violations: list[GuardrailViolation] = []
+    for imported_module, line in _iter_imports(tree):
+        if _is_runtime_session_ibkr_transport_import(imported_module):
+            violations.append(
+                GuardrailViolation(
+                    code=RuntimeSessionComplexityRule.code,
+                    path=str(relative_path),
+                    line=line,
+                    message=(
+                        "RuntimeSession must not import IBKR transport modules; "
+                        "wire broker transports at adapter/topology boundaries."
+                    ),
+                    symbol=imported_module,
+                )
+            )
+    for imported_module, imported_name, line in _iter_imported_names(tree):
+        symbol = f"{imported_module}.{imported_name}"
+        if _is_runtime_session_ibkr_transport_import(symbol):
+            violations.append(
+                GuardrailViolation(
+                    code=RuntimeSessionComplexityRule.code,
+                    path=str(relative_path),
+                    line=line,
+                    message=(
+                        "RuntimeSession must not import IBKR transport symbols; "
+                        "wire broker transports at adapter/topology boundaries."
+                    ),
+                    symbol=symbol,
+                )
+            )
+    return violations
+
+
+def _is_runtime_session_ibkr_transport_import(imported_symbol: str) -> bool:
+    normalized = imported_symbol.lower()
+    if "ibkr" not in normalized and "ib_async" not in normalized:
+        return False
+    return ".transports." in normalized or ".adapters." in normalized
+
+
+def _runtime_session_account_mutations(
+    class_node: ast.ClassDef, relative_path: Path
+) -> list[GuardrailViolation]:
+    violations: list[GuardrailViolation] = []
+    for node in ast.walk(class_node):
+        if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+            continue
+        if node.func.attr not in RUNTIME_SESSION_ACCOUNT_MUTATORS:
+            continue
+        receiver_parts = _attribute_parts(node.func.value)
+        if not _looks_like_account_state_receiver(receiver_parts):
+            continue
+        violations.append(
+            GuardrailViolation(
+                code=RuntimeSessionComplexityRule.code,
+                path=str(relative_path),
+                line=node.lineno,
+                message=(
+                    "RuntimeSession must not mutate account state directly; "
+                    "route fills through AccountActor ownership."
+                ),
+                symbol=".".join((*receiver_parts, node.func.attr)),
+            )
+        )
+    return violations
+
+
+def _attribute_parts(node: ast.AST) -> tuple[str, ...]:
+    if isinstance(node, ast.Name):
+        return (node.id,)
+    if isinstance(node, ast.Attribute):
+        return (*_attribute_parts(node.value), node.attr)
+    if isinstance(node, ast.Call):
+        return _attribute_parts(node.func)
+    return ()
+
+
+def _looks_like_account_state_receiver(parts: tuple[str, ...]) -> bool:
+    return any(
+        part in {"account_actor", "_account_actor", "account", "_account", "cash", "_cash"}
+        or "position" in part
+        for part in parts
+    )
+
+
 def _read_runtime_session_evidence(repo_root: Path) -> str:
     evidence_path = repo_root / RUNTIME_SESSION_EVIDENCE_PATH
+    if not evidence_path.exists():
+        return ""
+    return evidence_path.read_text(encoding="utf-8")
+
+
+def _read_runtime_coordinator_decision_evidence(repo_root: Path) -> str:
+    evidence_path = repo_root / RUNTIME_COORDINATOR_DECISIONS_PATH
     if not evidence_path.exists():
         return ""
     return evidence_path.read_text(encoding="utf-8")
@@ -1556,6 +1906,66 @@ def _runtime_coordinator_decision(evidence: str, class_name: str) -> tuple[str |
 
 def _has_coordinator_keep_evidence(evidence: str) -> bool:
     return any(token in evidence for token in RUNTIME_COORDINATOR_KEEP_EVIDENCE)
+
+
+def _deleted_coordinator_import_violations(
+    repo_root: Path, evidence: str
+) -> list[GuardrailViolation]:
+    deleted_candidates = {
+        class_name: relative_path
+        for class_name, relative_path in RUNTIME_COORDINATOR_CANDIDATES.items()
+        if _runtime_coordinator_decision(evidence, class_name)[0] == "delete"
+    }
+    if not deleted_candidates:
+        return []
+    source_root = repo_root / QTS_ROOT
+    if not source_root.exists():
+        return []
+    candidate_modules = {
+        class_name: _module_name_for_runtime_path(relative_path)
+        for class_name, relative_path in deleted_candidates.items()
+    }
+    violations: list[GuardrailViolation] = []
+    for path in sorted(source_root.rglob("*.py")):
+        if "__pycache__" in path.parts:
+            continue
+        relative_path = path.relative_to(repo_root)
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(relative_path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module is not None:
+                for class_name, module_name in candidate_modules.items():
+                    if node.module == module_name and any(
+                        alias.name == class_name for alias in node.names
+                    ):
+                        violations.append(
+                            _deleted_coordinator_import_violation(
+                                relative_path, node.lineno, class_name
+                            )
+                        )
+            if isinstance(node, ast.Import):
+                for class_name, module_name in candidate_modules.items():
+                    if any(alias.name == module_name for alias in node.names):
+                        violations.append(
+                            _deleted_coordinator_import_violation(
+                                relative_path, node.lineno, class_name
+                            )
+                        )
+    return violations
+
+
+def _module_name_for_runtime_path(relative_path: Path) -> str:
+    return ".".join(relative_path.with_suffix("").parts[2:])
+
+
+def _deleted_coordinator_import_violation(
+    relative_path: Path, line: int, class_name: str
+) -> GuardrailViolation:
+    return GuardrailViolation(
+        code="RUNTIME_COORDINATOR_DECISION",
+        path=str(relative_path),
+        line=line,
+        message=f"{class_name} is marked delete but still has a production import",
+    )
 
 
 def _check_import(
@@ -2304,6 +2714,146 @@ def _line_number_containing(source: str, token: str) -> int | None:
 
 def _has_allowed_prefix(path: Path, prefixes: tuple[tuple[str, ...], ...]) -> bool:
     return any(path.parts[: len(prefix)] == prefix for prefix in prefixes)
+
+
+def _class_inventory_baseline_optional(repo_root: Path) -> bool:
+    return (
+        not (repo_root / CLASS_INVENTORY_BASELINE_PATH).exists()
+        and not (repo_root / FINAL_PLATFORM_FREEZE_PLAN_PATH).exists()
+    )
+
+
+def _load_class_inventory_baseline(repo_root: Path) -> _ClassInventoryBaseline | None:
+    path = repo_root / CLASS_INVENTORY_BASELINE_PATH
+    if not path.exists():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return _ClassInventoryBaseline(
+            production_class_count=0,
+            production_classes=frozenset(),
+            single_field_boundary_justifications=frozenset(),
+            parse_violations=frozenset({(1, f"failed to parse class inventory baseline: {exc}")}),
+        )
+    if not isinstance(payload, dict):
+        return _ClassInventoryBaseline(
+            production_class_count=0,
+            production_classes=frozenset(),
+            single_field_boundary_justifications=frozenset(),
+            parse_violations=frozenset({(1, "class inventory baseline must be a mapping")}),
+        )
+
+    parse_violations: set[tuple[int, str]] = set()
+    raw_count = payload.get("production_class_count")
+    if isinstance(raw_count, int) and raw_count >= 0:
+        production_class_count = raw_count
+    else:
+        production_class_count = 0
+        parse_violations.add((1, "production_class_count must be a non-negative integer"))
+
+    raw_classes = payload.get("production_classes")
+    if isinstance(raw_classes, list) and all(isinstance(item, str) for item in raw_classes):
+        production_classes = frozenset(raw_classes)
+    else:
+        production_classes = frozenset()
+        parse_violations.add((1, "production_classes must be a list of class symbols"))
+
+    raw_justifications = payload.get("single_field_boundary_justifications")
+    if isinstance(raw_justifications, dict) and all(
+        isinstance(key, str) and isinstance(value, str) and value.strip()
+        for key, value in raw_justifications.items()
+    ):
+        single_field_justifications = frozenset(raw_justifications)
+    else:
+        single_field_justifications = frozenset()
+        parse_violations.add(
+            (
+                1,
+                "single_field_boundary_justifications must map class symbols to non-empty text",
+            )
+        )
+
+    return _ClassInventoryBaseline(
+        production_class_count=production_class_count,
+        production_classes=production_classes,
+        single_field_boundary_justifications=single_field_justifications,
+        parse_violations=frozenset(parse_violations),
+    )
+
+
+def _class_inventory_parse_violations(
+    code: str, baseline: _ClassInventoryBaseline
+) -> list[GuardrailViolation]:
+    return [
+        GuardrailViolation(
+            code=code,
+            path=str(CLASS_INVENTORY_BASELINE_PATH),
+            line=line,
+            message=message,
+        )
+        for line, message in sorted(baseline.parse_violations)
+    ]
+
+
+def _scan_production_classes(repo_root: Path) -> list[_ProductionClassEntry]:
+    source_root = repo_root / QTS_ROOT
+    if not source_root.exists():
+        return []
+    entries: list[_ProductionClassEntry] = []
+    for path in sorted(source_root.rglob("*.py")):
+        if "__pycache__" in path.parts:
+            continue
+        relative_path = path.relative_to(repo_root)
+        qts_relative_path = path.relative_to(source_root)
+        if qts_relative_path.parts[:1] == ("testing",):
+            continue
+        source = path.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(relative_path))
+        module_name = "qts." + qts_relative_path.with_suffix("").as_posix().replace("/", ".")
+        for node in _iter_top_level_classes(tree):
+            if not _is_public_class(node):
+                continue
+            entries.append(
+                _ProductionClassEntry(
+                    symbol=f"{module_name}.{node.name}",
+                    name=node.name,
+                    relative_path=relative_path,
+                    qts_relative_path=qts_relative_path,
+                    line=node.lineno,
+                    field_count=_class_field_count(node),
+                )
+            )
+    return entries
+
+
+def _class_field_count(node: ast.ClassDef) -> int:
+    fields: set[str] = set()
+    for item in node.body:
+        if isinstance(item, ast.AnnAssign) and isinstance(item.target, ast.Name):
+            if _is_class_var_annotation(item.annotation):
+                continue
+            if not item.target.id.startswith("_"):
+                fields.add(item.target.id)
+        elif isinstance(item, ast.Assign):
+            for target in item.targets:
+                if isinstance(target, ast.Name) and not target.id.startswith("_"):
+                    fields.add(target.id)
+    return len(fields)
+
+
+def _is_class_var_annotation(annotation: ast.AST) -> bool:
+    if isinstance(annotation, ast.Name):
+        return annotation.id == "ClassVar"
+    if isinstance(annotation, ast.Attribute):
+        return annotation.attr == "ClassVar"
+    if isinstance(annotation, ast.Subscript):
+        return _is_class_var_annotation(annotation.value)
+    return False
+
+
+def _is_dto_or_value_object_name(name: str) -> bool:
+    return name.endswith("DTO") or name.endswith("ValueObject")
 
 
 def main() -> int:

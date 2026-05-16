@@ -132,7 +132,7 @@ def test_backtest_artifact_contract_contains_auditable_inputs_outputs_and_hashes
         "execution_environment",
         "execution_assumptions",
         "finalized_at",
-        "live_order_permission",
+        "order_submission_permission",
         "manifest_hash",
         "market_data_environment",
         "metrics",
@@ -166,7 +166,7 @@ def test_backtest_artifact_contract_contains_auditable_inputs_outputs_and_hashes
     assert manifest["market_data_environment"] == "historical_replay"
     assert manifest["execution_environment"] == "simulated"
     assert manifest["account_environment"] == "simulated"
-    assert manifest["live_order_permission"] is False
+    assert manifest["order_submission_permission"] is False
     assert manifest["startup_checklist_hash"] == NON_BROKER_HASH_SENTINEL
     assert manifest["operator_identity_hash"] == NON_BROKER_HASH_SENTINEL
     assert manifest["event_schema_version"] == "1"

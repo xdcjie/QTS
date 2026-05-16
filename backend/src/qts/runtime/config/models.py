@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import yaml  # type: ignore[import-untyped]
 
@@ -226,7 +226,7 @@ class CostModelConfig:
 
 
 @dataclass(frozen=True, slots=True)
-class RiskConfig:
+class BacktestRiskConfig:
     """Backtest risk settings."""
 
     max_notional: Decimal
@@ -392,7 +392,9 @@ class BacktestRuntimeConfig:
     strategy_params: dict[str, Any] = field(default_factory=dict)
     instrument_ids: dict[str, InstrumentId] = field(default_factory=dict)
     cost_model: CostModelConfig = field(default_factory=CostModelConfig)
-    risk_config: RiskConfig = field(default_factory=lambda: RiskConfig(max_notional=Decimal("1")))
+    risk_config: BacktestRiskConfig = field(
+        default_factory=lambda: BacktestRiskConfig(max_notional=Decimal("1"))
+    )
     roll_policy: RollPolicyConfig = field(default_factory=RollPolicyConfig)
     warmup_bars: int = 0
     mode: RuntimeMode | str = RuntimeMode.BACKTEST
@@ -538,8 +540,17 @@ class BacktestRuntimeConfig:
 
 
 @dataclass(frozen=True, slots=True)
-class LiveRuntimeConfig:
-    """Startup and safety configuration for live-capable runtimes."""
+class BrokerRuntimeConfig:
+    """Startup and safety configuration for broker-capable runtime modes."""
+
+    _supported_modes: ClassVar[frozenset[RuntimeMode]] = frozenset(
+        {
+            RuntimeMode.PAPER_BROKER,
+            RuntimeMode.LIVE_OBSERVATION,
+            RuntimeMode.LIVE,
+            RuntimeMode.OBSERVATION,
+        }
+    )
 
     mode: RuntimeMode | str
     broker_configured: bool
@@ -569,13 +580,15 @@ class LiveRuntimeConfig:
     schema_version: str = "1"
 
     def __post_init__(self) -> None:
-        """Validate the live runtime mode label."""
+        """Validate the broker runtime mode contract."""
         if not self.schema_version.strip():
             raise ValueError("schema_version must not be empty")
         object.__setattr__(self, "schema_version", self.schema_version.strip())
         mode = RuntimeMode.from_value(self.mode)
         if mode is RuntimeMode.BACKTEST:
-            raise ValueError("LiveRuntimeConfig mode cannot be backtest")
+            raise ValueError("BrokerRuntimeConfig mode cannot be backtest")
+        if mode not in self._supported_modes:
+            raise ValueError(f"{self.__class__.__name__} mode cannot be {mode.value}")
         object.__setattr__(self, "mode", mode)
         execution_environment = ExecutionEnvironment.from_value(
             self.execution_environment,
@@ -631,7 +644,7 @@ class LiveRuntimeConfig:
 
     @property
     def config_hash(self) -> str:
-        """Return the stable identity hash for this live runtime config."""
+        """Return the stable identity hash for this broker runtime config."""
         return stable_json_hash(self.to_payload())
 
     def to_payload(self) -> dict[str, Any]:
@@ -692,11 +705,16 @@ class LiveRuntimeConfig:
 
     def _validate_mode_contract(self, mode: RuntimeMode) -> None:
         """Validate mode, account, execution, and port consistency."""
+        from qts.config.ibkr import is_ibkr_live_account, is_ibkr_paper_account
+
         account_code = self.broker_account_code or ""
-        is_paper_account = account_code.upper().startswith("DU")
+        is_paper_account = is_ibkr_paper_account(account_code)
+        is_live_account = is_ibkr_live_account(account_code)
         if mode is RuntimeMode.LIVE:
             if is_paper_account:
                 raise ValueError("live mode cannot use a paper account")
+            if account_code and not is_live_account:
+                raise ValueError("live mode requires a live account")
             if self.broker_account_kind != AccountEnvironment.LIVE.value:
                 raise ValueError("live mode requires broker_account_kind=live")
             if self.account_environment is not AccountEnvironment.LIVE:
@@ -753,11 +771,11 @@ __all__ = [
     "ConfigMigrationResult",
     "BacktestMarketDataReference",
     "BacktestRuntimeConfig",
-    "LiveRuntimeConfig",
+    "BrokerRuntimeConfig",
     "BacktestEngineConfig",
     "BacktestCostModel",
     "BacktestStrategyConfig",
     "CostModelConfig",
-    "RiskConfig",
+    "BacktestRiskConfig",
     "RollPolicyConfig",
 ]

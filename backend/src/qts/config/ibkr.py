@@ -156,12 +156,25 @@ class IbkrEnvironmentConfig:
     def account_classification(self) -> str:
         """Classify the configured account without exposing credential values."""
 
-        account_id = self.order_execution.account_id.upper()
-        if account_id.startswith("DU"):
+        account_id = self.order_execution.account_id
+        if is_ibkr_paper_account(account_id):
             return "paper"
-        if account_id.startswith("U"):
+        if is_ibkr_live_account(account_id):
             return "live"
         return "unknown"
+
+
+def is_ibkr_paper_account(account_id: str) -> bool:
+    """Return whether an IBKR account code identifies a paper account."""
+
+    return account_id.strip().upper().startswith("DUP")
+
+
+def is_ibkr_live_account(account_id: str) -> bool:
+    """Return whether an IBKR account code identifies a live account."""
+
+    normalized = account_id.strip().upper()
+    return normalized.startswith("DU") and not normalized.startswith("DUP")
 
 
 def collect_validation_errors(
@@ -187,10 +200,15 @@ def validate_ibkr_environment(
     if config.market_data.client_id == config.order_execution.client_id:
         errors.append("market data and order execution client_id must be distinct")
 
+    if config.mode == "paper" and not is_ibkr_paper_account(config.order_execution.account_id):
+        errors.append("paper mode requires a paper account")
+
     if config.mode == "live":
         paper_client_ids = paper_client_ids or set()
-        if config.order_execution.account_id.upper().startswith("DU"):
+        if is_ibkr_paper_account(config.order_execution.account_id):
             errors.append("live mode cannot use a paper account")
+        elif not is_ibkr_live_account(config.order_execution.account_id):
+            errors.append("live mode requires a live account")
         if config.uses_paper_gateway_port() and not config.observe_only:
             errors.append(
                 "live mode cannot use paper Gateway port 4002 unless observe_only is true"

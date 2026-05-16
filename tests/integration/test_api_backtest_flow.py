@@ -14,8 +14,14 @@ def test_api_can_submit_backtest_request() -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["run_id"].startswith("bt-")
-    assert payload["status"] == "accepted"
-    assert payload["config_path"] == config_path
+    assert payload["manifest_path"].endswith(".manifest.json")
+    assert payload["equity_curve_path"].endswith(".equity_curve.ndjson")
+    assert payload["orders_path"].endswith(".orders.ndjson")
+    assert payload["fills_path"].endswith(".fills.ndjson")
+    assert {"equity_curve", "orders", "fills"} <= set(payload["artifact_hashes"])
+    assert "metrics" in payload
+    assert "status" not in payload
+    assert "config_path" not in payload
     assert "actor_ref" not in payload
     assert "mailbox" not in payload
 

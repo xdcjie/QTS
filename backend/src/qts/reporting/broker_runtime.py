@@ -18,10 +18,11 @@ from qts.reporting.base import (
 from qts.runtime.config import BacktestCostModel
 from qts.runtime.mode import RuntimeMode
 from qts.runtime.sinks.base import RuntimeEvent
-from qts.runtime.sinks.live import LiveRuntimeEventSink
+from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
 if TYPE_CHECKING:
     from qts.runtime.broker_startup import BrokerRuntimeStartupChecklist
+    from qts.runtime.live_capital import LiveCapitalEnablementDecision
 
 _SECRET_KEY_PARTS = ("password", "token", "credential")
 
@@ -53,18 +54,19 @@ class BrokerRuntimeReportWriter:
         source_commit: str | None = None,
         operator_identity_hash: str | None = None,
         connection_metadata: dict[str, Any],
-        event_sink: LiveRuntimeEventSink,
+        event_sink: BrokerRuntimeEventSink,
         market_data_environment: str | None = None,
         execution_environment: str | None = None,
         account_environment: str | None = None,
         broker_account_kind: str | None = None,
-        live_order_permission: bool = False,
+        order_submission_permission: bool = False,
         operator_signoff_id: str | None = None,
         market_data_permission_state: str | None = None,
         startup_checklist: BrokerRuntimeStartupChecklist | None = None,
         extra_artifacts: dict[str, Path] | None = None,
         runtime_topology_payload: dict[str, Any] | None = None,
         execution_assumptions: dict[str, Any] | None = None,
+        live_capital_decision: LiveCapitalEnablementDecision | None = None,
     ) -> BrokerRuntimeReportManifest:
         """Write a manifest naming event and evidence artifacts."""
         finalized_at = datetime.now(UTC)
@@ -140,7 +142,7 @@ class BrokerRuntimeReportWriter:
                 market_data_permission_state,
                 default="unknown",
             ),
-            "live_order_permission": live_order_permission,
+            "order_submission_permission": order_submission_permission,
             "operator_signoff_id": operator_signoff_id,
             "config_hash": stable_json_hash(config_payload),
             "topology_hash": topology_hash,
@@ -153,6 +155,8 @@ class BrokerRuntimeReportWriter:
             "connection_metadata": self._redacted_connection_metadata(connection_metadata),
             "artifacts": artifacts,
         }
+        if live_capital_decision is not None:
+            payload["live_capital_signoff"] = live_capital_decision.to_payload()
         if execution_assumptions is not None:
             payload["execution_assumptions"] = dict(execution_assumptions)
         elif runtime_mode_value == RuntimeMode.PAPER_SIMULATED.value:

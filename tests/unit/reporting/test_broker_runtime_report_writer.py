@@ -20,9 +20,9 @@ def test_broker_runtime_report_writer_manifest_names_artifacts_counts_and_redact
     from qts.core.ids import RuntimeRunId
     from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
     from qts.runtime.sinks.base import RuntimeEventContext
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(
+    sink = BrokerRuntimeEventSink(
         tmp_path,
         context=RuntimeEventContext(run_id=RuntimeRunId("live-report-test"), mode="paper_broker"),
     )
@@ -41,7 +41,7 @@ def test_broker_runtime_report_writer_manifest_names_artifacts_counts_and_redact
         execution_environment="broker",
         account_environment="paper",
         broker_account_kind="paper",
-        live_order_permission=False,
+        order_submission_permission=False,
         operator_signoff_id=None,
         connection_metadata={
             "host": "127.0.0.1",
@@ -64,7 +64,7 @@ def test_broker_runtime_report_writer_manifest_names_artifacts_counts_and_redact
     assert payload["account_environment"] == "paper"
     assert payload["broker_account_kind"] == "paper"
     assert payload["runtime_instance_id"] == "paper-instance"
-    assert payload["live_order_permission"] is False
+    assert payload["order_submission_permission"] is False
     assert payload["source_commit"] == "abcdef123456"
     assert payload["operator_identity_hash"] == "sha256:operator-paper"
     assert payload["startup_checklist_hash"].startswith("sha256:")
@@ -86,11 +86,11 @@ def test_broker_runtime_report_writer_manifest_names_artifacts_counts_and_redact
 def test_broker_runtime_report_writer_includes_runtime_topology_payload(tmp_path: Path) -> None:
     from qts.core.ids import InstrumentId, RuntimeRunId
     from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
-    from qts.runtime.config import LiveRuntimeConfig
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.config.paper import PaperSimulatedRuntimeConfig
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
     from qts.runtime.topology import RuntimeTopologyBuilder
 
-    config = LiveRuntimeConfig(
+    config = PaperSimulatedRuntimeConfig(
         mode="paper_simulated",
         broker_configured=True,
         account_configured=True,
@@ -109,7 +109,7 @@ def test_broker_runtime_report_writer_includes_runtime_topology_payload(tmp_path
         base_currency="USD",
     )
 
-    sink = LiveRuntimeEventSink(tmp_path)
+    sink = BrokerRuntimeEventSink(tmp_path)
     sink.close()
 
     manifest = BrokerRuntimeReportWriter(tmp_path).write_manifest(
@@ -140,7 +140,7 @@ def test_broker_runtime_report_writer_manifest_includes_account_partition_topolo
     from qts.core.ids import AccountId, InstrumentId, RuntimeRunId, StrategyId
     from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
     from qts.runtime.mode import RuntimeMode
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
     from qts.runtime.topology import (
         AccountRuntimeSpec,
         MarketDataRouteSpec,
@@ -185,7 +185,7 @@ def test_broker_runtime_report_writer_manifest_includes_account_partition_topolo
         ),
     )
 
-    sink = LiveRuntimeEventSink(tmp_path)
+    sink = BrokerRuntimeEventSink(tmp_path)
     sink.close()
 
     manifest = BrokerRuntimeReportWriter(tmp_path).write_manifest(
@@ -221,9 +221,9 @@ def test_paper_simulated_broker_runtime_manifest_includes_execution_assumptions(
     tmp_path: Path,
 ) -> None:
     from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(tmp_path)
+    sink = BrokerRuntimeEventSink(tmp_path)
     sink.close()
 
     manifest = BrokerRuntimeReportWriter(tmp_path).write_manifest(
@@ -250,9 +250,9 @@ def test_paper_simulated_broker_runtime_manifest_includes_execution_assumptions(
 def test_broker_runtime_report_writer_rejects_permission_mode_label(tmp_path: Path) -> None:
     import pytest
     from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(tmp_path)
+    sink = BrokerRuntimeEventSink(tmp_path)
     sink.close()
 
     with pytest.raises(ValueError, match="paper"):
@@ -273,9 +273,9 @@ def test_broker_runtime_report_writer_rejects_missing_operator_identity_hash(
 ) -> None:
     import pytest
     from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(tmp_path)
+    sink = BrokerRuntimeEventSink(tmp_path)
     sink.close()
 
     with pytest.raises(ValueError, match="operator_identity_hash"):
@@ -288,3 +288,92 @@ def test_broker_runtime_report_writer_rejects_missing_operator_identity_hash(
             connection_metadata={"host": "127.0.0.1", "port": 4002},
             event_sink=sink,
         )
+
+
+def test_signoff_evidence_written_to_manifest_and_runtime_event(tmp_path: Path) -> None:
+    from datetime import UTC, datetime, timedelta
+    from decimal import Decimal
+
+    from qts.core.ids import RuntimeRunId
+    from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
+    from qts.runtime.broker_startup import BrokerRuntimeStartupChecklist
+    from qts.runtime.config import BrokerRuntimeConfig
+    from qts.runtime.live_capital import LiveCapitalEnablementRequest, OperatorSignoff
+    from qts.runtime.mode import RuntimeMode
+    from qts.runtime.sinks.base import RuntimeEventContext
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
+
+    request = LiveCapitalEnablementRequest(
+        operator_signoff=OperatorSignoff(
+            operator_id="operator-1",
+            reason="controlled live-capital readiness drill",
+            risk_approver_id="risk-1",
+            engineering_approver_id="engineering-1",
+            expires_at=datetime.now(UTC) + timedelta(hours=1),
+            strategy_ids=("strategy-a",),
+            account_ids=("acct-live-1",),
+            max_notional_limit=Decimal("100000"),
+            allowed_instruments=("F.US.CME.GC.M2026",),
+        ),
+        strategy_id="strategy-a",
+        account_id="acct-live-1",
+        instrument_id="F.US.CME.GC.M2026",
+        requested_notional=Decimal("1000"),
+    )
+    decision = request.evaluate(now=datetime.now(UTC))
+    config = BrokerRuntimeConfig(
+        mode=RuntimeMode.LIVE,
+        broker_configured=True,
+        account_configured=True,
+        risk_configured=True,
+        calendar_configured=True,
+        kill_switch_configured=True,
+        allow_live_orders=True,
+        broker_account_code="DU1234567",
+        broker_port=4001,
+        operator_signoff_id="ops-signoff-1",
+    )
+    startup_checklist = BrokerRuntimeStartupChecklist.from_config(
+        config,
+        live_capital_decision=decision,
+    )
+    sink = BrokerRuntimeEventSink(
+        tmp_path,
+        context=RuntimeEventContext(run_id=RuntimeRunId("live-signoff-test"), mode="live"),
+    )
+
+    sink.write(decision.to_runtime_event())
+    sink.close()
+
+    manifest = BrokerRuntimeReportWriter(tmp_path).write_manifest(
+        config_payload=config.to_payload(),
+        runtime_mode="live",
+        account_id="acct-live-1",
+        runtime_instance_id="live-signoff-instance",
+        source_commit="abcdef123456",
+        operator_identity_hash="sha256:operator-live",
+        market_data_environment="realtime",
+        execution_environment="broker",
+        account_environment="live",
+        broker_account_kind="live",
+        order_submission_permission=True,
+        connection_metadata={"host": "127.0.0.1", "port": 4001},
+        event_sink=sink,
+        startup_checklist=startup_checklist,
+        live_capital_decision=decision,
+    )
+
+    event_row = json.loads(sink.path.read_text(encoding="utf-8").splitlines()[0])
+    payload = json.loads(manifest.manifest_path.read_text(encoding="utf-8"))
+
+    assert event_row["kind"] == "runtime.live_capital.signoff_decision"
+    assert event_row["payload"]["allowed"] is True
+    assert event_row["payload"]["operator_signoff"]["operator_id"] == "operator-1"
+    assert event_row["payload"]["operator_signoff"]["risk_approver_id"] == "risk-1"
+    assert payload["live_capital_signoff"]["allowed"] is True
+    assert payload["live_capital_signoff"]["operator_signoff"]["engineering_approver_id"] == (
+        "engineering-1"
+    )
+    assert payload["startup_checklist"]["checks"][-1]["check_name"] == (
+        "live_capital_signoff_check"
+    )

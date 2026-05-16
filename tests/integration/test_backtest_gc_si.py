@@ -16,9 +16,9 @@ from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
 from qts.domain.market_data import Bar
 from qts.runtime.config import (
     BacktestMarketDataReference,
+    BacktestRiskConfig,
     BacktestRuntimeConfig,
     CostModelConfig,
-    RiskConfig,
 )
 from qts.strategy_sdk import Strategy
 
@@ -40,7 +40,7 @@ def _config(*, warmup_bars: int = 0) -> BacktestRuntimeConfig:
         strategy_class="tests.integration.test_backtest_gc_si:BuyOneGcStrategy",
         strategy_params={},
         cost_model=CostModelConfig(),
-        risk_config=RiskConfig(max_notional=Decimal("100000000")),
+        risk_config=BacktestRiskConfig(max_notional=Decimal("100000000")),
         warmup_bars=warmup_bars,
     )
 
@@ -133,7 +133,7 @@ def test_backtest_engine_from_config_does_not_require_chain_for_static_instrumen
         timeframe="1m",
         initial_cash=Decimal("100000"),
         strategy_class="tests.integration.test_backtest_gc_si:BuyOneAaplStrategy",
-        risk_config=RiskConfig(max_notional=Decimal("100000000")),
+        risk_config=BacktestRiskConfig(max_notional=Decimal("100000000")),
     )
     bar = Bar(
         instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),

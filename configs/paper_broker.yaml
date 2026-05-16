@@ -4,7 +4,7 @@ execution_environment: broker
 market_data_environment: realtime
 account_environment: paper
 broker_account_kind: paper
-broker_account_code: DU1234567
+broker_account_code: DUP1234567
 broker_port: 4002
 broker_configured: true
 account_configured: true

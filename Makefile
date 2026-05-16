@@ -1,5 +1,7 @@
 .PHONY: install install-ibkr-api format lint guardrails typecheck test-unit test-integration test-anchor test-replay test-backtest-replay test-reconciliation test-soak test quick-check check load-test soak-test readiness-smoke-local readiness-smoke-external readiness-check validate-historical-sample backtest-full-smoke backtest-acceptance backtest-gc-full
 
+QTS_EXTERNAL_EVIDENCE_DIR ?= evidence/ibkr
+
 install:
 	uv sync
 
@@ -56,7 +58,8 @@ readiness-smoke-local:
 	uv run pytest tests/integration/test_readiness_smoke_matrix.py -q
 
 readiness-smoke-external:
-	QTS_RUN_EXTERNAL_READINESS_SMOKES=1 uv run pytest tests/anchor/test_readiness_smoke_matrix_external.py -q -m external
+	PYTHONPATH=backend/src uv run python scripts/generate_external_readiness_smoke_evidence.py --evidence-dir $(QTS_EXTERNAL_EVIDENCE_DIR)
+	QTS_RUN_EXTERNAL_READINESS_SMOKES=1 uv run pytest tests/anchor/test_readiness_smoke_matrix_external.py -q -m external --evidence-dir $(QTS_EXTERNAL_EVIDENCE_DIR)
 
 readiness-check: check test-replay test-reconciliation test-soak
 

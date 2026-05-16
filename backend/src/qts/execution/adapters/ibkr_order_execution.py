@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
+from typing import Any, cast
 
 from qts.core.ids import AccountId, BrokerId, OrderId, StrategyId
 from qts.domain.orders import ExecutionReport, OrderIntent, OrderSide
@@ -113,11 +114,13 @@ class IbkrOrderExecutionAdapter:
         symbol_mapping: BrokerSymbolMapping,
         capabilities: BrokerCapabilities | None = None,
         order_map: BrokerOrderMap | None = None,
+        live_capital_decision: object | None = None,
     ) -> None:
         """Perform __init__."""
         self.connection = connection
         self._symbol_mapping = symbol_mapping
         self._order_map = order_map
+        self._live_capital_decision = live_capital_decision
         self._capabilities = capabilities or BrokerCapabilities(
             broker_id=connection.broker_id,
             supports_market_orders=True,
@@ -131,6 +134,9 @@ class IbkrOrderExecutionAdapter:
         self._commissions: dict[str, IbkrCommissionPayload] = {}
         self._completed_execution_keys: set[tuple[str, str, str]] = set()
         self._seen_order_status_keys: set[tuple[str, str, str | None]] = set()
+        self._seen_open_order_keys: set[
+            tuple[str, str | None, str | None, str | None, str | None, str | None, Decimal | None]
+        ] = set()
         self._callback_quarantine = BrokerCallbackQuarantine()
         self._callback_events: list[IbkrOrderCallbackEvent] = []
         self._broker_open_orders: dict[OrderId, OrderSnapshot] = {}
@@ -190,6 +196,7 @@ class IbkrOrderExecutionAdapter:
         """Perform to_order_request."""
         if not client_order_id.strip():
             raise ValueError("client_order_id must not be empty")
+        self._assert_live_capital_order_allowed()
         self.validate_no_unresolved_callbacks()
         self._validate_order_request(
             intent,
@@ -214,6 +221,12 @@ class IbkrOrderExecutionAdapter:
             contract=contract,
             outside_regular_trading_hours=outside_regular_trading_hours,
         )
+
+    def _assert_live_capital_order_allowed(self) -> None:
+        gate = self._live_capital_decision
+        if gate is None:
+            return
+        cast(Any, gate).assert_live_order_allowed()
 
     def record_submitted_order(
         self,
@@ -350,6 +363,15 @@ class IbkrOrderExecutionAdapter:
             )
             return
         try:
+            open_order_key = self._open_order_key(payload)
+            if open_order_key in self._seen_open_order_keys:
+                self._record_callback_event(
+                    "ibkr_order_callback_duplicate_dropped",
+                    report_id=payload.report_id,
+                    broker_order_id=payload.broker_order_id,
+                    reason="open_order_already_seen",
+                )
+                return
             record = self._order_map.by_client_order_id(payload.client_order_id)
             self._order_map.attach_ibkr_order_id(
                 client_order_id=payload.client_order_id,
@@ -379,6 +401,7 @@ class IbkrOrderExecutionAdapter:
                     quantity=payload.quantity,
                     status=payload.status,
                 )
+            self._seen_open_order_keys.add(open_order_key)
         except KeyError:
             self._callback_quarantine.add_open_order(payload)
             self._record_callback_event(
@@ -675,6 +698,20 @@ class IbkrOrderExecutionAdapter:
     def _execution_key(self, payload: IbkrExecutionPayload) -> tuple[str, str, str]:
         account_id = payload.account_id or self.connection.account_id
         return (account_id, payload.broker_order_id, payload.execution_id)
+
+    @staticmethod
+    def _open_order_key(
+        payload: IbkrOpenOrderPayload,
+    ) -> tuple[str, str | None, str | None, str | None, str | None, str | None, Decimal | None]:
+        return (
+            payload.broker_order_id,
+            payload.client_order_id,
+            payload.perm_id,
+            payload.status,
+            payload.broker_symbol,
+            payload.side,
+            payload.quantity,
+        )
 
     @staticmethod
     def _is_late_cancel_after_fill(*, current_status: str, next_status: str) -> bool:

@@ -80,9 +80,9 @@ def test_paper_runtime_chain_smoke_with_fake_boundary() -> None:
 def test_runtime_event_sink_smoke(tmp_path: Path) -> None:
     from qts.core.ids import CorrelationId, RuntimeRunId
     from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventContext
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(
+    sink = BrokerRuntimeEventSink(
         tmp_path,
         context=RuntimeEventContext(run_id=RuntimeRunId("run-smoke"), mode="paper_broker"),
     )

@@ -16,7 +16,7 @@ from qts.runtime.config import (
     BacktestMarketDataReference,
     BacktestRuntimeConfig,
     BacktestStrategyConfig,
-    LiveRuntimeConfig,
+    BrokerRuntimeConfig,
 )
 from qts.runtime.mode import AccountEnvironment, ExecutionEnvironment, RuntimeMode
 from qts.runtime.topology import (
@@ -101,7 +101,7 @@ def test_backtest_topology_builder_falls_back_to_symbols_when_instrument_ids_mis
 
 
 def test_live_topology_builder_broker_mode_requires_route() -> None:
-    config = LiveRuntimeConfig(
+    config = BrokerRuntimeConfig(
         mode=RuntimeMode.LIVE.value,
         broker_configured=True,
         account_configured=True,
@@ -110,7 +110,7 @@ def test_live_topology_builder_broker_mode_requires_route() -> None:
         kill_switch_configured=True,
         allow_live_orders=True,
         operator_signoff_id="ops-001",
-        broker_account_code="U123",
+        broker_account_code="DU123",
         broker_port=4001,
         broker_account_kind="live",
     )
@@ -158,7 +158,7 @@ def test_two_strategies_one_account_topology() -> None:
                 broker_id=broker_id,
                 base_currency="USD",
                 initial_cash=Decimal("100000"),
-                broker_account_code="DU1234567",
+                broker_account_code="DUP1234567",
                 account_environment=AccountEnvironment.PAPER,
             ),
         ),

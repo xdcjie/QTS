@@ -12,7 +12,11 @@ from qts.data.historical.catalog import (
     HistoricalCatalogLoadConfig,
 )
 from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
-from qts.runtime.config import BacktestMarketDataReference, BacktestRuntimeConfig, RiskConfig
+from qts.runtime.config import (
+    BacktestMarketDataReference,
+    BacktestRiskConfig,
+    BacktestRuntimeConfig,
+)
 
 
 def test_backtest_input_builder_creates_streaming_inputs_from_configured_dataset(
@@ -61,7 +65,7 @@ historical_data:
         timeframe="1m",
         initial_cash=Decimal("100000"),
         strategy_class="tests.integration.test_backtest_gc_si:BuyOneAaplStrategy",
-        risk_config=RiskConfig(max_notional=Decimal("100000000")),
+        risk_config=BacktestRiskConfig(max_notional=Decimal("100000000")),
     )
 
     catalog = HistoricalCatalog.load(

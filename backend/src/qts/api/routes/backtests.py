@@ -7,10 +7,12 @@ from fastapi import APIRouter, Query
 from qts.api.mappers import (
     map_backtest_request_schema,
     map_backtest_run_dto,
+    map_backtest_run_result_dto,
     map_backtest_strategy_option_dto,
 )
 from qts.api.schemas import (
     BacktestRequestSchema,
+    BacktestRunResultSchema,
     BacktestRunSchema,
     BacktestStrategyOptionSchema,
 )
@@ -20,12 +22,12 @@ from qts.application.services import BacktestService, BacktestStrategyCatalog
 router = APIRouter()
 
 
-@router.post("/backtests", response_model=BacktestRunSchema)
-def submit_backtest(request: BacktestRequestSchema) -> BacktestRunSchema:
+@router.post("/backtests", response_model=BacktestRunResultSchema)
+def submit_backtest(request: BacktestRequestSchema) -> BacktestRunResultSchema:
     """Submit a backtest request through the backtest application service."""
     request_dto: BacktestRequestDTO = map_backtest_request_schema(request)
     result = BacktestService().submit(request_dto)
-    return map_backtest_run_dto(result)
+    return map_backtest_run_result_dto(result)
 
 
 @router.get("/backtests", response_model=tuple[BacktestRunSchema, ...])

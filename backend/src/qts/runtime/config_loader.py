@@ -13,10 +13,10 @@ import yaml  # type: ignore[import-untyped]
 from qts.core.ids import InstrumentId
 from qts.runtime.config import (
     BacktestMarketDataReference,
+    BacktestRiskConfig,
     BacktestRuntimeConfig,
     BacktestStrategyConfig,
     CostModelConfig,
-    RiskConfig,
     RollPolicyConfig,
 )
 
@@ -97,7 +97,7 @@ class BacktestConfigLoader:
                 ),
                 slippage_bps=Decimal(str(cost_payload.get("slippage_bps", "0"))),
             ),
-            risk_config=RiskConfig(
+            risk_config=BacktestRiskConfig(
                 max_notional=Decimal(str(risk_payload.get("max_notional", "1"))),
                 schema_version=str(risk_payload.get("schema_version", "1")),
             ),

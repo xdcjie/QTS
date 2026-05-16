@@ -148,59 +148,59 @@ def test_recovery_gate_blocks_invalid_event_sequence() -> None:
 def test_live_recovery_enters_observation_before_live_orders() -> None:
     from qts.runtime.event_store import EventSequenceValidationReport
     from qts.runtime.state_recovery import (
-        LiveRecoveryDecisionStatus,
+        RuntimeRecoveryDecisionStatus,
         validate_event_sequence_for_recovery,
-        validate_live_recovery_gate,
+        validate_runtime_recovery_gate,
     )
 
     readiness = validate_event_sequence_for_recovery(EventSequenceValidationReport(valid=True))
 
-    initial = validate_live_recovery_gate(readiness)
-    reconciled_without_observation = validate_live_recovery_gate(
+    initial = validate_runtime_recovery_gate(readiness)
+    reconciled_without_observation = validate_runtime_recovery_gate(
         readiness,
         reconciliation_passed=True,
     )
-    ready = validate_live_recovery_gate(
+    ready = validate_runtime_recovery_gate(
         readiness,
         observation_entered=True,
         reconciliation_passed=True,
     )
 
-    assert initial.status is LiveRecoveryDecisionStatus.ENTER_OBSERVATION
+    assert initial.status is RuntimeRecoveryDecisionStatus.ENTER_OBSERVATION
     assert initial.real_order_submission_enabled is False
-    assert reconciled_without_observation.status is LiveRecoveryDecisionStatus.ENTER_OBSERVATION
+    assert reconciled_without_observation.status is RuntimeRecoveryDecisionStatus.ENTER_OBSERVATION
     assert reconciled_without_observation.real_order_submission_enabled is False
-    assert ready.status is LiveRecoveryDecisionStatus.ALLOW_LIVE
+    assert ready.status is RuntimeRecoveryDecisionStatus.ALLOW_LIVE
     assert ready.real_order_submission_enabled is True
 
 
 def test_live_recovery_blocks_when_event_sequence_is_invalid() -> None:
     from qts.runtime.event_store import EventSequenceValidationReport
     from qts.runtime.state_recovery import (
-        LiveRecoveryDecisionStatus,
+        RuntimeRecoveryDecisionStatus,
         validate_event_sequence_for_recovery,
-        validate_live_recovery_gate,
+        validate_runtime_recovery_gate,
     )
 
     readiness = validate_event_sequence_for_recovery(
         EventSequenceValidationReport(valid=False, missing_sequences=(2,))
     )
 
-    decision = validate_live_recovery_gate(readiness)
+    decision = validate_runtime_recovery_gate(readiness)
 
-    assert decision.status is LiveRecoveryDecisionStatus.BLOCK
+    assert decision.status is RuntimeRecoveryDecisionStatus.BLOCK
     assert decision.real_order_submission_enabled is False
     assert decision.reason_code == "EVENT_SEQUENCE_GAP"
 
 
 def test_live_recovery_decision_writes_manifest_payload_and_runtime_event() -> None:
     from qts.runtime.state_recovery import (
-        LiveRecoveryDecision,
-        LiveRecoveryDecisionStatus,
+        RuntimeRecoveryDecision,
+        RuntimeRecoveryDecisionStatus,
     )
 
-    decision = LiveRecoveryDecision(
-        status=LiveRecoveryDecisionStatus.ENTER_OBSERVATION,
+    decision = RuntimeRecoveryDecision(
+        status=RuntimeRecoveryDecisionStatus.ENTER_OBSERVATION,
         real_order_submission_enabled=False,
         reason_code="RECOVERY_RECONCILIATION_REQUIRED",
     )

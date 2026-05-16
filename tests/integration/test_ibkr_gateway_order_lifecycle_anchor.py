@@ -115,7 +115,7 @@ def test_ibkr_gateway_order_lifecycle_anchor_requires_paper_and_real_transport(
 
 
 def _select_paper_account(accounts: tuple[str, ...]) -> str:
-    paper_accounts = [account for account in accounts if account.upper().startswith("DU")]
+    paper_accounts = [account for account in accounts if account.upper().startswith("DUP")]
     if not paper_accounts:
-        pytest.fail("paper-only IBKR order anchor requires a managed DU paper account")
+        pytest.fail("paper-only IBKR order anchor requires a managed DUP paper account")
     return paper_accounts[0]

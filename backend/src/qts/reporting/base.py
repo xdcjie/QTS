@@ -26,7 +26,7 @@ CANONICAL_RUNTIME_MANIFEST_FIELDS = (
     "market_data_environment",
     "execution_environment",
     "account_environment",
-    "live_order_permission",
+    "order_submission_permission",
     "config_hash",
     "topology_hash",
     "startup_checklist_hash",
@@ -49,7 +49,7 @@ class RuntimeManifest:
     market_data_environment: str
     execution_environment: str
     account_environment: str
-    live_order_permission: bool
+    order_submission_permission: bool
     event_schema_version: str
     artifact_schema_version: str
     config_hash: str
@@ -89,7 +89,9 @@ class RuntimeManifest:
             market_data_environment=str(payload["market_data_environment"]),
             execution_environment=str(payload["execution_environment"]),
             account_environment=str(payload["account_environment"]),
-            live_order_permission=cls._bool_from_payload(payload, "live_order_permission"),
+            order_submission_permission=cls._bool_from_payload(
+                payload, "order_submission_permission"
+            ),
             event_schema_version=str(payload["event_schema_version"]),
             artifact_schema_version=str(payload["artifact_schema_version"]),
             config_hash=str(payload["config_hash"]),
@@ -112,7 +114,7 @@ class RuntimeManifest:
             "market_data_environment": self.market_data_environment,
             "execution_environment": self.execution_environment,
             "account_environment": self.account_environment,
-            "live_order_permission": self.live_order_permission,
+            "order_submission_permission": self.order_submission_permission,
             "event_schema_version": self.event_schema_version,
             "artifact_schema_version": self.artifact_schema_version,
             "config_hash": self.config_hash,
@@ -134,7 +136,7 @@ class RuntimeManifest:
         for key in CANONICAL_RUNTIME_MANIFEST_FIELDS:
             cls._require_payload_value(payload, key)
         cls._aware_datetime_from_payload(payload, "created_at")
-        cls._bool_from_payload(payload, "live_order_permission")
+        cls._bool_from_payload(payload, "order_submission_permission")
 
     @staticmethod
     def hash_payload(payload: Mapping[str, object]) -> str:

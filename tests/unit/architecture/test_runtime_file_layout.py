@@ -13,19 +13,19 @@ def test_shared_runtime_layout_exports_target_names() -> None:
     from qts.reporting.backtest import BacktestReportWriter
     from qts.reporting.base import ReportWriter, RuntimeArtifactWriter
     from qts.reporting.broker_runtime import BrokerRuntimeEventReporter, BrokerRuntimeReportWriter
-    from qts.runtime.config import BacktestRuntimeConfig, LiveRuntimeConfig, TradingRuntimeConfig
+    from qts.runtime.config import BacktestRuntimeConfig, BrokerRuntimeConfig, TradingRuntimeConfig
     from qts.runtime.execution_report_handler import ExecutionReportHandler
     from qts.runtime.intent_processing import OrderPlanBuilder, TargetIntentProcessor
     from qts.runtime.market_data_flow import MarketDataFlow
     from qts.runtime.sinks.backtest import BacktestRuntimeEventSink
     from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventSink
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
     from qts.runtime.strategy_execution_pipeline import StrategyExecutionPipeline
 
     exported = {
         TradingRuntimeConfig,
         BacktestRuntimeConfig,
-        LiveRuntimeConfig,
+        BrokerRuntimeConfig,
         ReplayMarketDataSource,
         StreamingMarketDataSource,
         MarketDataPipeline,
@@ -39,7 +39,7 @@ def test_shared_runtime_layout_exports_target_names() -> None:
         RuntimeEvent,
         RuntimeEventSink,
         BacktestRuntimeEventSink,
-        LiveRuntimeEventSink,
+        BrokerRuntimeEventSink,
         ReportWriter,
         RuntimeArtifactWriter,
         BacktestReportWriter,

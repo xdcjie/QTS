@@ -277,6 +277,7 @@ class BrokerRuntimeTopologyResolver:
             actor=ExecutionActor(
                 order_manager_ref=order_manager_ref,
                 execution_adapter=self._dependencies.execution_adapter,
+                live_capital_decision=self._dependencies.live_capital_decision,
             ),
             mailbox=execution_mailbox,
         )

@@ -25,5 +25,6 @@ def test_ibkr_live_observation_anchor_requires_observation_only_config(
     orders_enabled = bool(payload.get("orders_enabled", False))
 
     assert mode == "live"
-    assert not account_id.upper().startswith("DU")
+    assert account_id.upper().startswith("DU")
+    assert not account_id.upper().startswith("DUP")
     assert orders_enabled is False

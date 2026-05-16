@@ -14,6 +14,7 @@ from qts.config.ibkr import (
     IBKR_PAPER_GATEWAY_PORT,
     IbkrEnvironmentConfig,
     collect_validation_errors,
+    is_ibkr_paper_account,
 )
 from qts.core.ids import AccountId, InstrumentId, OrderId, StrategyId
 from qts.domain.orders import CancelIntent, ExecutionReport, OrderIntent, OrderSide
@@ -23,7 +24,7 @@ from qts.execution.broker import BrokerOrderRequest, normalize_broker_execution_
 from qts.execution.order_manager import OrderManager
 from qts.reconciliation.snapshots import ReconciliationSnapshot
 from qts.runtime.actors.account_actor import AccountSnapshot
-from qts.runtime.live_reconciliation import LiveReconciliation
+from qts.runtime.broker_runtime_reconciliation import BrokerRuntimeReconciliation
 from qts.simulation.broker import SimulatedBrokerAdapter
 
 JsonObject = dict[str, Any]
@@ -182,7 +183,7 @@ def run_paper_order_lifecycle_drill(
             "reconciliation_evidence": not reconciliation["periodic"]["has_drift"],
             "broker_order_map_restorable": restored_record.client_order_id
             == broker_request.client_order_id,
-            "paper_account_guard": account_id.value.upper().startswith("DU"),
+            "paper_account_guard": is_ibkr_paper_account(account_id.value),
             "paper_port_guard": config.order_execution.port == IBKR_PAPER_GATEWAY_PORT,
         },
         "safety_guards": [
@@ -275,7 +276,7 @@ def _validate_paper_only_ibkr_config(
     if config.mode != "paper":
         errors.append("paper-only drill requires mode=paper")
 
-    if not config.order_execution.account_id.upper().startswith("DU"):
+    if not is_ibkr_paper_account(config.order_execution.account_id):
         errors.append("paper-only drill requires a paper account id")
 
     if config.order_execution.port != IBKR_PAPER_GATEWAY_PORT:
@@ -339,7 +340,7 @@ def _reconciliation_evidence(
     account_id: AccountId,
     manager: OrderManager,
 ) -> JsonObject:
-    reconciler = LiveReconciliation(account_id=account_id)
+    reconciler = BrokerRuntimeReconciliation(account_id=account_id)
     internal = reconciler.internal_snapshot(
         order_manager=manager.snapshot(),
         account=AccountSnapshot(cash={"USD": Decimal("0")}, positions={}),

@@ -179,6 +179,31 @@ exceptions:
     reason: baseline allowance
     owner: platform
     expiry: 2099-12-31
+  - class_name: OperatorSignoff
+    module: qts.runtime.live_capital
+    reason: M3 live-capital dual-control signoff is a planned freeze gate, not compatibility debt
+    owner: platform
+    expiry: 2026-12-31
+  - class_name: LiveCapitalEnablementRequest
+    module: qts.runtime.live_capital
+    reason: M3 live-capital enablement request is required to replace single-field signoff gating
+    owner: platform
+    expiry: 2026-12-31
+  - class_name: LiveCapitalEnablementDecision
+    module: qts.runtime.live_capital
+    reason: M3 live-capital enablement decision records dual-control scope and expiry evidence
+    owner: platform
+    expiry: 2026-12-31
+  - class_name: LiveCapitalOrderDecision
+    module: qts.runtime.live_capital
+    reason: M3 execution-boundary live-capital order gate is required before live capital can be enabled
+    owner: platform
+    expiry: 2026-12-31
+  - class_name: LiveCapitalReadinessDecision
+    module: qts.runtime.live_capital
+    reason: M3 kill-switch drill evidence gate is required before live capital can be enabled
+    owner: platform
+    expiry: 2026-12-31
   - class_name: RuntimeCommandType
     module: qts.runtime.commands
     reason: baseline allowance
@@ -244,6 +269,11 @@ exceptions:
     reason: baseline allowance
     owner: platform
     expiry: 2099-12-31
+  - class_name: BacktestRiskConfig
+    module: qts.runtime.config.models
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
   - class_name: RollPolicyConfig
     module: qts.runtime.config.models
     reason: baseline allowance
@@ -264,13 +294,8 @@ exceptions:
     reason: baseline allowance
     owner: platform
     expiry: 2099-12-31
-  - class_name: LiveRuntimeConfig
+  - class_name: BrokerRuntimeConfig
     module: qts.runtime.config.models
-    reason: baseline allowance
-    owner: platform
-    expiry: 2099-12-31
-  - class_name: PaperBrokerRuntimeConfig
-    module: qts.runtime.config.paper
     reason: baseline allowance
     owner: platform
     expiry: 2099-12-31
@@ -369,13 +394,13 @@ exceptions:
     reason: baseline allowance
     owner: platform
     expiry: 2099-12-31
-  - class_name: LiveReconciliationResult
-    module: qts.runtime.live_reconciliation
+  - class_name: BrokerRuntimeReconciliationResult
+    module: qts.runtime.broker_runtime_reconciliation
     reason: baseline allowance
     owner: platform
     expiry: 2099-12-31
-  - class_name: LiveReconciliation
-    module: qts.runtime.live_reconciliation
+  - class_name: BrokerRuntimeReconciliation
+    module: qts.runtime.broker_runtime_reconciliation
     reason: baseline allowance
     owner: platform
     expiry: 2099-12-31
@@ -439,7 +464,7 @@ exceptions:
     reason: baseline allowance
     owner: platform
     expiry: 2099-12-31
-  - class_name: LiveOrderPermission
+  - class_name: OrderSubmissionPermission
     module: qts.runtime.permissions
     reason: baseline allowance
     owner: platform
@@ -554,8 +579,8 @@ exceptions:
     reason: baseline allowance
     owner: platform
     expiry: 2099-12-31
-  - class_name: LiveRuntimeEventSink
-    module: qts.runtime.sinks.live
+  - class_name: BrokerRuntimeEventSink
+    module: qts.runtime.sinks.broker_runtime
     reason: baseline allowance
     owner: platform
     expiry: 2099-12-31
@@ -584,7 +609,7 @@ exceptions:
     reason: baseline allowance
     owner: platform
     expiry: 2099-12-31
-  - class_name: LiveRecoveryDecisionStatus
+  - class_name: RuntimeRecoveryDecisionStatus
     module: qts.runtime.state_recovery
     reason: baseline allowance
     owner: platform
@@ -594,7 +619,7 @@ exceptions:
     reason: baseline allowance
     owner: platform
     expiry: 2099-12-31
-  - class_name: LiveRecoveryDecision
+  - class_name: RuntimeRecoveryDecision
     module: qts.runtime.state_recovery
     reason: baseline allowance
     owner: platform
@@ -1014,3 +1039,53 @@ exceptions:
     reason: baseline allowance
     owner: platform
     expiry: 2099-12-31
+  - class_name: BacktestRunResultDTO
+    module: qts.application.dto.backtest
+    reason: M6 research run API returns manifest/artifact results without exposing runtime internals
+    owner: research
+    expiry: 2026-12-31
+  - class_name: BacktestRunResultSchema
+    module: qts.api.schemas.backtest_schema
+    reason: M6 HTTP backtest submission returns the research manifest/artifact contract without legacy status fields
+    owner: research
+    expiry: 2026-12-31
+  - class_name: FactorAsset
+    module: qts.factors.contract
+    reason: M6 factor contract requires a stable asset protocol for deterministic ranking
+    owner: research
+    expiry: 2026-12-31
+  - class_name: FactorScore
+    module: qts.factors.contract
+    reason: M6 factor contract requires explicit cross-sectional score records
+    owner: research
+    expiry: 2026-12-31
+  - class_name: FactorResult
+    module: qts.factors.contract
+    reason: M6 factor contract requires a stable ranked result object
+    owner: research
+    expiry: 2026-12-31
+  - class_name: FactorWindow
+    module: qts.factors.contract
+    reason: M6 factor contract requires explicit lookback, missing-data, and universe semantics
+    owner: research
+    expiry: 2026-12-31
+  - class_name: Factor
+    module: qts.factors.contract
+    reason: M6 factor contract requires a versioned research-facing protocol
+    owner: research
+    expiry: 2026-12-31
+  - class_name: ExperimentManifestConfig
+    module: qts.research.experiment_manifest
+    reason: M6 experiment manifest writer needs reproducible strategy/factor/dataset/config input
+    owner: research
+    expiry: 2026-12-31
+  - class_name: ExperimentManifestResult
+    module: qts.research.experiment_manifest
+    reason: M6 experiment manifest writer returns manifest evidence without runtime internals
+    owner: research
+    expiry: 2026-12-31
+  - class_name: ExperimentManifestWriter
+    module: qts.research.experiment_manifest
+    reason: M6 experiment manifest writer owns artifacts/research manifest persistence
+    owner: research
+    expiry: 2026-12-31

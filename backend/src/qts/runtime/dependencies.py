@@ -25,6 +25,7 @@ from qts.strategy_sdk import PortfolioView, Strategy
 
 if TYPE_CHECKING:
     from qts.runtime.broker_lifecycle import BrokerReconnectReconciliation
+    from qts.runtime.live_capital import LiveCapitalOrderDecision
 
 PortfolioViewBuilder = Callable[
     [AccountSnapshot],
@@ -64,6 +65,7 @@ class RuntimeSessionDependencies:
     warmup_bars: int = 0
     order_submission_enabled: bool = True
     startup_decision: BrokerRuntimeStartupDecision | None = None
+    live_capital_decision: LiveCapitalOrderDecision | None = None
     broker_reconnect_reconciliation: BrokerReconnectReconciliation | None = None
     order_id_prefix: str = "live"
 

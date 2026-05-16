@@ -55,10 +55,10 @@ def test_observation_mode_blocks_submit_order() -> None:
 
 
 def test_paper_simulated_never_constructs_ibkr_order_transport() -> None:
-    from qts.runtime.config import LiveRuntimeConfig
+    from qts.runtime.config.paper import PaperSimulatedRuntimeConfig
     from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
 
-    config = LiveRuntimeConfig(
+    config = PaperSimulatedRuntimeConfig(
         mode=RuntimeMode.PAPER_SIMULATED,
         broker_configured=True,
         account_configured=True,
@@ -72,9 +72,9 @@ def test_paper_simulated_never_constructs_ibkr_order_transport() -> None:
 
 def test_mode_written_to_report_manifest(tmp_path: Path) -> None:
     from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(tmp_path)
+    sink = BrokerRuntimeEventSink(tmp_path)
     sink.close()
 
     manifest = BrokerRuntimeReportWriter(tmp_path).write_manifest(
@@ -113,17 +113,13 @@ def test_config_hash_stable(tmp_path: Path) -> None:
 
 
 def test_runtime_config_package_exposes_mode_specific_modules() -> None:
+    from qts.runtime.config import BrokerRuntimeConfig
     from qts.runtime.config.backtest import BacktestRuntimeConfig
     from qts.runtime.config.base import ConfigMigration, TradingRuntimeConfig
-    from qts.runtime.config.live import LiveRuntimeConfig
-    from qts.runtime.config.paper import (
-        PaperBrokerRuntimeConfig,
-        PaperSimulatedRuntimeConfig,
-    )
+    from qts.runtime.config.paper import PaperSimulatedRuntimeConfig
 
     assert BacktestRuntimeConfig.__name__ == "BacktestRuntimeConfig"
-    assert LiveRuntimeConfig.__name__ == "LiveRuntimeConfig"
-    assert PaperBrokerRuntimeConfig.__name__ == "PaperBrokerRuntimeConfig"
+    assert BrokerRuntimeConfig.__name__ == "BrokerRuntimeConfig"
     assert PaperSimulatedRuntimeConfig.__name__ == "PaperSimulatedRuntimeConfig"
     assert ConfigMigration.__name__ == "ConfigMigration"
     assert TradingRuntimeConfig(mode="paper_broker").mode == "paper_broker"
@@ -139,7 +135,7 @@ def test_paper_runtime_sample_configs_are_disjoint() -> None:
     assert broker["execution_environment"] == "broker"
     assert broker["account_environment"] == "paper"
     assert broker["broker_account_kind"] == "paper"
-    assert str(broker["broker_account_code"]).startswith("DU")
+    assert str(broker["broker_account_code"]).startswith("DUP")
     assert broker["broker_port"] == 4002
     assert simulated["mode"] == "paper_simulated"
     assert simulated["execution_environment"] == "simulated"
@@ -200,7 +196,7 @@ def test_transport_adapter_paths_are_removed() -> None:
 
 
 def test_live_config_rejects_backtest_only_fields() -> None:
-    from qts.runtime.config import LiveRuntimeConfig
+    from qts.runtime.config import BrokerRuntimeConfig
 
     kwargs: dict[str, Any] = {
         "mode": "paper_simulated",
@@ -212,7 +208,7 @@ def test_live_config_rejects_backtest_only_fields() -> None:
         "dataset_path": "backtest-only.csv",
     }
     with pytest.raises(TypeError):
-        cast(Any, LiveRuntimeConfig)(**kwargs)
+        cast(Any, BrokerRuntimeConfig)(**kwargs)
 
 
 def test_backtest_config_rejects_live_broker_credentials(tmp_path: Path) -> None:
@@ -255,10 +251,10 @@ def test_brokerage_model_written_to_manifest(tmp_path: Path) -> None:
 def test_checklist_written_to_manifest(tmp_path: Path) -> None:
     from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
     from qts.runtime.broker_startup import BrokerRuntimeStartupChecklist
-    from qts.runtime.config import LiveRuntimeConfig
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.config.paper import PaperSimulatedRuntimeConfig
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
-    config = LiveRuntimeConfig(
+    config = PaperSimulatedRuntimeConfig(
         mode="paper_simulated",
         broker_configured=True,
         account_configured=True,
@@ -267,7 +263,7 @@ def test_checklist_written_to_manifest(tmp_path: Path) -> None:
         kill_switch_configured=True,
     )
     checklist = BrokerRuntimeStartupChecklist.from_config(config)
-    sink = LiveRuntimeEventSink(tmp_path)
+    sink = BrokerRuntimeEventSink(tmp_path)
     sink.close()
 
     manifest = BrokerRuntimeReportWriter(tmp_path).write_manifest(
@@ -288,15 +284,15 @@ def test_checklist_written_to_manifest(tmp_path: Path) -> None:
 
 def test_live_market_data_permission_written_to_manifest(tmp_path: Path) -> None:
     from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
-    sink = LiveRuntimeEventSink(tmp_path)
+    sink = BrokerRuntimeEventSink(tmp_path)
     sink.close()
 
     manifest = BrokerRuntimeReportWriter(tmp_path).write_manifest(
         config_payload={"mode": "paper_broker"},
         runtime_mode="paper_broker",
-        account_id="DU1234567",
+        account_id="DUP1234567",
         runtime_instance_id="runtime-evolution-market-data-permission",
         source_commit="abcdef123456",
         operator_identity_hash="sha256:operator-runtime-evolution",

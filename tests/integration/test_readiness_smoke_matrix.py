@@ -29,9 +29,9 @@ from qts.runtime.broker_startup import (
     BrokerRuntimeStartupDecisionStatus,
 )
 from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
-from qts.runtime.permissions import LiveOrderPermission
+from qts.runtime.permissions import OrderSubmissionPermission
 from qts.runtime.sinks.base import RuntimeEvent
-from qts.runtime.sinks.live import LiveRuntimeEventSink
+from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 from qts.runtime.topology import (
     AccountRuntimeSpec,
     MarketDataRouteSpec,
@@ -302,7 +302,7 @@ def _runtime_live_observation_no_orders(output_dir: Path) -> SmokeEvidence:
         startup_decision=_startup_decision(
             mode=RuntimeMode.LIVE_OBSERVATION,
             status=BrokerRuntimeStartupDecisionStatus.ALLOW_OBSERVATION,
-            permission=LiveOrderPermission.OBSERVATION_ONLY,
+            permission=OrderSubmissionPermission.OBSERVATION_ONLY,
         ),
     )
 
@@ -335,7 +335,7 @@ def _runtime_live_permission_off(output_dir: Path) -> SmokeEvidence:
         startup_decision=_startup_decision(
             mode=RuntimeMode.LIVE,
             status=BrokerRuntimeStartupDecisionStatus.ALLOW_OBSERVATION,
-            permission=LiveOrderPermission.OBSERVATION_ONLY,
+            permission=OrderSubmissionPermission.OBSERVATION_ONLY,
         ),
     )
 
@@ -368,7 +368,7 @@ def _runtime_broker_disconnect_blocks(output_dir: Path) -> SmokeEvidence:
         startup_decision=_startup_decision(
             mode=RuntimeMode.PAPER_BROKER,
             status=BrokerRuntimeStartupDecisionStatus.ALLOW_PAPER,
-            permission=LiveOrderPermission.PAPER_ORDERS_ALLOWED,
+            permission=OrderSubmissionPermission.PAPER_ORDERS_ALLOWED,
         ),
     )
 
@@ -403,7 +403,7 @@ def _runtime_reconnect_requires_reconciliation(output_dir: Path) -> SmokeEvidenc
         startup_decision=_startup_decision(
             mode=RuntimeMode.PAPER_BROKER,
             status=BrokerRuntimeStartupDecisionStatus.ALLOW_PAPER,
-            permission=LiveOrderPermission.PAPER_ORDERS_ALLOWED,
+            permission=OrderSubmissionPermission.PAPER_ORDERS_ALLOWED,
         ),
         broker_reconnect_reconciliation=_RecordingReconnectReconciliation(
             passed=False,
@@ -446,7 +446,7 @@ def _session(
     account_actors: dict[AccountId, Any] | None = None,
     startup_decision: BrokerRuntimeStartupDecision | None = None,
     broker_reconnect_reconciliation: Any | None = None,
-) -> tuple[Any, LiveRuntimeEventSink]:
+) -> tuple[Any, BrokerRuntimeEventSink]:
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
     from qts.runtime.dependencies import RuntimeSessionDependencies
@@ -454,7 +454,7 @@ def _session(
     from qts.runtime.sinks.base import RuntimeEventContext
 
     run_id = RuntimeRunId(smoke_name.replace("_", "-"))
-    sink = LiveRuntimeEventSink(
+    sink = BrokerRuntimeEventSink(
         output_dir,
         context=RuntimeEventContext(
             run_id=run_id,
@@ -518,7 +518,7 @@ def _write_smoke_manifest(
             if runtime_mode is RuntimeMode.PAPER_BROKER
             else "simulated"
         ),
-        "live_order_permission": runtime_mode is RuntimeMode.LIVE,
+        "order_submission_permission": runtime_mode is RuntimeMode.LIVE,
         "event_schema_version": RuntimeEvent.SCHEMA_VERSION,
         "artifact_schema_version": RUNTIME_ARTIFACT_SCHEMA_VERSION,
         "config_hash": stable_json_hash({"smoke_name": smoke_name, "runtime_mode": runtime_mode}),
@@ -674,6 +674,9 @@ class _RecordingReconnectReconciliation:
     unresolved_callback_count: int = 0
     calls: list[str] = field(default_factory=list)
 
+    def resubscribe_market_data(self) -> None:
+        self.calls.append("market_data")
+
     def refresh_open_orders(self) -> None:
         self.calls.append("open_orders")
 
@@ -776,7 +779,7 @@ def _startup_decision(
     *,
     mode: RuntimeMode,
     status: BrokerRuntimeStartupDecisionStatus,
-    permission: LiveOrderPermission,
+    permission: OrderSubmissionPermission,
 ) -> BrokerRuntimeStartupDecision:
     return BrokerRuntimeStartupDecision(
         status=status,

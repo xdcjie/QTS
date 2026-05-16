@@ -11,12 +11,12 @@ from qts.runtime.actors.account_actor import AccountSnapshot
 def test_live_reconciliation_builds_internal_snapshot_and_blocks_startup_on_drift() -> None:
     from qts.portfolio.position_book import Position
     from qts.reconciliation.snapshots import CashSnapshot, ReconciliationSnapshot
-    from qts.runtime.live_reconciliation import LiveReconciliation
+    from qts.runtime.broker_runtime_reconciliation import BrokerRuntimeReconciliation
 
     account_id = AccountId("acct-a")
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
     order_id = OrderId("ord-1")
-    reconciler = LiveReconciliation(account_id=account_id)
+    reconciler = BrokerRuntimeReconciliation(account_id=account_id)
     internal = reconciler.internal_snapshot(
         order_manager=OrderManagerSnapshot(
             orders=(
@@ -57,10 +57,10 @@ def test_live_reconciliation_builds_internal_snapshot_and_blocks_startup_on_drif
 
 def test_live_reconciliation_periodic_drift_emits_degradation_event() -> None:
     from qts.reconciliation.snapshots import CashSnapshot, ReconciliationSnapshot
-    from qts.runtime.live_reconciliation import LiveReconciliation
+    from qts.runtime.broker_runtime_reconciliation import BrokerRuntimeReconciliation
 
     account_id = AccountId("acct-a")
-    reconciler = LiveReconciliation(account_id=account_id)
+    reconciler = BrokerRuntimeReconciliation(account_id=account_id)
 
     result = reconciler.periodic_check(
         internal=ReconciliationSnapshot(

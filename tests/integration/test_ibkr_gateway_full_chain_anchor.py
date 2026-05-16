@@ -65,7 +65,7 @@ def test_ibkr_gateway_full_chain_anchor_requires_real_paper_evidence(
     from qts.runtime.dependencies import RuntimeSessionDependencies
     from qts.runtime.session import RuntimeSession
     from qts.runtime.sinks.base import RuntimeEvent
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
     generated_at = datetime.now(UTC)
     evidence_dir = Path("evidence/ibkr")
@@ -112,7 +112,7 @@ def test_ibkr_gateway_full_chain_anchor_requires_real_paper_evidence(
         sink=order_callback_adapter,
     )
 
-    event_sink = LiveRuntimeEventSink(
+    event_sink = BrokerRuntimeEventSink(
         evidence_dir,
         filename=f"paper-full-chain-events-{generated_at:%Y%m%dT%H%M%SZ}.ndjson",
     )
@@ -546,7 +546,7 @@ def _reference_price(event: Any) -> Decimal:
 
 
 def _select_paper_account(accounts: tuple[str, ...]) -> str:
-    paper_accounts = [account for account in accounts if account.upper().startswith("DU")]
+    paper_accounts = [account for account in accounts if account.upper().startswith("DUP")]
     if not paper_accounts:
-        pytest.fail("paper-only IBKR full-chain anchor requires a managed DU paper account")
+        pytest.fail("paper-only IBKR full-chain anchor requires a managed DUP paper account")
     return paper_accounts[0]

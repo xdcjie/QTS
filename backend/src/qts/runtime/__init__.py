@@ -16,15 +16,15 @@ from qts.runtime.mode import (
     RuntimeMode,
 )
 from qts.runtime.partitioning import AccountBrokerMapping, AccountPartitionPolicy, AccountRiskConfig
-from qts.runtime.permissions import LiveOrderPermission
+from qts.runtime.permissions import OrderSubmissionPermission
 from qts.runtime.router import EventRouter, RouteNotFoundError
 from qts.runtime.session import RuntimeSession, RuntimeSessionResult
 from qts.runtime.state import RuntimeSessionState, RuntimeStateMachine
 from qts.runtime.state_recovery import (
     FileSnapshotStore,
     InMemorySnapshotStore,
-    LiveRecoveryDecision,
-    LiveRecoveryDecisionStatus,
+    RuntimeRecoveryDecision,
+    RuntimeRecoveryDecisionStatus,
     SnapshotStore,
     StateSnapshot,
 )
@@ -52,9 +52,9 @@ __all__ = [
     "FileSnapshotStore",
     "InMemoryEventStore",
     "InMemorySnapshotStore",
-    "LiveRecoveryDecision",
-    "LiveRecoveryDecisionStatus",
-    "LiveOrderPermission",
+    "RuntimeRecoveryDecision",
+    "RuntimeRecoveryDecisionStatus",
+    "OrderSubmissionPermission",
     "RuntimeSessionState",
     "MarketDataEnvironment",
     "MarketDataRouteSpec",

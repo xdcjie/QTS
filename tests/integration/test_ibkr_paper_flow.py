@@ -56,7 +56,7 @@ def test_ibkr_paper_market_data_and_order_execution_use_separate_fake_transports
             port=7497,
             client_id=201,
             broker_id=BrokerId("IBKR"),
-            account_id="DU1234567",
+            account_id="DUP1234567",
         ),
         symbol_mapping=mapping,
     )
@@ -138,7 +138,7 @@ def test_ibkr_paper_market_data_and_order_execution_use_separate_fake_transports
     account_ref.process_all()
 
     [request] = fake_execution.requests
-    assert request.account_id == "DU1234567"
+    assert request.account_id == "DUP1234567"
     assert request.broker_symbol == "AAPL"
     assert account_actor.snapshot().positions[instrument_id].quantity == Decimal("10")
     assert order_manager_actor.get_order(intent.order_id).state is OrderState.FILLED

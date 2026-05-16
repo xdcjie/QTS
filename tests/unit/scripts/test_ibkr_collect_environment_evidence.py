@@ -72,7 +72,7 @@ connections:
     broker_id: IBKR
 
 order_execution:
-  account_id: DU1234567
+  account_id: DUP1234567
   risk_profile: paper-default
 
 secrets:

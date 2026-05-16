@@ -63,8 +63,8 @@ class SnapshotStore(Protocol):
         ...
 
 
-class LiveRecoveryDecisionStatus(StrEnum):
-    """Safety decision for live runtime recovery."""
+class RuntimeRecoveryDecisionStatus(StrEnum):
+    """Safety decision for runtime recovery."""
 
     ENTER_OBSERVATION = "enter_observation"
     ALLOW_LIVE = "allow_live"
@@ -88,15 +88,15 @@ class RecoveryReadinessDecision:
 
 
 @dataclass(frozen=True, slots=True)
-class LiveRecoveryDecision:
-    """Recovery safety decision before live order submission resumes."""
+class RuntimeRecoveryDecision:
+    """Recovery safety decision before order submission resumes."""
 
-    status: LiveRecoveryDecisionStatus
+    status: RuntimeRecoveryDecisionStatus
     real_order_submission_enabled: bool
     reason_code: str | None = None
 
     def __post_init__(self) -> None:
-        if self.status is LiveRecoveryDecisionStatus.ALLOW_LIVE:
+        if self.status is RuntimeRecoveryDecisionStatus.ALLOW_LIVE:
             if not self.real_order_submission_enabled:
                 raise ValueError("ALLOW_LIVE requires real_order_submission_enabled")
             if self.reason_code is not None:
@@ -279,34 +279,34 @@ def validate_event_sequence_for_recovery(
     return RecoveryReadinessDecision(recovery_allowed=report.valid)
 
 
-def validate_live_recovery_gate(
+def validate_runtime_recovery_gate(
     readiness: RecoveryReadinessDecision,
     *,
     observation_entered: bool = False,
     reconciliation_passed: bool = False,
-) -> LiveRecoveryDecision:
+) -> RuntimeRecoveryDecision:
     """Require observation and broker reconciliation before live orders resume."""
 
     if not readiness.recovery_allowed:
-        return LiveRecoveryDecision(
-            status=LiveRecoveryDecisionStatus.BLOCK,
+        return RuntimeRecoveryDecision(
+            status=RuntimeRecoveryDecisionStatus.BLOCK,
             real_order_submission_enabled=False,
             reason_code=readiness.reason_code,
         )
     if not observation_entered:
-        return LiveRecoveryDecision(
-            status=LiveRecoveryDecisionStatus.ENTER_OBSERVATION,
+        return RuntimeRecoveryDecision(
+            status=RuntimeRecoveryDecisionStatus.ENTER_OBSERVATION,
             real_order_submission_enabled=False,
             reason_code="RECOVERY_OBSERVATION_REQUIRED",
         )
     if not reconciliation_passed:
-        return LiveRecoveryDecision(
-            status=LiveRecoveryDecisionStatus.ENTER_OBSERVATION,
+        return RuntimeRecoveryDecision(
+            status=RuntimeRecoveryDecisionStatus.ENTER_OBSERVATION,
             real_order_submission_enabled=False,
             reason_code="RECOVERY_RECONCILIATION_REQUIRED",
         )
-    return LiveRecoveryDecision(
-        status=LiveRecoveryDecisionStatus.ALLOW_LIVE,
+    return RuntimeRecoveryDecision(
+        status=RuntimeRecoveryDecisionStatus.ALLOW_LIVE,
         real_order_submission_enabled=True,
     )
 
@@ -315,12 +315,12 @@ __all__ = [
     "DurableSnapshotStore",
     "FileSnapshotStore",
     "InMemorySnapshotStore",
-    "LiveRecoveryDecision",
-    "LiveRecoveryDecisionStatus",
+    "RuntimeRecoveryDecision",
+    "RuntimeRecoveryDecisionStatus",
     "RecoveryReadinessDecision",
     "SnapshotFrequencyPolicy",
     "SnapshotStore",
     "StateSnapshot",
     "validate_event_sequence_for_recovery",
-    "validate_live_recovery_gate",
+    "validate_runtime_recovery_gate",
 ]

@@ -36,7 +36,7 @@ def test_paper_drill_records_limit_order_cancel_and_execution_reports(
     assert payload["live_orders_enabled"] is False
     assert payload["config"]["provider"] == "ibkr"
     assert payload["config"]["mode"] == "paper"
-    assert payload["config"]["account_id"] == "DU1234567"
+    assert payload["config"]["account_id"] == "DUP1234567"
     assert payload["config"]["order_execution"]["port"] == 4002
     assert payload["order"]["order_type"] == "limit"
     assert payload["order"]["limit_price"] == "190.25"
@@ -116,7 +116,7 @@ connections:
     port: 4001
     client_id: 201
 order_execution:
-  account_id: DU1234567
+  account_id: DUP1234567
   risk_profile: paper-default
 secrets:
   username_env: IBKR_PAPER_USERNAME
@@ -154,7 +154,7 @@ connections:
     port: 4002
     client_id: 201
 order_execution:
-  account_id: U1234567
+  account_id: DU1234567
   risk_profile: paper-default
 secrets:
   username_env: IBKR_PAPER_USERNAME
@@ -189,7 +189,7 @@ connections:
     port: 4002
     client_id: 201
 order_execution:
-  account_id: DU1234567
+  account_id: DUP1234567
   risk_profile: paper-default
 secrets:
   username_env: IBKR_PAPER_USERNAME

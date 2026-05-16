@@ -174,6 +174,32 @@ class StreamingMarketDataSource:
             )
         )
 
+    def resubscribe_active_subscriptions(
+        self,
+        *,
+        observed_at: datetime | None = None,
+    ) -> tuple[StreamingMarketDataSubscriptionEvent, ...]:
+        """Record provider resubscribe evidence for all active logical subscriptions."""
+
+        effective_observed_at = observed_at or datetime.now(UTC)
+        events = tuple(
+            self._subscription_event(
+                StreamingMarketDataSubscriptionEventType.RESUBSCRIBED,
+                state,
+                observed_at=effective_observed_at,
+            )
+            for _, state in sorted(
+                self._subscriptions.items(),
+                key=lambda item: (
+                    item[0].instrument_id.value,
+                    item[0].requested_timeframe,
+                    item[0].stream_type.value,
+                ),
+            )
+        )
+        self._pending.extend(events)
+        return events
+
     def mark_subscription_failed(
         self,
         subscription: LogicalSubscription,

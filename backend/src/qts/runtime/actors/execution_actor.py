@@ -11,6 +11,7 @@ from qts.execution.order_manager import ExecutionReport, OrderIntent
 from qts.execution.simulator.simulated_broker import SimulatedBroker
 from qts.runtime.actor import Actor
 from qts.runtime.actor_ref import ActorRef
+from qts.runtime.live_capital import LiveCapitalOrderDecision
 
 if TYPE_CHECKING:
     from qts.runtime.actors.order_manager_actor import OrderRouteMetadata
@@ -92,13 +93,17 @@ class ExecutionActor(Actor):
         *,
         order_manager_ref: ActorRef,
         execution_adapter: ExecutionAdapter | None = None,
+        live_capital_decision: LiveCapitalOrderDecision | None = None,
     ) -> None:
         self._order_manager_ref = order_manager_ref
         self._execution_adapter = execution_adapter or SimulatedBroker()
+        self._live_capital_decision = live_capital_decision
 
     def handle(self, message: object) -> None:
         """Perform handle."""
         if isinstance(message, OrderExecutionRequest):
+            if self._live_capital_decision is not None:
+                self._live_capital_decision.assert_live_order_allowed()
             report = self._execution_adapter.execute_market_order(
                 message.intent,
                 broker_order_id=message.broker_order_id,

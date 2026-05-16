@@ -8,9 +8,10 @@ from typing import Any
 
 from qts.core.hashing import stable_json_hash
 from qts.reporting.base import PLATFORM_BASELINE_VERSION
-from qts.runtime.config import LiveRuntimeConfig
+from qts.runtime.config import BrokerRuntimeConfig
+from qts.runtime.live_capital import LiveCapitalEnablementDecision, LiveCapitalEnablementRequest
 from qts.runtime.mode import AccountEnvironment, RuntimeMode
-from qts.runtime.permissions import LiveOrderPermission
+from qts.runtime.permissions import OrderSubmissionPermission
 
 
 class BrokerRuntimeStartupDecisionStatus(StrEnum):
@@ -52,7 +53,12 @@ class BrokerRuntimeStartupChecklist:
     checks: tuple[BrokerRuntimeStartupCheck, ...]
 
     @classmethod
-    def from_config(cls, config: LiveRuntimeConfig) -> BrokerRuntimeStartupChecklist:
+    def from_config(
+        cls,
+        config: BrokerRuntimeConfig,
+        *,
+        live_capital_decision: LiveCapitalEnablementDecision | None = None,
+    ) -> BrokerRuntimeStartupChecklist:
         """Build structured startup evidence without changing startup state."""
 
         checks: list[BrokerRuntimeStartupCheck] = []
@@ -189,6 +195,35 @@ class BrokerRuntimeStartupChecklist:
                     remediation="none" if passed else remediation,
                 )
             )
+        if mode is RuntimeMode.LIVE:
+            signoff_passed = live_capital_decision is not None and live_capital_decision.allowed
+            checks.append(
+                BrokerRuntimeStartupCheck(
+                    check_name="live_capital_signoff_check",
+                    status="PASS" if signoff_passed else "FAIL",
+                    severity="INFO" if signoff_passed else "BLOCKER",
+                    evidence=(
+                        live_capital_decision.checklist_evidence()
+                        if live_capital_decision is not None
+                        else "live_capital_signoff=missing"
+                    ),
+                    remediation=(
+                        "none"
+                        if signoff_passed
+                        else "record non-expired dual-control signoff within approved scope"
+                    ),
+                )
+            )
+        else:
+            checks.append(
+                BrokerRuntimeStartupCheck(
+                    check_name="live_capital_signoff_check",
+                    status="PASS",
+                    severity="INFO",
+                    evidence="live_capital_signoff=not_required",
+                    remediation="none",
+                )
+            )
         return cls(checks=tuple(checks))
 
     @property
@@ -241,24 +276,39 @@ class BrokerRuntimeStartupDecision:
 
     status: BrokerRuntimeStartupDecisionStatus
     mode: RuntimeMode
-    order_permission: LiveOrderPermission
+    order_permission: OrderSubmissionPermission
     real_order_submission_enabled: bool
     checklist: BrokerRuntimeStartupChecklist
 
 
-def validate_live_startup(config: LiveRuntimeConfig) -> BrokerRuntimeStartupDecision:
+def validate_live_startup(
+    config: BrokerRuntimeConfig,
+    *,
+    live_capital_request: LiveCapitalEnablementRequest | None = None,
+) -> BrokerRuntimeStartupDecision:
     """Fail closed unless all live safety prerequisites are explicit."""
 
-    checklist = BrokerRuntimeStartupChecklist.from_config(config)
+    mode = RuntimeMode.from_value(config.mode)
+    live_capital_decision = (
+        live_capital_request.evaluate() if live_capital_request is not None else None
+    )
+    checklist = BrokerRuntimeStartupChecklist.from_config(
+        config,
+        live_capital_decision=live_capital_decision,
+    )
     missing = [
         f"{check.check_name} ({check.evidence})"
         for check in checklist.checks
-        if check.status == "FAIL" and check.severity == "BLOCKER"
+        if check.status == "FAIL"
+        and check.severity == "BLOCKER"
+        and check.check_name != "live_capital_signoff_check"
     ]
     if missing:
         raise ValueError("live startup missing required config: " + ", ".join(missing))
-    mode = RuntimeMode.from_value(config.mode)
-    status = _startup_decision_status(mode)
+    status = _startup_decision_status(
+        mode,
+        live_capital_decision=live_capital_decision,
+    )
     return BrokerRuntimeStartupDecision(
         status=status,
         mode=mode,
@@ -272,8 +322,14 @@ def validate_live_startup(config: LiveRuntimeConfig) -> BrokerRuntimeStartupDeci
     )
 
 
-def _startup_decision_status(mode: RuntimeMode) -> BrokerRuntimeStartupDecisionStatus:
+def _startup_decision_status(
+    mode: RuntimeMode,
+    *,
+    live_capital_decision: LiveCapitalEnablementDecision | None = None,
+) -> BrokerRuntimeStartupDecisionStatus:
     if mode is RuntimeMode.LIVE:
+        if live_capital_decision is None or not live_capital_decision.allowed:
+            return BrokerRuntimeStartupDecisionStatus.ALLOW_OBSERVATION
         return BrokerRuntimeStartupDecisionStatus.ALLOW_LIVE
     if mode in {RuntimeMode.PAPER_BROKER, RuntimeMode.PAPER_SIMULATED}:
         return BrokerRuntimeStartupDecisionStatus.ALLOW_PAPER
@@ -284,12 +340,12 @@ def _startup_decision_status(mode: RuntimeMode) -> BrokerRuntimeStartupDecisionS
 
 def _order_permission_for_status(
     status: BrokerRuntimeStartupDecisionStatus,
-) -> LiveOrderPermission:
+) -> OrderSubmissionPermission:
     if status is BrokerRuntimeStartupDecisionStatus.ALLOW_LIVE:
-        return LiveOrderPermission.LIVE_ORDERS_ALLOWED
+        return OrderSubmissionPermission.LIVE_ORDERS_ALLOWED
     if status is BrokerRuntimeStartupDecisionStatus.ALLOW_PAPER:
-        return LiveOrderPermission.PAPER_ORDERS_ALLOWED
-    return LiveOrderPermission.OBSERVATION_ONLY
+        return OrderSubmissionPermission.PAPER_ORDERS_ALLOWED
+    return OrderSubmissionPermission.OBSERVATION_ONLY
 
 
 __all__ = [

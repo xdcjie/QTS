@@ -27,13 +27,5 @@ M5 guardrail evidence for `RuntimeSession` and runtime coordinator candidates.
 
 ## Coordinator Decisions
 
-| Candidate | Decision | Evidence | Gate |
-| --- | --- | --- | --- |
-| RuntimeRecoveryCoordinator | Keep | state/policy: owns degraded-to-running recovery transition and audit event write behind the facade | `RUNTIME_COORDINATOR_DECISION` |
-| RuntimeRollbackCoordinator | Keep | safety boundary: owns fail-closed rollback evidence capture, active-order snapshotting, and rollback audit event | `RUNTIME_COORDINATOR_DECISION` |
-| BrokerRuntimeStartupGate | Keep | independent test value: startup permission decisions are unit-tested separately from RuntimeSession order flow | `RUNTIME_COORDINATOR_DECISION` |
-| RuntimeSafetyController | Keep | safety boundary: kill-switch and order-blocking policy remain isolated from market-data dispatch | `RUNTIME_COORDINATOR_DECISION` |
-| RuntimeBrokerLifecycleCoordinator | Keep | external boundary: broker disconnect/reconnect reconciliation owns broker-refresh sequencing and recovery gating | `RUNTIME_COORDINATOR_DECISION` |
-| RuntimeMarketDataCoordinator | Keep | complexity threshold: inlining market-data, strategy, risk, order, fill, and account-snapshot dispatch would make RuntimeSession unreadable | `RUNTIME_COORDINATOR_DECISION` |
-
-Merge/delete decisions must remove the production class definition in the same change. The guardrail fails if a candidate is marked `Merge` or `Delete` while the class still exists.
+The authoritative M5.2 keep / merge / delete audit lives in
+`docs/architecture/runtime_coordinator_decisions.md`.

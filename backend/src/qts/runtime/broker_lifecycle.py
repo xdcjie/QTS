@@ -31,6 +31,10 @@ class BrokerReconnectReconciliationResult:
 class BrokerReconnectReconciliation(Protocol):
     """Broker refresh boundary required before reconnect recovery."""
 
+    def resubscribe_market_data(self) -> None:
+        """Restore active market-data subscriptions before reconciliation."""
+        ...
+
     def refresh_open_orders(self) -> None:
         """Request broker open orders before reconciliation."""
         ...
@@ -102,6 +106,7 @@ class RuntimeBrokerLifecycleCoordinator:
                 return cast(RuntimeSessionState, session.degrade())
             return cast(RuntimeSessionState, session.state)
 
+        reconciliation.resubscribe_market_data()
         reconciliation.refresh_open_orders()
         reconciliation.refresh_positions()
         reconciliation.refresh_executions()

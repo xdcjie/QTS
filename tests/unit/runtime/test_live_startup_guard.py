@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import importlib
 from dataclasses import replace
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 
 import pytest
 from qts.runtime.broker_startup import (
@@ -11,14 +13,15 @@ from qts.runtime.broker_startup import (
     BrokerRuntimeStartupDecisionStatus,
     validate_live_startup,
 )
-from qts.runtime.config import LiveRuntimeConfig
+from qts.runtime.config import BrokerRuntimeConfig
+from qts.runtime.live_capital import LiveCapitalEnablementRequest, OperatorSignoff
 from qts.runtime.mode import (
     AccountEnvironment,
     ExecutionEnvironment,
     MarketDataEnvironment,
     RuntimeMode,
 )
-from qts.runtime.permissions import LiveOrderPermission
+from qts.runtime.permissions import OrderSubmissionPermission
 
 
 def test_broker_runtime_startup_types_are_canonical() -> None:
@@ -33,7 +36,7 @@ def test_broker_runtime_startup_types_are_canonical() -> None:
 
 
 def test_live_startup_guard_requires_all_safety_controls_for_live_mode() -> None:
-    config = LiveRuntimeConfig(
+    config = BrokerRuntimeConfig(
         mode=RuntimeMode.LIVE.value,
         broker_configured=True,
         account_configured=True,
@@ -41,7 +44,7 @@ def test_live_startup_guard_requires_all_safety_controls_for_live_mode() -> None
         calendar_configured=True,
         kill_switch_configured=False,
         allow_live_orders=True,
-        broker_account_code="U1234567",
+        broker_account_code="DU1234567",
         broker_port=4001,
         operator_signoff_id="ops-approval-1",
     )
@@ -51,7 +54,7 @@ def test_live_startup_guard_requires_all_safety_controls_for_live_mode() -> None
 
 
 def test_live_startup_checklist_reports_evidence_and_remediation() -> None:
-    config = LiveRuntimeConfig(
+    config = BrokerRuntimeConfig(
         mode=RuntimeMode.OBSERVATION.value,
         broker_configured=True,
         account_configured=False,
@@ -108,7 +111,7 @@ def test_startup_checklist_blocks_only_blocker_severity_failures() -> None:
 
 
 def test_live_runtime_config_requires_schema_version() -> None:
-    config = LiveRuntimeConfig(
+    config = BrokerRuntimeConfig(
         mode=RuntimeMode.OBSERVATION.value,
         broker_configured=True,
         account_configured=True,
@@ -120,7 +123,7 @@ def test_live_runtime_config_requires_schema_version() -> None:
     assert config.schema_version == "1"
 
     with pytest.raises(ValueError, match="schema_version"):
-        LiveRuntimeConfig(
+        BrokerRuntimeConfig(
             mode=RuntimeMode.OBSERVATION.value,
             broker_configured=True,
             account_configured=True,
@@ -132,14 +135,14 @@ def test_live_runtime_config_requires_schema_version() -> None:
 
 
 def test_live_runtime_config_hash_includes_schema_and_environment() -> None:
-    config = LiveRuntimeConfig(
+    config = BrokerRuntimeConfig(
         mode=RuntimeMode.PAPER_BROKER.value,
         broker_configured=True,
         account_configured=True,
         risk_configured=True,
         calendar_configured=True,
         kill_switch_configured=True,
-        broker_account_code="DU1234567",
+        broker_account_code="DUP1234567",
         broker_port=4002,
     )
     changed = replace(config, schema_version="2")
@@ -152,8 +155,10 @@ def test_live_runtime_config_hash_includes_schema_and_environment() -> None:
     assert changed.config_hash != config.config_hash
 
 
-def test_live_runtime_config_keeps_runtime_mode_enum() -> None:
-    config = LiveRuntimeConfig(
+def test_paper_simulated_runtime_config_keeps_runtime_mode_enum() -> None:
+    from qts.runtime.config.paper import PaperSimulatedRuntimeConfig
+
+    config = PaperSimulatedRuntimeConfig(
         mode=RuntimeMode.PAPER_SIMULATED.value,
         broker_configured=True,
         account_configured=True,
@@ -167,7 +172,7 @@ def test_live_runtime_config_keeps_runtime_mode_enum() -> None:
 
 
 def test_broker_runtime_config_materializes_default_ports() -> None:
-    live = LiveRuntimeConfig(
+    live = BrokerRuntimeConfig(
         mode=RuntimeMode.LIVE.value,
         broker_configured=True,
         account_configured=True,
@@ -175,17 +180,17 @@ def test_broker_runtime_config_materializes_default_ports() -> None:
         calendar_configured=True,
         kill_switch_configured=True,
         allow_live_orders=True,
-        broker_account_code="U1234567",
+        broker_account_code="DU1234567",
         operator_signoff_id="ops-approval-1",
     )
-    paper = LiveRuntimeConfig(
+    paper = BrokerRuntimeConfig(
         mode=RuntimeMode.PAPER_BROKER.value,
         broker_configured=True,
         account_configured=True,
         risk_configured=True,
         calendar_configured=True,
         kill_switch_configured=True,
-        broker_account_code="DU1234567",
+        broker_account_code="DUP1234567",
     )
 
     assert live.broker_port == 4001
@@ -195,7 +200,7 @@ def test_broker_runtime_config_materializes_default_ports() -> None:
 
 
 def test_live_startup_checklist_includes_runtime_safety_gates() -> None:
-    config = LiveRuntimeConfig(
+    config = BrokerRuntimeConfig(
         mode=RuntimeMode.OBSERVATION.value,
         broker_configured=True,
         account_configured=True,
@@ -236,7 +241,7 @@ def test_live_startup_checklist_includes_runtime_safety_gates() -> None:
 
 
 def test_observation_mode_allows_connections_but_blocks_real_order_submission() -> None:
-    config = LiveRuntimeConfig(
+    config = BrokerRuntimeConfig(
         mode=RuntimeMode.OBSERVATION.value,
         broker_configured=True,
         account_configured=True,
@@ -252,43 +257,71 @@ def test_observation_mode_allows_connections_but_blocks_real_order_submission() 
 
 
 def test_live_startup_decision_statuses_are_explicit() -> None:
-    live_decision = validate_live_startup(
-        LiveRuntimeConfig(
-            mode=RuntimeMode.LIVE.value,
-            broker_configured=True,
-            account_configured=True,
-            risk_configured=True,
-            calendar_configured=True,
-            kill_switch_configured=True,
-            allow_live_orders=True,
-            broker_account_code="U1234567",
-            broker_port=4001,
-            operator_signoff_id="ops-approval-1",
-        )
+    live_config = BrokerRuntimeConfig(
+        mode=RuntimeMode.LIVE.value,
+        broker_configured=True,
+        account_configured=True,
+        risk_configured=True,
+        calendar_configured=True,
+        kill_switch_configured=True,
+        allow_live_orders=True,
+        broker_account_code="DU1234567",
+        broker_port=4001,
+        operator_signoff_id="ops-approval-1",
     )
+    runtime_recovery_decision = validate_live_startup(
+        live_config,
+        live_capital_request=LiveCapitalEnablementRequest(
+            operator_signoff=OperatorSignoff(
+                operator_id="operator-1",
+                reason="controlled live-capital readiness drill",
+                risk_approver_id="risk-1",
+                engineering_approver_id="engineering-1",
+                expires_at=datetime.now(UTC) + timedelta(hours=1),
+                strategy_ids=("strategy-a",),
+                account_ids=("acct-live-1",),
+                max_notional_limit=Decimal("100000"),
+                allowed_instruments=("F.US.CME.GC.M2026",),
+            ),
+            strategy_id="strategy-a",
+            account_id="acct-live-1",
+            instrument_id="F.US.CME.GC.M2026",
+            requested_notional=Decimal("1000"),
+        ),
+    )
+    missing_dual_control_decision = validate_live_startup(live_config)
     paper_decision = validate_live_startup(
-        LiveRuntimeConfig(
+        BrokerRuntimeConfig(
             mode=RuntimeMode.PAPER_BROKER.value,
             broker_configured=True,
             account_configured=True,
             risk_configured=True,
             calendar_configured=True,
             kill_switch_configured=True,
-            broker_account_code="DU1234567",
+            broker_account_code="DUP1234567",
             broker_port=4002,
         )
     )
 
-    assert live_decision.status is BrokerRuntimeStartupDecisionStatus.ALLOW_LIVE
+    assert runtime_recovery_decision.status is BrokerRuntimeStartupDecisionStatus.ALLOW_LIVE
+    assert missing_dual_control_decision.status is (
+        BrokerRuntimeStartupDecisionStatus.ALLOW_OBSERVATION
+    )
     assert paper_decision.status is BrokerRuntimeStartupDecisionStatus.ALLOW_PAPER
-    assert live_decision.order_permission is LiveOrderPermission.LIVE_ORDERS_ALLOWED
-    assert paper_decision.order_permission is LiveOrderPermission.PAPER_ORDERS_ALLOWED
-    assert live_decision.real_order_submission_enabled is True
+    assert (
+        runtime_recovery_decision.order_permission is OrderSubmissionPermission.LIVE_ORDERS_ALLOWED
+    )
+    assert missing_dual_control_decision.order_permission is (
+        OrderSubmissionPermission.OBSERVATION_ONLY
+    )
+    assert paper_decision.order_permission is OrderSubmissionPermission.PAPER_ORDERS_ALLOWED
+    assert runtime_recovery_decision.real_order_submission_enabled is True
+    assert missing_dual_control_decision.real_order_submission_enabled is False
     assert paper_decision.real_order_submission_enabled is False
 
 
 def test_live_observation_mode_uses_explicit_order_permission() -> None:
-    config = LiveRuntimeConfig(
+    config = BrokerRuntimeConfig(
         mode=RuntimeMode.LIVE_OBSERVATION,
         broker_configured=True,
         account_configured=True,
@@ -301,13 +334,43 @@ def test_live_observation_mode_uses_explicit_order_permission() -> None:
 
     assert config.mode is RuntimeMode.LIVE_OBSERVATION
     assert decision.status is BrokerRuntimeStartupDecisionStatus.ALLOW_OBSERVATION
-    assert decision.order_permission is LiveOrderPermission.OBSERVATION_ONLY
+    assert decision.order_permission is OrderSubmissionPermission.OBSERVATION_ONLY
     assert decision.real_order_submission_enabled is False
 
 
 def test_live_rejects_paper_account_code() -> None:
     with pytest.raises(ValueError, match="live mode cannot use a paper account"):
-        LiveRuntimeConfig(
+        BrokerRuntimeConfig(
+            mode=RuntimeMode.LIVE,
+            broker_configured=True,
+            account_configured=True,
+            risk_configured=True,
+            calendar_configured=True,
+            kill_switch_configured=True,
+            allow_live_orders=True,
+            broker_account_code="DUP1234567",
+            broker_port=4001,
+            operator_signoff_id="ops-approval-1",
+        )
+
+
+def test_paper_broker_rejects_live_account_code() -> None:
+    with pytest.raises(ValueError, match="paper broker mode requires a paper account"):
+        BrokerRuntimeConfig(
+            mode=RuntimeMode.PAPER_BROKER,
+            broker_configured=True,
+            account_configured=True,
+            risk_configured=True,
+            calendar_configured=True,
+            kill_switch_configured=True,
+            broker_account_code="DU1234567",
+            broker_port=4002,
+        )
+
+
+def test_live_requires_operator_signoff_and_explicit_live_orders() -> None:
+    with pytest.raises(ValueError, match="operator_signoff_id"):
+        BrokerRuntimeConfig(
             mode=RuntimeMode.LIVE,
             broker_configured=True,
             account_configured=True,
@@ -317,47 +380,17 @@ def test_live_rejects_paper_account_code() -> None:
             allow_live_orders=True,
             broker_account_code="DU1234567",
             broker_port=4001,
-            operator_signoff_id="ops-approval-1",
-        )
-
-
-def test_paper_broker_rejects_live_account_code() -> None:
-    with pytest.raises(ValueError, match="paper broker mode requires a paper account"):
-        LiveRuntimeConfig(
-            mode=RuntimeMode.PAPER_BROKER,
-            broker_configured=True,
-            account_configured=True,
-            risk_configured=True,
-            calendar_configured=True,
-            kill_switch_configured=True,
-            broker_account_code="U1234567",
-            broker_port=4002,
-        )
-
-
-def test_live_requires_operator_signoff_and_explicit_live_orders() -> None:
-    with pytest.raises(ValueError, match="operator_signoff_id"):
-        LiveRuntimeConfig(
-            mode=RuntimeMode.LIVE,
-            broker_configured=True,
-            account_configured=True,
-            risk_configured=True,
-            calendar_configured=True,
-            kill_switch_configured=True,
-            allow_live_orders=True,
-            broker_account_code="U1234567",
-            broker_port=4001,
         )
 
     with pytest.raises(ValueError, match="allow_live_orders"):
-        LiveRuntimeConfig(
+        BrokerRuntimeConfig(
             mode=RuntimeMode.LIVE,
             broker_configured=True,
             account_configured=True,
             risk_configured=True,
             calendar_configured=True,
             kill_switch_configured=True,
-            broker_account_code="U1234567",
+            broker_account_code="DU1234567",
             broker_port=4001,
             operator_signoff_id="ops-approval-1",
         )
@@ -365,7 +398,7 @@ def test_live_requires_operator_signoff_and_explicit_live_orders() -> None:
 
 def test_live_uses_default_port_unless_override_reason_is_recorded() -> None:
     with pytest.raises(ValueError, match="broker_port_override_reason"):
-        LiveRuntimeConfig(
+        BrokerRuntimeConfig(
             mode=RuntimeMode.LIVE,
             broker_configured=True,
             account_configured=True,
@@ -373,14 +406,16 @@ def test_live_uses_default_port_unless_override_reason_is_recorded() -> None:
             calendar_configured=True,
             kill_switch_configured=True,
             allow_live_orders=True,
-            broker_account_code="U1234567",
+            broker_account_code="DU1234567",
             broker_port=7496,
             operator_signoff_id="ops-approval-1",
         )
 
 
 def test_paper_simulated_runtime_uses_simulated_execution_environment() -> None:
-    config = LiveRuntimeConfig(
+    from qts.runtime.config.paper import PaperSimulatedRuntimeConfig
+
+    config = PaperSimulatedRuntimeConfig(
         mode=RuntimeMode.PAPER_SIMULATED,
         broker_configured=True,
         account_configured=True,
@@ -396,16 +431,16 @@ def test_paper_simulated_runtime_uses_simulated_execution_environment() -> None:
 
 
 def test_paper_runtime_configs_have_disjoint_semantics() -> None:
-    from qts.runtime.config.paper import PaperBrokerRuntimeConfig, PaperSimulatedRuntimeConfig
+    from qts.runtime.config.paper import PaperSimulatedRuntimeConfig
 
-    broker = PaperBrokerRuntimeConfig(
+    broker = BrokerRuntimeConfig(
         mode=RuntimeMode.PAPER_BROKER,
         broker_configured=True,
         account_configured=True,
         risk_configured=True,
         calendar_configured=True,
         kill_switch_configured=True,
-        broker_account_code="DU1234567",
+        broker_account_code="DUP1234567",
     )
     simulated = PaperSimulatedRuntimeConfig(
         mode=RuntimeMode.PAPER_SIMULATED,
@@ -425,8 +460,8 @@ def test_paper_runtime_configs_have_disjoint_semantics() -> None:
     assert simulated.broker_account_kind == "simulated"
     assert simulated.broker_port is None
 
-    with pytest.raises(ValueError, match="PaperBrokerRuntimeConfig mode must be paper_broker"):
-        PaperBrokerRuntimeConfig(
+    with pytest.raises(ValueError, match="BrokerRuntimeConfig mode cannot be paper_simulated"):
+        BrokerRuntimeConfig(
             mode=RuntimeMode.PAPER_SIMULATED,
             broker_configured=True,
             account_configured=True,
@@ -444,19 +479,19 @@ def test_paper_runtime_configs_have_disjoint_semantics() -> None:
             risk_configured=True,
             calendar_configured=True,
             kill_switch_configured=True,
-            broker_account_code="DU1234567",
+            broker_account_code="DUP1234567",
         )
 
 
 def test_permission_mode_label_is_not_runtime_mode_alias() -> None:
     with pytest.raises(ValueError, match="Unsupported runtime mode"):
-        LiveRuntimeConfig(
-            mode=LiveOrderPermission.PAPER_ORDERS_ALLOWED.value,
+        BrokerRuntimeConfig(
+            mode=OrderSubmissionPermission.PAPER_ORDERS_ALLOWED.value,
             broker_configured=True,
             account_configured=True,
             risk_configured=True,
             calendar_configured=True,
             kill_switch_configured=True,
-            broker_account_code="DU1234567",
+            broker_account_code="DUP1234567",
             broker_port=4002,
         )

@@ -3,37 +3,89 @@ from __future__ import annotations
 import ast
 import json
 from pathlib import Path
+from types import SimpleNamespace
+
+from pytest import MonkeyPatch
 
 
-def test_application_services_return_stable_dtos_without_actor_internals() -> None:
+def test_application_services_return_stable_dtos_without_actor_internals(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    import qts.application.services.backtest as service_module
     from qts.application.dto.backtest import BacktestRequestDTO
     from qts.application.services import BacktestService, HealthService
 
-    health = HealthService().status()
-    result = BacktestService().submit(
-        BacktestRequestDTO(config_path="configs/backtest.gc_si.example.yaml")
+    config_path = tmp_path / "research.yaml"
+    config_path.write_text("mode: backtest\n", encoding="utf-8")
+    manifest_path = tmp_path / "bt-research.manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "run_id": "bt-research",
+                "metrics": {},
+                "artifacts": {
+                    "equity_curve": {"path": "equity.ndjson", "sha256": "sha256:eq"},
+                    "orders": {"path": "orders.ndjson", "sha256": "sha256:orders"},
+                    "fills": {"path": "fills.ndjson", "sha256": "sha256:fills"},
+                },
+            }
+        ),
+        encoding="utf-8",
     )
 
+    def fake_run_backtest(path: Path, *, output_dir: Path) -> SimpleNamespace:
+        return SimpleNamespace(
+            manifest_path=manifest_path,
+            result=SimpleNamespace(actor_ref=object(), mailbox=object()),
+        )
+
+    monkeypatch.setattr(service_module, "run_backtest", fake_run_backtest)
+
+    health = HealthService().status()
+    result = BacktestService().submit(BacktestRequestDTO(config_path=str(config_path)))
+
     assert health.status == "ok"
-    assert result.status == "accepted"
-    assert result.run_id.startswith("bt-")
+    assert result.run_id == "bt-research"
     assert not hasattr(result, "actor_ref")
     assert not hasattr(result, "mailbox")
 
 
-def test_backtest_service_persists_config_path_in_summary() -> None:
+def test_backtest_service_returns_manifest_backed_research_result(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    import qts.application.services.backtest as service_module
     from qts.application.dto.backtest import BacktestRequestDTO
     from qts.application.services import BacktestService
 
-    config_path = "configs/backtest.gc_si.example.yaml"
+    config_path = tmp_path / "research.yaml"
+    config_path.write_text("mode: backtest\n", encoding="utf-8")
+    manifest_path = tmp_path / "bt-research.manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "run_id": "bt-research",
+                "metrics": {"points": 3},
+                "artifacts": {
+                    "equity_curve": {"path": "equity.ndjson", "sha256": "sha256:eq"},
+                    "orders": {"path": "orders.ndjson", "sha256": "sha256:orders"},
+                    "fills": {"path": "fills.ndjson", "sha256": "sha256:fills"},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
 
-    result = BacktestService().submit(BacktestRequestDTO(config_path=config_path))
-    summary = json.loads(Path(result.summary_path).read_text(encoding="utf-8"))
+    def fake_run_backtest(path: Path, *, output_dir: Path) -> SimpleNamespace:
+        return SimpleNamespace(manifest_path=manifest_path)
 
-    assert summary["schema_version"] == "1"
-    assert summary["run_id"] == result.run_id
-    assert summary["config_path"] == config_path
-    assert summary["status"] == "completed"
+    monkeypatch.setattr(service_module, "run_backtest", fake_run_backtest)
+
+    result = BacktestService().submit(BacktestRequestDTO(config_path=str(config_path)))
+
+    assert result.run_id == "bt-research"
+    assert result.manifest_path == str(manifest_path)
+    assert result.equity_curve_path == "equity.ndjson"
+    assert result.metrics == {"points": 3}
 
 
 def test_backtest_strategy_catalog_lists_valid_backtest_configs(tmp_path: Path) -> None:

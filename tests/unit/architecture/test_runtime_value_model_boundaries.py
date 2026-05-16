@@ -33,7 +33,7 @@ AUDITED_CLASSES = {
         "role": "runtime result",
     },
     "WrittenRuntimeEvent": {
-        "module": "qts.runtime.sinks.live",
+        "module": "qts.runtime.sinks.broker_runtime",
         "decision": "remove",
         "role": "mirror",
     },

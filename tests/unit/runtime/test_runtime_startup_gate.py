@@ -27,12 +27,12 @@ def test_broker_runtime_startup_gate_requires_decision_for_broker_modes() -> Non
 
 def test_broker_runtime_startup_gate_blocks_observation_and_disabled_live_orders() -> None:
     from qts.runtime.broker_startup import validate_live_startup
-    from qts.runtime.config import LiveRuntimeConfig
+    from qts.runtime.config import BrokerRuntimeConfig
     from qts.runtime.mode import RuntimeMode
     from qts.runtime.startup_gate import BrokerRuntimeStartupGate
 
     observation_decision = validate_live_startup(
-        LiveRuntimeConfig(
+        BrokerRuntimeConfig(
             mode=RuntimeMode.LIVE_OBSERVATION,
             broker_configured=True,
             account_configured=True,

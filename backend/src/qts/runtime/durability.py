@@ -9,12 +9,12 @@ from typing import Any, Protocol
 from qts.runtime.event_store import EventSequenceValidationReport, StoredEvent
 from qts.runtime.sinks.base import RuntimeEvent
 from qts.runtime.state_recovery import (
-    LiveRecoveryDecision,
     RecoveryReadinessDecision,
+    RuntimeRecoveryDecision,
     SnapshotStore,
     StateSnapshot,
     validate_event_sequence_for_recovery,
-    validate_live_recovery_gate,
+    validate_runtime_recovery_gate,
 )
 
 
@@ -67,8 +67,8 @@ class RuntimeDurabilityDrillResult:
     recovered_state: dict[str, Any]
     latest_snapshot_sequence: int
     replayed_event_count: int
-    recovery_decision: RecoveryReadinessDecision
-    live_decision: LiveRecoveryDecision
+    recovery_readiness_decision: RecoveryReadinessDecision
+    runtime_recovery_decision: RuntimeRecoveryDecision
 
 
 class RuntimeDurabilityDrill:
@@ -112,7 +112,7 @@ class RuntimeDurabilityDrill:
         event_store = self._config.event_store_factory()
         recovery_decision = validate_event_sequence_for_recovery(event_store.validate_sequence())
         if not recovery_decision.recovery_allowed:
-            live_decision = validate_live_recovery_gate(
+            runtime_decision = validate_runtime_recovery_gate(
                 recovery_decision,
                 observation_entered=observation_entered,
                 reconciliation_passed=reconciliation_passed,
@@ -121,8 +121,8 @@ class RuntimeDurabilityDrill:
                 recovered_state={},
                 latest_snapshot_sequence=0,
                 replayed_event_count=0,
-                recovery_decision=recovery_decision,
-                live_decision=live_decision,
+                recovery_readiness_decision=recovery_decision,
+                runtime_recovery_decision=runtime_decision,
             )
 
         recovered_state, latest_snapshot_sequence = self._load_snapshot_state()
@@ -130,7 +130,7 @@ class RuntimeDurabilityDrill:
         for event in replayed_events:
             self._apply_replayed_event(recovered_state, event)
         self._require_expected_state(recovered_state, expected_state)
-        live_decision = validate_live_recovery_gate(
+        runtime_decision = validate_runtime_recovery_gate(
             recovery_decision,
             observation_entered=observation_entered,
             reconciliation_passed=reconciliation_passed,
@@ -139,8 +139,8 @@ class RuntimeDurabilityDrill:
             recovered_state=recovered_state,
             latest_snapshot_sequence=latest_snapshot_sequence,
             replayed_event_count=len(replayed_events),
-            recovery_decision=recovery_decision,
-            live_decision=live_decision,
+            recovery_readiness_decision=recovery_decision,
+            runtime_recovery_decision=runtime_decision,
         )
 
     def _load_snapshot_state(self) -> tuple[dict[str, Any], int]:

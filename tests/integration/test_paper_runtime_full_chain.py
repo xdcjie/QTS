@@ -28,7 +28,7 @@ def test_paper_runtime_processes_strategy_order_fill_and_account_snapshot(
     from qts.runtime.actors.account_actor import AccountActor
     from qts.runtime.dependencies import RuntimeSessionDependencies
     from qts.runtime.session import RuntimeSession
-    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
     registry = InstrumentRegistry()
@@ -50,7 +50,7 @@ def test_paper_runtime_processes_strategy_order_fill_and_account_snapshot(
     )
     execution = _FillingExecutionAdapter()
     account_id = AccountId("acct-paper-full-chain")
-    sink = LiveRuntimeEventSink(tmp_path, filename="paper-events.ndjson")
+    sink = BrokerRuntimeEventSink(tmp_path, filename="paper-events.ndjson")
     session = RuntimeSession(
         RuntimeSessionDependencies(
             strategy=_BuyOnceStrategy(),

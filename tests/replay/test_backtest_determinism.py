@@ -151,6 +151,7 @@ def test_same_research_config_data_and_strategy_produce_same_normalized_artifact
 
 def _normalized_manifest_hash(path: Path) -> str:
     payload = json.loads(path.read_text(encoding="utf-8"))
+    payload.pop("manifest_hash", None)
     payload.pop("created_at", None)
     payload.pop("finalized_at", None)
     for artifact in payload["artifacts"].values():

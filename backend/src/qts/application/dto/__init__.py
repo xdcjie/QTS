@@ -1,6 +1,7 @@
 from qts.application.dto.backtest import (
     BacktestRequestDTO,
     BacktestRunDTO,
+    BacktestRunResultDTO,
     BacktestStrategyOptionDTO,
 )
 from qts.application.dto.health import HealthStatusDTO
@@ -18,6 +19,7 @@ from qts.application.dto.order_events import OrderFillDTO
 __all__ = [
     "BacktestRequestDTO",
     "BacktestRunDTO",
+    "BacktestRunResultDTO",
     "BacktestStrategyOptionDTO",
     "HealthStatusDTO",
     "KillSwitchCommandDTO",

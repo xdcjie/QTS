@@ -15,7 +15,7 @@ from qts.runtime.event_store import FileEventStore
 from qts.runtime.sinks.base import RuntimeEvent
 from qts.runtime.state_recovery import (
     FileSnapshotStore,
-    LiveRecoveryDecisionStatus,
+    RuntimeRecoveryDecisionStatus,
     StateSnapshot,
 )
 
@@ -90,9 +90,9 @@ def test_durability_drill_recovers_snapshot_and_replays_post_snapshot_events(
     assert result.recovered_state == pre_crash_state
     assert result.replayed_event_count == 2
     assert result.latest_snapshot_sequence == 2
-    assert result.recovery_decision.recovery_allowed is True
-    assert result.live_decision.status is LiveRecoveryDecisionStatus.ALLOW_LIVE
-    assert result.live_decision.real_order_submission_enabled is True
+    assert result.recovery_readiness_decision.recovery_allowed is True
+    assert result.runtime_recovery_decision.status is RuntimeRecoveryDecisionStatus.ALLOW_LIVE
+    assert result.runtime_recovery_decision.real_order_submission_enabled is True
 
 
 def test_durability_drill_blocks_event_sequence_gap(tmp_path: Path) -> None:
@@ -136,10 +136,10 @@ def test_durability_drill_blocks_event_sequence_gap(tmp_path: Path) -> None:
         reconciliation_passed=True,
     )
 
-    assert result.recovery_decision.recovery_allowed is False
-    assert result.recovery_decision.reason_code == "EVENT_SEQUENCE_GAP"
-    assert result.live_decision.status is LiveRecoveryDecisionStatus.BLOCK
-    assert result.live_decision.real_order_submission_enabled is False
+    assert result.recovery_readiness_decision.recovery_allowed is False
+    assert result.recovery_readiness_decision.reason_code == "EVENT_SEQUENCE_GAP"
+    assert result.runtime_recovery_decision.status is RuntimeRecoveryDecisionStatus.BLOCK
+    assert result.runtime_recovery_decision.real_order_submission_enabled is False
 
 
 def test_durability_drill_blocks_snapshot_schema_version_mismatch(tmp_path: Path) -> None:
@@ -189,9 +189,11 @@ def test_durability_drill_requires_reconciliation_before_order_submission(
         reconciliation_passed=False,
     )
 
-    assert result.live_decision.status is LiveRecoveryDecisionStatus.ENTER_OBSERVATION
-    assert result.live_decision.reason_code == "RECOVERY_RECONCILIATION_REQUIRED"
-    assert result.live_decision.real_order_submission_enabled is False
+    assert (
+        result.runtime_recovery_decision.status is RuntimeRecoveryDecisionStatus.ENTER_OBSERVATION
+    )
+    assert result.runtime_recovery_decision.reason_code == "RECOVERY_RECONCILIATION_REQUIRED"
+    assert result.runtime_recovery_decision.real_order_submission_enabled is False
 
 
 def test_durability_drill_detects_recovered_state_mismatch(tmp_path: Path) -> None:
