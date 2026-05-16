@@ -19,6 +19,7 @@ from qts.backtest.portfolio_projection import BacktestPortfolioProjector
 from qts.core.hashing import stable_json_hash
 from qts.core.ids import (
     AccountId,
+    BrokerId,
     InstrumentId,
     RuntimeRunId,
     StrategyId,
@@ -185,7 +186,17 @@ class BacktestEngine:
             risk_engine=self._risk_engine,
             instrument_context=self._instrument_context,
             multiplier_for=self._portfolio_projector.multiplier_for,
+            broker_id=self._backtest_broker_id(),
         )
+
+    def _backtest_broker_id(self) -> BrokerId:
+        capabilities = getattr(self._execution_adapter, "capabilities", None)
+        if capabilities is None:
+            return BrokerId("simulated")
+        broker_id = capabilities.broker_id
+        if isinstance(broker_id, BrokerId):
+            return broker_id
+        return BrokerId(str(broker_id))
 
     @classmethod
     def from_config(

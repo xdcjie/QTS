@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 import pytest
+
+if TYPE_CHECKING:
+    from qts.core.ids import AccountId, CorrelationId, StrategyId
+    from qts.runtime.actors.order_manager_actor import OrderRouteMetadata
 
 
 def test_execution_actor_wraps_simulator_and_emits_execution_report() -> None:
@@ -28,8 +33,12 @@ def test_execution_actor_wraps_simulator_and_emits_execution_report() -> None:
             market_price=Decimal("101.25"),
             account_id=AccountId("acct-a"),
             strategy_id=StrategyId("strategy-a"),
-            client_order_id="client-001",
-            correlation_id=CorrelationId("corr-001"),
+            route_metadata=_route_metadata(
+                account_id=AccountId("acct-a"),
+                strategy_id=StrategyId("strategy-a"),
+                client_order_id="client-001",
+                correlation_id=CorrelationId("corr-001"),
+            ),
         )
     )
 
@@ -113,8 +122,12 @@ def test_execution_actor_forwards_route_metadata_to_execution_adapter() -> None:
             market_price=Decimal("101.25"),
             account_id=AccountId("acct-a"),
             strategy_id=StrategyId("strategy-a"),
-            client_order_id="client-001",
-            correlation_id=CorrelationId("corr-001"),
+            route_metadata=_route_metadata(
+                account_id=AccountId("acct-a"),
+                strategy_id=StrategyId("strategy-a"),
+                client_order_id="client-001",
+                correlation_id=CorrelationId("corr-001"),
+            ),
         )
     )
 
@@ -127,6 +140,25 @@ def test_execution_actor_forwards_route_metadata_to_execution_adapter() -> None:
         "client_order_id": "client-001",
         "correlation_id": CorrelationId("corr-001"),
     }
+
+
+def _route_metadata(
+    *,
+    account_id: AccountId,
+    strategy_id: StrategyId,
+    client_order_id: str,
+    correlation_id: CorrelationId,
+) -> OrderRouteMetadata:
+    from qts.core.ids import BrokerId
+    from qts.runtime.actors.order_manager_actor import OrderRouteMetadata
+
+    return OrderRouteMetadata(
+        broker_id=BrokerId("broker-route"),
+        account_id=account_id,
+        strategy_id=strategy_id,
+        client_order_id=client_order_id,
+        correlation_id=correlation_id,
+    )
 
 
 def test_execution_actor_rejects_market_data_messages() -> None:

@@ -744,3 +744,56 @@ def test_broker_runtime_topology_resolver_rejects_empty_market_data_routes() -> 
                 instrument_registry=None,
             )
         ).build()
+
+
+def test_broker_route_missing_fails_fast() -> None:
+    from qts.runtime.router import RouteNotFoundError
+
+    account_id = AccountId("acct-missing-route")
+    topology = RuntimeTopology(
+        run_id=RuntimeRunId("live-topology-missing-broker-route"),
+        mode=RuntimeMode.PAPER_BROKER,
+        accounts=(
+            AccountRuntimeSpec(
+                account_id=account_id,
+                initial_cash=Decimal("10000"),
+            ),
+        ),
+        strategies=(
+            StrategyRuntimeSpec(
+                strategy_id=StrategyId("strat-missing-route"),
+                strategy_class="tests.unit.runtime.test_broker_runtime_topology._Strategy",
+                account_id=account_id,
+                subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
+            ),
+        ),
+        broker_routes=(),
+        market_data_routes=(
+            MarketDataRouteSpec(
+                source_id="streaming",
+                source_type="streaming",
+                provider="streaming",
+                subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
+            ),
+        ),
+    )
+
+    with pytest.raises(RouteNotFoundError, match="no route for key"):
+        BrokerRuntimeTopologyResolver(
+            RuntimeSessionDependencies(
+                strategy=_Strategy(),
+                risk_engine=RiskEngine([]),
+                instrument_context=_InstrumentContext(),
+                execution_adapter=_ExecutionAdapter(),
+                account_actor=AccountActor(
+                    initial_cash={"USD": Decimal("10000")},
+                    account_id=account_id,
+                ),
+                portfolio_view=_portfolio_view,
+                multiplier_for=lambda instrument_id: Decimal("1"),
+                runtime_topology=topology,
+                mode=RuntimeMode.PAPER_BROKER,
+                execution_environment=ExecutionEnvironment.BROKER,
+                instrument_registry=None,
+            )
+        ).build()

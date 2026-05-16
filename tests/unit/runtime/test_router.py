@@ -71,6 +71,8 @@ def test_event_router_routes_market_data_and_execution_messages_to_separate_acto
     from qts.runtime.mailbox import Mailbox
     from qts.runtime.router import EventRouter
 
+    from tests.support.order_route import order_route_metadata
+
     market_data_mailbox = Mailbox()
     execution_mailbox = Mailbox()
     order_manager_mailbox = Mailbox()
@@ -112,8 +114,12 @@ def test_event_router_routes_market_data_and_execution_messages_to_separate_acto
             market_price=Decimal("100"),
             account_id=AccountId("DU1234567"),
             strategy_id=StrategyId("strategy-a"),
-            client_order_id="client-001",
-            correlation_id=CorrelationId("corr-001"),
+            route_metadata=order_route_metadata(
+                account_id=AccountId("DU1234567"),
+                strategy_id=StrategyId("strategy-a"),
+                client_order_id="client-001",
+                correlation_id=CorrelationId("corr-001"),
+            ),
         ),
     )
 

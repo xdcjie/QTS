@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from tests.support.order_route import order_route_metadata
+
 
 def test_live_broker_callbacks_reuse_shared_order_and_account_flow() -> None:
     from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
@@ -58,8 +60,12 @@ def test_live_broker_callbacks_reuse_shared_order_and_account_flow() -> None:
             market_price=Decimal("100"),
             account_id=account_id,
             strategy_id=strategy_id,
-            client_order_id="client-001",
-            correlation_id=CorrelationId("corr-001"),
+            route_metadata=order_route_metadata(
+                account_id=account_id,
+                strategy_id=strategy_id,
+                client_order_id="client-001",
+                correlation_id=CorrelationId("corr-001"),
+            ),
         )
     )
     order_manager_ref.process_all()
@@ -142,8 +148,12 @@ def test_live_cancel_flow_uses_order_manager_and_execution_actor_path() -> None:
             market_price=Decimal("100"),
             account_id=account_id,
             strategy_id=strategy_id,
-            client_order_id="client-001",
-            correlation_id=correlation_id,
+            route_metadata=order_route_metadata(
+                account_id=account_id,
+                strategy_id=strategy_id,
+                client_order_id="client-001",
+                correlation_id=correlation_id,
+            ),
         )
     )
     order_manager_ref.process_all()
@@ -154,8 +164,12 @@ def test_live_cancel_flow_uses_order_manager_and_execution_actor_path() -> None:
             CancelIntent(order_id=intent.order_id),
             account_id=account_id,
             strategy_id=strategy_id,
-            client_order_id="client-001",
-            correlation_id=correlation_id,
+            route_metadata=order_route_metadata(
+                account_id=account_id,
+                strategy_id=strategy_id,
+                client_order_id="client-001",
+                correlation_id=correlation_id,
+            ),
         )
     )
     order_manager_ref.process_all()
@@ -225,8 +239,12 @@ def test_live_ibkr_fill_waits_for_commission_before_account_mutation() -> None:
             market_price=Decimal("100"),
             account_id=account_id,
             strategy_id=strategy_id,
-            client_order_id="client-001",
-            correlation_id=CorrelationId("corr-001"),
+            route_metadata=order_route_metadata(
+                account_id=account_id,
+                strategy_id=strategy_id,
+                client_order_id="client-001",
+                correlation_id=CorrelationId("corr-001"),
+            ),
         )
     )
 

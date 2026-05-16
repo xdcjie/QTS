@@ -113,6 +113,88 @@ def test_live_report_writer_includes_runtime_topology_payload(tmp_path: Path) ->
     assert payload["runtime_topology"]["topology_hash"].startswith("sha256:")
 
 
+def test_live_report_writer_manifest_includes_account_partition_topology(
+    tmp_path: Path,
+) -> None:
+    from decimal import Decimal
+
+    from qts.core.ids import AccountId, InstrumentId, RuntimeRunId, StrategyId
+    from qts.reporting.live import LiveReportWriter
+    from qts.runtime.mode import RuntimeMode
+    from qts.runtime.sinks.live import LiveRuntimeEventSink
+    from qts.runtime.topology import (
+        AccountRuntimeSpec,
+        MarketDataRouteSpec,
+        RuntimeTopology,
+        StrategyRuntimeSpec,
+    )
+
+    account_a = AccountId("acct-report-a")
+    account_b = AccountId("acct-report-b")
+    runtime_topology = RuntimeTopology(
+        run_id=RuntimeRunId("live-report-partition-topology"),
+        mode=RuntimeMode.PAPER_SIMULATED,
+        accounts=(
+            AccountRuntimeSpec(account_id=account_a, initial_cash=Decimal("10000")),
+            AccountRuntimeSpec(account_id=account_b, initial_cash=Decimal("20000")),
+        ),
+        strategies=(
+            StrategyRuntimeSpec(
+                strategy_id=StrategyId("strat-report-a"),
+                strategy_class="tests.StrategyA",
+                account_id=account_a,
+                subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
+            ),
+            StrategyRuntimeSpec(
+                strategy_id=StrategyId("strat-report-b"),
+                strategy_class="tests.StrategyB",
+                account_id=account_b,
+                subscriptions=(InstrumentId("EQUITY.US.NASDAQ.MSFT"),),
+            ),
+        ),
+        broker_routes=(),
+        market_data_routes=(
+            MarketDataRouteSpec(
+                source_id="streaming",
+                source_type="streaming",
+                provider="streaming",
+                subscriptions=(
+                    InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+                    InstrumentId("EQUITY.US.NASDAQ.MSFT"),
+                ),
+            ),
+        ),
+    )
+
+    sink = LiveRuntimeEventSink(tmp_path)
+    sink.close()
+
+    manifest = LiveReportWriter(tmp_path).write_manifest(
+        config_payload={"mode": "paper_simulated"},
+        runtime_mode="paper_simulated",
+        account_id="multi-account",
+        connection_metadata={"host": "127.0.0.1", "port": 4002},
+        event_sink=sink,
+        runtime_topology_payload=runtime_topology.to_manifest_payload(),
+    )
+
+    payload = json.loads(manifest.manifest_path.read_text(encoding="utf-8"))
+    partitions = payload["runtime_topology"]["account_partition_topology"]
+
+    assert partitions == [
+        {
+            "account_id": "acct-report-a",
+            "broker_route_count": 0,
+            "strategy_ids": ["strat-report-a"],
+        },
+        {
+            "account_id": "acct-report-b",
+            "broker_route_count": 0,
+            "strategy_ids": ["strat-report-b"],
+        },
+    ]
+
+
 def test_paper_simulated_live_manifest_includes_execution_assumptions(
     tmp_path: Path,
 ) -> None:

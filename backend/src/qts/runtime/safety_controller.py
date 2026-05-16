@@ -67,8 +67,7 @@ class RuntimeSafetyController:
                         CancelIntent(order_id=OrderId(order_id)),
                         account_id=metadata.account_id,
                         strategy_id=metadata.strategy_id,
-                        client_order_id=metadata.client_order_id,
-                        correlation_id=metadata.correlation_id,
+                        route_metadata=metadata,
                     )
                 )
             for partition in session._account_partitions.values():

@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import Any
 
 import pytest
-from qts.core.ids import AccountId, CorrelationId, InstrumentId, StrategyId
+from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, StrategyId
 from qts.domain.market_data import Bar
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.account_actor import AccountActor
@@ -72,6 +72,7 @@ def _new_environment(
         risk_engine=RiskEngine([]),
         instrument_context=instrument_context,
         multiplier_for=projector.multiplier_for,
+        broker_id=BrokerId("simulated"),
     )
     return (
         processor,

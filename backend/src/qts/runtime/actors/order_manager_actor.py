@@ -6,7 +6,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal
 
-from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
+from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
 from qts.domain.orders import CancelIntent, ReplaceIntent
 from qts.domain.risk import RiskDecision
 from qts.execution.order_manager import (
@@ -33,17 +33,14 @@ class SubmitOrder:
     market_price: Decimal
     account_id: AccountId
     strategy_id: StrategyId
-    client_order_id: str
-    correlation_id: CorrelationId
-    contributing_strategy_ids: tuple[StrategyId, ...] = ()
-    aggregation_decision_id: str | None = None
+    route_metadata: OrderRouteMetadata
 
     def __post_init__(self) -> None:
         """Validate order submission identity fields."""
-        if not self.client_order_id.strip():
-            raise ValueError("client_order_id must not be empty")
-        if self.aggregation_decision_id is not None and not self.aggregation_decision_id.strip():
-            raise ValueError("aggregation_decision_id must not be empty")
+        if self.route_metadata.account_id != self.account_id:
+            raise ValueError("SubmitOrder account_id does not match route metadata")
+        if self.route_metadata.strategy_id != self.strategy_id:
+            raise ValueError("SubmitOrder strategy_id does not match route metadata")
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,13 +50,14 @@ class CancelOrder:
     intent: CancelIntent
     account_id: AccountId
     strategy_id: StrategyId
-    client_order_id: str
-    correlation_id: CorrelationId
+    route_metadata: OrderRouteMetadata
 
     def __post_init__(self) -> None:
         """Validate order cancellation identity fields."""
-        if not self.client_order_id.strip():
-            raise ValueError("client_order_id must not be empty")
+        if self.route_metadata.account_id != self.account_id:
+            raise ValueError("CancelOrder account_id does not match route metadata")
+        if self.route_metadata.strategy_id != self.strategy_id:
+            raise ValueError("CancelOrder strategy_id does not match route metadata")
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,19 +68,21 @@ class ReplaceOrder:
     risk_decision: RiskDecision
     account_id: AccountId
     strategy_id: StrategyId
-    client_order_id: str
-    correlation_id: CorrelationId
+    route_metadata: OrderRouteMetadata
 
     def __post_init__(self) -> None:
         """Validate order replacement identity fields."""
-        if not self.client_order_id.strip():
-            raise ValueError("client_order_id must not be empty")
+        if self.route_metadata.account_id != self.account_id:
+            raise ValueError("ReplaceOrder account_id does not match route metadata")
+        if self.route_metadata.strategy_id != self.strategy_id:
+            raise ValueError("ReplaceOrder strategy_id does not match route metadata")
 
 
 @dataclass(frozen=True, slots=True)
 class OrderRouteMetadata:
     """Route and trace metadata captured when an order is submitted."""
 
+    broker_id: BrokerId
     account_id: AccountId
     strategy_id: StrategyId
     client_order_id: str
@@ -90,9 +90,17 @@ class OrderRouteMetadata:
     contributing_strategy_ids: tuple[StrategyId, ...] = ()
     aggregation_decision_id: str | None = None
 
+    def __post_init__(self) -> None:
+        """Validate route and trace metadata."""
+        if not self.client_order_id.strip():
+            raise ValueError("client_order_id must not be empty")
+        if self.aggregation_decision_id is not None and not self.aggregation_decision_id.strip():
+            raise ValueError("aggregation_decision_id must not be empty")
+
     def to_payload(self) -> dict[str, str]:
         """Serialize route metadata for recovery snapshots."""
         payload = {
+            "broker_id": self.broker_id.value,
             "account_id": self.account_id.value,
             "strategy_id": self.strategy_id.value,
             "client_order_id": self.client_order_id,
@@ -119,6 +127,7 @@ class OrderRouteMetadata:
         else:
             contributing_strategy_ids = ()
         return cls(
+            broker_id=BrokerId(str(payload["broker_id"])),
             account_id=AccountId(str(payload["account_id"])),
             strategy_id=StrategyId(str(payload["strategy_id"])),
             client_order_id=str(payload["client_order_id"]),
@@ -131,21 +140,9 @@ class OrderRouteMetadata:
             ),
         )
 
-    def matches_route(
-        self,
-        *,
-        account_id: AccountId,
-        strategy_id: StrategyId,
-        client_order_id: str,
-        correlation_id: CorrelationId,
-    ) -> bool:
+    def matches_route(self, route_metadata: OrderRouteMetadata) -> bool:
         """Return whether command route identity matches the submitted order route."""
-        return (
-            self.account_id == account_id
-            and self.strategy_id == strategy_id
-            and self.client_order_id == client_order_id
-            and self.correlation_id == correlation_id
-        )
+        return self == route_metadata
 
 
 class OrderManagerActor(Actor):
@@ -227,14 +224,7 @@ class OrderManagerActor(Actor):
         if self._account_id is not None and message.intent.account_id != self._account_id:
             raise ValueError("order account_id does not match OrderManagerActor account_id")
         order = self._manager.create_order(message.intent, risk_decision=message.risk_decision)
-        self._route_metadata_by_order_id[message.intent.order_id] = OrderRouteMetadata(
-            account_id=message.account_id,
-            strategy_id=message.strategy_id,
-            client_order_id=message.client_order_id,
-            correlation_id=message.correlation_id,
-            contributing_strategy_ids=message.contributing_strategy_ids,
-            aggregation_decision_id=message.aggregation_decision_id,
-        )
+        self._route_metadata_by_order_id[message.intent.order_id] = message.route_metadata
         self._manager.mark_sent(order.order_id, broker_order_id=message.broker_order_id)
         self._execution_ref.tell(
             OrderExecutionRequest(
@@ -243,8 +233,7 @@ class OrderManagerActor(Actor):
                 market_price=message.market_price,
                 account_id=message.account_id,
                 strategy_id=message.strategy_id,
-                client_order_id=message.client_order_id,
-                correlation_id=message.correlation_id,
+                route_metadata=message.route_metadata,
             )
         )
 
@@ -254,12 +243,7 @@ class OrderManagerActor(Actor):
         metadata = self._route_metadata_by_order_id[message.intent.order_id]
         if current.intent.account_id != message.account_id:
             raise ValueError("cancel account_id does not match order account_id")
-        if not metadata.matches_route(
-            account_id=message.account_id,
-            strategy_id=message.strategy_id,
-            client_order_id=message.client_order_id,
-            correlation_id=message.correlation_id,
-        ):
+        if not metadata.matches_route(message.route_metadata):
             raise ValueError("cancel route metadata does not match submitted order")
         if self._account_id is not None and message.account_id != self._account_id:
             raise ValueError("cancel account_id does not match OrderManagerActor account_id")
@@ -273,8 +257,7 @@ class OrderManagerActor(Actor):
                 broker_order_id=order.broker_order_id,
                 account_id=message.account_id,
                 strategy_id=message.strategy_id,
-                client_order_id=message.client_order_id,
-                correlation_id=message.correlation_id,
+                route_metadata=message.route_metadata,
             )
         )
 
@@ -284,12 +267,7 @@ class OrderManagerActor(Actor):
         metadata = self._route_metadata_by_order_id[message.intent.order_id]
         if current.intent.account_id != message.account_id:
             raise ValueError("replace account_id does not match order account_id")
-        if not metadata.matches_route(
-            account_id=message.account_id,
-            strategy_id=message.strategy_id,
-            client_order_id=message.client_order_id,
-            correlation_id=message.correlation_id,
-        ):
+        if not metadata.matches_route(message.route_metadata):
             raise ValueError("replace route metadata does not match submitted order")
         if self._account_id is not None and message.account_id != self._account_id:
             raise ValueError("replace account_id does not match OrderManagerActor account_id")

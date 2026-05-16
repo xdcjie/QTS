@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
 
-from qts.core.ids import AccountId, CausationId, CorrelationId, InstrumentId, StrategyId
+from qts.core.ids import AccountId, BrokerId, CausationId, CorrelationId, InstrumentId, StrategyId
 from qts.data.permissions import MarketDataPermissionEvent
 from qts.data.sources.streaming_market_data_source import (
     StreamingMarketDataDegradation,
@@ -121,6 +121,11 @@ class RuntimeSession:
                 ),
                 instrument_context=dependencies.instrument_context,
                 multiplier_for=dependencies.multiplier_for,
+                broker_id=(
+                    partition.broker_route.broker_id
+                    if partition.broker_route is not None
+                    else BrokerId("simulated")
+                ),
                 order_id_prefix=dependencies.order_id_prefix,
                 broker_order_id_prefix=dependencies.order_id_prefix,
             )

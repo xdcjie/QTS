@@ -6,6 +6,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+from qts.core.ids import BrokerId
 from qts.domain.market_data import Bar
 from qts.execution.order_manager import Order, OrderFill
 from qts.reporting.backtest import EquityCurvePoint
@@ -78,7 +79,7 @@ def test_backtest_actor_loop_processes_bars_and_returns_runtime_result(tmp_path:
     from qts.backtest.engine import BacktestCostModel
     from qts.backtest.instrument_context import BacktestInstrumentContext
     from qts.backtest.portfolio_projection import BacktestPortfolioProjector
-    from qts.core.ids import AccountId, InstrumentId, RuntimeRunId, StrategyId
+    from qts.core.ids import AccountId, BrokerId, InstrumentId, RuntimeRunId, StrategyId
     from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
     from qts.reporting.backtest import BacktestArtifactWriter
     from qts.risk.risk_engine import RiskEngine
@@ -109,6 +110,7 @@ def test_backtest_actor_loop_processes_bars_and_returns_runtime_result(tmp_path:
         risk_engine=RiskEngine([MaxNotionalRule(max_notional=Decimal("1000000"))]),
         instrument_context=instrument_context,
         multiplier_for=portfolio_projector.multiplier_for,
+        broker_id=BrokerId("simulated"),
     )
 
     loop = BacktestActorLoop(
@@ -191,6 +193,7 @@ def test_backtest_actor_loop_emits_signal_events() -> None:
         risk_engine=RiskEngine([MaxNotionalRule(max_notional=Decimal("1000000"))]),
         instrument_context=instrument_context,
         multiplier_for=portfolio_projector.multiplier_for,
+        broker_id=BrokerId("simulated"),
     )
 
     loop = BacktestActorLoop(
@@ -266,6 +269,7 @@ def test_backtest_actor_loop_emits_broker_reject_event_for_capability_reject(
         risk_engine=RiskEngine([MaxNotionalRule(max_notional=Decimal("1000000"))]),
         instrument_context=instrument_context,
         multiplier_for=portfolio_projector.multiplier_for,
+        broker_id=BrokerId("simulated"),
     )
     loop = BacktestActorLoop(
         strategy=OneOrderStrategy(),
@@ -349,6 +353,7 @@ def test_backtest_actor_loop_emits_market_data_provenance() -> None:
         risk_engine=RiskEngine([MaxNotionalRule(max_notional=Decimal("1000000"))]),
         instrument_context=instrument_context,
         multiplier_for=portfolio_projector.multiplier_for,
+        broker_id=BrokerId("simulated"),
     )
     loop = BacktestActorLoop(
         strategy=NoopStrategy(),
@@ -413,6 +418,7 @@ def test_backtest_actor_loop_emits_conflict_reject_events_when_policy_rejects() 
         risk_engine=RiskEngine([MaxNotionalRule(max_notional=Decimal("1000000"))]),
         instrument_context=instrument_context,
         multiplier_for=portfolio_projector.multiplier_for,
+        broker_id=BrokerId("simulated"),
     )
 
     loop = BacktestActorLoop(

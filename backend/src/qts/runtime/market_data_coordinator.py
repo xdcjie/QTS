@@ -44,7 +44,6 @@ class RuntimeMarketDataCoordinator:
                 if session.state is not RuntimeSessionState.DEGRADED:
                     session.degrade()
                 reason_code = "RUNTIME_DEGRADED"
-        primary_snapshot = session._primary_partition.account_actor.snapshot()
         account_snapshots = tuple(
             (account_id, partition.account_actor.snapshot())
             for account_id, partition in session._account_partitions.items()
@@ -53,7 +52,7 @@ class RuntimeMarketDataCoordinator:
             market_data=(),
             orders=(),
             fills=(),
-            account_snapshot=primary_snapshot,
+            account_snapshot=self._single_account_snapshot(account_snapshots),
             account_snapshots=account_snapshots,
             reason_code=reason_code,
         )
@@ -73,7 +72,7 @@ class RuntimeMarketDataCoordinator:
                 market_data=(),
                 orders=(),
                 fills=(),
-                account_snapshot=session._primary_partition.account_actor.snapshot(),
+                account_snapshot=self._single_account_snapshot(snapshots),
                 account_snapshots=snapshots,
                 reason_code="INSTRUMENT_NOT_SUBSCRIBED",
             )
@@ -322,7 +321,6 @@ class RuntimeMarketDataCoordinator:
 
             session._event_index += 1
 
-        primary_snapshot = session._primary_partition.account_actor.snapshot()
         account_snapshots = tuple(
             (account_id, partition.account_actor.snapshot())
             for account_id, partition in session._account_partitions.items()
@@ -333,11 +331,19 @@ class RuntimeMarketDataCoordinator:
             market_data=bars,
             orders=tuple(all_orders),
             fills=tuple(all_fills),
-            account_snapshot=primary_snapshot,
+            account_snapshot=self._single_account_snapshot(account_snapshots),
             account_snapshots=account_snapshots,
             reason_code=reason_code,
             order_results=tuple(order_results),
         )
+
+    @staticmethod
+    def _single_account_snapshot(
+        account_snapshots: tuple[tuple[AccountId | None, AccountSnapshot], ...],
+    ) -> AccountSnapshot | None:
+        if len(account_snapshots) != 1:
+            return None
+        return account_snapshots[0][1]
 
     def _write_risk_decision_events(
         self,
@@ -356,6 +362,11 @@ class RuntimeMarketDataCoordinator:
                     {
                         "approved": True,
                         "rule_id": decision.rule_id,
+                        "aggregation_decision_id": decision.aggregation_decision_id,
+                        "contributing_strategy_ids": [
+                            strategy_id.value for strategy_id in decision.contributing_strategy_ids
+                        ],
+                        "conflict_reason": decision.conflict_reason,
                         "evidence": dict(decision.evidence),
                     },
                     correlation_id=correlation_id,
@@ -371,6 +382,11 @@ class RuntimeMarketDataCoordinator:
                     "reason_code": decision.reason_code,
                     "reason": decision.reason,
                     "rule_id": decision.rule_id,
+                    "aggregation_decision_id": decision.aggregation_decision_id,
+                    "contributing_strategy_ids": [
+                        strategy_id.value for strategy_id in decision.contributing_strategy_ids
+                    ],
+                    "conflict_reason": decision.conflict_reason,
                     "evidence": dict(decision.evidence),
                 },
                 correlation_id=correlation_id,
@@ -384,6 +400,11 @@ class RuntimeMarketDataCoordinator:
                     "reason_code": decision.reason_code,
                     "reason": decision.reason,
                     "rule_id": decision.rule_id,
+                    "aggregation_decision_id": decision.aggregation_decision_id,
+                    "contributing_strategy_ids": [
+                        strategy_id.value for strategy_id in decision.contributing_strategy_ids
+                    ],
+                    "conflict_reason": decision.conflict_reason,
                     "evidence": dict(decision.evidence),
                 },
                 correlation_id=correlation_id,
@@ -430,6 +451,12 @@ class RuntimeMarketDataCoordinator:
                     "broker_order_id": order.broker_order_id,
                     "client_order_id": metadata.client_order_id,
                     "aggregation_decision_id": metadata.aggregation_decision_id,
+                    "contributing_strategy_ids": [
+                        strategy_id.value
+                        for strategy_id in (
+                            metadata.contributing_strategy_ids or contributing_strategy_ids
+                        )
+                    ],
                 },
                 correlation_id=metadata.correlation_id,
                 instrument_id=order.intent.instrument_id,

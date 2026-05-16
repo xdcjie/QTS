@@ -66,7 +66,7 @@ def test_account_actor_restore_preserves_positions_cash_and_fill_idempotency() -
     assert snapshot.seen_fill_ids == ("fill-001", "fill-002")
 
 
-def test_fill_for_account_a_does_not_change_account_b() -> None:
+def test_fill_for_account_a_never_updates_account_b() -> None:
     import pytest
     from qts.core.ids import AccountId, InstrumentId, OrderId
     from qts.execution.order_manager import OrderFill, OrderSide

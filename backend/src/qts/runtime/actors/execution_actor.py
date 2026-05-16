@@ -4,13 +4,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from qts.core.ids import AccountId, CorrelationId, OrderId, StrategyId
 from qts.execution.order_manager import ExecutionReport, OrderIntent
 from qts.execution.simulator.simulated_broker import SimulatedBroker
 from qts.runtime.actor import Actor
 from qts.runtime.actor_ref import ActorRef
+
+if TYPE_CHECKING:
+    from qts.runtime.actors.order_manager_actor import OrderRouteMetadata
 
 
 class ExecutionAdapter(Protocol):
@@ -53,13 +56,14 @@ class OrderExecutionRequest:
     market_price: Decimal
     account_id: AccountId
     strategy_id: StrategyId
-    client_order_id: str
-    correlation_id: CorrelationId
+    route_metadata: OrderRouteMetadata
 
     def __post_init__(self) -> None:
         """Validate execution request identity fields."""
-        if not self.client_order_id.strip():
-            raise ValueError("client_order_id must not be empty")
+        if self.route_metadata.account_id != self.account_id:
+            raise ValueError("execution account_id does not match route metadata")
+        if self.route_metadata.strategy_id != self.strategy_id:
+            raise ValueError("execution strategy_id does not match route metadata")
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,13 +74,14 @@ class OrderCancelRequest:
     broker_order_id: str
     account_id: AccountId
     strategy_id: StrategyId
-    client_order_id: str
-    correlation_id: CorrelationId
+    route_metadata: OrderRouteMetadata
 
     def __post_init__(self) -> None:
         """Validate cancel request identity fields."""
-        if not self.client_order_id.strip():
-            raise ValueError("client_order_id must not be empty")
+        if self.route_metadata.account_id != self.account_id:
+            raise ValueError("cancel account_id does not match route metadata")
+        if self.route_metadata.strategy_id != self.strategy_id:
+            raise ValueError("cancel strategy_id does not match route metadata")
 
 
 class ExecutionActor(Actor):
@@ -100,8 +105,8 @@ class ExecutionActor(Actor):
                 market_price=message.market_price,
                 account_id=message.account_id,
                 strategy_id=message.strategy_id,
-                client_order_id=message.client_order_id,
-                correlation_id=message.correlation_id,
+                client_order_id=message.route_metadata.client_order_id,
+                correlation_id=message.route_metadata.correlation_id,
             )
             self._order_manager_ref.tell(report)
             return
@@ -111,8 +116,8 @@ class ExecutionActor(Actor):
                 broker_order_id=message.broker_order_id,
                 account_id=message.account_id,
                 strategy_id=message.strategy_id,
-                client_order_id=message.client_order_id,
-                correlation_id=message.correlation_id,
+                client_order_id=message.route_metadata.client_order_id,
+                correlation_id=message.route_metadata.correlation_id,
             )
             self._order_manager_ref.tell(report)
             return

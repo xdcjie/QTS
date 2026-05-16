@@ -10,7 +10,13 @@ from typing import Any
 from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, RuntimeRunId, StrategyId
 from qts.domain.market_data import Bar
 from qts.domain.risk import OrderRiskRequest, RiskDecision
-from qts.execution.order_manager import ExecutionReport, ExecutionReportStatus, OrderIntent
+from qts.execution.order_manager import (
+    ExecutionReport,
+    ExecutionReportStatus,
+    OrderFill,
+    OrderIntent,
+    OrderSide,
+)
 from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventSink
 from qts.runtime.topology import (
     AccountRuntimeSpec,
@@ -1003,6 +1009,32 @@ def test_runtime_session_runs_multiple_strategies_in_one_account_topology() -> N
         )
     }
     assert contributing_ids == {("strat-multi-a", "strat-multi-b")}
+    envelopes = [event.to_envelope() for event in sink.events]
+    signal_event = next(row for row in envelopes if row["kind"] == "runtime.signal_aggregated")
+    risk_event = next(row for row in envelopes if row["kind"] == "runtime.risk_decision")
+    order_event = next(row for row in envelopes if row["kind"] == "runtime.order_submitted")
+    report_event = next(row for row in envelopes if row["kind"] == "runtime.broker_report")
+
+    assert (
+        risk_event["payload"]["aggregation_decision_id"]
+        == signal_event["payload"]["aggregation_decision_id"]
+    )
+    assert risk_event["payload"]["contributing_strategy_ids"] == [
+        "strat-multi-a",
+        "strat-multi-b",
+    ]
+    assert order_event["payload"]["contributing_strategy_ids"] == [
+        "strat-multi-a",
+        "strat-multi-b",
+    ]
+    assert (
+        report_event["payload"]["aggregation_decision_id"]
+        == signal_event["payload"]["aggregation_decision_id"]
+    )
+    assert report_event["payload"]["contributing_strategy_ids"] == [
+        "strat-multi-a",
+        "strat-multi-b",
+    ]
 
 
 def test_runtime_session_separate_conflict_groups_do_not_mix_targets() -> None:
@@ -1131,8 +1163,19 @@ def test_runtime_session_rejects_conflicting_targets_with_reject_conflict_policy
     session.on_market_data(_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC)))
 
     assert adapter.seen == []
-    assert any(event.kind == "runtime.signal_conflict_detected" for event in sink.events)
-    assert any(event.kind == "runtime.signal_rejected" for event in sink.events)
+    envelopes = [event.to_envelope() for event in sink.events]
+    rejected_event = next(row for row in envelopes if row["kind"] == "runtime.signal_rejected")
+    conflict_event = next(
+        row for row in envelopes if row["kind"] == "runtime.signal_conflict_detected"
+    )
+    assert rejected_event["payload"]["rejected_strategy_ids"] == [
+        "strat-multi-a",
+        "strat-multi-b",
+    ]
+    assert conflict_event["payload"]["rejected_strategy_ids"] == [
+        "strat-multi-a",
+        "strat-multi-b",
+    ]
 
 
 def test_runtime_session_routes_intents_to_multi_account_topology_partitions() -> None:
@@ -1213,8 +1256,6 @@ def test_runtime_session_routes_intents_to_multi_account_topology_partitions() -
     assert account_actor_b.snapshot().positions[
         InstrumentId("EQUITY.US.NASDAQ.AAPL")
     ].quantity == Decimal("2")
-    assert result.account_snapshot is not None
-    assert result.account_snapshot.account_id == account_a
     snapshot_map = {
         account_id.value: snapshot
         for account_id, snapshot in result.account_snapshots
@@ -1258,6 +1299,264 @@ def test_runtime_session_routes_intents_to_multi_account_topology_partitions() -
     assert contributing_ids == {("strat-multi-topology-a",), ("strat-multi-topology-b",)}
     for event in signal_aggregated_events:
         assert event["payload"]["aggregation_policy"] == "sum_targets"
+
+
+def test_position_snapshot_partitioned_by_account() -> None:
+    from qts.risk.risk_engine import RiskEngine
+    from qts.runtime.actors.account_actor import AccountActor
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
+
+    account_a = AccountId("acct-position-a")
+    account_b = AccountId("acct-position-b")
+    account_actor_a = AccountActor(initial_cash={"USD": Decimal("10000")}, account_id=account_a)
+    account_actor_b = AccountActor(initial_cash={"USD": Decimal("10000")}, account_id=account_b)
+    topology = RuntimeTopology(
+        run_id=RuntimeRunId("topology-position-partitions"),
+        mode=RuntimeMode.PAPER_SIMULATED,
+        accounts=(
+            AccountRuntimeSpec(account_id=account_a, initial_cash=Decimal("10000")),
+            AccountRuntimeSpec(account_id=account_b, initial_cash=Decimal("10000")),
+        ),
+        strategies=(
+            StrategyRuntimeSpec(
+                strategy_id=StrategyId("strat-position-a"),
+                strategy_class="tests.unit.runtime.test_runtime_session._FixedTargetStrategy",
+                account_id=account_a,
+                subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
+            ),
+            StrategyRuntimeSpec(
+                strategy_id=StrategyId("strat-position-b"),
+                strategy_class="tests.unit.runtime.test_runtime_session._FixedTargetStrategy",
+                account_id=account_b,
+                subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
+            ),
+        ),
+        broker_routes=(),
+        market_data_routes=(
+            MarketDataRouteSpec(
+                source_id="streaming",
+                source_type="streaming",
+                provider="streaming",
+                subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
+            ),
+        ),
+    )
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
+            strategies=(_FixedTargetStrategy(Decimal("1")), _FixedTargetStrategy(Decimal("2"))),
+            risk_engine=RiskEngine([]),
+            instrument_context=_InstrumentContext(),
+            execution_adapter=_FilledExecutionAdapter(),
+            account_actor=AccountActor(initial_cash={"USD": Decimal("10000")}),
+            account_actors={account_a: account_actor_a, account_b: account_actor_b},
+            instrument_registry=_registry(),
+            portfolio_view=_portfolio_view,
+            multiplier_for=lambda instrument_id: Decimal("1"),
+            runtime_topology=topology,
+        )
+    )
+
+    session.start()
+    result = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC)))
+
+    assert result.account_snapshot is None
+    snapshot_map = {account_id: snapshot for account_id, snapshot in result.account_snapshots}
+    assert set(snapshot_map) == {account_a, account_b}
+    assert snapshot_map[account_a].positions[
+        InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    ].quantity == Decimal("1")
+    assert snapshot_map[account_b].positions[
+        InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    ].quantity == Decimal("2")
+
+
+def test_reconciliation_snapshot_partitioned_by_account() -> None:
+    from qts.risk.kill_switch import RuntimeKillSwitchCommand
+    from qts.risk.risk_engine import RiskEngine
+    from qts.runtime.actors.account_actor import AccountActor, ApplyFill
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
+    from qts.runtime.state_recovery import InMemorySnapshotStore
+
+    account_a = AccountId("acct-reconcile-a")
+    account_b = AccountId("acct-reconcile-b")
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    account_actor_a = AccountActor(initial_cash={"USD": Decimal("10000")}, account_id=account_a)
+    account_actor_b = AccountActor(initial_cash={"USD": Decimal("10000")}, account_id=account_b)
+    account_actor_a.handle(
+        ApplyFill(
+            fill=OrderFill(
+                fill_id="fill-reconcile-a",
+                order_id=OrderId("ord-reconcile-a"),
+                account_id=account_a,
+                instrument_id=instrument_id,
+                side=OrderSide.BUY,
+                quantity=Decimal("1"),
+                price=Decimal("100"),
+            ),
+            currency="USD",
+            multiplier=Decimal("1"),
+        )
+    )
+    account_actor_b.handle(
+        ApplyFill(
+            fill=OrderFill(
+                fill_id="fill-reconcile-b",
+                order_id=OrderId("ord-reconcile-b"),
+                account_id=account_b,
+                instrument_id=instrument_id,
+                side=OrderSide.BUY,
+                quantity=Decimal("2"),
+                price=Decimal("100"),
+            ),
+            currency="USD",
+            multiplier=Decimal("1"),
+        )
+    )
+    store_a = InMemorySnapshotStore()
+    store_b = InMemorySnapshotStore()
+    topology = RuntimeTopology(
+        run_id=RuntimeRunId("topology-reconciliation-partitions"),
+        mode=RuntimeMode.PAPER_SIMULATED,
+        accounts=(
+            AccountRuntimeSpec(account_id=account_a, initial_cash=Decimal("10000")),
+            AccountRuntimeSpec(account_id=account_b, initial_cash=Decimal("10000")),
+        ),
+        strategies=(
+            StrategyRuntimeSpec(
+                strategy_id=StrategyId("strat-reconcile-a"),
+                strategy_class="tests.unit.runtime.test_runtime_session._FixedTargetStrategy",
+                account_id=account_a,
+                subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
+            ),
+            StrategyRuntimeSpec(
+                strategy_id=StrategyId("strat-reconcile-b"),
+                strategy_class="tests.unit.runtime.test_runtime_session._FixedTargetStrategy",
+                account_id=account_b,
+                subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
+            ),
+        ),
+        broker_routes=(),
+        market_data_routes=(
+            MarketDataRouteSpec(
+                source_id="streaming",
+                source_type="streaming",
+                provider="streaming",
+                subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
+            ),
+        ),
+    )
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
+            strategies=(_FixedTargetStrategy(Decimal("1")), _FixedTargetStrategy(Decimal("2"))),
+            risk_engine=RiskEngine([]),
+            instrument_context=_InstrumentContext(),
+            execution_adapter=_RecordingExecutionAdapter(),
+            account_actor=AccountActor(initial_cash={"USD": Decimal("10000")}),
+            account_actors={account_a: account_actor_a, account_b: account_actor_b},
+            snapshot_stores={account_a: store_a, account_b: store_b},
+            instrument_registry=_registry(),
+            portfolio_view=_portfolio_view,
+            multiplier_for=lambda instrument_id: Decimal("1"),
+            runtime_topology=topology,
+        )
+    )
+
+    session.start()
+    evidence = session.activate_kill_switch(
+        RuntimeKillSwitchCommand(
+            operator_id="ops-reconcile",
+            reason="capture partitioned reconciliation snapshots",
+            cancel_active_orders=False,
+        )
+    )
+
+    assert set(evidence.snapshot_refs) == {
+        "account:acct-reconcile-a",
+        "account:acct-reconcile-b",
+    }
+    snapshot_a = store_a.load("account:acct-reconcile-a")
+    snapshot_b = store_b.load("account:acct-reconcile-b")
+    assert snapshot_a is not None
+    assert snapshot_b is not None
+    assert snapshot_a.payload["cash"] == {"USD": "9900"}
+    assert snapshot_b.payload["cash"] == {"USD": "9800"}
+    assert snapshot_a.payload["positions"] == {"EQUITY.US.NASDAQ.AAPL": "1"}
+    assert snapshot_b.payload["positions"] == {"EQUITY.US.NASDAQ.AAPL": "2"}
+
+
+def test_cash_reservation_for_account_a_never_blocks_account_b() -> None:
+    from qts.risk.risk_engine import RiskEngine
+    from qts.runtime.actors.account_actor import AccountActor
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
+
+    account_a = AccountId("acct-cash-a")
+    account_b = AccountId("acct-cash-b")
+    account_actor_a = AccountActor(initial_cash={"USD": Decimal("10000")}, account_id=account_a)
+    account_actor_b = AccountActor(initial_cash={"USD": Decimal("10000")}, account_id=account_b)
+    topology = RuntimeTopology(
+        run_id=RuntimeRunId("topology-cash-reservation-partitions"),
+        mode=RuntimeMode.PAPER_SIMULATED,
+        accounts=(
+            AccountRuntimeSpec(account_id=account_a, initial_cash=Decimal("10000")),
+            AccountRuntimeSpec(account_id=account_b, initial_cash=Decimal("10000")),
+        ),
+        strategies=(
+            StrategyRuntimeSpec(
+                strategy_id=StrategyId("strat-cash-a"),
+                strategy_class="tests.unit.runtime.test_runtime_session._FixedTargetStrategy",
+                account_id=account_a,
+                subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
+            ),
+            StrategyRuntimeSpec(
+                strategy_id=StrategyId("strat-cash-b"),
+                strategy_class="tests.unit.runtime.test_runtime_session._FixedTargetStrategy",
+                account_id=account_b,
+                subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
+            ),
+        ),
+        broker_routes=(),
+        market_data_routes=(
+            MarketDataRouteSpec(
+                source_id="streaming",
+                source_type="streaming",
+                provider="streaming",
+                subscriptions=(InstrumentId("EQUITY.US.NASDAQ.AAPL"),),
+            ),
+        ),
+    )
+    adapter = _FilledExecutionAdapter()
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
+            strategies=(_FixedTargetStrategy(Decimal("1")), _FixedTargetStrategy(Decimal("2"))),
+            risk_engine=RiskEngine([]),
+            risk_engines={
+                account_a: RiskEngine([_RejectAllRiskRule()]),
+                account_b: RiskEngine([]),
+            },
+            instrument_context=_InstrumentContext(),
+            execution_adapter=adapter,
+            account_actor=AccountActor(initial_cash={"USD": Decimal("10000")}),
+            account_actors={account_a: account_actor_a, account_b: account_actor_b},
+            instrument_registry=_registry(),
+            portfolio_view=_portfolio_view,
+            multiplier_for=lambda instrument_id: Decimal("1"),
+            runtime_topology=topology,
+        )
+    )
+
+    session.start()
+    result = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC)))
+
+    assert [intent.account_id for intent in adapter.seen] == [account_b]
+    assert account_actor_a.snapshot().positions == {}
+    assert account_actor_a.snapshot().cash["USD"] == Decimal("10000")
+    assert account_actor_b.snapshot().positions[
+        InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    ].quantity == Decimal("2")
+    assert [order.intent.account_id for order in result.orders] == [account_b]
 
 
 def test_runtime_session_uses_account_partition_risk_engine() -> None:

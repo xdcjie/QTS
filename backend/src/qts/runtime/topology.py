@@ -212,8 +212,30 @@ class RuntimeTopology:
         payload["strategy_count"] = len(self.strategies)
         payload["broker_route_count"] = len(self.broker_routes)
         payload["market_data_route_count"] = len(self.market_data_routes)
+        payload["account_partition_topology"] = self._account_partition_topology()
         payload["topology_hash"] = self.topology_hash
         return payload
+
+    def _account_partition_topology(self) -> list[dict[str, Any]]:
+        """Return manifest evidence for account-scoped runtime partitions."""
+        partitions: list[dict[str, Any]] = []
+        for account in self.accounts:
+            strategy_ids = sorted(
+                strategy.strategy_id.value
+                for strategy in self.strategies
+                if strategy.account_id == account.account_id
+            )
+            broker_route_count = sum(
+                1 for route in self.broker_routes if route.account_id == account.account_id
+            )
+            partitions.append(
+                {
+                    "account_id": account.account_id.value,
+                    "broker_route_count": broker_route_count,
+                    "strategy_ids": strategy_ids,
+                }
+            )
+        return partitions
 
     def _validate_unique_strategy_ids(self) -> None:
         strategy_ids = [item.strategy_id for item in self.strategies]

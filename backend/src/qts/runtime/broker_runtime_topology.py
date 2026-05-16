@@ -13,7 +13,8 @@ from qts.runtime.actors.execution_actor import ExecutionActor
 from qts.runtime.actors.order_manager_actor import OrderManagerActor
 from qts.runtime.dependencies import RuntimeSessionDependencies
 from qts.runtime.mailbox import Mailbox
-from qts.runtime.mode import RuntimeMode
+from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
+from qts.runtime.router import RouteNotFoundError
 from qts.runtime.signal_policy import SignalAggregationPolicy
 from qts.runtime.state_recovery import SnapshotStore
 from qts.runtime.strategy_execution_pipeline import StrategyExecutionPipeline
@@ -304,8 +305,8 @@ class BrokerRuntimeTopologyResolver:
             )
         return self._dependencies.snapshot_store
 
-    @staticmethod
     def _broker_route_for(
+        self,
         topology: RuntimeTopology,
         account_id: AccountId,
     ) -> BrokerRouteSpec | None:
@@ -313,6 +314,8 @@ class BrokerRuntimeTopologyResolver:
         if len(routes) > 1:
             raise ValueError(f"multiple broker routes for account: {account_id.value}")
         if not routes:
+            if self._dependencies.execution_environment is ExecutionEnvironment.BROKER:
+                raise RouteNotFoundError(f"no route for key: {account_id.value}")
             return None
         return routes[0]
 

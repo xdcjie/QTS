@@ -36,6 +36,8 @@ from qts.runtime.mailbox import Mailbox
 from qts.strategy_sdk import Strategy
 from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter
 
+from tests.support.order_route import order_route_metadata
+
 
 @dataclass(slots=True)
 class RecordingExecutionAdapter:
@@ -117,8 +119,12 @@ def test_shared_actor_order_flow_uses_same_messages_for_execution_adapters() -> 
             market_price=Decimal("100"),
             account_id=account_id,
             strategy_id=strategy_id,
-            client_order_id="client-001",
-            correlation_id=CorrelationId("corr-001"),
+            route_metadata=order_route_metadata(
+                account_id=account_id,
+                strategy_id=strategy_id,
+                client_order_id="client-001",
+                correlation_id=CorrelationId("corr-001"),
+            ),
         )
     )
     order_manager_ref.process_all()

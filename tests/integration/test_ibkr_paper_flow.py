@@ -35,6 +35,8 @@ def test_ibkr_paper_market_data_and_order_execution_use_separate_fake_transports
     from qts.runtime.actors.order_manager_actor import OrderManagerActor, SubmitOrder
     from qts.runtime.mailbox import Mailbox
 
+    from tests.support.order_route import order_route_metadata
+
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
     mapping = BrokerSymbolMapping(BrokerId("IBKR"))
     mapping.register(instrument_id, "AAPL")
@@ -122,8 +124,12 @@ def test_ibkr_paper_market_data_and_order_execution_use_separate_fake_transports
             market_price=tick.price,
             account_id=account_id,
             strategy_id=strategy_id,
-            client_order_id="client-ibkr-001",
-            correlation_id=CorrelationId("corr-ibkr-001"),
+            route_metadata=order_route_metadata(
+                account_id=account_id,
+                strategy_id=strategy_id,
+                client_order_id="client-ibkr-001",
+                correlation_id=CorrelationId("corr-ibkr-001"),
+            ),
         )
     )
     order_manager_ref.process_all()

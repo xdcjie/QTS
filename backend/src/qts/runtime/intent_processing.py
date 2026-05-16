@@ -8,7 +8,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Protocol
 
-from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
+from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
 from qts.domain.market_data import Bar
 from qts.domain.risk import MarketDataRiskContext, OrderRiskRequest, RiskDecision
 from qts.execution.order_manager import Order, OrderFill, OrderIntent, OrderSide
@@ -16,7 +16,11 @@ from qts.portfolio.position_book import Position
 from qts.risk.risk_engine import RiskEngine
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.account_actor import AccountActor
-from qts.runtime.actors.order_manager_actor import OrderManagerActor, SubmitOrder
+from qts.runtime.actors.order_manager_actor import (
+    OrderManagerActor,
+    OrderRouteMetadata,
+    SubmitOrder,
+)
 from qts.strategy_sdk import TargetIntent
 from qts.strategy_sdk.target import TargetIntentType
 
@@ -182,6 +186,7 @@ class TargetIntentProcessor:
         risk_engine: RiskEngine,
         instrument_context: InstrumentExecutionContext,
         multiplier_for: Callable[[InstrumentId], Decimal],
+        broker_id: BrokerId,
         order_id_prefix: str = "bt",
         broker_order_id_prefix: str = "sim",
     ) -> None:
@@ -193,6 +198,7 @@ class TargetIntentProcessor:
         self._risk_engine = risk_engine
         self._order_plan_builder = OrderPlanBuilder(instrument_context=instrument_context)
         self._multiplier_for = multiplier_for
+        self._broker_id = broker_id
         self._order_id_prefix = order_id_prefix
         self._broker_order_id_prefix = broker_order_id_prefix
 
@@ -326,6 +332,15 @@ class TargetIntentProcessor:
             quantity=quantity,
             account_id=account_id,
         )
+        route_metadata = OrderRouteMetadata(
+            broker_id=self._broker_id,
+            account_id=account_id,
+            strategy_id=strategy_id,
+            client_order_id=client_order_id,
+            correlation_id=correlation_id,
+            contributing_strategy_ids=contributing_strategy_ids,
+            aggregation_decision_id=aggregation_decision_id,
+        )
         order_manager_ref.tell(
             SubmitOrder(
                 intent=order_intent,
@@ -334,10 +349,7 @@ class TargetIntentProcessor:
                 market_price=market_price,
                 account_id=account_id,
                 strategy_id=strategy_id,
-                client_order_id=client_order_id,
-                correlation_id=correlation_id,
-                contributing_strategy_ids=contributing_strategy_ids,
-                aggregation_decision_id=aggregation_decision_id,
+                route_metadata=route_metadata,
             )
         )
         order_manager_ref.process_all()

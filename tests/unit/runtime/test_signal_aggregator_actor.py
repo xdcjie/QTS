@@ -222,6 +222,61 @@ def test_aggregated_signal_batch_carries_audit_identity() -> None:
     assert result.conflict_reason == result.conflicts[0].reason
 
 
+def test_signal_aggregation_decision_id_is_deterministic_for_same_input() -> None:
+    from qts.core.ids import AccountId, CorrelationId, StrategyId
+    from qts.domain.market_data import Bar
+    from qts.runtime.actor_ref import ActorRef
+    from qts.runtime.actors.signal_aggregator_actor import (
+        AggregatedSignalBatch,
+        SignalAggregatorActor,
+        StrategySignalEvent,
+    )
+    from qts.runtime.mailbox import Mailbox
+    from qts.runtime.signal_policy import SignalAggregationPolicy, SignalContribution
+
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    bar = Bar(
+        instrument_id=_quantity_intent(1).asset.instrument_id,
+        start_time=start,
+        end_time=start + timedelta(minutes=1),
+        timeframe="1m",
+        session_id="2026-01-02",
+        open=Decimal("100"),
+        high=Decimal("100"),
+        low=Decimal("100"),
+        close=Decimal("100"),
+        is_complete=True,
+    )
+    event = StrategySignalEvent(
+        bar=bar,
+        account_id=AccountId("acct-a"),
+        correlation_id=CorrelationId("corr-a"),
+        contributions=(
+            SignalContribution(
+                strategy_id=StrategyId("strategy-a"),
+                intent=_quantity_intent(10),
+                aggregation_policy=SignalAggregationPolicy.SUM_TARGETS,
+            ),
+            SignalContribution(
+                strategy_id=StrategyId("strategy-b"),
+                intent=_quantity_intent(5),
+                aggregation_policy=SignalAggregationPolicy.SUM_TARGETS,
+            ),
+        ),
+    )
+
+    first_outbox = Mailbox()
+    SignalAggregatorActor(result_ref=ActorRef(mailbox=first_outbox)).handle(event)
+    first = first_outbox.get()
+    second_outbox = Mailbox()
+    SignalAggregatorActor(result_ref=ActorRef(mailbox=second_outbox)).handle(event)
+    second = second_outbox.get()
+
+    assert isinstance(first, AggregatedSignalBatch)
+    assert isinstance(second, AggregatedSignalBatch)
+    assert first.aggregation_decision_id == second.aggregation_decision_id
+
+
 def _quantity_intent(value: Decimal | int) -> TargetIntent:
     from qts.core.ids import InstrumentId
     from qts.strategy_sdk import AssetRef, TargetIntent

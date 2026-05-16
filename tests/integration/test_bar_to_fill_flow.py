@@ -16,6 +16,8 @@ def test_target_to_fill_updates_account_through_actor_messages() -> None:
     from qts.runtime.actors.order_manager_actor import OrderManagerActor, SubmitOrder
     from qts.runtime.mailbox import Mailbox
 
+    from tests.support.order_route import order_route_metadata
+
     account_id = AccountId("acct-shared-flow")
     strategy_id = StrategyId("strategy-shared-flow")
     account_actor = AccountActor(
@@ -60,8 +62,12 @@ def test_target_to_fill_updates_account_through_actor_messages() -> None:
             market_price=Decimal("100"),
             account_id=account_id,
             strategy_id=strategy_id,
-            client_order_id="client-001",
-            correlation_id=CorrelationId("corr-001"),
+            route_metadata=order_route_metadata(
+                account_id=account_id,
+                strategy_id=strategy_id,
+                client_order_id="client-001",
+                correlation_id=CorrelationId("corr-001"),
+            ),
         )
     )
     order_manager_ref.process_all()

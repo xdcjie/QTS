@@ -33,6 +33,8 @@ def test_market_data_actor_rejects_order_execution_requests() -> None:
     from qts.runtime.actors.execution_actor import OrderExecutionRequest
     from qts.runtime.actors.market_data_actor import MarketDataActor
 
+    from tests.support.order_route import order_route_metadata
+
     actor = MarketDataActor()
 
     with pytest.raises(TypeError, match="unsupported market data message"):
@@ -48,8 +50,12 @@ def test_market_data_actor_rejects_order_execution_requests() -> None:
                 market_price=Decimal("101.25"),
                 account_id=AccountId("acct-a"),
                 strategy_id=StrategyId("strategy-a"),
-                client_order_id="client-001",
-                correlation_id=CorrelationId("corr-001"),
+                route_metadata=order_route_metadata(
+                    account_id=AccountId("acct-a"),
+                    strategy_id=StrategyId("strategy-a"),
+                    client_order_id="client-001",
+                    correlation_id=CorrelationId("corr-001"),
+                ),
             )
         )
 
