@@ -1,0 +1,1016 @@
+exceptions:
+  - class_name: Actor
+    module: qts.runtime.actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: ActorRef
+    module: qts.runtime.actor_ref
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: ApplyFill
+    module: qts.runtime.actors.account_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: AccountSnapshot
+    module: qts.runtime.actors.account_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: AccountActor
+    module: qts.runtime.actors.account_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: ExecutionAdapter
+    module: qts.runtime.actors.execution_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: OrderExecutionRequest
+    module: qts.runtime.actors.execution_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: OrderCancelRequest
+    module: qts.runtime.actors.execution_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: ExecutionActor
+    module: qts.runtime.actors.execution_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: MarketDataEvent
+    module: qts.runtime.actors.market_data_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: SubscribeMarketData
+    module: qts.runtime.actors.market_data_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: MarketDataActor
+    module: qts.runtime.actors.market_data_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: SubmitOrder
+    module: qts.runtime.actors.order_manager_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: CancelOrder
+    module: qts.runtime.actors.order_manager_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: ReplaceOrder
+    module: qts.runtime.actors.order_manager_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: OrderRouteMetadata
+    module: qts.runtime.actors.order_manager_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: OrderManagerActor
+    module: qts.runtime.actors.order_manager_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: StrategySignalEvent
+    module: qts.runtime.actors.signal_aggregator_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: AggregatedSignalBatch
+    module: qts.runtime.actors.signal_aggregator_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: SignalAggregatorActor
+    module: qts.runtime.actors.signal_aggregator_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: StrategyBarEvent
+    module: qts.runtime.actors.strategy_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: StrategyBarResult
+    module: qts.runtime.actors.strategy_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: StrategyFinalize
+    module: qts.runtime.actors.strategy_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: StrategyFinalized
+    module: qts.runtime.actors.strategy_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: StrategyActor
+    module: qts.runtime.actors.strategy_actor
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BrokerReconnectReconciliationResult
+    module: qts.runtime.broker_lifecycle
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BrokerReconnectReconciliation
+    module: qts.runtime.broker_lifecycle
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeBrokerLifecycleCoordinator
+    module: qts.runtime.broker_lifecycle
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: StrategyRuntimeBinding
+    module: qts.runtime.broker_runtime_topology
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: AccountRuntimePartition
+    module: qts.runtime.broker_runtime_topology
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: ResolvedRuntimeTopology
+    module: qts.runtime.broker_runtime_topology
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BrokerRuntimeTopologyResolver
+    module: qts.runtime.broker_runtime_topology
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BrokerRuntimeStartupDecisionStatus
+    module: qts.runtime.broker_startup
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BrokerRuntimeStartupCheck
+    module: qts.runtime.broker_startup
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BrokerRuntimeStartupChecklist
+    module: qts.runtime.broker_startup
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BrokerRuntimeStartupDecision
+    module: qts.runtime.broker_startup
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeCommandType
+    module: qts.runtime.commands
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeCommandResultStatus
+    module: qts.runtime.commands
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeCommandStreamEvent
+    module: qts.runtime.commands
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeCommand
+    module: qts.runtime.commands
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeCommandResult
+    module: qts.runtime.commands
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeCommandBus
+    module: qts.runtime.commands
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: TradingRuntimeConfig
+    module: qts.runtime.config.models
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: ConfigMigrationResult
+    module: qts.runtime.config.models
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: ConfigMigration
+    module: qts.runtime.config.models
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BacktestCostModel
+    module: qts.runtime.config.models
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BacktestEngineConfig
+    module: qts.runtime.config.models
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: CostModelConfig
+    module: qts.runtime.config.models
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RiskConfig
+    module: qts.runtime.config.models
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RollPolicyConfig
+    module: qts.runtime.config.models
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BacktestMarketDataReference
+    module: qts.runtime.config.models
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BacktestStrategyConfig
+    module: qts.runtime.config.models
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BacktestRuntimeConfig
+    module: qts.runtime.config.models
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: LiveRuntimeConfig
+    module: qts.runtime.config.models
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: PaperBrokerRuntimeConfig
+    module: qts.runtime.config.paper
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: PaperSimulatedRuntimeConfig
+    module: qts.runtime.config.paper
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BacktestConfigLoader
+    module: qts.runtime.config_loader
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeSessionDependencies
+    module: qts.runtime.dependencies
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: DurableEventStore
+    module: qts.runtime.durability
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: SnapshotSchemaMismatch
+    module: qts.runtime.durability
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeDurabilityStateMismatch
+    module: qts.runtime.durability
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeDurabilityDrillConfig
+    module: qts.runtime.durability
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeDurabilityDrillResult
+    module: qts.runtime.durability
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeDurabilityDrill
+    module: qts.runtime.durability
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: EventSequenceValidationReport
+    module: qts.runtime.event_store
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: EventStore
+    module: qts.runtime.event_store
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: InMemoryEventStore
+    module: qts.runtime.event_store
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: FileEventStore
+    module: qts.runtime.event_store
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: ExecutionReportHandler
+    module: qts.runtime.execution_report_handler
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: InstrumentExecutionContext
+    module: qts.runtime.intent_processing
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: ProcessedIntent
+    module: qts.runtime.intent_processing
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: OrderPlan
+    module: qts.runtime.intent_processing
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: OrderPlanBuilder
+    module: qts.runtime.intent_processing
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: TargetIntentProcessor
+    module: qts.runtime.intent_processing
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: LiveReconciliationResult
+    module: qts.runtime.live_reconciliation
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: LiveReconciliation
+    module: qts.runtime.live_reconciliation
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: Mailbox
+    module: qts.runtime.mailbox
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeMarketDataCoordinator
+    module: qts.runtime.market_data_coordinator
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: MarketDataFlowResult
+    module: qts.runtime.market_data_flow
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: MarketDataFlow
+    module: qts.runtime.market_data_flow
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeMode
+    module: qts.runtime.mode
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: MarketDataEnvironment
+    module: qts.runtime.mode
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: ExecutionEnvironment
+    module: qts.runtime.mode
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: AccountEnvironment
+    module: qts.runtime.mode
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeOrderResult
+    module: qts.runtime.order_result
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: AccountPartitionPolicy
+    module: qts.runtime.partitioning
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: AccountBrokerMapping
+    module: qts.runtime.partitioning
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: AccountRiskConfig
+    module: qts.runtime.partitioning
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: LiveOrderPermission
+    module: qts.runtime.permissions
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeRecoveryCoordinator
+    module: qts.runtime.recovery
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeRollbackCoordinator
+    module: qts.runtime.rollback
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RouteNotFoundError
+    module: qts.runtime.router
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: EventRouter
+    module: qts.runtime.router
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeEventWriter
+    module: qts.runtime.runtime_event_writer
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeKillSwitchDeactivateCommand
+    module: qts.runtime.safety
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeKillSwitchEvidence
+    module: qts.runtime.safety
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeSafetyController
+    module: qts.runtime.safety_controller
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeSessionResult
+    module: qts.runtime.session
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeRollbackCommand
+    module: qts.runtime.session
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeRollbackEvidence
+    module: qts.runtime.session
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeSession
+    module: qts.runtime.session
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: SignalAggregationPolicy
+    module: qts.runtime.signal_policy
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: SignalContribution
+    module: qts.runtime.signal_policy
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: SignalConflict
+    module: qts.runtime.signal_policy
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: SignalAggregationDecision
+    module: qts.runtime.signal_policy
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: SignalPolicyEngine
+    module: qts.runtime.signal_policy
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BacktestRuntimeEventSink
+    module: qts.runtime.sinks.backtest
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeEvent
+    module: qts.runtime.sinks.base
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeEventWriteResult
+    module: qts.runtime.sinks.base
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeEventContext
+    module: qts.runtime.sinks.base
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeEventSink
+    module: qts.runtime.sinks.base
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: LiveRuntimeEventSink
+    module: qts.runtime.sinks.live
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BrokerRuntimeStartupGate
+    module: qts.runtime.startup_gate
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeSessionState
+    module: qts.runtime.state
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeStateMachine
+    module: qts.runtime.state
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: StateSnapshot
+    module: qts.runtime.state_recovery
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: SnapshotStore
+    module: qts.runtime.state_recovery
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: LiveRecoveryDecisionStatus
+    module: qts.runtime.state_recovery
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RecoveryReadinessDecision
+    module: qts.runtime.state_recovery
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: LiveRecoveryDecision
+    module: qts.runtime.state_recovery
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: InMemorySnapshotStore
+    module: qts.runtime.state_recovery
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: FileSnapshotStore
+    module: qts.runtime.state_recovery
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: DurableSnapshotStore
+    module: qts.runtime.state_recovery
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: SnapshotFrequencyPolicy
+    module: qts.runtime.state_recovery
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: StrategyExecutionResult
+    module: qts.runtime.strategy_execution_pipeline
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: StrategyExecutionPipeline
+    module: qts.runtime.strategy_execution_pipeline
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: StrategyRuntimeSpec
+    module: qts.runtime.topology
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: AccountRuntimeSpec
+    module: qts.runtime.topology
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BrokerRouteSpec
+    module: qts.runtime.topology
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: MarketDataRouteSpec
+    module: qts.runtime.topology
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimePartitionKey
+    module: qts.runtime.topology
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeTopology
+    module: qts.runtime.topology
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeTopologyManifest
+    module: qts.runtime.topology
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: RuntimeTopologyBuilder
+    module: qts.runtime.topology
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BrokerCallbackQuarantine
+    module: qts.execution.adapters.broker_callback_quarantine
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BrokerExecutionAdapter
+    module: qts.execution.adapters.broker_execution_adapter
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrOrderExecutionConnection
+    module: qts.execution.adapters.ibkr_order_execution
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrExecutionReport
+    module: qts.execution.adapters.ibkr_order_execution
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrOrderCallbackEvent
+    module: qts.execution.adapters.ibkr_order_execution
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrOrderExecutionAdapter
+    module: qts.execution.adapters.ibkr_order_execution
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BrokerOrderRecord
+    module: qts.execution.adapters.ibkr_order_map
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BrokerOrderMap
+    module: qts.execution.adapters.ibkr_order_map
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: SimulatedExecutionCostModel
+    module: qts.execution.adapters.simulated_execution_adapter
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: SimulatedExecutionAdapter
+    module: qts.execution.adapters.simulated_execution_adapter
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbAsyncOrderExecutionTransportConfig
+    module: qts.execution.transports.ib_async_order_execution_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbAsyncOrderExecutionTransport
+    module: qts.execution.transports.ib_async_order_execution_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrOrderIdAllocator
+    module: qts.execution.transports.ibkr_order_ids
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrTwsCallbackDispatcher
+    module: qts.execution.transports.ibkr_tws_callback_dispatcher
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrTwsConnection
+    module: qts.execution.transports.ibkr_tws_connection
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrTwsExecutionEventEmitter
+    module: qts.execution.transports.ibkr_tws_execution_event_emitter
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrTwsOrderClient
+    module: qts.execution.transports.ibkr_tws_order_client
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrOrderContractSpec
+    module: qts.execution.transports.ibkr_tws_order_execution_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrTwsOrderExecutionTransportConfig
+    module: qts.execution.transports.ibkr_tws_order_execution_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrOrderRequest
+    module: qts.execution.transports.ibkr_tws_order_execution_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrOrderStatusPayload
+    module: qts.execution.transports.ibkr_tws_order_execution_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrOpenOrderPayload
+    module: qts.execution.transports.ibkr_tws_order_execution_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrPositionPayload
+    module: qts.execution.transports.ibkr_tws_order_execution_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrAccountSummaryPayload
+    module: qts.execution.transports.ibkr_tws_order_execution_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrExecutionPayload
+    module: qts.execution.transports.ibkr_tws_order_execution_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrCommissionPayload
+    module: qts.execution.transports.ibkr_tws_order_execution_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrErrorPayload
+    module: qts.execution.transports.ibkr_tws_order_execution_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrConnectionEventPayload
+    module: qts.execution.transports.ibkr_tws_order_execution_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrCommissionReport
+    module: qts.execution.transports.ibkr_tws_order_execution_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrTransportError
+    module: qts.execution.transports.ibkr_tws_order_execution_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrConnectionEvent
+    module: qts.execution.transports.ibkr_tws_order_execution_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrOrderExecutionCallbackSink
+    module: qts.execution.transports.ibkr_tws_order_execution_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrOrderExecutionTransport
+    module: qts.execution.transports.ibkr_tws_order_execution_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrTwsOrderExecutionTransport
+    module: qts.execution.transports.ibkr_tws_order_execution_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrTwsReconciliationClient
+    module: qts.execution.transports.ibkr_tws_reconciliation_client
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: ReplayClock
+    module: qts.data.sources.replay_market_data_source
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: ReplaySequencedEvent
+    module: qts.data.sources.replay_market_data_source
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: ReplayEventSequencer
+    module: qts.data.sources.replay_market_data_source
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: SubscriptionReplayMarketDataSource
+    module: qts.data.sources.replay_market_data_source
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: ReplayMarketDataBundle
+    module: qts.data.sources.replay_market_data_source
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: ReplayMarketDataSource
+    module: qts.data.sources.replay_market_data_source
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: StreamingMarketDataSubscription
+    module: qts.data.sources.streaming_market_data_source
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: StreamingMarketDataDegradation
+    module: qts.data.sources.streaming_market_data_source
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: StreamingMarketDataSource
+    module: qts.data.sources.streaming_market_data_source
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrMarketDataConnection
+    module: qts.data.adapters.ibkr_market_data
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrMarketDataSubscription
+    module: qts.data.adapters.ibkr_market_data
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrMarketDataAdapter
+    module: qts.data.adapters.ibkr_market_data
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbAsyncMarketDataTransportConfig
+    module: qts.data.transports.ib_async_market_data_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbAsyncMarketDataTransport
+    module: qts.data.transports.ib_async_market_data_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrProviderMarketDataType
+    module: qts.data.transports.ibkr_tws_market_data_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrMarketDataContractSpec
+    module: qts.data.transports.ibkr_tws_market_data_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrTwsMarketDataTransportConfig
+    module: qts.data.transports.ibkr_tws_market_data_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrTickPayload
+    module: qts.data.transports.ibkr_tws_market_data_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrQuotePayload
+    module: qts.data.transports.ibkr_tws_market_data_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrBarPayload
+    module: qts.data.transports.ibkr_tws_market_data_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrMarketDataErrorPayload
+    module: qts.data.transports.ibkr_tws_market_data_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrMarketDataTypePayload
+    module: qts.data.transports.ibkr_tws_market_data_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrMarketDataCallbackSink
+    module: qts.data.transports.ibkr_tws_market_data_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrMarketDataTransport
+    module: qts.data.transports.ibkr_tws_market_data_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: IbkrTwsMarketDataTransport
+    module: qts.data.transports.ibkr_tws_market_data_transport
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: DriftKind
+    module: qts.reconciliation.drift
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: DriftItem
+    module: qts.reconciliation.drift
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: ReconciliationEngine
+    module: qts.reconciliation.engine
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: ReconciliationReport
+    module: qts.reconciliation.report
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: OrderSnapshot
+    module: qts.reconciliation.snapshots
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: PositionSnapshot
+    module: qts.reconciliation.snapshots
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: CashSnapshot
+    module: qts.reconciliation.snapshots
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: ReconciliationSnapshot
+    module: qts.reconciliation.snapshots
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: StartupReconciliationDecision
+    module: qts.reconciliation.startup_gate
+    reason: baseline allowance
+    owner: platform
+    expiry: 2099-12-31

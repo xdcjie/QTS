@@ -24,6 +24,7 @@ def _canonical_manifest_payload() -> dict[str, object]:
         "startup_checklist_hash": "sha256:startup",
         "event_schema_version": RuntimeEvent.SCHEMA_VERSION,
         "artifact_schema_version": "1",
+        "platform_baseline_version": "qts-platform-v1",
         "created_at": "2026-01-02T14:30:00+00:00",
         "source_commit": "abcdef123456",
         "operator_identity_hash": "sha256:operator",
@@ -75,6 +76,61 @@ def test_runtime_manifest_record_loads_queryable_deterministic_hash(tmp_path: Pa
     assert first.query("run_id") == "run-canonical"
     assert first.query("runtime_mode") == "paper_broker"
     assert first.query("manifest_hash") == first.manifest_hash
+
+
+def test_backtest_manifest_contains_platform_baseline_version(tmp_path: Path) -> None:
+    from qts.reporting.backtest import BacktestArtifactWriter, EquityCurvePoint
+    from qts.reporting.base import PLATFORM_BASELINE_VERSION, RuntimeManifest
+
+    writer = BacktestArtifactWriter(tmp_path)
+    writer.write_equity_point(
+        EquityCurvePoint(time=datetime(2026, 1, 2, 14, 30, tzinfo=UTC), equity=Decimal("10000"))
+    )
+    _, _, payload, _ = writer.finalize(
+        config_hash="sha256:config",
+        **m1_manifest_kwargs(),
+        cost_model={},
+        processed_bars=1,
+        warmup_bars=0,
+        trading_bars=1,
+        final_cash=Decimal("10000"),
+        strategy_version="test",
+    )
+
+    runtime_manifest = RuntimeManifest.from_payload(payload)
+
+    assert runtime_manifest.platform_baseline_version == PLATFORM_BASELINE_VERSION
+    assert runtime_manifest.platform_baseline_version == payload["platform_baseline_version"]
+
+
+def test_broker_runtime_manifest_contains_platform_baseline_version(tmp_path: Path) -> None:
+    from qts.core.ids import RuntimeRunId
+    from qts.reporting.base import PLATFORM_BASELINE_VERSION, RuntimeManifest
+    from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
+    from qts.runtime.sinks.base import RuntimeEventContext
+    from qts.runtime.sinks.live import LiveRuntimeEventSink
+
+    sink = LiveRuntimeEventSink(
+        tmp_path,
+        context=RuntimeEventContext(run_id=RuntimeRunId("broker-baseline"), mode="paper_broker"),
+    )
+    sink.close()
+    manifest = BrokerRuntimeReportWriter(tmp_path).write_manifest(
+        config_payload={"mode": "paper_broker"},
+        runtime_mode="paper_broker",
+        account_id="acct-baseline",
+        runtime_instance_id="broker-baseline-instance",
+        source_commit="abcdef123456",
+        operator_identity_hash="sha256:operator-baseline",
+        connection_metadata={},
+        event_sink=sink,
+    )
+
+    payload = json.loads(manifest.manifest_path.read_text(encoding="utf-8"))
+    runtime_manifest = RuntimeManifest.from_payload(payload)
+
+    assert runtime_manifest.platform_baseline_version == PLATFORM_BASELINE_VERSION
+    assert payload["platform_baseline_version"] == PLATFORM_BASELINE_VERSION
 
 
 def test_broker_runtime_manifest_validates_against_shared_runtime_manifest(tmp_path: Path) -> None:

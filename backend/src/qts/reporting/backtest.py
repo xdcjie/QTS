@@ -16,6 +16,7 @@ from qts.data.provenance import DatasetMetadata
 from qts.reporting.base import (
     NON_BROKER_HASH_SENTINEL,
     NON_BROKER_SOURCE_COMMIT,
+    PLATFORM_BASELINE_VERSION,
     RUNTIME_ARTIFACT_SCHEMA_VERSION,
     RuntimeManifest,
 )
@@ -348,6 +349,7 @@ class BacktestArtifactWriter:
                 else None
             ),
             "startup_checklist_hash": NON_BROKER_HASH_SENTINEL,
+            "platform_baseline_version": PLATFORM_BASELINE_VERSION,
             "created_at": finalized_at.isoformat(),
             "finalized_at": finalized_at.isoformat(),
             "source_commit": NON_BROKER_SOURCE_COMMIT,

@@ -97,6 +97,29 @@ def test_backtest_and_live_events_share_envelope(tmp_path: Path) -> None:
     assert set(bt_row) == set(live_row)
 
 
+def test_runtime_event_contains_platform_baseline_version(tmp_path: Path) -> None:
+    from qts.core.ids import RuntimeRunId
+    from qts.reporting.base import PLATFORM_BASELINE_VERSION
+    from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventContext
+    from qts.runtime.sinks.live import LiveRuntimeEventSink
+
+    sink = LiveRuntimeEventSink(
+        tmp_path,
+        context=RuntimeEventContext(run_id=RuntimeRunId("run-baseline"), mode="live"),
+    )
+    sink.write(
+        RuntimeEvent(
+            kind="runtime.state",
+            payload={"state": "running"},
+            payload_schema_version="1",
+        )
+    )
+    sink.close()
+
+    payload = json.loads(sink.path.read_text(encoding="utf-8").splitlines()[0])
+    assert payload["platform_baseline_version"] == PLATFORM_BASELINE_VERSION
+
+
 def test_correlation_id_flows_from_market_data_to_order() -> None:
     from qts.core.ids import CorrelationId
     from qts.runtime.sinks.base import RuntimeEvent

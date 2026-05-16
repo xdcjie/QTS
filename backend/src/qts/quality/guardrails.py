@@ -5,8 +5,11 @@ from __future__ import annotations
 import ast
 import re
 from dataclasses import dataclass
+from datetime import date, datetime
 from pathlib import Path
 from typing import Protocol, cast, runtime_checkable
+
+import yaml  # type: ignore[import-untyped]
 
 QTS_ROOT = Path("backend/src/qts")
 PRODUCT_SYMBOLS = frozenset({"GC", "SI", "ES", "NQ", "CL", "HG", "ZN", "ZB", "YM", "RTY"})
@@ -127,10 +130,19 @@ STRATEGY_SDK_FORBIDDEN_IMPORT_PREFIXES = (
     "qts.runtime",
     "qts.execution.adapters",
     "qts.risk.risk_engine",
+    "qts.reconciliation",
+    "qts.portfolio.account_actor",
 )
 STRATEGY_SDK_FORBIDDEN_SYMBOLS = frozenset(
-    {"BrokerActor", "OrderManagerActor", "ContractSpec", "BrokerSymbolMapping"}
+    {
+        "BrokerActor",
+        "OrderManagerActor",
+        "ContractSpec",
+        "BrokerSymbolMapping",
+        "AccountActor",
+    }
 )
+STRATEGY_SDK_PUBLIC_SURFACE_MODULES = frozenset({("strategy_sdk",), ("factors",)})
 BACKTEST_RUNNER_FORBIDDEN_IMPORT_PREFIXES = (
     "qts.data.historical.config",
     "qts.data.historical.csv_dataset",
@@ -236,7 +248,22 @@ RUNTIME_COORDINATOR_KEEP_EVIDENCE = (
     "safety boundary",
     "complexity threshold",
 )
+PLATFORM_FREEZE_EXCEPTIONS_PATH = Path("docs/architecture/platform_freeze_exceptions.yaml")
+PLATFORM_FREEZE_RULE_KEY = "PLATFORM_FREEZE"
+PLATFORM_FREEZE_BUNDLES: tuple[tuple[str, ...], ...] = (
+    ("runtime",),
+    ("execution", "adapters"),
+    ("execution", "transports"),
+    ("data", "sources"),
+    ("data", "adapters"),
+    ("data", "transports"),
+    ("reconciliation",),
+)
 GUARDRAIL_REMEDIATIONS = {
+    PLATFORM_FREEZE_RULE_KEY: (
+        "Add a temporary exception with an explicit expiry and reason in "
+        "platform_freeze_exceptions.yaml, or move the concept out of frozen packages."
+    ),
     "ADAPTER_BOUNDARY": (
         "Move cross-service behavior behind the correct data or execution adapter boundary."
     ),
@@ -339,6 +366,199 @@ class GuardrailViolation:
             f"{self.path}:{self.line}: {self.code}:{symbol} "
             f"{self.message} remediation: {self.remediation}"
         )
+
+
+@dataclass(frozen=True, slots=True)
+class PlatformFreezeException:
+    """Structured allowlisted class exception for the platform freeze rule."""
+
+    class_name: str
+    module: str
+    reason: str
+    owner: str
+    expiry: date
+
+    @classmethod
+    def from_raw(cls, payload: dict[str, object], line: int) -> PlatformFreezeException | str:
+        """Return an exception object or a parse violation message."""
+        missing = {
+            k for k in ("class_name", "module", "reason", "owner", "expiry") if k not in payload
+        }
+        if missing:
+            return f"exception item missing keys: {', '.join(sorted(missing))} (line {line})"
+        expiry_value = str(payload["expiry"])
+        try:
+            expiry = datetime.fromisoformat(expiry_value).date()
+        except ValueError:
+            return f"invalid expiry date: {expiry_value!r} (line {line})"
+        return cls(
+            class_name=str(payload["class_name"]),
+            module=str(payload["module"]),
+            reason=str(payload["reason"]),
+            owner=str(payload["owner"]),
+            expiry=expiry,
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class PlatformFreezeConfig:
+    """Runtime configuration for `PlatformFreezeRule`."""
+
+    allowed_exceptions: frozenset[tuple[str, str]] = frozenset()
+    expired_exceptions: frozenset[tuple[str, str]] = frozenset()
+    parse_violations: frozenset[tuple[int, str]] = frozenset()
+
+
+class PlatformFreezeRule:
+    """Reject new production classes in frozen platform packages without exception."""
+
+    code = PLATFORM_FREEZE_RULE_KEY
+
+    def __init__(self, repo_root: Path | None = None) -> None:
+        self._config = _load_platform_freeze_config(repo_root or Path("."))
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform check."""
+        if not _is_platform_freeze_module(qts_relative_path):
+            return []
+        if self._config.parse_violations:
+            return []
+        module_name = "qts." + qts_relative_path.with_suffix("").as_posix().replace("/", ".")
+        violations: list[GuardrailViolation] = []
+        for node in _iter_top_level_classes(tree):
+            if not _is_public_class(node):
+                continue
+            key = (module_name, node.name)
+            if key in self._config.allowed_exceptions:
+                continue
+            if key in self._config.expired_exceptions:
+                message = (
+                    f"platform freeze exception has expired for {module_name}.{node.name}; "
+                    "add a fresh allowlisted exception with future expiry"
+                )
+            else:
+                message = (
+                    f"new production class is not allowed in frozen package without an "
+                    f"unexpired exception entry in {PLATFORM_FREEZE_EXCEPTIONS_PATH}: "
+                    f"{node.name}"
+                )
+            violations.append(
+                GuardrailViolation(
+                    code=self.code,
+                    path=str(relative_path),
+                    line=node.lineno,
+                    message=message,
+                    symbol=f"{module_name}.{node.name}",
+                )
+            )
+        return violations
+
+    def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
+        """Perform repository-level check."""
+        del repo_root
+        violations: list[GuardrailViolation] = []
+        for line, message in self._config.parse_violations:
+            violations.append(
+                GuardrailViolation(
+                    code=self.code,
+                    path=str(PLATFORM_FREEZE_EXCEPTIONS_PATH),
+                    line=line,
+                    message=message,
+                )
+            )
+        return violations
+
+
+def _is_platform_freeze_module(qts_relative_path: Path) -> bool:
+    """Return whether module lives under a frozen package."""
+    return any(
+        qts_relative_path.parts[: len(frozen_prefix)] == frozen_prefix
+        for frozen_prefix in PLATFORM_FREEZE_BUNDLES
+    )
+
+
+def _load_platform_freeze_config(repo_root: Path) -> PlatformFreezeConfig:
+    """Load platform freeze exceptions from docs file."""
+    path = repo_root / PLATFORM_FREEZE_EXCEPTIONS_PATH
+    if not path.exists():
+        return PlatformFreezeConfig(
+            allowed_exceptions=frozenset(),
+            expired_exceptions=frozenset(),
+            parse_violations=frozenset({(1, f"missing exception file: {path}")}),
+        )
+
+    try:
+        payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return PlatformFreezeConfig(
+            parse_violations=frozenset(
+                {(1, f"failed to parse platform freeze exceptions yaml: {exc}")}
+            )
+        )
+    if not isinstance(payload, dict):
+        return PlatformFreezeConfig(
+            parse_violations=frozenset(
+                {(1, f"platform freeze exceptions file must be a mapping: {path}")}
+            )
+        )
+
+    raw_exceptions = payload.get("exceptions")
+    if not isinstance(raw_exceptions, list):
+        return PlatformFreezeConfig(
+            parse_violations=frozenset(
+                {
+                    (
+                        1,
+                        "platform freeze exceptions must declare an 'exceptions' list."
+                        f" File: {path}",
+                    )
+                }
+            )
+        )
+
+    allowed: set[tuple[str, str]] = set()
+    expired: set[tuple[str, str]] = set()
+    parse_violations: set[tuple[int, str]] = set()
+    today = date.today()
+    for index, item in enumerate(raw_exceptions, start=1):
+        if not isinstance(item, dict):
+            parse_violations.add((index, "exception item must be a mapping"))
+            continue
+        parsed = PlatformFreezeException.from_raw(item, index)
+        if isinstance(parsed, str):
+            parse_violations.add((index, parsed))
+            continue
+        class_name = parsed.class_name
+        module_name = parsed.module
+        expiry_date = parsed.expiry
+        key = (module_name, class_name)
+        if expiry_date < today:
+            expired.add(key)
+        else:
+            allowed.add(key)
+
+    return PlatformFreezeConfig(
+        allowed_exceptions=frozenset(allowed),
+        expired_exceptions=frozenset(expired),
+        parse_violations=frozenset(parse_violations),
+    )
+
+
+def _iter_top_level_classes(tree: ast.AST) -> list[ast.ClassDef]:
+    """Return top-level class definitions from module body."""
+    module = cast(ast.Module, tree)
+    return [node for node in module.body if isinstance(node, ast.ClassDef)]
+
+
+def _is_public_class(node: ast.ClassDef) -> bool:
+    """Return whether class definition is production-public."""
+    return not node.name.startswith("_")
 
 
 class Rule(Protocol):
@@ -982,7 +1202,7 @@ class BacktestActorLoopCohesionRule:
 
 
 class StrategySdkPublicSurfaceRule:
-    """Reject internal runtime/broker/risk symbols from strategy SDK modules."""
+    """Reject internal runtime/broker/risk/reconciliation symbols from public SDK modules."""
 
     code = "STRATEGY_SDK_INTERNAL_LEAK"
 
@@ -1118,7 +1338,9 @@ class RuntimeCoordinatorDecisionRule:
 class GuardrailSuite:
     """Execute a configured set of guardrail rules against Python files."""
 
-    def __init__(self, rules: tuple[Rule, ...] | None = None) -> None:
+    def __init__(
+        self, rules: tuple[Rule, ...] | None = None, repo_root: Path | None = None
+    ) -> None:
         self.rules = rules or (
             ImportBoundaryRule(),
             ProductSpecificRule(),
@@ -1144,6 +1366,7 @@ class GuardrailSuite:
             SharedRuntimeWordingRule(),
             ProductionPlaceholderDocstringRule(),
             StaleArchitectureTextRule(),
+            PlatformFreezeRule(repo_root=repo_root),
             RuntimeSessionComplexityRule(),
             RuntimeCoordinatorDecisionRule(),
         )
@@ -1194,7 +1417,7 @@ class GuardrailSuite:
 
 def run_guardrails(repo_root: Path) -> list[GuardrailViolation]:
     """Return all guardrail violations under the repository root."""
-    return GuardrailSuite().check(repo_root)
+    return GuardrailSuite(repo_root=repo_root).check(repo_root)
 
 
 def _check_python_file(repo_root: Path, path: Path) -> list[GuardrailViolation]:
@@ -1900,7 +2123,7 @@ def _check_strategy_sdk_internal_leak(
     qts_relative_path: Path,
     tree: ast.AST,
 ) -> list[GuardrailViolation]:
-    if qts_relative_path.parts[:1] != ("strategy_sdk",):
+    if qts_relative_path.parts[:1] not in STRATEGY_SDK_PUBLIC_SURFACE_MODULES:
         return []
     violations: list[GuardrailViolation] = []
     for imported_module, line in _iter_imports(tree):

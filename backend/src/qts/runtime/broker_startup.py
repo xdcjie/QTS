@@ -7,6 +7,7 @@ from enum import StrEnum
 from typing import Any
 
 from qts.core.hashing import stable_json_hash
+from qts.reporting.base import PLATFORM_BASELINE_VERSION
 from qts.runtime.config import LiveRuntimeConfig
 from qts.runtime.mode import AccountEnvironment, RuntimeMode
 from qts.runtime.permissions import LiveOrderPermission
@@ -216,6 +217,7 @@ class BrokerRuntimeStartupChecklist:
         """Serialize checklist evidence for manifests and startup artifacts."""
 
         payload: dict[str, Any] = {
+            "platform_baseline_version": PLATFORM_BASELINE_VERSION,
             "passed": self.passed,
             "checks": [
                 {

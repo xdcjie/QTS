@@ -17,7 +17,11 @@ from qts.execution.order_manager import (
     ExecutionReportStatus,
     OrderIntent,
 )
-from qts.reporting.base import RUNTIME_ARTIFACT_SCHEMA_VERSION, RuntimeManifest
+from qts.reporting.base import (
+    PLATFORM_BASELINE_VERSION,
+    RUNTIME_ARTIFACT_SCHEMA_VERSION,
+    RuntimeManifest,
+)
 from qts.runtime.broker_startup import (
     BrokerRuntimeStartupCheck,
     BrokerRuntimeStartupChecklist,
@@ -522,6 +526,7 @@ def _write_smoke_manifest(
         "startup_checklist_hash": stable_json_hash({"smoke_name": smoke_name, "startup": "local"}),
         "created_at": datetime(2026, 1, 2, tzinfo=UTC).isoformat(),
         "finalized_at": datetime(2026, 1, 2, 0, 1, tzinfo=UTC).isoformat(),
+        "platform_baseline_version": PLATFORM_BASELINE_VERSION,
         "source_commit": "not-applicable-readiness-smoke",
         "operator_identity_hash": "sha256:not-applicable-readiness-smoke",
         "artifacts": {

@@ -96,6 +96,35 @@ def test_runtime_event_sink_writes_mode_and_execution_environment(tmp_path: Path
     assert row["execution_environment"] == "broker"
 
 
+def test_live_runtime_event_sink_contains_platform_baseline_version(tmp_path: Path) -> None:
+    import json
+
+    from qts.core.ids import CorrelationId, RuntimeRunId
+    from qts.reporting.base import PLATFORM_BASELINE_VERSION
+    from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventContext
+    from qts.runtime.sinks.live import LiveRuntimeEventSink
+
+    sink = LiveRuntimeEventSink(
+        tmp_path,
+        context=RuntimeEventContext(
+            run_id=RuntimeRunId("run-live-baseline"),
+            mode="live",
+            execution_environment="broker",
+        ),
+    )
+    sink.write(
+        RuntimeEvent(
+            kind="runtime.order_submitted",
+            payload={"order_id": "order-1", "client_order_id": "client-order-1"},
+            correlation_id=CorrelationId("corr-1"),
+        )
+    )
+    sink.close()
+
+    row = json.loads(sink.path.read_text(encoding="utf-8").strip())
+    assert row["platform_baseline_version"] == PLATFORM_BASELINE_VERSION
+
+
 def test_runtime_event_sink_writes_unified_runtime_envelope(tmp_path: Path) -> None:
     from qts.core.ids import (
         AccountId,

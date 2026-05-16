@@ -16,6 +16,7 @@ from typing import Any, Protocol, runtime_checkable
 from qts.core.hashing import stable_json_hash
 
 RUNTIME_ARTIFACT_SCHEMA_VERSION = "1"
+PLATFORM_BASELINE_VERSION = "qts-platform-v1"
 NON_BROKER_SOURCE_COMMIT = "not-applicable-backtest"
 NON_BROKER_HASH_SENTINEL = "sha256:not-applicable-backtest"
 CANONICAL_RUNTIME_MANIFEST_FIELDS = (
@@ -31,6 +32,7 @@ CANONICAL_RUNTIME_MANIFEST_FIELDS = (
     "startup_checklist_hash",
     "event_schema_version",
     "artifact_schema_version",
+    "platform_baseline_version",
     "created_at",
     "source_commit",
     "operator_identity_hash",
@@ -56,6 +58,7 @@ class RuntimeManifest:
     created_at: datetime
     source_commit: str
     operator_identity_hash: str
+    platform_baseline_version: str
     manifest_hash: str
     finalized_at: datetime | None = None
 
@@ -95,6 +98,7 @@ class RuntimeManifest:
             created_at=cls._aware_datetime_from_payload(payload, "created_at"),
             source_commit=str(payload["source_commit"]),
             operator_identity_hash=str(payload["operator_identity_hash"]),
+            platform_baseline_version=str(payload["platform_baseline_version"]),
             manifest_hash=manifest_hash,
             finalized_at=finalized_at,
         )
@@ -117,6 +121,7 @@ class RuntimeManifest:
             "created_at": self.created_at.isoformat(),
             "source_commit": self.source_commit,
             "operator_identity_hash": self.operator_identity_hash,
+            "platform_baseline_version": self.platform_baseline_version,
             "manifest_hash": self.manifest_hash,
         }
         if self.finalized_at is not None:
@@ -231,6 +236,7 @@ class RuntimeArtifactWriter(Protocol):
 
 __all__ = [
     "CANONICAL_RUNTIME_MANIFEST_FIELDS",
+    "PLATFORM_BASELINE_VERSION",
     "NON_BROKER_HASH_SENTINEL",
     "NON_BROKER_SOURCE_COMMIT",
     "RUNTIME_ARTIFACT_SCHEMA_VERSION",

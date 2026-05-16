@@ -145,6 +145,7 @@ def test_backtest_artifact_contract_contains_auditable_inputs_outputs_and_hashes
         "runtime_mode",
         "source_commit",
         "startup_checklist_hash",
+        "platform_baseline_version",
         "topology_hash",
         "runtime_topology",
         "trading_bars",

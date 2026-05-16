@@ -32,6 +32,7 @@ StrategySdkPublicSurfaceRule = _guardrails.StrategySdkPublicSurfaceRule
 StaleArchitectureTextRule = _guardrails.StaleArchitectureTextRule
 TransportCanonicalPathRule = _guardrails.TransportCanonicalPathRule
 TransportAdapterImportRule = _guardrails.TransportAdapterImportRule
+PlatformFreezeRule = _guardrails.PlatformFreezeRule
 run_guardrails = _guardrails.run_guardrails
 main = _guardrails.main
 

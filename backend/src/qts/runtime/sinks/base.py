@@ -19,6 +19,7 @@ from qts.core.ids import (
     RuntimeRunId,
     StrategyId,
 )
+from qts.reporting.base import PLATFORM_BASELINE_VERSION
 from qts.runtime.mode import RuntimeMode
 
 
@@ -72,6 +73,7 @@ class RuntimeEvent:
             "run_id": self._id_value(self.run_id),
             "mode": self.mode,
             "runtime_mode": self.mode,
+            "platform_baseline_version": PLATFORM_BASELINE_VERSION,
             "sequence_no": effective_sequence_no,
             "ts_event": self.ts_event.isoformat() if self.ts_event is not None else None,
             "ts_ingest": self.ts_ingest.isoformat() if self.ts_ingest is not None else None,
@@ -133,6 +135,7 @@ class RuntimeEvent:
             "sequence_no",
             "event_id",
             "payload_schema_version",
+            "platform_baseline_version",
         )
         for field_name in required_fields:
             value = row.get(field_name)

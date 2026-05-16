@@ -152,6 +152,7 @@ def test_backtest_runtime_event_sink_writes_events_and_manifest_contract(
     assert event_row["mode"] == "backtest"
     assert event_row["sequence_no"] == 1
     assert event_row["execution_environment"] == "simulated"
+    assert event_row["platform_baseline_version"] == "qts-platform-v1"
     assert manifest["run_id"] == "bt-run-1"
     assert manifest["runtime_mode"] == "backtest"
     assert manifest["event_schema_version"] == RuntimeEvent.SCHEMA_VERSION

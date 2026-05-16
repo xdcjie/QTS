@@ -10,7 +10,11 @@ from typing import TYPE_CHECKING, Any
 
 from qts.core.hashing import stable_json_default, stable_json_hash
 from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
-from qts.reporting.base import RUNTIME_ARTIFACT_SCHEMA_VERSION, RuntimeManifest
+from qts.reporting.base import (
+    PLATFORM_BASELINE_VERSION,
+    RUNTIME_ARTIFACT_SCHEMA_VERSION,
+    RuntimeManifest,
+)
 from qts.runtime.config import BacktestCostModel
 from qts.runtime.mode import RuntimeMode
 from qts.runtime.sinks.base import RuntimeEvent
@@ -141,6 +145,7 @@ class BrokerRuntimeReportWriter:
             "config_hash": stable_json_hash(config_payload),
             "topology_hash": topology_hash,
             "startup_checklist_hash": startup_checklist_hash,
+            "platform_baseline_version": PLATFORM_BASELINE_VERSION,
             "created_at": finalized_at.isoformat(),
             "finalized_at": finalized_at.isoformat(),
             "source_commit": source_commit,

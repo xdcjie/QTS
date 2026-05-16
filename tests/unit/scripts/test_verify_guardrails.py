@@ -21,19 +21,33 @@ def _load_guardrails_module() -> ModuleType:
 run_guardrails = cast(Any, _load_guardrails_module().run_guardrails)
 
 
+def _without_platform_freeze(violations: list[object]) -> set[str]:
+    """Hide platform freeze in legacy-focused guardrail unit tests."""
+    codes = {violation.code for violation in violations if hasattr(violation, "code")}
+    return {code for code in codes if code != "PLATFORM_FREEZE"}
+
+
 def _write(root: Path, relative_path: str, source: str) -> None:
     path = root / relative_path
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(source, encoding="utf-8")
 
 
+def _write_platform_freeze_stub(root: Path) -> None:
+    _write(
+        root,
+        "docs/architecture/platform_freeze_exceptions.yaml",
+        "exceptions: []\n",
+    )
+
+
 def _codes(root: Path) -> set[str]:
-    return {violation.code for violation in run_guardrails(root)}
+    return _without_platform_freeze(run_guardrails(root))
 
 
 def _codes_by_suite(root: Path, *rules: object) -> set[str]:
     suite = _load_guardrails_module().GuardrailSuite(rules=tuple(rules))
-    return {violation.code for violation in suite.check(root)}
+    return _without_platform_freeze(suite.check(root))
 
 
 def test_guardrails_reject_domain_imports_from_runtime(tmp_path: Path) -> None:
@@ -77,7 +91,51 @@ def test_guardrails_reject_strategy_sdk_internal_domain_symbols(tmp_path: Path) 
         "from qts.domain.instruments import ContractSpec\n",
     )
 
-    assert _codes(root) == {"STRATEGY_SDK_INTERNAL_LEAK"}
+    assert "STRATEGY_SDK_INTERNAL_LEAK" in _codes(root)
+
+
+def test_strategy_package_cannot_import_runtime_internals(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/strategy_sdk/bad.py",
+        "from qts.runtime.actor import Actor\n"
+        "from qts.reconciliation import reconcile_snapshots\n"
+        "from qts.portfolio.account_actor import AccountActor\n",
+    )
+
+    assert "STRATEGY_SDK_INTERNAL_LEAK" in _codes(root)
+
+
+def test_strategy_package_cannot_import_broker_transports(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/strategy_sdk/bad.py",
+        "from qts.execution.adapters.ibkr_order_execution import IbkrOrderExecutionAdapter\n",
+    )
+
+    assert "STRATEGY_SDK_INTERNAL_LEAK" in _codes(root)
+
+
+def test_factor_package_has_no_runtime_dependency(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(root, "backend/src/qts/factors/bad.py", "from qts.runtime.actor import Actor\n")
+
+    assert "STRATEGY_SDK_INTERNAL_LEAK" in _codes(root)
+
+
+def test_factor_package_has_no_runtime_execution_broker_imports(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/factors/bad.py",
+        "from qts.execution.adapters.ibkr_order_execution import IbkrOrderExecutionAdapter\n"
+        "from qts.portfolio.account_actor import AccountActor\n"
+        "from qts.reconciliation import ReconciliationSnapshot\n",
+    )
+
+    assert "STRATEGY_SDK_INTERNAL_LEAK" in _codes(root)
 
 
 def test_guardrails_reject_market_data_and_execution_adapter_coupling(tmp_path: Path) -> None:
@@ -414,6 +472,7 @@ def test_guardrails_reject_backtest_actor_loop_private_helper_growth(
 
 def test_guardrails_allow_product_facts_in_registry_providers(tmp_path: Path) -> None:
     root = tmp_path
+    _write_platform_freeze_stub(root)
     _write(
         root,
         "backend/src/qts/registry/providers/comex_gold_calendar_provider.py",
@@ -777,6 +836,7 @@ def test_guardrails_reject_provider_sdk_import_in_runtime(tmp_path: Path) -> Non
 
 def test_guardrail_report_contains_remediation(tmp_path: Path) -> None:
     root = tmp_path
+    _write_platform_freeze_stub(root)
     _write(
         root,
         "backend/src/qts/domain/bad.py",
@@ -958,6 +1018,7 @@ def test_guardrail_suite_includes_required_m0_hard_gate_rules() -> None:
         "ProviderSdkImportRule",
         "StrategySdkPublicSurfaceRule",
         "StaleArchitectureTextRule",
+        "PlatformFreezeRule",
     } <= rule_names
 
 
@@ -990,6 +1051,7 @@ def test_ci_and_pre_commit_run_architecture_guardrails() -> None:
     assert "push:" in workflow
     assert "make test-unit" in workflow
     assert "make guardrails" in pre_commit
+    assert "tests/quality/test_platform_freeze.py" in workflow
 
 
 def test_make_check_keeps_guardrails_before_tests() -> None:

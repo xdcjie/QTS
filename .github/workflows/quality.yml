@@ -20,4 +20,5 @@ jobs:
       - run: make lint
       - run: make guardrails
       - run: make typecheck
+      - run: uv run pytest tests/quality/test_platform_freeze.py
       - run: make test-unit
