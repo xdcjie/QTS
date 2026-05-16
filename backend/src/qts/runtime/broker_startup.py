@@ -1,4 +1,4 @@
-"""Paper/live runtime lifecycle and startup safety orchestration."""
+"""Broker-capable runtime startup safety evidence and decisions."""
 
 from __future__ import annotations
 
@@ -7,13 +7,9 @@ from enum import StrEnum
 from typing import Any
 
 from qts.core.hashing import stable_json_hash
-from qts.data.interfaces import StreamingFeedAdapter
-from qts.execution.broker import BrokerAdapter, BrokerExecutionReport, BrokerOrderRequest
 from qts.runtime.config import LiveRuntimeConfig
 from qts.runtime.mode import AccountEnvironment, RuntimeMode
 from qts.runtime.permissions import LiveOrderPermission
-from qts.runtime.sinks.base import RuntimeEvent
-from qts.runtime.state import RuntimeSessionState, RuntimeStateMachine
 
 
 class BrokerRuntimeStartupDecisionStatus(StrEnum):
@@ -27,7 +23,7 @@ class BrokerRuntimeStartupDecisionStatus(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class BrokerRuntimeStartupCheck:
-    """One structured live startup checklist item."""
+    """One structured broker startup checklist item."""
 
     check_name: str
     status: str
@@ -50,7 +46,7 @@ class BrokerRuntimeStartupCheck:
 
 @dataclass(frozen=True, slots=True)
 class BrokerRuntimeStartupChecklist:
-    """Structured startup checklist evidence for paper/live modes."""
+    """Structured startup checklist evidence for broker-capable modes."""
 
     checks: tuple[BrokerRuntimeStartupCheck, ...]
 
@@ -86,11 +82,7 @@ class BrokerRuntimeStartupChecklist:
             ),
             (
                 "port_check",
-                mode
-                not in {
-                    RuntimeMode.LIVE,
-                    RuntimeMode.PAPER_BROKER,
-                }
+                mode not in {RuntimeMode.LIVE, RuntimeMode.PAPER_BROKER}
                 or config.broker_port is not None,
                 (
                     f"broker_port={config.broker_port}"
@@ -298,115 +290,10 @@ def _order_permission_for_status(
     return LiveOrderPermission.OBSERVATION_ONLY
 
 
-@dataclass(frozen=True, slots=True)
-class RuntimeOrderResult:
-    """Result of live runtime order submission."""
-
-    request: BrokerOrderRequest | None
-    accepted: bool
-    report: BrokerExecutionReport | None = None
-    reason_code: str | None = None
-
-    def to_evidence(self) -> dict[str, Any]:
-        """Serialize order permission evidence for runtime events."""
-        request_payload: dict[str, Any] | None = None
-        if self.request is not None:
-            request_payload = {
-                "order_id": self.request.order_id.value,
-                "client_order_id": self.request.client_order_id,
-                "account_id": self.request.account_id.value,
-                "strategy_id": (
-                    self.request.strategy_id.value if self.request.strategy_id is not None else None
-                ),
-                "instrument_id": self.request.instrument_id.value,
-                "side": self.request.side.value,
-                "quantity": str(self.request.quantity),
-            }
-        return {
-            "accepted": self.accepted,
-            "reason_code": self.reason_code,
-            "request": request_payload,
-            "report": self.report is not None,
-        }
-
-
-class LiveRuntime:
-    """Runtime facade over broker and market-data boundary adapters."""
-
-    def __init__(self, *, broker: BrokerAdapter, feed: StreamingFeedAdapter) -> None:
-        self._broker = broker
-        self._feed = feed
-        self._machine = RuntimeStateMachine()
-
-    @property
-    def state(self) -> RuntimeSessionState:
-        """Perform state."""
-        return self._machine.state
-
-    @property
-    def feed(self) -> StreamingFeedAdapter:
-        """Perform feed."""
-        return self._feed
-
-    def start(self) -> RuntimeSessionState:
-        """Perform start."""
-        self._machine.apply("start")
-        return self._machine.apply("started")
-
-    def stop(self) -> RuntimeSessionState:
-        """Perform stop."""
-        return self._machine.apply("stop")
-
-    def pause(self) -> RuntimeSessionState:
-        """Perform pause."""
-        return self._machine.apply("pause")
-
-    def resume(self) -> RuntimeSessionState:
-        """Perform resume."""
-        return self._machine.apply("resume")
-
-    def degrade(self) -> RuntimeSessionState:
-        """Perform degrade."""
-        return self._machine.apply("degrade")
-
-    def recover(self) -> RuntimeSessionState:
-        """Perform recover."""
-        return self._machine.apply("recover")
-
-    def apply_runtime_event(self, event: RuntimeEvent) -> RuntimeSessionState:
-        """Apply runtime control events such as market-data degradation."""
-
-        if event.kind == "runtime.degraded":
-            if self.state is RuntimeSessionState.DEGRADED:
-                return self.state
-            return self.degrade()
-        return self.state
-
-    def submit_order(self, request: BrokerOrderRequest) -> RuntimeOrderResult:
-        """Reject direct order submission outside the shared runtime session path."""
-        if self.state is RuntimeSessionState.PAUSED:
-            return RuntimeOrderResult(request=request, accepted=False, reason_code="RUNTIME_PAUSED")
-        if self.state is RuntimeSessionState.DEGRADED:
-            return RuntimeOrderResult(
-                request=request, accepted=False, reason_code="RUNTIME_DEGRADED"
-            )
-        if self.state is not RuntimeSessionState.RUNNING:
-            return RuntimeOrderResult(
-                request=request, accepted=False, reason_code="RUNTIME_NOT_RUNNING"
-            )
-        return RuntimeOrderResult(
-            request=request,
-            accepted=False,
-            reason_code="DIRECT_ORDER_PATH_DISABLED",
-        )
-
-
 __all__ = [
     "BrokerRuntimeStartupCheck",
     "BrokerRuntimeStartupChecklist",
     "BrokerRuntimeStartupDecision",
     "BrokerRuntimeStartupDecisionStatus",
-    "LiveRuntime",
-    "RuntimeOrderResult",
     "validate_live_startup",
 ]

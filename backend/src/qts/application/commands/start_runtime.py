@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 
-from qts.runtime.live import BrokerRuntimeStartupDecision
+from qts.runtime.broker_startup import BrokerRuntimeStartupDecision
 from qts.runtime.mode import RuntimeMode
 
 

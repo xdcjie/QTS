@@ -11,6 +11,13 @@ START_MARKER = "<!-- SOURCE_INVENTORY_START -->"
 END_MARKER = "<!-- SOURCE_INVENTORY_END -->"
 SOURCE_ROOTS = (Path("backend/src/qts"), Path("frontend/src"))
 SOURCE_SUFFIXES = {".py", ".ts", ".tsx", ".css", ".md"}
+STALE_GENERATED_DOC_TOKENS = (
+    "Boundary placeholder",
+    "live-beta",
+    "backend/src/qts/runtime/config.py",
+    "LiveRuntimeSession",
+    "fake or real boundary adapters",
+)
 
 
 @dataclass(frozen=True)
@@ -69,8 +76,9 @@ def render_source_inventory_section(repo_root: Path) -> str:
         '      <p class="section-note">',
         "        该区块由 <code>scripts/update_project_panorama_source_index.py</code> 从",
         "        <code>backend/src/qts</code> 和 <code>frontend/src</code> 生成；"
-        "作用说明优先取 docstring，",
-        "        无 docstring 时按名称、签名和所在边界推断，作为快速导航和评审入口。",
+        "它是源码生成的单一实现清单。作用说明优先取 docstring，",
+        "        无 docstring 时按名称、签名和所在边界推断，作为快速导航和评审入口；"
+        "不得手写保留旧路径或历史架构名称。",
         "      </p>",
         "    </div>",
         '    <div class="inventory-stats" aria-label="source inventory summary">',
@@ -125,6 +133,10 @@ def update_html(repo_root: Path, html_path: Path) -> bool:
         return False
     path.write_text(updated, encoding="utf-8")
     return True
+
+
+def find_stale_generated_doc_tokens(text: str) -> tuple[str, ...]:
+    return tuple(token for token in STALE_GENERATED_DOC_TOKENS if token in text)
 
 
 def _render_file(file_info: FileInfo) -> list[str]:
@@ -461,8 +473,13 @@ def main() -> int:
         flags=re.S,
     )
     if args.check:
+        stale_tokens = find_stale_generated_doc_tokens(original)
+        if stale_tokens:
+            joined = ", ".join(stale_tokens)
+            print(f"{args.html} contains stale generated documentation token(s): {joined}")
+            return 1
         if current_match is None or current_match.group(0) != expected:
-            print("project_panorama.html source inventory is stale")
+            print(f"{args.html} source inventory is stale")
             return 1
         return 0
     changed = update_html(repo_root, args.html)

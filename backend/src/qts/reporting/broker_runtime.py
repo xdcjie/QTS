@@ -17,7 +17,7 @@ from qts.runtime.sinks.base import RuntimeEvent
 from qts.runtime.sinks.live import LiveRuntimeEventSink
 
 if TYPE_CHECKING:
-    from qts.runtime.live import BrokerRuntimeStartupChecklist
+    from qts.runtime.broker_startup import BrokerRuntimeStartupChecklist
 
 _SECRET_KEY_PARTS = ("password", "token", "credential")
 

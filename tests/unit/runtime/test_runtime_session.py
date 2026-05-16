@@ -388,9 +388,9 @@ def test_runtime_session_writes_contextual_runtime_event_envelope() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.risk.rules.max_notional import MaxNotionalRule
     from qts.runtime.actors.account_actor import AccountActor
+    from qts.runtime.broker_startup import validate_live_startup
     from qts.runtime.config import LiveRuntimeConfig
     from qts.runtime.dependencies import RuntimeSessionDependencies
-    from qts.runtime.live import validate_live_startup
     from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
     from qts.runtime.session import RuntimeSession
 
@@ -738,9 +738,9 @@ def test_runtime_session_blocks_orders_after_delayed_market_data_permission() ->
 def test_runtime_session_records_market_data_risk_rejection_evidence() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
+    from qts.runtime.broker_startup import validate_live_startup
     from qts.runtime.config import LiveRuntimeConfig
     from qts.runtime.dependencies import RuntimeSessionDependencies
-    from qts.runtime.live import validate_live_startup
     from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
     from qts.runtime.session import RuntimeSession
 
@@ -1703,9 +1703,9 @@ def test_runtime_session_live_mode_requires_startup_decision_for_orders() -> Non
 def test_runtime_session_start_writes_startup_gate_evidence() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
+    from qts.runtime.broker_startup import validate_live_startup
     from qts.runtime.config import LiveRuntimeConfig
     from qts.runtime.dependencies import RuntimeSessionDependencies
-    from qts.runtime.live import validate_live_startup
     from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
     from qts.runtime.session import RuntimeSession
 
@@ -1790,9 +1790,9 @@ def test_paper_broker_runtime_session_requires_startup_decision_for_orders() -> 
 def test_runtime_session_observation_permission_blocks_orders() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
+    from qts.runtime.broker_startup import validate_live_startup
     from qts.runtime.config import LiveRuntimeConfig
     from qts.runtime.dependencies import RuntimeSessionDependencies
-    from qts.runtime.live import validate_live_startup
     from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
     from qts.runtime.session import RuntimeSession
 
@@ -1838,9 +1838,9 @@ def test_runtime_session_observation_permission_blocks_orders() -> None:
 def test_runtime_session_permission_block_writes_runtime_order_result_evidence() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
+    from qts.runtime.broker_startup import validate_live_startup
     from qts.runtime.config import LiveRuntimeConfig
     from qts.runtime.dependencies import RuntimeSessionDependencies
-    from qts.runtime.live import validate_live_startup
     from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
     from qts.runtime.session import RuntimeSession
 
@@ -1899,9 +1899,9 @@ def test_runtime_session_permission_block_writes_runtime_order_result_evidence()
 def test_runtime_session_paper_permission_does_not_permit_live_account_order() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
+    from qts.runtime.broker_startup import BrokerRuntimeStartupDecision, validate_live_startup
     from qts.runtime.config import LiveRuntimeConfig
     from qts.runtime.dependencies import RuntimeSessionDependencies
-    from qts.runtime.live import BrokerRuntimeStartupDecision, validate_live_startup
     from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
     from qts.runtime.permissions import LiveOrderPermission
     from qts.runtime.session import RuntimeSession
@@ -1961,9 +1961,9 @@ def test_runtime_session_live_mode_allows_orders_after_startup_decision() -> Non
     from qts.data.permissions import MarketDataPermissionEvent, MarketDataPermissionState
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
+    from qts.runtime.broker_startup import validate_live_startup
     from qts.runtime.config import LiveRuntimeConfig
     from qts.runtime.dependencies import RuntimeSessionDependencies
-    from qts.runtime.live import validate_live_startup
     from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
     from qts.runtime.session import RuntimeSession
 

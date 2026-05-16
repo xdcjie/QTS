@@ -1,16 +1,17 @@
 from __future__ import annotations
 
+import importlib
 from dataclasses import replace
 
 import pytest
-from qts.runtime.config import LiveRuntimeConfig
-from qts.runtime.live import (
+from qts.runtime.broker_startup import (
     BrokerRuntimeStartupCheck,
     BrokerRuntimeStartupChecklist,
     BrokerRuntimeStartupDecision,
     BrokerRuntimeStartupDecisionStatus,
     validate_live_startup,
 )
+from qts.runtime.config import LiveRuntimeConfig
 from qts.runtime.mode import (
     AccountEnvironment,
     ExecutionEnvironment,
@@ -25,6 +26,10 @@ def test_broker_runtime_startup_types_are_canonical() -> None:
     assert BrokerRuntimeStartupChecklist.__name__ == "BrokerRuntimeStartupChecklist"
     assert BrokerRuntimeStartupDecision.__name__ == "BrokerRuntimeStartupDecision"
     assert BrokerRuntimeStartupDecisionStatus.__name__ == "BrokerRuntimeStartupDecisionStatus"
+    assert BrokerRuntimeStartupChecklist.__module__ == "qts.runtime.broker_startup"
+    assert validate_live_startup.__module__ == "qts.runtime.broker_startup"
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("qts.runtime.live")
 
 
 def test_live_startup_guard_requires_all_safety_controls_for_live_mode() -> None:

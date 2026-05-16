@@ -4,9 +4,11 @@ import importlib
 from dataclasses import is_dataclass
 from pathlib import Path
 
+import pytest
+
 AUDITED_CLASSES = {
     "RuntimeOrderResult": {
-        "module": "qts.runtime.live",
+        "module": "qts.runtime.order_result",
         "decision": "keep",
         "role": "runtime result",
     },
@@ -107,6 +109,8 @@ def test_runtime_value_model_concept_map_covers_audited_classes() -> None:
 
 
 def test_retained_runtime_value_models_have_distinct_boundary_classes() -> None:
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("qts.runtime.live")
     for class_name, expected in AUDITED_CLASSES.items():
         if expected["decision"] == "remove":
             try:

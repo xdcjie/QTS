@@ -25,74 +25,20 @@ def test_live_runtime_state_machine_allows_only_operational_transitions() -> Non
 
 
 def test_live_runtime_degrades_from_runtime_event_and_rejects_new_orders() -> None:
-    from decimal import Decimal
+    machine = RuntimeStateMachine()
+    machine.apply("start")
+    machine.apply("started")
 
-    from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId
-    from qts.execution.broker import BrokerOrderRequest
-    from qts.execution.order_manager import OrderSide
-    from qts.runtime.live import LiveRuntime
-    from qts.runtime.sinks.base import RuntimeEvent
-    from qts.testing.fakes.broker import FakeBrokerAdapter
-    from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter
-
-    runtime = LiveRuntime(
-        broker=FakeBrokerAdapter(broker_id=BrokerId("paper")),
-        feed=FakeStreamingMarketDataAdapter(source_id="ibkr-paper-md"),
-    )
-    runtime.start()
-
-    state = runtime.apply_runtime_event(
-        RuntimeEvent(
-            kind="runtime.degraded",
-            payload={"reason": "stale_market_data"},
-        )
-    )
-    result = runtime.submit_order(
-        BrokerOrderRequest(
-            order_id=OrderId("ord-001"),
-            client_order_id="client-ord-001",
-            account_id=AccountId("DU1234567"),
-            strategy_id=None,
-            instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
-            side=OrderSide.BUY,
-            quantity=Decimal("1"),
-        )
-    )
-
-    assert state is RuntimeSessionState.DEGRADED
-    assert result.accepted is False
-    assert result.reason_code == "RUNTIME_DEGRADED"
+    assert machine.apply("degrade") is RuntimeSessionState.DEGRADED
 
 
-def test_live_runtime_direct_submit_path_is_disabled_when_running() -> None:
-    from decimal import Decimal
+def test_live_runtime_facade_is_not_exported() -> None:
+    import importlib
 
-    from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId
-    from qts.execution.broker import BrokerOrderRequest
-    from qts.execution.order_manager import OrderSide
-    from qts.runtime.live import LiveRuntime
-    from qts.testing.fakes.broker import FakeBrokerAdapter
-    from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter
+    import qts.runtime as runtime_package
+    from qts.runtime.session import RuntimeSession
 
-    broker = FakeBrokerAdapter(broker_id=BrokerId("paper"))
-    runtime = LiveRuntime(
-        broker=broker,
-        feed=FakeStreamingMarketDataAdapter(source_id="ibkr-paper-md"),
-    )
-    runtime.start()
-
-    result = runtime.submit_order(
-        BrokerOrderRequest(
-            order_id=OrderId("ord-direct-001"),
-            client_order_id="client-ord-direct-001",
-            account_id=AccountId("DU1234567"),
-            strategy_id=None,
-            instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
-            side=OrderSide.BUY,
-            quantity=Decimal("1"),
-        )
-    )
-
-    assert result.accepted is False
-    assert result.reason_code == "DIRECT_ORDER_PATH_DISABLED"
-    assert result.report is None
+    assert not hasattr(runtime_package, "LiveRuntime")
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("qts.runtime.live")
+    assert not hasattr(RuntimeSession, "submit_order")

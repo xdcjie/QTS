@@ -38,12 +38,16 @@
   "qts.application.commands.ibkr_paper_order_lifecycle_drill": [
     "qts.config.ibkr",
     "qts.core.ids",
+    "qts.execution.adapters.ibkr_order_map",
     "qts.execution.broker",
     "qts.execution.order_manager",
+    "qts.reconciliation.snapshots",
+    "qts.runtime.actors.account_actor",
+    "qts.runtime.live_reconciliation",
     "qts.simulation.broker"
   ],
   "qts.application.commands.start_runtime": [
-    "qts.runtime.live",
+    "qts.runtime.broker_startup",
     "qts.runtime.mode"
   ],
   "qts.application.dto.backtest": [],
@@ -323,6 +327,7 @@
     "qts.registry.broker_symbol_mapping"
   ],
   "qts.execution.adapters.ibkr_order_map": [
+    "qts.core.hashing",
     "qts.core.ids"
   ],
   "qts.execution.adapters.simulated_execution_adapter": [
@@ -466,7 +471,9 @@
     "qts.data.provenance",
     "qts.reporting.base"
   ],
-  "qts.reporting.base": [],
+  "qts.reporting.base": [
+    "qts.core.hashing"
+  ],
   "qts.reporting.broker_runtime": [
     "qts.core.hashing",
     "qts.execution.adapters.simulated_execution_adapter",
@@ -480,7 +487,9 @@
     "qts.core.ids"
   ],
   "qts.risk.risk_engine": [
-    "qts.risk.rule"
+    "qts.risk.rule",
+    "qts.risk.rules.market_data_freshness",
+    "qts.risk.rules.market_data_permission"
   ],
   "qts.risk.rule": [],
   "qts.risk.rule_registry": [
@@ -559,10 +568,16 @@
     "qts.runtime.dependencies",
     "qts.runtime.mailbox",
     "qts.runtime.mode",
+    "qts.runtime.router",
     "qts.runtime.signal_policy",
     "qts.runtime.state_recovery",
     "qts.runtime.strategy_execution_pipeline",
     "qts.runtime.topology"
+  ],
+  "qts.runtime.broker_startup": [
+    "qts.core.hashing",
+    "qts.runtime.mode",
+    "qts.runtime.permissions"
   ],
   "qts.runtime.commands": [
     "qts.core.time"
@@ -607,12 +622,17 @@
     "qts.risk.risk_engine",
     "qts.runtime.actors.account_actor",
     "qts.runtime.actors.execution_actor",
+    "qts.runtime.broker_startup",
     "qts.runtime.intent_processing",
-    "qts.runtime.live",
     "qts.runtime.mode",
     "qts.runtime.sinks.base",
     "qts.runtime.state_recovery",
     "qts.runtime.topology"
+  ],
+  "qts.runtime.durability": [
+    "qts.runtime.event_store",
+    "qts.runtime.sinks.base",
+    "qts.runtime.state_recovery"
   ],
   "qts.runtime.event_store": [
     "qts.core.ids",
@@ -632,15 +652,6 @@
     "qts.runtime.actors.account_actor",
     "qts.runtime.actors.order_manager_actor",
     "qts.strategy_sdk.target"
-  ],
-  "qts.runtime.live": [
-    "qts.core.hashing",
-    "qts.data.interfaces",
-    "qts.execution.broker",
-    "qts.runtime.mode",
-    "qts.runtime.permissions",
-    "qts.runtime.sinks.base",
-    "qts.runtime.state"
   ],
   "qts.runtime.live_reconciliation": [
     "qts.core.ids",
@@ -675,6 +686,9 @@
     "qts.runtime.sinks.base"
   ],
   "qts.runtime.mode": [],
+  "qts.runtime.order_result": [
+    "qts.execution.broker"
+  ],
   "qts.runtime.partitioning": [
     "qts.core.ids"
   ],
@@ -716,9 +730,13 @@
     "qts.runtime.intent_processing",
     "qts.runtime.mailbox",
     "qts.runtime.market_data_flow",
+    "qts.runtime.mode",
+    "qts.runtime.order_result",
     "qts.runtime.safety",
     "qts.runtime.sinks.base",
+    "qts.runtime.startup_gate",
     "qts.runtime.state",
+    "qts.runtime.state_recovery",
     "qts.runtime.topology"
   ],
   "qts.runtime.signal_policy": [
@@ -739,7 +757,7 @@
     "qts.runtime.sinks.base"
   ],
   "qts.runtime.startup_gate": [
-    "qts.runtime.live",
+    "qts.runtime.broker_startup",
     "qts.runtime.mode"
   ],
   "qts.runtime.state": [],

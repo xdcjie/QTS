@@ -8,7 +8,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, cast
 
-from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+from qts.core.ids import InstrumentId
 from qts.domain.market_data import Bar
 
 from tests.support.backtest_streaming import run_engine_streaming
@@ -65,34 +65,16 @@ def test_backtest_core_chain_smoke(tmp_path: Path) -> None:
 
 
 def test_paper_runtime_chain_smoke_with_fake_boundary() -> None:
-    from qts.execution.broker import BrokerOrderRequest
-    from qts.execution.order_manager import OrderSide
-    from qts.runtime.live import LiveRuntime
-    from qts.runtime.state import RuntimeSessionState
-    from qts.testing.fakes.broker import FakeBrokerAdapter
-    from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter
+    import importlib
 
-    broker = FakeBrokerAdapter(broker_id=BrokerId("paper"))
-    runtime = LiveRuntime(
-        broker=broker,
-        feed=FakeStreamingMarketDataAdapter(source_id="paper-md"),
-    )
-    assert runtime.start() is RuntimeSessionState.RUNNING
-    assert runtime.state is RuntimeSessionState.RUNNING
+    import pytest
+    import qts.runtime as runtime_package
+    from qts.runtime.session import RuntimeSession
 
-    request = BrokerOrderRequest(
-        order_id=OrderId("ord-smoke-001"),
-        client_order_id="client-smoke-001",
-        account_id=AccountId("acct-smoke"),
-        strategy_id=StrategyId("strategy-smoke"),
-        instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
-        side=OrderSide.BUY,
-        quantity=Decimal("1"),
-    )
-    result = runtime.submit_order(request)
-    assert result.accepted is False
-    assert result.reason_code == "DIRECT_ORDER_PATH_DISABLED"
-    assert result.report is None
+    assert not hasattr(runtime_package, "LiveRuntime")
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("qts.runtime.live")
+    assert not hasattr(RuntimeSession, "submit_order")
 
 
 def test_runtime_event_sink_smoke(tmp_path: Path) -> None:

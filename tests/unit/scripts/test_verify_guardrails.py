@@ -570,6 +570,56 @@ def test_guardrails_reject_removed_import_usage(
     }
 
 
+def test_guardrails_reject_removed_runtime_live_import_usage(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/runtime/session_consumer.py",
+        "from qts.runtime.live import RuntimeOrderResult\n",
+    )
+
+    assert _codes_by_suite(root, guardrails.RemovedImportNoNewUsageRule()) == {
+        "REMOVED_IMPORT_USAGE"
+    }
+
+
+def test_guardrails_reject_removed_live_runtime_import_usage(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/runtime/session_consumer.py",
+        "from qts.runtime.live import LiveRuntime\n",
+    )
+
+    violations = guardrails.GuardrailSuite(rules=(guardrails.RemovedImportNoNewUsageRule(),)).check(
+        root
+    )
+
+    assert {violation.code for violation in violations} == {"REMOVED_IMPORT_USAGE"}
+    assert violations[0].symbol == "qts.runtime.live.LiveRuntime"
+
+
+def test_guardrails_allow_canonical_broker_startup_and_order_result_imports(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/runtime/session_consumer.py",
+        "from qts.runtime.broker_startup import BrokerRuntimeStartupDecision\n"
+        "from qts.runtime.order_result import RuntimeOrderResult\n",
+    )
+
+    assert _codes_by_suite(root, guardrails.RemovedImportNoNewUsageRule()) == set()
+
+
 def test_default_guardrails_reject_removed_import_usage(
     tmp_path: Path,
 ) -> None:
@@ -810,6 +860,46 @@ def test_guardrails_reject_placeholder_docstrings_in_production(tmp_path: Path) 
     assert _codes(root) == {"PLACEHOLDER_DOCSTRING"}
 
 
+def test_guardrails_reject_stale_architecture_runtime_text(tmp_path: Path) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "docs/architecture/runtime_value_model_boundaries.md",
+        "| RuntimeOrderResult | qts.runtime.live | runtime result |\n",
+    )
+
+    assert _codes_by_suite(root, guardrails.StaleArchitectureTextRule()) == {
+        "STALE_ARCHITECTURE_TEXT"
+    }
+
+
+def test_guardrails_reject_stale_architecture_html_runtime_text(tmp_path: Path) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "docs/architecture/backtest_live_parallel_sequence.html",
+        "<section>LiveRuntimeSession</section>\n",
+    )
+
+    assert _codes_by_suite(root, guardrails.StaleArchitectureTextRule()) == {
+        "STALE_ARCHITECTURE_TEXT"
+    }
+
+
+def test_guardrails_allow_canonical_architecture_runtime_text(tmp_path: Path) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "docs/architecture/runtime_value_model_boundaries.md",
+        "| RuntimeOrderResult | qts.runtime.order_result | runtime result |\n",
+    )
+
+    assert _codes_by_suite(root, guardrails.StaleArchitectureTextRule()) == set()
+
+
 def test_guardrails_pass_current_repository() -> None:
     assert run_guardrails(Path(".")) == []
 
@@ -850,10 +940,61 @@ def test_guardrail_suite_default_preserves_expected_codes(tmp_path: Path) -> Non
     assert root_codes == suite_codes
 
 
+def test_guardrail_suite_includes_required_m0_hard_gate_rules() -> None:
+    guardrails = _load_guardrails_module()
+    rule_names = {rule.__class__.__name__ for rule in guardrails.GuardrailSuite().rules}
+
+    assert {
+        "ImportBoundaryRule",
+        "LivePackageNoReplayClassRule",
+        "ProductionNoFakeClassRule",
+        "DataLiveNoSharedContractRule",
+        "TransportCanonicalPathRule",
+        "RemovedImportNoNewUsageRule",
+        "ProductionNoTestingImportRule",
+        "SharedRuntimeWordingRule",
+        "ProductionPlaceholderDocstringRule",
+        "BrokerSymbolBoundaryRule",
+        "ProviderSdkImportRule",
+        "StrategySdkPublicSurfaceRule",
+        "StaleArchitectureTextRule",
+    } <= rule_names
+
+
+def test_guardrail_report_contains_rule_path_symbol_and_guidance(tmp_path: Path) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/runtime/session_consumer.py",
+        "from qts.runtime.live import LiveRuntime\n",
+    )
+
+    violation = guardrails.GuardrailSuite(rules=(guardrails.RemovedImportNoNewUsageRule(),)).check(
+        root
+    )[0]
+
+    report = violation.format()
+    assert "backend/src/qts/runtime/session_consumer.py:1" in report
+    assert "REMOVED_IMPORT_USAGE" in report
+    assert "qts.runtime.live.LiveRuntime" in report
+    assert "remediation:" in report
+
+
 def test_ci_and_pre_commit_run_architecture_guardrails() -> None:
     workflow = Path(".github/workflows/quality.yml").read_text(encoding="utf-8")
     pre_commit = Path(".pre-commit-config.yaml").read_text(encoding="utf-8")
 
     assert "make guardrails" in workflow
+    assert "pull_request:" in workflow
+    assert "push:" in workflow
     assert "make test-unit" in workflow
     assert "make guardrails" in pre_commit
+
+
+def test_make_check_keeps_guardrails_before_tests() -> None:
+    makefile = Path("Makefile").read_text(encoding="utf-8")
+
+    assert (
+        "check: format lint guardrails typecheck test-unit test-integration test-anchor" in makefile
+    )

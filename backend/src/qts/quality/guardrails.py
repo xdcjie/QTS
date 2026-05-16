@@ -42,6 +42,7 @@ REMOVED_IMPORT_MODULES = frozenset(
         "qts.execution.adapters.ibkr_transport",
         "qts.application.commands.start_paper",
         "qts.reporting.live",
+        "qts.runtime.live",
         "qts.runtime.live_runtime_session",
         "qts.runtime.live_runtime_dependencies",
         "qts.runtime.live_runtime_topology",
@@ -52,8 +53,18 @@ REMOVED_IMPORT_SYMBOLS = frozenset(
         ("qts.reporting", "LiveEventReporter"),
         ("qts.reporting", "LiveReportManifest"),
         ("qts.reporting", "LiveReportWriter"),
+        ("qts.runtime", "LiveRuntime"),
     }
 )
+REMOVED_IMPORT_WILDCARD_MODULES = frozenset({"qts.runtime.live"})
+STALE_ARCHITECTURE_TEXT = {
+    "qts.runtime.live": "Use qts.runtime.broker_startup or qts.runtime.order_result.",
+    "LiveRuntime": "RuntimeSession is the only broker-capable runtime entrypoint.",
+    "LiveRuntimeSession": "Use RuntimeSession.",
+    "live-beta": "Use current runtime readiness wording.",
+    "backend/src/qts/runtime/config.py": "Use the runtime/config package path.",
+}
+ARCHITECTURE_TEXT_GUARD_PATHS = (Path("docs/architecture"),)
 SOURCE_SPECIFIC_BOUNDARY_PREFIXES = (
     ("backtest",),
     ("data", "historical"),
@@ -281,6 +292,7 @@ GUARDRAIL_REMEDIATIONS = {
         "Move shared roll/session/resolution logic to a shared package."
     ),
     "SHARED_RUNTIME_WORDING": "Use mode-neutral runtime wording.",
+    "STALE_ARCHITECTURE_TEXT": "Update architecture text to the canonical M0 runtime boundary.",
     "STRATEGY_SDK_INTERNAL_LEAK": (
         "Expose only Strategy SDK public facades and readonly value types."
     ),
@@ -305,6 +317,7 @@ class GuardrailViolation:
     line: int
     message: str
     remediation: str = ""
+    symbol: str = ""
 
     def __post_init__(self) -> None:
         """Attach a default remediation for report consumers."""
@@ -321,8 +334,10 @@ class GuardrailViolation:
 
     def format(self) -> str:
         """Perform format."""
+        symbol = f" symbol: {self.symbol}" if self.symbol else ""
         return (
-            f"{self.path}:{self.line}: {self.code}: {self.message} remediation: {self.remediation}"
+            f"{self.path}:{self.line}: {self.code}:{symbol} "
+            f"{self.message} remediation: {self.remediation}"
         )
 
 
@@ -560,8 +575,32 @@ class RemovedImportNoNewUsageRule:
     ) -> list[GuardrailViolation]:
         """Perform check."""
         violations: list[GuardrailViolation] = []
+        imported_name_lines: set[tuple[str, int]] = set()
+        for imported_module, imported_name, line in _iter_imported_names(tree):
+            if (
+                imported_module not in REMOVED_IMPORT_WILDCARD_MODULES
+                and (
+                    imported_module,
+                    imported_name,
+                )
+                not in REMOVED_IMPORT_SYMBOLS
+            ):
+                continue
+            imported_name_lines.add((imported_module, line))
+            symbol = f"{imported_module}.{imported_name}"
+            violations.append(
+                GuardrailViolation(
+                    code=self.code,
+                    path=str(relative_path),
+                    line=line,
+                    message=f"removed import name is not allowed: {symbol}",
+                    symbol=symbol,
+                )
+            )
         for imported_module, line in _iter_imports(tree):
             if imported_module not in REMOVED_IMPORT_MODULES:
+                continue
+            if (imported_module, line) in imported_name_lines:
                 continue
             violations.append(
                 GuardrailViolation(
@@ -569,21 +608,47 @@ class RemovedImportNoNewUsageRule:
                     path=str(relative_path),
                     line=line,
                     message=f"removed import path is not allowed: {imported_module}",
+                    symbol=imported_module,
                 )
             )
-        for imported_module, imported_name, line in _iter_imported_names(tree):
-            if (imported_module, imported_name) not in REMOVED_IMPORT_SYMBOLS:
-                continue
-            violations.append(
-                GuardrailViolation(
-                    code=self.code,
-                    path=str(relative_path),
-                    line=line,
-                    message=(
-                        f"removed import name is not allowed: {imported_module}.{imported_name}"
-                    ),
+        return violations
+
+
+class StaleArchitectureTextRule:
+    """Reject stale architecture wording from M0 guarded documents."""
+
+    code = "STALE_ARCHITECTURE_TEXT"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform per-file check."""
+        return []
+
+    def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
+        """Perform repository-wide check."""
+        violations: list[GuardrailViolation] = []
+        for relative_path in _iter_architecture_text_paths(repo_root):
+            path = repo_root / relative_path
+            source = path.read_text(encoding="utf-8")
+            for token, guidance in STALE_ARCHITECTURE_TEXT.items():
+                line = _line_number_containing(source, token)
+                if line is None:
+                    continue
+                violations.append(
+                    GuardrailViolation(
+                        code=self.code,
+                        path=str(relative_path),
+                        line=line,
+                        message=f"stale architecture text is not allowed: {token}",
+                        remediation=guidance,
+                        symbol=token,
+                    )
                 )
-            )
         return violations
 
 
@@ -1078,6 +1143,7 @@ class GuardrailSuite:
             ProductionNoTestingImportRule(),
             SharedRuntimeWordingRule(),
             ProductionPlaceholderDocstringRule(),
+            StaleArchitectureTextRule(),
             RuntimeSessionComplexityRule(),
             RuntimeCoordinatorDecisionRule(),
         )
@@ -1104,24 +1170,22 @@ class GuardrailSuite:
     def check(self, repo_root: Path) -> list[GuardrailViolation]:
         """Perform check."""
         source_root = repo_root / QTS_ROOT
-        if not source_root.exists():
-            return []
-
         violations: list[GuardrailViolation] = []
-        for path in sorted(source_root.rglob("*.py")):
-            if "__pycache__" in path.parts:
-                continue
-            relative_path = path.relative_to(repo_root)
-            qts_relative_path = path.relative_to(repo_root / QTS_ROOT)
-            source = path.read_text(encoding="utf-8")
-            tree = ast.parse(source, filename=str(relative_path))
-            violations.extend(
-                self.check_file(
-                    relative_path=relative_path,
-                    qts_relative_path=qts_relative_path,
-                    tree=tree,
+        if source_root.exists():
+            for path in sorted(source_root.rglob("*.py")):
+                if "__pycache__" in path.parts:
+                    continue
+                relative_path = path.relative_to(repo_root)
+                qts_relative_path = path.relative_to(repo_root / QTS_ROOT)
+                source = path.read_text(encoding="utf-8")
+                tree = ast.parse(source, filename=str(relative_path))
+                violations.extend(
+                    self.check_file(
+                        relative_path=relative_path,
+                        qts_relative_path=qts_relative_path,
+                        tree=tree,
+                    )
                 )
-            )
         for rule in self.rules:
             if isinstance(rule, RepositoryRule):
                 violations.extend(rule.check_repository(repo_root))
@@ -1989,6 +2053,30 @@ def _iter_docstrings(tree: ast.AST) -> list[tuple[ast.AST, str]]:
         if docstring is not None:
             docstrings.append((node, docstring))
     return docstrings
+
+
+def _iter_architecture_text_paths(repo_root: Path) -> list[Path]:
+    paths: set[Path] = set()
+    for guarded_path in ARCHITECTURE_TEXT_GUARD_PATHS:
+        path = repo_root / guarded_path
+        if path.is_dir():
+            for suffix in ("*.md", "*.html"):
+                paths.update(item.relative_to(repo_root) for item in path.rglob(suffix))
+            continue
+        if path.exists():
+            paths.add(path.relative_to(repo_root))
+    return sorted(paths)
+
+
+def _line_number_containing(source: str, token: str) -> int | None:
+    for line_number, line in enumerate(source.splitlines(), start=1):
+        if token == "LiveRuntime":
+            if re.search(r"\bLiveRuntime\b", line):
+                return line_number
+            continue
+        if token in line:
+            return line_number
+    return None
 
 
 def _has_allowed_prefix(path: Path, prefixes: tuple[tuple[str, ...], ...]) -> bool:

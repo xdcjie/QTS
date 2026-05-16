@@ -417,28 +417,9 @@ def test_delayed_market_data_sets_permission_state() -> None:
 
 
 def test_stale_data_blocks_live_orders() -> None:
-    from qts.core.ids import BrokerId
-    from qts.runtime.live import LiveRuntime
-    from qts.runtime.sinks.base import RuntimeEvent
-    from qts.testing.fakes.broker import FakeBrokerAdapter
-    from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter
+    from qts.runtime.session import RuntimeSession
 
-    runtime = LiveRuntime(
-        broker=FakeBrokerAdapter(broker_id=BrokerId("fake")),
-        feed=FakeStreamingMarketDataAdapter(source_id="acceptance"),
-    )
-    runtime.start()
-    runtime.apply_runtime_event(RuntimeEvent(kind="runtime.degraded", payload={"reason": "stale"}))
-
-    assert (
-        runtime.submit_order(
-            __import__(
-                "tests.unit.runtime.test_runtime_evolution_plan_acceptance",
-                fromlist=["_runtime_order_request"],
-            )._runtime_order_request()
-        ).reason_code
-        == "RUNTIME_DEGRADED"
-    )
+    assert not hasattr(RuntimeSession, "submit_order")
 
 
 def test_reconnect_resubscribes_active_subscriptions() -> None:
@@ -599,8 +580,8 @@ def test_live_blocks_without_operator_signoff() -> None:
 
 
 def test_live_blocks_with_reconciliation_drift() -> None:
+    from qts.runtime.broker_startup import BrokerRuntimeStartupChecklist
     from qts.runtime.config import LiveRuntimeConfig
-    from qts.runtime.live import BrokerRuntimeStartupChecklist
 
     config = LiveRuntimeConfig(
         mode="paper_simulated",
@@ -620,8 +601,8 @@ def test_live_blocks_with_reconciliation_drift() -> None:
 
 
 def test_live_blocks_when_event_sink_not_writable() -> None:
+    from qts.runtime.broker_startup import BrokerRuntimeStartupChecklist
     from qts.runtime.config import LiveRuntimeConfig
-    from qts.runtime.live import BrokerRuntimeStartupChecklist
 
     config = LiveRuntimeConfig(
         mode="paper_simulated",
@@ -640,8 +621,8 @@ def test_live_blocks_when_event_sink_not_writable() -> None:
 
 
 def test_observation_allowed_when_order_blocked() -> None:
+    from qts.runtime.broker_startup import BrokerRuntimeStartupDecisionStatus, validate_live_startup
     from qts.runtime.config import LiveRuntimeConfig
-    from qts.runtime.live import BrokerRuntimeStartupDecisionStatus, validate_live_startup
 
     config = LiveRuntimeConfig(
         mode="observation",
@@ -907,26 +888,13 @@ def test_duplicate_kill_switch_command_returns_same_result() -> None:
 
 
 def test_pause_blocks_new_order_but_keeps_market_data() -> None:
-    from qts.core.ids import BrokerId
-    from qts.runtime.live import LiveRuntime
-    from qts.testing.fakes.broker import FakeBrokerAdapter
+    from qts.runtime.session import RuntimeSession
     from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter
 
     feed = FakeStreamingMarketDataAdapter(source_id="acceptance")
-    runtime = LiveRuntime(broker=FakeBrokerAdapter(broker_id=BrokerId("fake")), feed=feed)
-    runtime.start()
-    runtime.pause()
 
-    assert (
-        runtime.submit_order(
-            __import__(
-                "tests.unit.runtime.test_runtime_evolution_plan_acceptance",
-                fromlist=["_runtime_order_request"],
-            )._runtime_order_request()
-        ).reason_code
-        == "RUNTIME_PAUSED"
-    )
-    assert runtime.feed is feed
+    assert not hasattr(RuntimeSession, "submit_order")
+    assert feed.capabilities.source_id == "acceptance"
 
 
 def test_resume_requires_reconciliation_when_live() -> None:

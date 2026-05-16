@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from qts.runtime.live import BrokerRuntimeStartupDecision
+from qts.runtime.broker_startup import BrokerRuntimeStartupDecision
 from qts.runtime.mode import RuntimeMode
 
 

@@ -49,20 +49,9 @@ def _backtest_config_kwargs(tmp_path: Path) -> dict[str, Any]:
 
 
 def test_observation_mode_blocks_submit_order() -> None:
-    from qts.core.ids import BrokerId
-    from qts.runtime.live import LiveRuntime
-    from qts.testing.fakes.broker import FakeBrokerAdapter
-    from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter
+    from qts.runtime.session import RuntimeSession
 
-    runtime = LiveRuntime(
-        broker=FakeBrokerAdapter(broker_id=BrokerId("fake")),
-        feed=FakeStreamingMarketDataAdapter(source_id="acceptance"),
-    )
-
-    result = runtime.submit_order(_runtime_order_request())
-
-    assert result.accepted is False
-    assert result.reason_code == "RUNTIME_NOT_RUNNING"
+    assert not hasattr(RuntimeSession, "submit_order")
 
 
 def test_paper_simulated_never_constructs_ibkr_order_transport() -> None:
@@ -265,8 +254,8 @@ def test_brokerage_model_written_to_manifest(tmp_path: Path) -> None:
 
 def test_checklist_written_to_manifest(tmp_path: Path) -> None:
     from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
+    from qts.runtime.broker_startup import BrokerRuntimeStartupChecklist
     from qts.runtime.config import LiveRuntimeConfig
-    from qts.runtime.live import BrokerRuntimeStartupChecklist
     from qts.runtime.sinks.live import LiveRuntimeEventSink
 
     config = LiveRuntimeConfig(

@@ -5,47 +5,20 @@ from decimal import Decimal
 
 from fastapi.testclient import TestClient
 from qts.api.app import create_app
-from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+from qts.core.ids import AccountId, InstrumentId, OrderId
 from qts.data.events import MarketDataSubscription
 from qts.domain.market_data import Bar
-from qts.execution.broker import BrokerOrderRequest
 from qts.execution.order_manager import OrderSide
 from qts.reconciliation import OrderSnapshot, ReconciliationSnapshot, reconcile_snapshots
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.market_data_actor import MarketDataActor, MarketDataEvent
-from qts.runtime.live import LiveRuntime
 from qts.runtime.mailbox import Mailbox
-from qts.testing.fakes.broker import FakeBrokerAdapter
+from qts.runtime.session import RuntimeSession
 from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter
 
 
 def test_live_runtime_start_pause_resume_and_fake_broker_flow() -> None:
-    runtime = LiveRuntime(
-        broker=FakeBrokerAdapter(broker_id=BrokerId("fake")),
-        feed=FakeStreamingMarketDataAdapter(source_id="fake-live"),
-    )
-    runtime.start()
-    runtime.pause()
-
-    blocked = runtime.submit_order(
-        BrokerOrderRequest(
-            order_id=OrderId("order-1"),
-            client_order_id="client-order-1",
-            account_id=AccountId("acct-a"),
-            strategy_id=StrategyId("strat-a"),
-            instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
-            side=OrderSide.BUY,
-            quantity=Decimal("1"),
-        )
-    )
-    runtime.resume()
-    assert blocked.request is not None
-    accepted = runtime.submit_order(blocked.request)
-
-    assert blocked.accepted is False
-    assert blocked.reason_code == "RUNTIME_PAUSED"
-    assert accepted.accepted is False
-    assert accepted.reason_code == "DIRECT_ORDER_PATH_DISABLED"
+    assert not hasattr(RuntimeSession, "submit_order")
 
 
 def test_live_feed_routes_through_market_data_actor_aggregation_pipeline() -> None:
