@@ -72,7 +72,7 @@ def test_backtest_streaming_emits_stable_artifacts(tmp_path: Path) -> None:
         "trade_ledger",
     }
     assert captured.result.artifact_rows == {
-        "events": 10,
+        "events": 11,
         "orders": 1,
         "fills": 1,
         "trade_ledger": 1,

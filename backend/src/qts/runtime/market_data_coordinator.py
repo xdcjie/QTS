@@ -4,17 +4,17 @@ from __future__ import annotations
 
 from typing import Any
 
-from qts.core.ids import AccountId, CausationId, CorrelationId, InstrumentId, StrategyId
+from qts.core.ids import AccountId, CorrelationId
 from qts.data.permissions import MarketDataPermissionEvent
 from qts.data.sources.streaming_market_data_source import (
     StreamingMarketDataDegradation,
     StreamingMarketDataSubscriptionEvent,
 )
 from qts.domain.market_data import Bar
-from qts.domain.risk import RiskDecision
 from qts.execution.order_manager import Order, OrderFill
 from qts.runtime.actors.account_actor import AccountSnapshot
 from qts.runtime.actors.signal_aggregator_actor import SignalContribution
+from qts.runtime.runtime_event_writer import RuntimeEventWriter
 from qts.runtime.session import RuntimeSessionResult
 from qts.runtime.state import RuntimeSessionState
 
@@ -24,6 +24,7 @@ class RuntimeMarketDataCoordinator:
 
     def __init__(self, session: Any) -> None:
         self._session = session
+        self._runtime_event_writer = RuntimeEventWriter(write=session._write)
 
     def on_market_data_source_event(
         self,
@@ -305,19 +306,22 @@ class RuntimeMarketDataCoordinator:
                             )
                             all_orders.extend(processed.orders)
                             all_fills.extend(processed.fills)
-                            self._write_risk_decision_events(
+                            self._runtime_event_writer.write_risk_decision_events(
                                 processed.risk_decisions,
                                 correlation_id=correlation_id,
                                 account_id=partition.account_id,
                                 instrument_id=intent.asset.instrument_id,
                                 strategy_id=strategy_id,
                             )
-                            self._write_order_events(
+                            self._runtime_event_writer.write_order_events(
                                 processed.orders,
-                                partition=partition,
-                                contributing_strategy_ids=batch.contributing_strategy_ids,
+                                partition.order_manager_actor,
+                                fallback_contributing_strategy_ids=batch.contributing_strategy_ids,
                             )
-                            self._write_fill_events(processed.fills, partition=partition)
+                            self._runtime_event_writer.write_fill_events(
+                                processed.fills,
+                                partition.order_manager_actor,
+                            )
 
             session._event_index += 1
 
@@ -344,152 +348,6 @@ class RuntimeMarketDataCoordinator:
         if len(account_snapshots) != 1:
             return None
         return account_snapshots[0][1]
-
-    def _write_risk_decision_events(
-        self,
-        risk_decisions: tuple[RiskDecision, ...],
-        *,
-        correlation_id: CorrelationId,
-        account_id: AccountId | None,
-        instrument_id: InstrumentId,
-        strategy_id: StrategyId,
-    ) -> None:
-        session = self._session
-        for decision in risk_decisions:
-            if decision.approved:
-                session._write_event(
-                    "runtime.risk_decision",
-                    {
-                        "approved": True,
-                        "rule_id": decision.rule_id,
-                        "aggregation_decision_id": decision.aggregation_decision_id,
-                        "contributing_strategy_ids": [
-                            strategy_id.value for strategy_id in decision.contributing_strategy_ids
-                        ],
-                        "conflict_reason": decision.conflict_reason,
-                        "evidence": dict(decision.evidence),
-                    },
-                    correlation_id=correlation_id,
-                    account_id=account_id,
-                    instrument_id=instrument_id,
-                    strategy_id=strategy_id,
-                )
-                continue
-            session._write_event(
-                "runtime.risk_decision",
-                {
-                    "approved": False,
-                    "reason_code": decision.reason_code,
-                    "reason": decision.reason,
-                    "rule_id": decision.rule_id,
-                    "aggregation_decision_id": decision.aggregation_decision_id,
-                    "contributing_strategy_ids": [
-                        strategy_id.value for strategy_id in decision.contributing_strategy_ids
-                    ],
-                    "conflict_reason": decision.conflict_reason,
-                    "evidence": dict(decision.evidence),
-                },
-                correlation_id=correlation_id,
-                account_id=account_id,
-                instrument_id=instrument_id,
-                strategy_id=strategy_id,
-            )
-            session._write_event(
-                "runtime.risk_rejected",
-                {
-                    "reason_code": decision.reason_code,
-                    "reason": decision.reason,
-                    "rule_id": decision.rule_id,
-                    "aggregation_decision_id": decision.aggregation_decision_id,
-                    "contributing_strategy_ids": [
-                        strategy_id.value for strategy_id in decision.contributing_strategy_ids
-                    ],
-                    "conflict_reason": decision.conflict_reason,
-                    "evidence": dict(decision.evidence),
-                },
-                correlation_id=correlation_id,
-                account_id=account_id,
-                instrument_id=instrument_id,
-                strategy_id=strategy_id,
-            )
-
-    def _write_order_events(
-        self,
-        orders: tuple[Order, ...],
-        *,
-        partition: Any,
-        contributing_strategy_ids: tuple[StrategyId, ...],
-    ) -> None:
-        session = self._session
-        for order in orders:
-            metadata = partition.order_manager_actor.route_metadata(order.order_id)
-            session._write_event(
-                "runtime.order_submitted",
-                {
-                    "order_id": order.order_id.value,
-                    "broker_order_id": order.broker_order_id,
-                    "client_order_id": metadata.client_order_id,
-                    "instrument_id": order.intent.instrument_id.value,
-                    "aggregation_decision_id": metadata.aggregation_decision_id,
-                    "contributing_strategy_ids": [
-                        strategy_id.value
-                        for strategy_id in (
-                            metadata.contributing_strategy_ids or contributing_strategy_ids
-                        )
-                    ],
-                },
-                correlation_id=metadata.correlation_id,
-                instrument_id=order.intent.instrument_id,
-                strategy_id=metadata.strategy_id,
-                account_id=metadata.account_id,
-            )
-            session._write_event(
-                "runtime.broker_report",
-                {
-                    "order_id": order.order_id.value,
-                    "state": order.state.value,
-                    "broker_order_id": order.broker_order_id,
-                    "client_order_id": metadata.client_order_id,
-                    "aggregation_decision_id": metadata.aggregation_decision_id,
-                    "contributing_strategy_ids": [
-                        strategy_id.value
-                        for strategy_id in (
-                            metadata.contributing_strategy_ids or contributing_strategy_ids
-                        )
-                    ],
-                },
-                correlation_id=metadata.correlation_id,
-                instrument_id=order.intent.instrument_id,
-                strategy_id=metadata.strategy_id,
-                account_id=metadata.account_id,
-                causation_id=CausationId(f"{metadata.client_order_id}:order_submitted"),
-            )
-
-    def _write_fill_events(self, fills: tuple[OrderFill, ...], *, partition: Any) -> None:
-        session = self._session
-        for fill in fills:
-            metadata = partition.order_manager_actor.route_metadata(fill.order_id)
-            order = partition.order_manager_actor.get_order(fill.order_id)
-            session._write_event(
-                "runtime.fill_applied",
-                {
-                    "fill_id": fill.fill_id,
-                    "order_id": fill.order_id.value,
-                    "broker_order_id": order.broker_order_id,
-                    "client_order_id": metadata.client_order_id,
-                    "instrument_id": fill.instrument_id.value,
-                    "side": fill.side.value,
-                    "quantity": str(fill.quantity),
-                    "price": str(fill.price),
-                    "commission": str(fill.commission),
-                    "slippage": str(fill.slippage),
-                },
-                correlation_id=metadata.correlation_id,
-                instrument_id=fill.instrument_id,
-                strategy_id=metadata.strategy_id,
-                account_id=metadata.account_id,
-                causation_id=CausationId(f"{metadata.client_order_id}:broker_report"),
-            )
 
     def _write_account_snapshots(self) -> None:
         session = self._session

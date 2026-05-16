@@ -1,4 +1,8 @@
-from qts.api.schemas.backtest_schema import BacktestRequestSchema, BacktestRunSchema
+from qts.api.schemas.backtest_schema import (
+    BacktestRequestSchema,
+    BacktestRunSchema,
+    BacktestStrategyOptionSchema,
+)
 from qts.api.schemas.operations import (
     KillSwitchCommand,
     KillSwitchCommandSchema,
@@ -14,6 +18,7 @@ from qts.api.schemas.operations import (
 __all__ = [
     "BacktestRequestSchema",
     "BacktestRunSchema",
+    "BacktestStrategyOptionSchema",
     "KillSwitchCommand",
     "KillSwitchCommandSchema",
     "KillSwitchResponse",

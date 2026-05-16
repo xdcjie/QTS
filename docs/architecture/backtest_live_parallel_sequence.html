@@ -606,26 +606,28 @@
       <div class="surface class-inventory" aria-label="生产类全量索引">
         <h2>生产类全量索引（按阶段 / 模块）</h2>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">511 classes</span></summary>
+          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">517 classes</span></summary>
           <ul>
-          <li><code>qts/api/schemas/backtest_schema.py</code> -> <code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span>, <code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span></li>
+          <li><code>qts/api/schemas/backtest_schema.py</code> -> <code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span>, <code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span>, <code>BacktestStrategyOptionSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:24</span></li>
           <li><code>qts/api/schemas/common.py</code> -> <code>StrategyStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:8</span>, <code>AccountSnapshotSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:15</span>, <code>OrderStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:22</span>, <code>RiskRuleSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:29</span>, <code>OperationalErrorSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:36</span></li>
           <li><code>qts/api/schemas/operations.py</code> -> <code>RuntimeCommandResponseSchema</code> <span class="location">backend/src/qts/api/schemas/operations.py:10</span>, <code>RuntimeCommandResultResponseSchema</code> <span class="location">backend/src/qts/api/schemas/operations.py:16</span>, <code>KillSwitchScopeSchema</code> <span class="location">backend/src/qts/api/schemas/operations.py:27</span>, <code>KillSwitchCommandSchema</code> <span class="location">backend/src/qts/api/schemas/operations.py:36</span>, <code>KillSwitchResponseSchema</code> <span class="location">backend/src/qts/api/schemas/operations.py:55</span></li>
           <li><code>qts/api/services/command_idempotency.py</code> -> <code>CommandIdempotencyStore</code> <span class="location">backend/src/qts/api/services/command_idempotency.py:11</span></li>
           <li><code>qts/api/websocket/dtos.py</code> -> <code>StreamEventType</code> <span class="location">backend/src/qts/api/websocket/dtos.py:10</span>, <code>StreamEventDTO</code> <span class="location">backend/src/qts/api/websocket/dtos.py:24</span></li>
           <li><code>qts/api/websocket/manager.py</code> -> <code>JsonWebSocket</code> <span class="location">backend/src/qts/api/websocket/manager.py:8</span>, <code>WebSocketConnectionManager</code> <span class="location">backend/src/qts/api/websocket/manager.py:20</span></li>
           <li><code>qts/application/commands/start_runtime.py</code> -> <code>StartRuntimeCommand</code> <span class="location">backend/src/qts/application/commands/start_runtime.py:13</span>, <code>RuntimeStartResult</code> <span class="location">backend/src/qts/application/commands/start_runtime.py:40</span></li>
-          <li><code>qts/application/dto/backtest.py</code> -> <code>BacktestRequestDTO</code> <span class="location">backend/src/qts/application/dto/backtest.py:9</span>, <code>BacktestRunDTO</code> <span class="location">backend/src/qts/application/dto/backtest.py:21</span></li>
+          <li><code>qts/application/dto/backtest.py</code> -> <code>BacktestRequestDTO</code> <span class="location">backend/src/qts/application/dto/backtest.py:10</span>, <code>BacktestRunDTO</code> <span class="location">backend/src/qts/application/dto/backtest.py:27</span>, <code>BacktestStrategyOptionDTO</code> <span class="location">backend/src/qts/application/dto/backtest.py:39</span></li>
           <li><code>qts/application/dto/health.py</code> -> <code>HealthStatusDTO</code> <span class="location">backend/src/qts/application/dto/health.py:9</span></li>
           <li><code>qts/application/dto/operations.py</code> -> <code>RuntimeStateDTO</code> <span class="location">backend/src/qts/application/dto/operations.py:11</span>, <code>RuntimeCommandResultDTO</code> <span class="location">backend/src/qts/application/dto/operations.py:18</span>, <code>KillSwitchCommandDTO</code> <span class="location">backend/src/qts/application/dto/operations.py:40</span>, <code>KillSwitchStateDTO</code> <span class="location">backend/src/qts/application/dto/operations.py:58</span>, <code>OperatorStatusFieldDTO</code> <span class="location">backend/src/qts/application/dto/operations.py:68</span>, <code>OperatorAlertDTO</code> <span class="location">backend/src/qts/application/dto/operations.py:90</span>, <code>OperatorDashboardStatusDTO</code> <span class="location">backend/src/qts/application/dto/operations.py:111</span></li>
           <li><code>qts/application/dto/order_events.py</code> -> <code>OrderFillDTO</code> <span class="location">backend/src/qts/application/dto/order_events.py:10</span></li>
-          <li><code>qts/application/services/backtest.py</code> -> <code>BacktestService</code> <span class="location">backend/src/qts/application/services/backtest.py:10</span></li>
+          <li><code>qts/application/services/backtest.py</code> -> <code>BacktestService</code> <span class="location">backend/src/qts/application/services/backtest.py:12</span></li>
+          <li><code>qts/application/services/backtest_strategy_catalog.py</code> -> <code>BacktestStrategyCatalog</code> <span class="location">backend/src/qts/application/services/backtest_strategy_catalog.py:11</span></li>
+          <li><code>qts/application/services/backtest_summary_store.py</code> -> <code>BacktestSummaryStore</code> <span class="location">backend/src/qts/application/services/backtest_summary_store.py:12</span></li>
           <li><code>qts/application/services/health.py</code> -> <code>HealthService</code> <span class="location">backend/src/qts/application/services/health.py:8</span></li>
           <li><code>qts/application/services/interfaces.py</code> -> <code>AccountService</code> <span class="location">backend/src/qts/application/services/interfaces.py:8</span>, <code>OrderService</code> <span class="location">backend/src/qts/application/services/interfaces.py:16</span>, <code>RiskService</code> <span class="location">backend/src/qts/application/services/interfaces.py:24</span></li>
           <li><code>qts/application/services/operations.py</code> -> <code>OperationsService</code> <span class="location">backend/src/qts/application/services/operations.py:26</span></li>
           <li><code>qts/application/services/strategy_service.py</code> -> <code>StrategyLifecycleService</code> <span class="location">backend/src/qts/application/services/strategy_service.py:9</span></li>
           <li><code>qts/application/strategy_lifecycle.py</code> -> <code>StrategyStatus</code> <span class="location">backend/src/qts/application/strategy_lifecycle.py:14</span>, <code>StrategyInstance</code> <span class="location">backend/src/qts/application/strategy_lifecycle.py:22</span>, <code>StrategyRegistry</code> <span class="location">backend/src/qts/application/strategy_lifecycle.py:40</span></li>
-          <li><code>qts/backtest/actor_loop.py</code> -> <code>BacktestRuntimeSink</code> <span class="location">backend/src/qts/backtest/actor_loop.py:31</span>, <code>BacktestActorLoopResult</code> <span class="location">backend/src/qts/backtest/actor_loop.py:61</span>, <code>BacktestActorLoop</code> <span class="location">backend/src/qts/backtest/actor_loop.py:75</span></li>
+          <li><code>qts/backtest/actor_loop.py</code> -> <code>BacktestRuntimeSink</code> <span class="location">backend/src/qts/backtest/actor_loop.py:32</span>, <code>BacktestActorLoopResult</code> <span class="location">backend/src/qts/backtest/actor_loop.py:62</span>, <code>BacktestActorLoop</code> <span class="location">backend/src/qts/backtest/actor_loop.py:76</span></li>
           <li><code>qts/backtest/dependencies.py</code> -> <code>BacktestEngineDependencies</code> <span class="location">backend/src/qts/backtest/dependencies.py:37</span>, <code>BacktestActorLoopConfig</code> <span class="location">backend/src/qts/backtest/dependencies.py:78</span>, <code>BacktestActorLoopDependencies</code> <span class="location">backend/src/qts/backtest/dependencies.py:95</span></li>
           <li><code>qts/backtest/engine.py</code> -> <code>BacktestStreamResult</code> <span class="location">backend/src/qts/backtest/engine.py:63</span>, <code>BacktestEngine</code> <span class="location">backend/src/qts/backtest/engine.py:82</span></li>
           <li><code>qts/backtest/instrument_context.py</code> -> <code>BacktestInstrumentContext</code> <span class="location">backend/src/qts/backtest/instrument_context.py:16</span></li>
@@ -768,6 +770,7 @@
           <li><code>qts/runtime/recovery.py</code> -> <code>RuntimeRecoveryCoordinator</code> <span class="location">backend/src/qts/runtime/recovery.py:10</span></li>
           <li><code>qts/runtime/rollback.py</code> -> <code>RuntimeRollbackCoordinator</code> <span class="location">backend/src/qts/runtime/rollback.py:10</span></li>
           <li><code>qts/runtime/router.py</code> -> <code>RouteNotFoundError</code> <span class="location">backend/src/qts/runtime/router.py:10</span>, <code>EventRouter</code> <span class="location">backend/src/qts/runtime/router.py:14</span></li>
+          <li><code>qts/runtime/runtime_event_writer.py</code> -> <code>_OrderManagerLike</code> <span class="location">backend/src/qts/runtime/runtime_event_writer.py:16</span>, <code>RuntimeEventWriter</code> <span class="location">backend/src/qts/runtime/runtime_event_writer.py:27</span></li>
           <li><code>qts/runtime/safety.py</code> -> <code>RuntimeKillSwitchDeactivateCommand</code> <span class="location">backend/src/qts/runtime/safety.py:11</span>, <code>RuntimeKillSwitchEvidence</code> <span class="location">backend/src/qts/runtime/safety.py:27</span></li>
           <li><code>qts/runtime/safety_controller.py</code> -> <code>RuntimeSafetyController</code> <span class="location">backend/src/qts/runtime/safety_controller.py:18</span></li>
           <li><code>qts/runtime/session.py</code> -> <code>RuntimeSessionResult</code> <span class="location">backend/src/qts/runtime/session.py:48</span>, <code>RuntimeRollbackCommand</code> <span class="location">backend/src/qts/runtime/session.py:61</span>, <code>RuntimeRollbackEvidence</code> <span class="location">backend/src/qts/runtime/session.py:77</span>, <code>RuntimeSession</code> <span class="location">backend/src/qts/runtime/session.py:90</span></li>
@@ -795,13 +798,14 @@
           <li><code>qts/strategy_sdk/target_emitter.py</code> -> <code>TargetIntentEmitter</code> <span class="location">backend/src/qts/strategy_sdk/target_emitter.py:8</span></li>
           <li><code>qts/testing/fakes/broker.py</code> -> <code>FakeBrokerAdapter</code> <span class="location">backend/src/qts/testing/fakes/broker.py:19</span></li>
           <li><code>qts/testing/fakes/market_data.py</code> -> <code>FakeStreamingMarketDataAdapter</code> <span class="location">backend/src/qts/testing/fakes/market_data.py:16</span></li>
-        </ul>
+          </ul>
         </details>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">511 classes</span></summary>
+          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">517 classes</span></summary>
           <ul class="method-index">
           <li><code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>BacktestStrategyOptionSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:24</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>StrategyStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:8</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>AccountSnapshotSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:15</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>OrderStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:22</span> -> <span class="muted">no public/core methods</span></li>
@@ -819,8 +823,9 @@
           <li><code>WebSocketConnectionManager</code> <span class="location">backend/src/qts/api/websocket/manager.py:20</span> -> <code>__init__():23</code>, <code>count property:27</code>, <code>async connect():31</code>, <code>disconnect():36</code>, <code>async broadcast():41</code></li>
           <li><code>StartRuntimeCommand</code> <span class="location">backend/src/qts/application/commands/start_runtime.py:13</span> -> <code>__post_init__():23</code></li>
           <li><code>RuntimeStartResult</code> <span class="location">backend/src/qts/application/commands/start_runtime.py:40</span> -> <code>__post_init__():53</code></li>
-          <li><code>BacktestRequestDTO</code> <span class="location">backend/src/qts/application/dto/backtest.py:9</span> -> <code>__post_init__():14</code></li>
-          <li><code>BacktestRunDTO</code> <span class="location">backend/src/qts/application/dto/backtest.py:21</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>BacktestRequestDTO</code> <span class="location">backend/src/qts/application/dto/backtest.py:10</span> -> <code>__post_init__():15</code></li>
+          <li><code>BacktestRunDTO</code> <span class="location">backend/src/qts/application/dto/backtest.py:27</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>BacktestStrategyOptionDTO</code> <span class="location">backend/src/qts/application/dto/backtest.py:39</span> -> <code>__post_init__():45</code></li>
           <li><code>HealthStatusDTO</code> <span class="location">backend/src/qts/application/dto/health.py:9</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>RuntimeStateDTO</code> <span class="location">backend/src/qts/application/dto/operations.py:11</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>RuntimeCommandResultDTO</code> <span class="location">backend/src/qts/application/dto/operations.py:18</span> -> <code>__post_init__():28</code></li>
@@ -830,7 +835,9 @@
           <li><code>OperatorAlertDTO</code> <span class="location">backend/src/qts/application/dto/operations.py:90</span> -> <code>__post_init__():98</code></li>
           <li><code>OperatorDashboardStatusDTO</code> <span class="location">backend/src/qts/application/dto/operations.py:111</span> -> <code>__post_init__():130</code>, <code>fields property:185</code></li>
           <li><code>OrderFillDTO</code> <span class="location">backend/src/qts/application/dto/order_events.py:10</span> -> <code>__post_init__():20</code></li>
-          <li><code>BacktestService</code> <span class="location">backend/src/qts/application/services/backtest.py:10</span> -> <code>__init__():13</code>, <code>submit():17</code></li>
+          <li><code>BacktestService</code> <span class="location">backend/src/qts/application/services/backtest.py:12</span> -> <code>__init__():15</code>, <code>submit():27</code>, <code>list_runs():39</code></li>
+          <li><code>BacktestStrategyCatalog</code> <span class="location">backend/src/qts/application/services/backtest_strategy_catalog.py:11</span> -> <code>__init__():14</code>, <code>list_options():18</code></li>
+          <li><code>BacktestSummaryStore</code> <span class="location">backend/src/qts/application/services/backtest_summary_store.py:12</span> -> <code>__init__():17</code>, <code>list_runs():21</code></li>
           <li><code>HealthService</code> <span class="location">backend/src/qts/application/services/health.py:8</span> -> <code>status():11</code></li>
           <li><code>AccountService</code> <span class="location">backend/src/qts/application/services/interfaces.py:8</span> -> <code>snapshot():11</code></li>
           <li><code>OrderService</code> <span class="location">backend/src/qts/application/services/interfaces.py:16</span> -> <code>status():19</code></li>
@@ -840,9 +847,9 @@
           <li><code>StrategyStatus</code> <span class="location">backend/src/qts/application/strategy_lifecycle.py:14</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>StrategyInstance</code> <span class="location">backend/src/qts/application/strategy_lifecycle.py:22</span> -> <code>__post_init__():32</code></li>
           <li><code>StrategyRegistry</code> <span class="location">backend/src/qts/application/strategy_lifecycle.py:40</span> -> <code>__init__():43</code>, <code>register():47</code>, <code>resolve():55</code></li>
-          <li><code>BacktestRuntimeSink</code> <span class="location">backend/src/qts/backtest/actor_loop.py:31</span> -> <code>order_count property:35</code>, <code>write():38</code>, <code>write_processed():41</code>, <code>write_equity_point():50</code></li>
-          <li><code>BacktestActorLoopResult</code> <span class="location">backend/src/qts/backtest/actor_loop.py:61</span> -> <code>processed_bars property:70</code></li>
-          <li><code>BacktestActorLoop</code> <span class="location">backend/src/qts/backtest/actor_loop.py:75</span> -> <code>__init__():78</code>, <code>run():128</code></li>
+          <li><code>BacktestRuntimeSink</code> <span class="location">backend/src/qts/backtest/actor_loop.py:32</span> -> <code>order_count property:36</code>, <code>write():39</code>, <code>write_processed():42</code>, <code>write_equity_point():51</code></li>
+          <li><code>BacktestActorLoopResult</code> <span class="location">backend/src/qts/backtest/actor_loop.py:62</span> -> <code>processed_bars property:71</code></li>
+          <li><code>BacktestActorLoop</code> <span class="location">backend/src/qts/backtest/actor_loop.py:76</span> -> <code>__init__():79</code>, <code>run():129</code></li>
           <li><code>BacktestEngineDependencies</code> <span class="location">backend/src/qts/backtest/dependencies.py:37</span> -> <code>with_defaults():50</code></li>
           <li><code>BacktestActorLoopConfig</code> <span class="location">backend/src/qts/backtest/dependencies.py:78</span> -> <code>__post_init__():85</code></li>
           <li><code>BacktestActorLoopDependencies</code> <span class="location">backend/src/qts/backtest/dependencies.py:95</span> -> <span class="muted">no public/core methods</span></li>
@@ -1231,7 +1238,7 @@
           <li><code>LiveReconciliationResult</code> <span class="location">backend/src/qts/runtime/live_reconciliation.py:24</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>LiveReconciliation</code> <span class="location">backend/src/qts/runtime/live_reconciliation.py:31</span> -> <code>__init__():34</code>, <code>internal_snapshot():45</code>, <code>startup_decision():77</code>, <code>periodic_check():86</code></li>
           <li><code>Mailbox</code> <span class="location">backend/src/qts/runtime/mailbox.py:8</span> -> <code>__init__():11</code>, <code>size property:16</code>, <code>put():20</code>, <code>get():24</code>, <code>empty():28</code></li>
-          <li><code>RuntimeMarketDataCoordinator</code> <span class="location">backend/src/qts/runtime/market_data_coordinator.py:22</span> -> <code>__init__():25</code>, <code>on_market_data_source_event():28</code>, <code>on_market_data():60</code></li>
+          <li><code>RuntimeMarketDataCoordinator</code> <span class="location">backend/src/qts/runtime/market_data_coordinator.py:22</span> -> <code>__init__():25</code>, <code>on_market_data_source_event():29</code>, <code>on_market_data():61</code></li>
           <li><code>MarketDataFlowResult</code> <span class="location">backend/src/qts/runtime/market_data_flow.py:26</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>MarketDataFlow</code> <span class="location">backend/src/qts/runtime/market_data_flow.py:33</span> -> <code>__init__():36</code>, <code>publish_bar():51</code>, <code>publish_source_event():65</code>, <code>risk_context_for():97</code></li>
           <li><code>RuntimeMode</code> <span class="location">backend/src/qts/runtime/mode.py:8</span> -> <code>from_value():19</code></li>
@@ -1247,6 +1254,8 @@
           <li><code>RuntimeRollbackCoordinator</code> <span class="location">backend/src/qts/runtime/rollback.py:10</span> -> <code>__init__():13</code>, <code>rollback():16</code></li>
           <li><code>RouteNotFoundError</code> <span class="location">backend/src/qts/runtime/router.py:10</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>EventRouter</code> <span class="location">backend/src/qts/runtime/router.py:14</span> -> <code>__init__():17</code>, <code>register():24</code>, <code>route():28</code></li>
+          <li><code>_OrderManagerLike</code> <span class="location">backend/src/qts/runtime/runtime_event_writer.py:16</span> -> <code>route_metadata():19</code>, <code>get_order():22</code></li>
+          <li><code>RuntimeEventWriter</code> <span class="location">backend/src/qts/runtime/runtime_event_writer.py:27</span> -> <code>write_risk_decision_events():32</code>, <code>write_order_events():65</code>, <code>write_fill_events():118</code></li>
           <li><code>RuntimeKillSwitchDeactivateCommand</code> <span class="location">backend/src/qts/runtime/safety.py:11</span> -> <code>__post_init__():18</code></li>
           <li><code>RuntimeKillSwitchEvidence</code> <span class="location">backend/src/qts/runtime/safety.py:27</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>RuntimeSafetyController</code> <span class="location">backend/src/qts/runtime/safety_controller.py:18</span> -> <code>__init__():21</code>, <code>blocked_reason():24</code>, <code>activate_kill_switch():43</code>, <code>deactivate_kill_switch():113</code></li>
@@ -1311,7 +1320,7 @@
           <li><code>TargetIntentEmitter</code> <span class="location">backend/src/qts/strategy_sdk/target_emitter.py:8</span> -> <code>__init__():11</code>, <code>intents property:16</code>, <code>emit():20</code></li>
           <li><code>FakeBrokerAdapter</code> <span class="location">backend/src/qts/testing/fakes/broker.py:19</span> -> <code>__init__():22</code>, <code>capabilities property:29</code>, <code>submit_order():35</code>, <code>cancel_order():49</code>, <code>order_request():60</code>, <code>emit_fill():64</code></li>
           <li><code>FakeStreamingMarketDataAdapter</code> <span class="location">backend/src/qts/testing/fakes/market_data.py:16</span> -> <code>__init__():19</code>, <code>capabilities property:34</code>, <code>subscription_count property:39</code>, <code>subscribe():43</code>, <code>emit():48</code>, <code>fail():52</code></li>
-        </ul>
+          </ul>
         </details>
       </div>
 
@@ -3019,10 +3028,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>304 files</span>
-      <span>512 classes</span>
-      <span>1595 functions</span>
-      <span>290 backend</span>
+      <span>307 files</span>
+      <span>518 classes</span>
+      <span>1615 functions</span>
+      <span>293 backend</span>
       <span>14 frontend</span>
     </div>
   </div>
@@ -3093,7 +3102,7 @@
         <code>backend/src/qts/api/mappers.py</code>
         <span class="inventory-counts">
           <span>0 classes</span>
-          <span>9 functions</span>
+          <span>10 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -3104,15 +3113,16 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>map_backtest_request_schema</code></td><td>module:19</td><td>Map API input schema into an application DTO.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>map_backtest_run_dto</code></td><td>module:25</td><td>Map application output DTO into API response schema.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>map_runtime_state_dto</code></td><td>module:31</td><td>Map runtime state DTO into response payload.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>map_runtime_command_result_dto</code></td><td>module:37</td><td>Map runtime command result DTO into response payload.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>map_kill_switch_state_dto</code></td><td>module:50</td><td>Map kill-switch state DTO into response payload.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>map_operator_dashboard_status_dto</code></td><td>module:61</td><td>Map operator dashboard status DTO into response payload.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>_map_operator_status_field</code></td><td>module:70</td><td>提供模块级 map operator status field 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_map_operator_alert</code></td><td>module:77</td><td>提供模块级 map operator alert 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_map_operator_value</code></td><td>module:86</td><td>提供模块级 map operator value 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>map_backtest_request_schema</code></td><td>module:27</td><td>Map API input schema into an application DTO.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>map_backtest_run_dto</code></td><td>module:33</td><td>Map application output DTO into API response schema.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>map_backtest_strategy_option_dto</code></td><td>module:43</td><td>Map an application strategy option DTO into an API response schema.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>map_runtime_state_dto</code></td><td>module:54</td><td>Map runtime state DTO into response payload.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>map_runtime_command_result_dto</code></td><td>module:60</td><td>Map runtime command result DTO into response payload.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>map_kill_switch_state_dto</code></td><td>module:73</td><td>Map kill-switch state DTO into response payload.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>map_operator_dashboard_status_dto</code></td><td>module:84</td><td>Map operator dashboard status DTO into response payload.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>_map_operator_status_field</code></td><td>module:93</td><td>提供模块级 map operator status field 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_map_operator_alert</code></td><td>module:100</td><td>提供模块级 map operator alert 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_map_operator_value</code></td><td>module:109</td><td>提供模块级 map operator value 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -3158,7 +3168,7 @@
         <code>backend/src/qts/api/routes/backtests.py</code>
         <span class="inventory-counts">
           <span>0 classes</span>
-          <span>1 function</span>
+          <span>3 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -3169,7 +3179,9 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>submit_backtest</code></td><td>module:19</td><td>Submit a backtest request through the backtest application service.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>submit_backtest</code></td><td>module:24</td><td>Submit a backtest request through the backtest application service.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>list_backtests</code></td><td>module:32</td><td>List recent backtest runs from persisted summaries.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>list_backtest_strategy_options</code></td><td>module:44</td><td>List runnable backtest strategy options from configured backtest files.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
             </tbody>
           </table>
         </div>
@@ -3304,7 +3316,7 @@
       <summary>
         <code>backend/src/qts/api/schemas/backtest_schema.py</code>
         <span class="inventory-counts">
-          <span>2 classes</span>
+          <span>3 classes</span>
           <span>0 functions</span>
         </span>
       </summary>
@@ -3318,6 +3330,7 @@
             <tbody>
               <tr><td><code>BacktestRequestSchema</code></td><td>backtest_schema:8</td><td>HTTP request for submitting a backtest.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
               <tr><td><code>BacktestRunSchema</code></td><td>backtest_schema:14</td><td>HTTP response for a submitted backtest.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
+              <tr><td><code>BacktestStrategyOptionSchema</code></td><td>backtest_schema:24</td><td>HTTP response for a runnable backtest strategy option.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
             </tbody>
           </table>
         </div>
@@ -3720,8 +3733,8 @@
       <summary>
         <code>backend/src/qts/application/dto/backtest.py</code>
         <span class="inventory-counts">
-          <span>2 classes</span>
-          <span>1 function</span>
+          <span>3 classes</span>
+          <span>2 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -3732,8 +3745,9 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>BacktestRequestDTO</code></td><td>backtest:9</td><td>Stable application request for starting a backtest.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
-              <tr><td><code>BacktestRunDTO</code></td><td>backtest:21</td><td>Stable application response for a submitted backtest.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
+              <tr><td><code>BacktestRequestDTO</code></td><td>backtest:10</td><td>Stable application request for starting a backtest.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
+              <tr><td><code>BacktestRunDTO</code></td><td>backtest:27</td><td>Stable application response for a submitted backtest.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
+              <tr><td><code>BacktestStrategyOptionDTO</code></td><td>backtest:39</td><td>Configured backtest option exposed to UI/API clients.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
             </tbody>
           </table>
         </div>
@@ -3742,7 +3756,8 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__post_init__</code></td><td>BacktestRequestDTO:14</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>BacktestRequestDTO:15</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>BacktestStrategyOptionDTO:45</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -3865,7 +3880,7 @@
         <code>backend/src/qts/application/services/backtest.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
-          <span>2 functions</span>
+          <span>3 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -3876,7 +3891,7 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>BacktestService</code></td><td>backtest:10</td><td>Application boundary for backtest use cases.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestService</code></td><td>backtest:12</td><td>Application boundary for backtest use cases.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -3885,8 +3900,80 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__init__</code></td><td>BacktestService:13</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>submit</code></td><td>BacktestService:17</td><td>Perform submit.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>BacktestService:15</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>submit</code></td><td>BacktestService:27</td><td>Perform submit.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>list_runs</code></td><td>BacktestService:39</td><td>List completed or failed backtests from persisted summaries.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
+        <code>backend/src/qts/application/services/backtest_strategy_catalog.py</code>
+        <span class="inventory-counts">
+          <span>1 class</span>
+          <span>4 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Backtest strategy option catalog sourced from runtime config files.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>BacktestStrategyCatalog</code></td><td>backtest_strategy_catalog:11</td><td>Expose runnable backtest configurations as strategy options.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>__init__</code></td><td>BacktestStrategyCatalog:14</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>list_options</code></td><td>BacktestStrategyCatalog:18</td><td>List valid backtest configs in deterministic label order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_option_from_path</code></td><td>BacktestStrategyCatalog:29</td><td>Parse one config file into a UI/API strategy option.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_label_for_config</code></td><td>BacktestStrategyCatalog:39</td><td>Return the operator-facing label for one backtest config.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
+        <code>backend/src/qts/application/services/backtest_summary_store.py</code>
+        <span class="inventory-counts">
+          <span>1 class</span>
+          <span>7 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Persisted backtest summary access.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>BacktestSummaryStore</code></td><td>backtest_summary_store:12</td><td>Read persisted backtest summary files with schema compatibility checks.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>__init__</code></td><td>BacktestSummaryStore:17</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>list_runs</code></td><td>BacktestSummaryStore:21</td><td>List summary-backed backtest runs newest first.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_read_summary</code></td><td>BacktestSummaryStore:34</td><td>Read one summary file into the public application DTO.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_summary_payload</code></td><td>BacktestSummaryStore:66</td><td>Load a summary payload if it is readable JSON object.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_invalid_summary</code></td><td>BacktestSummaryStore:76</td><td>Return a deterministic DTO for unreadable summary files.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_run_id_from_summary_path</code></td><td>BacktestSummaryStore:86</td><td>Derive run id from a canonical summary file name.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_string_field</code></td><td>BacktestSummaryStore:91</td><td>Return a non-empty string field from a summary payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -4127,9 +4214,9 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>BacktestRuntimeSink</code></td><td>actor_loop:31</td><td>Minimal backtest sink contract used by the actor loop.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
-              <tr><td><code>BacktestActorLoopResult</code></td><td>actor_loop:61</td><td>Result summary produced by an actor loop run.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BacktestActorLoop</code></td><td>actor_loop:75</td><td>Run backtest bars through strategy/order execution actors.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestRuntimeSink</code></td><td>actor_loop:32</td><td>Minimal backtest sink contract used by the actor loop.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>BacktestActorLoopResult</code></td><td>actor_loop:62</td><td>Result summary produced by an actor loop run.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestActorLoop</code></td><td>actor_loop:76</td><td>Run backtest bars through strategy/order execution actors.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -4138,15 +4225,15 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>order_count</code></td><td>BacktestRuntimeSink:35</td><td>Return total processed orders.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write</code></td><td>BacktestRuntimeSink:38</td><td>Write one normalized runtime event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_processed</code></td><td>BacktestRuntimeSink:41</td><td>Record processed orders and fills.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_equity_point</code></td><td>BacktestRuntimeSink:50</td><td>Record per-bar equity point.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>processed_bars</code></td><td>BacktestActorLoopResult:70</td><td>Perform processed_bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>BacktestActorLoop:78</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_resolve_actor_classes</code></td><td>BacktestActorLoop:120</td><td>Perform _resolve_actor_classes.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>run</code></td><td>BacktestActorLoop:128</td><td>Perform run.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_write_account_snapshot</code></td><td>BacktestActorLoop:492</td><td>Emit a normalized account snapshot event.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>order_count</code></td><td>BacktestRuntimeSink:36</td><td>Return total processed orders.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write</code></td><td>BacktestRuntimeSink:39</td><td>Write one normalized runtime event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_processed</code></td><td>BacktestRuntimeSink:42</td><td>Record processed orders and fills.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_equity_point</code></td><td>BacktestRuntimeSink:51</td><td>Record per-bar equity point.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>processed_bars</code></td><td>BacktestActorLoopResult:71</td><td>Perform processed_bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>BacktestActorLoop:79</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_resolve_actor_classes</code></td><td>BacktestActorLoop:121</td><td>Perform _resolve_actor_classes.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>run</code></td><td>BacktestActorLoop:129</td><td>Perform run.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_write_account_snapshot</code></td><td>BacktestActorLoop:439</td><td>Emit a normalized account snapshot event.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -4331,11 +4418,11 @@
               <tr><td><code>processed_bars</code></td><td>BacktestRun:34</td><td>Perform processed_bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>report_hash</code></td><td>BacktestRun:39</td><td>Perform report_hash.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>run_backtest</code></td><td>module:44</td><td>Run a backtest and write partitioned streaming artifacts.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>_catalog_load_config</code></td><td>module:87</td><td>Perform _catalog_load_config.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_load_strategy</code></td><td>module:100</td><td>Perform _load_strategy.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_import_strategy_module</code></td><td>module:112</td><td>Load a module that defines the requested strategy class.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_strategy_type_from_module</code></td><td>module:128</td><td>Extract the strategy class from a strategy module.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_streaming_summary_payload</code></td><td>module:142</td><td>Perform _streaming_summary_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_catalog_load_config</code></td><td>module:88</td><td>Perform _catalog_load_config.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_load_strategy</code></td><td>module:101</td><td>Perform _load_strategy.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_import_strategy_module</code></td><td>module:113</td><td>Load a module that defines the requested strategy class.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_strategy_type_from_module</code></td><td>module:129</td><td>Extract the strategy class from a strategy module.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_streaming_summary_payload</code></td><td>module:143</td><td>Perform _streaming_summary_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10522,7 +10609,7 @@
         <code>backend/src/qts/runtime/market_data_coordinator.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
-          <span>8 functions</span>
+          <span>5 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -10543,13 +10630,10 @@
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
               <tr><td><code>__init__</code></td><td>RuntimeMarketDataCoordinator:25</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>on_market_data_source_event</code></td><td>RuntimeMarketDataCoordinator:28</td><td>Handle a source market-data event, including degradation and permission signals.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_market_data</code></td><td>RuntimeMarketDataCoordinator:60</td><td>Handle one source bar through market-data, strategy, risk, and actors.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_single_account_snapshot</code></td><td>RuntimeMarketDataCoordinator:341</td><td>实现 RuntimeMarketDataCoordinator 的 single account snapshot 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_write_risk_decision_events</code></td><td>RuntimeMarketDataCoordinator:348</td><td>实现 RuntimeMarketDataCoordinator 的 write risk decision events 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_write_order_events</code></td><td>RuntimeMarketDataCoordinator:416</td><td>实现 RuntimeMarketDataCoordinator 的 write order events 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_write_fill_events</code></td><td>RuntimeMarketDataCoordinator:468</td><td>实现 RuntimeMarketDataCoordinator 的 write fill events 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_write_account_snapshots</code></td><td>RuntimeMarketDataCoordinator:494</td><td>实现 RuntimeMarketDataCoordinator 的 write account snapshots 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>on_market_data_source_event</code></td><td>RuntimeMarketDataCoordinator:29</td><td>Handle a source market-data event, including degradation and permission signals.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_market_data</code></td><td>RuntimeMarketDataCoordinator:61</td><td>Handle one source bar through market-data, strategy, risk, and actors.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_single_account_snapshot</code></td><td>RuntimeMarketDataCoordinator:345</td><td>实现 RuntimeMarketDataCoordinator 的 single account snapshot 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_write_account_snapshots</code></td><td>RuntimeMarketDataCoordinator:352</td><td>实现 RuntimeMarketDataCoordinator 的 write account snapshots 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10830,6 +10914,43 @@
               <tr><td><code>__init__</code></td><td>EventRouter:17</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>register</code></td><td>EventRouter:24</td><td>Perform register.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>route</code></td><td>EventRouter:28</td><td>Perform route.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
+        <code>backend/src/qts/runtime/runtime_event_writer.py</code>
+        <span class="inventory-counts">
+          <span>2 classes</span>
+          <span>6 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Shared runtime event writers for risk/order/fill observability.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>_OrderManagerLike</code></td><td>runtime_event_writer:16</td><td>Protocol-like facade for order manager observability metadata.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>RuntimeEventWriter</code></td><td>runtime_event_writer:27</td><td>Write runtime observability events for order flow and risk decisions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>route_metadata</code></td><td>_OrderManagerLike:19</td><td>Return route metadata for an order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>get_order</code></td><td>_OrderManagerLike:22</td><td>Return current order by order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_risk_decision_events</code></td><td>RuntimeEventWriter:32</td><td>Write approved/rejected risk decision events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_order_events</code></td><td>RuntimeEventWriter:65</td><td>Write submitted/order-state events for emitted orders.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_fill_events</code></td><td>RuntimeEventWriter:118</td><td>Write fill events with routing metadata and account context.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_risk_decision_payload</code></td><td>RuntimeEventWriter:151</td><td>Serialize shared risk decision fields for runtime events.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -12067,7 +12188,7 @@
         <code>frontend/src/components/BacktestLab.tsx</code>
         <span class="inventory-counts">
           <span>0 classes</span>
-          <span>3 functions</span>
+          <span>4 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -12078,9 +12199,10 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>BacktestLab</code></td><td>module:17</td><td>渲染或辅助渲染 backtest lab 控制台视图。</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>fetchResults</code></td><td>module:23</td><td>渲染或辅助渲染 backtest lab 控制台视图。</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>handleRun</code></td><td>module:31</td><td>渲染或辅助渲染 backtest lab 控制台视图。</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>BacktestLab</code></td><td>module:12</td><td>渲染或辅助渲染 backtest lab 控制台视图。</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>fetchResults</code></td><td>module:19</td><td>渲染或辅助渲染 backtest lab 控制台视图。</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>fetchStrategyOptions</code></td><td>module:25</td><td>渲染或辅助渲染 backtest lab 控制台视图。</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>handleRun</code></td><td>module:39</td><td>渲染或辅助渲染 backtest lab 控制台视图。</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
             </tbody>
           </table>
         </div>

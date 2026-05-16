@@ -4,8 +4,16 @@ from __future__ import annotations
 
 from typing import Any
 
-from qts.api.schemas.backtest_schema import BacktestRequestSchema, BacktestRunSchema
-from qts.application.dto.backtest import BacktestRequestDTO, BacktestRunDTO
+from qts.api.schemas.backtest_schema import (
+    BacktestRequestSchema,
+    BacktestRunSchema,
+    BacktestStrategyOptionSchema,
+)
+from qts.application.dto.backtest import (
+    BacktestRequestDTO,
+    BacktestRunDTO,
+    BacktestStrategyOptionDTO,
+)
 from qts.application.dto.operations import (
     KillSwitchStateDTO,
     OperatorAlertDTO,
@@ -19,13 +27,28 @@ from qts.application.dto.operations import (
 def map_backtest_request_schema(request: BacktestRequestSchema) -> BacktestRequestDTO:
     """Map API input schema into an application DTO."""
 
-    return BacktestRequestDTO(strategy_name=request.strategy_name)
+    return BacktestRequestDTO(config_path=request.config_path)
 
 
 def map_backtest_run_dto(run: BacktestRunDTO) -> BacktestRunSchema:
     """Map application output DTO into API response schema."""
 
-    return BacktestRunSchema(run_id=run.run_id, strategy_name=run.strategy_name, status=run.status)
+    return BacktestRunSchema(
+        run_id=run.run_id,
+        config_path=run.config_path,
+        status=run.status,
+    )
+
+
+def map_backtest_strategy_option_dto(
+    option: BacktestStrategyOptionDTO,
+) -> BacktestStrategyOptionSchema:
+    """Map an application strategy option DTO into an API response schema."""
+
+    return BacktestStrategyOptionSchema(
+        label=option.label,
+        config_path=option.config_path,
+    )
 
 
 def map_runtime_state_dto(state: RuntimeStateDTO) -> dict[str, Any]:
@@ -96,6 +119,7 @@ def _map_operator_value(value: object) -> object:
 __all__ = [
     "map_backtest_request_schema",
     "map_backtest_run_dto",
+    "map_backtest_strategy_option_dto",
     "map_kill_switch_state_dto",
     "map_operator_dashboard_status_dto",
     "map_runtime_command_result_dto",

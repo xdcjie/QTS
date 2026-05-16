@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import json
 from pathlib import Path
 
 
@@ -9,13 +10,76 @@ def test_application_services_return_stable_dtos_without_actor_internals() -> No
     from qts.application.services import BacktestService, HealthService
 
     health = HealthService().status()
-    result = BacktestService().submit(BacktestRequestDTO(strategy_name="smoke"))
+    result = BacktestService().submit(
+        BacktestRequestDTO(config_path="configs/backtest.gc_si.example.yaml")
+    )
 
     assert health.status == "ok"
     assert result.status == "accepted"
     assert result.run_id.startswith("bt-")
     assert not hasattr(result, "actor_ref")
     assert not hasattr(result, "mailbox")
+
+
+def test_backtest_service_persists_config_path_in_summary() -> None:
+    from qts.application.dto.backtest import BacktestRequestDTO
+    from qts.application.services import BacktestService
+
+    config_path = "configs/backtest.gc_si.example.yaml"
+
+    result = BacktestService().submit(BacktestRequestDTO(config_path=config_path))
+    summary = json.loads(Path(result.summary_path).read_text(encoding="utf-8"))
+
+    assert summary["schema_version"] == "1"
+    assert summary["run_id"] == result.run_id
+    assert summary["config_path"] == config_path
+    assert summary["status"] == "completed"
+
+
+def test_backtest_strategy_catalog_lists_valid_backtest_configs(tmp_path: Path) -> None:
+    from qts.application.services.backtest_strategy_catalog import BacktestStrategyCatalog
+
+    strategy_path = tmp_path / "strategies" / "example.yaml"
+    strategy_path.parent.mkdir()
+    strategy_path.write_text(
+        """
+strategy_id: example-momentum
+class_path: examples.strategies.gc_si_momentum:GcSiMomentumStrategy
+account_id: backtest-account
+params:
+  symbols:
+    - GC
+""".strip(),
+        encoding="utf-8",
+    )
+    config_path = tmp_path / "backtest.example.yaml"
+    config_path.write_text(
+        f"""
+market_data:
+  source: local_historical
+  config: configs/data/historical.local.yaml
+  catalog: research_futures
+roots:
+  - GC
+symbols:
+  - GC
+start: "2010-06-06T22:00:00Z"
+end: "2010-06-06T22:05:00Z"
+timeframe: 1m
+initial_cash: "1000000"
+strategy_config: {strategy_path}
+risk_config:
+  max_notional: "100000000"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / "backtest.invalid.yaml").write_text("mode: backtest", encoding="utf-8")
+
+    options = BacktestStrategyCatalog(config_dir=tmp_path).list_options()
+
+    assert len(options) == 1
+    assert options[0].label == "example-momentum"
+    assert options[0].config_path == str(config_path)
 
 
 def test_operations_service_keeps_private_mapping_logic_inside_the_service() -> None:

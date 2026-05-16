@@ -1,13 +1,8 @@
 import { useState, useEffect } from 'react'
 import { History, Play, Settings, ChevronRight, Loader2, BarChart2, RefreshCw } from 'lucide-react'
 import { apiClient } from '@/api/client'
-import { BacktestRun } from '@/models'
+import { BacktestRun, BacktestStrategyOption } from '@/models'
 import { cn } from '../App'
-
-const STRATEGY_OPTIONS = [
-  { label: 'EMA Cross', class_path: 'qts.user_strategies.ema_cross.strategy.EMAStrategy' },
-  { label: 'Mean Reversion', class_path: 'qts.user_strategies.mean_reversion.strategy.MeanReversionStrategy' },
-]
 
 interface BacktestRunExt extends BacktestRun {
   _strategy?: string
@@ -17,24 +12,41 @@ interface BacktestRunExt extends BacktestRun {
 export function BacktestLab() {
   const [isRunning, setIsRunning] = useState(false)
   const [results, setResults] = useState<BacktestRunExt[]>([])
+  const [strategyOptions, setStrategyOptions] = useState<BacktestStrategyOption[]>([])
   const [strategyIdx, setStrategyIdx] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
   const fetchResults = () => {
     apiClient.get<BacktestRun[]>('/backtests')
-      .then(data => setResults([...data].reverse()))
+      .then(data => setResults(data))
       .catch(() => {})
   }
 
-  useEffect(() => { fetchResults() }, [])
+  const fetchStrategyOptions = () => {
+    apiClient.get<BacktestStrategyOption[]>('/backtests/strategy-options')
+      .then(data => {
+        setStrategyOptions(data)
+        setStrategyIdx(prev => data.length === 0 ? 0 : Math.min(prev, data.length - 1))
+      })
+      .catch(() => setError('Unable to load backtest strategy options.'))
+  }
+
+  useEffect(() => {
+    fetchResults()
+    fetchStrategyOptions()
+  }, [])
 
   const handleRun = async () => {
+    const strategy = strategyOptions[strategyIdx]
+    if (!strategy) {
+      setError('No backtest strategy options are configured.')
+      return
+    }
     setIsRunning(true)
     setError(null)
-    const strategy = STRATEGY_OPTIONS[strategyIdx]
     try {
       const result = await apiClient.post<BacktestRun>('/backtests', {
-        strategy_name: strategy.label,
+        config_path: strategy.config_path,
       })
       const ext: BacktestRunExt = { ...result, _strategy: strategy.label, _date: 'Just now' }
       setResults(prev => [ext, ...prev])
@@ -59,7 +71,7 @@ export function BacktestLab() {
           </button>
           <button
             onClick={handleRun}
-            disabled={isRunning}
+            disabled={isRunning || strategyOptions.length === 0}
             className="btn-primary flex items-center gap-2 disabled:opacity-50"
           >
             {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
@@ -90,10 +102,13 @@ export function BacktestLab() {
                 onChange={e => setStrategyIdx(Number(e.target.value))}
                 className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-accent"
               >
-                {STRATEGY_OPTIONS.map((s, i) => (
-                  <option key={i} value={i}>{s.label}</option>
+                {strategyOptions.map((s, i) => (
+                  <option key={s.config_path} value={i}>{s.label}</option>
                 ))}
               </select>
+              {strategyOptions.length === 0 && (
+                <p className="text-xs text-muted mt-2">No configured backtest strategies available.</p>
+              )}
             </div>
           </div>
         </div>
@@ -122,7 +137,7 @@ export function BacktestLab() {
                           <BarChart2 className="w-4 h-4 text-accent" />
                         </div>
                         <div>
-                          <div className="font-bold text-sm">{run._strategy ?? run.strategy_name}</div>
+                          <div className="font-bold text-sm">{run._strategy ?? run.config_path.split('/').pop() ?? run.config_path}</div>
                           <div className="text-[10px] text-muted font-mono">
                             {run.run_id} {run._date ? `• ${run._date}` : ''}
                           </div>

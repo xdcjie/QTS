@@ -221,6 +221,7 @@ def test_backtest_actor_loop_emits_signal_events() -> None:
         "runtime.signal_received",
         "runtime.strategy_intent",
         "runtime.signal_aggregated",
+        "runtime.risk_decision",
         "runtime.order_submitted",
         "runtime.broker_report",
         "runtime.fill_applied",

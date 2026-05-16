@@ -67,6 +67,7 @@ def run_backtest(
         json.dumps(
             _streaming_summary_payload(
                 result,
+                config_path=config_path,
                 manifest_path=result.manifest_path,
                 dataset_stats=inputs.dataset_stats,
             ),
@@ -142,6 +143,7 @@ def _strategy_type_from_module(module: ModuleType, class_name: str) -> type[Stra
 def _streaming_summary_payload(
     result: BacktestStreamResult,
     *,
+    config_path: Path,
     manifest_path: Path,
     dataset_stats: dict[str, dict[str, int]],
 ) -> dict[str, Any]:
@@ -151,6 +153,10 @@ def _streaming_summary_payload(
     excluded_spreads = sum(item["spreads_excluded"] for item in dataset_stats.values())
     contracts_excluded = sum(item.get("contracts_excluded", 0) for item in dataset_stats.values())
     return {
+        "schema_version": "1",
+        "run_id": result.run_id.value,
+        "config_path": str(config_path),
+        "status": "completed",
         "contracts_excluded": contracts_excluded,
         "processed_rows": processed_rows,
         "emitted_bars": emitted_bars,

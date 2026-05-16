@@ -8,7 +8,7 @@ from decimal import Decimal
 from typing import Protocol
 
 from qts.backtest.dependencies import BacktestActorLoopConfig, BacktestActorLoopDependencies
-from qts.core.ids import AccountId, CausationId, CorrelationId, InstrumentId, StrategyId
+from qts.core.ids import AccountId, CorrelationId, InstrumentId, StrategyId
 from qts.domain.market_data import Bar
 from qts.execution.order_manager import Order, OrderFill
 from qts.reporting.backtest import (
@@ -23,6 +23,7 @@ from qts.runtime.actors.order_manager_actor import OrderManagerActor
 from qts.runtime.intent_processing import ProcessedIntent
 from qts.runtime.mailbox import Mailbox
 from qts.runtime.market_data_flow import MarketDataFlow
+from qts.runtime.runtime_event_writer import RuntimeEventWriter
 from qts.runtime.sinks.base import RuntimeEvent
 from qts.runtime.strategy_execution_pipeline import StrategyExecutionPipeline
 from qts.strategy_sdk import PortfolioView, Strategy
@@ -154,6 +155,7 @@ class BacktestActorLoop:
             ),
             mailbox=execution_mailbox,
         )
+        event_writer = RuntimeEventWriter(write=sink.write)
 
         strategy_actor, signal_aggregator_actor = self._resolve_actor_classes()
         strategy_pipeline = StrategyExecutionPipeline(
@@ -392,79 +394,24 @@ class BacktestActorLoop:
                         continue
                     order_payload = processed.orders
                     fill_payload = processed.fills
+                    event_writer.write_risk_decision_events(
+                        processed.risk_decisions,
+                        correlation_id=correlation_id,
+                        account_id=self._account_id,
+                        instrument_id=intent.asset.instrument_id,
+                        strategy_id=self._strategy_id,
+                    )
                     sink.write_processed(
                         orders=order_payload,
                         fills=fill_payload,
                         bar=bar,
                     )
-                    for order in order_payload:
-                        metadata = order_manager_actor.route_metadata(order.order_id)
-                        sink.write(
-                            RuntimeEvent(
-                                kind="runtime.order_submitted",
-                                payload={
-                                    "order_id": order.order_id.value,
-                                    "broker_order_id": order.broker_order_id,
-                                    "client_order_id": metadata.client_order_id,
-                                    "instrument_id": order.intent.instrument_id.value,
-                                    "aggregation_decision_id": metadata.aggregation_decision_id,
-                                    "contributing_strategy_ids": [
-                                        strategy_id.value
-                                        for strategy_id in metadata.contributing_strategy_ids
-                                    ],
-                                },
-                                correlation_id=metadata.correlation_id,
-                                instrument_id=order.intent.instrument_id,
-                                account_id=metadata.account_id,
-                                strategy_id=metadata.strategy_id,
-                            )
-                        )
-                        sink.write(
-                            RuntimeEvent(
-                                kind="runtime.broker_report",
-                                payload={
-                                    "order_id": order.order_id.value,
-                                    "state": order.state.value,
-                                    "broker_order_id": order.broker_order_id,
-                                    "client_order_id": metadata.client_order_id,
-                                    "aggregation_decision_id": metadata.aggregation_decision_id,
-                                },
-                                correlation_id=metadata.correlation_id,
-                                instrument_id=order.intent.instrument_id,
-                                account_id=metadata.account_id,
-                                strategy_id=metadata.strategy_id,
-                                causation_id=CausationId(
-                                    f"{metadata.client_order_id}:order_submitted"
-                                ),
-                            )
-                        )
-                    for fill in fill_payload:
-                        metadata = order_manager_actor.route_metadata(fill.order_id)
-                        order = order_manager_actor.get_order(fill.order_id)
-                        sink.write(
-                            RuntimeEvent(
-                                kind="runtime.fill_applied",
-                                payload={
-                                    "fill_id": fill.fill_id,
-                                    "order_id": fill.order_id.value,
-                                    "broker_order_id": order.broker_order_id,
-                                    "client_order_id": metadata.client_order_id,
-                                    "instrument_id": fill.instrument_id.value,
-                                    "side": fill.side.value,
-                                    "quantity": str(fill.quantity),
-                                    "price": str(fill.price),
-                                    "commission": str(fill.commission),
-                                    "slippage": str(fill.slippage),
-                                },
-                                correlation_id=metadata.correlation_id,
-                                instrument_id=fill.instrument_id,
-                                account_id=metadata.account_id,
-                                strategy_id=metadata.strategy_id,
-                                causation_id=CausationId(
-                                    f"{metadata.client_order_id}:broker_report"
-                                ),
-                            )
-                        )
+                    event_writer.write_order_events(
+                        order_payload,
+                        order_manager_actor,
+                        fallback_contributing_strategy_ids=strategy_result.contributing_strategy_ids,
+                    )
+                    event_writer.write_fill_events(fill_payload, order_manager_actor)
                     if compact_orders:
                         order_manager_actor.compact_for_streaming(
                             order.order_id for order in order_payload

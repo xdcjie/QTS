@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 class BacktestRequestSchema(BaseModel):
     """HTTP request for submitting a backtest."""
 
-    strategy_name: str = Field(min_length=1)
+    config_path: str = Field(min_length=1)
 
 
 class BacktestRunSchema(BaseModel):
@@ -17,8 +17,21 @@ class BacktestRunSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     run_id: str
-    strategy_name: str
+    config_path: str
     status: str
 
 
-__all__ = ["BacktestRequestSchema", "BacktestRunSchema"]
+class BacktestStrategyOptionSchema(BaseModel):
+    """HTTP response for a runnable backtest strategy option."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    label: str
+    config_path: str
+
+
+__all__ = [
+    "BacktestRequestSchema",
+    "BacktestRunSchema",
+    "BacktestStrategyOptionSchema",
+]

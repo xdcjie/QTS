@@ -21,8 +21,13 @@ export interface OrderStatusEntry {
 
 export interface BacktestRun {
   run_id: string
-  strategy_name: string
+  config_path: string
   status: string
+}
+
+export interface BacktestStrategyOption {
+  label: string
+  config_path: string
 }
 
 export interface Position {
