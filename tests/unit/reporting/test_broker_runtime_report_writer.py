@@ -1,16 +1,24 @@
 from __future__ import annotations
 
+import importlib
 import json
 from pathlib import Path
 
 from qts.runtime.sinks.base import RuntimeEvent
 
 
-def test_live_report_writer_manifest_names_artifacts_counts_and_redacted_connection(
+def test_old_live_report_module_path_is_removed() -> None:
+    import pytest
+
+    with pytest.raises(ModuleNotFoundError):
+        importlib.import_module("qts.reporting.live")
+
+
+def test_broker_runtime_report_writer_manifest_names_artifacts_counts_and_redacted_connection(
     tmp_path: Path,
 ) -> None:
     from qts.core.ids import RuntimeRunId
-    from qts.reporting.live import LiveReportWriter
+    from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
     from qts.runtime.sinks.base import RuntimeEventContext
     from qts.runtime.sinks.live import LiveRuntimeEventSink
 
@@ -21,7 +29,7 @@ def test_live_report_writer_manifest_names_artifacts_counts_and_redacted_connect
     sink.write(RuntimeEvent(kind="runtime.state_transition", payload={"state": "running"}))
     sink.close()
 
-    writer = LiveReportWriter(tmp_path)
+    writer = BrokerRuntimeReportWriter(tmp_path)
     manifest = writer.write_manifest(
         config_payload={"mode": "paper_broker", "account_id": "DU1234567"},
         runtime_mode="paper_broker",
@@ -45,7 +53,7 @@ def test_live_report_writer_manifest_names_artifacts_counts_and_redacted_connect
     payload = json.loads(manifest.manifest_path.read_text(encoding="utf-8"))
 
     assert payload["runtime_mode"] == "paper_broker"
-    assert payload["run_id"].startswith("live-")
+    assert payload["run_id"].startswith("broker-runtime-")
     assert payload["event_schema_version"] == RuntimeEvent.SCHEMA_VERSION
     assert payload["account_id"] == "DU1234567"
     assert payload["market_data_environment"] == "realtime"
@@ -67,9 +75,9 @@ def test_live_report_writer_manifest_names_artifacts_counts_and_redacted_connect
     assert "should-not-render" not in manifest.manifest_path.read_text(encoding="utf-8")
 
 
-def test_live_report_writer_includes_runtime_topology_payload(tmp_path: Path) -> None:
+def test_broker_runtime_report_writer_includes_runtime_topology_payload(tmp_path: Path) -> None:
     from qts.core.ids import InstrumentId, RuntimeRunId
-    from qts.reporting.live import LiveReportWriter
+    from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
     from qts.runtime.config import LiveRuntimeConfig
     from qts.runtime.sinks.live import LiveRuntimeEventSink
     from qts.runtime.topology import RuntimeTopologyBuilder
@@ -96,7 +104,7 @@ def test_live_report_writer_includes_runtime_topology_payload(tmp_path: Path) ->
     sink = LiveRuntimeEventSink(tmp_path)
     sink.close()
 
-    manifest = LiveReportWriter(tmp_path).write_manifest(
+    manifest = BrokerRuntimeReportWriter(tmp_path).write_manifest(
         config_payload={"mode": "paper_simulated"},
         runtime_mode="paper_simulated",
         account_id="acct-paper",
@@ -113,13 +121,13 @@ def test_live_report_writer_includes_runtime_topology_payload(tmp_path: Path) ->
     assert payload["runtime_topology"]["topology_hash"].startswith("sha256:")
 
 
-def test_live_report_writer_manifest_includes_account_partition_topology(
+def test_broker_runtime_report_writer_manifest_includes_account_partition_topology(
     tmp_path: Path,
 ) -> None:
     from decimal import Decimal
 
     from qts.core.ids import AccountId, InstrumentId, RuntimeRunId, StrategyId
-    from qts.reporting.live import LiveReportWriter
+    from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
     from qts.runtime.mode import RuntimeMode
     from qts.runtime.sinks.live import LiveRuntimeEventSink
     from qts.runtime.topology import (
@@ -169,7 +177,7 @@ def test_live_report_writer_manifest_includes_account_partition_topology(
     sink = LiveRuntimeEventSink(tmp_path)
     sink.close()
 
-    manifest = LiveReportWriter(tmp_path).write_manifest(
+    manifest = BrokerRuntimeReportWriter(tmp_path).write_manifest(
         config_payload={"mode": "paper_simulated"},
         runtime_mode="paper_simulated",
         account_id="multi-account",
@@ -195,16 +203,16 @@ def test_live_report_writer_manifest_includes_account_partition_topology(
     ]
 
 
-def test_paper_simulated_live_manifest_includes_execution_assumptions(
+def test_paper_simulated_broker_runtime_manifest_includes_execution_assumptions(
     tmp_path: Path,
 ) -> None:
-    from qts.reporting.live import LiveReportWriter
+    from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
     from qts.runtime.sinks.live import LiveRuntimeEventSink
 
     sink = LiveRuntimeEventSink(tmp_path)
     sink.close()
 
-    manifest = LiveReportWriter(tmp_path).write_manifest(
+    manifest = BrokerRuntimeReportWriter(tmp_path).write_manifest(
         config_payload={"mode": "paper_simulated"},
         runtime_mode="paper_simulated",
         account_id="acct-paper",
@@ -222,16 +230,16 @@ def test_paper_simulated_live_manifest_includes_execution_assumptions(
     assert assumptions["unsupported_order_rejection_policy"] == "reject_and_emit_runtime_event"
 
 
-def test_live_report_writer_rejects_permission_mode_label(tmp_path: Path) -> None:
+def test_broker_runtime_report_writer_rejects_permission_mode_label(tmp_path: Path) -> None:
     import pytest
-    from qts.reporting.live import LiveReportWriter
+    from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
     from qts.runtime.sinks.live import LiveRuntimeEventSink
 
     sink = LiveRuntimeEventSink(tmp_path)
     sink.close()
 
     with pytest.raises(ValueError, match="paper"):
-        LiveReportWriter(tmp_path).write_manifest(
+        BrokerRuntimeReportWriter(tmp_path).write_manifest(
             config_payload={"mode": "paper"},
             runtime_mode="paper",
             account_id="DU1234567",

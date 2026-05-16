@@ -59,7 +59,7 @@ def test_ibkr_gateway_full_chain_anchor_requires_real_paper_evidence(
         IbkrOrderContractSpec,
     )
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
-    from qts.reporting.live import LiveReportWriter
+    from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
     from qts.runtime.dependencies import RuntimeSessionDependencies
@@ -202,7 +202,7 @@ def test_ibkr_gateway_full_chain_anchor_requires_real_paper_evidence(
     account_snapshot = session.account_snapshot
     final_quantity = account_snapshot.positions.get(instrument_id)
     final_position = final_quantity.quantity if final_quantity is not None else Decimal("0")
-    manifest = LiveReportWriter(evidence_dir).write_manifest(
+    manifest = BrokerRuntimeReportWriter(evidence_dir).write_manifest(
         config_payload={
             "mode": "paper_broker",
             "gateway": gateway,

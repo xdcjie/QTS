@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from qts.core.hashing import stable_json_default, stable_json_hash
 from qts.core.ids import RuntimeRunId
@@ -41,6 +41,19 @@ _REQUIRED_M1_EXECUTION_FIELDS = (
     "partial_fill_policy",
     "broker_capability_model",
 )
+
+
+def is_broker_capability_reject(exc: ValueError) -> bool:
+    """Return whether a broker rejection came from the capability model."""
+    return "not supported by broker capabilities" in str(exc)
+
+
+def broker_capability_payload(execution_adapter: object) -> dict[str, object]:
+    """Return broker capability evidence for a runtime rejection event."""
+    payload = getattr(execution_adapter, "broker_capability_payload", None)
+    if payload is None:
+        return {}
+    return cast(dict[str, object], payload())
 
 
 def dataset_metadata_payload(item: DatasetMetadata) -> dict[str, str | int | None]:

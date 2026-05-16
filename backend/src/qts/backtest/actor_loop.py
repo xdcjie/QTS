@@ -5,13 +5,17 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Protocol, cast
+from typing import Protocol
 
 from qts.backtest.dependencies import BacktestActorLoopConfig, BacktestActorLoopDependencies
 from qts.core.ids import AccountId, CausationId, CorrelationId, InstrumentId, StrategyId
 from qts.domain.market_data import Bar
 from qts.execution.order_manager import Order, OrderFill
-from qts.reporting.backtest import EquityCurvePoint
+from qts.reporting.backtest import (
+    EquityCurvePoint,
+    broker_capability_payload,
+    is_broker_capability_reject,
+)
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.account_actor import AccountActor, AccountSnapshot
 from qts.runtime.actors.execution_actor import ExecutionActor
@@ -367,7 +371,7 @@ class BacktestActorLoop:
                             ),
                         )
                     except ValueError as exc:
-                        if not self._is_broker_capability_reject(exc):
+                        if not is_broker_capability_reject(exc):
                             raise
                         sink.write(
                             RuntimeEvent(
@@ -375,7 +379,9 @@ class BacktestActorLoop:
                                 payload={
                                     "reason_code": "unsupported_order_type",
                                     "reason": str(exc),
-                                    "broker_capability_model": (self._broker_capability_payload()),
+                                    "broker_capability_model": broker_capability_payload(
+                                        self._execution_adapter
+                                    ),
                                 },
                                 correlation_id=correlation_id,
                                 instrument_id=intent.asset.instrument_id,
@@ -500,16 +506,6 @@ class BacktestActorLoop:
                 },
             )
         )
-
-    @staticmethod
-    def _is_broker_capability_reject(exc: ValueError) -> bool:
-        return "not supported by broker capabilities" in str(exc)
-
-    def _broker_capability_payload(self) -> dict[str, object]:
-        payload = getattr(self._execution_adapter, "broker_capability_payload", None)
-        if payload is None:
-            return {}
-        return cast(dict[str, object], payload())
 
 
 __all__ = ["BacktestActorLoop", "BacktestActorLoopResult"]

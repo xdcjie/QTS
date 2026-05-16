@@ -12,7 +12,7 @@ def test_shared_runtime_layout_exports_target_names() -> None:
     from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
     from qts.reporting.backtest import BacktestReportWriter
     from qts.reporting.base import ReportWriter, RuntimeArtifactWriter
-    from qts.reporting.live import LiveEventReporter, LiveReportWriter
+    from qts.reporting.broker_runtime import BrokerRuntimeEventReporter, BrokerRuntimeReportWriter
     from qts.runtime.config import BacktestRuntimeConfig, LiveRuntimeConfig, TradingRuntimeConfig
     from qts.runtime.execution_report_handler import ExecutionReportHandler
     from qts.runtime.intent_processing import OrderPlanBuilder, TargetIntentProcessor
@@ -43,8 +43,8 @@ def test_shared_runtime_layout_exports_target_names() -> None:
         ReportWriter,
         RuntimeArtifactWriter,
         BacktestReportWriter,
-        LiveReportWriter,
-        LiveEventReporter,
+        BrokerRuntimeReportWriter,
+        BrokerRuntimeEventReporter,
     }
 
     assert all(item.__name__ for item in exported)

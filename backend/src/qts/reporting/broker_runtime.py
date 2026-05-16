@@ -1,4 +1,4 @@
-"""Live reporting outputs."""
+"""Broker runtime reporting outputs."""
 
 from __future__ import annotations
 
@@ -23,19 +23,19 @@ _SECRET_KEY_PARTS = ("password", "token", "credential")
 
 
 @dataclass(frozen=True, slots=True)
-class LiveReportManifest:
-    """Live report manifest metadata."""
+class BrokerRuntimeReportManifest:
+    """Broker runtime report manifest metadata."""
 
     manifest_path: Path
     payload: dict[str, Any]
     runtime_manifest: RuntimeManifest
 
 
-class LiveReportWriter:
+class BrokerRuntimeReportWriter:
     """Write auditable paper/live run manifests."""
 
     def __init__(self, output_dir: Path) -> None:
-        """Create a writer for live report artifacts."""
+        """Create a writer for broker runtime report artifacts."""
         self._output_dir = output_dir
         self._output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -58,7 +58,7 @@ class LiveReportWriter:
         extra_artifacts: dict[str, Path] | None = None,
         runtime_topology_payload: dict[str, Any] | None = None,
         execution_assumptions: dict[str, Any] | None = None,
-    ) -> LiveReportManifest:
+    ) -> BrokerRuntimeReportManifest:
         """Write a manifest naming event and evidence artifacts."""
         finalized_at = datetime.now(UTC)
         runtime_mode_value = RuntimeMode.from_value(runtime_mode).value
@@ -136,7 +136,7 @@ class LiveReportWriter:
             payload["startup_checklist"] = startup_checklist_payload
         report_hash = stable_json_hash(payload)
         payload["report_hash"] = report_hash
-        run_id = f"live-{report_hash.removeprefix('sha256:')[:12]}"
+        run_id = f"broker-runtime-{report_hash.removeprefix('sha256:')[:12]}"
         payload["run_id"] = run_id
         runtime_manifest = RuntimeManifest.from_payload(payload)
         manifest_path = self._output_dir / f"{run_id}.manifest.json"
@@ -149,14 +149,14 @@ class LiveReportWriter:
             ),
             encoding="utf-8",
         )
-        return LiveReportManifest(
+        return BrokerRuntimeReportManifest(
             manifest_path=manifest_path,
             payload=payload,
             runtime_manifest=runtime_manifest,
         )
 
     def finalize(self) -> None:
-        """Finalize live report writer resources."""
+        """Finalize broker runtime report writer resources."""
         return None
 
     @staticmethod
@@ -198,8 +198,8 @@ class LiveReportWriter:
         return normalized or default
 
 
-class LiveEventReporter:
-    """Boundary for live event reporting integrations."""
+class BrokerRuntimeEventReporter:
+    """Boundary for broker runtime event reporting integrations."""
 
 
-__all__ = ["LiveEventReporter", "LiveReportManifest", "LiveReportWriter"]
+__all__ = ["BrokerRuntimeEventReporter", "BrokerRuntimeReportManifest", "BrokerRuntimeReportWriter"]

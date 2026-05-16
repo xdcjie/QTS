@@ -82,13 +82,13 @@ def test_paper_simulated_never_constructs_ibkr_order_transport() -> None:
 
 
 def test_mode_written_to_report_manifest(tmp_path: Path) -> None:
-    from qts.reporting.live import LiveReportWriter
+    from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
     from qts.runtime.sinks.live import LiveRuntimeEventSink
 
     sink = LiveRuntimeEventSink(tmp_path)
     sink.close()
 
-    manifest = LiveReportWriter(tmp_path).write_manifest(
+    manifest = BrokerRuntimeReportWriter(tmp_path).write_manifest(
         config_payload={"mode": "paper_simulated"},
         runtime_mode="paper_simulated",
         account_id="acct-paper",
@@ -261,7 +261,7 @@ def test_brokerage_model_written_to_manifest(tmp_path: Path) -> None:
 
 
 def test_checklist_written_to_manifest(tmp_path: Path) -> None:
-    from qts.reporting.live import LiveReportWriter
+    from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
     from qts.runtime.config import LiveRuntimeConfig
     from qts.runtime.live import BrokerRuntimeStartupChecklist
     from qts.runtime.sinks.live import LiveRuntimeEventSink
@@ -278,7 +278,7 @@ def test_checklist_written_to_manifest(tmp_path: Path) -> None:
     sink = LiveRuntimeEventSink(tmp_path)
     sink.close()
 
-    manifest = LiveReportWriter(tmp_path).write_manifest(
+    manifest = BrokerRuntimeReportWriter(tmp_path).write_manifest(
         config_payload=config.to_payload(),
         runtime_mode="paper_simulated",
         account_id="acct-paper",
@@ -292,13 +292,13 @@ def test_checklist_written_to_manifest(tmp_path: Path) -> None:
 
 
 def test_live_market_data_permission_written_to_manifest(tmp_path: Path) -> None:
-    from qts.reporting.live import LiveReportWriter
+    from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
     from qts.runtime.sinks.live import LiveRuntimeEventSink
 
     sink = LiveRuntimeEventSink(tmp_path)
     sink.close()
 
-    manifest = LiveReportWriter(tmp_path).write_manifest(
+    manifest = BrokerRuntimeReportWriter(tmp_path).write_manifest(
         config_payload={"mode": "paper_broker"},
         runtime_mode="paper_broker",
         account_id="DU1234567",

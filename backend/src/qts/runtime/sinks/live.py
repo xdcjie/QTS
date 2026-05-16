@@ -4,22 +4,18 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from qts.core.hashing import stable_json_default, stable_json_hash
-from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventContext, RuntimeEventSink
+from qts.runtime.sinks.base import (
+    RuntimeEvent,
+    RuntimeEventContext,
+    RuntimeEventSink,
+    RuntimeEventWriteResult,
+)
 
 _SECRET_KEY_PARTS = ("password", "secret", "token", "credential")
-
-
-@dataclass(frozen=True, slots=True)
-class WrittenRuntimeEvent:
-    """Metadata returned after writing one event."""
-
-    sequence: int
-    event_hash: str
 
 
 class LiveRuntimeEventSink(RuntimeEventSink):
@@ -59,7 +55,7 @@ class LiveRuntimeEventSink(RuntimeEventSink):
         """Return the hash of rows written by this sink instance."""
         return f"sha256:{self._content_hasher.hexdigest()}"
 
-    def write(self, event: RuntimeEvent) -> WrittenRuntimeEvent:
+    def write(self, event: RuntimeEvent) -> RuntimeEventWriteResult:
         """Append one normalized event row and return its hash metadata."""
         if self._closed:
             raise RuntimeError("event sink is closed")
@@ -89,7 +85,7 @@ class LiveRuntimeEventSink(RuntimeEventSink):
         self._handle.flush()
         self._content_hasher.update(line.encode())
         self._rows = sequence
-        return WrittenRuntimeEvent(sequence=sequence, event_hash=event_hash)
+        return RuntimeEventWriteResult(sequence_no=sequence, event_hash=event_hash)
 
     def close(self) -> None:
         """Close the underlying event file."""
@@ -112,4 +108,4 @@ class LiveRuntimeEventSink(RuntimeEventSink):
                 self._reject_secrets(item)
 
 
-__all__ = ["LiveRuntimeEventSink", "WrittenRuntimeEvent"]
+__all__ = ["LiveRuntimeEventSink"]

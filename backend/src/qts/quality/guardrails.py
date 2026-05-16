@@ -6,7 +6,7 @@ import ast
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol, cast
+from typing import Protocol, cast, runtime_checkable
 
 QTS_ROOT = Path("backend/src/qts")
 PRODUCT_SYMBOLS = frozenset({"GC", "SI", "ES", "NQ", "CL", "HG", "ZN", "ZB", "YM", "RTY"})
@@ -41,9 +41,17 @@ REMOVED_IMPORT_MODULES = frozenset(
         "qts.execution.adapters.ibkr_order_ids",
         "qts.execution.adapters.ibkr_transport",
         "qts.application.commands.start_paper",
+        "qts.reporting.live",
         "qts.runtime.live_runtime_session",
         "qts.runtime.live_runtime_dependencies",
         "qts.runtime.live_runtime_topology",
+    }
+)
+REMOVED_IMPORT_SYMBOLS = frozenset(
+    {
+        ("qts.reporting", "LiveEventReporter"),
+        ("qts.reporting", "LiveReportManifest"),
+        ("qts.reporting", "LiveReportWriter"),
     }
 )
 SOURCE_SPECIFIC_BOUNDARY_PREFIXES = (
@@ -159,9 +167,71 @@ BACKTEST_ENGINE_FORBIDDEN_HELPERS = frozenset(
         "_contract_multipliers_from_config",
     }
 )
+BACKTEST_ACTOR_LOOP_MAX_PRIVATE_METHODS = 2
+BACKTEST_ACTOR_LOOP_FORBIDDEN_IMPORT_PREFIXES = (
+    "qts.data.historical.config",
+    "qts.data.historical.csv_dataset",
+    "qts.data.provenance",
+    "qts.domain.instruments",
+    "qts.registry",
+)
+BACKTEST_ACTOR_LOOP_FORBIDDEN_IMPORTED_NAMES = frozenset(
+    {
+        "BacktestArtifactWriter",
+        "BacktestRuntimeEventSink",
+        "BacktestArtifacts",
+        "RuntimeManifest",
+    }
+)
+BACKTEST_ACTOR_LOOP_FORBIDDEN_HELPERS = frozenset(
+    {
+        "_build_dataset",
+        "_finalize_artifacts",
+        "_load_catalog",
+        "_stream_configured_bars",
+        "_write_manifest",
+        "_write_report",
+    }
+)
+RUNTIME_SESSION_EVIDENCE_PATH = Path("docs/architecture/runtime_session_complexity.md")
+RUNTIME_SESSION_LIMITS = {
+    "public_methods": 12,
+    "private_helpers": 8,
+    "file_lines": 350,
+    "method_lines": 50,
+    "cyclomatic": 10,
+}
+RUNTIME_SESSION_METHOD_GROUPS = (
+    "lifecycle",
+    "broker lifecycle",
+    "market data dispatch",
+    "strategy/risk/order processing",
+    "safety/rollback",
+    "event writing",
+)
+RUNTIME_COORDINATOR_CANDIDATES = {
+    "RuntimeRecoveryCoordinator": Path("backend/src/qts/runtime/recovery.py"),
+    "RuntimeRollbackCoordinator": Path("backend/src/qts/runtime/rollback.py"),
+    "BrokerRuntimeStartupGate": Path("backend/src/qts/runtime/startup_gate.py"),
+    "RuntimeSafetyController": Path("backend/src/qts/runtime/safety_controller.py"),
+    "RuntimeBrokerLifecycleCoordinator": Path("backend/src/qts/runtime/broker_lifecycle.py"),
+    "RuntimeMarketDataCoordinator": Path("backend/src/qts/runtime/market_data_coordinator.py"),
+}
+RUNTIME_COORDINATOR_KEEP_EVIDENCE = (
+    "multiple call points",
+    "state/policy",
+    "independent test value",
+    "external boundary",
+    "safety boundary",
+    "complexity threshold",
+)
 GUARDRAIL_REMEDIATIONS = {
     "ADAPTER_BOUNDARY": (
         "Move cross-service behavior behind the correct data or execution adapter boundary."
+    ),
+    "BACKTEST_ACTOR_LOOP_COHESION": (
+        "Keep BacktestActorLoop focused on replay/event flow and move input/report ownership "
+        "to source, sink, or artifact boundaries."
     ),
     "ADAPTER_STATE_DEPENDENCY": (
         "Keep mutable runtime state in actors and pass normalized DTOs through adapters."
@@ -201,6 +271,12 @@ GUARDRAIL_REMEDIATIONS = {
         "Production packages must depend on simulation or explicit interfaces."
     ),
     "PROVIDER_SDK_IMPORT": "Import provider SDKs only from adapter or transport boundaries.",
+    "RUNTIME_COORDINATOR_DECISION": (
+        "Record a keep/merge/delete decision with enforceable retention evidence."
+    ),
+    "RUNTIME_SESSION_COMPLEXITY": (
+        "Keep RuntimeSession under facade limits or maintain explicit M5 gate evidence."
+    ),
     "SHARED_CAPABILITY_IN_SOURCE_BOUNDARY": (
         "Move shared roll/session/resolution logic to a shared package."
     ),
@@ -267,6 +343,15 @@ class Rule(Protocol):
 
 
 GuardrailRule = Rule
+
+
+@runtime_checkable
+class RepositoryRule(Protocol):
+    """Optional guardrail rule interface for repository-wide checks."""
+
+    def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
+        """Perform repository-wide check."""
+        ...
 
 
 class ImportBoundaryRule:
@@ -484,6 +569,19 @@ class RemovedImportNoNewUsageRule:
                     path=str(relative_path),
                     line=line,
                     message=f"removed import path is not allowed: {imported_module}",
+                )
+            )
+        for imported_module, imported_name, line in _iter_imported_names(tree):
+            if (imported_module, imported_name) not in REMOVED_IMPORT_SYMBOLS:
+                continue
+            violations.append(
+                GuardrailViolation(
+                    code=self.code,
+                    path=str(relative_path),
+                    line=line,
+                    message=(
+                        f"removed import name is not allowed: {imported_module}.{imported_name}"
+                    ),
                 )
             )
         return violations
@@ -802,6 +900,22 @@ class BacktestEngineCohesionRule:
         return _check_backtest_engine_cohesion(relative_path, qts_relative_path, tree)
 
 
+class BacktestActorLoopCohesionRule:
+    """Reject input assembly and report ownership inside the backtest actor loop."""
+
+    code = "BACKTEST_ACTOR_LOOP_COHESION"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform check."""
+        return _check_backtest_actor_loop_cohesion(relative_path, qts_relative_path, tree)
+
+
 class StrategySdkPublicSurfaceRule:
     """Reject internal runtime/broker/risk symbols from strategy SDK modules."""
 
@@ -816,6 +930,124 @@ class StrategySdkPublicSurfaceRule:
     ) -> list[GuardrailViolation]:
         """Perform check."""
         return _check_strategy_sdk_internal_leak(relative_path, qts_relative_path, tree)
+
+
+class RuntimeSessionComplexityRule:
+    """Require RuntimeSession facade complexity limits or explicit M5 evidence."""
+
+    code = "RUNTIME_SESSION_COMPLEXITY"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform per-file check."""
+        return []
+
+    def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
+        """Perform repository-wide check."""
+        session_path = repo_root / QTS_ROOT / "runtime/session.py"
+        if not session_path.exists():
+            return []
+        relative_path = session_path.relative_to(repo_root)
+        source = session_path.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(relative_path))
+        session_class = _find_class(tree, "RuntimeSession")
+        if session_class is None:
+            return []
+
+        metrics = _runtime_session_metrics(source, session_class)
+        violations = _runtime_session_metric_violations(metrics)
+        if not violations:
+            return []
+
+        evidence = _read_runtime_session_evidence(repo_root)
+        if _has_runtime_session_complexity_evidence(evidence):
+            return []
+        return [
+            GuardrailViolation(
+                code=self.code,
+                path=str(relative_path),
+                line=session_class.lineno,
+                message=(
+                    "RuntimeSession exceeds M5 facade limits without explicit evidence: "
+                    + ", ".join(violations)
+                ),
+            )
+        ]
+
+
+class RuntimeCoordinatorDecisionRule:
+    """Require keep/merge/delete decisions for M5 runtime coordinator candidates."""
+
+    code = "RUNTIME_COORDINATOR_DECISION"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform per-file check."""
+        return []
+
+    def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
+        """Perform repository-wide check."""
+        evidence = _read_runtime_session_evidence(repo_root)
+        violations: list[GuardrailViolation] = []
+        for class_name, relative_path in RUNTIME_COORDINATOR_CANDIDATES.items():
+            path = repo_root / relative_path
+            if not path.exists():
+                continue
+            source = path.read_text(encoding="utf-8")
+            tree = ast.parse(source, filename=str(relative_path))
+            class_node = _find_class(tree, class_name)
+            if class_node is None:
+                continue
+            decision, decision_evidence = _runtime_coordinator_decision(evidence, class_name)
+            if decision is None:
+                violations.append(
+                    GuardrailViolation(
+                        code=self.code,
+                        path=str(relative_path),
+                        line=class_node.lineno,
+                        message=(
+                            "runtime coordinator candidate lacks keep/merge/delete "
+                            f"evidence: {class_name}"
+                        ),
+                    )
+                )
+                continue
+            if decision != "keep":
+                violations.append(
+                    GuardrailViolation(
+                        code=self.code,
+                        path=str(relative_path),
+                        line=class_node.lineno,
+                        message=(
+                            f"{class_name} is marked {decision} but still has a "
+                            "production class definition"
+                        ),
+                    )
+                )
+                continue
+            if not _has_coordinator_keep_evidence(decision_evidence):
+                violations.append(
+                    GuardrailViolation(
+                        code=self.code,
+                        path=str(relative_path),
+                        line=class_node.lineno,
+                        message=(
+                            f"{class_name} keep decision lacks retention evidence "
+                            "from the M5 approved criteria"
+                        ),
+                    )
+                )
+        return violations
 
 
 class GuardrailSuite:
@@ -835,6 +1067,7 @@ class GuardrailSuite:
             BacktestRunnerCohesionRule(),
             BacktestInputCohesionRule(),
             BacktestEngineCohesionRule(),
+            BacktestActorLoopCohesionRule(),
             StrategySdkPublicSurfaceRule(),
             LivePackageNoReplayClassRule(),
             DataLiveNoSharedContractRule(),
@@ -845,6 +1078,8 @@ class GuardrailSuite:
             ProductionNoTestingImportRule(),
             SharedRuntimeWordingRule(),
             ProductionPlaceholderDocstringRule(),
+            RuntimeSessionComplexityRule(),
+            RuntimeCoordinatorDecisionRule(),
         )
 
     def check_file(
@@ -887,6 +1122,9 @@ class GuardrailSuite:
                     tree=tree,
                 )
             )
+        for rule in self.rules:
+            if isinstance(rule, RepositoryRule):
+                violations.extend(rule.check_repository(repo_root))
         return sorted(violations)
 
 
@@ -905,6 +1143,132 @@ def _check_python_file(repo_root: Path, path: Path) -> list[GuardrailViolation]:
         qts_relative_path=qts_relative_path,
         tree=tree,
     )
+
+
+@dataclass(frozen=True, slots=True)
+class _RuntimeSessionMetrics:
+    public_methods: int
+    private_helpers: int
+    file_lines: int
+    overlong_methods: tuple[str, ...]
+    complex_methods: tuple[str, ...]
+
+
+def _find_class(tree: ast.AST, class_name: str) -> ast.ClassDef | None:
+    module = cast(ast.Module, tree)
+    for node in module.body:
+        if isinstance(node, ast.ClassDef) and node.name == class_name:
+            return node
+    return None
+
+
+def _runtime_session_metrics(source: str, class_node: ast.ClassDef) -> _RuntimeSessionMetrics:
+    methods = [
+        node for node in class_node.body if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+    ]
+    public_methods = [
+        method
+        for method in methods
+        if not method.name.startswith("_") and not _is_property_method(method)
+    ]
+    private_helpers = [
+        method
+        for method in methods
+        if method.name.startswith("_")
+        and not method.name.startswith("__")
+        and not _is_property_method(method)
+    ]
+    overlong_methods = tuple(
+        method.name
+        for method in methods
+        if _node_line_count(method) > RUNTIME_SESSION_LIMITS["method_lines"]
+    )
+    complex_methods = tuple(
+        method.name
+        for method in methods
+        if _cyclomatic_complexity(method) > RUNTIME_SESSION_LIMITS["cyclomatic"]
+    )
+    return _RuntimeSessionMetrics(
+        public_methods=len(public_methods),
+        private_helpers=len(private_helpers),
+        file_lines=len(source.splitlines()),
+        overlong_methods=overlong_methods,
+        complex_methods=complex_methods,
+    )
+
+
+def _runtime_session_metric_violations(metrics: _RuntimeSessionMetrics) -> list[str]:
+    violations: list[str] = []
+    for metric_name in ("public_methods", "private_helpers", "file_lines"):
+        value = getattr(metrics, metric_name)
+        limit = RUNTIME_SESSION_LIMITS[metric_name]
+        if value > limit:
+            violations.append(f"{metric_name}={value}>{limit}")
+    if metrics.overlong_methods:
+        violations.append(
+            "method_lines>"
+            f"{RUNTIME_SESSION_LIMITS['method_lines']}:{','.join(metrics.overlong_methods)}"
+        )
+    if metrics.complex_methods:
+        violations.append(
+            f"cyclomatic>{RUNTIME_SESSION_LIMITS['cyclomatic']}:{','.join(metrics.complex_methods)}"
+        )
+    return violations
+
+
+def _is_property_method(method: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    for decorator in method.decorator_list:
+        if isinstance(decorator, ast.Name) and decorator.id == "property":
+            return True
+    return False
+
+
+def _node_line_count(node: ast.AST) -> int:
+    end_lineno = getattr(node, "end_lineno", getattr(node, "lineno", 1))
+    return int(end_lineno) - int(getattr(node, "lineno", 1)) + 1
+
+
+def _cyclomatic_complexity(node: ast.AST) -> int:
+    complexity = 1
+    for child in ast.walk(node):
+        if isinstance(child, ast.If | ast.For | ast.AsyncFor | ast.While | ast.ExceptHandler):
+            complexity += 1
+        elif isinstance(child, ast.BoolOp):
+            complexity += max(1, len(child.values) - 1)
+        elif isinstance(child, ast.IfExp | ast.comprehension):
+            complexity += 1
+    return complexity
+
+
+def _read_runtime_session_evidence(repo_root: Path) -> str:
+    evidence_path = repo_root / RUNTIME_SESSION_EVIDENCE_PATH
+    if not evidence_path.exists():
+        return ""
+    return evidence_path.read_text(encoding="utf-8")
+
+
+def _has_runtime_session_complexity_evidence(evidence: str) -> bool:
+    normalized = evidence.lower()
+    if "runtimesession complexity evidence" not in normalized:
+        return False
+    if "m5 guardrail evidence" not in normalized:
+        return False
+    return all(group in normalized for group in RUNTIME_SESSION_METHOD_GROUPS)
+
+
+def _runtime_coordinator_decision(evidence: str, class_name: str) -> tuple[str | None, str]:
+    pattern = re.compile(
+        rf"^\|\s*{re.escape(class_name)}\s*\|\s*(keep|merge|delete)\s*\|\s*([^|]+)\|",
+        re.IGNORECASE | re.MULTILINE,
+    )
+    match = pattern.search(evidence)
+    if match is None:
+        return None, ""
+    return match.group(1).lower(), match.group(2).strip().lower()
+
+
+def _has_coordinator_keep_evidence(evidence: str) -> bool:
+    return any(token in evidence for token in RUNTIME_COORDINATOR_KEEP_EVIDENCE)
 
 
 def _check_import(
@@ -1388,6 +1752,82 @@ def _check_backtest_engine_cohesion(
                 ),
             )
         )
+    return violations
+
+
+def _check_backtest_actor_loop_cohesion(
+    relative_path: Path,
+    qts_relative_path: Path,
+    tree: ast.AST,
+) -> list[GuardrailViolation]:
+    if qts_relative_path.parts != ("backtest", "actor_loop.py"):
+        return []
+    violations: list[GuardrailViolation] = []
+    for imported_module, line in _iter_imports(tree):
+        if imported_module.startswith(BACKTEST_ACTOR_LOOP_FORBIDDEN_IMPORT_PREFIXES):
+            violations.append(
+                GuardrailViolation(
+                    code="BACKTEST_ACTOR_LOOP_COHESION",
+                    path=str(relative_path),
+                    line=line,
+                    message=(
+                        "BacktestActorLoop should consume prepared replay bars and "
+                        f"dependencies, not own input assembly via {imported_module}"
+                    ),
+                )
+            )
+    for imported_module, imported_name, line in _iter_imported_names(tree):
+        if imported_name not in BACKTEST_ACTOR_LOOP_FORBIDDEN_IMPORTED_NAMES:
+            continue
+        violations.append(
+            GuardrailViolation(
+                code="BACKTEST_ACTOR_LOOP_COHESION",
+                path=str(relative_path),
+                line=line,
+                message=(
+                    "BacktestActorLoop should emit normalized events through its sink, "
+                    f"not own report artifacts via {imported_module}.{imported_name}"
+                ),
+            )
+        )
+    module = cast(ast.Module, tree)
+    for node in module.body:
+        if not isinstance(node, ast.ClassDef) or node.name != "BacktestActorLoop":
+            continue
+        private_methods = [
+            item
+            for item in node.body
+            if isinstance(item, ast.FunctionDef | ast.AsyncFunctionDef)
+            and item.name.startswith("_")
+            and not item.name.startswith("__")
+        ]
+        if len(private_methods) > BACKTEST_ACTOR_LOOP_MAX_PRIVATE_METHODS:
+            violations.append(
+                GuardrailViolation(
+                    code="BACKTEST_ACTOR_LOOP_COHESION",
+                    path=str(relative_path),
+                    line=node.lineno,
+                    message=(
+                        "BacktestActorLoop private helper count must stay at or below "
+                        f"{BACKTEST_ACTOR_LOOP_MAX_PRIVATE_METHODS}; found "
+                        f"{len(private_methods)}"
+                    ),
+                )
+            )
+        for method in private_methods:
+            if method.name not in BACKTEST_ACTOR_LOOP_FORBIDDEN_HELPERS:
+                continue
+            violations.append(
+                GuardrailViolation(
+                    code="BACKTEST_ACTOR_LOOP_COHESION",
+                    path=str(relative_path),
+                    line=method.lineno,
+                    message=(
+                        "BacktestActorLoop private helpers must not own replay input "
+                        f"or report artifact work: {method.name}"
+                    ),
+                )
+            )
     return violations
 
 

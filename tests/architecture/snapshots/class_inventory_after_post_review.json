@@ -5847,12 +5847,12 @@
       "qts.runtime.sinks.live",
       "typing"
     ],
-    "docstring_first_line": "Boundary for live event reporting integrations.",
-    "file": "/Users/bjhl/Projects/QTS/backend/src/qts/reporting/live.py",
+    "docstring_first_line": "Boundary for broker runtime event reporting integrations.",
+    "file": "/Users/bjhl/Projects/QTS/backend/src/qts/reporting/broker_runtime.py",
     "lineno": 201,
     "method_count": 0,
-    "module": "qts.reporting.live",
-    "name": "LiveEventReporter",
+    "module": "qts.reporting.broker_runtime",
+    "name": "BrokerRuntimeEventReporter",
     "public": true
   },
   {
@@ -5871,12 +5871,12 @@
       "qts.runtime.sinks.live",
       "typing"
     ],
-    "docstring_first_line": "Live report manifest metadata.",
-    "file": "/Users/bjhl/Projects/QTS/backend/src/qts/reporting/live.py",
+    "docstring_first_line": "Broker runtime report manifest metadata.",
+    "file": "/Users/bjhl/Projects/QTS/backend/src/qts/reporting/broker_runtime.py",
     "lineno": 26,
     "method_count": 0,
-    "module": "qts.reporting.live",
-    "name": "LiveReportManifest",
+    "module": "qts.reporting.broker_runtime",
+    "name": "BrokerRuntimeReportManifest",
     "public": true
   },
   {
@@ -5896,11 +5896,11 @@
       "typing"
     ],
     "docstring_first_line": "Write auditable paper/live run manifests.",
-    "file": "/Users/bjhl/Projects/QTS/backend/src/qts/reporting/live.py",
+    "file": "/Users/bjhl/Projects/QTS/backend/src/qts/reporting/broker_runtime.py",
     "lineno": 34,
     "method_count": 7,
-    "module": "qts.reporting.live",
-    "name": "LiveReportWriter",
+    "module": "qts.reporting.broker_runtime",
+    "name": "BrokerRuntimeReportWriter",
     "public": true
   },
   {

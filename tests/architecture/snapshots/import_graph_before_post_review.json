@@ -448,7 +448,7 @@
     "qts.data.provenance"
   ],
   "qts.reporting.base": [],
-  "qts.reporting.live": [
+  "qts.reporting.broker_runtime": [
     "qts.core.hashing",
     "qts.runtime.mode",
     "qts.runtime.sinks.base",

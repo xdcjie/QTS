@@ -467,7 +467,7 @@
     "qts.reporting.base"
   ],
   "qts.reporting.base": [],
-  "qts.reporting.live": [
+  "qts.reporting.broker_runtime": [
     "qts.core.hashing",
     "qts.execution.adapters.simulated_execution_adapter",
     "qts.reporting.base",

@@ -9,7 +9,7 @@ from qts.runtime.topology import RuntimeTopologyBuilder
 
 def test_live_runtime_evidence_output_links_event_stream_and_manifest(tmp_path: Path) -> None:
     from qts.core.ids import InstrumentId, RuntimeRunId
-    from qts.reporting.live import LiveReportWriter
+    from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
     from qts.runtime.config import LiveRuntimeConfig
     from qts.runtime.sinks.base import RuntimeEventContext
     from qts.runtime.sinks.live import LiveRuntimeEventSink
@@ -39,7 +39,7 @@ def test_live_runtime_evidence_output_links_event_stream_and_manifest(tmp_path: 
     sink.write(RuntimeEvent(kind="runtime.account_snapshot", payload={"cash": {"USD": "1000"}}))
     sink.close()
 
-    manifest = LiveReportWriter(tmp_path).write_manifest(
+    manifest = BrokerRuntimeReportWriter(tmp_path).write_manifest(
         config_payload={"mode": "paper_broker"},
         runtime_mode="paper_broker",
         account_id="DU1234567",

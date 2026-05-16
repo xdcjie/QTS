@@ -20,10 +20,10 @@ def test_reporting_base_contracts_define_manifest_and_artifact_methods() -> None
         assert hasattr(RuntimeArtifactWriter, method_name)
 
 
-def test_live_manifest_validates_against_shared_runtime_manifest(tmp_path: Path) -> None:
+def test_broker_runtime_manifest_validates_against_shared_runtime_manifest(tmp_path: Path) -> None:
     from qts.core.ids import RuntimeRunId
     from qts.reporting.base import RuntimeManifest
-    from qts.reporting.live import LiveReportWriter
+    from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
     from qts.runtime.sinks.base import RuntimeEventContext
     from qts.runtime.sinks.live import LiveRuntimeEventSink
 
@@ -34,7 +34,7 @@ def test_live_manifest_validates_against_shared_runtime_manifest(tmp_path: Path)
     sink.write(RuntimeEvent(kind="runtime.state_transition", payload={"state": "running"}))
     sink.close()
 
-    manifest = LiveReportWriter(tmp_path).write_manifest(
+    manifest = BrokerRuntimeReportWriter(tmp_path).write_manifest(
         config_payload={"mode": "live"},
         runtime_mode="live",
         account_id="acct-live",

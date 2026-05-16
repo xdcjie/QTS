@@ -374,6 +374,44 @@ def test_guardrails_reject_backtest_engine_historical_input_assembly(
     assert _codes(root) == {"BACKTEST_ENGINE_COHESION"}
 
 
+def test_guardrails_reject_backtest_actor_loop_boundary_ownership(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/backtest/actor_loop.py",
+        "from qts.data.historical.config import HistoricalMarketDataConfig\n"
+        "from qts.reporting.backtest import BacktestArtifactWriter\n\n"
+        "class BacktestActorLoop:\n"
+        "    def run(self):\n"
+        "        return HistoricalMarketDataConfig, BacktestArtifactWriter\n",
+    )
+
+    assert _codes(root) == {"BACKTEST_ACTOR_LOOP_COHESION"}
+
+
+def test_guardrails_reject_backtest_actor_loop_private_helper_growth(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/backtest/actor_loop.py",
+        "class BacktestActorLoop:\n"
+        "    def run(self):\n"
+        "        return None\n\n"
+        "    def _resolve_actor_classes(self):\n"
+        "        return None\n\n"
+        "    def _write_account_snapshot(self):\n"
+        "        return None\n\n"
+        "    def _format_broker_capability_payload(self):\n"
+        "        return None\n",
+    )
+
+    assert _codes(root) == {"BACKTEST_ACTOR_LOOP_COHESION"}
+
+
 def test_guardrails_allow_product_facts_in_registry_providers(tmp_path: Path) -> None:
     root = tmp_path
     _write(
@@ -521,6 +559,11 @@ def test_guardrails_reject_removed_import_usage(
         "backend/src/qts/runtime/start_runtime_consumer.py",
         "from qts.application.commands.start_paper import start_paper\n",
     )
+    _write(
+        root,
+        "backend/src/qts/reporting/old_report_consumer.py",
+        "from qts.reporting.live import LiveReportWriter\n",
+    )
 
     assert _codes_by_suite(root, guardrails.RemovedImportNoNewUsageRule()) == {
         "REMOVED_IMPORT_USAGE"
@@ -538,6 +581,38 @@ def test_default_guardrails_reject_removed_import_usage(
     )
 
     assert _codes(root) == {"REMOVED_IMPORT_USAGE"}
+
+
+def test_guardrails_reject_old_live_report_import_usage(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/reporting/old_report_consumer.py",
+        "from qts.reporting.live import LiveReportWriter\n",
+    )
+
+    assert _codes_by_suite(root, guardrails.RemovedImportNoNewUsageRule()) == {
+        "REMOVED_IMPORT_USAGE"
+    }
+
+
+def test_guardrails_reject_old_live_report_export_name_usage(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/reporting/old_report_consumer.py",
+        "from qts.reporting import LiveReportWriter\n",
+    )
+
+    assert _codes_by_suite(root, guardrails.RemovedImportNoNewUsageRule()) == {
+        "REMOVED_IMPORT_USAGE"
+    }
 
 
 def test_default_guardrails_reject_removed_transport_import_usage(
@@ -695,6 +770,33 @@ def test_guardrails_reject_shared_runtime_fake_adapter_wording(tmp_path: Path) -
     )
 
     assert _codes(root) == {"SHARED_RUNTIME_WORDING"}
+
+
+def test_guardrails_reject_runtime_session_complexity_without_evidence(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    methods = "\n".join(f"    def public_{index}(self):\n        pass" for index in range(13))
+    _write(
+        root,
+        "backend/src/qts/runtime/session.py",
+        f"class RuntimeSession:\n{methods}\n\n    def _helper_0(self):\n        pass\n",
+    )
+
+    assert _codes(root) == {"RUNTIME_SESSION_COMPLEXITY"}
+
+
+def test_guardrails_reject_runtime_coordinator_without_decision_evidence(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/runtime/recovery.py",
+        "class RuntimeRecoveryCoordinator:\n    def recover(self):\n        pass\n",
+    )
+
+    assert _codes(root) == {"RUNTIME_COORDINATOR_DECISION"}
 
 
 def test_guardrails_reject_placeholder_docstrings_in_production(tmp_path: Path) -> None:
