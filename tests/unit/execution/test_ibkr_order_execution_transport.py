@@ -85,6 +85,98 @@ def test_ibkr_tws_order_execution_transport_facade_delegates_split_responsibilit
     assert "IbkrExecutionPayload(" not in source
 
 
+def test_ibkr_tws_connection_does_not_create_domain_execution_reports() -> None:
+    import inspect
+
+    from qts.execution.transports.ibkr_tws_connection import IbkrTwsConnection
+
+    source = inspect.getsource(IbkrTwsConnection)
+
+    assert "ExecutionReport" not in source
+    assert "BrokerExecutionReport" not in source
+    assert "IbkrOrderStatusPayload" not in source
+    assert "IbkrExecutionPayload" not in source
+
+
+def test_ibkr_tws_order_client_does_not_process_callbacks_or_hold_business_state() -> None:
+    import inspect
+
+    from qts.execution.transports.ibkr_tws_order_client import IbkrTwsOrderClient
+
+    source = inspect.getsource(IbkrTwsOrderClient)
+
+    assert "_submitted_requests" not in source
+    assert "handle_" not in source
+    assert "on_order_status" not in source
+    assert "on_execution" not in source
+    assert "on_commission" not in source
+    assert "IbkrOrderStatusPayload" not in source
+    assert "IbkrExecutionPayload" not in source
+
+
+def test_ibkr_tws_callback_dispatcher_does_not_submit_or_cancel_orders() -> None:
+    import inspect
+
+    from qts.execution.transports.ibkr_tws_callback_dispatcher import (
+        IbkrTwsCallbackDispatcher,
+    )
+
+    source = inspect.getsource(IbkrTwsCallbackDispatcher)
+
+    assert "placeOrder" not in source
+    assert "cancelOrder" not in source
+    assert "submit_order" not in source
+    assert "cancel_order" not in source
+    assert "IbkrTwsOrderClient" not in source
+
+
+def test_ibkr_tws_execution_event_emitter_only_publishes_normalized_events() -> None:
+    import inspect
+
+    from qts.execution.transports.ibkr_tws_execution_event_emitter import (
+        IbkrTwsExecutionEventEmitter,
+    )
+
+    source = inspect.getsource(IbkrTwsExecutionEventEmitter)
+
+    assert "_sink" not in source
+    assert "on_order_status" not in source
+    assert "on_execution" not in source
+    assert "on_commission" not in source
+    assert "IbkrOrderStatusPayload" not in source
+    assert "IbkrExecutionPayload" not in source
+
+
+def test_ibkr_tws_order_execution_transport_facade_has_no_duplicate_business_state() -> None:
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
+        IbkrTwsOrderExecutionTransport,
+        IbkrTwsOrderExecutionTransportConfig,
+    )
+
+    transport = IbkrTwsOrderExecutionTransport(
+        config=IbkrTwsOrderExecutionTransportConfig(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+        ),
+        sink=_RecordingSink(),
+    )
+
+    assert set(vars(transport)) == {
+        "config",
+        "_reports",
+        "_seen_errors",
+        "_connection",
+        "_order_client",
+        "_reconciliation_client",
+        "_event_emitter",
+        "_callback_dispatcher",
+    }
+    assert not hasattr(transport, "_submitted_requests")
+    assert not hasattr(transport, "_order_map")
+    assert not hasattr(transport, "_callback_quarantine")
+
+
 def test_ibkr_tws_callback_dispatcher_converts_raw_callbacks_to_payloads() -> None:
     import queue
 
@@ -108,8 +200,8 @@ def test_ibkr_tws_callback_dispatcher_converts_raw_callbacks_to_payloads() -> No
         status = "Submitted"
 
     sink = _RecordingSink()
-    emitter = IbkrTwsExecutionEventEmitter(sink=sink, reports=queue.Queue())
-    dispatcher = IbkrTwsCallbackDispatcher(emitter=emitter)
+    emitter = IbkrTwsExecutionEventEmitter(reports=queue.Queue())
+    dispatcher = IbkrTwsCallbackDispatcher(sink=sink, emitter=emitter)
 
     dispatcher.handle_open_order(
         order_id=123,

@@ -1445,8 +1445,8 @@
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>302 files</span>
-      <span>497 classes</span>
-      <span>1524 functions</span>
+      <span>498 classes</span>
+      <span>1548 functions</span>
       <span>288 backend</span>
       <span>14 frontend</span>
     </div>
@@ -4986,7 +4986,7 @@
         <code>backend/src/qts/execution/adapters/broker_callback_quarantine.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
-          <span>9 functions</span>
+          <span>15 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -4997,7 +4997,7 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>BrokerCallbackQuarantine</code></td><td>broker_callback_quarantine:12</td><td>Owns unresolved broker callbacks until identity mapping can resolve them.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BrokerCallbackQuarantine</code></td><td>broker_callback_quarantine:14</td><td>Owns unresolved broker callbacks until identity mapping can resolve them.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5006,15 +5006,21 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__init__</code></td><td>BrokerCallbackQuarantine:15</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>executions</code></td><td>BrokerCallbackQuarantine:21</td><td>Return unresolved execution callbacks.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>open_orders</code></td><td>BrokerCallbackQuarantine:27</td><td>Return unresolved openOrder callbacks.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>order_statuses</code></td><td>BrokerCallbackQuarantine:33</td><td>Return unresolved orderStatus callbacks.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>has_unresolved</code></td><td>BrokerCallbackQuarantine:39</td><td>Return whether any unresolved callbacks remain.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>add_execution</code></td><td>BrokerCallbackQuarantine:44</td><td>Quarantine an execution callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>replace_executions</code></td><td>BrokerCallbackQuarantine:49</td><td>Replace unresolved execution callbacks after a resolve attempt.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>add_open_order</code></td><td>BrokerCallbackQuarantine:54</td><td>Quarantine an openOrder callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>add_order_status</code></td><td>BrokerCallbackQuarantine:59</td><td>Quarantine an orderStatus callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>BrokerCallbackQuarantine:17</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>executions</code></td><td>BrokerCallbackQuarantine:25</td><td>Return unresolved execution callbacks.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>open_orders</code></td><td>BrokerCallbackQuarantine:31</td><td>Return unresolved openOrder callbacks.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>order_statuses</code></td><td>BrokerCallbackQuarantine:37</td><td>Return unresolved orderStatus callbacks.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>positions</code></td><td>BrokerCallbackQuarantine:43</td><td>Return unresolved position callbacks.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>account_summaries</code></td><td>BrokerCallbackQuarantine:49</td><td>Return unresolved accountSummary callbacks.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>has_unresolved</code></td><td>BrokerCallbackQuarantine:55</td><td>Return whether any unresolved callbacks remain.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>add_execution</code></td><td>BrokerCallbackQuarantine:66</td><td>Quarantine an execution callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>replace_executions</code></td><td>BrokerCallbackQuarantine:71</td><td>Replace unresolved execution callbacks after a resolve attempt.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>replace_open_orders</code></td><td>BrokerCallbackQuarantine:76</td><td>Replace unresolved openOrder callbacks after a resolve attempt.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>replace_order_statuses</code></td><td>BrokerCallbackQuarantine:81</td><td>Replace unresolved orderStatus callbacks after a resolve attempt.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>add_open_order</code></td><td>BrokerCallbackQuarantine:86</td><td>Quarantine an openOrder callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>add_order_status</code></td><td>BrokerCallbackQuarantine:91</td><td>Quarantine an orderStatus callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>add_position</code></td><td>BrokerCallbackQuarantine:96</td><td>Quarantine a position callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>add_account_summary</code></td><td>BrokerCallbackQuarantine:101</td><td>Quarantine an accountSummary callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5084,7 +5090,7 @@
         <code>backend/src/qts/execution/adapters/ibkr_order_execution.py</code>
         <span class="inventory-counts">
           <span>4 classes</span>
-          <span>33 functions</span>
+          <span>38 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -5098,7 +5104,7 @@
               <tr><td><code>IbkrOrderExecutionConnection</code></td><td>ibkr_order_execution:45</td><td>IBKR order execution connection settings.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
               <tr><td><code>IbkrExecutionReport</code></td><td>ibkr_order_execution:67</td><td>IBKR execution report shape before normalization.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
               <tr><td><code>IbkrOrderCallbackEvent</code></td><td>ibkr_order_execution:80</td><td>Audit event for normalized IBKR order callback handling.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
-              <tr><td><code>IbkrOrderExecutionAdapter</code></td><td>ibkr_order_execution:102</td><td>Maps internal orders to IBKR order requests and normalizes reports.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>IbkrOrderExecutionAdapter</code></td><td>ibkr_order_execution:106</td><td>Maps internal orders to IBKR order requests and normalizes reports.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5108,38 +5114,43 @@
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
               <tr><td><code>__post_init__</code></td><td>IbkrOrderExecutionConnection:54</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>IbkrOrderCallbackEvent:89</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>IbkrOrderExecutionAdapter:105</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>quarantined_executions</code></td><td>IbkrOrderExecutionAdapter:137</td><td>Read-only unresolved IBKR execution callbacks.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>quarantined_open_orders</code></td><td>IbkrOrderExecutionAdapter:142</td><td>Read-only unresolved IBKR openOrder callbacks.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>quarantined_order_statuses</code></td><td>IbkrOrderExecutionAdapter:147</td><td>Read-only unresolved IBKR order-status callbacks.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>callback_events</code></td><td>IbkrOrderExecutionAdapter:152</td><td>Read-only IBKR callback audit events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>has_unresolved_callbacks</code></td><td>IbkrOrderExecutionAdapter:157</td><td>Return whether unresolved IBKR callbacks remain quarantined.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_order_request</code></td><td>IbkrOrderExecutionAdapter:162</td><td>Perform to_order_request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>record_submitted_order</code></td><td>IbkrOrderExecutionAdapter:204</td><td>Record a submitted IBKR order id for callback reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>resolve_cancel_broker_order_id</code></td><td>IbkrOrderExecutionAdapter:229</td><td>Resolve the IBKR order id for a cancel request through route metadata.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>normalize_execution_report</code></td><td>IbkrOrderExecutionAdapter:248</td><td>Perform normalize_execution_report.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_order_status</code></td><td>IbkrOrderExecutionAdapter:260</td><td>Normalize a raw IBKR order-status callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_open_order</code></td><td>IbkrOrderExecutionAdapter:307</td><td>Record an IBKR openOrder callback against the broker-order map.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_position</code></td><td>IbkrOrderExecutionAdapter:365</td><td>Record an IBKR position callback for broker reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_account_summary</code></td><td>IbkrOrderExecutionAdapter:376</td><td>Record an IBKR account summary callback for broker reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>broker_reconciliation_snapshot</code></td><td>IbkrOrderExecutionAdapter:388</td><td>Return the latest normalized broker-side snapshot for reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_execution</code></td><td>IbkrOrderExecutionAdapter:408</td><td>Stage a raw IBKR execution callback until its commission arrives.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_commission</code></td><td>IbkrOrderExecutionAdapter:456</td><td>Normalize a raw IBKR commission callback and complete matching fills.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>resolve_quarantined_callbacks</code></td><td>IbkrOrderExecutionAdapter:487</td><td>Try to resolve quarantined callbacks after order mapping changes.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_error</code></td><td>IbkrOrderExecutionAdapter:518</td><td>Normalize a raw IBKR error callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_disconnect</code></td><td>IbkrOrderExecutionAdapter:527</td><td>Normalize a raw IBKR disconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_reconnect</code></td><td>IbkrOrderExecutionAdapter:532</td><td>Normalize a raw IBKR reconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_status_from_ibkr</code></td><td>IbkrOrderExecutionAdapter:538</td><td>实现 IbkrOrderExecutionAdapter 的 status from ibkr 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_order_side_from_ibkr</code></td><td>IbkrOrderExecutionAdapter:556</td><td>实现 IbkrOrderExecutionAdapter 的 order side from ibkr 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>validate_cancel_supported</code></td><td>IbkrOrderExecutionAdapter:564</td><td>Validate cancel support before sending an IBKR cancel request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>validate_replace_supported</code></td><td>IbkrOrderExecutionAdapter:570</td><td>Validate replace support before sending an IBKR replace request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>validate_no_unresolved_callbacks</code></td><td>IbkrOrderExecutionAdapter:576</td><td>Fail closed while broker callbacks remain unresolved.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_validate_order_request</code></td><td>IbkrOrderExecutionAdapter:582</td><td>实现 IbkrOrderExecutionAdapter 的 validate order request 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_execution_key</code></td><td>IbkrOrderExecutionAdapter:611</td><td>实现 IbkrOrderExecutionAdapter 的 execution key 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_pop_commissioned_execution_by_execution_id</code></td><td>IbkrOrderExecutionAdapter:615</td><td>实现 IbkrOrderExecutionAdapter 的 pop commissioned execution by execution id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_pop_commissioned_execution</code></td><td>IbkrOrderExecutionAdapter:624</td><td>实现 IbkrOrderExecutionAdapter 的 pop commissioned execution 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_record_callback_event</code></td><td>IbkrOrderExecutionAdapter:647</td><td>实现 IbkrOrderExecutionAdapter 的 record callback event 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>IbkrOrderCallbackEvent:91</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>IbkrOrderExecutionAdapter:109</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>quarantined_executions</code></td><td>IbkrOrderExecutionAdapter:141</td><td>Read-only unresolved IBKR execution callbacks.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>quarantined_open_orders</code></td><td>IbkrOrderExecutionAdapter:146</td><td>Read-only unresolved IBKR openOrder callbacks.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>quarantined_order_statuses</code></td><td>IbkrOrderExecutionAdapter:151</td><td>Read-only unresolved IBKR order-status callbacks.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>quarantined_positions</code></td><td>IbkrOrderExecutionAdapter:156</td><td>Read-only unresolved IBKR position callbacks.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>quarantined_account_summaries</code></td><td>IbkrOrderExecutionAdapter:161</td><td>Read-only unresolved IBKR account-summary callbacks.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>callback_events</code></td><td>IbkrOrderExecutionAdapter:166</td><td>Read-only IBKR callback audit events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>has_unresolved_callbacks</code></td><td>IbkrOrderExecutionAdapter:171</td><td>Return whether unresolved IBKR callbacks remain quarantined.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_order_request</code></td><td>IbkrOrderExecutionAdapter:176</td><td>Perform to_order_request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>record_submitted_order</code></td><td>IbkrOrderExecutionAdapter:218</td><td>Record a submitted IBKR order id for callback reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>resolve_cancel_broker_order_id</code></td><td>IbkrOrderExecutionAdapter:243</td><td>Resolve the IBKR order id for a cancel request through route metadata.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>normalize_execution_report</code></td><td>IbkrOrderExecutionAdapter:262</td><td>Perform normalize_execution_report.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_order_status</code></td><td>IbkrOrderExecutionAdapter:274</td><td>Normalize a raw IBKR order-status callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_open_order</code></td><td>IbkrOrderExecutionAdapter:333</td><td>Record an IBKR openOrder callback against the broker-order map.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_position</code></td><td>IbkrOrderExecutionAdapter:391</td><td>Record an IBKR position callback for broker reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_account_summary</code></td><td>IbkrOrderExecutionAdapter:408</td><td>Record an IBKR account summary callback for broker reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>broker_reconciliation_snapshot</code></td><td>IbkrOrderExecutionAdapter:426</td><td>Return the latest normalized broker-side snapshot for reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_execution</code></td><td>IbkrOrderExecutionAdapter:446</td><td>Stage a raw IBKR execution callback until its commission arrives.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_commission</code></td><td>IbkrOrderExecutionAdapter:493</td><td>Normalize a raw IBKR commission callback and complete matching fills.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>resolve_quarantined_callbacks</code></td><td>IbkrOrderExecutionAdapter:524</td><td>Try to resolve quarantined callbacks after order mapping changes.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_error</code></td><td>IbkrOrderExecutionAdapter:582</td><td>Normalize a raw IBKR error callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_disconnect</code></td><td>IbkrOrderExecutionAdapter:591</td><td>Normalize a raw IBKR disconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_reconnect</code></td><td>IbkrOrderExecutionAdapter:596</td><td>Normalize a raw IBKR reconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_status_from_ibkr</code></td><td>IbkrOrderExecutionAdapter:602</td><td>实现 IbkrOrderExecutionAdapter 的 status from ibkr 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_order_side_from_ibkr</code></td><td>IbkrOrderExecutionAdapter:620</td><td>实现 IbkrOrderExecutionAdapter 的 order side from ibkr 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>validate_cancel_supported</code></td><td>IbkrOrderExecutionAdapter:628</td><td>Validate cancel support before sending an IBKR cancel request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>validate_replace_supported</code></td><td>IbkrOrderExecutionAdapter:634</td><td>Validate replace support before sending an IBKR replace request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>validate_no_unresolved_callbacks</code></td><td>IbkrOrderExecutionAdapter:640</td><td>Fail closed while broker callbacks remain unresolved.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_validate_order_request</code></td><td>IbkrOrderExecutionAdapter:646</td><td>实现 IbkrOrderExecutionAdapter 的 validate order request 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_execution_key</code></td><td>IbkrOrderExecutionAdapter:675</td><td>实现 IbkrOrderExecutionAdapter 的 execution key 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_late_cancel_after_fill</code></td><td>IbkrOrderExecutionAdapter:680</td><td>实现 IbkrOrderExecutionAdapter 的 is late cancel after fill 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_pop_commissioned_execution_by_execution_id</code></td><td>IbkrOrderExecutionAdapter:686</td><td>实现 IbkrOrderExecutionAdapter 的 pop commissioned execution by execution id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_pop_commissioned_execution</code></td><td>IbkrOrderExecutionAdapter:695</td><td>实现 IbkrOrderExecutionAdapter 的 pop commissioned execution 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_record_callback_event</code></td><td>IbkrOrderExecutionAdapter:718</td><td>实现 IbkrOrderExecutionAdapter 的 record callback event 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_record_account_mismatch_event</code></td><td>IbkrOrderExecutionAdapter:741</td><td>实现 IbkrOrderExecutionAdapter 的 record account mismatch event 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_mask_account_id</code></td><td>IbkrOrderExecutionAdapter:760</td><td>实现 IbkrOrderExecutionAdapter 的 mask account id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5150,7 +5161,7 @@
         <code>backend/src/qts/execution/adapters/ibkr_order_map.py</code>
         <span class="inventory-counts">
           <span>2 classes</span>
-          <span>14 functions</span>
+          <span>25 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -5161,8 +5172,8 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>BrokerOrderRecord</code></td><td>ibkr_order_map:12</td><td>Audit record linking internal and IBKR order identifiers.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BrokerOrderMap</code></td><td>ibkr_order_map:36</td><td>Owns lookup indexes across internal, client, broker, and permanent ids.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BrokerOrderRecord</code></td><td>ibkr_order_map:15</td><td>Audit record linking internal and IBKR order identifiers.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BrokerOrderMap</code></td><td>ibkr_order_map:39</td><td>Owns lookup indexes across internal, client, broker, and permanent ids.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5171,20 +5182,31 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__post_init__</code></td><td>BrokerOrderRecord:25</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>BrokerOrderMap:39</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>record_pending_submission</code></td><td>BrokerOrderMap:45</td><td>Record an order before the IBKR broker order id is known.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>attach_ibkr_order_id</code></td><td>BrokerOrderMap:75</td><td>Attach the broker order id returned by IBKR order submission.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>attach_perm_id</code></td><td>BrokerOrderMap:86</td><td>Attach IBKR&#x27;s permanent id from order callbacks.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>mark_status</code></td><td>BrokerOrderMap:92</td><td>Record the latest broker status for audit and reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>by_client_order_id</code></td><td>BrokerOrderMap:106</td><td>Look up a record by client order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>by_internal_order_id</code></td><td>BrokerOrderMap:111</td><td>Look up a record by internal order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>by_ibkr_order_id</code></td><td>BrokerOrderMap:116</td><td>Look up a record by IBKR order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>by_perm_id</code></td><td>BrokerOrderMap:121</td><td>Look up a record by IBKR permanent id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>snapshot</code></td><td>BrokerOrderMap:126</td><td>Return a deterministic snapshot suitable for durable recovery.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>restore</code></td><td>BrokerOrderMap:135</td><td>Restore all lookup indexes from a broker-order-map snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_store</code></td><td>BrokerOrderMap:143</td><td>实现 BrokerOrderMap 的 store 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_require_client_order_id</code></td><td>BrokerOrderMap:152</td><td>实现 BrokerOrderMap 的 require client order id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>BrokerOrderRecord:28</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>BrokerOrderMap:42</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>record_pending_submission</code></td><td>BrokerOrderMap:48</td><td>Record an order before the IBKR broker order id is known.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>attach_ibkr_order_id</code></td><td>BrokerOrderMap:78</td><td>Attach the broker order id returned by IBKR order submission.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>attach_perm_id</code></td><td>BrokerOrderMap:89</td><td>Attach IBKR&#x27;s permanent id from order callbacks.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>mark_status</code></td><td>BrokerOrderMap:95</td><td>Record the latest broker status for audit and reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>by_client_order_id</code></td><td>BrokerOrderMap:109</td><td>Look up a record by client order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>by_internal_order_id</code></td><td>BrokerOrderMap:114</td><td>Look up a record by internal order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>by_ibkr_order_id</code></td><td>BrokerOrderMap:119</td><td>Look up a record by IBKR order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>by_perm_id</code></td><td>BrokerOrderMap:124</td><td>Look up a record by IBKR permanent id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>snapshot</code></td><td>BrokerOrderMap:129</td><td>Return a deterministic snapshot suitable for durable recovery.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>snapshot_hash</code></td><td>BrokerOrderMap:137</td><td>Return a deterministic hash for the durable order-map snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>restore</code></td><td>BrokerOrderMap:143</td><td>Restore all lookup indexes from a broker-order-map snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_store</code></td><td>BrokerOrderMap:155</td><td>实现 BrokerOrderMap 的 store 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_require_client_order_id</code></td><td>BrokerOrderMap:186</td><td>实现 BrokerOrderMap 的 require client order id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_record_payload</code></td><td>BrokerOrderMap:192</td><td>实现 BrokerOrderMap 的 record payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_coerce_record</code></td><td>BrokerOrderMap:210</td><td>实现 BrokerOrderMap 的 coerce record 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_required_str</code></td><td>BrokerOrderMap:231</td><td>实现 BrokerOrderMap 的 required str 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_required_order_id</code></td><td>BrokerOrderMap:242</td><td>实现 BrokerOrderMap 的 required order id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_required_account_id</code></td><td>BrokerOrderMap:249</td><td>实现 BrokerOrderMap 的 required account id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_optional_strategy_id</code></td><td>BrokerOrderMap:256</td><td>实现 BrokerOrderMap 的 optional strategy id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_optional_str</code></td><td>BrokerOrderMap:266</td><td>实现 BrokerOrderMap 的 optional str 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_required_datetime</code></td><td>BrokerOrderMap:276</td><td>实现 BrokerOrderMap 的 required datetime 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_optional_datetime</code></td><td>BrokerOrderMap:282</td><td>实现 BrokerOrderMap 的 optional datetime 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_coerce_datetime</code></td><td>BrokerOrderMap:288</td><td>实现 BrokerOrderMap 的 coerce datetime 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5591,7 +5613,7 @@
         <code>backend/src/qts/execution/transports/ibkr_tws_callback_dispatcher.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
-          <span>11 functions</span>
+          <span>20 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -5602,7 +5624,7 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>IbkrTwsCallbackDispatcher</code></td><td>ibkr_tws_callback_dispatcher:26</td><td>Converts raw TWS callbacks into transport payloads and emits them.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>IbkrTwsCallbackDispatcher</code></td><td>ibkr_tws_callback_dispatcher:31</td><td>Converts raw TWS callbacks into transport payloads and emits them.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5611,17 +5633,26 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__init__</code></td><td>IbkrTwsCallbackDispatcher:29</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>handle_order_status</code></td><td>IbkrTwsCallbackDispatcher:32</td><td>Handle an IBKR orderStatus callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_open_order</code></td><td>IbkrTwsCallbackDispatcher:50</td><td>Handle an IBKR openOrder callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_position</code></td><td>IbkrTwsCallbackDispatcher:80</td><td>Handle an IBKR position callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_account_summary</code></td><td>IbkrTwsCallbackDispatcher:91</td><td>Handle an IBKR accountSummary callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_execution</code></td><td>IbkrTwsCallbackDispatcher:110</td><td>Handle an IBKR execDetails callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_commission_report</code></td><td>IbkrTwsCallbackDispatcher:129</td><td>Handle an IBKR commission callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_commission_and_fees</code></td><td>IbkrTwsCallbackDispatcher:146</td><td>Handle an IBKR commissionAndFeesReport callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_error</code></td><td>IbkrTwsCallbackDispatcher:151</td><td>Handle an IBKR error callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_disconnect</code></td><td>IbkrTwsCallbackDispatcher:161</td><td>Handle an IBKR disconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_reconnect</code></td><td>IbkrTwsCallbackDispatcher:166</td><td>Handle an IBKR reconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>IbkrTwsCallbackDispatcher:34</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>dispatch_order_status</code></td><td>IbkrTwsCallbackDispatcher:43</td><td>Route a normalized order-status callback payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>dispatch_open_order</code></td><td>IbkrTwsCallbackDispatcher:50</td><td>Route a normalized openOrder callback payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>dispatch_position</code></td><td>IbkrTwsCallbackDispatcher:55</td><td>Route a normalized position callback payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>dispatch_account_summary</code></td><td>IbkrTwsCallbackDispatcher:60</td><td>Route a normalized accountSummary callback payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>dispatch_execution</code></td><td>IbkrTwsCallbackDispatcher:65</td><td>Route a normalized execution callback payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>dispatch_commission</code></td><td>IbkrTwsCallbackDispatcher:72</td><td>Route a normalized commission callback payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>dispatch_error</code></td><td>IbkrTwsCallbackDispatcher:82</td><td>Route a normalized error callback payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>dispatch_disconnect</code></td><td>IbkrTwsCallbackDispatcher:87</td><td>Route a normalized disconnect callback payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>dispatch_reconnect</code></td><td>IbkrTwsCallbackDispatcher:92</td><td>Route a normalized reconnect callback payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_order_status</code></td><td>IbkrTwsCallbackDispatcher:97</td><td>Handle an IBKR orderStatus callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_open_order</code></td><td>IbkrTwsCallbackDispatcher:115</td><td>Handle an IBKR openOrder callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_position</code></td><td>IbkrTwsCallbackDispatcher:145</td><td>Handle an IBKR position callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_account_summary</code></td><td>IbkrTwsCallbackDispatcher:156</td><td>Handle an IBKR accountSummary callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_execution</code></td><td>IbkrTwsCallbackDispatcher:175</td><td>Handle an IBKR execDetails callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_commission_report</code></td><td>IbkrTwsCallbackDispatcher:194</td><td>Handle an IBKR commission callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_commission_and_fees</code></td><td>IbkrTwsCallbackDispatcher:210</td><td>Handle an IBKR commissionAndFeesReport callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_error</code></td><td>IbkrTwsCallbackDispatcher:215</td><td>Handle an IBKR error callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_disconnect</code></td><td>IbkrTwsCallbackDispatcher:225</td><td>Handle an IBKR disconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_reconnect</code></td><td>IbkrTwsCallbackDispatcher:232</td><td>Handle an IBKR reconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5672,7 +5703,7 @@
         <code>backend/src/qts/execution/transports/ibkr_tws_execution_event_emitter.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
-          <span>14 functions</span>
+          <span>6 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -5683,7 +5714,7 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>IbkrTwsExecutionEventEmitter</code></td><td>ibkr_tws_execution_event_emitter:24</td><td>Owns adapter sink dispatch and report/error queue publication.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>IbkrTwsExecutionEventEmitter</code></td><td>ibkr_tws_execution_event_emitter:15</td><td>Publishes normalized order-execution transport events.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5692,20 +5723,12 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__init__</code></td><td>IbkrTwsExecutionEventEmitter:27</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>emit_order_status</code></td><td>IbkrTwsExecutionEventEmitter:36</td><td>Dispatch a raw order-status callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_open_order</code></td><td>IbkrTwsExecutionEventEmitter:44</td><td>Dispatch a raw openOrder callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_position</code></td><td>IbkrTwsExecutionEventEmitter:49</td><td>Dispatch a raw position callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_account_summary</code></td><td>IbkrTwsExecutionEventEmitter:54</td><td>Dispatch a raw accountSummary callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_execution</code></td><td>IbkrTwsExecutionEventEmitter:59</td><td>Dispatch a raw execution callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_commission</code></td><td>IbkrTwsExecutionEventEmitter:67</td><td>Dispatch a raw commission callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_error</code></td><td>IbkrTwsExecutionEventEmitter:75</td><td>Dispatch a raw error callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>publish_error</code></td><td>IbkrTwsExecutionEventEmitter:80</td><td>Dispatch and publish a raw error callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_disconnect</code></td><td>IbkrTwsExecutionEventEmitter:85</td><td>Dispatch a raw disconnect callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>publish_disconnect</code></td><td>IbkrTwsExecutionEventEmitter:90</td><td>Dispatch and publish a raw disconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_reconnect</code></td><td>IbkrTwsExecutionEventEmitter:95</td><td>Dispatch a raw reconnect callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>publish_reconnect</code></td><td>IbkrTwsExecutionEventEmitter:100</td><td>Dispatch and publish a raw reconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>publish_commission_result</code></td><td>IbkrTwsExecutionEventEmitter:105</td><td>Publish a completed fill report produced by a commission callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>IbkrTwsExecutionEventEmitter:18</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>publish_report</code></td><td>IbkrTwsExecutionEventEmitter:25</td><td>Publish a normalized execution report when one is available.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>publish_error</code></td><td>IbkrTwsExecutionEventEmitter:31</td><td>Publish a normalized transport error.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>publish_disconnect</code></td><td>IbkrTwsExecutionEventEmitter:36</td><td>Publish a normalized disconnect event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>publish_reconnect</code></td><td>IbkrTwsExecutionEventEmitter:41</td><td>Publish a normalized reconnect event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>publish_commission_result</code></td><td>IbkrTwsExecutionEventEmitter:46</td><td>Publish a normalized fill report produced by a commission callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5737,10 +5760,10 @@
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
               <tr><td><code>__init__</code></td><td>IbkrTwsOrderClient:19</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>submit_order_with_broker_id</code></td><td>IbkrTwsOrderClient:33</td><td>Submit an IBKR order request and return the broker order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>cancel_order</code></td><td>IbkrTwsOrderClient:46</td><td>Cancel a broker order by broker order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>mark_next_order_id</code></td><td>IbkrTwsOrderClient:54</td><td>Record the next valid IBKR order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_reserve_order_id</code></td><td>IbkrTwsOrderClient:64</td><td>实现 IbkrTwsOrderClient 的 reserve order id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>submit_order_with_broker_id</code></td><td>IbkrTwsOrderClient:32</td><td>Submit an IBKR order request and return the broker order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>cancel_order</code></td><td>IbkrTwsOrderClient:44</td><td>Cancel a broker order by broker order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>mark_next_order_id</code></td><td>IbkrTwsOrderClient:52</td><td>Record the next valid IBKR order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_reserve_order_id</code></td><td>IbkrTwsOrderClient:62</td><td>实现 IbkrTwsOrderClient 的 reserve order id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5825,55 +5848,55 @@
               <tr><td><code>emit_disconnect</code></td><td>IbkrOrderExecutionTransport:447</td><td>Dispatch a raw disconnect callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>emit_reconnect</code></td><td>IbkrOrderExecutionTransport:451</td><td>Dispatch a raw reconnect callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>__init__</code></td><td>IbkrTwsOrderExecutionTransport:459</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_app</code></td><td>IbkrTwsOrderExecutionTransport:497</td><td>实现 IbkrTwsOrderExecutionTransport 的 app 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_app</code></td><td>IbkrTwsOrderExecutionTransport:501</td><td>实现 IbkrTwsOrderExecutionTransport 的 app 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>connected</code></td><td>IbkrTwsOrderExecutionTransport:505</td><td>Return whether the IBKR client is connected.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>managed_accounts</code></td><td>IbkrTwsOrderExecutionTransport:511</td><td>Return managed accounts advertised by the connected Gateway session.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>connect</code></td><td>IbkrTwsOrderExecutionTransport:516</td><td>Connect to TWS/Gateway and wait for the next order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>disconnect</code></td><td>IbkrTwsOrderExecutionTransport:521</td><td>Disconnect from TWS/Gateway.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>submit_order</code></td><td>IbkrTwsOrderExecutionTransport:526</td><td>Submit a normalized IBKR order request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>submit_order_with_broker_id</code></td><td>IbkrTwsOrderExecutionTransport:531</td><td>Submit an IBKR order request and return the broker order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>cancel_order</code></td><td>IbkrTwsOrderExecutionTransport:539</td><td>Cancel a broker order by broker order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>request_startup_reconciliation</code></td><td>IbkrTwsOrderExecutionTransport:544</td><td>Request broker state needed to reconcile after startup or reconnect.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>wait_for_order_status</code></td><td>IbkrTwsOrderExecutionTransport:549</td><td>Wait for a broker status report matching the order and allowed statuses.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>wait_for_fill_report</code></td><td>IbkrTwsOrderExecutionTransport:585</td><td>Wait for a broker fill report with quantity, price, and fill id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_order_status</code></td><td>IbkrTwsOrderExecutionTransport:623</td><td>Handle an IBKR orderStatus callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_open_order</code></td><td>IbkrTwsOrderExecutionTransport:638</td><td>Handle an IBKR openOrder callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_position</code></td><td>IbkrTwsOrderExecutionTransport:655</td><td>Handle an IBKR position callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_account_summary</code></td><td>IbkrTwsOrderExecutionTransport:664</td><td>Handle an IBKR accountSummary callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_execution</code></td><td>IbkrTwsOrderExecutionTransport:681</td><td>Handle an IBKR execDetails callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_commission_report</code></td><td>IbkrTwsOrderExecutionTransport:686</td><td>Handle an IBKR commission callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_commission_and_fees</code></td><td>IbkrTwsOrderExecutionTransport:691</td><td>Handle an IBKR commissionAndFeesReport callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_error</code></td><td>IbkrTwsOrderExecutionTransport:696</td><td>Handle an IBKR error callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_disconnect</code></td><td>IbkrTwsOrderExecutionTransport:701</td><td>Handle an IBKR disconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_reconnect</code></td><td>IbkrTwsOrderExecutionTransport:706</td><td>Handle an IBKR reconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>mark_next_order_id</code></td><td>IbkrTwsOrderExecutionTransport:711</td><td>Record the next valid IBKR order id and mark the API session ready.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>set_managed_accounts</code></td><td>IbkrTwsOrderExecutionTransport:717</td><td>Record managed accounts from the Gateway session.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_order_status</code></td><td>IbkrTwsOrderExecutionTransport:722</td><td>Dispatch a raw order-status callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_open_order</code></td><td>IbkrTwsOrderExecutionTransport:727</td><td>Dispatch a raw openOrder callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_execution</code></td><td>IbkrTwsOrderExecutionTransport:732</td><td>Dispatch a raw execution callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_commission</code></td><td>IbkrTwsOrderExecutionTransport:737</td><td>Dispatch a raw commission callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_error</code></td><td>IbkrTwsOrderExecutionTransport:745</td><td>Dispatch a raw error callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_disconnect</code></td><td>IbkrTwsOrderExecutionTransport:750</td><td>Dispatch a raw disconnect callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_reconnect</code></td><td>IbkrTwsOrderExecutionTransport:755</td><td>Dispatch a raw reconnect callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_new_order_execution_app</code></td><td>module:782</td><td>提供模块级 new order execution app 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>_new_order_execution_app.&lt;locals&gt;:786</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>next_valid_id</code></td><td>_new_order_execution_app.&lt;locals&gt;:790</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 next valid id 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>managed_accounts</code></td><td>_new_order_execution_app.&lt;locals&gt;:793</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 managed accounts 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>order_status</code></td><td>_new_order_execution_app.&lt;locals&gt;:796</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 order status 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>open_order</code></td><td>_new_order_execution_app.&lt;locals&gt;:822</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 open order 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>position</code></td><td>_new_order_execution_app.&lt;locals&gt;:830</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 position 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>account_summary</code></td><td>_new_order_execution_app.&lt;locals&gt;:834</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 account summary 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>exec_details</code></td><td>_new_order_execution_app.&lt;locals&gt;:850</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 exec details 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>commission_and_fees_report</code></td><td>_new_order_execution_app.&lt;locals&gt;:854</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 commission and fees report 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>commission_report</code></td><td>_new_order_execution_app.&lt;locals&gt;:857</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 commission report 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>error</code></td><td>_new_order_execution_app.&lt;locals&gt;:860</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 error 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>connection_closed</code></td><td>_new_order_execution_app.&lt;locals&gt;:871</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 connection closed 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_ibapi_attr</code></td><td>module:895</td><td>提供模块级 ibapi attr 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_connect_ibapi_app</code></td><td>module:906</td><td>提供模块级 connect ibapi app 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>connect</code></td><td>_connect_ibapi_app.&lt;locals&gt;:916</td><td>实现 _connect_ibapi_app.&lt;locals&gt; 的 connect 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_to_decimal</code></td><td>module:938</td><td>提供模块级 to decimal 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_format_error</code></td><td>module:942</td><td>提供模块级 format error 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_app</code></td><td>IbkrTwsOrderExecutionTransport:500</td><td>实现 IbkrTwsOrderExecutionTransport 的 app 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_app</code></td><td>IbkrTwsOrderExecutionTransport:504</td><td>实现 IbkrTwsOrderExecutionTransport 的 app 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>connected</code></td><td>IbkrTwsOrderExecutionTransport:508</td><td>Return whether the IBKR client is connected.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>managed_accounts</code></td><td>IbkrTwsOrderExecutionTransport:514</td><td>Return managed accounts advertised by the connected Gateway session.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>connect</code></td><td>IbkrTwsOrderExecutionTransport:519</td><td>Connect to TWS/Gateway and wait for the next order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>disconnect</code></td><td>IbkrTwsOrderExecutionTransport:524</td><td>Disconnect from TWS/Gateway.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>submit_order</code></td><td>IbkrTwsOrderExecutionTransport:529</td><td>Submit a normalized IBKR order request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>submit_order_with_broker_id</code></td><td>IbkrTwsOrderExecutionTransport:534</td><td>Submit an IBKR order request and return the broker order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>cancel_order</code></td><td>IbkrTwsOrderExecutionTransport:542</td><td>Cancel a broker order by broker order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>request_startup_reconciliation</code></td><td>IbkrTwsOrderExecutionTransport:547</td><td>Request broker state needed to reconcile after startup or reconnect.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>wait_for_order_status</code></td><td>IbkrTwsOrderExecutionTransport:552</td><td>Wait for a broker status report matching the order and allowed statuses.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>wait_for_fill_report</code></td><td>IbkrTwsOrderExecutionTransport:588</td><td>Wait for a broker fill report with quantity, price, and fill id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_order_status</code></td><td>IbkrTwsOrderExecutionTransport:626</td><td>Handle an IBKR orderStatus callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_open_order</code></td><td>IbkrTwsOrderExecutionTransport:641</td><td>Handle an IBKR openOrder callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_position</code></td><td>IbkrTwsOrderExecutionTransport:658</td><td>Handle an IBKR position callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_account_summary</code></td><td>IbkrTwsOrderExecutionTransport:667</td><td>Handle an IBKR accountSummary callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_execution</code></td><td>IbkrTwsOrderExecutionTransport:684</td><td>Handle an IBKR execDetails callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_commission_report</code></td><td>IbkrTwsOrderExecutionTransport:689</td><td>Handle an IBKR commission callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_commission_and_fees</code></td><td>IbkrTwsOrderExecutionTransport:694</td><td>Handle an IBKR commissionAndFeesReport callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_error</code></td><td>IbkrTwsOrderExecutionTransport:699</td><td>Handle an IBKR error callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_disconnect</code></td><td>IbkrTwsOrderExecutionTransport:704</td><td>Handle an IBKR disconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_reconnect</code></td><td>IbkrTwsOrderExecutionTransport:709</td><td>Handle an IBKR reconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>mark_next_order_id</code></td><td>IbkrTwsOrderExecutionTransport:714</td><td>Record the next valid IBKR order id and mark the API session ready.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>set_managed_accounts</code></td><td>IbkrTwsOrderExecutionTransport:720</td><td>Record managed accounts from the Gateway session.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>emit_order_status</code></td><td>IbkrTwsOrderExecutionTransport:725</td><td>Dispatch a raw order-status callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>emit_open_order</code></td><td>IbkrTwsOrderExecutionTransport:730</td><td>Dispatch a raw openOrder callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>emit_execution</code></td><td>IbkrTwsOrderExecutionTransport:735</td><td>Dispatch a raw execution callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>emit_commission</code></td><td>IbkrTwsOrderExecutionTransport:740</td><td>Dispatch a raw commission callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>emit_error</code></td><td>IbkrTwsOrderExecutionTransport:748</td><td>Dispatch a raw error callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>emit_disconnect</code></td><td>IbkrTwsOrderExecutionTransport:753</td><td>Dispatch a raw disconnect callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>emit_reconnect</code></td><td>IbkrTwsOrderExecutionTransport:758</td><td>Dispatch a raw reconnect callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_new_order_execution_app</code></td><td>module:785</td><td>提供模块级 new order execution app 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>_new_order_execution_app.&lt;locals&gt;:789</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>next_valid_id</code></td><td>_new_order_execution_app.&lt;locals&gt;:793</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 next valid id 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>managed_accounts</code></td><td>_new_order_execution_app.&lt;locals&gt;:796</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 managed accounts 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>order_status</code></td><td>_new_order_execution_app.&lt;locals&gt;:799</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 order status 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>open_order</code></td><td>_new_order_execution_app.&lt;locals&gt;:825</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 open order 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>position</code></td><td>_new_order_execution_app.&lt;locals&gt;:833</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 position 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>account_summary</code></td><td>_new_order_execution_app.&lt;locals&gt;:837</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 account summary 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>exec_details</code></td><td>_new_order_execution_app.&lt;locals&gt;:853</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 exec details 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>commission_and_fees_report</code></td><td>_new_order_execution_app.&lt;locals&gt;:857</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 commission and fees report 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>commission_report</code></td><td>_new_order_execution_app.&lt;locals&gt;:860</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 commission report 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>error</code></td><td>_new_order_execution_app.&lt;locals&gt;:863</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 error 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>connection_closed</code></td><td>_new_order_execution_app.&lt;locals&gt;:874</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 connection closed 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_ibapi_attr</code></td><td>module:898</td><td>提供模块级 ibapi attr 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_connect_ibapi_app</code></td><td>module:909</td><td>提供模块级 connect ibapi app 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>connect</code></td><td>_connect_ibapi_app.&lt;locals&gt;:919</td><td>实现 _connect_ibapi_app.&lt;locals&gt; 的 connect 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_to_decimal</code></td><td>module:941</td><td>提供模块级 to decimal 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_format_error</code></td><td>module:945</td><td>提供模块级 format error 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -6619,8 +6642,8 @@
       <summary>
         <code>backend/src/qts/quality/guardrails.py</code>
         <span class="inventory-counts">
-          <span>24 classes</span>
-          <span>57 functions</span>
+          <span>25 classes</span>
+          <span>58 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -6631,30 +6654,31 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>GuardrailViolation</code></td><td>guardrails:220</td><td>One architecture or domain-boundary guardrail violation.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>Rule</code></td><td>guardrails:249</td><td>Pluggable guardrail rule interface.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
-              <tr><td><code>ImportBoundaryRule</code></td><td>guardrails:268</td><td>Validate package import boundary direction and adapter constraints.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>LivePackageNoReplayClassRule</code></td><td>guardrails:291</td><td>Reject replay concepts in the live market-data package.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ProductionNoFakeClassRule</code></td><td>guardrails:322</td><td>Reject fake classes from production packages.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>DataLiveNoSharedContractRule</code></td><td>guardrails:351</td><td>Reject shared market-data contracts from the live package.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>TransportCanonicalPathRule</code></td><td>guardrails:386</td><td>Reject transport class definitions from adapter packages.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>RemovedImportNoNewUsageRule</code></td><td>guardrails:424</td><td>Reject imports from removed module paths.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ProductionNoTestingImportRule</code></td><td>guardrails:452</td><td>Reject production imports from qts.testing.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>SharedRuntimeWordingRule</code></td><td>guardrails:482</td><td>Reject mode-specific wording in shared runtime docstrings.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ProductionPlaceholderDocstringRule</code></td><td>guardrails:519</td><td>Reject placeholder docstrings in production code.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ProductSpecificRule</code></td><td>guardrails:549</td><td>Reject product hard-coding outside documented locations.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BrokerSpecificRule</code></td><td>guardrails:567</td><td>Reject broker hard-coding outside broker boundaries.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BrokerSymbolBoundaryRule</code></td><td>guardrails:585</td><td>Reject broker symbol mapping imports outside approved boundary modules.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ProviderSdkImportRule</code></td><td>guardrails:620</td><td>Reject provider SDK imports outside adapter and transport boundaries.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>TestSupportRule</code></td><td>guardrails:653</td><td>Reject test/anchor support in production source.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>SharedCapabilityRule</code></td><td>guardrails:669</td><td>Reject shared capability semantics in source-specific modules.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>OOPPublicFactoryRule</code></td><td>guardrails:685</td><td>Reject module-level public factory names on stable concepts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>OOPHelperOwnershipRule</code></td><td>guardrails:701</td><td>Reject helper ownership violations that should stay private.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BacktestRunnerCohesionRule</code></td><td>guardrails:717</td><td>Reject replay input assembly inside backtest runner.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BacktestInputCohesionRule</code></td><td>guardrails:733</td><td>Reject catalog/data construction inside backtest input builder.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BacktestEngineCohesionRule</code></td><td>guardrails:749</td><td>Reject historical replay assembly inside backtest engine.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>StrategySdkPublicSurfaceRule</code></td><td>guardrails:765</td><td>Reject internal runtime/broker/risk symbols from strategy SDK modules.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>GuardrailSuite</code></td><td>guardrails:781</td><td>Execute a configured set of guardrail rules against Python files.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>GuardrailViolation</code></td><td>guardrails:224</td><td>One architecture or domain-boundary guardrail violation.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>Rule</code></td><td>guardrails:253</td><td>Pluggable guardrail rule interface.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>ImportBoundaryRule</code></td><td>guardrails:272</td><td>Validate package import boundary direction and adapter constraints.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>LivePackageNoReplayClassRule</code></td><td>guardrails:295</td><td>Reject replay concepts in the live market-data package.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ProductionNoFakeClassRule</code></td><td>guardrails:326</td><td>Reject fake classes from production packages.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>DataLiveNoSharedContractRule</code></td><td>guardrails:355</td><td>Reject shared market-data contracts from the live package.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>TransportCanonicalPathRule</code></td><td>guardrails:390</td><td>Reject transport class definitions from adapter packages.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>TransportAdapterImportRule</code></td><td>guardrails:428</td><td>Reject transport modules importing adapter implementations.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>RemovedImportNoNewUsageRule</code></td><td>guardrails:464</td><td>Reject imports from removed module paths.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ProductionNoTestingImportRule</code></td><td>guardrails:492</td><td>Reject production imports from qts.testing.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>SharedRuntimeWordingRule</code></td><td>guardrails:522</td><td>Reject mode-specific wording in shared runtime docstrings.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ProductionPlaceholderDocstringRule</code></td><td>guardrails:559</td><td>Reject placeholder docstrings in production code.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ProductSpecificRule</code></td><td>guardrails:589</td><td>Reject product hard-coding outside documented locations.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BrokerSpecificRule</code></td><td>guardrails:607</td><td>Reject broker hard-coding outside broker boundaries.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BrokerSymbolBoundaryRule</code></td><td>guardrails:625</td><td>Reject broker symbol mapping imports outside approved boundary modules.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ProviderSdkImportRule</code></td><td>guardrails:660</td><td>Reject provider SDK imports outside adapter and transport boundaries.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>TestSupportRule</code></td><td>guardrails:693</td><td>Reject test/anchor support in production source.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>SharedCapabilityRule</code></td><td>guardrails:709</td><td>Reject shared capability semantics in source-specific modules.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>OOPPublicFactoryRule</code></td><td>guardrails:725</td><td>Reject module-level public factory names on stable concepts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>OOPHelperOwnershipRule</code></td><td>guardrails:741</td><td>Reject helper ownership violations that should stay private.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestRunnerCohesionRule</code></td><td>guardrails:757</td><td>Reject replay input assembly inside backtest runner.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestInputCohesionRule</code></td><td>guardrails:773</td><td>Reject catalog/data construction inside backtest input builder.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestEngineCohesionRule</code></td><td>guardrails:789</td><td>Reject historical replay assembly inside backtest engine.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>StrategySdkPublicSurfaceRule</code></td><td>guardrails:805</td><td>Reject internal runtime/broker/risk symbols from strategy SDK modules.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>GuardrailSuite</code></td><td>guardrails:821</td><td>Execute a configured set of guardrail rules against Python files.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -6663,63 +6687,64 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__post_init__</code></td><td>GuardrailViolation:229</td><td>Attach a default remediation for report consumers.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>format</code></td><td>GuardrailViolation:242</td><td>Perform format.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>Rule:254</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>ImportBoundaryRule:273</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>LivePackageNoReplayClassRule:296</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>ProductionNoFakeClassRule:327</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>DataLiveNoSharedContractRule:356</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>TransportCanonicalPathRule:391</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>RemovedImportNoNewUsageRule:429</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>ProductionNoTestingImportRule:457</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>SharedRuntimeWordingRule:487</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>ProductionPlaceholderDocstringRule:524</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>ProductSpecificRule:554</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>BrokerSpecificRule:572</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>BrokerSymbolBoundaryRule:590</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>ProviderSdkImportRule:625</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>TestSupportRule:658</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>SharedCapabilityRule:674</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>OOPPublicFactoryRule:690</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>OOPHelperOwnershipRule:706</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>BacktestRunnerCohesionRule:722</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>BacktestInputCohesionRule:738</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>BacktestEngineCohesionRule:754</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>StrategySdkPublicSurfaceRule:770</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>GuardrailSuite:784</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>check_file</code></td><td>GuardrailSuite:809</td><td>Perform check_file.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>GuardrailSuite:828</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>run_guardrails</code></td><td>module:852</td><td>Return all guardrail violations under the repository root.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>_check_python_file</code></td><td>module:857</td><td>提供模块级 check python file 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_import</code></td><td>module:869</td><td>提供模块级 check import 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_forbidden_dependency</code></td><td>module:935</td><td>提供模块级 is forbidden dependency 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_forbidden_broker_adapter_dependency</code></td><td>module:963</td><td>提供模块级 is forbidden broker adapter dependency 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_forbidden_adapter_dependency</code></td><td>module:975</td><td>提供模块级 is forbidden adapter dependency 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_transport_actor_import</code></td><td>module:986</td><td>提供模块级 is transport actor import 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_pipeline_actor_import</code></td><td>module:992</td><td>提供模块级 is pipeline actor import 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_runtime_actor_module</code></td><td>module:1000</td><td>提供模块级 is runtime actor module 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_provider_sdk_module</code></td><td>module:1011</td><td>提供模块级 is provider sdk module 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_product_specific_code</code></td><td>module:1018</td><td>提供模块级 check product specific code 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_broker_specific_code</code></td><td>module:1034</td><td>提供模块级 check broker specific code 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_test_support_code</code></td><td>module:1050</td><td>提供模块级 check test support code 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_shared_capability_placement</code></td><td>module:1081</td><td>提供模块级 check shared capability placement 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_oop_public_factory_functions</code></td><td>module:1103</td><td>提供模块级 check oop public factory functions 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_oop_helper_ownership</code></td><td>module:1134</td><td>提供模块级 check oop helper ownership 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_backtest_runner_cohesion</code></td><td>module:1201</td><td>提供模块级 check backtest runner cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_backtest_input_cohesion</code></td><td>module:1257</td><td>提供模块级 check backtest input cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_backtest_engine_cohesion</code></td><td>module:1313</td><td>提供模块级 check backtest engine cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_strategy_sdk_internal_leak</code></td><td>module:1353</td><td>提供模块级 check strategy sdk internal leak 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_forbidden_tokens</code></td><td>module:1415</td><td>提供模块级 check forbidden tokens 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_node_identifier_name</code></td><td>module:1448</td><td>提供模块级 node identifier name 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_contains_forbidden_token</code></td><td>module:1458</td><td>提供模块级 contains forbidden token 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_node_references_name</code></td><td>module:1462</td><td>提供模块级 node references name 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_identifier_tokens</code></td><td>module:1469</td><td>提供模块级 identifier tokens 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_iter_imports</code></td><td>module:1481</td><td>提供模块级 iter imports 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_iter_imported_names</code></td><td>module:1491</td><td>提供模块级 iter imported names 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_iter_docstrings</code></td><td>module:1499</td><td>提供模块级 iter docstrings 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_has_allowed_prefix</code></td><td>module:1513</td><td>提供模块级 has allowed prefix 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>main</code></td><td>module:1517</td><td>Perform main.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>GuardrailViolation:233</td><td>Attach a default remediation for report consumers.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>format</code></td><td>GuardrailViolation:246</td><td>Perform format.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>Rule:258</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>ImportBoundaryRule:277</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>LivePackageNoReplayClassRule:300</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>ProductionNoFakeClassRule:331</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>DataLiveNoSharedContractRule:360</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>TransportCanonicalPathRule:395</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>TransportAdapterImportRule:433</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>RemovedImportNoNewUsageRule:469</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>ProductionNoTestingImportRule:497</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>SharedRuntimeWordingRule:527</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>ProductionPlaceholderDocstringRule:564</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>ProductSpecificRule:594</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>BrokerSpecificRule:612</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>BrokerSymbolBoundaryRule:630</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>ProviderSdkImportRule:665</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>TestSupportRule:698</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>SharedCapabilityRule:714</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>OOPPublicFactoryRule:730</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>OOPHelperOwnershipRule:746</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>BacktestRunnerCohesionRule:762</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>BacktestInputCohesionRule:778</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>BacktestEngineCohesionRule:794</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>StrategySdkPublicSurfaceRule:810</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>GuardrailSuite:824</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>check_file</code></td><td>GuardrailSuite:850</td><td>Perform check_file.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>GuardrailSuite:869</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>run_guardrails</code></td><td>module:893</td><td>Return all guardrail violations under the repository root.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>_check_python_file</code></td><td>module:898</td><td>提供模块级 check python file 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_import</code></td><td>module:910</td><td>提供模块级 check import 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_forbidden_dependency</code></td><td>module:976</td><td>提供模块级 is forbidden dependency 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_forbidden_broker_adapter_dependency</code></td><td>module:1004</td><td>提供模块级 is forbidden broker adapter dependency 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_forbidden_adapter_dependency</code></td><td>module:1016</td><td>提供模块级 is forbidden adapter dependency 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_transport_actor_import</code></td><td>module:1027</td><td>提供模块级 is transport actor import 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_pipeline_actor_import</code></td><td>module:1033</td><td>提供模块级 is pipeline actor import 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_runtime_actor_module</code></td><td>module:1041</td><td>提供模块级 is runtime actor module 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_provider_sdk_module</code></td><td>module:1052</td><td>提供模块级 is provider sdk module 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_product_specific_code</code></td><td>module:1059</td><td>提供模块级 check product specific code 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_broker_specific_code</code></td><td>module:1075</td><td>提供模块级 check broker specific code 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_test_support_code</code></td><td>module:1091</td><td>提供模块级 check test support code 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_shared_capability_placement</code></td><td>module:1122</td><td>提供模块级 check shared capability placement 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_oop_public_factory_functions</code></td><td>module:1144</td><td>提供模块级 check oop public factory functions 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_oop_helper_ownership</code></td><td>module:1175</td><td>提供模块级 check oop helper ownership 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_backtest_runner_cohesion</code></td><td>module:1242</td><td>提供模块级 check backtest runner cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_backtest_input_cohesion</code></td><td>module:1298</td><td>提供模块级 check backtest input cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_backtest_engine_cohesion</code></td><td>module:1354</td><td>提供模块级 check backtest engine cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_strategy_sdk_internal_leak</code></td><td>module:1394</td><td>提供模块级 check strategy sdk internal leak 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_forbidden_tokens</code></td><td>module:1456</td><td>提供模块级 check forbidden tokens 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_node_identifier_name</code></td><td>module:1489</td><td>提供模块级 node identifier name 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_contains_forbidden_token</code></td><td>module:1499</td><td>提供模块级 contains forbidden token 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_node_references_name</code></td><td>module:1503</td><td>提供模块级 node references name 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_identifier_tokens</code></td><td>module:1510</td><td>提供模块级 identifier tokens 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_iter_imports</code></td><td>module:1522</td><td>提供模块级 iter imports 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_iter_imported_names</code></td><td>module:1532</td><td>提供模块级 iter imported names 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_iter_docstrings</code></td><td>module:1540</td><td>提供模块级 iter docstrings 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_has_allowed_prefix</code></td><td>module:1554</td><td>提供模块级 has allowed prefix 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>main</code></td><td>module:1558</td><td>Perform main.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
             </tbody>
           </table>
         </div>

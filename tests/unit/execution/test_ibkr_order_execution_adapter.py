@@ -423,6 +423,128 @@ def test_ibkr_duplicate_execution_callback_does_not_emit_second_fill_report() ->
     ]
 
 
+def test_ibkr_late_commission_before_execution_completes_fill_once() -> None:
+    from qts.core.ids import BrokerId, InstrumentId
+    from qts.execution.adapters.ibkr_order_execution import (
+        IbkrOrderExecutionAdapter,
+        IbkrOrderExecutionConnection,
+    )
+    from qts.execution.order_manager import ExecutionReport
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
+        IbkrCommissionPayload,
+        IbkrCommissionReport,
+        IbkrExecutionPayload,
+    )
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    adapter = IbkrOrderExecutionAdapter(
+        connection=IbkrOrderExecutionConnection(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+            broker_id=BrokerId("IBKR"),
+            account_id="DU1234567",
+        ),
+        symbol_mapping=mapping,
+    )
+    commission = IbkrCommissionPayload(
+        execution_id="fill-late-exec",
+        commission=Decimal("1.23"),
+        currency="USD",
+    )
+
+    early_commission = adapter.on_commission(commission)
+    completed = adapter.on_execution(
+        IbkrExecutionPayload(
+            report_id="exec-after-commission",
+            broker_order_id="100",
+            execution_id="fill-late-exec",
+            filled_quantity=Decimal("10"),
+            fill_price=Decimal("101.25"),
+            account_id="DU1234567",
+        )
+    )
+    duplicate_commission = adapter.on_commission(commission)
+
+    assert isinstance(early_commission, IbkrCommissionReport)
+    assert isinstance(completed, ExecutionReport)
+    assert completed.fill_id == "fill-late-exec"
+    assert completed.commission == Decimal("1.23")
+    assert isinstance(duplicate_commission, IbkrCommissionReport)
+    assert adapter.callback_events[-1].reason == "commission_for_completed_execution"
+
+
+def test_ibkr_partial_fills_emit_once_per_execution_id() -> None:
+    from qts.core.ids import BrokerId, InstrumentId
+    from qts.execution.adapters.ibkr_order_execution import (
+        IbkrOrderExecutionAdapter,
+        IbkrOrderExecutionConnection,
+    )
+    from qts.execution.order_manager import ExecutionReport
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
+        IbkrCommissionPayload,
+        IbkrExecutionPayload,
+    )
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    adapter = IbkrOrderExecutionAdapter(
+        connection=IbkrOrderExecutionConnection(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+            broker_id=BrokerId("IBKR"),
+            account_id="DU1234567",
+        ),
+        symbol_mapping=mapping,
+    )
+    first_execution = IbkrExecutionPayload(
+        report_id="exec-partial-1",
+        broker_order_id="100",
+        execution_id="fill-partial-1",
+        filled_quantity=Decimal("4"),
+        fill_price=Decimal("101.25"),
+        account_id="DU1234567",
+    )
+    second_execution = IbkrExecutionPayload(
+        report_id="exec-partial-2",
+        broker_order_id="100",
+        execution_id="fill-partial-2",
+        filled_quantity=Decimal("6"),
+        fill_price=Decimal("101.50"),
+        account_id="DU1234567",
+    )
+
+    adapter.on_execution(first_execution)
+    first = adapter.on_commission(
+        IbkrCommissionPayload(
+            execution_id="fill-partial-1",
+            commission=Decimal("0.40"),
+            currency="USD",
+        )
+    )
+    adapter.on_execution(second_execution)
+    second = adapter.on_commission(
+        IbkrCommissionPayload(
+            execution_id="fill-partial-2",
+            commission=Decimal("0.60"),
+            currency="USD",
+        )
+    )
+    duplicate_first = adapter.on_execution(first_execution)
+
+    assert isinstance(first, ExecutionReport)
+    assert isinstance(second, ExecutionReport)
+    assert first.filled_quantity == Decimal("4")
+    assert second.filled_quantity == Decimal("6")
+    assert duplicate_first is None
+
+
 def test_ibkr_execution_idempotency_uses_account_and_broker_order_identity() -> None:
     from qts.core.ids import BrokerId, InstrumentId
     from qts.execution.adapters.ibkr_order_execution import (
@@ -616,6 +738,66 @@ def test_ibkr_duplicate_order_status_callback_is_dropped() -> None:
     assert adapter.callback_events[-1].reason == "order_status_already_seen"
 
 
+def test_ibkr_late_cancel_after_filled_status_does_not_downgrade_order_map() -> None:
+    from datetime import UTC, datetime
+
+    from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+    from qts.execution.adapters.ibkr_order_execution import (
+        IbkrOrderExecutionAdapter,
+        IbkrOrderExecutionConnection,
+    )
+    from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
+    from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOrderStatusPayload
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    order_map = BrokerOrderMap()
+    order_map.record_pending_submission(
+        internal_order_id=OrderId("ord-001"),
+        client_order_id="client-ord-001",
+        account_id=AccountId("acct-ibkr"),
+        strategy_id=StrategyId("strategy-ibkr"),
+        submitted_at=datetime(2026, 5, 14, 12, 0, tzinfo=UTC),
+    )
+    order_map.attach_ibkr_order_id(client_order_id="client-ord-001", ibkr_order_id="100")
+    adapter = IbkrOrderExecutionAdapter(
+        connection=IbkrOrderExecutionConnection(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+            broker_id=BrokerId("IBKR"),
+            account_id="DU1234567",
+        ),
+        symbol_mapping=mapping,
+        order_map=order_map,
+    )
+
+    filled = adapter.on_order_status(
+        IbkrOrderStatusPayload(
+            report_id="status-100-filled",
+            broker_order_id="100",
+            status="Filled",
+            perm_id="99001",
+        )
+    )
+    late_cancel = adapter.on_order_status(
+        IbkrOrderStatusPayload(
+            report_id="status-100-cancelled",
+            broker_order_id="100",
+            status="Cancelled",
+            perm_id="99001",
+        )
+    )
+
+    assert filled is not None
+    assert late_cancel is None
+    assert order_map.by_ibkr_order_id("100").status == "Filled"
+    assert adapter.callback_events[-1].kind == "ibkr_order_callback_late_terminal_dropped"
+    assert adapter.callback_events[-1].reason == "late_cancel_after_filled"
+
+
 def test_ibkr_cancel_resolves_ibkr_order_id_through_order_map() -> None:
     from datetime import UTC, datetime
 
@@ -805,6 +987,93 @@ def test_ibkr_wrong_account_execution_callback_is_quarantined() -> None:
     assert adapter.quarantined_executions == (execution,)
     assert adapter.has_unresolved_callbacks
     assert adapter.callback_events[-1].reason == "wrong_account"
+    assert adapter.callback_events[-1].expected_account == "DU*****67"
+    assert adapter.callback_events[-1].observed_account == "DU*****99"
+
+
+def test_ibkr_wrong_account_position_callback_is_quarantined_with_masked_evidence() -> None:
+    from qts.core.ids import AccountId, BrokerId, InstrumentId
+    from qts.execution.adapters.ibkr_order_execution import (
+        IbkrOrderExecutionAdapter,
+        IbkrOrderExecutionConnection,
+    )
+    from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrPositionPayload
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    adapter = IbkrOrderExecutionAdapter(
+        connection=IbkrOrderExecutionConnection(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+            broker_id=BrokerId("IBKR"),
+            account_id="DU1234567",
+        ),
+        symbol_mapping=mapping,
+    )
+    position = IbkrPositionPayload(
+        account_id="DU9999999",
+        broker_symbol="AAPL",
+        quantity=Decimal("7"),
+    )
+
+    adapter.on_position(position)
+    snapshot = adapter.broker_reconciliation_snapshot(account_id=AccountId("acct-ibkr"))
+
+    assert snapshot.positions == ()
+    assert adapter.quarantined_positions == (position,)
+    assert adapter.has_unresolved_callbacks
+    assert adapter.callback_events[-1].kind == "ibkr_account_callback_quarantined"
+    assert adapter.callback_events[-1].reason == "wrong_account"
+    assert adapter.callback_events[-1].expected_account == "DU*****67"
+    assert adapter.callback_events[-1].observed_account == "DU*****99"
+    assert "DU1234567" not in repr(adapter.callback_events[-1])
+    assert "DU9999999" not in repr(adapter.callback_events[-1])
+
+
+def test_ibkr_wrong_account_summary_callback_is_quarantined_with_masked_evidence() -> None:
+    from qts.core.ids import AccountId, BrokerId, InstrumentId
+    from qts.execution.adapters.ibkr_order_execution import (
+        IbkrOrderExecutionAdapter,
+        IbkrOrderExecutionConnection,
+    )
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
+        IbkrAccountSummaryPayload,
+    )
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    adapter = IbkrOrderExecutionAdapter(
+        connection=IbkrOrderExecutionConnection(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+            broker_id=BrokerId("IBKR"),
+            account_id="DU1234567",
+        ),
+        symbol_mapping=mapping,
+    )
+    summary = IbkrAccountSummaryPayload(
+        account_id="DU9999999",
+        tag="TotalCashValue",
+        value=Decimal("999999"),
+        currency="USD",
+    )
+
+    adapter.on_account_summary(summary)
+    snapshot = adapter.broker_reconciliation_snapshot(account_id=AccountId("acct-ibkr"))
+
+    assert snapshot.cash == ()
+    assert adapter.quarantined_account_summaries == (summary,)
+    assert adapter.has_unresolved_callbacks
+    assert adapter.callback_events[-1].kind == "ibkr_account_callback_quarantined"
+    assert adapter.callback_events[-1].reason == "wrong_account"
+    assert adapter.callback_events[-1].expected_account == "DU*****67"
+    assert adapter.callback_events[-1].observed_account == "DU*****99"
 
 
 def test_ibkr_quarantined_execution_resolves_after_open_order_mapping() -> None:
@@ -880,6 +1149,71 @@ def test_ibkr_quarantined_execution_resolves_after_open_order_mapping() -> None:
     assert adapter.quarantined_executions == ()
     assert adapter.has_unresolved_callbacks is False
     assert adapter.callback_events[-1].kind == "ibkr_order_callback_quarantine_resolved"
+
+
+def test_ibkr_open_order_before_record_submitted_order_resolves_after_route_metadata() -> None:
+    from datetime import UTC, datetime
+
+    from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+    from qts.execution.adapters.ibkr_order_execution import (
+        IbkrOrderExecutionAdapter,
+        IbkrOrderExecutionConnection,
+    )
+    from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
+    from qts.execution.order_manager import OrderIntent, OrderSide
+    from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOpenOrderPayload
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    order_map = BrokerOrderMap()
+    adapter = IbkrOrderExecutionAdapter(
+        connection=IbkrOrderExecutionConnection(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+            broker_id=BrokerId("IBKR"),
+            account_id="DU1234567",
+        ),
+        symbol_mapping=mapping,
+        order_map=order_map,
+    )
+    request = adapter.to_order_request(
+        OrderIntent(
+            order_id=OrderId("ord-001"),
+            account_id=AccountId("acct-ibkr"),
+            instrument_id=instrument_id,
+            side=OrderSide.BUY,
+            quantity=Decimal("1"),
+        ),
+        client_order_id="client-ord-001",
+        strategy_id=StrategyId("strategy-ibkr"),
+    )
+    open_order = IbkrOpenOrderPayload(
+        report_id="open-order-before-submit-record",
+        broker_order_id="100",
+        client_order_id="client-ord-001",
+        perm_id="99001",
+        status="Submitted",
+        broker_symbol="AAPL",
+        side="BUY",
+        quantity=Decimal("1"),
+    )
+
+    adapter.on_open_order(open_order)
+    adapter.record_submitted_order(
+        request,
+        ibkr_order_id="100",
+        submitted_at=datetime(2026, 5, 14, 12, 0, tzinfo=UTC),
+    )
+    resolved = adapter.resolve_quarantined_callbacks()
+
+    assert resolved == ()
+    assert adapter.quarantined_open_orders == ()
+    assert order_map.by_ibkr_order_id("100").perm_id == "99001"
+    assert order_map.by_ibkr_order_id("100").status == "Submitted"
+    assert adapter.has_unresolved_callbacks is False
 
 
 def test_ibkr_unknown_open_order_callback_is_quarantined() -> None:

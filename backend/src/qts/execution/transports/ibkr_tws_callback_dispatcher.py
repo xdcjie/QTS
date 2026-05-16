@@ -11,11 +11,16 @@ from qts.execution.transports.ibkr_tws_execution_event_emitter import (
 from qts.execution.transports.ibkr_tws_order_execution_transport import (
     IbkrAccountSummaryPayload,
     IbkrCommissionPayload,
+    IbkrCommissionReport,
+    IbkrConnectionEvent,
     IbkrConnectionEventPayload,
+    IbkrErrorPayload,
     IbkrExecutionPayload,
     IbkrOpenOrderPayload,
+    IbkrOrderExecutionCallbackSink,
     IbkrOrderStatusPayload,
     IbkrPositionPayload,
+    IbkrTransportError,
     _to_decimal,
 )
 
@@ -26,8 +31,68 @@ _EXECUTION_REPORT_PREFIX = "ibkr-exec"
 class IbkrTwsCallbackDispatcher:
     """Converts raw TWS callbacks into transport payloads and emits them."""
 
-    def __init__(self, *, emitter: IbkrTwsExecutionEventEmitter) -> None:
+    def __init__(
+        self,
+        *,
+        sink: IbkrOrderExecutionCallbackSink,
+        emitter: IbkrTwsExecutionEventEmitter,
+    ) -> None:
+        self._sink = sink
         self._emitter = emitter
+
+    def dispatch_order_status(self, payload: IbkrOrderStatusPayload) -> ExecutionReport | None:
+        """Route a normalized order-status callback payload."""
+
+        report = self._sink.on_order_status(payload)
+        self._emitter.publish_report(report)
+        return report
+
+    def dispatch_open_order(self, payload: IbkrOpenOrderPayload) -> None:
+        """Route a normalized openOrder callback payload."""
+
+        self._sink.on_open_order(payload)
+
+    def dispatch_position(self, payload: IbkrPositionPayload) -> None:
+        """Route a normalized position callback payload."""
+
+        self._sink.on_position(payload)
+
+    def dispatch_account_summary(self, payload: IbkrAccountSummaryPayload) -> None:
+        """Route a normalized accountSummary callback payload."""
+
+        self._sink.on_account_summary(payload)
+
+    def dispatch_execution(self, payload: IbkrExecutionPayload) -> ExecutionReport | None:
+        """Route a normalized execution callback payload."""
+
+        report = self._sink.on_execution(payload)
+        self._emitter.publish_report(report)
+        return report
+
+    def dispatch_commission(
+        self,
+        payload: IbkrCommissionPayload,
+    ) -> ExecutionReport | IbkrCommissionReport:
+        """Route a normalized commission callback payload."""
+
+        result = self._sink.on_commission(payload)
+        self._emitter.publish_commission_result(result)
+        return result
+
+    def dispatch_error(self, payload: IbkrErrorPayload) -> IbkrTransportError:
+        """Route a normalized error callback payload."""
+
+        return self._sink.on_error(payload)
+
+    def dispatch_disconnect(self, payload: IbkrConnectionEventPayload) -> IbkrConnectionEvent:
+        """Route a normalized disconnect callback payload."""
+
+        return self._sink.on_disconnect(payload)
+
+    def dispatch_reconnect(self, payload: IbkrConnectionEventPayload) -> IbkrConnectionEvent:
+        """Route a normalized reconnect callback payload."""
+
+        return self._sink.on_reconnect(payload)
 
     def handle_order_status(
         self,
@@ -38,7 +103,7 @@ class IbkrTwsCallbackDispatcher:
     ) -> ExecutionReport | None:
         """Handle an IBKR orderStatus callback."""
 
-        return self._emitter.emit_order_status(
+        return self.dispatch_order_status(
             IbkrOrderStatusPayload(
                 report_id=f"{_ORDER_STATUS_REPORT_PREFIX}-{order_id}-{status.lower()}",
                 broker_order_id=str(order_id),
@@ -61,7 +126,7 @@ class IbkrTwsCallbackDispatcher:
         perm_id = getattr(order, "permId", None)
         status = str(getattr(order_state, "status", "")).strip()
         total_quantity = order.totalQuantity if hasattr(order, "totalQuantity") else None
-        self._emitter.emit_open_order(
+        self.dispatch_open_order(
             IbkrOpenOrderPayload(
                 report_id=f"ibkr-open-order-{order_id}",
                 broker_order_id=str(order_id),
@@ -80,7 +145,7 @@ class IbkrTwsCallbackDispatcher:
     def handle_position(self, *, account_id: str, contract: Any, position: object) -> None:
         """Handle an IBKR position callback."""
 
-        self._emitter.emit_position(
+        self.dispatch_position(
             IbkrPositionPayload(
                 account_id=account_id,
                 broker_symbol=str(getattr(contract, "symbol", "")).strip(),
@@ -98,7 +163,7 @@ class IbkrTwsCallbackDispatcher:
     ) -> None:
         """Handle an IBKR accountSummary callback."""
 
-        self._emitter.emit_account_summary(
+        self.dispatch_account_summary(
             IbkrAccountSummaryPayload(
                 account_id=account_id,
                 tag=tag,
@@ -110,7 +175,7 @@ class IbkrTwsCallbackDispatcher:
     def handle_execution(self, execution: Any) -> ExecutionReport | None:
         """Handle an IBKR execDetails callback."""
 
-        return self._emitter.emit_execution(
+        return self.dispatch_execution(
             IbkrExecutionPayload(
                 report_id=f"{_EXECUTION_REPORT_PREFIX}-{execution.execId}",
                 broker_order_id=str(execution.orderId),
@@ -134,14 +199,13 @@ class IbkrTwsCallbackDispatcher:
             if hasattr(commission_report, "commissionAndFees")
             else commission_report.commission
         )
-        result = self._emitter.emit_commission(
+        self.dispatch_commission(
             IbkrCommissionPayload(
                 execution_id=str(commission_report.execId),
                 commission=_to_decimal(commission),
                 currency=str(commission_report.currency),
             )
         )
-        self._emitter.publish_commission_result(result)
 
     def handle_commission_and_fees(self, commission_report: Any) -> None:
         """Handle an IBKR commissionAndFeesReport callback."""
@@ -152,21 +216,25 @@ class IbkrTwsCallbackDispatcher:
         """Handle an IBKR error callback."""
 
         if message.strip():
-            from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrErrorPayload
-
             self._emitter.publish_error(
-                IbkrErrorPayload(request_id=request_id, code=code, message=message)
+                self.dispatch_error(
+                    IbkrErrorPayload(request_id=request_id, code=code, message=message)
+                )
             )
 
     def handle_disconnect(self, *, reason: str) -> None:
         """Handle an IBKR disconnect callback."""
 
-        self._emitter.publish_disconnect(IbkrConnectionEventPayload(reason=reason))
+        self._emitter.publish_disconnect(
+            self.dispatch_disconnect(IbkrConnectionEventPayload(reason=reason))
+        )
 
     def handle_reconnect(self, *, reason: str) -> None:
         """Handle an IBKR reconnect callback."""
 
-        self._emitter.publish_reconnect(IbkrConnectionEventPayload(reason=reason))
+        self._emitter.publish_reconnect(
+            self.dispatch_reconnect(IbkrConnectionEventPayload(reason=reason))
+        )
 
 
 __all__ = ["IbkrTwsCallbackDispatcher"]

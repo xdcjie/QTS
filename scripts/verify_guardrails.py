@@ -23,6 +23,7 @@ RemovedImportNoNewUsageRule = _guardrails.RemovedImportNoNewUsageRule
 ProductionNoFakeClassRule = _guardrails.ProductionNoFakeClassRule
 ProductionNoTestingImportRule = _guardrails.ProductionNoTestingImportRule
 TransportCanonicalPathRule = _guardrails.TransportCanonicalPathRule
+TransportAdapterImportRule = _guardrails.TransportAdapterImportRule
 run_guardrails = _guardrails.run_guardrails
 main = _guardrails.main
 

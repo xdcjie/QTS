@@ -213,6 +213,10 @@ GUARDRAIL_REMEDIATIONS = {
     "TRANSPORT_ACTOR_IMPORT": (
         "Keep transports free of runtime actors and emit normalized callbacks instead."
     ),
+    "TRANSPORT_ADAPTER_IMPORT": (
+        "Keep adapter business behavior out of transports; pass normalized payloads "
+        "through protocols."
+    ),
 }
 
 
@@ -415,6 +419,42 @@ class TransportCanonicalPathRule:
                     message=(
                         "transport class canonical definitions belong under transports: "
                         f"{node.name}"
+                    ),
+                )
+            )
+        return violations
+
+
+class TransportAdapterImportRule:
+    """Reject transport modules importing adapter implementations."""
+
+    code = "TRANSPORT_ADAPTER_IMPORT"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform check."""
+        if len(qts_relative_path.parts) < 3 or qts_relative_path.parts[1] != "transports":
+            return []
+        violations: list[GuardrailViolation] = []
+        for imported_module, line in _iter_imports(tree):
+            imported_parts = imported_module.split(".")
+            if len(imported_parts) < 4:
+                continue
+            if imported_parts[0] != "qts" or imported_parts[2] != "adapters":
+                continue
+            violations.append(
+                GuardrailViolation(
+                    code=self.code,
+                    path=str(relative_path),
+                    line=line,
+                    message=(
+                        "transport modules must not import adapter implementations: "
+                        f"{imported_module}"
                     ),
                 )
             )
@@ -799,6 +839,7 @@ class GuardrailSuite:
             LivePackageNoReplayClassRule(),
             DataLiveNoSharedContractRule(),
             TransportCanonicalPathRule(),
+            TransportAdapterImportRule(),
             RemovedImportNoNewUsageRule(),
             ProductionNoFakeClassRule(),
             ProductionNoTestingImportRule(),

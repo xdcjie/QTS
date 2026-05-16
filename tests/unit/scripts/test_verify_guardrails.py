@@ -567,6 +567,24 @@ def test_default_guardrails_reject_removed_transport_import_usage(
     assert _codes(root) == {"REMOVED_IMPORT_USAGE"}
 
 
+def test_default_guardrails_reject_transport_importing_adapter_modules(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/execution/transports/ibkr_bad_transport.py",
+        "from qts.execution.adapters.ibkr_order_execution import IbkrOrderExecutionAdapter\n",
+    )
+    _write(
+        root,
+        "backend/src/qts/data/transports/ibkr_bad_transport.py",
+        "from qts.data.adapters.ibkr_market_data import IbkrMarketDataAdapter\n",
+    )
+
+    assert _codes(root) == {"TRANSPORT_ADAPTER_IMPORT"}
+
+
 def test_guardrails_reject_production_imports_from_qts_testing(tmp_path: Path) -> None:
     root = tmp_path
     guardrails = _load_guardrails_module()

@@ -28,13 +28,11 @@ class IbkrTwsOrderClient:
         self._order_id_allocator = order_id_allocator or IbkrOrderIdAllocator(
             config.order_id_store_path
         )
-        self._submitted_requests: dict[str, IbkrOrderRequest] = {}
 
     def submit_order_with_broker_id(self, app: Any, request: IbkrOrderRequest) -> str:
         """Submit an IBKR order request and return the broker order id."""
 
         broker_order_id = str(self._reserve_order_id())
-        self._submitted_requests[broker_order_id] = request
         app.placeOrder(
             int(broker_order_id),
             request.to_ibapi_contract(),

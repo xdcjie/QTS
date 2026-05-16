@@ -490,8 +490,11 @@ class IbkrTwsOrderExecutionTransport:
             order_id_allocator=order_id_allocator,
         )
         self._reconciliation_client = IbkrTwsReconciliationClient(config=config)
-        self._event_emitter = IbkrTwsExecutionEventEmitter(sink=sink, reports=self._reports)
-        self._callback_dispatcher = IbkrTwsCallbackDispatcher(emitter=self._event_emitter)
+        self._event_emitter = IbkrTwsExecutionEventEmitter(reports=self._reports)
+        self._callback_dispatcher = IbkrTwsCallbackDispatcher(
+            sink=sink,
+            emitter=self._event_emitter,
+        )
 
     @property
     def _app(self) -> Any | None:
@@ -722,17 +725,17 @@ class IbkrTwsOrderExecutionTransport:
     def emit_order_status(self, payload: IbkrOrderStatusPayload) -> ExecutionReport | None:
         """Dispatch a raw order-status callback to the adapter sink."""
 
-        return self._event_emitter.emit_order_status(payload)
+        return self._callback_dispatcher.dispatch_order_status(payload)
 
     def emit_open_order(self, payload: IbkrOpenOrderPayload) -> None:
         """Dispatch a raw openOrder callback to the adapter sink."""
 
-        self._event_emitter.emit_open_order(payload)
+        self._callback_dispatcher.dispatch_open_order(payload)
 
     def emit_execution(self, payload: IbkrExecutionPayload) -> ExecutionReport | None:
         """Dispatch a raw execution callback to the adapter sink."""
 
-        return self._event_emitter.emit_execution(payload)
+        return self._callback_dispatcher.dispatch_execution(payload)
 
     def emit_commission(
         self,
@@ -740,22 +743,22 @@ class IbkrTwsOrderExecutionTransport:
     ) -> ExecutionReport | IbkrCommissionReport:
         """Dispatch a raw commission callback to the adapter sink."""
 
-        return self._event_emitter.emit_commission(payload)
+        return self._callback_dispatcher.dispatch_commission(payload)
 
     def emit_error(self, payload: IbkrErrorPayload) -> IbkrTransportError:
         """Dispatch a raw error callback to the adapter sink."""
 
-        return self._event_emitter.emit_error(payload)
+        return self._callback_dispatcher.dispatch_error(payload)
 
     def emit_disconnect(self, payload: IbkrConnectionEventPayload) -> IbkrConnectionEvent:
         """Dispatch a raw disconnect callback to the adapter sink."""
 
-        return self._event_emitter.emit_disconnect(payload)
+        return self._callback_dispatcher.dispatch_disconnect(payload)
 
     def emit_reconnect(self, payload: IbkrConnectionEventPayload) -> IbkrConnectionEvent:
         """Dispatch a raw reconnect callback to the adapter sink."""
 
-        return self._event_emitter.emit_reconnect(payload)
+        return self._callback_dispatcher.dispatch_reconnect(payload)
 
 
 __all__ = [

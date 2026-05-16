@@ -85,6 +85,8 @@ class IbkrOrderCallbackEvent:
     broker_order_id: str | None = None
     execution_id: str | None = None
     reason: str | None = None
+    expected_account: str | None = None
+    observed_account: str | None = None
 
     def __post_init__(self) -> None:
         if not self.kind.strip():
@@ -94,6 +96,8 @@ class IbkrOrderCallbackEvent:
             ("broker_order_id", self.broker_order_id),
             ("execution_id", self.execution_id),
             ("reason", self.reason),
+            ("expected_account", self.expected_account),
+            ("observed_account", self.observed_account),
         ):
             if value is not None and not value.strip():
                 raise ValueError(f"{field_name} must not be empty when provided")
@@ -147,6 +151,16 @@ class IbkrOrderExecutionAdapter:
     def quarantined_order_statuses(self) -> tuple[IbkrOrderStatusPayload, ...]:
         """Read-only unresolved IBKR order-status callbacks."""
         return self._callback_quarantine.order_statuses
+
+    @property
+    def quarantined_positions(self) -> tuple[IbkrPositionPayload, ...]:
+        """Read-only unresolved IBKR position callbacks."""
+        return self._callback_quarantine.positions
+
+    @property
+    def quarantined_account_summaries(self) -> tuple[IbkrAccountSummaryPayload, ...]:
+        """Read-only unresolved IBKR account-summary callbacks."""
+        return self._callback_quarantine.account_summaries
 
     @property
     def callback_events(self) -> tuple[IbkrOrderCallbackEvent, ...]:
@@ -281,6 +295,18 @@ class IbkrOrderExecutionAdapter:
                         ibkr_order_id=payload.broker_order_id,
                         perm_id=payload.perm_id,
                     )
+                record = self._order_map.by_ibkr_order_id(payload.broker_order_id)
+                if self._is_late_cancel_after_fill(
+                    current_status=record.status,
+                    next_status=payload.status,
+                ):
+                    self._record_callback_event(
+                        "ibkr_order_callback_late_terminal_dropped",
+                        report_id=payload.report_id,
+                        broker_order_id=payload.broker_order_id,
+                        reason="late_cancel_after_filled",
+                    )
+                    return None
                 self._order_map.mark_status(
                     ibkr_order_id=payload.broker_order_id,
                     status=payload.status,
@@ -366,6 +392,12 @@ class IbkrOrderExecutionAdapter:
         """Record an IBKR position callback for broker reconciliation."""
 
         if payload.account_id != self.connection.account_id:
+            self._callback_quarantine.add_position(payload)
+            self._record_account_mismatch_event(
+                report_id=None,
+                broker_order_id=None,
+                observed_account=payload.account_id,
+            )
             return
         instrument_id = self._symbol_mapping.to_instrument_id(payload.broker_symbol)
         self._broker_positions[instrument_id.value] = PositionSnapshot(
@@ -377,6 +409,12 @@ class IbkrOrderExecutionAdapter:
         """Record an IBKR account summary callback for broker reconciliation."""
 
         if payload.account_id != self.connection.account_id:
+            self._callback_quarantine.add_account_summary(payload)
+            self._record_account_mismatch_event(
+                report_id=None,
+                broker_order_id=None,
+                observed_account=payload.account_id,
+            )
             return
         if payload.tag != "TotalCashValue":
             return
@@ -416,12 +454,11 @@ class IbkrOrderExecutionAdapter:
         )
         if payload.account_id is not None and payload.account_id != self.connection.account_id:
             self._callback_quarantine.add_execution(payload)
-            self._record_callback_event(
-                "ibkr_order_callback_unresolved_quarantined",
+            self._record_account_mismatch_event(
                 report_id=payload.report_id,
                 broker_order_id=payload.broker_order_id,
                 execution_id=payload.execution_id,
-                reason="wrong_account",
+                observed_account=payload.account_id,
             )
             return None
         execution_key = self._execution_key(payload)
@@ -488,29 +525,56 @@ class IbkrOrderExecutionAdapter:
         """Try to resolve quarantined callbacks after order mapping changes."""
 
         resolved_reports: list[ExecutionReport] = []
+        unresolved_open_orders: list[IbkrOpenOrderPayload] = []
+        for open_order_payload in self._callback_quarantine.open_orders:
+            before_count = len(self._callback_quarantine.open_orders)
+            self.on_open_order(open_order_payload)
+            if len(self._callback_quarantine.open_orders) > before_count:
+                self._callback_quarantine.replace_open_orders(
+                    list(self._callback_quarantine.open_orders[:-1])
+                )
+                unresolved_open_orders.append(open_order_payload)
+        self._callback_quarantine.replace_open_orders(unresolved_open_orders)
+
+        unresolved_order_statuses: list[IbkrOrderStatusPayload] = []
+        for order_status_payload in self._callback_quarantine.order_statuses:
+            before_count = len(self._callback_quarantine.order_statuses)
+            report = self.on_order_status(order_status_payload)
+            if report is not None:
+                resolved_reports.append(report)
+            if len(self._callback_quarantine.order_statuses) > before_count:
+                self._callback_quarantine.replace_order_statuses(
+                    list(self._callback_quarantine.order_statuses[:-1])
+                )
+                unresolved_order_statuses.append(order_status_payload)
+        self._callback_quarantine.replace_order_statuses(unresolved_order_statuses)
+
         unresolved_executions: list[IbkrExecutionPayload] = []
-        for payload in self._callback_quarantine.executions:
-            if payload.account_id is not None and payload.account_id != self.connection.account_id:
-                unresolved_executions.append(payload)
+        for execution_payload in self._callback_quarantine.executions:
+            if (
+                execution_payload.account_id is not None
+                and execution_payload.account_id != self.connection.account_id
+            ):
+                unresolved_executions.append(execution_payload)
                 continue
             if self._order_map is not None:
                 try:
-                    self._order_map.by_ibkr_order_id(payload.broker_order_id)
+                    self._order_map.by_ibkr_order_id(execution_payload.broker_order_id)
                 except KeyError:
-                    unresolved_executions.append(payload)
+                    unresolved_executions.append(execution_payload)
                     continue
-            execution_key = self._execution_key(payload)
+            execution_key = self._execution_key(execution_payload)
             if execution_key in self._completed_execution_keys:
                 continue
-            self._pending_executions[execution_key] = payload
+            self._pending_executions[execution_key] = execution_payload
             report = self._pop_commissioned_execution(execution_key)
             if report is not None:
                 resolved_reports.append(report)
             self._record_callback_event(
                 "ibkr_order_callback_quarantine_resolved",
-                report_id=payload.report_id,
-                broker_order_id=payload.broker_order_id,
-                execution_id=payload.execution_id,
+                report_id=execution_payload.report_id,
+                broker_order_id=execution_payload.broker_order_id,
+                execution_id=execution_payload.execution_id,
             )
         self._callback_quarantine.replace_executions(unresolved_executions)
         return tuple(resolved_reports)
@@ -612,6 +676,13 @@ class IbkrOrderExecutionAdapter:
         account_id = payload.account_id or self.connection.account_id
         return (account_id, payload.broker_order_id, payload.execution_id)
 
+    @staticmethod
+    def _is_late_cancel_after_fill(*, current_status: str, next_status: str) -> bool:
+        return current_status.strip().lower() == "filled" and next_status.strip().lower() in {
+            "apicancelled",
+            "cancelled",
+        }
+
     def _pop_commissioned_execution_by_execution_id(
         self,
         execution_id: str,
@@ -652,6 +723,8 @@ class IbkrOrderExecutionAdapter:
         broker_order_id: str | None = None,
         execution_id: str | None = None,
         reason: str | None = None,
+        expected_account: str | None = None,
+        observed_account: str | None = None,
     ) -> None:
         self._callback_events.append(
             IbkrOrderCallbackEvent(
@@ -660,8 +733,34 @@ class IbkrOrderExecutionAdapter:
                 broker_order_id=broker_order_id,
                 execution_id=execution_id,
                 reason=reason,
+                expected_account=expected_account,
+                observed_account=observed_account,
             )
         )
+
+    def _record_account_mismatch_event(
+        self,
+        *,
+        report_id: str | None,
+        broker_order_id: str | None,
+        observed_account: str,
+        execution_id: str | None = None,
+    ) -> None:
+        self._record_callback_event(
+            "ibkr_account_callback_quarantined",
+            report_id=report_id,
+            broker_order_id=broker_order_id,
+            execution_id=execution_id,
+            reason="wrong_account",
+            expected_account=self._mask_account_id(self.connection.account_id),
+            observed_account=self._mask_account_id(observed_account),
+        )
+
+    @staticmethod
+    def _mask_account_id(account_id: str) -> str:
+        if len(account_id) <= 4:
+            return "*" * len(account_id)
+        return f"{account_id[:2]}{'*' * max(len(account_id) - 4, 1)}{account_id[-2:]}"
 
 
 __all__ = [
