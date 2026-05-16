@@ -56,4 +56,5 @@ markers = [
     "integration: multi-module integration tests",
     "anchor: domain correctness invariant tests",
     "slow: slow tests not required for quick local feedback",
+    "external: tests requiring externally collected broker or service evidence",
 ]

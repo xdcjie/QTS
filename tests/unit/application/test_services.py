@@ -183,3 +183,100 @@ def test_operations_service_scopes_runtime_command_idempotency_by_operator() -> 
     assert first.command_id != second.command_id
     assert first.evidence["operator_id"] == "ops-a"
     assert second.evidence["operator_id"] == "ops-b"
+
+
+def test_operations_service_returns_timestamped_operator_status_without_actor_internals() -> None:
+    from datetime import datetime
+
+    from qts.application.services import OperationsService
+
+    status = OperationsService().operator_status()
+
+    fields = (
+        status.runtime_state,
+        status.runtime_mode,
+        status.order_permission_state,
+        status.broker_connection_state,
+        status.market_data_permission_state,
+        status.stale_subscriptions,
+        status.open_orders,
+        status.positions,
+        status.cash_snapshot,
+        status.kill_switch_state,
+        status.last_reconciliation_result,
+        status.unresolved_broker_callbacks,
+        status.event_sink,
+        status.latest_manifest,
+    )
+
+    for field in fields:
+        assert isinstance(field.timestamp, datetime)
+        assert field.timestamp.tzinfo is not None
+
+    assert status.runtime_state.value == "running"
+    assert status.runtime_mode.value == "paper"
+    assert status.order_permission_state.value == "enabled"
+    assert status.broker_connection_state.value == "disconnected"
+    assert status.market_data_permission_state.value == "enabled"
+    assert status.event_sink.value == {"path": None, "hash": None, "row_count": 0}
+    assert status.latest_manifest.value == {"path": None, "hash": None}
+    assert not hasattr(status, "actor_ref")
+    assert not hasattr(status, "mailbox")
+
+
+def test_operator_status_alerts_stale_drift_and_unresolved_callbacks() -> None:
+    from datetime import UTC, datetime
+
+    from qts.application.dto import OperatorDashboardStatusDTO, OperatorStatusFieldDTO
+    from qts.application.services import OperationsService
+
+    observed_at = datetime(2026, 5, 16, tzinfo=UTC)
+    service = OperationsService(
+        operator_status=OperatorDashboardStatusDTO(
+            runtime_state=OperatorStatusFieldDTO(value="running", timestamp=observed_at),
+            runtime_mode=OperatorStatusFieldDTO(value="paper", timestamp=observed_at),
+            order_permission_state=OperatorStatusFieldDTO(value="enabled", timestamp=observed_at),
+            broker_connection_state=OperatorStatusFieldDTO(
+                value="connected", timestamp=observed_at
+            ),
+            market_data_permission_state=OperatorStatusFieldDTO(
+                value="enabled",
+                timestamp=observed_at,
+            ),
+            stale_subscriptions=OperatorStatusFieldDTO(
+                value=({"subscription_id": "sub-1", "instrument_id": "FUT.CME.GC"},),
+                timestamp=observed_at,
+            ),
+            open_orders=OperatorStatusFieldDTO(value=(), timestamp=observed_at),
+            positions=OperatorStatusFieldDTO(value=(), timestamp=observed_at),
+            cash_snapshot=OperatorStatusFieldDTO(value=(), timestamp=observed_at),
+            kill_switch_state=OperatorStatusFieldDTO(
+                value={"active": False, "scope": "global", "reason": ""},
+                timestamp=observed_at,
+            ),
+            last_reconciliation_result=OperatorStatusFieldDTO(
+                value={"status": "drift", "drift_count": 1},
+                timestamp=observed_at,
+            ),
+            unresolved_broker_callbacks=OperatorStatusFieldDTO(
+                value=({"callback_id": "cb-1", "kind": "orderStatus"},),
+                timestamp=observed_at,
+            ),
+            event_sink=OperatorStatusFieldDTO(
+                value={"path": "events.jsonl", "hash": "abc", "row_count": 3},
+                timestamp=observed_at,
+            ),
+            latest_manifest=OperatorStatusFieldDTO(
+                value={"path": "manifest.json", "hash": "def"},
+                timestamp=observed_at,
+            ),
+        )
+    )
+
+    status = service.operator_status()
+
+    assert {(alert.code, alert.timestamp) for alert in status.alerts} == {
+        ("STALE_DATA", observed_at),
+        ("RECONCILIATION_DRIFT", observed_at),
+        ("UNRESOLVED_BROKER_CALLBACKS", observed_at),
+    }

@@ -45,13 +45,16 @@ class BrokerRuntimeReportWriter:
         config_payload: dict[str, Any],
         runtime_mode: str,
         account_id: str,
+        runtime_instance_id: str | None = None,
+        source_commit: str | None = None,
+        operator_identity_hash: str | None = None,
         connection_metadata: dict[str, Any],
         event_sink: LiveRuntimeEventSink,
         market_data_environment: str | None = None,
         execution_environment: str | None = None,
         account_environment: str | None = None,
         broker_account_kind: str | None = None,
-        allow_live_orders: bool = False,
+        live_order_permission: bool = False,
         operator_signoff_id: str | None = None,
         market_data_permission_state: str | None = None,
         startup_checklist: BrokerRuntimeStartupChecklist | None = None,
@@ -64,6 +67,15 @@ class BrokerRuntimeReportWriter:
         runtime_mode_value = RuntimeMode.from_value(runtime_mode).value
         if not account_id.strip():
             raise ValueError("account_id must not be empty")
+        runtime_instance_id = self._required_non_empty(
+            runtime_instance_id,
+            field_name="runtime_instance_id",
+        )
+        source_commit = self._required_non_empty(source_commit, field_name="source_commit")
+        operator_identity_hash = self._required_non_empty(
+            operator_identity_hash,
+            field_name="operator_identity_hash",
+        )
         artifacts = {
             "events": {
                 "path": str(event_sink.path),
@@ -87,9 +99,21 @@ class BrokerRuntimeReportWriter:
                 encoding="utf-8",
             )
             artifacts["startup_checklist"] = self._artifact_payload(startup_checklist_path)
+        startup_checklist_hash = stable_json_hash(
+            startup_checklist_payload
+            if startup_checklist_payload is not None
+            else {"startup_checklist": "not-provided"}
+        )
+        topology_hash = (
+            str(runtime_topology_payload["topology_hash"])
+            if runtime_topology_payload is not None
+            and runtime_topology_payload.get("topology_hash") is not None
+            else stable_json_hash({"runtime_topology": "not-provided"})
+        )
         payload = {
             "runtime_mode": runtime_mode_value,
             "account_id": account_id,
+            "runtime_instance_id": runtime_instance_id,
             "event_schema_version": RuntimeEvent.SCHEMA_VERSION,
             "artifact_schema_version": RUNTIME_ARTIFACT_SCHEMA_VERSION,
             "market_data_environment": self._non_empty_or_default(
@@ -112,17 +136,15 @@ class BrokerRuntimeReportWriter:
                 market_data_permission_state,
                 default="unknown",
             ),
-            "allow_live_orders": allow_live_orders,
+            "live_order_permission": live_order_permission,
             "operator_signoff_id": operator_signoff_id,
             "config_hash": stable_json_hash(config_payload),
-            "topology_hash": (
-                str(runtime_topology_payload["topology_hash"])
-                if runtime_topology_payload is not None
-                and runtime_topology_payload.get("topology_hash") is not None
-                else None
-            ),
+            "topology_hash": topology_hash,
+            "startup_checklist_hash": startup_checklist_hash,
             "created_at": finalized_at.isoformat(),
             "finalized_at": finalized_at.isoformat(),
+            "source_commit": source_commit,
+            "operator_identity_hash": operator_identity_hash,
             "connection_metadata": self._redacted_connection_metadata(connection_metadata),
             "artifacts": artifacts,
         }
@@ -138,6 +160,7 @@ class BrokerRuntimeReportWriter:
         payload["report_hash"] = report_hash
         run_id = f"broker-runtime-{report_hash.removeprefix('sha256:')[:12]}"
         payload["run_id"] = run_id
+        payload["manifest_hash"] = RuntimeManifest.hash_payload(payload)
         runtime_manifest = RuntimeManifest.from_payload(payload)
         manifest_path = self._output_dir / f"{run_id}.manifest.json"
         manifest_path.write_text(
@@ -196,6 +219,13 @@ class BrokerRuntimeReportWriter:
             return default
         normalized = value.strip()
         return normalized or default
+
+    @staticmethod
+    def _required_non_empty(value: str | None, *, field_name: str) -> str:
+        """Return a stripped required manifest value."""
+        if value is None or not value.strip():
+            raise ValueError(f"missing required runtime manifest field: {field_name}")
+        return value.strip()
 
 
 class BrokerRuntimeEventReporter:

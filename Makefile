@@ -1,4 +1,4 @@
-.PHONY: install install-ibkr-api format lint guardrails typecheck test-unit test-integration test-anchor test-replay test-backtest-replay test-reconciliation test-soak test quick-check check load-test soak-test readiness-check validate-historical-sample backtest-full-smoke backtest-acceptance backtest-gc-full
+.PHONY: install install-ibkr-api format lint guardrails typecheck test-unit test-integration test-anchor test-replay test-backtest-replay test-reconciliation test-soak test quick-check check load-test soak-test readiness-smoke-local readiness-smoke-external readiness-check validate-historical-sample backtest-full-smoke backtest-acceptance backtest-gc-full
 
 install:
 	uv sync
@@ -51,6 +51,12 @@ load-test:
 
 soak-test:
 	@echo "Manual soak gate: run paper trading for the duration documented in docs/operations/load_and_soak.md"
+
+readiness-smoke-local:
+	uv run pytest tests/integration/test_readiness_smoke_matrix.py -q
+
+readiness-smoke-external:
+	QTS_RUN_EXTERNAL_READINESS_SMOKES=1 uv run pytest tests/anchor/test_readiness_smoke_matrix_external.py -q -m external
 
 readiness-check: check test-replay test-reconciliation test-soak
 

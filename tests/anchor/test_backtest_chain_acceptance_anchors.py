@@ -108,6 +108,7 @@ def test_backtest_artifact_contract_contains_auditable_inputs_outputs_and_hashes
     tmp_path: Path,
 ) -> None:
     from qts.backtest.runner import run_backtest
+    from qts.reporting.base import NON_BROKER_HASH_SENTINEL, RuntimeManifest
 
     from tests.support.backtest_streaming import capture_stream_result
 
@@ -122,24 +123,34 @@ def test_backtest_artifact_contract_contains_auditable_inputs_outputs_and_hashes
         "artifacts",
         "artifact_schema_version",
         "brokerage_model",
+        "account_environment",
         "config_hash",
         "cost_model",
         "created_at",
         "dataset_metadata",
         "event_schema_version",
+        "execution_environment",
         "execution_assumptions",
         "finalized_at",
+        "live_order_permission",
+        "manifest_hash",
+        "market_data_environment",
         "metrics",
+        "operator_identity_hash",
         "processed_bars",
         "report_hash",
         "risk_config_hash",
         "run_id",
+        "runtime_instance_id",
         "runtime_mode",
+        "source_commit",
+        "startup_checklist_hash",
         "topology_hash",
         "runtime_topology",
         "trading_bars",
         "warmup_bars",
     }
+    runtime_manifest = RuntimeManifest.from_payload(manifest)
     assert set(manifest["artifacts"]) == {
         "events",
         "orders",
@@ -148,9 +159,18 @@ def test_backtest_artifact_contract_contains_auditable_inputs_outputs_and_hashes
         "equity_curve",
     }
     assert manifest["run_id"] == run.result.run_id.value
+    assert runtime_manifest.run_id == run.result.run_id.value
+    assert manifest["runtime_instance_id"] == manifest["run_id"]
     assert manifest["runtime_mode"] == "backtest"
+    assert manifest["market_data_environment"] == "historical_replay"
+    assert manifest["execution_environment"] == "simulated"
+    assert manifest["account_environment"] == "simulated"
+    assert manifest["live_order_permission"] is False
+    assert manifest["startup_checklist_hash"] == NON_BROKER_HASH_SENTINEL
+    assert manifest["operator_identity_hash"] == NON_BROKER_HASH_SENTINEL
     assert manifest["event_schema_version"] == "1"
     assert manifest["artifact_schema_version"] == "1"
+    assert manifest["manifest_hash"] == runtime_manifest.manifest_hash
     assert manifest["execution_assumptions"]["fill_model_name"] == "immediate_market_fill"
     assert manifest["execution_assumptions"]["broker_capability_model"]["broker_id"] == "custom"
     assert manifest["topology_hash"] == manifest["runtime_topology"]["topology_hash"]

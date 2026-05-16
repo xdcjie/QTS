@@ -13,7 +13,12 @@ from typing import Any, cast
 from qts.core.hashing import stable_json_default, stable_json_hash
 from qts.core.ids import RuntimeRunId
 from qts.data.provenance import DatasetMetadata
-from qts.reporting.base import RUNTIME_ARTIFACT_SCHEMA_VERSION, RuntimeManifest
+from qts.reporting.base import (
+    NON_BROKER_HASH_SENTINEL,
+    NON_BROKER_SOURCE_COMMIT,
+    RUNTIME_ARTIFACT_SCHEMA_VERSION,
+    RuntimeManifest,
+)
 
 RUNTIME_EVENT_SCHEMA_VERSION = "1"
 _REQUIRED_M1_MANIFEST_FIELDS = (
@@ -224,6 +229,8 @@ class BacktestArtifactWriter:
     def write_manifest(self, manifest: RuntimeManifest | dict[str, Any]) -> Path:
         """Write a shared manifest payload for contract-level callers."""
         payload = manifest.to_payload() if isinstance(manifest, RuntimeManifest) else dict(manifest)
+        payload.setdefault("manifest_hash", RuntimeManifest.hash_payload(payload))
+        RuntimeManifest.from_payload(payload)
         manifest_path = self._output_dir / f"{payload['run_id']}.manifest.json"
         manifest_path.write_text(
             json.dumps(payload, default=stable_json_default, indent=2, sort_keys=True),
@@ -325,7 +332,12 @@ class BacktestArtifactWriter:
 
         manifest_payload: dict[str, Any] = {
             "run_id": run_id,
+            "runtime_instance_id": run_id,
             "runtime_mode": "backtest",
+            "market_data_environment": "historical_replay",
+            "execution_environment": "simulated",
+            "account_environment": "simulated",
+            "live_order_permission": False,
             "event_schema_version": RUNTIME_EVENT_SCHEMA_VERSION,
             "artifact_schema_version": RUNTIME_ARTIFACT_SCHEMA_VERSION,
             "config_hash": config_hash,
@@ -335,8 +347,11 @@ class BacktestArtifactWriter:
                 and runtime_topology_payload.get("topology_hash") is not None
                 else None
             ),
+            "startup_checklist_hash": NON_BROKER_HASH_SENTINEL,
             "created_at": finalized_at.isoformat(),
             "finalized_at": finalized_at.isoformat(),
+            "source_commit": NON_BROKER_SOURCE_COMMIT,
+            "operator_identity_hash": NON_BROKER_HASH_SENTINEL,
             "report_hash": report_hash,
             "dataset_metadata": normalized_dataset_metadata,
             "cost_model": cost_model,
@@ -359,6 +374,8 @@ class BacktestArtifactWriter:
         if runtime_topology_payload is not None:
             manifest_payload["runtime_topology"] = runtime_topology_payload
         _validate_m1_backtest_manifest(manifest_payload)
+        manifest_payload["manifest_hash"] = RuntimeManifest.hash_payload(manifest_payload)
+        RuntimeManifest.from_payload(manifest_payload)
         manifest_path = self._output_dir / f"{run_id}.manifest.json"
         manifest_path.write_text(
             json.dumps(

@@ -34,11 +34,14 @@ def test_broker_runtime_report_writer_manifest_names_artifacts_counts_and_redact
         config_payload={"mode": "paper_broker", "account_id": "DU1234567"},
         runtime_mode="paper_broker",
         account_id="DU1234567",
+        runtime_instance_id="paper-instance",
+        source_commit="abcdef123456",
+        operator_identity_hash="sha256:operator-paper",
         market_data_environment="realtime",
         execution_environment="broker",
         account_environment="paper",
         broker_account_kind="paper",
-        allow_live_orders=False,
+        live_order_permission=False,
         operator_signoff_id=None,
         connection_metadata={
             "host": "127.0.0.1",
@@ -60,7 +63,12 @@ def test_broker_runtime_report_writer_manifest_names_artifacts_counts_and_redact
     assert payload["execution_environment"] == "broker"
     assert payload["account_environment"] == "paper"
     assert payload["broker_account_kind"] == "paper"
-    assert payload["allow_live_orders"] is False
+    assert payload["runtime_instance_id"] == "paper-instance"
+    assert payload["live_order_permission"] is False
+    assert payload["source_commit"] == "abcdef123456"
+    assert payload["operator_identity_hash"] == "sha256:operator-paper"
+    assert payload["startup_checklist_hash"].startswith("sha256:")
+    assert payload["manifest_hash"].startswith("sha256:")
     assert payload["operator_signoff_id"] is None
     assert payload["config_hash"].startswith("sha256:")
     assert payload["artifacts"]["events"]["rows"] == 1
@@ -108,6 +116,9 @@ def test_broker_runtime_report_writer_includes_runtime_topology_payload(tmp_path
         config_payload={"mode": "paper_simulated"},
         runtime_mode="paper_simulated",
         account_id="acct-paper",
+        runtime_instance_id="paper-sim-instance",
+        source_commit="abcdef123456",
+        operator_identity_hash="sha256:operator-paper",
         connection_metadata={"host": "127.0.0.1", "port": 4002},
         event_sink=sink,
         runtime_topology_payload=runtime_topology.to_manifest_payload(),
@@ -181,6 +192,9 @@ def test_broker_runtime_report_writer_manifest_includes_account_partition_topolo
         config_payload={"mode": "paper_simulated"},
         runtime_mode="paper_simulated",
         account_id="multi-account",
+        runtime_instance_id="paper-partition-instance",
+        source_commit="abcdef123456",
+        operator_identity_hash="sha256:operator-paper",
         connection_metadata={"host": "127.0.0.1", "port": 4002},
         event_sink=sink,
         runtime_topology_payload=runtime_topology.to_manifest_payload(),
@@ -216,6 +230,9 @@ def test_paper_simulated_broker_runtime_manifest_includes_execution_assumptions(
         config_payload={"mode": "paper_simulated"},
         runtime_mode="paper_simulated",
         account_id="acct-paper",
+        runtime_instance_id="paper-assumptions-instance",
+        source_commit="abcdef123456",
+        operator_identity_hash="sha256:operator-paper",
         connection_metadata={"host": "127.0.0.1", "port": 4002},
         event_sink=sink,
     )
@@ -243,6 +260,31 @@ def test_broker_runtime_report_writer_rejects_permission_mode_label(tmp_path: Pa
             config_payload={"mode": "paper"},
             runtime_mode="paper",
             account_id="DU1234567",
+            runtime_instance_id="paper-label-instance",
+            source_commit="abcdef123456",
+            operator_identity_hash="sha256:operator-paper",
+            connection_metadata={"host": "127.0.0.1", "port": 4002},
+            event_sink=sink,
+        )
+
+
+def test_broker_runtime_report_writer_rejects_missing_operator_identity_hash(
+    tmp_path: Path,
+) -> None:
+    import pytest
+    from qts.reporting.broker_runtime import BrokerRuntimeReportWriter
+    from qts.runtime.sinks.live import LiveRuntimeEventSink
+
+    sink = LiveRuntimeEventSink(tmp_path)
+    sink.close()
+
+    with pytest.raises(ValueError, match="operator_identity_hash"):
+        BrokerRuntimeReportWriter(tmp_path).write_manifest(
+            config_payload={"mode": "paper_broker"},
+            runtime_mode="paper_broker",
+            account_id="DU1234567",
+            runtime_instance_id="paper-missing-operator",
+            source_commit="abcdef123456",
             connection_metadata={"host": "127.0.0.1", "port": 4002},
             event_sink=sink,
         )

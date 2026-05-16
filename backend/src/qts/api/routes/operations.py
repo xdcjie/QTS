@@ -8,6 +8,7 @@ from fastapi import APIRouter, Header, HTTPException
 
 from qts.api.mappers import (
     map_kill_switch_state_dto,
+    map_operator_dashboard_status_dto,
     map_runtime_command_result_dto,
     map_runtime_state_dto,
 )
@@ -37,6 +38,16 @@ def _require_safety_scope(authorization_scope: str | None) -> str:
     if authorization_scope != "runtime:safety:write":
         raise HTTPException(status_code=403, detail="runtime safety scope required")
     return authorization_scope
+
+
+@router.get("/operator-status")
+def operator_status(
+    operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
+) -> dict[str, object]:
+    """Return application-owned operator dashboard status."""
+
+    _require_operator(operator)
+    return map_operator_dashboard_status_dto(_operations.operator_status())
 
 
 @router.post("/runtime/start", response_model=RuntimeCommandResponseSchema)

@@ -3,6 +3,9 @@ from qts.application.dto.health import HealthStatusDTO
 from qts.application.dto.operations import (
     KillSwitchCommandDTO,
     KillSwitchStateDTO,
+    OperatorAlertDTO,
+    OperatorDashboardStatusDTO,
+    OperatorStatusFieldDTO,
     RuntimeCommandResultDTO,
     RuntimeStateDTO,
 )
@@ -15,6 +18,9 @@ __all__ = [
     "KillSwitchCommandDTO",
     "KillSwitchStateDTO",
     "OrderFillDTO",
+    "OperatorAlertDTO",
+    "OperatorDashboardStatusDTO",
+    "OperatorStatusFieldDTO",
     "RuntimeCommandResultDTO",
     "RuntimeStateDTO",
 ]

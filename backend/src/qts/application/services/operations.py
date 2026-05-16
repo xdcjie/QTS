@@ -8,6 +8,8 @@ from datetime import UTC, datetime
 from qts.application.dto import (
     KillSwitchCommandDTO,
     KillSwitchStateDTO,
+    OperatorDashboardStatusDTO,
+    OperatorStatusFieldDTO,
     RuntimeCommandResultDTO,
     RuntimeStateDTO,
 )
@@ -24,10 +26,23 @@ from qts.runtime.commands import (
 class OperationsService:
     """Owns operational state without leaking runtime internals into API routes."""
 
-    def __init__(self, *, kill_switches: KillSwitchRegistry | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        kill_switches: KillSwitchRegistry | None = None,
+        operator_status: OperatorDashboardStatusDTO | None = None,
+    ) -> None:
         """Create operational command state and idempotent command routing."""
         self._runtime_state = "running"
+        self._runtime_mode = "paper"
         self._kill_switches = kill_switches or KillSwitchRegistry()
+        self._kill_switch_state = {
+            "scope": "global",
+            "scope_id": None,
+            "active": False,
+            "reason": "",
+        }
+        self._operator_status = operator_status
         self._command_sequence = 0
         self._command_bus = RuntimeCommandBus(handler=self._handle_runtime_command)
 
@@ -219,6 +234,49 @@ class OperationsService:
         )
         return self._command_result_dto(result)
 
+    def operator_status(self) -> OperatorDashboardStatusDTO:
+        """Return the application-owned operator dashboard state."""
+        if self._operator_status is not None:
+            return self._operator_status
+        observed_at = datetime.now(UTC)
+        return OperatorDashboardStatusDTO(
+            runtime_state=OperatorStatusFieldDTO(
+                value=self._runtime_state,
+                timestamp=observed_at,
+            ),
+            runtime_mode=OperatorStatusFieldDTO(value=self._runtime_mode, timestamp=observed_at),
+            order_permission_state=OperatorStatusFieldDTO(value="enabled", timestamp=observed_at),
+            broker_connection_state=OperatorStatusFieldDTO(
+                value="disconnected",
+                timestamp=observed_at,
+            ),
+            market_data_permission_state=OperatorStatusFieldDTO(
+                value="enabled",
+                timestamp=observed_at,
+            ),
+            stale_subscriptions=OperatorStatusFieldDTO(value=(), timestamp=observed_at),
+            open_orders=OperatorStatusFieldDTO(value=(), timestamp=observed_at),
+            positions=OperatorStatusFieldDTO(value=(), timestamp=observed_at),
+            cash_snapshot=OperatorStatusFieldDTO(value=(), timestamp=observed_at),
+            kill_switch_state=OperatorStatusFieldDTO(
+                value=self._kill_switch_state,
+                timestamp=observed_at,
+            ),
+            last_reconciliation_result=OperatorStatusFieldDTO(
+                value={"status": "not_requested", "drift_count": 0},
+                timestamp=observed_at,
+            ),
+            unresolved_broker_callbacks=OperatorStatusFieldDTO(value=(), timestamp=observed_at),
+            event_sink=OperatorStatusFieldDTO(
+                value={"path": None, "hash": None, "row_count": 0},
+                timestamp=observed_at,
+            ),
+            latest_manifest=OperatorStatusFieldDTO(
+                value={"path": None, "hash": None},
+                timestamp=observed_at,
+            ),
+        )
+
     def _submit_runtime_state_command(
         self,
         command_type: RuntimeCommandType,
@@ -297,6 +355,12 @@ class OperationsService:
                     reason=str(exc),
                 )
             state = self._kill_switches.activate(scope, reason=reason)
+            self._kill_switch_state = {
+                "scope": state.scope.scope_type.value,
+                "scope_id": state.scope.scope_id,
+                "active": state.active,
+                "reason": state.reason,
+            }
             evidence = self._command_evidence(
                 command,
                 {
@@ -317,6 +381,12 @@ class OperationsService:
                     reason=str(exc),
                 )
             state = self._kill_switches.deactivate(scope, reason=reason)
+            self._kill_switch_state = {
+                "scope": state.scope.scope_type.value,
+                "scope_id": state.scope.scope_id,
+                "active": state.active,
+                "reason": state.reason,
+            }
             evidence = self._command_evidence(
                 command,
                 {

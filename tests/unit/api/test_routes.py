@@ -182,6 +182,47 @@ def test_operational_routes_scope_idempotency_by_command_kind() -> None:
     assert reconcile.json()["evidence"]["reconciliation"] == "requested"
 
 
+def test_operator_status_route_returns_timestamped_dashboard_dto() -> None:
+    from datetime import datetime
+
+    from fastapi.testclient import TestClient
+    from qts.api.app import create_app
+
+    client = TestClient(create_app())
+
+    response = client.get(
+        "/operations/operator-status",
+        headers={"X-QTS-Operator": "tester"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    fields = (
+        "runtime_state",
+        "runtime_mode",
+        "order_permission_state",
+        "broker_connection_state",
+        "market_data_permission_state",
+        "stale_subscriptions",
+        "open_orders",
+        "positions",
+        "cash_snapshot",
+        "kill_switch_state",
+        "last_reconciliation_result",
+        "unresolved_broker_callbacks",
+        "event_sink",
+        "latest_manifest",
+    )
+    for field_name in fields:
+        assert "value" in payload[field_name]
+        datetime.fromisoformat(payload[field_name]["timestamp"])
+
+    assert payload["runtime_state"]["value"] in {"running", "stopped", "paused", "observation"}
+    assert payload["event_sink"]["value"] == {"path": None, "hash": None, "row_count": 0}
+    assert payload["latest_manifest"]["value"] == {"path": None, "hash": None}
+    assert payload["alerts"] == []
+
+
 def test_operational_routes_do_not_import_runtime_internals() -> None:
     tree = ast.parse(Path("backend/src/qts/api/routes/operations.py").read_text(encoding="utf-8"))
 

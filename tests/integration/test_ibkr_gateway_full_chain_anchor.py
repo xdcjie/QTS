@@ -213,6 +213,9 @@ def test_ibkr_gateway_full_chain_anchor_requires_real_paper_evidence(
         },
         runtime_mode="paper_broker",
         account_id=account_id,
+        runtime_instance_id=f"ibkr-full-chain-{transport_name}",
+        source_commit="external-readiness-evidence",
+        operator_identity_hash="sha256:external-readiness-operator",
         connection_metadata={"host": host, "port": port},
         event_sink=event_sink,
     )
