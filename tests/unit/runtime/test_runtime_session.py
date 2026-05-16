@@ -56,7 +56,7 @@ def test_runtime_session_public_surface_stays_thin() -> None:
         if not name.startswith("_") and (inspect.isfunction(member) or isinstance(member, property))
     ]
 
-    assert len(public_members) <= 15
+    assert len(public_members) <= 16
 
 
 def _bar(start: datetime) -> Bar:
@@ -250,6 +250,38 @@ class _RecordingSink(RuntimeEventSink):
 
     def write(self, event: RuntimeEvent) -> None:
         self.events.append(event)
+
+
+@dataclass(slots=True)
+class _RecordingReconnectReconciliation:
+    passed: bool
+    reason_code: str | None = None
+    drift_count: int = 0
+    unresolved_callback_count: int = 0
+    calls: list[str] = field(default_factory=list)
+
+    def refresh_open_orders(self) -> None:
+        self.calls.append("open_orders")
+
+    def refresh_positions(self) -> None:
+        self.calls.append("positions")
+
+    def refresh_executions(self) -> None:
+        self.calls.append("executions")
+
+    def refresh_account_summary(self) -> None:
+        self.calls.append("account_summary")
+
+    def reconcile_after_reconnect(self) -> Any:
+        from qts.runtime.broker_lifecycle import BrokerReconnectReconciliationResult
+
+        self.calls.append("reconcile")
+        return BrokerReconnectReconciliationResult(
+            passed=self.passed,
+            reason_code=self.reason_code,
+            drift_count=self.drift_count,
+            unresolved_callback_count=self.unresolved_callback_count,
+        )
 
 
 def _portfolio_view(
@@ -501,6 +533,73 @@ def test_runtime_session_reconnect_blocks_orders_until_reconciled() -> None:
 
     adapter = _RecordingExecutionAdapter()
     sink = _RecordingSink()
+    reconciliation = _RecordingReconnectReconciliation(passed=False, reason_code="DRIFT")
+    account_id = AccountId("acct-live-default")
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
+            strategy=_FixedTargetStrategy(Decimal("1")),
+            risk_engine=RiskEngine([]),
+            instrument_context=_InstrumentContext(),
+            execution_adapter=adapter,
+            account_actor=AccountActor(
+                initial_cash={"USD": Decimal("10000")},
+                account_id=account_id,
+            ),
+            instrument_registry=_registry(),
+            portfolio_view=_portfolio_view,
+            multiplier_for=lambda instrument_id: Decimal("1"),
+            account_id=account_id,
+            sink=sink,
+            broker_reconnect_reconciliation=reconciliation,
+        )
+    )
+
+    session.start()
+    disconnected_state = session.on_broker_disconnect(reason="socket closed")
+    blocked = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC)))
+    failed_reconnect_state = session.on_broker_reconnect(reason="socket restored")
+    still_blocked = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 31, tzinfo=UTC)))
+    reconciliation.passed = True
+    reconciliation.reason_code = None
+    reconciliation.drift_count = 0
+    reconciliation.unresolved_callback_count = 0
+    recovered_state = session.on_broker_reconnect(reason="open orders and positions reconciled")
+    accepted = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 32, tzinfo=UTC)))
+
+    event_kinds = [event.kind for event in sink.events]
+    assert disconnected_state is RuntimeSessionState.DEGRADED
+    assert failed_reconnect_state is RuntimeSessionState.DEGRADED
+    assert recovered_state is RuntimeSessionState.RUNNING
+    assert blocked.reason_code == "RUNTIME_DEGRADED"
+    assert still_blocked.reason_code == "RUNTIME_DEGRADED"
+    assert len(adapter.seen) == 1
+    assert len(accepted.orders) == 1
+    assert "runtime.broker_disconnected" in event_kinds
+    assert "runtime.broker_reconnected" in event_kinds
+    assert "runtime.reconciliation_passed" in event_kinds
+    assert reconciliation.calls == [
+        "open_orders",
+        "positions",
+        "executions",
+        "account_summary",
+        "reconcile",
+        "open_orders",
+        "positions",
+        "executions",
+        "account_summary",
+        "reconcile",
+    ]
+
+
+def test_runtime_session_reconnect_requires_configured_reconciliation_boundary() -> None:
+    from qts.risk.risk_engine import RiskEngine
+    from qts.runtime.actors.account_actor import AccountActor
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
+    from qts.runtime.state import RuntimeSessionState as RuntimeSessionState
+
+    adapter = _RecordingExecutionAdapter()
+    sink = _RecordingSink()
     account_id = AccountId("acct-live-default")
     session = RuntimeSession(
         RuntimeSessionDependencies(
@@ -521,29 +620,66 @@ def test_runtime_session_reconnect_blocks_orders_until_reconciled() -> None:
     )
 
     session.start()
-    disconnected_state = session.on_broker_disconnect(reason="socket closed")
+    session.on_broker_disconnect(reason="socket closed")
+    reconnect_state = session.on_broker_reconnect(reason="socket restored")
     blocked = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC)))
-    failed_reconnect_state = session.on_broker_reconnect(
-        reason="socket restored",
-        reconciliation_passed=False,
-    )
-    still_blocked = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 31, tzinfo=UTC)))
-    recovered_state = session.on_broker_reconnect(
-        reason="open orders and positions reconciled",
-        reconciliation_passed=True,
-    )
-    accepted = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 32, tzinfo=UTC)))
 
-    event_kinds = [event.kind for event in sink.events]
-    assert disconnected_state is RuntimeSessionState.DEGRADED
-    assert failed_reconnect_state is RuntimeSessionState.DEGRADED
-    assert recovered_state is RuntimeSessionState.RUNNING
+    assert reconnect_state is RuntimeSessionState.DEGRADED
     assert blocked.reason_code == "RUNTIME_DEGRADED"
-    assert still_blocked.reason_code == "RUNTIME_DEGRADED"
-    assert len(adapter.seen) == 1
-    assert len(accepted.orders) == 1
-    assert "runtime.broker_disconnected" in event_kinds
-    assert "runtime.broker_reconnected" in event_kinds
+    assert adapter.seen == []
+    failed_events = [
+        event for event in sink.events if event.kind == "runtime.reconciliation_failed"
+    ]
+    assert failed_events[-1].payload["reason_code"] == "RECONNECT_RECONCILIATION_NOT_CONFIGURED"
+
+
+def test_runtime_session_reconnect_keeps_degraded_for_unresolved_callbacks() -> None:
+    from qts.risk.risk_engine import RiskEngine
+    from qts.runtime.actors.account_actor import AccountActor
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
+    from qts.runtime.state import RuntimeSessionState as RuntimeSessionState
+
+    adapter = _RecordingExecutionAdapter()
+    sink = _RecordingSink()
+    reconciliation = _RecordingReconnectReconciliation(
+        passed=False,
+        reason_code="UNRESOLVED_CALLBACKS",
+        unresolved_callback_count=2,
+    )
+    account_id = AccountId("acct-live-default")
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
+            strategy=_FixedTargetStrategy(Decimal("1")),
+            risk_engine=RiskEngine([]),
+            instrument_context=_InstrumentContext(),
+            execution_adapter=adapter,
+            account_actor=AccountActor(
+                initial_cash={"USD": Decimal("10000")},
+                account_id=account_id,
+            ),
+            instrument_registry=_registry(),
+            portfolio_view=_portfolio_view,
+            multiplier_for=lambda instrument_id: Decimal("1"),
+            account_id=account_id,
+            sink=sink,
+            broker_reconnect_reconciliation=reconciliation,
+        )
+    )
+
+    session.start()
+    session.on_broker_disconnect(reason="socket closed")
+    reconnect_state = session.on_broker_reconnect(reason="socket restored")
+    blocked = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC)))
+
+    assert reconnect_state is RuntimeSessionState.DEGRADED
+    assert blocked.reason_code == "RUNTIME_DEGRADED"
+    assert adapter.seen == []
+    failed_event = [
+        event for event in sink.events if event.kind == "runtime.reconciliation_failed"
+    ][-1]
+    assert failed_event.payload["reason_code"] == "UNRESOLVED_CALLBACKS"
+    assert failed_event.payload["unresolved_callback_count"] == 2
 
 
 def test_runtime_session_blocks_orders_after_delayed_market_data_permission() -> None:
@@ -595,7 +731,6 @@ def test_runtime_session_blocks_orders_after_delayed_market_data_permission() ->
 
 def test_runtime_session_records_market_data_risk_rejection_evidence() -> None:
     from qts.risk.risk_engine import RiskEngine
-    from qts.risk.rules.market_data_permission import MarketDataPermissionRiskRule
     from qts.runtime.actors.account_actor import AccountActor
     from qts.runtime.config import LiveRuntimeConfig
     from qts.runtime.dependencies import RuntimeSessionDependencies
@@ -625,7 +760,7 @@ def test_runtime_session_records_market_data_risk_rejection_evidence() -> None:
             execution_environment=ExecutionEnvironment.BROKER,
             startup_decision=startup_decision,
             strategy=_BuyOnceStrategy(),
-            risk_engine=RiskEngine([MarketDataPermissionRiskRule()]),
+            risk_engine=RiskEngine([]),
             instrument_context=_InstrumentContext(),
             execution_adapter=adapter,
             account_actor=AccountActor(
@@ -1266,6 +1401,58 @@ def test_runtime_session_live_mode_requires_startup_decision_for_orders() -> Non
     assert result.reason_code == "LIVE_STARTUP_NOT_ALLOWED"
 
 
+def test_runtime_session_start_writes_startup_gate_evidence() -> None:
+    from qts.risk.risk_engine import RiskEngine
+    from qts.runtime.actors.account_actor import AccountActor
+    from qts.runtime.config import LiveRuntimeConfig
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.live import validate_live_startup
+    from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
+    from qts.runtime.session import RuntimeSession
+
+    sink = _RecordingSink()
+    account_id = AccountId("acct-live-startup-evidence")
+    startup_decision = validate_live_startup(
+        LiveRuntimeConfig(
+            mode=RuntimeMode.LIVE,
+            broker_configured=True,
+            account_configured=True,
+            risk_configured=True,
+            calendar_configured=True,
+            kill_switch_configured=True,
+            allow_live_orders=True,
+            broker_account_code="U1234567",
+            operator_signoff_id="ops-approval-1",
+        )
+    )
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
+            mode=RuntimeMode.LIVE,
+            execution_environment=ExecutionEnvironment.BROKER,
+            startup_decision=startup_decision,
+            strategy=_BuyOnceStrategy(),
+            risk_engine=RiskEngine([]),
+            instrument_context=_InstrumentContext(),
+            execution_adapter=_RecordingExecutionAdapter(),
+            account_actor=AccountActor(
+                initial_cash={"USD": Decimal("10000")},
+                account_id=account_id,
+            ),
+            instrument_registry=_registry(),
+            portfolio_view=_portfolio_view,
+            multiplier_for=lambda instrument_id: Decimal("1"),
+            sink=sink,
+            account_id=account_id,
+        )
+    )
+
+    session.start()
+
+    startup_event = next(event for event in sink.events if event.kind == "runtime.startup_gate")
+    assert startup_event.payload["checklist_hash"] == startup_decision.checklist.checklist_hash
+    assert startup_event.payload["checks"][0]["evidence"]
+
+
 def test_paper_broker_runtime_session_requires_startup_decision_for_orders() -> None:
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
@@ -1349,7 +1536,130 @@ def test_runtime_session_observation_permission_blocks_orders() -> None:
     assert result.reason_code == "OBSERVATION_ONLY"
 
 
+def test_runtime_session_permission_block_writes_runtime_order_result_evidence() -> None:
+    from qts.risk.risk_engine import RiskEngine
+    from qts.runtime.actors.account_actor import AccountActor
+    from qts.runtime.config import LiveRuntimeConfig
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.live import validate_live_startup
+    from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
+    from qts.runtime.session import RuntimeSession
+
+    adapter = _RecordingExecutionAdapter()
+    sink = _RecordingSink()
+    account_id = AccountId("acct-live-permission-block")
+    startup_decision = validate_live_startup(
+        LiveRuntimeConfig(
+            mode=RuntimeMode.LIVE_OBSERVATION,
+            broker_configured=True,
+            account_configured=True,
+            risk_configured=True,
+            calendar_configured=True,
+            kill_switch_configured=True,
+        )
+    )
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
+            mode=RuntimeMode.LIVE_OBSERVATION,
+            execution_environment=ExecutionEnvironment.DISABLED,
+            startup_decision=startup_decision,
+            strategy=_BuyOnceStrategy(),
+            risk_engine=RiskEngine([]),
+            instrument_context=_InstrumentContext(),
+            execution_adapter=adapter,
+            account_actor=AccountActor(
+                initial_cash={"USD": Decimal("10000")},
+                account_id=account_id,
+            ),
+            instrument_registry=_registry(),
+            portfolio_view=_portfolio_view,
+            multiplier_for=lambda instrument_id: Decimal("1"),
+            sink=sink,
+            account_id=account_id,
+        )
+    )
+
+    session.start()
+    result = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC)))
+
+    blocked_events = [event for event in sink.events if event.kind == "order_blocked_by_permission"]
+    assert adapter.seen == []
+    assert result.reason_code == "OBSERVATION_ONLY"
+    assert len(result.order_results) == 1
+    assert result.order_results[0].accepted is False
+    assert result.order_results[0].reason_code == "OBSERVATION_ONLY"
+    assert len(blocked_events) == 1
+    assert blocked_events[0].payload["reason_code"] == "OBSERVATION_ONLY"
+    assert blocked_events[0].payload["runtime_order_result"]["accepted"] is False
+    assert (
+        blocked_events[0].payload["startup_checklist"]["checklist_hash"]
+        == startup_decision.checklist.checklist_hash
+    )
+
+
+def test_runtime_session_paper_permission_does_not_permit_live_account_order() -> None:
+    from qts.risk.risk_engine import RiskEngine
+    from qts.runtime.actors.account_actor import AccountActor
+    from qts.runtime.config import LiveRuntimeConfig
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.live import BrokerRuntimeStartupDecision, validate_live_startup
+    from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
+    from qts.runtime.permissions import LiveOrderPermission
+    from qts.runtime.session import RuntimeSession
+
+    adapter = _RecordingExecutionAdapter()
+    sink = _RecordingSink()
+    account_id = AccountId("U1234567")
+    paper_startup_decision = validate_live_startup(
+        LiveRuntimeConfig(
+            mode=RuntimeMode.PAPER_BROKER,
+            broker_configured=True,
+            account_configured=True,
+            risk_configured=True,
+            calendar_configured=True,
+            kill_switch_configured=True,
+            broker_account_code="DU1234567",
+        )
+    )
+    startup_decision = BrokerRuntimeStartupDecision(
+        status=paper_startup_decision.status,
+        mode=RuntimeMode.LIVE,
+        order_permission=LiveOrderPermission.PAPER_ORDERS_ALLOWED,
+        real_order_submission_enabled=False,
+        checklist=paper_startup_decision.checklist,
+    )
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
+            mode=RuntimeMode.LIVE,
+            execution_environment=ExecutionEnvironment.BROKER,
+            startup_decision=startup_decision,
+            strategy=_BuyOnceStrategy(),
+            risk_engine=RiskEngine([]),
+            instrument_context=_InstrumentContext(),
+            execution_adapter=adapter,
+            account_actor=AccountActor(
+                initial_cash={"USD": Decimal("10000")},
+                account_id=account_id,
+            ),
+            instrument_registry=_registry(),
+            portfolio_view=_portfolio_view,
+            multiplier_for=lambda instrument_id: Decimal("1"),
+            sink=sink,
+            account_id=account_id,
+        )
+    )
+
+    session.start()
+    result = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC)))
+
+    assert adapter.seen == []
+    assert result.reason_code == "LIVE_ORDER_PERMISSION_REQUIRED"
+    assert len(result.order_results) == 1
+    assert result.order_results[0].reason_code == "LIVE_ORDER_PERMISSION_REQUIRED"
+
+
 def test_runtime_session_live_mode_allows_orders_after_startup_decision() -> None:
+    from qts.data.permissions import MarketDataPermissionEvent, MarketDataPermissionState
     from qts.risk.risk_engine import RiskEngine
     from qts.runtime.actors.account_actor import AccountActor
     from qts.runtime.config import LiveRuntimeConfig
@@ -1394,6 +1704,14 @@ def test_runtime_session_live_mode_allows_orders_after_startup_decision() -> Non
     )
 
     session.start()
+    session.on_market_data_source_event(
+        MarketDataPermissionEvent(
+            source_id="ibkr-live-md",
+            permission_state=MarketDataPermissionState.LIVE,
+            provider_market_data_type=1,
+            request_id=11,
+        )
+    )
     result = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC)))
 
     assert len(adapter.seen) == 1

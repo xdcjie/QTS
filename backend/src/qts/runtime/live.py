@@ -40,8 +40,8 @@ class BrokerRuntimeStartupCheck:
             raise ValueError("check_name must not be empty")
         if self.status not in {"PASS", "WARN", "FAIL"}:
             raise ValueError("status must be PASS, WARN, or FAIL")
-        if self.severity not in {"INFO", "WARN", "BLOCKER"}:
-            raise ValueError("severity must be INFO, WARN, or BLOCKER")
+        if self.severity not in {"INFO", "WARNING", "BLOCKER"}:
+            raise ValueError("severity must be INFO, WARNING, or BLOCKER")
         if not self.evidence.strip():
             raise ValueError("evidence must not be empty")
         if not self.remediation.strip():
@@ -202,7 +202,9 @@ class BrokerRuntimeStartupChecklist:
     def passed(self) -> bool:
         """Return whether all blocking checks passed."""
 
-        return all(check.status != "FAIL" for check in self.checks)
+        return all(
+            not (check.status == "FAIL" and check.severity == "BLOCKER") for check in self.checks
+        )
 
     def by_name(self, check_name: str) -> BrokerRuntimeStartupCheck:
         """Return one checklist item by name."""
@@ -257,7 +259,7 @@ def validate_live_startup(config: LiveRuntimeConfig) -> BrokerRuntimeStartupDeci
     missing = [
         f"{check.check_name} ({check.evidence})"
         for check in checklist.checks
-        if check.status == "FAIL"
+        if check.status == "FAIL" and check.severity == "BLOCKER"
     ]
     if missing:
         raise ValueError("live startup missing required config: " + ", ".join(missing))
@@ -300,10 +302,32 @@ def _order_permission_for_status(
 class RuntimeOrderResult:
     """Result of live runtime order submission."""
 
-    request: BrokerOrderRequest
+    request: BrokerOrderRequest | None
     accepted: bool
     report: BrokerExecutionReport | None = None
     reason_code: str | None = None
+
+    def to_evidence(self) -> dict[str, Any]:
+        """Serialize order permission evidence for runtime events."""
+        request_payload: dict[str, Any] | None = None
+        if self.request is not None:
+            request_payload = {
+                "order_id": self.request.order_id.value,
+                "client_order_id": self.request.client_order_id,
+                "account_id": self.request.account_id.value,
+                "strategy_id": (
+                    self.request.strategy_id.value if self.request.strategy_id is not None else None
+                ),
+                "instrument_id": self.request.instrument_id.value,
+                "side": self.request.side.value,
+                "quantity": str(self.request.quantity),
+            }
+        return {
+            "accepted": self.accepted,
+            "reason_code": self.reason_code,
+            "request": request_payload,
+            "report": self.report is not None,
+        }
 
 
 class LiveRuntime:
@@ -359,7 +383,7 @@ class LiveRuntime:
         return self.state
 
     def submit_order(self, request: BrokerOrderRequest) -> RuntimeOrderResult:
-        """Perform submit_order."""
+        """Reject direct order submission outside the shared runtime session path."""
         if self.state is RuntimeSessionState.PAUSED:
             return RuntimeOrderResult(request=request, accepted=False, reason_code="RUNTIME_PAUSED")
         if self.state is RuntimeSessionState.DEGRADED:
@@ -371,7 +395,9 @@ class LiveRuntime:
                 request=request, accepted=False, reason_code="RUNTIME_NOT_RUNNING"
             )
         return RuntimeOrderResult(
-            request=request, accepted=True, report=self._broker.submit_order(request)
+            request=request,
+            accepted=False,
+            reason_code="DIRECT_ORDER_PATH_DISABLED",
         )
 
 

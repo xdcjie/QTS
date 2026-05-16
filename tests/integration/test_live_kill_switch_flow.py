@@ -11,6 +11,8 @@ from qts.execution.order_manager import (
     ExecutionReportStatus,
     OrderIntent,
 )
+from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventSink
+from qts.runtime.state_recovery import StateSnapshot
 from qts.runtime.topology import (
     AccountRuntimeSpec,
     MarketDataRouteSpec,
@@ -252,6 +254,204 @@ def test_live_rollback_records_operator_action_and_preserves_event_store_paths()
     assert blocked.reason_code == "KILL_SWITCH_ACTIVE"
 
 
+def test_kill_switch_keeps_event_and_snapshot_recording_after_orders_are_blocked() -> None:
+    from qts.domain.instruments import AssetClass, ContractSpec, Instrument, SettlementType
+    from qts.registry.instrument_registry import InstrumentRegistry
+    from qts.risk.kill_switch import RuntimeKillSwitchCommand
+    from qts.risk.risk_engine import RiskEngine
+    from qts.runtime.actors.account_actor import AccountActor
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    registry = InstrumentRegistry()
+    registry.register(
+        "AAPL",
+        Instrument(
+            instrument_id=instrument_id,
+            asset_class=AssetClass.EQUITY,
+            exchange="NASDAQ",
+            currency="USD",
+            contract_spec=ContractSpec(
+                tick_size=Decimal("0.01"),
+                lot_size=Decimal("1"),
+                multiplier=Decimal("1"),
+                settlement=SettlementType.CASH,
+                calendar_id="NASDAQ",
+            ),
+        ),
+    )
+    sink = _RecordingSink()
+    snapshot_store = _RecordingSnapshotStore()
+    account_id = AccountId("acct-kill-observe")
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
+            run_id=RuntimeRunId("kill-switch-observability-run"),
+            strategy=_BuyEveryBarStrategy(),
+            risk_engine=RiskEngine([]),
+            instrument_context=_InstrumentContext(),
+            execution_adapter=_AcceptedThenCancelledExecutionAdapter(),
+            account_actor=AccountActor(
+                initial_cash={"USD": Decimal("10000")},
+                account_id=account_id,
+            ),
+            instrument_registry=registry,
+            portfolio_view=_portfolio_view,
+            multiplier_for=lambda instrument_id: Decimal("1"),
+            account_id=account_id,
+            sink=sink,
+            snapshot_store=snapshot_store,
+        )
+    )
+
+    session.start()
+    evidence = session.activate_kill_switch(
+        RuntimeKillSwitchCommand(
+            operator_id="ops-a",
+            reason="halt",
+            cancel_active_orders=False,
+        )
+    )
+    blocked = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC)))
+
+    assert evidence.run_id == "kill-switch-observability-run"
+    assert blocked.reason_code == "KILL_SWITCH_ACTIVE"
+    assert "runtime.market_data" in [event.kind for event in sink.events]
+    assert "runtime.account_snapshot" in [event.kind for event in sink.events]
+    assert snapshot_store.saved
+    assert snapshot_store.saved[-1].run_id == RuntimeRunId("kill-switch-observability-run")
+
+
+def test_rollback_evidence_includes_run_active_orders_and_snapshot_refs() -> None:
+    from pathlib import Path
+
+    from qts.domain.instruments import AssetClass, ContractSpec, Instrument, SettlementType
+    from qts.registry.instrument_registry import InstrumentRegistry
+    from qts.risk.risk_engine import RiskEngine
+    from qts.runtime.actors.account_actor import AccountActor
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeRollbackCommand, RuntimeSession
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    registry = InstrumentRegistry()
+    registry.register(
+        "AAPL",
+        Instrument(
+            instrument_id=instrument_id,
+            asset_class=AssetClass.EQUITY,
+            exchange="NASDAQ",
+            currency="USD",
+            contract_spec=ContractSpec(
+                tick_size=Decimal("0.01"),
+                lot_size=Decimal("1"),
+                multiplier=Decimal("1"),
+                settlement=SettlementType.CASH,
+                calendar_id="NASDAQ",
+            ),
+        ),
+    )
+    account_id = AccountId("acct-rollback-rich")
+    snapshot_store = _RecordingSnapshotStore()
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
+            run_id=RuntimeRunId("rollback-rich-run"),
+            strategy=_BuyEveryBarStrategy(),
+            risk_engine=RiskEngine([]),
+            instrument_context=_InstrumentContext(),
+            execution_adapter=_AcceptedThenCancelledExecutionAdapter(),
+            account_actor=AccountActor(
+                initial_cash={"USD": Decimal("10000")},
+                account_id=account_id,
+            ),
+            instrument_registry=registry,
+            portfolio_view=_portfolio_view,
+            multiplier_for=lambda instrument_id: Decimal("1"),
+            account_id=account_id,
+            snapshot_store=snapshot_store,
+        )
+    )
+
+    session.start()
+    session.on_market_data(_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC)))
+    evidence = session.rollback(
+        RuntimeRollbackCommand(
+            operator_id="ops-a",
+            reason="deploy rollback",
+            event_store_paths=(Path("evidence/ibkr/events.ndjson"),),
+        )
+    )
+
+    assert evidence.run_id == "rollback-rich-run"
+    assert evidence.runtime_state == "running"
+    assert evidence.active_order_ids == ("live-000001",)
+    assert evidence.event_store_paths == ("evidence/ibkr/events.ndjson",)
+    assert evidence.snapshot_refs == ("account:acct-rollback-rich",)
+    assert snapshot_store.saved[-1].snapshot_id == "account:acct-rollback-rich"
+
+
+def test_runtime_session_rejects_unauthorized_kill_switch_deactivate() -> None:
+    from qts.domain.instruments import AssetClass, ContractSpec, Instrument, SettlementType
+    from qts.registry.instrument_registry import InstrumentRegistry
+    from qts.risk.kill_switch import RuntimeKillSwitchCommand
+    from qts.risk.risk_engine import RiskEngine
+    from qts.runtime.actors.account_actor import AccountActor
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.safety import RuntimeKillSwitchDeactivateCommand
+    from qts.runtime.safety_controller import RuntimeSafetyController
+    from qts.runtime.session import RuntimeSession
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    registry = InstrumentRegistry()
+    registry.register(
+        "AAPL",
+        Instrument(
+            instrument_id=instrument_id,
+            asset_class=AssetClass.EQUITY,
+            exchange="NASDAQ",
+            currency="USD",
+            contract_spec=ContractSpec(
+                tick_size=Decimal("0.01"),
+                lot_size=Decimal("1"),
+                multiplier=Decimal("1"),
+                settlement=SettlementType.CASH,
+                calendar_id="NASDAQ",
+            ),
+        ),
+    )
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
+            strategy=_BuyEveryBarStrategy(),
+            risk_engine=RiskEngine([]),
+            instrument_context=_InstrumentContext(),
+            execution_adapter=_AcceptedThenCancelledExecutionAdapter(),
+            account_actor=AccountActor(
+                initial_cash={"USD": Decimal("10000")},
+                account_id=AccountId("acct-unauth-deactivate"),
+            ),
+            instrument_registry=registry,
+            portfolio_view=_portfolio_view,
+            multiplier_for=lambda instrument_id: Decimal("1"),
+            account_id=AccountId("acct-unauth-deactivate"),
+        )
+    )
+
+    session.start()
+    session.activate_kill_switch(RuntimeKillSwitchCommand(operator_id="ops-a", reason="halt"))
+
+    try:
+        RuntimeSafetyController(session).deactivate_kill_switch(
+            RuntimeKillSwitchDeactivateCommand(
+                operator_id="ops-a",
+                reason="resume",
+                authorized=False,
+            )
+        )
+    except PermissionError as exc:
+        assert str(exc) == "kill switch deactivate requires safety authorization"
+    else:
+        raise AssertionError("unauthorized kill-switch deactivate must fail")
+
+
 class _BuyEveryBarStrategy(Strategy):
     def initialize(self, ctx: Any) -> None:
         self.asset = ctx.symbol("AAPL")
@@ -301,6 +501,28 @@ class _AcceptedThenCancelledExecutionAdapter:
             broker_order_id=broker_order_id,
             status=ExecutionReportStatus.CANCELLED,
         )
+
+
+class _RecordingSink(RuntimeEventSink):
+    def __init__(self) -> None:
+        self.events: list[RuntimeEvent] = []
+
+    def write(self, event: RuntimeEvent) -> None:
+        self.events.append(event)
+
+
+class _RecordingSnapshotStore:
+    def __init__(self) -> None:
+        self.saved: list[StateSnapshot] = []
+
+    def save(self, snapshot: StateSnapshot) -> None:
+        self.saved.append(snapshot)
+
+    def load(self, actor_id: str) -> StateSnapshot | None:
+        for snapshot in reversed(self.saved):
+            if snapshot.actor_id == actor_id:
+                return snapshot
+        return None
 
 
 def _bar(start: datetime) -> Bar:

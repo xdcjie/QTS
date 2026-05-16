@@ -62,3 +62,37 @@ def test_live_runtime_degrades_from_runtime_event_and_rejects_new_orders() -> No
     assert state is RuntimeSessionState.DEGRADED
     assert result.accepted is False
     assert result.reason_code == "RUNTIME_DEGRADED"
+
+
+def test_live_runtime_direct_submit_path_is_disabled_when_running() -> None:
+    from decimal import Decimal
+
+    from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId
+    from qts.execution.broker import BrokerOrderRequest
+    from qts.execution.order_manager import OrderSide
+    from qts.runtime.live import LiveRuntime
+    from qts.testing.fakes.broker import FakeBrokerAdapter
+    from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter
+
+    broker = FakeBrokerAdapter(broker_id=BrokerId("paper"))
+    runtime = LiveRuntime(
+        broker=broker,
+        feed=FakeStreamingMarketDataAdapter(source_id="ibkr-paper-md"),
+    )
+    runtime.start()
+
+    result = runtime.submit_order(
+        BrokerOrderRequest(
+            order_id=OrderId("ord-direct-001"),
+            client_order_id="client-ord-direct-001",
+            account_id=AccountId("DU1234567"),
+            strategy_id=None,
+            instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+            side=OrderSide.BUY,
+            quantity=Decimal("1"),
+        )
+    )
+
+    assert result.accepted is False
+    assert result.reason_code == "DIRECT_ORDER_PATH_DISABLED"
+    assert result.report is None

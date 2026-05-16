@@ -39,11 +39,13 @@ def test_live_runtime_start_pause_resume_and_fake_broker_flow() -> None:
         )
     )
     runtime.resume()
+    assert blocked.request is not None
     accepted = runtime.submit_order(blocked.request)
 
     assert blocked.accepted is False
     assert blocked.reason_code == "RUNTIME_PAUSED"
-    assert accepted.accepted is True
+    assert accepted.accepted is False
+    assert accepted.reason_code == "DIRECT_ORDER_PATH_DISABLED"
 
 
 def test_live_feed_routes_through_market_data_actor_aggregation_pipeline() -> None:

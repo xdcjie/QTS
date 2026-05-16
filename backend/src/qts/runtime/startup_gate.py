@@ -26,6 +26,11 @@ class BrokerRuntimeStartupGate:
         if not self.startup_decision.order_permission.allows_order_submission:
             return "OBSERVATION_ONLY"
         if (
+            self.mode is RuntimeMode.LIVE
+            and not self.startup_decision.order_permission.allows_live_orders
+        ):
+            return "LIVE_ORDER_PERMISSION_REQUIRED"
+        if (
             self.startup_decision.order_permission.allows_live_orders
             and not self.startup_decision.real_order_submission_enabled
         ):

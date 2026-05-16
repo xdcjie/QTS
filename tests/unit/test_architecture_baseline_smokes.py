@@ -90,8 +90,9 @@ def test_paper_runtime_chain_smoke_with_fake_boundary() -> None:
         quantity=Decimal("1"),
     )
     result = runtime.submit_order(request)
-    assert result.accepted is True
-    assert result.report is not None
+    assert result.accepted is False
+    assert result.reason_code == "DIRECT_ORDER_PATH_DISABLED"
+    assert result.report is None
 
 
 def test_runtime_event_sink_smoke(tmp_path: Path) -> None:

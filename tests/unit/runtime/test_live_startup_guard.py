@@ -65,6 +65,43 @@ def test_live_startup_checklist_reports_evidence_and_remediation() -> None:
     assert "account" in account_check.remediation
 
 
+def test_startup_checklist_blocks_only_blocker_severity_failures() -> None:
+    checklist = BrokerRuntimeStartupChecklist(
+        checks=(
+            BrokerRuntimeStartupCheck(
+                check_name="operator_note",
+                status="FAIL",
+                severity="WARNING",
+                evidence="operator_note=missing",
+                remediation="record optional operator note",
+            ),
+            BrokerRuntimeStartupCheck(
+                check_name="schema_version",
+                status="PASS",
+                severity="INFO",
+                evidence="schema_version=1",
+                remediation="none",
+            ),
+        )
+    )
+    blocked = BrokerRuntimeStartupChecklist(
+        checks=(
+            BrokerRuntimeStartupCheck(
+                check_name="risk_config_check",
+                status="FAIL",
+                severity="BLOCKER",
+                evidence="risk_configured=False",
+                remediation="configure risk limits",
+            ),
+        )
+    )
+
+    assert checklist.passed is True
+    assert blocked.passed is False
+    assert checklist.to_payload()["checklist_hash"].startswith("sha256:")
+    assert checklist.to_payload()["checks"][0]["evidence"] == "operator_note=missing"
+
+
 def test_live_runtime_config_requires_schema_version() -> None:
     config = LiveRuntimeConfig(
         mode=RuntimeMode.OBSERVATION.value,

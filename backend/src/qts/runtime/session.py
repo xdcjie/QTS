@@ -31,11 +31,15 @@ from qts.runtime.broker_runtime_topology import (
 )
 from qts.runtime.dependencies import RuntimeSessionDependencies
 from qts.runtime.intent_processing import ProcessedIntent, TargetIntentProcessor
+from qts.runtime.live import RuntimeOrderResult
 from qts.runtime.mailbox import Mailbox
 from qts.runtime.market_data_flow import MarketDataFlow
+from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
 from qts.runtime.safety import RuntimeKillSwitchEvidence
 from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventContext
+from qts.runtime.startup_gate import BrokerRuntimeStartupGate
 from qts.runtime.state import RuntimeSessionState, RuntimeStateMachine
+from qts.runtime.state_recovery import StateSnapshot
 from qts.runtime.topology import RuntimeTopology
 from qts.strategy_sdk import TargetIntent
 
@@ -50,6 +54,7 @@ class RuntimeSessionResult:
     account_snapshot: AccountSnapshot | None = None
     account_snapshots: tuple[tuple[AccountId | None, AccountSnapshot], ...] = ()
     reason_code: str | None = None
+    order_results: tuple[RuntimeOrderResult, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,10 +77,13 @@ class RuntimeRollbackCommand:
 class RuntimeRollbackEvidence:
     """Evidence captured during a runtime rollback drill."""
 
+    run_id: str
     operator_id: str
     reason: str
     runtime_state: str
     event_store_paths: tuple[str, ...]
+    active_order_ids: tuple[str, ...]
+    snapshot_refs: tuple[str, ...]
     account_snapshot: AccountSnapshot
 
 
@@ -106,7 +114,11 @@ class RuntimeSession:
         self._machine = RuntimeStateMachine()
         self._intent_processors = {
             account_id: TargetIntentProcessor(
-                risk_engine=partition.risk_engine,
+                risk_engine=(
+                    partition.risk_engine.requiring_live_market_data()
+                    if self._requires_live_market_data_risk()
+                    else partition.risk_engine
+                ),
                 instrument_context=dependencies.instrument_context,
                 multiplier_for=dependencies.multiplier_for,
                 order_id_prefix=dependencies.order_id_prefix,
@@ -193,7 +205,19 @@ class RuntimeSession:
         """Start the session."""
         self._machine.apply("start")
         state = self._machine.apply("started")
-        self._write_event("runtime.state_transition", {"state": state.value})
+        startup_blocked_reason = BrokerRuntimeStartupGate(
+            mode=self._dependencies.mode,
+            startup_decision=self._dependencies.startup_decision,
+        ).blocked_reason()
+        self._write_startup_gate_event()
+        if startup_blocked_reason is not None:
+            self._write_event(
+                "runtime.startup_blocked",
+                {"reason_code": startup_blocked_reason},
+            )
+            state = self.degrade()
+        else:
+            self._write_event("runtime.state_transition", {"state": state.value})
         return state
 
     def stop(self) -> RuntimeSessionState:
@@ -232,12 +256,10 @@ class RuntimeSession:
         self,
         *,
         reason: str,
-        reconciliation_passed: bool,
     ) -> RuntimeSessionState:
         """Recover from broker reconnect only after reconciliation passes."""
         return self._broker_lifecycle.on_broker_reconnect(
             reason=reason,
-            reconciliation_passed=reconciliation_passed,
         )
 
     def on_market_data_source_event(
@@ -331,6 +353,51 @@ class RuntimeSession:
     def _blocked_reason(self) -> str | None:
         return self._safety_controller.blocked_reason()
 
+    def _write_startup_gate_event(self) -> None:
+        decision = self._dependencies.startup_decision
+        if decision is None:
+            return
+        payload = decision.checklist.to_payload()
+        self._write_event(
+            "runtime.startup_gate",
+            {
+                "status": decision.status.value,
+                "order_permission": decision.order_permission.value,
+                "real_order_submission_enabled": decision.real_order_submission_enabled,
+                "checklist_hash": payload["checklist_hash"],
+                "passed": payload["passed"],
+                "checks": payload["checks"],
+            },
+        )
+
+    def _permission_block_result(self, reason_code: str) -> RuntimeOrderResult:
+        return RuntimeOrderResult(request=None, accepted=False, reason_code=reason_code)
+
+    def _write_order_permission_blocked(
+        self,
+        reason_code: str,
+        order_result: RuntimeOrderResult,
+        *,
+        correlation_id: CorrelationId,
+        instrument_id: InstrumentId,
+    ) -> None:
+        decision = self._dependencies.startup_decision
+        payload: dict[str, object] = {
+            "reason_code": reason_code,
+            "client_order_id": "permission-blocked",
+            "runtime_order_result": order_result.to_evidence(),
+        }
+        if decision is not None:
+            payload["order_permission"] = decision.order_permission.value
+            payload["real_order_submission_enabled"] = decision.real_order_submission_enabled
+            payload["startup_checklist"] = decision.checklist.to_payload()
+        self._write_event(
+            "order_blocked_by_permission",
+            payload,
+            correlation_id=correlation_id,
+            instrument_id=instrument_id,
+        )
+
     def _write_event(
         self,
         kind: str,
@@ -360,6 +427,46 @@ class RuntimeSession:
         sink = self._dependencies.sink
         if sink is not None:
             sink.write(event)
+
+    def _record_account_snapshots(self) -> tuple[str, ...]:
+        snapshot_refs: list[str] = []
+        for account_id, partition in self._account_partitions.items():
+            if partition.snapshot_store is None:
+                continue
+            actor_id = self._account_snapshot_actor_id(account_id)
+            snapshot = partition.account_actor.snapshot()
+            partition.snapshot_store.save(
+                StateSnapshot(
+                    snapshot_id=actor_id,
+                    actor_id=actor_id,
+                    run_id=self._dependencies.run_id,
+                    state_version=1,
+                    last_sequence=self._runtime_event_sequence,
+                    payload={
+                        "cash": {
+                            currency: str(balance) for currency, balance in snapshot.cash.items()
+                        },
+                        "positions": {
+                            instrument_id.value: str(position.quantity)
+                            for instrument_id, position in snapshot.positions.items()
+                        },
+                    },
+                )
+            )
+            snapshot_refs.append(actor_id)
+        return tuple(snapshot_refs)
+
+    @staticmethod
+    def _account_snapshot_actor_id(account_id: AccountId | None) -> str:
+        if account_id is None:
+            return "account:default"
+        return f"account:{account_id.value}"
+
+    def _requires_live_market_data_risk(self) -> bool:
+        return (
+            self._dependencies.mode is RuntimeMode.LIVE
+            and self._dependencies.execution_environment is ExecutionEnvironment.BROKER
+        )
 
     def _active_order_ids(self) -> tuple[str, ...]:
         terminal = {OrderState.FILLED, OrderState.CANCELLED, OrderState.REJECTED}

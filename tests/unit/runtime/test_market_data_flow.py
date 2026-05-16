@@ -119,3 +119,45 @@ def test_market_data_flow_emits_explicit_stale_data_event() -> None:
     ]
     assert result.runtime_events[0].payload["reason_code"] == "MARKET_DATA_STALE"
     assert result.runtime_events[1].payload["reason_code"] == "MARKET_DATA_STALE"
+
+
+def test_market_data_flow_risk_context_combines_permission_and_stale_evidence() -> None:
+    from qts.data.permissions import MarketDataPermissionEvent, MarketDataPermissionState
+    from qts.data.sources.streaming_market_data_source import StreamingMarketDataDegradation
+    from qts.data.subscriptions import LogicalSubscriptionKey
+    from qts.domain.risk import MarketDataRiskContext
+    from qts.runtime.market_data_flow import MarketDataFlow
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    observed_at = datetime(2026, 1, 2, 14, 35, tzinfo=UTC)
+    flow = MarketDataFlow(target_timeframe=None, exchange_timezone_by_instrument={})
+
+    flow.publish_source_event(
+        MarketDataPermissionEvent(
+            source_id="ibkr-live-md",
+            permission_state=MarketDataPermissionState.DELAYED,
+            provider_market_data_type=3,
+            request_id=17,
+        )
+    )
+    flow.publish_source_event(
+        StreamingMarketDataDegradation(
+            instrument_id=instrument_id,
+            subscription=LogicalSubscriptionKey(
+                instrument_id=instrument_id,
+                requested_timeframe="1m",
+            ),
+            observed_at=observed_at,
+            age=timedelta(seconds=61),
+            max_age=timedelta(seconds=30),
+        )
+    )
+
+    context = flow.risk_context_for(instrument_id)
+
+    assert isinstance(context, MarketDataRiskContext)
+    assert context.permission_state == "delayed"
+    assert context.stale is True
+    assert context.evidence_payload()["source_id"] == "ibkr-live-md"
+    assert context.evidence_payload()["instrument_id"] == instrument_id.value
+    assert context.evidence_payload()["age_seconds"] == 61

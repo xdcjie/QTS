@@ -6,6 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import tzinfo
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from qts.core.ids import AccountId, InstrumentId, RuntimeRunId, StrategyId
 from qts.data.sources.streaming_market_data_source import StreamingMarketDataSource
@@ -21,6 +22,9 @@ from qts.runtime.sinks.base import RuntimeEventSink
 from qts.runtime.state_recovery import SnapshotStore
 from qts.runtime.topology import RuntimeTopology
 from qts.strategy_sdk import PortfolioView, Strategy
+
+if TYPE_CHECKING:
+    from qts.runtime.broker_lifecycle import BrokerReconnectReconciliation
 
 PortfolioViewBuilder = Callable[
     [AccountSnapshot],
@@ -60,6 +64,7 @@ class RuntimeSessionDependencies:
     warmup_bars: int = 0
     order_submission_enabled: bool = True
     startup_decision: BrokerRuntimeStartupDecision | None = None
+    broker_reconnect_reconciliation: BrokerReconnectReconciliation | None = None
     order_id_prefix: str = "live"
 
     def __post_init__(self) -> None:

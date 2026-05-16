@@ -90,6 +90,7 @@ class RuntimeMarketDataCoordinator:
         bars = flow_result.market_data
         all_orders: list[Order] = []
         all_fills: list[OrderFill] = []
+        order_results = []
         reason_code: str | None = None
         account_snapshots: tuple[tuple[AccountId | None, AccountSnapshot], ...]
         for bar in bars:
@@ -110,6 +111,14 @@ class RuntimeMarketDataCoordinator:
             blocked_reason = session._blocked_reason()
             if blocked_reason is not None:
                 reason_code = blocked_reason
+                order_result = session._permission_block_result(blocked_reason)
+                order_results.append(order_result)
+                session._write_order_permission_blocked(
+                    blocked_reason,
+                    order_result,
+                    correlation_id=correlation_id,
+                    instrument_id=bar.instrument_id,
+                )
                 continue
 
             bindings_for_bar = [
@@ -327,6 +336,7 @@ class RuntimeMarketDataCoordinator:
             account_snapshot=primary_snapshot,
             account_snapshots=account_snapshots,
             reason_code=reason_code,
+            order_results=tuple(order_results),
         )
 
     def _write_risk_decision_events(
@@ -469,6 +479,7 @@ class RuntimeMarketDataCoordinator:
                 },
                 account_id=partition.account_id,
             )
+        session._record_account_snapshots()
 
 
 __all__ = ["RuntimeMarketDataCoordinator"]

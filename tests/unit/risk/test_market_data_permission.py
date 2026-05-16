@@ -70,3 +70,21 @@ def test_market_data_freshness_rule_rejects_stale_data_with_evidence() -> None:
 
     assert decision.reason_code == "MARKET_DATA_STALE"
     assert _market_data_evidence(decision)["age_seconds"] == 61
+
+
+def test_risk_engine_forces_market_data_permission_and_freshness_rules() -> None:
+    from qts.risk.risk_engine import RiskEngine
+
+    engine = RiskEngine([], require_live_market_data=True)
+
+    delayed = engine.check(_request(permission_state="delayed"))
+    frozen = engine.check(_request(permission_state="frozen"))
+    unavailable = engine.check(_request(permission_state="unavailable"))
+    stale = engine.check(_request(stale=True))
+
+    assert delayed.reason_code == "MARKET_DATA_DELAYED_FOR_LIVE_ORDER"
+    assert frozen.reason_code == "MARKET_DATA_FROZEN_FOR_LIVE_ORDER"
+    assert unavailable.reason_code == "MARKET_DATA_UNAVAILABLE"
+    assert stale.reason_code == "MARKET_DATA_STALE"
+    assert _market_data_evidence(delayed)["source_id"] == "ibkr-paper-md"
+    assert _market_data_evidence(stale)["age_seconds"] == 61
