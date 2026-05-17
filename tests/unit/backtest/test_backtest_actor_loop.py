@@ -45,6 +45,15 @@ class _RecordingBacktestSink:
         """Ignore equity points in this in-memory sink."""
         del point
 
+    def write_holdings_snapshot(
+        self,
+        *,
+        gross_notional: object,
+        net_notional: object,
+    ) -> None:
+        """Ignore holdings notional snapshots in this in-memory sink."""
+        del gross_notional, net_notional
+
     def write_account_snapshot(self, point: AccountSnapshot) -> None:
         """Ignore account snapshots in this in-memory sink."""
         del point

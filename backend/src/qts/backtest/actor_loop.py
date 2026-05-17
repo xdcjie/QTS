@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal
 from types import SimpleNamespace
 from typing import Any, Protocol, TypeAlias
 
 from qts.backtest.dependencies import BacktestActorLoopConfig, BacktestActorLoopDependencies
-from qts.core.ids import AccountId, CorrelationId, StrategyId
+from qts.core.ids import AccountId, CorrelationId, InstrumentId, StrategyId
 from qts.domain.market_data import Bar
 from qts.execution.order_manager import Order, OrderFill
 from qts.reporting.backtest import (
@@ -51,6 +51,14 @@ class BacktestRuntimeSink(Protocol):
 
     def write_equity_point(self, point: EquityCurvePoint) -> None:
         """Record per-bar equity point."""
+
+    def write_holdings_snapshot(
+        self,
+        *,
+        gross_notional: Decimal,
+        net_notional: Decimal,
+    ) -> None:
+        """Record one per-bar holdings notional snapshot."""
 
 
 ProcessIntentHandler = Callable[..., ProcessedIntent]
@@ -555,6 +563,15 @@ class BacktestActorLoop:
         state.sink.write_equity_point(
             self._equity_point(bar, snapshot, latest_prices=state.latest_prices)
         )
+        gross_notional, net_notional = _holdings_notional(
+            snapshot,
+            latest_prices=state.latest_prices,
+            contract_multipliers=self._contract_multipliers,
+        )
+        state.sink.write_holdings_snapshot(
+            gross_notional=gross_notional,
+            net_notional=net_notional,
+        )
         self._write_account_snapshot(state.sink, snapshot)
 
     @staticmethod
@@ -583,6 +600,32 @@ class BacktestActorLoop:
                 },
             )
         )
+
+
+def _holdings_notional(
+    snapshot: AccountSnapshot,
+    *,
+    latest_prices: Mapping[InstrumentId, Decimal],
+    contract_multipliers: Mapping[InstrumentId, Decimal],
+) -> tuple[Decimal, Decimal]:
+    """Return ``(gross, net)`` notional across the current holdings.
+
+    Pure transformation shared between the equity/snapshot writer path and
+    any future caller that needs the same valuation; intentionally module-
+    private rather than a method on ``BacktestActorLoop`` so the loop stays
+    within its private-helper budget.
+    """
+    gross = Decimal("0")
+    net = Decimal("0")
+    for instrument_id, position in snapshot.holdings.items():
+        mark = latest_prices.get(instrument_id)
+        if mark is None or position.quantity == Decimal("0"):
+            continue
+        multiplier = contract_multipliers.get(instrument_id, Decimal("1"))
+        signed_notional = position.quantity * mark * multiplier
+        gross += abs(signed_notional)
+        net += signed_notional
+    return gross, net
 
 
 __all__ = ["BacktestActorLoop", "BacktestActorLoopResult"]

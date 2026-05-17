@@ -313,6 +313,22 @@ class BacktestArtifactWriter:
         self._statistics.on_equity_point(time=point.time, equity=point.equity)
         self._artifacts["equity_curve"].write({"time": point.time, "equity": point.equity})
 
+    def write_holdings_snapshot(
+        self,
+        *,
+        gross_notional: Decimal,
+        net_notional: Decimal,
+    ) -> None:
+        """Record one per-bar holdings notional snapshot.
+
+        Feeds the statistics builder so ``avg_gross_exposure`` and
+        ``avg_net_exposure`` appear in the finalized payload.
+        """
+        self._statistics.on_holdings_snapshot(
+            gross_notional=gross_notional,
+            net_notional=net_notional,
+        )
+
     def finalize(
         self,
         *,

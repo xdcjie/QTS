@@ -77,6 +77,20 @@ class BacktestRuntimeEventSink(RuntimeEventSink):
         """Perform write_equity_point."""
         self._writer.write_equity_point(point)
 
+    def write_holdings_snapshot(
+        self,
+        *,
+        gross_notional: object,
+        net_notional: object,
+    ) -> None:
+        """Forward a per-bar holdings notional snapshot to the writer."""
+        from decimal import Decimal as _Decimal
+
+        self._writer.write_holdings_snapshot(
+            gross_notional=_Decimal(str(gross_notional)),
+            net_notional=_Decimal(str(net_notional)),
+        )
+
     @staticmethod
     def _ledger_rows(fills: Iterable[OrderFill], *, bar: Bar) -> tuple[TradeLedgerEntry, ...]:
         """Perform _ledger_rows."""
