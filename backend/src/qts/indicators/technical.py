@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 
 from qts.domain.market_data import Bar
+from qts.indicators.price.ema import EMA
 from qts.indicators.rolling import RollingWindow
 
 
@@ -173,4 +174,147 @@ class VolumeRatio:
         return self.value
 
 
-__all__ = ["AverageTrueRange", "RSI", "SessionVWAP", "VolumeRatio"]
+@dataclass(frozen=True, slots=True)
+class BollingerBandsValue:
+    """Bollinger Bands output for a completed price update."""
+
+    lower: Decimal
+    middle: Decimal
+    upper: Decimal
+    standard_deviation: Decimal
+
+
+@dataclass(slots=True)
+class BollingerBands:
+    """Bollinger Bands using population standard deviation."""
+
+    window: int
+    standard_deviations: Decimal = Decimal("2")
+    _prices: RollingWindow[Decimal] = field(init=False, repr=False)
+    value: BollingerBandsValue | None = None
+
+    def __post_init__(self) -> None:
+        """Validate and initialize rolling price state."""
+        if self.standard_deviations < Decimal("0"):
+            raise ValueError("standard_deviations must be non-negative")
+        self._prices = RollingWindow[Decimal](self.window)
+
+    @property
+    def ready(self) -> bool:
+        """Return whether the bands have warmed up."""
+        return self.value is not None
+
+    def update(self, price: Decimal) -> BollingerBandsValue | None:
+        """Update Bollinger Bands from a close price."""
+        self._prices.append(price)
+        if not self._prices.ready:
+            self.value = None
+            return None
+        prices = self._prices.snapshot()
+        middle = sum(prices, Decimal("0")) / Decimal(self.window)
+        variance = sum((item - middle) * (item - middle) for item in prices) / Decimal(self.window)
+        standard_deviation = variance.sqrt()
+        offset = self.standard_deviations * standard_deviation
+        self.value = BollingerBandsValue(
+            lower=middle - offset,
+            middle=middle,
+            upper=middle + offset,
+            standard_deviation=standard_deviation,
+        )
+        return self.value
+
+
+@dataclass(frozen=True, slots=True)
+class MACDValue:
+    """MACD output for a completed price update."""
+
+    macd: Decimal
+    signal: Decimal
+    histogram: Decimal
+
+
+@dataclass(slots=True)
+class MACD:
+    """Moving Average Convergence Divergence with SMA-seeded EMAs."""
+
+    fast_window: int
+    slow_window: int
+    signal_window: int
+    _fast: EMA = field(init=False, repr=False)
+    _slow: EMA = field(init=False, repr=False)
+    _signal: EMA = field(init=False, repr=False)
+    value: MACDValue | None = None
+
+    def __post_init__(self) -> None:
+        """Validate and initialize MACD EMA state."""
+        if self.fast_window >= self.slow_window:
+            raise ValueError("fast_window must be less than slow_window")
+        self._fast = EMA(window=self.fast_window)
+        self._slow = EMA(window=self.slow_window)
+        self._signal = EMA(window=self.signal_window)
+
+    @property
+    def ready(self) -> bool:
+        """Return whether MACD and signal have warmed up."""
+        return self.value is not None
+
+    def update(self, price: Decimal) -> MACDValue | None:
+        """Update MACD from a close price."""
+        fast = self._fast.update(price)
+        slow = self._slow.update(price)
+        if fast is None or slow is None:
+            self.value = None
+            return None
+
+        macd = fast - slow
+        signal = self._signal.update(macd)
+        if signal is None:
+            self.value = None
+            return None
+
+        self.value = MACDValue(macd=macd, signal=signal, histogram=macd - signal)
+        return self.value
+
+
+@dataclass(slots=True)
+class RateOfChange:
+    """Rate of change percentage versus the price `window` periods ago."""
+
+    window: int
+    _prices: RollingWindow[Decimal] = field(init=False, repr=False)
+    value: Decimal | None = None
+
+    def __post_init__(self) -> None:
+        """Validate and initialize rolling price state."""
+        self._prices = RollingWindow[Decimal](self.window + 1)
+
+    @property
+    def ready(self) -> bool:
+        """Return whether rate of change has warmed up."""
+        return self.value is not None
+
+    def update(self, price: Decimal) -> Decimal | None:
+        """Update rate of change from a close price."""
+        self._prices.append(price)
+        if not self._prices.ready:
+            self.value = None
+            return None
+        previous = self._prices.snapshot()[0]
+        if previous == Decimal("0"):
+            self.value = None
+            return None
+        self.value = ((price - previous) / previous) * Decimal("100")
+        return self.value
+
+
+__all__ = [
+    "AverageTrueRange",
+    "BollingerBands",
+    "BollingerBandsValue",
+    "MACD",
+    "MACDValue",
+    "RSI",
+    "RateOfChange",
+    "SessionVWAP",
+    "VolumeRatio",
+]

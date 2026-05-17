@@ -15,6 +15,8 @@ from qts.data.subscriptions import (
     LogicalSubscriptionKey,
     PhysicalSubscriptionKey,
     SourceStreamType,
+    UniverseSubscriptionDelta,
+    UniverseSubscriptionPlanner,
     logical_key,
     plan_physical_subscription,
 )
@@ -44,6 +46,8 @@ __all__ = [
     "LogicalSubscriptionKey",
     "PhysicalSubscriptionKey",
     "SourceStreamType",
+    "UniverseSubscriptionDelta",
+    "UniverseSubscriptionPlanner",
     "logical_key",
     "plan_physical_subscription",
 ]

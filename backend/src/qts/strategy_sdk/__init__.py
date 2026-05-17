@@ -7,6 +7,7 @@ from qts.strategy_sdk.indicators import AssetIndicator, IndicatorFactory
 from qts.strategy_sdk.portfolio_view import PortfolioPosition, PortfolioView
 from qts.strategy_sdk.strategy import Strategy
 from qts.strategy_sdk.target import TargetIntent, TargetIntentType
+from qts.strategy_sdk.universe import Universe, UniverseMember, UniverseSelector
 
 __all__ = [
     "AssetRef",
@@ -24,4 +25,7 @@ __all__ = [
     "TargetIntent",
     "TargetIntentType",
     "TimerEvent",
+    "Universe",
+    "UniverseMember",
+    "UniverseSelector",
 ]

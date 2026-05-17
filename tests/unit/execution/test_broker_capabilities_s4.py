@@ -29,10 +29,14 @@ def test_broker_capabilities_model_order_types_tif_short_and_fractional_support(
 
 
 def test_brokerage_model_mapping_lives_at_adapter_boundary() -> None:
-    from qts.execution.adapters.brokerage_capabilities import broker_capabilities_for_model
+    from qts.execution.adapters.brokerage_capabilities import (
+        broker_capabilities_for_model,
+        brokerage_model_for_name,
+    )
 
     capabilities = broker_capabilities_for_model("IBKR_FUTURES")
 
+    assert capabilities == brokerage_model_for_name("IBKR_FUTURES").capabilities
     assert capabilities.broker_id == BrokerId("ibkr-futures")
     assert capabilities.supports_order_type(BrokerOrderType.MARKET)
     assert capabilities.supports_tif(TimeInForce.DAY)

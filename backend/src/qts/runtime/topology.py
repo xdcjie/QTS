@@ -365,12 +365,156 @@ class RuntimeTopologyBuilder:
         market_data_subscriptions: tuple[InstrumentId, ...] | None = None,
     ) -> RuntimeTopology:
         """Build a live/paper topology from explicit session routing specs."""
+        mode = RuntimeMode.from_value(config.mode)
+        return RuntimeTopology(
+            run_id=run_id,
+            mode=mode,
+            accounts=(
+                cls.live_account_from_config(
+                    config,
+                    account_id=account_id,
+                    broker_id=broker_id,
+                    broker_account_code=broker_account_code,
+                    base_currency=base_currency,
+                    initial_cash=initial_cash,
+                ),
+            ),
+            strategies=(
+                cls.live_strategy_spec(
+                    account_id=account_id,
+                    strategy_id=strategy_id,
+                    strategy_class=strategy_class,
+                    subscriptions=(
+                        market_data_subscriptions
+                        if market_data_subscriptions is not None
+                        else subscriptions
+                    ),
+                ),
+            ),
+            broker_routes=cls.live_broker_routes(
+                config,
+                account_id=account_id,
+                broker_id=broker_id,
+                execution_adapter_type=execution_adapter_type,
+                order_transport_type=order_transport_type,
+                execution_environment=execution_environment,
+            ),
+            market_data_routes=cls.live_market_data_routes(
+                subscriptions=subscriptions,
+                market_data_source_id=market_data_source_id,
+                market_data_source_type=market_data_source_type,
+                market_data_provider=market_data_provider,
+                market_data_subscriptions=market_data_subscriptions,
+            ),
+        )
+
+    @classmethod
+    def live_account_from_config(
+        cls,
+        config: BrokerRuntimeConfig,
+        *,
+        account_id: str,
+        broker_id: str | None = None,
+        broker_account_code: str | None = None,
+        base_currency: str = "USD",
+        initial_cash: Decimal = Decimal("0"),
+    ) -> AccountRuntimeSpec:
+        """Build the account partition for a live/paper runtime topology."""
+
+        if not account_id.strip():
+            raise ValueError("account_id must not be empty")
+        mode = RuntimeMode.from_value(config.mode)
+        return AccountRuntimeSpec(
+            account_id=AccountId(account_id),
+            broker_id=BrokerId(broker_id) if broker_id is not None else None,
+            base_currency=base_currency,
+            initial_cash=initial_cash,
+            broker_account_code=broker_account_code,
+            account_environment=AccountEnvironment.from_value(
+                config.account_environment,
+                mode=mode,
+            ),
+        )
+
+    @classmethod
+    def live_strategy_spec(
+        cls,
+        *,
+        account_id: str,
+        strategy_id: str,
+        strategy_class: str,
+        subscriptions: tuple[InstrumentId, ...],
+    ) -> StrategyRuntimeSpec:
+        """Build the strategy partition for a live/paper runtime topology."""
+
         if not strategy_id.strip():
             raise ValueError("strategy_id must not be empty")
         if not strategy_class.strip():
             raise ValueError("strategy_class must not be empty")
         if not account_id.strip():
             raise ValueError("account_id must not be empty")
+        if not subscriptions:
+            raise ValueError("subscriptions must not be empty")
+        return StrategyRuntimeSpec(
+            strategy_id=StrategyId(strategy_id),
+            strategy_class=strategy_class,
+            account_id=AccountId(account_id),
+            subscriptions=tuple(dict.fromkeys(subscriptions)),
+        )
+
+    @classmethod
+    def live_broker_routes(
+        cls,
+        config: BrokerRuntimeConfig,
+        *,
+        account_id: str,
+        broker_id: str | None = None,
+        execution_adapter_type: str | None = None,
+        order_transport_type: str | None = None,
+        execution_environment: ExecutionEnvironment | None = None,
+    ) -> tuple[BrokerRouteSpec, ...]:
+        """Build execution adapter routes for a live/paper runtime topology."""
+
+        if not account_id.strip():
+            raise ValueError("account_id must not be empty")
+        mode = RuntimeMode.from_value(config.mode)
+        resolved_execution_environment = ExecutionEnvironment.from_value(
+            execution_environment,
+            mode=mode,
+        )
+        account_broker_id = BrokerId(broker_id) if broker_id is not None else None
+        if resolved_execution_environment is not ExecutionEnvironment.BROKER:
+            if account_broker_id is not None:
+                raise ValueError("account_broker_id requires broker route in broker mode")
+            return ()
+        if account_broker_id is None:
+            raise ValueError("broker route requires broker_id")
+        if not execution_adapter_type:
+            raise ValueError("broker route requires execution_adapter_type")
+        if not order_transport_type:
+            raise ValueError("broker route requires order_transport_type")
+        return (
+            BrokerRouteSpec(
+                broker_id=account_broker_id,
+                account_id=AccountId(account_id),
+                execution_adapter_type=execution_adapter_type,
+                order_transport_type=order_transport_type,
+                execution_environment=resolved_execution_environment,
+            ),
+        )
+
+    @classmethod
+    def live_market_data_routes(
+        cls,
+        *,
+        subscriptions: tuple[InstrumentId, ...],
+        market_data_source_id: str = "streaming",
+        market_data_source_type: str = "streaming",
+        market_data_provider: str = "streaming",
+        market_data_subscriptions: tuple[InstrumentId, ...] | None = None,
+    ) -> tuple[MarketDataRouteSpec, ...]:
+        """Build market-data routes for a live/paper runtime topology."""
+
         if not subscriptions:
             raise ValueError("subscriptions must not be empty")
         normalized_subscriptions = tuple(
@@ -380,68 +524,12 @@ class RuntimeTopologyBuilder:
                 else subscriptions
             )
         )
-
-        mode = RuntimeMode.from_value(config.mode)
-        execution_environment = ExecutionEnvironment.from_value(
-            execution_environment,
-            mode=mode,
-        )
-        broker_route: tuple[BrokerRouteSpec, ...] = ()
-        broker_route_required = execution_environment is ExecutionEnvironment.BROKER
-        account_broker_id = BrokerId(broker_id) if broker_id is not None else None
-        if broker_route_required:
-            if account_broker_id is None:
-                raise ValueError("broker route requires broker_id")
-            if not execution_adapter_type:
-                raise ValueError("broker route requires execution_adapter_type")
-            if not order_transport_type:
-                raise ValueError("broker route requires order_transport_type")
-            broker_route = (
-                BrokerRouteSpec(
-                    broker_id=account_broker_id,
-                    account_id=AccountId(account_id),
-                    execution_adapter_type=execution_adapter_type,
-                    order_transport_type=order_transport_type,
-                    execution_environment=execution_environment,
-                ),
-            )
-        elif account_broker_id is not None:
-            # Keep explicit broker_id only when route is provided to satisfy
-            # invariant checks in RuntimeTopology.
-            raise ValueError("account_broker_id requires broker route in broker mode")
-
-        return RuntimeTopology(
-            run_id=run_id,
-            mode=mode,
-            accounts=(
-                AccountRuntimeSpec(
-                    account_id=AccountId(account_id),
-                    broker_id=account_broker_id,
-                    base_currency=base_currency,
-                    initial_cash=initial_cash,
-                    broker_account_code=broker_account_code,
-                    account_environment=AccountEnvironment.from_value(
-                        config.account_environment,
-                        mode=mode,
-                    ),
-                ),
-            ),
-            strategies=(
-                StrategyRuntimeSpec(
-                    strategy_id=StrategyId(strategy_id),
-                    strategy_class=strategy_class,
-                    account_id=AccountId(account_id),
-                    subscriptions=normalized_subscriptions,
-                ),
-            ),
-            broker_routes=broker_route,
-            market_data_routes=(
-                MarketDataRouteSpec(
-                    source_id=market_data_source_id,
-                    source_type=market_data_source_type,
-                    provider=market_data_provider,
-                    subscriptions=normalized_subscriptions,
-                ),
+        return (
+            MarketDataRouteSpec(
+                source_id=market_data_source_id,
+                source_type=market_data_source_type,
+                provider=market_data_provider,
+                subscriptions=normalized_subscriptions,
             ),
         )
 

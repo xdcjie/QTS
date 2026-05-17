@@ -1166,6 +1166,17 @@ def test_guardrail_suite_can_target_product_specific_rule(tmp_path: Path) -> Non
     }
 
 
+def test_guardrail_script_uses_canonical_quality_entrypoint() -> None:
+    source = Path("scripts/verify_guardrails.py").read_text(encoding="utf-8")
+    guardrails = _load_guardrails_module()
+
+    assert "qts.quality.guardrails" not in source
+    assert "from qts.quality import" in source
+    assert guardrails.GuardrailSuite.__module__ == "qts.quality.suite"
+    assert guardrails.run_guardrails.__module__ == "qts.quality.suite"
+    assert guardrails.ProductionPlaceholderDocstringRule.__module__.startswith("qts.quality.rules.")
+
+
 def test_guardrail_suite_default_preserves_expected_codes(tmp_path: Path) -> None:
     root = tmp_path
     _write(

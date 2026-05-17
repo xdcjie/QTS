@@ -5,12 +5,25 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from decimal import Decimal
+from typing import TypeAlias
 
 from qts.domain.market_data import Bar
 from qts.indicators.price.ema import EMA
 from qts.indicators.price.sma import SMA
-from qts.indicators.technical import RSI, AverageTrueRange, SessionVWAP, VolumeRatio
+from qts.indicators.technical import (
+    MACD,
+    RSI,
+    AverageTrueRange,
+    BollingerBands,
+    BollingerBandsValue,
+    MACDValue,
+    RateOfChange,
+    SessionVWAP,
+    VolumeRatio,
+)
 from qts.strategy_sdk.asset_ref import AssetRef
+
+IndicatorValue: TypeAlias = Decimal | BollingerBandsValue | MACDValue
 
 
 @dataclass(slots=True)
@@ -20,9 +33,11 @@ class AssetIndicator:
     asset: AssetRef
     indicator: object
     _ready: Callable[[], bool] = field(repr=False)
-    _value: Callable[[], Decimal | None] = field(repr=False)
-    _bar_update: Callable[[Bar], Decimal | None] = field(repr=False)
-    _price_update: Callable[[Decimal], Decimal | None] | None = field(default=None, repr=False)
+    _value: Callable[[], IndicatorValue | None] = field(repr=False)
+    _bar_update: Callable[[Bar], IndicatorValue | None] = field(repr=False)
+    _price_update: Callable[[Decimal], IndicatorValue | None] | None = field(
+        default=None, repr=False
+    )
 
     @property
     def ready(self) -> bool:
@@ -30,17 +45,17 @@ class AssetIndicator:
         return self._ready()
 
     @property
-    def value(self) -> Decimal | None:
+    def value(self) -> IndicatorValue | None:
         """Perform value."""
         return self._value()
 
-    def update(self, price: Decimal) -> Decimal | None:
+    def update(self, price: Decimal) -> IndicatorValue | None:
         """Perform update."""
         if self._price_update is None:
             raise TypeError("indicator does not support direct price updates")
         return self._price_update(price)
 
-    def update_from_bar(self, bar: Bar) -> Decimal | None:
+    def update_from_bar(self, bar: Bar) -> IndicatorValue | None:
         """Update the bound indicator from a completed strategy-facing bar."""
         return self._bar_update(bar)
 
@@ -78,16 +93,46 @@ class IndicatorFactory:
         indicator = VolumeRatio(window=window)
         return self._bind_volume_indicator(asset, indicator)
 
+    def bollinger_bands(
+        self, asset: AssetRef, window: int, standard_deviations: Decimal = Decimal("2")
+    ) -> AssetIndicator:
+        """Create Bollinger Bands for close prices."""
+        return self._bind_price_indicator(
+            asset,
+            BollingerBands(window=window, standard_deviations=standard_deviations),
+        )
+
+    def macd(
+        self, asset: AssetRef, fast_window: int, slow_window: int, signal_window: int
+    ) -> AssetIndicator:
+        """Create MACD for close prices."""
+        return self._bind_price_indicator(
+            asset,
+            MACD(
+                fast_window=fast_window,
+                slow_window=slow_window,
+                signal_window=signal_window,
+            ),
+        )
+
+    def rate_of_change(self, asset: AssetRef, window: int) -> AssetIndicator:
+        """Create rate of change for close prices."""
+        return self._bind_price_indicator(asset, RateOfChange(window=window))
+
     def update_from_bar(self, bar: Bar) -> None:
         """Perform update_from_bar."""
         for item in self._created:
             if item.asset.instrument_id == bar.instrument_id:
                 item.update_from_bar(bar)
 
-    def _bind_price_indicator(self, asset: AssetRef, indicator: SMA | EMA | RSI) -> AssetIndicator:
+    def _bind_price_indicator(
+        self,
+        asset: AssetRef,
+        indicator: SMA | EMA | RSI | BollingerBands | MACD | RateOfChange,
+    ) -> AssetIndicator:
         """Bind a close-price indicator to an asset."""
 
-        def update_from_bar(bar: Bar) -> Decimal | None:
+        def update_from_bar(bar: Bar) -> IndicatorValue | None:
             return indicator.update(bar.close)
 
         bound = AssetIndicator(
@@ -104,7 +149,7 @@ class IndicatorFactory:
     def _bind_bar_indicator(
         self,
         asset: AssetRef,
-        update_from_bar: Callable[[Bar], Decimal | None],
+        update_from_bar: Callable[[Bar], IndicatorValue | None],
         indicator: AverageTrueRange | SessionVWAP,
     ) -> AssetIndicator:
         """Bind a full-bar indicator to an asset."""
@@ -121,7 +166,7 @@ class IndicatorFactory:
     def _bind_volume_indicator(self, asset: AssetRef, indicator: VolumeRatio) -> AssetIndicator:
         """Bind a volume indicator to an asset."""
 
-        def update_from_bar(bar: Bar) -> Decimal | None:
+        def update_from_bar(bar: Bar) -> IndicatorValue | None:
             return indicator.update(bar.volume)
 
         bound = AssetIndicator(
@@ -136,4 +181,4 @@ class IndicatorFactory:
         return bound
 
 
-__all__ = ["AssetIndicator", "IndicatorFactory"]
+__all__ = ["AssetIndicator", "IndicatorFactory", "IndicatorValue"]

@@ -144,6 +144,81 @@ def test_live_topology_builder_broker_mode_requires_route() -> None:
     assert topology.market_data_routes[0].source_type == "streaming"
 
 
+def test_live_topology_sections_match_full_builder_payload() -> None:
+    config = BrokerRuntimeConfig(
+        mode=RuntimeMode.PAPER_BROKER.value,
+        broker_configured=True,
+        account_configured=True,
+        risk_configured=True,
+        calendar_configured=True,
+        kill_switch_configured=True,
+        broker_account_code="DUP1234567",
+        broker_port=4002,
+        broker_account_kind="paper",
+    )
+    run_id = RuntimeRunId("run-live-section-builder")
+    account_id = "acct-paper"
+    strategy_id = "pullback-strategy"
+    strategy_class = "examples.strategies.vwap_pullback:VwapPullbackStrategy"
+    subscriptions = (InstrumentId("EQUITY.US.NASDAQ.AAPL"),)
+
+    account = RuntimeTopologyBuilder.live_account_from_config(
+        config,
+        account_id=account_id,
+        broker_id="broker-paper",
+        broker_account_code="DUP1234567",
+        initial_cash=Decimal("25000"),
+    )
+    strategy = RuntimeTopologyBuilder.live_strategy_spec(
+        account_id=account_id,
+        strategy_id=strategy_id,
+        strategy_class=strategy_class,
+        subscriptions=subscriptions,
+    )
+    broker_routes = RuntimeTopologyBuilder.live_broker_routes(
+        config,
+        account_id=account_id,
+        broker_id="broker-paper",
+        execution_adapter_type="ibkr",
+        order_transport_type="ib_async",
+    )
+    market_data_routes = RuntimeTopologyBuilder.live_market_data_routes(
+        subscriptions=subscriptions,
+        market_data_source_id="ibkr-md",
+        market_data_source_type="streaming",
+        market_data_provider="ibkr",
+    )
+    section_topology = RuntimeTopology(
+        run_id=run_id,
+        mode=RuntimeMode.PAPER_BROKER,
+        accounts=(account,),
+        strategies=(strategy,),
+        broker_routes=broker_routes,
+        market_data_routes=market_data_routes,
+    )
+    full_topology = RuntimeTopologyBuilder.from_live_config(
+        config,
+        run_id,
+        account_id=account_id,
+        strategy_id=strategy_id,
+        strategy_class=strategy_class,
+        subscriptions=subscriptions,
+        broker_id="broker-paper",
+        broker_account_code="DUP1234567",
+        initial_cash=Decimal("25000"),
+        execution_adapter_type="ibkr",
+        order_transport_type="ib_async",
+        market_data_source_id="ibkr-md",
+        market_data_source_type="streaming",
+        market_data_provider="ibkr",
+    )
+
+    assert account.account_environment is AccountEnvironment.PAPER
+    assert broker_routes[0].execution_environment is ExecutionEnvironment.BROKER
+    assert market_data_routes[0].subscriptions == subscriptions
+    assert section_topology.to_payload() == full_topology.to_payload()
+
+
 def test_two_strategies_one_account_topology() -> None:
     account_id = AccountId("acct-a")
     broker_id = BrokerId("broker-a")

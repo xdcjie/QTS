@@ -20,6 +20,7 @@ class OrderRiskRequest:
     price: Decimal
     multiplier: Decimal
     order_time: datetime | None = None
+    current_position: Decimal = Decimal("0")
     contributing_strategy_ids: tuple[StrategyId, ...] = ()
     aggregation_decision_id: str | None = None
     conflict_reason: str | None = None

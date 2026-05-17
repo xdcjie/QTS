@@ -251,9 +251,7 @@ class VwapPullbackStrategy(Strategy):
     def _manage_exit(self, ctx: StrategyContext, bar: Bar) -> None:
         if self._position_direction is None or self._entry_price is None:
             return
-        ATR_7 = self._require_indicators().ATR_7.value
-        if ATR_7 is None:
-            return
+        ATR_7 = self._required_indicator_value(self._require_indicators().ATR_7, "ATR_7")
 
         if self._position_direction == "LONG":
             trailing_candidate = bar.high - (ATR_7 * self._config.trailing_atr_multiple)
@@ -423,6 +421,8 @@ class VwapPullbackStrategy(Strategy):
         value = indicator.value
         if value is None:
             raise RuntimeError(f"{name} indicator is not ready")
+        if not isinstance(value, Decimal):
+            raise TypeError(f"{name} indicator must produce a Decimal value")
         return value
 
     @staticmethod

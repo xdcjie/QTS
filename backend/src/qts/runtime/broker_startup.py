@@ -52,166 +52,231 @@ class BrokerRuntimeStartupChecklist:
 
     checks: tuple[BrokerRuntimeStartupCheck, ...]
 
+    @staticmethod
+    def _check(
+        check_name: str,
+        *,
+        passed: bool,
+        evidence: str,
+        remediation: str,
+    ) -> BrokerRuntimeStartupCheck:
+        return BrokerRuntimeStartupCheck(
+            check_name=check_name,
+            status="PASS" if passed else "FAIL",
+            severity="INFO" if passed else "BLOCKER",
+            evidence=evidence,
+            remediation="none" if passed else remediation,
+        )
+
     @classmethod
-    def from_config(
+    def connectivity_checks_from_config(
+        cls,
+        config: BrokerRuntimeConfig,
+    ) -> tuple[BrokerRuntimeStartupCheck, ...]:
+        """Build broker connection and account mapping startup checks."""
+
+        mode = RuntimeMode.from_value(config.mode)
+        account_environment = AccountEnvironment.from_value(config.account_environment, mode=mode)
+        return tuple(
+            cls._check(
+                check_name,
+                passed=passed,
+                evidence=evidence,
+                remediation=remediation,
+            )
+            for check_name, passed, evidence, remediation in (
+                (
+                    "broker_configured",
+                    config.broker_configured,
+                    f"broker_configured={config.broker_configured}",
+                    "configure broker connection",
+                ),
+                (
+                    "account_configured",
+                    config.account_configured,
+                    f"account_configured={config.account_configured}",
+                    "configure account mapping",
+                ),
+                (
+                    "account_mode_check",
+                    config.account_configured,
+                    (
+                        f"account_environment={account_environment.value};"
+                        f"broker_account_kind={config.broker_account_kind};"
+                        f"broker_account_code={config.broker_account_code}"
+                    ),
+                    "configure account environment and broker account kind for the runtime mode",
+                ),
+                (
+                    "port_check",
+                    mode not in {RuntimeMode.LIVE, RuntimeMode.PAPER_BROKER}
+                    or config.broker_port is not None,
+                    (
+                        f"broker_port={config.broker_port}"
+                        if mode in {RuntimeMode.LIVE, RuntimeMode.PAPER_BROKER}
+                        else "broker_port=not_required"
+                    ),
+                    "configure the broker port for the runtime mode",
+                ),
+            )
+        )
+
+    @classmethod
+    def data_checks_from_config(
+        cls,
+        config: BrokerRuntimeConfig,
+    ) -> tuple[BrokerRuntimeStartupCheck, ...]:
+        """Build market-data and calendar startup checks."""
+
+        return tuple(
+            cls._check(
+                check_name,
+                passed=passed,
+                evidence=evidence,
+                remediation=remediation,
+            )
+            for check_name, passed, evidence, remediation in (
+                (
+                    "market_data_permission_check",
+                    config.market_data_permission_live,
+                    f"market_data_permission_live={config.market_data_permission_live}",
+                    "obtain live market-data permission or switch to observation-only",
+                ),
+                (
+                    "broker_time_check",
+                    config.broker_time_synced,
+                    f"broker_time_synced={config.broker_time_synced}",
+                    "synchronize broker/runtime clocks before startup",
+                ),
+                (
+                    "calendar_configured",
+                    config.calendar_configured,
+                    f"calendar_configured={config.calendar_configured}",
+                    "configure trading calendar",
+                ),
+            )
+        )
+
+    @classmethod
+    def execution_checks_from_config(
+        cls,
+        config: BrokerRuntimeConfig,
+    ) -> tuple[BrokerRuntimeStartupCheck, ...]:
+        """Build order-execution safety and artifact sink startup checks."""
+
+        mode = RuntimeMode.from_value(config.mode)
+        return tuple(
+            cls._check(
+                check_name,
+                passed=passed,
+                evidence=evidence,
+                remediation=remediation,
+            )
+            for check_name, passed, evidence, remediation in (
+                (
+                    "api_read_only_check",
+                    mode is not RuntimeMode.LIVE or not config.api_read_only,
+                    f"api_read_only={config.api_read_only}",
+                    "disable broker API read-only mode before enabling live orders",
+                ),
+                (
+                    "risk_config_check",
+                    config.risk_configured,
+                    f"risk_configured={config.risk_configured}",
+                    "configure risk limits",
+                ),
+                (
+                    "kill_switch_check",
+                    config.kill_switch_configured,
+                    f"kill_switch_configured={config.kill_switch_configured}",
+                    "configure kill switch",
+                ),
+                (
+                    "event_sink_check",
+                    config.event_sink_writable,
+                    f"event_sink_writable={config.event_sink_writable}",
+                    "configure a writable runtime event sink",
+                ),
+                (
+                    "snapshot_store_check",
+                    config.snapshot_store_configured,
+                    f"snapshot_store_configured={config.snapshot_store_configured}",
+                    "configure a runtime snapshot store",
+                ),
+            )
+        )
+
+    @classmethod
+    def reconciliation_checks_from_config(
+        cls,
+        config: BrokerRuntimeConfig,
+    ) -> tuple[BrokerRuntimeStartupCheck, ...]:
+        """Build open-order, position, and cash reconciliation startup checks."""
+
+        return tuple(
+            cls._check(
+                check_name,
+                passed=passed,
+                evidence=evidence,
+                remediation=remediation,
+            )
+            for check_name, passed, evidence, remediation in (
+                (
+                    "open_order_reconciliation_check",
+                    bool(config.open_order_reconciliation_passed),
+                    f"open_order_reconciliation_passed={config.open_order_reconciliation_passed}",
+                    "run open-order reconciliation and resolve drift",
+                ),
+                (
+                    "position_reconciliation_check",
+                    bool(config.position_reconciliation_passed),
+                    f"position_reconciliation_passed={config.position_reconciliation_passed}",
+                    "run position reconciliation and resolve drift",
+                ),
+                (
+                    "cash_reconciliation_check",
+                    bool(config.cash_reconciliation_passed),
+                    f"cash_reconciliation_passed={config.cash_reconciliation_passed}",
+                    "run cash reconciliation and resolve drift",
+                ),
+            )
+        )
+
+    @classmethod
+    def capital_checks_from_config(
         cls,
         config: BrokerRuntimeConfig,
         *,
         live_capital_decision: LiveCapitalEnablementDecision | None = None,
-    ) -> BrokerRuntimeStartupChecklist:
-        """Build structured startup evidence without changing startup state."""
+    ) -> tuple[BrokerRuntimeStartupCheck, ...]:
+        """Build operator and live-capital startup checks."""
 
-        checks: list[BrokerRuntimeStartupCheck] = []
         mode = RuntimeMode.from_value(config.mode)
-        account_environment = AccountEnvironment.from_value(config.account_environment, mode=mode)
-        for check_name, configured, evidence, remediation in (
-            (
-                "broker_configured",
-                config.broker_configured,
-                f"broker_configured={config.broker_configured}",
-                "configure broker connection",
-            ),
-            (
-                "account_configured",
-                config.account_configured,
-                f"account_configured={config.account_configured}",
-                "configure account mapping",
-            ),
-            (
-                "account_mode_check",
-                config.account_configured,
-                (
-                    f"account_environment={account_environment.value};"
-                    f"broker_account_kind={config.broker_account_kind};"
-                    f"broker_account_code={config.broker_account_code}"
-                ),
-                "configure account environment and broker account kind for the runtime mode",
-            ),
-            (
-                "port_check",
-                mode not in {RuntimeMode.LIVE, RuntimeMode.PAPER_BROKER}
-                or config.broker_port is not None,
-                (
-                    f"broker_port={config.broker_port}"
-                    if mode in {RuntimeMode.LIVE, RuntimeMode.PAPER_BROKER}
-                    else "broker_port=not_required"
-                ),
-                "configure the broker port for the runtime mode",
-            ),
-            (
-                "api_read_only_check",
-                mode is not RuntimeMode.LIVE or not config.api_read_only,
-                f"api_read_only={config.api_read_only}",
-                "disable broker API read-only mode before enabling live orders",
-            ),
-            (
-                "broker_time_check",
-                config.broker_time_synced,
-                f"broker_time_synced={config.broker_time_synced}",
-                "synchronize broker/runtime clocks before startup",
-            ),
-            (
-                "risk_config_check",
-                config.risk_configured,
-                f"risk_configured={config.risk_configured}",
-                "configure risk limits",
-            ),
-            (
-                "calendar_configured",
-                config.calendar_configured,
-                f"calendar_configured={config.calendar_configured}",
-                "configure trading calendar",
-            ),
-            (
-                "kill_switch_check",
-                config.kill_switch_configured,
-                f"kill_switch_configured={config.kill_switch_configured}",
-                "configure kill switch",
-            ),
-        ):
-            checks.append(
-                BrokerRuntimeStartupCheck(
-                    check_name=check_name,
-                    status="PASS" if configured else "FAIL",
-                    severity="INFO" if configured else "BLOCKER",
-                    evidence=evidence,
-                    remediation="none" if configured else remediation,
-                )
-            )
-        for check_name, passed, evidence, remediation in (
-            (
-                "market_data_permission_check",
-                config.market_data_permission_live,
-                f"market_data_permission_live={config.market_data_permission_live}",
-                "obtain live market-data permission or switch to observation-only",
-            ),
-            (
-                "open_order_reconciliation_check",
-                bool(config.open_order_reconciliation_passed),
-                f"open_order_reconciliation_passed={config.open_order_reconciliation_passed}",
-                "run open-order reconciliation and resolve drift",
-            ),
-            (
-                "position_reconciliation_check",
-                bool(config.position_reconciliation_passed),
-                f"position_reconciliation_passed={config.position_reconciliation_passed}",
-                "run position reconciliation and resolve drift",
-            ),
-            (
-                "cash_reconciliation_check",
-                bool(config.cash_reconciliation_passed),
-                f"cash_reconciliation_passed={config.cash_reconciliation_passed}",
-                "run cash reconciliation and resolve drift",
-            ),
-            (
-                "event_sink_check",
-                config.event_sink_writable,
-                f"event_sink_writable={config.event_sink_writable}",
-                "configure a writable runtime event sink",
-            ),
-            (
-                "snapshot_store_check",
-                config.snapshot_store_configured,
-                f"snapshot_store_configured={config.snapshot_store_configured}",
-                "configure a runtime snapshot store",
-            ),
-            (
+        operator_signoff_passed = mode is not RuntimeMode.LIVE or bool(config.operator_signoff_id)
+        checks = [
+            cls._check(
                 "operator_signoff_check",
-                mode is not RuntimeMode.LIVE or bool(config.operator_signoff_id),
-                (
+                passed=operator_signoff_passed,
+                evidence=(
                     f"operator_signoff_id={config.operator_signoff_id}"
                     if mode is RuntimeMode.LIVE
                     else "operator_signoff_id=not_required"
                 ),
-                "record operator signoff before enabling live orders",
-            ),
-        ):
-            checks.append(
-                BrokerRuntimeStartupCheck(
-                    check_name=check_name,
-                    status="PASS" if passed else "FAIL",
-                    severity="INFO" if passed else "BLOCKER",
-                    evidence=evidence,
-                    remediation="none" if passed else remediation,
-                )
+                remediation="record operator signoff before enabling live orders",
             )
+        ]
         if mode is RuntimeMode.LIVE:
             signoff_passed = live_capital_decision is not None and live_capital_decision.allowed
             checks.append(
-                BrokerRuntimeStartupCheck(
-                    check_name="live_capital_signoff_check",
-                    status="PASS" if signoff_passed else "FAIL",
-                    severity="INFO" if signoff_passed else "BLOCKER",
+                cls._check(
+                    "live_capital_signoff_check",
+                    passed=signoff_passed,
                     evidence=(
                         live_capital_decision.checklist_evidence()
                         if live_capital_decision is not None
                         else "live_capital_signoff=missing"
                     ),
-                    remediation=(
-                        "none"
-                        if signoff_passed
-                        else "record non-expired dual-control signoff within approved scope"
-                    ),
+                    remediation="record non-expired dual-control signoff within approved scope",
                 )
             )
         else:
@@ -224,7 +289,51 @@ class BrokerRuntimeStartupChecklist:
                     remediation="none",
                 )
             )
-        return cls(checks=tuple(checks))
+        return tuple(checks)
+
+    @classmethod
+    def from_config(
+        cls,
+        config: BrokerRuntimeConfig,
+        *,
+        live_capital_decision: LiveCapitalEnablementDecision | None = None,
+    ) -> BrokerRuntimeStartupChecklist:
+        """Build structured startup evidence without changing startup state."""
+
+        by_name = {
+            check.check_name: check
+            for checks in (
+                cls.connectivity_checks_from_config(config),
+                cls.data_checks_from_config(config),
+                cls.execution_checks_from_config(config),
+                cls.reconciliation_checks_from_config(config),
+                cls.capital_checks_from_config(
+                    config,
+                    live_capital_decision=live_capital_decision,
+                ),
+            )
+            for check in checks
+        }
+        check_order = (
+            "broker_configured",
+            "account_configured",
+            "account_mode_check",
+            "port_check",
+            "api_read_only_check",
+            "broker_time_check",
+            "risk_config_check",
+            "calendar_configured",
+            "kill_switch_check",
+            "market_data_permission_check",
+            "open_order_reconciliation_check",
+            "position_reconciliation_check",
+            "cash_reconciliation_check",
+            "event_sink_check",
+            "snapshot_store_check",
+            "operator_signoff_check",
+            "live_capital_signoff_check",
+        )
+        return cls(checks=tuple(by_name[name] for name in check_order))
 
     @property
     def passed(self) -> bool:

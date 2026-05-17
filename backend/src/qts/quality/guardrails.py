@@ -992,36 +992,6 @@ class SharedRuntimeWordingRule:
         return violations
 
 
-class ProductionPlaceholderDocstringRule:
-    """Reject placeholder docstrings in production code."""
-
-    code = "PLACEHOLDER_DOCSTRING"
-
-    def check(
-        self,
-        *,
-        relative_path: Path,
-        qts_relative_path: Path,
-        tree: ast.AST,
-    ) -> list[GuardrailViolation]:
-        """Perform check."""
-        if qts_relative_path.parts[:1] == ("quality",):
-            return []
-        violations: list[GuardrailViolation] = []
-        for node, docstring in _iter_docstrings(tree):
-            if "placeholder" not in docstring.lower():
-                continue
-            violations.append(
-                GuardrailViolation(
-                    code=self.code,
-                    path=str(relative_path),
-                    line=getattr(node, "lineno", 1),
-                    message="production docstrings must describe the artifact contract",
-                )
-            )
-        return violations
-
-
 class ProductSpecificRule:
     """Reject product hard-coding outside documented locations."""
 
@@ -1571,106 +1541,6 @@ class DuplicateDtoNameRule:
                     )
                 )
         return violations
-
-
-class GuardrailSuite:
-    """Execute a configured set of guardrail rules against Python files."""
-
-    def __init__(
-        self, rules: tuple[Rule, ...] | None = None, repo_root: Path | None = None
-    ) -> None:
-        self.rules = rules or (
-            ImportBoundaryRule(),
-            ProductSpecificRule(),
-            BrokerSpecificRule(),
-            BrokerSymbolBoundaryRule(),
-            ProviderSdkImportRule(),
-            TestSupportRule(),
-            SharedCapabilityRule(),
-            OOPPublicFactoryRule(),
-            OOPHelperOwnershipRule(),
-            BacktestRunnerCohesionRule(),
-            BacktestInputCohesionRule(),
-            BacktestEngineCohesionRule(),
-            BacktestActorLoopCohesionRule(),
-            StrategySdkPublicSurfaceRule(),
-            LivePackageNoReplayClassRule(),
-            DataLiveNoSharedContractRule(),
-            TransportCanonicalPathRule(),
-            TransportAdapterImportRule(),
-            RemovedImportNoNewUsageRule(),
-            ProductionNoFakeClassRule(),
-            ProductionNoTestingImportRule(),
-            SharedRuntimeWordingRule(),
-            ProductionPlaceholderDocstringRule(),
-            StaleArchitectureTextRule(),
-            PlatformFreezeRule(repo_root=repo_root),
-            RuntimeSessionComplexityRule(),
-            RuntimeCoordinatorDecisionRule(),
-            ClassInventoryBudgetRule(repo_root=repo_root),
-            SingleFieldDtoJustificationRule(repo_root=repo_root),
-            DuplicateDtoNameRule(),
-        )
-
-    def check_file(
-        self,
-        *,
-        relative_path: Path,
-        qts_relative_path: Path,
-        tree: ast.AST,
-    ) -> list[GuardrailViolation]:
-        """Perform check_file."""
-        violations: list[GuardrailViolation] = []
-        for rule in self.rules:
-            violations.extend(
-                rule.check(
-                    relative_path=relative_path,
-                    qts_relative_path=qts_relative_path,
-                    tree=tree,
-                )
-            )
-        return violations
-
-    def check(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform check."""
-        source_root = repo_root / QTS_ROOT
-        violations: list[GuardrailViolation] = []
-        if source_root.exists():
-            for path in sorted(source_root.rglob("*.py")):
-                if "__pycache__" in path.parts:
-                    continue
-                relative_path = path.relative_to(repo_root)
-                qts_relative_path = path.relative_to(repo_root / QTS_ROOT)
-                source = path.read_text(encoding="utf-8")
-                tree = ast.parse(source, filename=str(relative_path))
-                violations.extend(
-                    self.check_file(
-                        relative_path=relative_path,
-                        qts_relative_path=qts_relative_path,
-                        tree=tree,
-                    )
-                )
-        for rule in self.rules:
-            if isinstance(rule, RepositoryRule):
-                violations.extend(rule.check_repository(repo_root))
-        return sorted(violations)
-
-
-def run_guardrails(repo_root: Path) -> list[GuardrailViolation]:
-    """Return all guardrail violations under the repository root."""
-    return GuardrailSuite(repo_root=repo_root).check(repo_root)
-
-
-def _check_python_file(repo_root: Path, path: Path) -> list[GuardrailViolation]:
-    relative_path = path.relative_to(repo_root)
-    qts_relative_path = path.relative_to(repo_root / QTS_ROOT)
-    source = path.read_text(encoding="utf-8")
-    tree = ast.parse(source, filename=str(relative_path))
-    return GuardrailSuite().check_file(
-        relative_path=relative_path,
-        qts_relative_path=qts_relative_path,
-        tree=tree,
-    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -2854,20 +2724,3 @@ def _is_class_var_annotation(annotation: ast.AST) -> bool:
 
 def _is_dto_or_value_object_name(name: str) -> bool:
     return name.endswith("DTO") or name.endswith("ValueObject")
-
-
-def main() -> int:
-    """Perform main."""
-    repo_root = Path.cwd()
-    violations = run_guardrails(repo_root)
-    if not violations:
-        print("Architecture guardrails passed.")
-        return 0
-    print("Architecture guardrails failed:")
-    for violation in violations:
-        print(f"  {violation.format()}")
-    return 1
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

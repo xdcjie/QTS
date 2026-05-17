@@ -87,3 +87,52 @@ def test_volume_ratio_compares_current_volume_with_rolling_average() -> None:
     value = ratio.update(Decimal("40"))
     assert value is not None
     assert value.quantize(Decimal("0.0001")) == Decimal("1.3333")
+
+
+def test_bollinger_bands_use_population_standard_deviation_anchor() -> None:
+    from qts.indicators.technical import BollingerBands
+
+    bands = BollingerBands(window=3, standard_deviations=Decimal("2"))
+
+    assert bands.update(Decimal("1")) is None
+    assert bands.update(Decimal("2")) is None
+    value = bands.update(Decimal("3"))
+
+    assert bands.ready is True
+    assert value is not None
+    assert value.middle == Decimal("2")
+    assert value.standard_deviation.quantize(Decimal("0.00000001")) == Decimal("0.81649658")
+    assert value.upper.quantize(Decimal("0.00000001")) == Decimal("3.63299316")
+    assert value.lower.quantize(Decimal("0.00000001")) == Decimal("0.36700684")
+
+
+def test_macd_uses_sma_seeded_emas_and_signal_anchor() -> None:
+    from qts.indicators.technical import MACD
+
+    macd = MACD(fast_window=3, slow_window=6, signal_window=3)
+
+    values = [
+        macd.update(Decimal(price)) for price in ("1", "2", "3", "4", "5", "6", "8", "10", "9")
+    ]
+
+    assert values[:7] == [None, None, None, None, None, None, None]
+    value = values[-1]
+    assert macd.ready is True
+    assert value is not None
+    assert value.macd.quantize(Decimal("0.00000001")) == Decimal("1.57106414")
+    assert value.signal.quantize(Decimal("0.00000001")) == Decimal("1.65032799")
+    assert value.histogram.quantize(Decimal("0.00000001")) == Decimal("-0.07926385")
+
+
+def test_rate_of_change_compares_with_price_n_periods_ago_anchor() -> None:
+    from qts.indicators.technical import RateOfChange
+
+    roc = RateOfChange(window=3)
+
+    assert roc.update(Decimal("10")) is None
+    assert roc.update(Decimal("12")) is None
+    assert roc.update(Decimal("15")) is None
+    value = roc.update(Decimal("18"))
+
+    assert roc.ready is True
+    assert value == Decimal("80")

@@ -13,6 +13,7 @@ class MaxOrderQuantityRule:
     """Reject orders whose absolute quantity exceeds a fixed limit."""
 
     max_quantity: Decimal
+    rule_id = "max_order_quantity"
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""
@@ -25,8 +26,9 @@ class MaxOrderQuantityRule:
             return RiskDecision.rejected(
                 "MAX_ORDER_QTY_EXCEEDED",
                 f"order quantity {request.quantity} exceeds max {self.max_quantity}",
+                rule_id=self.rule_id,
             )
-        return RiskDecision.approve()
+        return RiskDecision.approve(rule_id=self.rule_id)
 
 
 __all__ = ["MaxOrderQuantityRule"]

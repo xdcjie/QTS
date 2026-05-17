@@ -6,7 +6,7 @@ Scope: P1 - Module health and breadth, OPT-04 through OPT-11.
 
 Out of scope: P1 Frontend and DX items are tracked separately.
 
-Baseline: 2026-05-17, `HEAD 2ac77a0`
+Baseline: 2026-05-17, `HEAD d43f767`
 
 ## Completion Rules
 
@@ -39,14 +39,14 @@ hard evidence in this repository:
 
 | Task | Status | Evidence Candidates | Blocking Gaps | First Red Gate |
 | --- | --- | --- | --- | --- |
-| OPT-04 Split `quality/guardrails.py` | IN-PROGRESS / Gate planned | `backend/src/qts/quality/guardrails.py`, `scripts/verify_guardrails.py`, `tests/unit/scripts/test_verify_guardrails.py`. | Rule ownership modules and registry are not yet split; generated imports and docs still point at the monolith. | Add tests that require rules to live under `qts.quality.rules` while `run_guardrails` remains the only public script entrypoint. |
-| OPT-05 Decompose `BrokerRuntimeStartupChecklist.from_config` | IN-PROGRESS / Gate planned | `backend/src/qts/runtime/broker_startup.py`, startup guard tests, readiness smoke tests. | Builder sections for data, execution, capital, and reconciliation are not yet explicit. | Add focused tests that each startup subsystem can fail independently and still aggregate into one fail-closed checklist. |
-| OPT-06 Decompose `RuntimeTopologyBuilder.from_live_config` | IN-PROGRESS / Gate planned | `backend/src/qts/runtime/topology.py`, runtime topology tests, broker topology tests. | Broker topology assembly still lives in one method. | Add tests that require account, strategy, broker route, and market-data route assembly to be independently observable. |
-| OPT-07 Add core indicators | IN-PROGRESS / Gate planned | `backend/src/qts/indicators/`, `backend/src/qts/strategy_sdk/indicators.py`, indicator docs. | Reference fixtures and SDK registration plan are missing for the industrial baseline. | Add one failing numerical anchor fixture for the first indicator group before implementation. |
-| OPT-08 Introduce Consolidator primitive | IN-PROGRESS / Gate planned | `backend/src/qts/data/bars/`, `backend/src/qts/runtime/market_data_coordinator.py`, bar/session tests. | No consolidator protocol or multi-timeframe replay equivalence gate exists. | Add a 1m-to-5m fixture test proving `[start, end)` derived bars match the historical 5m fixture. |
-| OPT-09 Pluginize risk rules and add standard 5 | IN-PROGRESS / Gate planned | `backend/src/qts/risk/rules/`, `backend/src/qts/risk/risk_engine.py`, risk config tests. | Rule registry, config ordering, and standard rule anchors are absent. | Add a config-ordering test that fails until `RiskEngine` loads declared rules through a registry. |
-| OPT-10 Brokerage Model: fees, margin, capabilities matrix | IN-PROGRESS / Gate planned | `backend/src/qts/execution/adapters/`, proposed `qts.execution.brokerage_model`, broker capability tests. | Fee, margin, slippage, and capability facts are not unified behind a brokerage model. | Add a brokerage model test that computes a known fee/margin/capability decision without leaking broker facts outside execution boundaries. |
-| OPT-11 Universe Selection framework | IN-PROGRESS / Gate planned | Proposed `backend/src/qts/strategy_sdk/universe.py`, `StrategyContext`, subscription planning, market-data coordinator. | Universe selector contract and subscription delta materialization are missing. | Add SDK tests for `ctx.set_universe(...)` and runtime tests for `InstrumentId` subscription delta materialization. |
+| OPT-04 Split `quality/guardrails.py` | IN-PROGRESS / First vertical slice landed | `backend/src/qts/quality/suite.py`, `backend/src/qts/quality/rules/docstrings.py`, `scripts/verify_guardrails.py`, `tests/unit/scripts/test_verify_guardrails.py`. | Only the first rule moved; most guardrail rules still need ownership modules. | Red architecture test requires `GuardrailSuite` to live outside `qts.quality.guardrails` while script entrypoint remains current. |
+| OPT-05 Decompose `BrokerRuntimeStartupChecklist.from_config` | IN-PROGRESS / First vertical slice landed | `backend/src/qts/runtime/broker_startup.py`, `tests/unit/runtime/test_live_startup_guard.py`. | Startup sections exist; deeper readiness smoke/integration coverage remains. | Focused section/fail-closed startup test. |
+| OPT-06 Decompose `RuntimeTopologyBuilder.from_live_config` | IN-PROGRESS / First vertical slice landed | `backend/src/qts/runtime/topology.py`, `tests/unit/runtime/test_runtime_topology.py`. | Section builders exist; live broker topology integration still needs broader coverage. | Section-builder payload equivalence test for account, strategy, broker route, and market-data route assembly. |
+| OPT-07 Add core indicators | IN-PROGRESS / First vertical slice landed | `backend/src/qts/indicators/technical.py`, `backend/src/qts/strategy_sdk/indicators.py`, `tests/unit/indicators/test_technical.py`, `tests/unit/strategy_sdk/test_indicator_factory.py`. | Only Bollinger Bands, MACD, and ROC are anchored; remaining industrial indicator baseline is still open. | Numerical anchor tests plus SDK registration test. |
+| OPT-08 Introduce Consolidator primitive | IN-PROGRESS / First vertical slice landed | `backend/src/qts/data/bars/consolidator.py`, `tests/unit/data/test_bar_consolidator.py`. | Runtime market-data coordinator integration and replay equivalence across more timeframes remain. | 1m-to-5m `[start, end)` fixture test plus no-partial/incomplete-source tests. |
+| OPT-09 Pluginize risk rules and add standard 5 | IN-PROGRESS / First vertical slice landed | `backend/src/qts/risk/rule_registry.py`, `backend/src/qts/risk/rules/position_limit.py`, `tests/unit/risk/test_risk_config.py`, `tests/unit/risk/test_position_limit.py`. | Only `position_limit` was added; remaining standard rules and fuller `RiskEngine` config integration are still open. | Config-ordering test for registry-built rules plus position-limit rejection anchors. |
+| OPT-10 Brokerage Model: fees, margin, capabilities matrix | IN-PROGRESS / First vertical slice landed | `backend/src/qts/execution/brokerage_model.py`, `backend/src/qts/execution/adapters/brokerage_capabilities.py`, `tests/unit/execution/test_brokerage_model.py`. | Risk margin integration and broader brokerage matrix remain; broker-specific profiles stay at adapter boundary. | Brokerage model test computes fee, margin, slippage, and capability decisions without leaking broker facts into runtime or SDK. |
+| OPT-11 Universe Selection framework | IN-PROGRESS / First vertical slice landed | `backend/src/qts/strategy_sdk/universe.py`, `StrategyContext`, `backend/src/qts/data/subscriptions.py`, `tests/unit/strategy_sdk/test_universe_selection.py`, `tests/unit/data/test_universe_subscription_plan.py`. | Selector scheduling, market-data coordinator integration, and fundamental/top-N selectors are still missing. | SDK tests for `ctx.set_universe(...)` and data subscription tests for deterministic `InstrumentId` delta materialization. |
 
 ## Execution Lanes
 
@@ -74,7 +74,7 @@ uv run pytest tests/unit/runtime/test_live_startup_guard.py tests/unit/runtime/t
 uv run pytest tests/unit/indicators -q
 uv run pytest tests/unit/data/test_bar_aggregator.py tests/unit/data/test_bar_alignment.py tests/unit/data/test_timeframe.py -q
 uv run pytest tests/unit/risk tests/unit/execution -q
-uv run pytest tests/unit/strategy_sdk tests/unit/data/test_subscription_planning.py -q
+uv run pytest tests/unit/strategy_sdk tests/unit/data/test_subscription_planning.py tests/unit/data/test_universe_subscription_plan.py -q
 make guardrails
 ```
 
@@ -124,4 +124,32 @@ make typecheck
 
 make test-unit
 # 852 passed
+```
+
+OPT-04 through OPT-11 first vertical slices on 2026-05-17:
+
+```bash
+PYTHONPATH=backend/src uv run pytest tests/unit/scripts/test_verify_guardrails.py tests/unit/runtime/test_live_startup_guard.py tests/unit/runtime/test_runtime_topology.py tests/unit/indicators/test_technical.py tests/unit/strategy_sdk/test_indicator_factory.py tests/unit/data/test_bar_consolidator.py tests/unit/risk/test_position_limit.py tests/unit/risk/test_risk_config.py tests/unit/risk/test_max_notional.py tests/unit/risk/test_max_order_qty.py tests/unit/execution/test_brokerage_model.py tests/unit/execution/test_broker_capabilities_s4.py tests/unit/strategy_sdk/test_universe_selection.py tests/unit/data/test_universe_subscription_plan.py tests/unit/docs/test_qts_vs_lean_p1_module_health_review_status_matrix.py -q
+# 142 passed
+
+make format
+# 539 files left unchanged
+
+make lint
+# All checks passed
+
+make guardrails
+# Architecture guardrails passed
+
+make typecheck
+# Success: no issues found in 516 source files
+
+make test-unit
+# 872 passed
+
+make test-integration
+# 78 passed, 4 skipped
+
+make test-anchor
+# 39 passed, 2 skipped
 ```
