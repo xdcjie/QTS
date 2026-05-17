@@ -1,6 +1,26 @@
 from __future__ import annotations
 
+import os
+from collections.abc import Iterator
+
 import pytest
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _enable_dev_auth_tokens() -> Iterator[None]:
+    """Opt the test session into built-in dev tokens unless already configured.
+
+    Production deployments must never set ``QTS_API_DEV_TOKENS``. Tests opt in
+    here so the default-deny `StaticTokenAuthBackend` does not break legacy
+    fixtures that issue ``Authorization: Bearer dev-token``.
+    """
+    if (
+        os.getenv("QTS_API_JWT_SECRET") is None
+        and os.getenv("QTS_API_STATIC_TOKENS") is None
+        and os.getenv("QTS_API_DEV_TOKENS") is None
+    ):
+        os.environ["QTS_API_DEV_TOKENS"] = "1"
+    yield
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:

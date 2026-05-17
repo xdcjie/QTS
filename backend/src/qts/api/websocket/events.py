@@ -6,8 +6,9 @@ from collections import deque
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 
+from qts.api.security import default_auth_backend, verify_websocket_authorization
 from qts.api.websocket.manager import WebSocketConnectionManager
 
 router = APIRouter()
@@ -100,6 +101,16 @@ async def broadcast_stream_event(
 @router.websocket("/ws/events")
 async def event_stream(websocket: WebSocket) -> None:
     """Open a resumable event stream with sequence and replay support."""
+    try:
+        verify_websocket_authorization(
+            default_auth_backend(),
+            websocket.headers.get("authorization"),
+        )
+    except HTTPException as exc:
+        close_code = 4403 if exc.status_code == 403 else 4401
+        await websocket.close(code=close_code)
+        return
+
     await manager.connect(websocket)
 
     latest = _snapshot_event()

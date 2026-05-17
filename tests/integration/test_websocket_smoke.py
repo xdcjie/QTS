@@ -9,7 +9,10 @@ def test_websocket_event_stream_connects_and_emits_synthetic_event() -> None:
 
     client = TestClient(create_app())
 
-    with client.websocket_connect("/ws/events") as websocket:
+    with client.websocket_connect(
+        "/ws/events",
+        headers={"Authorization": "Bearer dev-token"},
+    ) as websocket:
         snapshot = websocket.receive_json()
     assert snapshot["event_type"] == "snapshot"
     assert snapshot["replayed"] is False

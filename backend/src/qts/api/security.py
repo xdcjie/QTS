@@ -8,7 +8,7 @@ import hmac
 import json
 import os
 import time
-from collections import defaultdict, deque
+from collections import OrderedDict, defaultdict, deque
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -46,6 +46,8 @@ DEFAULT_SCOPES = frozenset(
         "runtime:safety:write",
     }
 )
+WEBSOCKET_REQUIRED_SCOPE = "runtime:read"
+_REPLAY_CACHE_CAPACITY = 2048
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,6 +85,8 @@ class StaticTokenAuthBackend:
 
     def verify(self, authorization_header: str | None) -> Principal:
         """Verify a bearer token against configured SHA-256 token hashes."""
+        if not self._principals:
+            raise HTTPException(status_code=401, detail="auth backend not configured")
         token = _bearer_token(authorization_header)
         token_hash = hashlib.sha256(token.encode()).hexdigest()
         try:
@@ -93,20 +97,7 @@ class StaticTokenAuthBackend:
     @staticmethod
     def _load(token_file: Path | None) -> dict[str, Principal]:
         if token_file is None or not token_file.exists():
-            return {
-                hashlib.sha256(b"dev-token").hexdigest(): Principal(
-                    id="local-dev",
-                    kind="human",
-                    scopes=DEFAULT_SCOPES,
-                    session_id="local",
-                ),
-                hashlib.sha256(b"read-token").hexdigest(): Principal(
-                    id="local-read",
-                    kind="human",
-                    scopes=frozenset(scope for scope in DEFAULT_SCOPES if scope.endswith(":read")),
-                    session_id="local-read",
-                ),
-            }
+            return {}
         yaml_module = import_module("yaml")
         data = (
             cast(
@@ -136,16 +127,30 @@ class StaticTokenAuthBackend:
 class BearerJWTAuthBackend:
     """Minimal HS256 JWT verifier for service tokens."""
 
-    def __init__(self, secret: str) -> None:
+    def __init__(self, secret: str, *, replay_cache_capacity: int = _REPLAY_CACHE_CAPACITY) -> None:
         if not secret.strip():
             raise ValueError("JWT secret must not be empty")
+        if replay_cache_capacity <= 0:
+            raise ValueError("replay_cache_capacity must be positive")
         self._secret = secret.encode()
-        self._seen_jti: set[str] = set()
+        self._seen_jti: OrderedDict[str, None] = OrderedDict()
+        self._replay_cache_capacity = replay_cache_capacity
+
+    def replay_cache_capacity(self) -> int:
+        """Return the maximum jti replay cache size."""
+        return self._replay_cache_capacity
+
+    def seen_jti_size(self) -> int:
+        """Return the current size of the jti replay cache."""
+        return len(self._seen_jti)
 
     def verify(self, authorization_header: str | None) -> Principal:
         """Verify a compact HS256 bearer JWT."""
         token = _bearer_token(authorization_header)
-        header_b64, payload_b64, signature_b64 = token.split(".")
+        try:
+            header_b64, payload_b64, signature_b64 = token.split(".")
+        except ValueError as exc:
+            raise HTTPException(status_code=401, detail="invalid bearer token") from exc
         signed = f"{header_b64}.{payload_b64}".encode()
         expected = hmac.new(self._secret, signed, hashlib.sha256).digest()
         observed = _base64url_decode(signature_b64)
@@ -159,7 +164,9 @@ class BearerJWTAuthBackend:
         if isinstance(jti, str):
             if jti in self._seen_jti:
                 raise HTTPException(status_code=401, detail="bearer token replayed")
-            self._seen_jti.add(jti)
+            self._seen_jti[jti] = None
+            while len(self._seen_jti) > self._replay_cache_capacity:
+                self._seen_jti.popitem(last=False)
         return Principal(
             id=str(payload.get("sub", "")),
             kind=str(payload.get("kind", "service")),
@@ -248,13 +255,65 @@ def get_principal(
     return default_auth_backend().verify(authorization)
 
 
+def verify_websocket_authorization(
+    auth_backend: AuthBackend,
+    authorization_header: str | None,
+    *,
+    required_scope: str = WEBSOCKET_REQUIRED_SCOPE,
+) -> Principal:
+    """Verify a WebSocket handshake authorization header and enforce scope.
+
+    Raises `HTTPException` when the principal is invalid or under-scoped. The
+    caller closes the socket with a websocket-style close code based on the
+    HTTPException status.
+    """
+    principal = auth_backend.verify(authorization_header)
+    if required_scope and required_scope not in principal.scopes:
+        raise HTTPException(status_code=403, detail="insufficient scope")
+    return principal
+
+
 def default_auth_backend() -> AuthBackend:
-    """Build the configured default auth backend."""
+    """Build the configured default auth backend.
+
+    Resolution order:
+    1. ``QTS_API_JWT_SECRET`` set → HS256 JWT backend.
+    2. ``QTS_API_STATIC_TOKENS`` set → static-token backend loaded from that file.
+    3. ``QTS_API_DEV_TOKENS=1`` set → built-in development tokens
+       (``dev-token`` with full scopes, ``read-token`` with read-only scopes).
+       This is the only opt-in to default tokens; production deployments must
+       leave it unset.
+    4. Otherwise → static-token backend with no principals (fail-closed).
+    """
     secret = os.getenv("QTS_API_JWT_SECRET")
     if secret:
         return BearerJWTAuthBackend(secret)
     token_path = os.getenv("QTS_API_STATIC_TOKENS")
-    return StaticTokenAuthBackend(None if token_path is None else Path(token_path))
+    if token_path is not None:
+        return StaticTokenAuthBackend(Path(token_path))
+    if os.getenv("QTS_API_DEV_TOKENS") == "1":
+        return _DevDefaultTokenAuthBackend()
+    return StaticTokenAuthBackend(None)
+
+
+class _DevDefaultTokenAuthBackend(StaticTokenAuthBackend):
+    """Development-only static-token backend with two built-in principals."""
+
+    def __init__(self) -> None:
+        self._principals = {
+            hashlib.sha256(b"dev-token").hexdigest(): Principal(
+                id="local-dev",
+                kind="human",
+                scopes=DEFAULT_SCOPES,
+                session_id="local",
+            ),
+            hashlib.sha256(b"read-token").hexdigest(): Principal(
+                id="local-read",
+                kind="human",
+                scopes=frozenset(scope for scope in DEFAULT_SCOPES if scope.endswith(":read")),
+                session_id="local-read",
+            ),
+        }
 
 
 def _bearer_token(authorization_header: str | None) -> str:
@@ -279,8 +338,10 @@ __all__ = [
     "DEFAULT_SCOPES",
     "Principal",
     "StaticTokenAuthBackend",
+    "WEBSOCKET_REQUIRED_SCOPE",
     "default_auth_backend",
     "get_principal",
     "require_scope",
     "required_scope_for",
+    "verify_websocket_authorization",
 ]
