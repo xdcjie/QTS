@@ -1,9 +1,12 @@
 {
-  "production_class_count": 583,
+  "production_class_count": 586,
   "production_classes": [
     "qts.observability.audit_sink.AuditSink",
     "qts.observability.audit_sink.InMemoryAuditSink",
     "qts.observability.audit_sink.StderrJsonAuditSink",
+    "qts.reconciliation.persistent_drift.PersistentDriftConfig",
+    "qts.reconciliation.persistent_drift.PersistentDriftDecision",
+    "qts.reconciliation.persistent_drift.PersistentDriftKillSwitch",
     "qts.risk.rules.order_spec_validity.BrokerageOrderTypePolicy",
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",

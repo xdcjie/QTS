@@ -606,7 +606,7 @@
       <div class="surface class-inventory" aria-label="生产类全量索引">
         <h2>生产类全量索引（按阶段 / 模块）</h2>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">609 classes</span></summary>
+          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">612 classes</span></summary>
           <ul>
           <li><code>qts/api/schemas/backtest_schema.py</code> -> <code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span>, <code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span>, <code>BacktestRunResultSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:24</span>, <code>BacktestStrategyOptionSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:38</span></li>
           <li><code>qts/api/schemas/common.py</code> -> <code>StrategyStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:8</span>, <code>AccountSnapshotSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:15</span>, <code>OrderStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:22</span>, <code>RiskRuleSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:29</span>, <code>OperationalErrorSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:36</span></li>
@@ -731,6 +731,7 @@
           <li><code>qts/quality/suite.py</code> -> <code>GuardrailSuite</code> <span class="location">backend/src/qts/quality/suite.py:43</span></li>
           <li><code>qts/reconciliation/drift.py</code> -> <code>DriftKind</code> <span class="location">backend/src/qts/reconciliation/drift.py:12</span>, <code>DriftItem</code> <span class="location">backend/src/qts/reconciliation/drift.py:23</span></li>
           <li><code>qts/reconciliation/engine.py</code> -> <code>ReconciliationEngine</code> <span class="location">backend/src/qts/reconciliation/engine.py:13</span></li>
+          <li><code>qts/reconciliation/persistent_drift.py</code> -> <code>PersistentDriftConfig</code> <span class="location">backend/src/qts/reconciliation/persistent_drift.py:21</span>, <code>PersistentDriftDecision</code> <span class="location">backend/src/qts/reconciliation/persistent_drift.py:32</span>, <code>PersistentDriftKillSwitch</code> <span class="location">backend/src/qts/reconciliation/persistent_drift.py:39</span></li>
           <li><code>qts/reconciliation/report.py</code> -> <code>ReconciliationReport</code> <span class="location">backend/src/qts/reconciliation/report.py:14</span></li>
           <li><code>qts/reconciliation/snapshots.py</code> -> <code>OrderSnapshot</code> <span class="location">backend/src/qts/reconciliation/snapshots.py:13</span>, <code>PositionSnapshot</code> <span class="location">backend/src/qts/reconciliation/snapshots.py:31</span>, <code>CashSnapshot</code> <span class="location">backend/src/qts/reconciliation/snapshots.py:39</span>, <code>ReconciliationSnapshot</code> <span class="location">backend/src/qts/reconciliation/snapshots.py:52</span></li>
           <li><code>qts/reconciliation/startup_gate.py</code> -> <code>StartupReconciliationDecision</code> <span class="location">backend/src/qts/reconciliation/startup_gate.py:11</span></li>
@@ -830,7 +831,7 @@
           </ul>
         </details>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">609 classes</span></summary>
+          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">612 classes</span></summary>
           <ul class="method-index">
           <li><code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span> -> <span class="muted">no public/core methods</span></li>
@@ -1193,6 +1194,9 @@
           <li><code>DriftKind</code> <span class="location">backend/src/qts/reconciliation/drift.py:12</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>DriftItem</code> <span class="location">backend/src/qts/reconciliation/drift.py:23</span> -> <code>to_dict():31</code></li>
           <li><code>ReconciliationEngine</code> <span class="location">backend/src/qts/reconciliation/engine.py:13</span> -> <code>__init__():16</code>, <code>reconcile():22</code>, <code>startup_gate():36</code></li>
+          <li><code>PersistentDriftConfig</code> <span class="location">backend/src/qts/reconciliation/persistent_drift.py:21</span> -> <code>__post_init__():26</code></li>
+          <li><code>PersistentDriftDecision</code> <span class="location">backend/src/qts/reconciliation/persistent_drift.py:32</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>PersistentDriftKillSwitch</code> <span class="location">backend/src/qts/reconciliation/persistent_drift.py:39</span> -> <code>__init__():42</code>, <code>tripped property:50</code>, <code>tripped_key property:55</code>, <code>observe():59</code></li>
           <li><code>ReconciliationReport</code> <span class="location">backend/src/qts/reconciliation/report.py:14</span> -> <code>has_drift property:21</code>, <code>to_dict():27</code></li>
           <li><code>OrderSnapshot</code> <span class="location">backend/src/qts/reconciliation/snapshots.py:13</span> -> <code>__post_init__():22</code></li>
           <li><code>PositionSnapshot</code> <span class="location">backend/src/qts/reconciliation/snapshots.py:31</span> -> <span class="muted">no public/core methods</span></li>
@@ -3123,10 +3127,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>341 files</span>
-      <span>611 classes</span>
-      <span>2024 functions</span>
-      <span>324 backend</span>
+      <span>342 files</span>
+      <span>614 classes</span>
+      <span>2029 functions</span>
+      <span>325 backend</span>
       <span>17 frontend</span>
     </div>
   </div>
@@ -9444,6 +9448,43 @@
               <tr><td><code>startup_gate</code></td><td>ReconciliationEngine:36</td><td>Return startup decision from a drift report.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>_effective_tolerance</code></td><td>ReconciliationEngine:40</td><td>Resolve effective tolerance with validation.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>reconcile_snapshots</code></td><td>module:49</td><td>Compare broker and internal snapshots into a deterministic drift report.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
+        <code>backend/src/qts/reconciliation/persistent_drift.py</code>
+        <span class="inventory-counts">
+          <span>3 classes</span>
+          <span>5 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Persistent reconciliation drift kill switch.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>PersistentDriftConfig</code></td><td>persistent_drift:21</td><td>Activation threshold for the persistent drift kill switch.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>PersistentDriftDecision</code></td><td>persistent_drift:32</td><td>Result of one ``observe`` cycle.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>PersistentDriftKillSwitch</code></td><td>persistent_drift:39</td><td>Track consecutive DIVERGENT reports on the same drift key.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>__post_init__</code></td><td>PersistentDriftConfig:26</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>PersistentDriftKillSwitch:42</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>tripped</code></td><td>PersistentDriftKillSwitch:50</td><td>Return whether the switch has activated.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>tripped_key</code></td><td>PersistentDriftKillSwitch:55</td><td>Return the drift key that caused activation, if any.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>observe</code></td><td>PersistentDriftKillSwitch:59</td><td>Process one reconciliation report and return the current decision.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>

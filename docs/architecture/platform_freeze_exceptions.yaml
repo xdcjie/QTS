@@ -1259,3 +1259,18 @@ exceptions:
     reason: OPT-01 typed Strategy callbacks need a public SDK fill event without exposing execution internals
     owner: strategy-sdk
     expiry: 2026-12-31
+  - class_name: PersistentDriftConfig
+    module: qts.reconciliation.persistent_drift
+    reason: OPT-47 reconciliation kill switch configuration
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: PersistentDriftDecision
+    module: qts.reconciliation.persistent_drift
+    reason: OPT-47 per-cycle kill switch decision payload
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: PersistentDriftKillSwitch
+    module: qts.reconciliation.persistent_drift
+    reason: OPT-47 reconciliation persistent-drift kill switch
+    owner: platform
+    expiry: 2027-05-17
