@@ -14,7 +14,7 @@ from time import monotonic
 from typing import Any, Literal, Protocol
 
 from qts.core.ids import AccountId, OrderId, StrategyId
-from qts.domain.orders import ExecutionReport, ExecutionReportStatus
+from qts.domain.orders import BracketLeg, ExecutionReport, ExecutionReportStatus
 from qts.execution.broker import BrokerOrderType, TimeInForce
 from qts.execution.transports.ibkr_order_ids import IbkrOrderIdAllocator
 
@@ -34,6 +34,7 @@ class IbkrOrderContractSpec:
     exchange: str
     currency: str
     primary_exchange: str | None = None
+    last_trade_date_or_contract_month: str | None = None
 
     def __post_init__(self) -> None:
         if not self.broker_symbol.strip():
@@ -46,6 +47,11 @@ class IbkrOrderContractSpec:
             raise ValueError("currency must not be empty")
         if self.primary_exchange is not None and not self.primary_exchange.strip():
             raise ValueError("primary_exchange must not be empty when provided")
+        if (
+            self.last_trade_date_or_contract_month is not None
+            and not self.last_trade_date_or_contract_month.strip()
+        ):
+            raise ValueError("last_trade_date_or_contract_month must not be empty when provided")
 
     @classmethod
     def stock(
@@ -66,6 +72,25 @@ class IbkrOrderContractSpec:
             primary_exchange=primary_exchange,
         )
 
+    @classmethod
+    def future(
+        cls,
+        broker_symbol: str,
+        *,
+        exchange: str,
+        currency: str,
+        last_trade_date_or_contract_month: str,
+    ) -> IbkrOrderContractSpec:
+        """Create a futures contract spec for an IBKR broker symbol."""
+
+        return cls(
+            broker_symbol=broker_symbol,
+            security_type="FUT",
+            exchange=exchange,
+            currency=currency,
+            last_trade_date_or_contract_month=last_trade_date_or_contract_month,
+        )
+
     def to_ibapi_contract(self) -> Any:
         """Return an official ibapi Contract object for this spec."""
 
@@ -77,6 +102,8 @@ class IbkrOrderContractSpec:
         contract.currency = self.currency
         if self.primary_exchange is not None:
             contract.primaryExchange = self.primary_exchange
+        if self.last_trade_date_or_contract_month is not None:
+            contract.lastTradeDateOrContractMonth = self.last_trade_date_or_contract_month
         return contract
 
 
@@ -117,8 +144,10 @@ class IbkrOrderRequest:
     order_type: BrokerOrderType = BrokerOrderType.MARKET
     time_in_force: TimeInForce = TimeInForce.DAY
     limit_price: Decimal | None = None
+    bracket_legs: tuple[BracketLeg, ...] | None = None
     contract: IbkrOrderContractSpec | None = None
     outside_regular_trading_hours: bool = False
+    what_if: bool = False
 
     def __post_init__(self) -> None:
         if not self.client_order_id.strip():
@@ -133,6 +162,11 @@ class IbkrOrderRequest:
             raise ValueError("quantity must be positive")
         if self.order_type is BrokerOrderType.LIMIT and self.limit_price is None:
             raise ValueError("limit_price is required for limit orders")
+        if self.order_type is BrokerOrderType.BRACKET:
+            if self.bracket_legs is None:
+                raise ValueError("bracket_legs are required for bracket orders")
+            if len(self.bracket_legs) < 2:
+                raise ValueError("bracket orders require at least two child legs")
         if self.limit_price is not None and self.limit_price <= Decimal("0"):
             raise ValueError("limit_price must be positive")
         if self.contract is not None and self.contract.broker_symbol != self.broker_symbol:
@@ -151,8 +185,7 @@ class IbkrOrderRequest:
     def to_ibapi_order(self) -> Any:
         """Return an official ibapi Order object for this request."""
 
-        order_class = _ibapi_attr("ibapi.order", "Order")
-        order = order_class()
+        order = self._new_order()
         order.action = self.side.upper()
         order.totalQuantity = self.quantity
         order.tif = self.time_in_force.value.upper()
@@ -160,6 +193,7 @@ class IbkrOrderRequest:
         order.orderRef = self.client_order_id
         order.transmit = True
         order.outsideRth = self.outside_regular_trading_hours
+        order.whatIf = self.what_if
         if self.order_type is BrokerOrderType.MARKET:
             order.orderType = "MKT"
         elif self.order_type is BrokerOrderType.LIMIT:
@@ -168,6 +202,62 @@ class IbkrOrderRequest:
         else:
             order.orderType = self.order_type.value.upper()
         return order
+
+    def to_ibapi_bracket_orders(
+        self,
+        *,
+        parent_order_id: int,
+        child_order_ids: tuple[int, ...],
+    ) -> tuple[Any, ...]:
+        """Return parent and OCO child orders for an IBKR bracket request."""
+
+        if self.order_type is not BrokerOrderType.BRACKET:
+            raise ValueError("bracket order conversion requires order_type=BRACKET")
+        if self.bracket_legs is None:
+            raise ValueError("bracket_legs are required for bracket orders")
+        if len(child_order_ids) != len(self.bracket_legs):
+            raise ValueError("one child order id is required for each bracket leg")
+
+        parent = self._new_order()
+        parent.orderId = parent_order_id
+        parent.action = self.side.upper()
+        parent.totalQuantity = self.quantity
+        parent.tif = self.time_in_force.value.upper()
+        parent.account = self.account_id
+        parent.orderRef = self.client_order_id
+        parent.transmit = self.what_if
+        parent.outsideRth = self.outside_regular_trading_hours
+        parent.whatIf = self.what_if
+        if self.limit_price is None:
+            parent.orderType = "MKT"
+        else:
+            parent.orderType = "LMT"
+            parent.lmtPrice = float(self.limit_price)
+
+        children: list[Any] = []
+        for index, (child_order_id, leg) in enumerate(
+            zip(child_order_ids, self.bracket_legs, strict=True)
+        ):
+            child = self._new_order()
+            child.orderId = child_order_id
+            child.action = leg.side.upper()
+            child.totalQuantity = leg.quantity
+            child.tif = self.time_in_force.value.upper()
+            child.account = self.account_id
+            child.orderRef = f"{self.client_order_id}-bracket-{index + 1}"
+            child.parentId = parent_order_id
+            child.transmit = self.what_if or index == len(self.bracket_legs) - 1
+            child.outsideRth = self.outside_regular_trading_hours
+            child.whatIf = self.what_if
+            _apply_bracket_leg_price(child, leg)
+            children.append(child)
+
+        return (parent, *children)
+
+    @staticmethod
+    def _new_order() -> Any:
+        order_class = _ibapi_attr("ibapi.order", "Order")
+        return order_class()
 
 
 @dataclass(frozen=True, slots=True)
@@ -940,6 +1030,29 @@ def _connect_ibapi_app(
 
 def _to_decimal(value: object) -> Decimal:
     return Decimal(str(value))
+
+
+def _apply_bracket_leg_price(order: Any, leg: BracketLeg) -> None:
+    if leg.order_type is BrokerOrderType.LIMIT:
+        if leg.limit_price is None:
+            raise ValueError("limit bracket legs require limit_price")
+        order.orderType = "LMT"
+        order.lmtPrice = float(leg.limit_price)
+        return
+    if leg.order_type is BrokerOrderType.STOP:
+        if leg.stop_price is None:
+            raise ValueError("stop bracket legs require stop_price")
+        order.orderType = "STP"
+        order.auxPrice = float(leg.stop_price)
+        return
+    if leg.order_type is BrokerOrderType.STOP_LIMIT:
+        if leg.stop_price is None or leg.limit_price is None:
+            raise ValueError("stop_limit bracket legs require stop_price and limit_price")
+        order.orderType = "STP LMT"
+        order.auxPrice = float(leg.stop_price)
+        order.lmtPrice = float(leg.limit_price)
+        return
+    raise ValueError(f"unsupported bracket leg order type: {leg.order_type.value}")
 
 
 def _format_error(error: IbkrTransportError) -> str:

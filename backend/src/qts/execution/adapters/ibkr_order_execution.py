@@ -192,6 +192,7 @@ class IbkrOrderExecutionAdapter:
         opens_short: bool = False,
         contract: IbkrOrderContractSpec | None = None,
         outside_regular_trading_hours: bool = False,
+        what_if: bool = False,
     ) -> IbkrOrderRequest:
         """Perform to_order_request."""
         if not client_order_id.strip():
@@ -222,8 +223,10 @@ class IbkrOrderExecutionAdapter:
             order_type=resolved_order_type,
             time_in_force=resolved_time_in_force,
             limit_price=resolved_limit_price,
+            bracket_legs=None if spec.bracket is None else spec.bracket.legs,
             contract=contract,
             outside_regular_trading_hours=outside_regular_trading_hours,
+            what_if=what_if,
         )
 
     def _assert_live_capital_order_allowed(self) -> None:
@@ -688,7 +691,10 @@ class IbkrOrderExecutionAdapter:
             raise ValueError(f"asset class is not supported: {asset_class}")
         if order_type is BrokerOrderType.LIMIT and limit_price is None:
             raise ValueError("limit_price is required for limit orders")
-        if order_type is not BrokerOrderType.LIMIT and limit_price is not None:
+        if (
+            order_type not in {BrokerOrderType.LIMIT, BrokerOrderType.BRACKET}
+            and limit_price is not None
+        ):
             raise ValueError("limit_price is only valid for limit orders")
         if (
             not self._capabilities.supports_fractional

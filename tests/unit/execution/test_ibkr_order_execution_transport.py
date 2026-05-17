@@ -465,6 +465,182 @@ def test_ibkr_tws_order_execution_transport_builds_limit_order_and_normalizes_ca
     assert cancel_report.broker_order_id == "777"
 
 
+def test_ibkr_order_contract_spec_builds_future_contract_month(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
+        IbkrOrderContractSpec,
+    )
+
+    class Contract:
+        pass
+
+    monkeypatch.setattr(
+        "qts.execution.transports.ibkr_tws_order_execution_transport._ibapi_attr",
+        lambda module_name, attribute_name: Contract,
+    )
+
+    contract = IbkrOrderContractSpec.future(
+        "MES",
+        exchange="CME",
+        currency="USD",
+        last_trade_date_or_contract_month="202606",
+    ).to_ibapi_contract()
+
+    assert contract.symbol == "MES"
+    assert contract.secType == "FUT"
+    assert contract.exchange == "CME"
+    assert contract.currency == "USD"
+    assert contract.lastTradeDateOrContractMonth == "202606"
+
+
+def test_ibkr_order_request_builds_bracket_parent_and_oco_children(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from qts.core.ids import AccountId, OrderId, StrategyId
+    from qts.domain.orders import BracketLeg, BrokerOrderType, OrderSide, TimeInForce
+    from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOrderRequest
+
+    class Order:
+        pass
+
+    monkeypatch.setattr(
+        "qts.execution.transports.ibkr_tws_order_execution_transport._ibapi_attr",
+        lambda module_name, attribute_name: Order,
+    )
+    request = IbkrOrderRequest(
+        internal_order_id=OrderId("ord-bracket"),
+        client_order_id="client-bracket",
+        internal_account_id=AccountId("acct-1"),
+        strategy_id=StrategyId("strategy-1"),
+        account_id="DU1234567",
+        broker_symbol="AAPL",
+        side=OrderSide.BUY.value,
+        quantity=Decimal("1"),
+        order_type=BrokerOrderType.BRACKET,
+        time_in_force=TimeInForce.GTC,
+        limit_price=Decimal("0.01"),
+        bracket_legs=(
+            BracketLeg(
+                order_type=BrokerOrderType.LIMIT,
+                side=OrderSide.SELL.value,
+                quantity=Decimal("1"),
+                limit_price=Decimal("9999"),
+            ),
+            BracketLeg(
+                order_type=BrokerOrderType.STOP,
+                side=OrderSide.SELL.value,
+                quantity=Decimal("1"),
+                stop_price=Decimal("0.01"),
+            ),
+        ),
+    )
+
+    parent, take_profit, stop_loss = request.to_ibapi_bracket_orders(
+        parent_order_id=700,
+        child_order_ids=(701, 702),
+    )
+
+    assert parent.orderId == 700
+    assert parent.orderType == "LMT"
+    assert parent.lmtPrice == 0.01
+    assert parent.whatIf is False
+    assert parent.transmit is False
+    assert take_profit.orderId == 701
+    assert take_profit.parentId == 700
+    assert take_profit.orderType == "LMT"
+    assert take_profit.lmtPrice == 9999.0
+    assert take_profit.whatIf is False
+    assert take_profit.transmit is False
+    assert stop_loss.orderId == 702
+    assert stop_loss.parentId == 700
+    assert stop_loss.orderType == "STP"
+    assert stop_loss.auxPrice == 0.01
+    assert stop_loss.whatIf is False
+    assert stop_loss.transmit is True
+
+
+def test_ibkr_order_request_builds_what_if_bracket_with_transmit_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from qts.core.ids import AccountId, OrderId, StrategyId
+    from qts.domain.orders import BracketLeg, BrokerOrderType, OrderSide
+    from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOrderRequest
+
+    class Order:
+        pass
+
+    monkeypatch.setattr(
+        "qts.execution.transports.ibkr_tws_order_execution_transport._ibapi_attr",
+        lambda module_name, attribute_name: Order,
+    )
+    request = IbkrOrderRequest(
+        internal_order_id=OrderId("ord-bracket-what-if"),
+        client_order_id="client-bracket-what-if",
+        internal_account_id=AccountId("acct-1"),
+        strategy_id=StrategyId("strategy-1"),
+        account_id="DU1234567",
+        broker_symbol="AAPL",
+        side=OrderSide.BUY.value,
+        quantity=Decimal("1"),
+        order_type=BrokerOrderType.BRACKET,
+        limit_price=Decimal("0.01"),
+        what_if=True,
+        bracket_legs=(
+            BracketLeg(
+                order_type=BrokerOrderType.LIMIT,
+                side=OrderSide.SELL.value,
+                quantity=Decimal("1"),
+                limit_price=Decimal("9999"),
+            ),
+            BracketLeg(
+                order_type=BrokerOrderType.STOP,
+                side=OrderSide.SELL.value,
+                quantity=Decimal("1"),
+                stop_price=Decimal("0.01"),
+            ),
+        ),
+    )
+
+    orders = request.to_ibapi_bracket_orders(parent_order_id=700, child_order_ids=(701, 702))
+
+    assert [order.whatIf for order in orders] == [True, True, True]
+    assert [order.transmit for order in orders] == [True, True, True]
+
+
+def test_ibkr_tws_order_client_submits_bracket_as_parent_and_children() -> None:
+    from qts.execution.transports.ibkr_order_ids import IbkrOrderIdAllocator
+    from qts.execution.transports.ibkr_tws_order_client import IbkrTwsOrderClient
+    from qts.execution.transports.ibkr_tws_order_execution_transport import (
+        IbkrTwsOrderExecutionTransportConfig,
+    )
+
+    app = _OrderClientApp()
+    allocator = IbkrOrderIdAllocator()
+    allocator.reconcile_next_valid_id(client_id=201, broker_next_valid_id=700)
+    sink = _RecordingSink()
+    client = IbkrTwsOrderClient(
+        config=IbkrTwsOrderExecutionTransportConfig(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+        ),
+        sink=sink,
+        order_id_allocator=allocator,
+    )
+    request = cast(Any, _BracketOrderClientRequest())
+
+    broker_order_id = client.submit_order_with_broker_id(app, request)
+
+    assert broker_order_id == "700"
+    assert app.placed_orders == [
+        (700, "contract", _FakeIbkrOrder(orderId=700, label="parent")),
+        (701, "contract", _FakeIbkrOrder(orderId=701, label="take_profit")),
+        (702, "contract", _FakeIbkrOrder(orderId=702, label="stop_loss")),
+    ]
+    assert sink.submitted_orders == [(request, "700")]
+
+
 def test_ibkr_tws_order_execution_transport_handles_older_commission_report() -> None:
     from qts.core.ids import BrokerId, InstrumentId
     from qts.execution.adapters.ibkr_order_execution import (
@@ -911,11 +1087,45 @@ class _OrderClientApp:
 
 
 class _OrderClientRequest:
+    from qts.execution.broker import BrokerOrderType
+
+    order_type = BrokerOrderType.MARKET
+
     def to_ibapi_contract(self) -> str:
         return "contract"
 
     def to_ibapi_order(self) -> str:
         return "order"
+
+
+class _BracketOrderClientRequest:
+    from qts.execution.broker import BrokerOrderType
+
+    order_type = BrokerOrderType.BRACKET
+    bracket_legs = ("take_profit", "stop_loss")
+
+    def to_ibapi_contract(self) -> str:
+        return "contract"
+
+    def to_ibapi_bracket_orders(
+        self,
+        *,
+        parent_order_id: int,
+        child_order_ids: tuple[int, ...],
+    ) -> tuple[object, ...]:
+        assert parent_order_id == 700
+        assert child_order_ids == (701, 702)
+        return (
+            _FakeIbkrOrder(orderId=700, label="parent"),
+            _FakeIbkrOrder(orderId=701, label="take_profit"),
+            _FakeIbkrOrder(orderId=702, label="stop_loss"),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class _FakeIbkrOrder:
+    orderId: int
+    label: str
 
 
 @dataclass(slots=True)

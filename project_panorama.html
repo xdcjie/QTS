@@ -1446,7 +1446,7 @@
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>340 files</span>
       <span>605 classes</span>
-      <span>1986 functions</span>
+      <span>1990 functions</span>
       <span>323 backend</span>
       <span>17 frontend</span>
     </div>
@@ -5420,35 +5420,35 @@
               <tr><td><code>callback_events</code></td><td>IbkrOrderExecutionAdapter:172</td><td>Read-only IBKR callback audit events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>has_unresolved_callbacks</code></td><td>IbkrOrderExecutionAdapter:177</td><td>Return whether unresolved IBKR callbacks remain quarantined.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>to_order_request</code></td><td>IbkrOrderExecutionAdapter:182</td><td>Perform to_order_request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_assert_live_capital_order_allowed</code></td><td>IbkrOrderExecutionAdapter:229</td><td>实现 IbkrOrderExecutionAdapter 的 assert live capital order allowed 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>record_submitted_order</code></td><td>IbkrOrderExecutionAdapter:235</td><td>Record a submitted IBKR order id for callback reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>resolve_cancel_broker_order_id</code></td><td>IbkrOrderExecutionAdapter:260</td><td>Resolve the IBKR order id for a cancel request through route metadata.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>normalize_execution_report</code></td><td>IbkrOrderExecutionAdapter:279</td><td>Perform normalize_execution_report.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_order_status</code></td><td>IbkrOrderExecutionAdapter:291</td><td>Normalize a raw IBKR order-status callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_open_order</code></td><td>IbkrOrderExecutionAdapter:350</td><td>Record an IBKR openOrder callback against the broker-order map.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_position</code></td><td>IbkrOrderExecutionAdapter:418</td><td>Record an IBKR position callback for broker reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_account_summary</code></td><td>IbkrOrderExecutionAdapter:435</td><td>Record an IBKR account summary callback for broker reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>broker_reconciliation_snapshot</code></td><td>IbkrOrderExecutionAdapter:453</td><td>Return the latest normalized broker-side snapshot for reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_execution</code></td><td>IbkrOrderExecutionAdapter:473</td><td>Stage a raw IBKR execution callback until its commission arrives.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_commission</code></td><td>IbkrOrderExecutionAdapter:520</td><td>Normalize a raw IBKR commission callback and complete matching fills.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>resolve_quarantined_callbacks</code></td><td>IbkrOrderExecutionAdapter:551</td><td>Try to resolve quarantined callbacks after order mapping changes.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_error</code></td><td>IbkrOrderExecutionAdapter:609</td><td>Normalize a raw IBKR error callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_disconnect</code></td><td>IbkrOrderExecutionAdapter:618</td><td>Normalize a raw IBKR disconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_reconnect</code></td><td>IbkrOrderExecutionAdapter:623</td><td>Normalize a raw IBKR reconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_status_from_ibkr</code></td><td>IbkrOrderExecutionAdapter:629</td><td>实现 IbkrOrderExecutionAdapter 的 status from ibkr 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_order_side_from_ibkr</code></td><td>IbkrOrderExecutionAdapter:647</td><td>实现 IbkrOrderExecutionAdapter 的 order side from ibkr 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>validate_cancel_supported</code></td><td>IbkrOrderExecutionAdapter:655</td><td>Validate cancel support before sending an IBKR cancel request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>validate_replace_supported</code></td><td>IbkrOrderExecutionAdapter:661</td><td>Validate replace support before sending an IBKR replace request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>validate_no_unresolved_callbacks</code></td><td>IbkrOrderExecutionAdapter:667</td><td>Fail closed while broker callbacks remain unresolved.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_validate_order_request</code></td><td>IbkrOrderExecutionAdapter:673</td><td>实现 IbkrOrderExecutionAdapter 的 validate order request 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_execution_key</code></td><td>IbkrOrderExecutionAdapter:702</td><td>实现 IbkrOrderExecutionAdapter 的 execution key 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_open_order_key</code></td><td>IbkrOrderExecutionAdapter:707</td><td>实现 IbkrOrderExecutionAdapter 的 open order key 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_late_cancel_after_fill</code></td><td>IbkrOrderExecutionAdapter:721</td><td>实现 IbkrOrderExecutionAdapter 的 is late cancel after fill 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_pop_commissioned_execution_by_execution_id</code></td><td>IbkrOrderExecutionAdapter:727</td><td>实现 IbkrOrderExecutionAdapter 的 pop commissioned execution by execution id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_pop_commissioned_execution</code></td><td>IbkrOrderExecutionAdapter:736</td><td>实现 IbkrOrderExecutionAdapter 的 pop commissioned execution 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_record_callback_event</code></td><td>IbkrOrderExecutionAdapter:759</td><td>实现 IbkrOrderExecutionAdapter 的 record callback event 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_record_account_mismatch_event</code></td><td>IbkrOrderExecutionAdapter:782</td><td>实现 IbkrOrderExecutionAdapter 的 record account mismatch event 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_mask_account_id</code></td><td>IbkrOrderExecutionAdapter:801</td><td>实现 IbkrOrderExecutionAdapter 的 mask account id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_assert_live_capital_order_allowed</code></td><td>IbkrOrderExecutionAdapter:232</td><td>实现 IbkrOrderExecutionAdapter 的 assert live capital order allowed 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>record_submitted_order</code></td><td>IbkrOrderExecutionAdapter:238</td><td>Record a submitted IBKR order id for callback reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>resolve_cancel_broker_order_id</code></td><td>IbkrOrderExecutionAdapter:263</td><td>Resolve the IBKR order id for a cancel request through route metadata.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>normalize_execution_report</code></td><td>IbkrOrderExecutionAdapter:282</td><td>Perform normalize_execution_report.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_order_status</code></td><td>IbkrOrderExecutionAdapter:294</td><td>Normalize a raw IBKR order-status callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_open_order</code></td><td>IbkrOrderExecutionAdapter:353</td><td>Record an IBKR openOrder callback against the broker-order map.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_position</code></td><td>IbkrOrderExecutionAdapter:421</td><td>Record an IBKR position callback for broker reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_account_summary</code></td><td>IbkrOrderExecutionAdapter:438</td><td>Record an IBKR account summary callback for broker reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>broker_reconciliation_snapshot</code></td><td>IbkrOrderExecutionAdapter:456</td><td>Return the latest normalized broker-side snapshot for reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_execution</code></td><td>IbkrOrderExecutionAdapter:476</td><td>Stage a raw IBKR execution callback until its commission arrives.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_commission</code></td><td>IbkrOrderExecutionAdapter:523</td><td>Normalize a raw IBKR commission callback and complete matching fills.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>resolve_quarantined_callbacks</code></td><td>IbkrOrderExecutionAdapter:554</td><td>Try to resolve quarantined callbacks after order mapping changes.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_error</code></td><td>IbkrOrderExecutionAdapter:612</td><td>Normalize a raw IBKR error callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_disconnect</code></td><td>IbkrOrderExecutionAdapter:621</td><td>Normalize a raw IBKR disconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_reconnect</code></td><td>IbkrOrderExecutionAdapter:626</td><td>Normalize a raw IBKR reconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_status_from_ibkr</code></td><td>IbkrOrderExecutionAdapter:632</td><td>实现 IbkrOrderExecutionAdapter 的 status from ibkr 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_order_side_from_ibkr</code></td><td>IbkrOrderExecutionAdapter:650</td><td>实现 IbkrOrderExecutionAdapter 的 order side from ibkr 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>validate_cancel_supported</code></td><td>IbkrOrderExecutionAdapter:658</td><td>Validate cancel support before sending an IBKR cancel request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>validate_replace_supported</code></td><td>IbkrOrderExecutionAdapter:664</td><td>Validate replace support before sending an IBKR replace request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>validate_no_unresolved_callbacks</code></td><td>IbkrOrderExecutionAdapter:670</td><td>Fail closed while broker callbacks remain unresolved.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_validate_order_request</code></td><td>IbkrOrderExecutionAdapter:676</td><td>实现 IbkrOrderExecutionAdapter 的 validate order request 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_execution_key</code></td><td>IbkrOrderExecutionAdapter:708</td><td>实现 IbkrOrderExecutionAdapter 的 execution key 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_open_order_key</code></td><td>IbkrOrderExecutionAdapter:713</td><td>实现 IbkrOrderExecutionAdapter 的 open order key 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_late_cancel_after_fill</code></td><td>IbkrOrderExecutionAdapter:727</td><td>实现 IbkrOrderExecutionAdapter 的 is late cancel after fill 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_pop_commissioned_execution_by_execution_id</code></td><td>IbkrOrderExecutionAdapter:733</td><td>实现 IbkrOrderExecutionAdapter 的 pop commissioned execution by execution id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_pop_commissioned_execution</code></td><td>IbkrOrderExecutionAdapter:742</td><td>实现 IbkrOrderExecutionAdapter 的 pop commissioned execution 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_record_callback_event</code></td><td>IbkrOrderExecutionAdapter:765</td><td>实现 IbkrOrderExecutionAdapter 的 record callback event 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_record_account_mismatch_event</code></td><td>IbkrOrderExecutionAdapter:788</td><td>实现 IbkrOrderExecutionAdapter 的 record account mismatch event 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_mask_account_id</code></td><td>IbkrOrderExecutionAdapter:807</td><td>实现 IbkrOrderExecutionAdapter 的 mask account id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -6087,7 +6087,7 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>IbkrTwsOrderClient</code></td><td>ibkr_tws_order_client:16</td><td>Owns IBKR order id reservation plus submit and cancel calls.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>IbkrTwsOrderClient</code></td><td>ibkr_tws_order_client:17</td><td>Owns IBKR order id reservation plus submit and cancel calls.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -6096,11 +6096,11 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__init__</code></td><td>IbkrTwsOrderClient:19</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>submit_order_with_broker_id</code></td><td>IbkrTwsOrderClient:32</td><td>Submit an IBKR order request and return the broker order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>cancel_order</code></td><td>IbkrTwsOrderClient:44</td><td>Cancel a broker order by broker order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>mark_next_order_id</code></td><td>IbkrTwsOrderClient:52</td><td>Record the next valid IBKR order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_reserve_order_id</code></td><td>IbkrTwsOrderClient:62</td><td>实现 IbkrTwsOrderClient 的 reserve order id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>IbkrTwsOrderClient:20</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>submit_order_with_broker_id</code></td><td>IbkrTwsOrderClient:33</td><td>Submit an IBKR order request and return the broker order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>cancel_order</code></td><td>IbkrTwsOrderClient:58</td><td>Cancel a broker order by broker order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>mark_next_order_id</code></td><td>IbkrTwsOrderClient:66</td><td>Record the next valid IBKR order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_reserve_order_id</code></td><td>IbkrTwsOrderClient:76</td><td>实现 IbkrTwsOrderClient 的 reserve order id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -6111,7 +6111,7 @@
         <code>backend/src/qts/execution/transports/ibkr_tws_order_execution_transport.py</code>
         <span class="inventory-counts">
           <span>17 classes</span>
-          <span>87 functions</span>
+          <span>91 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -6123,22 +6123,22 @@
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
               <tr><td><code>IbkrOrderContractSpec</code></td><td>ibkr_tws_order_execution_transport:29</td><td>IBKR contract fields required for order requests.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>IbkrTwsOrderExecutionTransportConfig</code></td><td>ibkr_tws_order_execution_transport:84</td><td>IBKR TWS/Gateway order-execution transport settings.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
-              <tr><td><code>IbkrOrderRequest</code></td><td>ibkr_tws_order_execution_transport:106</td><td>IBKR order request produced at the adapter boundary.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
-              <tr><td><code>IbkrOrderStatusPayload</code></td><td>ibkr_tws_order_execution_transport:174</td><td>Raw IBKR order-status callback payload.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>IbkrOpenOrderPayload</code></td><td>ibkr_tws_order_execution_transport:194</td><td>Raw IBKR openOrder callback payload.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>IbkrPositionPayload</code></td><td>ibkr_tws_order_execution_transport:226</td><td>Raw IBKR position callback payload for reconciliation.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>IbkrAccountSummaryPayload</code></td><td>ibkr_tws_order_execution_transport:241</td><td>Raw IBKR accountSummary callback payload for reconciliation.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>IbkrExecutionPayload</code></td><td>ibkr_tws_order_execution_transport:259</td><td>Raw IBKR execution callback payload.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>IbkrCommissionPayload</code></td><td>ibkr_tws_order_execution_transport:285</td><td>Raw IBKR commission callback payload.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>IbkrErrorPayload</code></td><td>ibkr_tws_order_execution_transport:302</td><td>Raw IBKR error callback payload.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>IbkrConnectionEventPayload</code></td><td>ibkr_tws_order_execution_transport:315</td><td>Raw IBKR disconnect/reconnect payload.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>IbkrCommissionReport</code></td><td>ibkr_tws_order_execution_transport:326</td><td>Normalized commission callback at the adapter boundary.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>IbkrTransportError</code></td><td>ibkr_tws_order_execution_transport:335</td><td>Normalized IBKR transport error at the adapter boundary.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>IbkrConnectionEvent</code></td><td>ibkr_tws_order_execution_transport:344</td><td>Normalized IBKR transport connection event.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
-              <tr><td><code>IbkrOrderExecutionCallbackSink</code></td><td>ibkr_tws_order_execution_transport:351</td><td>IBKR order-execution callback sink owned by the execution adapter.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
-              <tr><td><code>IbkrOrderExecutionTransport</code></td><td>ibkr_tws_order_execution_transport:404</td><td>Transport interface for IBKR order-execution connectivity.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
-              <tr><td><code>IbkrTwsOrderExecutionTransport</code></td><td>ibkr_tws_order_execution_transport:456</td><td>Official IBKR TWS API transport for paper/live order execution.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>IbkrTwsOrderExecutionTransportConfig</code></td><td>ibkr_tws_order_execution_transport:111</td><td>IBKR TWS/Gateway order-execution transport settings.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>IbkrOrderRequest</code></td><td>ibkr_tws_order_execution_transport:133</td><td>IBKR order request produced at the adapter boundary.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
+              <tr><td><code>IbkrOrderStatusPayload</code></td><td>ibkr_tws_order_execution_transport:264</td><td>Raw IBKR order-status callback payload.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>IbkrOpenOrderPayload</code></td><td>ibkr_tws_order_execution_transport:284</td><td>Raw IBKR openOrder callback payload.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>IbkrPositionPayload</code></td><td>ibkr_tws_order_execution_transport:316</td><td>Raw IBKR position callback payload for reconciliation.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>IbkrAccountSummaryPayload</code></td><td>ibkr_tws_order_execution_transport:331</td><td>Raw IBKR accountSummary callback payload for reconciliation.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>IbkrExecutionPayload</code></td><td>ibkr_tws_order_execution_transport:349</td><td>Raw IBKR execution callback payload.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>IbkrCommissionPayload</code></td><td>ibkr_tws_order_execution_transport:375</td><td>Raw IBKR commission callback payload.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>IbkrErrorPayload</code></td><td>ibkr_tws_order_execution_transport:392</td><td>Raw IBKR error callback payload.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>IbkrConnectionEventPayload</code></td><td>ibkr_tws_order_execution_transport:405</td><td>Raw IBKR disconnect/reconnect payload.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>IbkrCommissionReport</code></td><td>ibkr_tws_order_execution_transport:416</td><td>Normalized commission callback at the adapter boundary.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>IbkrTransportError</code></td><td>ibkr_tws_order_execution_transport:425</td><td>Normalized IBKR transport error at the adapter boundary.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>IbkrConnectionEvent</code></td><td>ibkr_tws_order_execution_transport:434</td><td>Normalized IBKR transport connection event.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
+              <tr><td><code>IbkrOrderExecutionCallbackSink</code></td><td>ibkr_tws_order_execution_transport:441</td><td>IBKR order-execution callback sink owned by the execution adapter.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>IbkrOrderExecutionTransport</code></td><td>ibkr_tws_order_execution_transport:494</td><td>Transport interface for IBKR order-execution connectivity.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>IbkrTwsOrderExecutionTransport</code></td><td>ibkr_tws_order_execution_transport:546</td><td>Official IBKR TWS API transport for paper/live order execution.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -6147,93 +6147,97 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__post_init__</code></td><td>IbkrOrderContractSpec:38</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>stock</code></td><td>IbkrOrderContractSpec:51</td><td>Create a stock contract spec for an IBKR broker symbol.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_ibapi_contract</code></td><td>IbkrOrderContractSpec:69</td><td>Return an official ibapi Contract object for this spec.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>IbkrTwsOrderExecutionTransportConfig:94</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>IbkrOrderRequest:123</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>contract_spec</code></td><td>IbkrOrderRequest:141</td><td>Return the IBKR contract spec for this order request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_ibapi_contract</code></td><td>IbkrOrderRequest:146</td><td>Return an official ibapi Contract object for this order request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_ibapi_order</code></td><td>IbkrOrderRequest:151</td><td>Return an official ibapi Order object for this request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>IbkrOrderStatusPayload:182</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>IbkrOpenOrderPayload:206</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>IbkrPositionPayload:233</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>IbkrAccountSummaryPayload:249</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>IbkrExecutionPayload:269</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>IbkrCommissionPayload:292</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>IbkrErrorPayload:309</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>IbkrConnectionEventPayload:320</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>record_submitted_order</code></td><td>IbkrOrderExecutionCallbackSink:354</td><td>Record the broker order id assigned during submission.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_order_status</code></td><td>IbkrOrderExecutionCallbackSink:364</td><td>Normalize a raw order-status callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_open_order</code></td><td>IbkrOrderExecutionCallbackSink:368</td><td>Record a raw openOrder callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_position</code></td><td>IbkrOrderExecutionCallbackSink:372</td><td>Record a raw position callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_account_summary</code></td><td>IbkrOrderExecutionCallbackSink:376</td><td>Record a raw account summary callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_execution</code></td><td>IbkrOrderExecutionCallbackSink:380</td><td>Stage or normalize a raw execution callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_commission</code></td><td>IbkrOrderExecutionCallbackSink:384</td><td>Normalize a raw commission callback, completing a pending fill when possible.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_error</code></td><td>IbkrOrderExecutionCallbackSink:391</td><td>Normalize a raw error callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_disconnect</code></td><td>IbkrOrderExecutionCallbackSink:395</td><td>Normalize a raw disconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_reconnect</code></td><td>IbkrOrderExecutionCallbackSink:399</td><td>Normalize a raw reconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>connected</code></td><td>IbkrOrderExecutionTransport:408</td><td>Return whether the transport is connected.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>connect</code></td><td>IbkrOrderExecutionTransport:412</td><td>Connect the order-execution transport.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>disconnect</code></td><td>IbkrOrderExecutionTransport:416</td><td>Disconnect the order-execution transport.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>submit_order</code></td><td>IbkrOrderExecutionTransport:420</td><td>Submit a normalized IBKR order request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>cancel_order</code></td><td>IbkrOrderExecutionTransport:424</td><td>Cancel a broker order by broker order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_order_status</code></td><td>IbkrOrderExecutionTransport:428</td><td>Dispatch a raw order-status callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_execution</code></td><td>IbkrOrderExecutionTransport:432</td><td>Dispatch a raw execution callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_commission</code></td><td>IbkrOrderExecutionTransport:436</td><td>Dispatch a raw commission callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_error</code></td><td>IbkrOrderExecutionTransport:443</td><td>Dispatch a raw error callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_disconnect</code></td><td>IbkrOrderExecutionTransport:447</td><td>Dispatch a raw disconnect callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_reconnect</code></td><td>IbkrOrderExecutionTransport:451</td><td>Dispatch a raw reconnect callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>IbkrTwsOrderExecutionTransport:459</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_app</code></td><td>IbkrTwsOrderExecutionTransport:500</td><td>实现 IbkrTwsOrderExecutionTransport 的 app 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_app</code></td><td>IbkrTwsOrderExecutionTransport:504</td><td>实现 IbkrTwsOrderExecutionTransport 的 app 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>connected</code></td><td>IbkrTwsOrderExecutionTransport:508</td><td>Return whether the IBKR client is connected.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>managed_accounts</code></td><td>IbkrTwsOrderExecutionTransport:514</td><td>Return managed accounts advertised by the connected Gateway session.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>connect</code></td><td>IbkrTwsOrderExecutionTransport:519</td><td>Connect to TWS/Gateway and wait for the next order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>disconnect</code></td><td>IbkrTwsOrderExecutionTransport:524</td><td>Disconnect from TWS/Gateway.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>submit_order</code></td><td>IbkrTwsOrderExecutionTransport:529</td><td>Submit a normalized IBKR order request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>submit_order_with_broker_id</code></td><td>IbkrTwsOrderExecutionTransport:534</td><td>Submit an IBKR order request and return the broker order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>cancel_order</code></td><td>IbkrTwsOrderExecutionTransport:542</td><td>Cancel a broker order by broker order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>request_startup_reconciliation</code></td><td>IbkrTwsOrderExecutionTransport:547</td><td>Request broker state needed to reconcile after startup or reconnect.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>wait_for_order_status</code></td><td>IbkrTwsOrderExecutionTransport:552</td><td>Wait for a broker status report matching the order and allowed statuses.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>wait_for_fill_report</code></td><td>IbkrTwsOrderExecutionTransport:588</td><td>Wait for a broker fill report with quantity, price, and fill id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_order_status</code></td><td>IbkrTwsOrderExecutionTransport:626</td><td>Handle an IBKR orderStatus callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_open_order</code></td><td>IbkrTwsOrderExecutionTransport:641</td><td>Handle an IBKR openOrder callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_position</code></td><td>IbkrTwsOrderExecutionTransport:658</td><td>Handle an IBKR position callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_account_summary</code></td><td>IbkrTwsOrderExecutionTransport:667</td><td>Handle an IBKR accountSummary callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_execution</code></td><td>IbkrTwsOrderExecutionTransport:684</td><td>Handle an IBKR execDetails callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_commission_report</code></td><td>IbkrTwsOrderExecutionTransport:689</td><td>Handle an IBKR commission callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_commission_and_fees</code></td><td>IbkrTwsOrderExecutionTransport:694</td><td>Handle an IBKR commissionAndFeesReport callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_error</code></td><td>IbkrTwsOrderExecutionTransport:699</td><td>Handle an IBKR error callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_disconnect</code></td><td>IbkrTwsOrderExecutionTransport:704</td><td>Handle an IBKR disconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>handle_reconnect</code></td><td>IbkrTwsOrderExecutionTransport:709</td><td>Handle an IBKR reconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>mark_next_order_id</code></td><td>IbkrTwsOrderExecutionTransport:714</td><td>Record the next valid IBKR order id and mark the API session ready.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>set_managed_accounts</code></td><td>IbkrTwsOrderExecutionTransport:720</td><td>Record managed accounts from the Gateway session.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_order_status</code></td><td>IbkrTwsOrderExecutionTransport:725</td><td>Dispatch a raw order-status callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_open_order</code></td><td>IbkrTwsOrderExecutionTransport:730</td><td>Dispatch a raw openOrder callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_execution</code></td><td>IbkrTwsOrderExecutionTransport:735</td><td>Dispatch a raw execution callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_commission</code></td><td>IbkrTwsOrderExecutionTransport:740</td><td>Dispatch a raw commission callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_error</code></td><td>IbkrTwsOrderExecutionTransport:748</td><td>Dispatch a raw error callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_disconnect</code></td><td>IbkrTwsOrderExecutionTransport:753</td><td>Dispatch a raw disconnect callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_reconnect</code></td><td>IbkrTwsOrderExecutionTransport:758</td><td>Dispatch a raw reconnect callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_new_order_execution_app</code></td><td>module:785</td><td>提供模块级 new order execution app 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>_new_order_execution_app.&lt;locals&gt;:789</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>next_valid_id</code></td><td>_new_order_execution_app.&lt;locals&gt;:793</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 next valid id 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>managed_accounts</code></td><td>_new_order_execution_app.&lt;locals&gt;:796</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 managed accounts 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>order_status</code></td><td>_new_order_execution_app.&lt;locals&gt;:799</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 order status 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>open_order</code></td><td>_new_order_execution_app.&lt;locals&gt;:825</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 open order 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>position</code></td><td>_new_order_execution_app.&lt;locals&gt;:833</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 position 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>account_summary</code></td><td>_new_order_execution_app.&lt;locals&gt;:837</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 account summary 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>exec_details</code></td><td>_new_order_execution_app.&lt;locals&gt;:853</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 exec details 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>commission_and_fees_report</code></td><td>_new_order_execution_app.&lt;locals&gt;:857</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 commission and fees report 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>commission_report</code></td><td>_new_order_execution_app.&lt;locals&gt;:860</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 commission report 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>error</code></td><td>_new_order_execution_app.&lt;locals&gt;:863</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 error 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>connection_closed</code></td><td>_new_order_execution_app.&lt;locals&gt;:874</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 connection closed 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_ibapi_attr</code></td><td>module:898</td><td>提供模块级 ibapi attr 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_connect_ibapi_app</code></td><td>module:909</td><td>提供模块级 connect ibapi app 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>connect</code></td><td>_connect_ibapi_app.&lt;locals&gt;:919</td><td>实现 _connect_ibapi_app.&lt;locals&gt; 的 connect 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_to_decimal</code></td><td>module:941</td><td>提供模块级 to decimal 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_format_error</code></td><td>module:945</td><td>提供模块级 format error 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>IbkrOrderContractSpec:39</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>stock</code></td><td>IbkrOrderContractSpec:57</td><td>Create a stock contract spec for an IBKR broker symbol.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>future</code></td><td>IbkrOrderContractSpec:76</td><td>Create a futures contract spec for an IBKR broker symbol.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_ibapi_contract</code></td><td>IbkrOrderContractSpec:94</td><td>Return an official ibapi Contract object for this spec.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>IbkrTwsOrderExecutionTransportConfig:121</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>IbkrOrderRequest:152</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>contract_spec</code></td><td>IbkrOrderRequest:175</td><td>Return the IBKR contract spec for this order request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_ibapi_contract</code></td><td>IbkrOrderRequest:180</td><td>Return an official ibapi Contract object for this order request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_ibapi_order</code></td><td>IbkrOrderRequest:185</td><td>Return an official ibapi Order object for this request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_ibapi_bracket_orders</code></td><td>IbkrOrderRequest:206</td><td>Return parent and OCO child orders for an IBKR bracket request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_new_order</code></td><td>IbkrOrderRequest:258</td><td>实现 IbkrOrderRequest 的 new order 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>IbkrOrderStatusPayload:272</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>IbkrOpenOrderPayload:296</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>IbkrPositionPayload:323</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>IbkrAccountSummaryPayload:339</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>IbkrExecutionPayload:359</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>IbkrCommissionPayload:382</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>IbkrErrorPayload:399</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>IbkrConnectionEventPayload:410</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>record_submitted_order</code></td><td>IbkrOrderExecutionCallbackSink:444</td><td>Record the broker order id assigned during submission.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_order_status</code></td><td>IbkrOrderExecutionCallbackSink:454</td><td>Normalize a raw order-status callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_open_order</code></td><td>IbkrOrderExecutionCallbackSink:458</td><td>Record a raw openOrder callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_position</code></td><td>IbkrOrderExecutionCallbackSink:462</td><td>Record a raw position callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_account_summary</code></td><td>IbkrOrderExecutionCallbackSink:466</td><td>Record a raw account summary callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_execution</code></td><td>IbkrOrderExecutionCallbackSink:470</td><td>Stage or normalize a raw execution callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_commission</code></td><td>IbkrOrderExecutionCallbackSink:474</td><td>Normalize a raw commission callback, completing a pending fill when possible.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_error</code></td><td>IbkrOrderExecutionCallbackSink:481</td><td>Normalize a raw error callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_disconnect</code></td><td>IbkrOrderExecutionCallbackSink:485</td><td>Normalize a raw disconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_reconnect</code></td><td>IbkrOrderExecutionCallbackSink:489</td><td>Normalize a raw reconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>connected</code></td><td>IbkrOrderExecutionTransport:498</td><td>Return whether the transport is connected.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>connect</code></td><td>IbkrOrderExecutionTransport:502</td><td>Connect the order-execution transport.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>disconnect</code></td><td>IbkrOrderExecutionTransport:506</td><td>Disconnect the order-execution transport.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>submit_order</code></td><td>IbkrOrderExecutionTransport:510</td><td>Submit a normalized IBKR order request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>cancel_order</code></td><td>IbkrOrderExecutionTransport:514</td><td>Cancel a broker order by broker order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>emit_order_status</code></td><td>IbkrOrderExecutionTransport:518</td><td>Dispatch a raw order-status callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>emit_execution</code></td><td>IbkrOrderExecutionTransport:522</td><td>Dispatch a raw execution callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>emit_commission</code></td><td>IbkrOrderExecutionTransport:526</td><td>Dispatch a raw commission callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>emit_error</code></td><td>IbkrOrderExecutionTransport:533</td><td>Dispatch a raw error callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>emit_disconnect</code></td><td>IbkrOrderExecutionTransport:537</td><td>Dispatch a raw disconnect callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>emit_reconnect</code></td><td>IbkrOrderExecutionTransport:541</td><td>Dispatch a raw reconnect callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>IbkrTwsOrderExecutionTransport:549</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_app</code></td><td>IbkrTwsOrderExecutionTransport:590</td><td>实现 IbkrTwsOrderExecutionTransport 的 app 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_app</code></td><td>IbkrTwsOrderExecutionTransport:594</td><td>实现 IbkrTwsOrderExecutionTransport 的 app 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>connected</code></td><td>IbkrTwsOrderExecutionTransport:598</td><td>Return whether the IBKR client is connected.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>managed_accounts</code></td><td>IbkrTwsOrderExecutionTransport:604</td><td>Return managed accounts advertised by the connected Gateway session.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>connect</code></td><td>IbkrTwsOrderExecutionTransport:609</td><td>Connect to TWS/Gateway and wait for the next order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>disconnect</code></td><td>IbkrTwsOrderExecutionTransport:614</td><td>Disconnect from TWS/Gateway.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>submit_order</code></td><td>IbkrTwsOrderExecutionTransport:619</td><td>Submit a normalized IBKR order request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>submit_order_with_broker_id</code></td><td>IbkrTwsOrderExecutionTransport:624</td><td>Submit an IBKR order request and return the broker order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>cancel_order</code></td><td>IbkrTwsOrderExecutionTransport:632</td><td>Cancel a broker order by broker order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>request_startup_reconciliation</code></td><td>IbkrTwsOrderExecutionTransport:637</td><td>Request broker state needed to reconcile after startup or reconnect.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>wait_for_order_status</code></td><td>IbkrTwsOrderExecutionTransport:642</td><td>Wait for a broker status report matching the order and allowed statuses.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>wait_for_fill_report</code></td><td>IbkrTwsOrderExecutionTransport:678</td><td>Wait for a broker fill report with quantity, price, and fill id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_order_status</code></td><td>IbkrTwsOrderExecutionTransport:716</td><td>Handle an IBKR orderStatus callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_open_order</code></td><td>IbkrTwsOrderExecutionTransport:731</td><td>Handle an IBKR openOrder callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_position</code></td><td>IbkrTwsOrderExecutionTransport:748</td><td>Handle an IBKR position callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_account_summary</code></td><td>IbkrTwsOrderExecutionTransport:757</td><td>Handle an IBKR accountSummary callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_execution</code></td><td>IbkrTwsOrderExecutionTransport:774</td><td>Handle an IBKR execDetails callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_commission_report</code></td><td>IbkrTwsOrderExecutionTransport:779</td><td>Handle an IBKR commission callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_commission_and_fees</code></td><td>IbkrTwsOrderExecutionTransport:784</td><td>Handle an IBKR commissionAndFeesReport callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_error</code></td><td>IbkrTwsOrderExecutionTransport:789</td><td>Handle an IBKR error callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_disconnect</code></td><td>IbkrTwsOrderExecutionTransport:794</td><td>Handle an IBKR disconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>handle_reconnect</code></td><td>IbkrTwsOrderExecutionTransport:799</td><td>Handle an IBKR reconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>mark_next_order_id</code></td><td>IbkrTwsOrderExecutionTransport:804</td><td>Record the next valid IBKR order id and mark the API session ready.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>set_managed_accounts</code></td><td>IbkrTwsOrderExecutionTransport:810</td><td>Record managed accounts from the Gateway session.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>emit_order_status</code></td><td>IbkrTwsOrderExecutionTransport:815</td><td>Dispatch a raw order-status callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>emit_open_order</code></td><td>IbkrTwsOrderExecutionTransport:820</td><td>Dispatch a raw openOrder callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>emit_execution</code></td><td>IbkrTwsOrderExecutionTransport:825</td><td>Dispatch a raw execution callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>emit_commission</code></td><td>IbkrTwsOrderExecutionTransport:830</td><td>Dispatch a raw commission callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>emit_error</code></td><td>IbkrTwsOrderExecutionTransport:838</td><td>Dispatch a raw error callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>emit_disconnect</code></td><td>IbkrTwsOrderExecutionTransport:843</td><td>Dispatch a raw disconnect callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>emit_reconnect</code></td><td>IbkrTwsOrderExecutionTransport:848</td><td>Dispatch a raw reconnect callback to the adapter sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_new_order_execution_app</code></td><td>module:875</td><td>提供模块级 new order execution app 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>_new_order_execution_app.&lt;locals&gt;:879</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>next_valid_id</code></td><td>_new_order_execution_app.&lt;locals&gt;:883</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 next valid id 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>managed_accounts</code></td><td>_new_order_execution_app.&lt;locals&gt;:886</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 managed accounts 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>order_status</code></td><td>_new_order_execution_app.&lt;locals&gt;:889</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 order status 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>open_order</code></td><td>_new_order_execution_app.&lt;locals&gt;:915</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 open order 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>position</code></td><td>_new_order_execution_app.&lt;locals&gt;:923</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 position 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>account_summary</code></td><td>_new_order_execution_app.&lt;locals&gt;:927</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 account summary 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>exec_details</code></td><td>_new_order_execution_app.&lt;locals&gt;:943</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 exec details 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>commission_and_fees_report</code></td><td>_new_order_execution_app.&lt;locals&gt;:947</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 commission and fees report 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>commission_report</code></td><td>_new_order_execution_app.&lt;locals&gt;:950</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 commission report 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>error</code></td><td>_new_order_execution_app.&lt;locals&gt;:953</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 error 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>connection_closed</code></td><td>_new_order_execution_app.&lt;locals&gt;:964</td><td>实现 _new_order_execution_app.&lt;locals&gt; 的 connection closed 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_ibapi_attr</code></td><td>module:988</td><td>提供模块级 ibapi attr 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_connect_ibapi_app</code></td><td>module:999</td><td>提供模块级 connect ibapi app 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>connect</code></td><td>_connect_ibapi_app.&lt;locals&gt;:1009</td><td>实现 _connect_ibapi_app.&lt;locals&gt; 的 connect 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_to_decimal</code></td><td>module:1031</td><td>提供模块级 to decimal 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_apply_bracket_leg_price</code></td><td>module:1035</td><td>提供模块级 apply bracket leg price 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_format_error</code></td><td>module:1058</td><td>提供模块级 format error 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
