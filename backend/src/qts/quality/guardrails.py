@@ -6,7 +6,7 @@ import ast
 import json
 import re
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Protocol, cast, runtime_checkable
 
@@ -254,6 +254,7 @@ RUNTIME_COORDINATOR_KEEP_EVIDENCE = (
 PLATFORM_FREEZE_EXCEPTIONS_PATH = Path("docs/architecture/platform_freeze_exceptions.yaml")
 CLASS_INVENTORY_BASELINE_PATH = Path("artifacts/quality/class_inventory_baseline.json")
 FINAL_PLATFORM_FREEZE_PLAN_PATH = Path("docs/plan/qts_final_platform_freeze_review_and_tasks.md")
+_PLATFORM_FREEZE_MAX_HORIZON = timedelta(days=365)
 PLATFORM_FREEZE_RULE_KEY = "PLATFORM_FREEZE"
 PLATFORM_FREEZE_BUNDLES: tuple[tuple[str, ...], ...] = (
     ("runtime",),
@@ -490,6 +491,7 @@ def _load_platform_freeze_config(repo_root: Path) -> PlatformFreezeConfig:
     expired: set[tuple[str, str]] = set()
     parse_violations: set[tuple[int, str]] = set()
     today = date.today()
+    horizon = today + _PLATFORM_FREEZE_MAX_HORIZON
     for index, item in enumerate(raw_exceptions, start=1):
         if not isinstance(item, dict):
             parse_violations.add((index, "exception item must be a mapping"))
@@ -504,8 +506,17 @@ def _load_platform_freeze_config(repo_root: Path) -> PlatformFreezeConfig:
         key = (module_name, class_name)
         if expiry_date < today:
             expired.add(key)
-        else:
-            allowed.add(key)
+            continue
+        if expiry_date > horizon:
+            parse_violations.add(
+                (
+                    index,
+                    f"freeze exception expiry {expiry_date.isoformat()} exceeds the "
+                    f"one-year horizon ({horizon.isoformat()}); shorten or re-evaluate.",
+                )
+            )
+            continue
+        allowed.add(key)
 
     return PlatformFreezeConfig(
         allowed_exceptions=frozenset(allowed),
