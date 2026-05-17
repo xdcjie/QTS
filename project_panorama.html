@@ -1444,10 +1444,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>340 files</span>
-      <span>608 classes</span>
-      <span>2005 functions</span>
-      <span>323 backend</span>
+      <span>341 files</span>
+      <span>611 classes</span>
+      <span>2014 functions</span>
+      <span>324 backend</span>
       <span>17 frontend</span>
     </div>
   </div>
@@ -1828,7 +1828,7 @@
         <code>backend/src/qts/api/security.py</code>
         <span class="inventory-counts">
           <span>6 classes</span>
-          <span>21 functions</span>
+          <span>22 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -1839,12 +1839,12 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>Principal</code></td><td>security:54</td><td>Authenticated API principal.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>AuthBackend</code></td><td>security:72</td><td>Authentication backend contract.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
-              <tr><td><code>StaticTokenAuthBackend</code></td><td>security:80</td><td>Hash-based static token backend for local development and CI.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BearerJWTAuthBackend</code></td><td>security:127</td><td>Minimal HS256 JWT verifier for service tokens.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ApiSecurityMiddleware</code></td><td>security:182</td><td>Authenticate every non-public API request and enforce scopes.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>_DevDefaultTokenAuthBackend</code></td><td>security:299</td><td>Development-only static-token backend with two built-in principals.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>Principal</code></td><td>security:58</td><td>Authenticated API principal.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>AuthBackend</code></td><td>security:76</td><td>Authentication backend contract.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>StaticTokenAuthBackend</code></td><td>security:84</td><td>Hash-based static token backend for local development and CI.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BearerJWTAuthBackend</code></td><td>security:131</td><td>Minimal HS256 JWT verifier for service tokens.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ApiSecurityMiddleware</code></td><td>security:186</td><td>Authenticate every non-public API request and enforce scopes.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>_DevDefaultTokenAuthBackend</code></td><td>security:328</td><td>Development-only static-token backend with two built-in principals.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -1853,27 +1853,28 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__post_init__</code></td><td>Principal:65</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>verify</code></td><td>AuthBackend:75</td><td>Verify an Authorization header and return a principal.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>StaticTokenAuthBackend:83</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>verify</code></td><td>StaticTokenAuthBackend:86</td><td>Verify a bearer token against configured SHA-256 token hashes.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_load</code></td><td>StaticTokenAuthBackend:98</td><td>实现 StaticTokenAuthBackend 的 load 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>BearerJWTAuthBackend:130</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>replay_cache_capacity</code></td><td>BearerJWTAuthBackend:139</td><td>Return the maximum jti replay cache size.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>seen_jti_size</code></td><td>BearerJWTAuthBackend:143</td><td>Return the current size of the jti replay cache.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>verify</code></td><td>BearerJWTAuthBackend:147</td><td>Verify a compact HS256 bearer JWT.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>ApiSecurityMiddleware:185</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>dispatch</code></td><td>ApiSecurityMiddleware:197</td><td>Authenticate, authorize, rate-limit, and continue.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_consume_budget</code></td><td>ApiSecurityMiddleware:213</td><td>实现 ApiSecurityMiddleware 的 consume budget 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>required_scope_for</code></td><td>module:227</td><td>Return the configured scope for a route.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>require_scope</code></td><td>module:236</td><td>FastAPI dependency factory for route-level scope checks.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>dependency</code></td><td>require_scope.&lt;locals&gt;:239</td><td>实现 require_scope.&lt;locals&gt; 的 dependency 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>get_principal</code></td><td>module:247</td><td>FastAPI dependency returning the authenticated principal.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>verify_websocket_authorization</code></td><td>module:258</td><td>Verify a WebSocket handshake authorization header and enforce scope.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>default_auth_backend</code></td><td>module:276</td><td>Build the configured default auth backend.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>__init__</code></td><td>_DevDefaultTokenAuthBackend:302</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_bearer_token</code></td><td>module:319</td><td>提供模块级 bearer token 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_base64url_decode</code></td><td>module:328</td><td>提供模块级 base64url decode 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>Principal:69</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>verify</code></td><td>AuthBackend:79</td><td>Verify an Authorization header and return a principal.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>StaticTokenAuthBackend:87</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>verify</code></td><td>StaticTokenAuthBackend:90</td><td>Verify a bearer token against configured SHA-256 token hashes.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_load</code></td><td>StaticTokenAuthBackend:102</td><td>实现 StaticTokenAuthBackend 的 load 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>BearerJWTAuthBackend:134</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>replay_cache_capacity</code></td><td>BearerJWTAuthBackend:143</td><td>Return the maximum jti replay cache size.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>seen_jti_size</code></td><td>BearerJWTAuthBackend:147</td><td>Return the current size of the jti replay cache.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>verify</code></td><td>BearerJWTAuthBackend:151</td><td>Verify a compact HS256 bearer JWT.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>ApiSecurityMiddleware:189</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>dispatch</code></td><td>ApiSecurityMiddleware:203</td><td>Authenticate, authorize, rate-limit, and continue.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_emit_audit</code></td><td>ApiSecurityMiddleware:224</td><td>实现 ApiSecurityMiddleware 的 emit audit 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_consume_budget</code></td><td>ApiSecurityMiddleware:242</td><td>实现 ApiSecurityMiddleware 的 consume budget 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>required_scope_for</code></td><td>module:256</td><td>Return the configured scope for a route.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>require_scope</code></td><td>module:265</td><td>FastAPI dependency factory for route-level scope checks.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>dependency</code></td><td>require_scope.&lt;locals&gt;:268</td><td>实现 require_scope.&lt;locals&gt; 的 dependency 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>get_principal</code></td><td>module:276</td><td>FastAPI dependency returning the authenticated principal.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>verify_websocket_authorization</code></td><td>module:287</td><td>Verify a WebSocket handshake authorization header and enforce scope.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>default_auth_backend</code></td><td>module:305</td><td>Build the configured default auth backend.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>__init__</code></td><td>_DevDefaultTokenAuthBackend:331</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_bearer_token</code></td><td>module:348</td><td>提供模块级 bearer token 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_base64url_decode</code></td><td>module:357</td><td>提供模块级 base64url decode 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -6766,6 +6767,46 @@
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
               <tr><td><code>__post_init__</code></td><td>AuditEvent:19</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
+        <code>backend/src/qts/observability/audit_sink.py</code>
+        <span class="inventory-counts">
+          <span>3 classes</span>
+          <span>8 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Audit sink protocol and built-in sinks.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>AuditSink</code></td><td>audit_sink:20</td><td>Write one audit event.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>InMemoryAuditSink</code></td><td>audit_sink:28</td><td>In-process buffer used by tests.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>StderrJsonAuditSink</code></td><td>audit_sink:47</td><td>Default sink — writes one JSON line per event to stderr.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>write</code></td><td>AuditSink:23</td><td>Write an audit event to the underlying destination.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>InMemoryAuditSink:31</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>write</code></td><td>InMemoryAuditSink:34</td><td>Append the event to the in-memory buffer.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>events</code></td><td>InMemoryAuditSink:38</td><td>Return a snapshot of buffered events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>clear</code></td><td>InMemoryAuditSink:42</td><td>Reset the buffer.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>StderrJsonAuditSink:50</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>write</code></td><td>StderrJsonAuditSink:53</td><td>Write a single JSON line representing the event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>now</code></td><td>module:61</td><td>Return an aware UTC timestamp for audit events.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
             </tbody>
           </table>
         </div>

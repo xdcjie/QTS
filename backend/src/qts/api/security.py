@@ -21,6 +21,10 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.responses import JSONResponse, Response
 from starlette.types import ASGIApp
 
+from qts.observability.audit import AuditEvent
+from qts.observability.audit_sink import AuditSink, StderrJsonAuditSink
+from qts.observability.audit_sink import now as _audit_now
+
 API_SCOPE_MATRIX: Mapping[tuple[str, str], str | None] = {
     ("GET", "/accounts/"): "accounts:read",
     ("GET", "/orders/"): "orders:read",
@@ -188,27 +192,52 @@ class ApiSecurityMiddleware(BaseHTTPMiddleware):
         *,
         auth_backend: AuthBackend,
         rate_limits: Mapping[str, int] | None = None,
+        audit_sink: AuditSink | None = None,
     ) -> None:
         super().__init__(app)
         self._auth_backend = auth_backend
         self._rate_limits = dict(rate_limits or {"read": 60, "write": 30, "safety": 6})
         self._windows: dict[str, deque[float]] = defaultdict(deque)
+        self._audit_sink: AuditSink = audit_sink or StderrJsonAuditSink()
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         """Authenticate, authorize, rate-limit, and continue."""
         if request.url.path == "/health":
             return await call_next(request)
+        principal: Principal | None = None
+        response: Response
         try:
             principal = self._auth_backend.verify(request.headers.get("Authorization"))
             required_scope = required_scope_for(request.method, request.url.path)
             if required_scope is not None and required_scope not in principal.scopes:
-                return JSONResponse({"detail": "insufficient scope"}, status_code=403)
-            if not self._consume_budget(principal, required_scope):
-                return JSONResponse({"detail": "rate limit exceeded"}, status_code=429)
-            request.state.principal = principal
+                response = JSONResponse({"detail": "insufficient scope"}, status_code=403)
+            elif not self._consume_budget(principal, required_scope):
+                response = JSONResponse({"detail": "rate limit exceeded"}, status_code=429)
+            else:
+                request.state.principal = principal
+                response = await call_next(request)
         except HTTPException as exc:
-            return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
-        return await call_next(request)
+            response = JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
+        self._emit_audit(request, principal, response.status_code)
+        return response
+
+    def _emit_audit(
+        self,
+        request: Request,
+        principal: Principal | None,
+        status_code: int,
+    ) -> None:
+        actor = principal.id if principal is not None else "anonymous"
+        correlation_id = request.headers.get("X-Correlation-Id")
+        self._audit_sink.write(
+            AuditEvent(
+                event_type="api.auth_decision",
+                event_time=_audit_now(),
+                actor=actor,
+                message=f"{request.method} {request.url.path} {status_code}",
+                correlation_id=correlation_id,
+            )
+        )
 
     def _consume_budget(self, principal: Principal, scope: str | None) -> bool:
         kind = "safety" if scope == "runtime:safety:write" else "write" if scope else "read"
