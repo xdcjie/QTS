@@ -44,16 +44,16 @@ These supersede any item-level acceptance below.
 
 | Item | Status | First red gate | Verified green | Commit |
 |---|---|---|---|---|
-| OPT-25.2 Wire `on_holdings_snapshot` | TODO | `test_exposure_in_finalized_backtest.py` | — | — |
-| OPT-26.2 Consume `account.position_closed` in stats | TODO | `test_statistics_consumes_position_closed.py` | — | — |
-| OPT-27.2 Risk rule rejects sim-unsupported types | TODO | `test_order_spec_validity_rejects_unsupported.py` | — | — |
-| OPT-29.2 `api.auth_decision` audit events | TODO | `test_api_audit_emission.py` | — | — |
-| OPT-15 Prometheus exporter + queue depth | TODO | `test_prometheus_metrics_endpoint.py` | — | — |
-| OPT-17 Event schema migration registry | TODO | `test_event_schema_migration.py` | — | — |
-| OPT-18 Freeze exceptions cleanup + `expires_on` | TODO | `test_freeze_exception_schema.py` | — | — |
-| OPT-47 Reconciliation kill-switch | TODO | `test_persistent_drift_kill_switch.py` | — | — |
-| OPT-48 Crash-mid-fill recovery anchor | TODO | `test_recovery_byte_identical_state.py` | — | — |
-| OPT-50 Performance benchmark baseline | TODO | `tests/benchmarks/` suite green | — | — |
+| OPT-25.2 Wire `on_holdings_snapshot` | ✅ DONE | `test_exposure_in_finalized_backtest.py` | ✓ | `de18b66` |
+| OPT-26.2 Consume `account.position_closed` in stats | ✅ DONE | `test_statistics_consumes_position_closed.py` | ✓ | `55dc935` |
+| OPT-27.2 Risk rule rejects sim-unsupported types | ✅ DONE | `test_order_spec_validity_rejects_unsupported.py` | ✓ | `e4f2b72` |
+| OPT-29.2 `api.auth_decision` audit events | ✅ DONE | `test_api_audit_emission.py` | ✓ | `eef4ad2` |
+| OPT-15 Prometheus exporter + queue depth | ✅ DONE | `test_prometheus_metrics_endpoint.py` | ✓ | `145a089` |
+| OPT-17 Event schema migration registry | ✅ DONE | `test_event_schema_migration.py` | ✓ | `d28e33f` |
+| OPT-18 Freeze exceptions cleanup + `expires_on` | ✅ DONE | `test_freeze_exception_schema.py` | ✓ | `d60ff82` |
+| OPT-47 Reconciliation kill-switch | ✅ DONE | `test_persistent_drift_kill_switch.py` | ✓ | `71dd959` |
+| OPT-48 Crash-mid-fill recovery anchor | ✅ DONE | `test_recovery_byte_identical_state.py` | ✓ | `6c3d421` |
+| OPT-50 Performance benchmark baseline | ✅ DONE | `tests/benchmarks/` suite green | ✓ | `6cfc399` |
 
 Marking an item DONE requires: first red gate recorded, focused green
 recorded, `make check` recorded, commit linked, this matrix updated.
