@@ -3129,10 +3129,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>342 files</span>
+      <span>343 files</span>
       <span>616 classes</span>
-      <span>2033 functions</span>
-      <span>325 backend</span>
+      <span>2041 functions</span>
+      <span>326 backend</span>
       <span>17 frontend</span>
     </div>
   </div>
@@ -3181,7 +3181,7 @@
         <code>backend/src/qts/api/app.py</code>
         <span class="inventory-counts">
           <span>0 classes</span>
-          <span>1 function</span>
+          <span>2 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -3192,7 +3192,8 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>create_app</code></td><td>module:20</td><td>Perform create_app.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>create_app</code></td><td>module:22</td><td>Perform create_app.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>_metrics_endpoint</code></td><td>create_app.&lt;locals&gt;:37</td><td>Serve runtime metrics in Prometheus text format.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -8639,6 +8640,34 @@
               <tr><td><code>snapshot</code></td><td>MetricsRegistry:143</td><td>Perform snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>_metric_key</code></td><td>MetricsRegistry:148</td><td>Perform _metric_key.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>_reason_code_tags</code></td><td>MetricsRegistry:161</td><td>Return metric tags for standard runtime reason codes.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
+        <code>backend/src/qts/observability/prometheus.py</code>
+        <span class="inventory-counts">
+          <span>0 classes</span>
+          <span>7 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Prometheus text-format exporter for the runtime MetricsRegistry.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>render_prometheus_text</code></td><td>module:55</td><td>Return the registry&#x27;s snapshot in Prometheus text format.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>_parse_key</code></td><td>module:76</td><td>提供模块级 parse key 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_to_prometheus_name</code></td><td>module:83</td><td>提供模块级 to prometheus name 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_resolve_type</code></td><td>module:87</td><td>提供模块级 resolve type 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_render_labels</code></td><td>module:95</td><td>提供模块级 render labels 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_parse_tags</code></td><td>module:105</td><td>提供模块级 parse tags 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>metrics_response_body</code></td><td>module:115</td><td>Render a pre-collected metric snapshot directly.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
             </tbody>
           </table>
         </div>

@@ -202,7 +202,7 @@ class ApiSecurityMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         """Authenticate, authorize, rate-limit, and continue."""
-        if request.url.path == "/health":
+        if request.url.path in {"/health", "/metrics"}:
             return await call_next(request)
         principal: Principal | None = None
         response: Response

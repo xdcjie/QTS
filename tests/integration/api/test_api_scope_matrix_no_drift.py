@@ -10,6 +10,7 @@ def test_every_app_route_has_scope_matrix_entry() -> None:
     app = create_app()
     framework_public_paths = {
         "/health",
+        "/metrics",
         "/openapi.json",
         "/docs",
         "/docs/oauth2-redirect",
