@@ -111,7 +111,7 @@ def _live_capital_request(
             reason="unit test live-capital gate",
             risk_approver_id="risk-live",
             engineering_approver_id="engineering-live",
-            expires_at=datetime(2026, 5, 17, tzinfo=UTC),
+            expires_at=datetime(2099, 12, 31, tzinfo=UTC),
             strategy_ids=(strategy_id.value,),
             account_ids=(account_id.value,),
             max_notional_limit=Decimal("100000"),

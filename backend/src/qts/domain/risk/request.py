@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -20,10 +21,16 @@ class OrderRiskRequest:
     price: Decimal
     multiplier: Decimal
     order_time: datetime | None = None
+    current_position: Decimal = Decimal("0")
     contributing_strategy_ids: tuple[StrategyId, ...] = ()
     aggregation_decision_id: str | None = None
     conflict_reason: str | None = None
     market_data: MarketDataRiskContext | None = None
+    account_equity: Decimal | None = None
+    current_exposure: Decimal = Decimal("0")
+    intraday_pnl: Decimal | None = None
+    current_notional_by_instrument: Mapping[InstrumentId, Decimal] | None = None
+    volatility: Decimal | None = None
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""
@@ -42,6 +49,18 @@ class OrderRiskRequest:
             raise ValueError("aggregation_decision_id must not be empty")
         if self.conflict_reason is not None and not self.conflict_reason.strip():
             raise ValueError("conflict_reason must not be empty")
+        if self.account_equity is not None and self.account_equity <= Decimal("0"):
+            raise ValueError("account_equity must be positive")
+        if self.current_exposure < Decimal("0"):
+            raise ValueError("current_exposure must be non-negative")
+        if self.current_notional_by_instrument is not None:
+            for instrument_id, notional in self.current_notional_by_instrument.items():
+                if not isinstance(instrument_id, InstrumentId):
+                    raise TypeError("current_notional_by_instrument keys must be InstrumentId")
+                if notional < Decimal("0"):
+                    raise ValueError("current instrument notional must be non-negative")
+        if self.volatility is not None and self.volatility < Decimal("0"):
+            raise ValueError("volatility must be non-negative")
 
     @property
     def notional(self) -> Decimal:

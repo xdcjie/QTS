@@ -13,6 +13,7 @@ class MaxNotionalRule:
     """Reject orders whose notional exceeds a fixed limit."""
 
     max_notional: Decimal
+    rule_id = "max_notional"
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""
@@ -25,8 +26,9 @@ class MaxNotionalRule:
             return RiskDecision.rejected(
                 "MAX_NOTIONAL_EXCEEDED",
                 f"order notional {request.notional} exceeds max {self.max_notional}",
+                rule_id=self.rule_id,
             )
-        return RiskDecision.approve()
+        return RiskDecision.approve(rule_id=self.rule_id)
 
 
 __all__ = ["MaxNotionalRule"]

@@ -74,6 +74,27 @@ def test_risk_rule_registry_builds_market_data_rules() -> None:
     )
 
 
+def test_risk_rule_registry_builds_rules_in_declared_order() -> None:
+    from qts.risk import RiskRuleConfig, RiskRuleRegistry
+
+    rules = RiskRuleRegistry().build_all(
+        (
+            RiskRuleConfig(
+                rule_id="rule-position",
+                name="position_limit",
+                params={"max_position": Decimal("100")},
+            ),
+            RiskRuleConfig(
+                rule_id="rule-notional",
+                name="max_notional",
+                params={"max_notional": Decimal("1000")},
+            ),
+        )
+    )
+
+    assert [type(rule).__name__ for rule in rules] == ["PositionLimitRule", "MaxNotionalRule"]
+
+
 def test_risk_rule_registry_keeps_param_lookup_inside_the_registry() -> None:
     tree = ast.parse(Path("backend/src/qts/risk/rule_registry.py").read_text(encoding="utf-8"))
 

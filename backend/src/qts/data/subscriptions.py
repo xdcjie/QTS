@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -81,6 +82,32 @@ class MarketDataSubscriptionEvent:
 
 
 @dataclass(frozen=True, slots=True)
+class UniverseSubscriptionDelta:
+    """Internal instrument subscription changes required by a universe update."""
+
+    subscribe: tuple[InstrumentId, ...]
+    unsubscribe: tuple[InstrumentId, ...]
+
+
+class UniverseSubscriptionPlanner:
+    """Materialize universe membership changes into market data deltas."""
+
+    def plan(
+        self,
+        *,
+        current: Iterable[InstrumentId],
+        target: Iterable[InstrumentId],
+    ) -> UniverseSubscriptionDelta:
+        """Return deterministic subscribe/unsubscribe deltas for internal IDs."""
+        current_ids = set(current)
+        target_ids = set(target)
+        return UniverseSubscriptionDelta(
+            subscribe=_sorted_ids(target_ids - current_ids),
+            unsubscribe=_sorted_ids(current_ids - target_ids),
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class PhysicalSubscriptionKey:
     """Deduplication key for provider-facing subscriptions."""
 
@@ -124,6 +151,10 @@ def plan_physical_subscription(
     )
 
 
+def _sorted_ids(instrument_ids: Iterable[InstrumentId]) -> tuple[InstrumentId, ...]:
+    return tuple(sorted(set(instrument_ids), key=lambda item: item.value))
+
+
 __all__ = [
     "LogicalSubscription",
     "LogicalSubscriptionKey",
@@ -131,6 +162,8 @@ __all__ = [
     "MarketDataSubscriptionEventType",
     "PhysicalSubscriptionKey",
     "SourceStreamType",
+    "UniverseSubscriptionDelta",
+    "UniverseSubscriptionPlanner",
     "logical_key",
     "plan_physical_subscription",
 ]

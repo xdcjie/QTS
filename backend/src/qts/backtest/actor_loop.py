@@ -5,10 +5,11 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Protocol
+from types import SimpleNamespace
+from typing import Any, Protocol, TypeAlias
 
 from qts.backtest.dependencies import BacktestActorLoopConfig, BacktestActorLoopDependencies
-from qts.core.ids import AccountId, CorrelationId, InstrumentId, StrategyId
+from qts.core.ids import AccountId, CorrelationId, StrategyId
 from qts.domain.market_data import Bar
 from qts.execution.order_manager import Order, OrderFill
 from qts.reporting.backtest import (
@@ -73,6 +74,9 @@ class BacktestActorLoopResult:
         return self.warmup_bars + self.trading_bars
 
 
+BacktestActorLoopState: TypeAlias = SimpleNamespace
+
+
 class BacktestActorLoop:
     """Run backtest bars through strategy/order execution actors."""
 
@@ -133,7 +137,24 @@ class BacktestActorLoop:
         prune_history: bool,
         compact_orders: bool,
     ) -> BacktestActorLoopResult:
-        """Perform run."""
+        """Run all bars through explicit initialization, bar, and final phases."""
+        state = self.initialize_run_phase(
+            sink=sink,
+            prune_history=prune_history,
+            compact_orders=compact_orders,
+        )
+        for source_bar in self._bars:
+            self.process_market_data_phase(state, source_bar)
+        return self.finalize_run_phase(state)
+
+    def initialize_run_phase(
+        self,
+        *,
+        sink: BacktestRuntimeSink,
+        prune_history: bool,
+        compact_orders: bool,
+    ) -> BacktestActorLoopState:
+        """Initialize actors, pipeline, market-data flow, and run state."""
         account_actor = AccountActor(
             initial_cash={"USD": self._initial_cash},
             account_id=self._account_id,
@@ -173,267 +194,358 @@ class BacktestActorLoop:
             conflict_group=self._conflict_group,
         )
 
-        latest_prices: dict[InstrumentId, Decimal] = {}
-        warmup_processed = 0
-        trading_processed = 0
-        event_index = 0
-        last_bar: Bar | None = None
-
         market_data_flow = MarketDataFlow(
             target_timeframe=self._target_timeframe,
             exchange_timezone_by_instrument=self._exchange_timezone_by_instrument,
         )
-        for source_bar in self._bars:
-            for bar in market_data_flow.publish_bar(source_bar):
-                last_bar = bar
-                correlation_id = CorrelationId(
-                    f"md:{bar.instrument_id.value}:{bar.timeframe}:{bar.end_time.isoformat()}"
-                )
-                latest_prices[bar.instrument_id] = bar.close
-                market_data_payload: dict[str, object] = {
-                    "instrument_id": bar.instrument_id.value,
-                    "timeframe": bar.timeframe,
-                    "end_time": bar.end_time.isoformat(),
-                }
-                market_data_payload.update(self._market_data_provenance_for(bar))
-                sink.write(
-                    RuntimeEvent(
-                        kind="runtime.market_data",
-                        payload=market_data_payload,
-                        correlation_id=correlation_id,
-                        instrument_id=bar.instrument_id,
-                    )
-                )
-                self._update_rolling_prices(
-                    bar,
-                    latest_prices=latest_prices,
-                )
-                strategy_result = strategy_pipeline.execute_bar(
-                    bar,
-                    account_snapshot=account_actor.snapshot(),
-                    latest_prices=latest_prices,
-                    aggregate_signals=event_index >= self._warmup_bars,
-                    account_id=self._account_id,
-                    correlation_id=correlation_id,
-                )
-                for intent in strategy_result.raw_intents:
-                    sink.write(
-                        RuntimeEvent(
-                            kind="runtime.signal_received",
-                            payload={
-                                "instrument_id": intent.asset.instrument_id.value,
-                                "intent_type": intent.intent_type.value,
-                                "value": str(intent.value) if intent.value is not None else None,
-                            },
-                            correlation_id=correlation_id,
-                            instrument_id=intent.asset.instrument_id,
-                            account_id=self._account_id,
-                            strategy_id=self._strategy_id,
-                        )
-                    )
-                    sink.write(
-                        RuntimeEvent(
-                            kind="runtime.strategy_intent",
-                            payload={
-                                "instrument_id": intent.asset.instrument_id.value,
-                                "intent_type": intent.intent_type.value,
-                                "value": str(intent.value) if intent.value is not None else None,
-                            },
-                            correlation_id=correlation_id,
-                            instrument_id=intent.asset.instrument_id,
-                            account_id=self._account_id,
-                            strategy_id=self._strategy_id,
-                        )
-                    )
-                if event_index < self._warmup_bars:
-                    warmup_processed += 1
-                    sink.write_equity_point(
-                        self._equity_point(
-                            bar,
-                            account_actor.snapshot(),
-                            latest_prices=latest_prices,
-                        )
-                    )
-                    self._write_account_snapshot(sink, account_actor.snapshot())
-                    event_index += 1
-                    continue
-
-                if strategy_result.signal_batches:
-                    for batch in strategy_result.signal_batches:
-                        sink.write(
-                            RuntimeEvent(
-                                kind="runtime.signal_aggregated",
-                                payload={
-                                    "aggregation_decision_id": batch.aggregation_decision_id,
-                                    "aggregation_policy": batch.aggregation_policy.value,
-                                    "contributing_strategy_ids": [
-                                        strategy_id.value
-                                        for strategy_id in batch.contributing_strategy_ids
-                                    ],
-                                    "conflict_group": batch.conflict_group,
-                                    "intent_count": len(batch.intents),
-                                    "target_before_risk": (
-                                        str(batch.target_before_risk)
-                                        if batch.target_before_risk is not None
-                                        else None
-                                    ),
-                                    "target_after_aggregation": (
-                                        str(batch.target_after_aggregation)
-                                        if batch.target_after_aggregation is not None
-                                        else None
-                                    ),
-                                },
-                                correlation_id=correlation_id,
-                                instrument_id=bar.instrument_id,
-                                account_id=self._account_id,
-                                strategy_id=self._strategy_id,
-                            )
-                        )
-                        if batch.conflict_reason:
-                            sink.write(
-                                RuntimeEvent(
-                                    kind="runtime.signal_conflict_detected",
-                                    payload={
-                                        "conflict_reason": batch.conflict_reason,
-                                        "aggregation_decision_id": batch.aggregation_decision_id,
-                                        "rejected_strategy_ids": [
-                                            strategy_id.value
-                                            for strategy_id in batch.rejected_strategy_ids
-                                        ],
-                                        "conflicts": [
-                                            {
-                                                "instrument_key": conflict.instrument_key,
-                                                "strategy_ids": [
-                                                    strategy_id.value
-                                                    for strategy_id in conflict.strategy_ids
-                                                ],
-                                                "reason": conflict.reason,
-                                            }
-                                            for conflict in batch.conflicts
-                                        ],
-                                        "conflict_group": batch.conflict_group,
-                                        "aggregation_policy": batch.aggregation_policy.value,
-                                    },
-                                    correlation_id=correlation_id,
-                                    instrument_id=bar.instrument_id,
-                                    account_id=self._account_id,
-                                    strategy_id=self._strategy_id,
-                                )
-                            )
-                            sink.write(
-                                RuntimeEvent(
-                                    kind="runtime.signal_rejected",
-                                    payload={
-                                        "conflict_reason": batch.conflict_reason,
-                                        "aggregation_decision_id": batch.aggregation_decision_id,
-                                        "rejected_strategy_ids": [
-                                            strategy_id.value
-                                            for strategy_id in batch.rejected_strategy_ids
-                                        ],
-                                        "conflict_group": batch.conflict_group,
-                                        "aggregation_policy": batch.aggregation_policy.value,
-                                        "target_before_risk": (
-                                            str(batch.target_before_risk)
-                                            if batch.target_before_risk is not None
-                                            else None
-                                        ),
-                                        "target_after_aggregation": (
-                                            str(batch.target_after_aggregation)
-                                            if batch.target_after_aggregation is not None
-                                            else None
-                                        ),
-                                    },
-                                    correlation_id=correlation_id,
-                                    instrument_id=bar.instrument_id,
-                                    account_id=self._account_id,
-                                    strategy_id=self._strategy_id,
-                                )
-                            )
-
-                for intent in strategy_result.intents:
-                    try:
-                        processed = self._process_intent(
-                            intent,
-                            bar=bar,
-                            account_actor=account_actor,
-                            order_manager_actor=order_manager_actor,
-                            order_manager_ref=order_manager_ref,
-                            execution_ref=execution_ref,
-                            account_ref=account_ref,
-                            account_id=self._account_id,
-                            strategy_id=self._strategy_id,
-                            correlation_id=correlation_id,
-                            order_number=sink.order_count + 1,
-                            contributing_strategy_ids=strategy_result.contributing_strategy_ids,
-                            aggregation_decision_id=strategy_result.aggregation_decision_id,
-                            conflict_reason=(
-                                strategy_result.conflict_reason
-                                if strategy_result.conflict_reason
-                                else None
-                            ),
-                        )
-                    except ValueError as exc:
-                        if not is_broker_capability_reject(exc):
-                            raise
-                        sink.write(
-                            RuntimeEvent(
-                                kind="runtime.broker_rejected",
-                                payload={
-                                    "reason_code": "unsupported_order_type",
-                                    "reason": str(exc),
-                                    "broker_capability_model": broker_capability_payload(
-                                        self._execution_adapter
-                                    ),
-                                },
-                                correlation_id=correlation_id,
-                                instrument_id=intent.asset.instrument_id,
-                                account_id=self._account_id,
-                                strategy_id=self._strategy_id,
-                            )
-                        )
-                        continue
-                    order_payload = processed.orders
-                    fill_payload = processed.fills
-                    event_writer.write_risk_decision_events(
-                        processed.risk_decisions,
-                        correlation_id=correlation_id,
-                        account_id=self._account_id,
-                        instrument_id=intent.asset.instrument_id,
-                        strategy_id=self._strategy_id,
-                    )
-                    sink.write_processed(
-                        orders=order_payload,
-                        fills=fill_payload,
-                        bar=bar,
-                    )
-                    event_writer.write_order_events(
-                        order_payload,
-                        order_manager_actor,
-                        fallback_contributing_strategy_ids=strategy_result.contributing_strategy_ids,
-                    )
-                    event_writer.write_fill_events(fill_payload, order_manager_actor)
-                    if compact_orders:
-                        order_manager_actor.compact_for_streaming(
-                            order.order_id for order in order_payload
-                        )
-                trading_processed += 1
-                sink.write_equity_point(
-                    self._equity_point(
-                        bar,
-                        account_actor.snapshot(),
-                        latest_prices=latest_prices,
-                    )
-                )
-                self._write_account_snapshot(sink, account_actor.snapshot())
-                event_index += 1
-
-        _ = strategy_pipeline.finalize()
-        return BacktestActorLoopResult(
-            final_account=account_actor.snapshot(),
-            warmup_bars=warmup_processed,
-            trading_bars=trading_processed,
-            last_bar=last_bar,
+        return BacktestActorLoopState(
+            sink=sink,
+            compact_orders=compact_orders,
+            account_actor=account_actor,
+            account_ref=account_ref,
+            order_manager_actor=order_manager_actor,
+            order_manager_ref=order_manager_ref,
+            execution_ref=execution_ref,
+            event_writer=event_writer,
+            strategy_pipeline=strategy_pipeline,
+            market_data_flow=market_data_flow,
+            latest_prices={},
+            warmup_processed=0,
+            trading_processed=0,
+            event_index=0,
+            last_bar=None,
         )
+
+    def process_market_data_phase(
+        self,
+        state: BacktestActorLoopState,
+        source_bar: Bar,
+    ) -> None:
+        """Convert one source bar into strategy-facing bar phases."""
+        for bar in state.market_data_flow.publish_bar(source_bar):
+            state.last_bar = bar
+            correlation_id = self.market_data_correlation_id(bar)
+            self.write_market_data_event(state, bar, correlation_id)
+            self._update_rolling_prices(bar, latest_prices=state.latest_prices)
+            strategy_result = self.execute_strategy_bar(state, bar, correlation_id)
+            self.write_strategy_signal_events(state, strategy_result, correlation_id)
+            if state.event_index < self._warmup_bars:
+                self.process_warmup_phase(state, bar)
+                continue
+            self.process_trading_phase(state, bar, strategy_result, correlation_id)
+
+    def process_warmup_phase(self, state: BacktestActorLoopState, bar: Bar) -> None:
+        """Record warmup accounting without submitting aggregated intents."""
+        state.warmup_processed += 1
+        self.write_equity_and_account_snapshot(state, bar)
+        state.event_index += 1
+
+    def process_trading_phase(
+        self,
+        state: BacktestActorLoopState,
+        bar: Bar,
+        strategy_result: Any,
+        correlation_id: CorrelationId,
+    ) -> None:
+        """Process aggregated signals, order flow, and end-of-bar accounting."""
+        for batch in strategy_result.signal_batches:
+            self.write_signal_batch_events(state, bar, batch, correlation_id)
+        for intent in strategy_result.intents:
+            self.process_strategy_intent(
+                state,
+                bar,
+                strategy_result,
+                intent,
+                correlation_id,
+            )
+        state.trading_processed += 1
+        self.write_equity_and_account_snapshot(state, bar)
+        state.event_index += 1
+
+    def finalize_run_phase(self, state: BacktestActorLoopState) -> BacktestActorLoopResult:
+        """Finalize the strategy pipeline and return the run summary."""
+        _ = state.strategy_pipeline.finalize()
+        return BacktestActorLoopResult(
+            final_account=state.account_actor.snapshot(),
+            warmup_bars=state.warmup_processed,
+            trading_bars=state.trading_processed,
+            last_bar=state.last_bar,
+        )
+
+    def market_data_correlation_id(self, bar: Bar) -> CorrelationId:
+        """Create the stable correlation id for one strategy-facing bar."""
+        return CorrelationId(
+            f"md:{bar.instrument_id.value}:{bar.timeframe}:{bar.end_time.isoformat()}"
+        )
+
+    def write_market_data_event(
+        self,
+        state: BacktestActorLoopState,
+        bar: Bar,
+        correlation_id: CorrelationId,
+    ) -> None:
+        """Update latest price state and emit the normalized market-data event."""
+        state.latest_prices[bar.instrument_id] = bar.close
+        market_data_payload: dict[str, object] = {
+            "instrument_id": bar.instrument_id.value,
+            "timeframe": bar.timeframe,
+            "end_time": bar.end_time.isoformat(),
+        }
+        market_data_payload.update(self._market_data_provenance_for(bar))
+        state.sink.write(
+            RuntimeEvent(
+                kind="runtime.market_data",
+                payload=market_data_payload,
+                correlation_id=correlation_id,
+                instrument_id=bar.instrument_id,
+            )
+        )
+
+    def execute_strategy_bar(
+        self,
+        state: BacktestActorLoopState,
+        bar: Bar,
+        correlation_id: CorrelationId,
+    ) -> Any:
+        """Execute the strategy pipeline for one bar."""
+        return state.strategy_pipeline.execute_bar(
+            bar,
+            account_snapshot=state.account_actor.snapshot(),
+            latest_prices=state.latest_prices,
+            aggregate_signals=state.event_index >= self._warmup_bars,
+            account_id=self._account_id,
+            correlation_id=correlation_id,
+        )
+
+    def write_strategy_signal_events(
+        self,
+        state: BacktestActorLoopState,
+        strategy_result: Any,
+        correlation_id: CorrelationId,
+    ) -> None:
+        """Emit raw strategy signal and intent events."""
+        for intent in strategy_result.raw_intents:
+            state.sink.write(
+                RuntimeEvent(
+                    kind="runtime.signal_received",
+                    payload={
+                        "instrument_id": intent.asset.instrument_id.value,
+                        "intent_type": intent.intent_type.value,
+                        "value": str(intent.value) if intent.value is not None else None,
+                    },
+                    correlation_id=correlation_id,
+                    instrument_id=intent.asset.instrument_id,
+                    account_id=self._account_id,
+                    strategy_id=self._strategy_id,
+                )
+            )
+            state.sink.write(
+                RuntimeEvent(
+                    kind="runtime.strategy_intent",
+                    payload={
+                        "instrument_id": intent.asset.instrument_id.value,
+                        "intent_type": intent.intent_type.value,
+                        "value": str(intent.value) if intent.value is not None else None,
+                    },
+                    correlation_id=correlation_id,
+                    instrument_id=intent.asset.instrument_id,
+                    account_id=self._account_id,
+                    strategy_id=self._strategy_id,
+                )
+            )
+
+    def write_signal_batch_events(
+        self,
+        state: BacktestActorLoopState,
+        bar: Bar,
+        batch: Any,
+        correlation_id: CorrelationId,
+    ) -> None:
+        """Emit aggregation, conflict, and rejection events for a signal batch."""
+        state.sink.write(
+            RuntimeEvent(
+                kind="runtime.signal_aggregated",
+                payload={
+                    "aggregation_decision_id": batch.aggregation_decision_id,
+                    "aggregation_policy": batch.aggregation_policy.value,
+                    "contributing_strategy_ids": [
+                        strategy_id.value for strategy_id in batch.contributing_strategy_ids
+                    ],
+                    "conflict_group": batch.conflict_group,
+                    "intent_count": len(batch.intents),
+                    "target_before_risk": (
+                        str(batch.target_before_risk)
+                        if batch.target_before_risk is not None
+                        else None
+                    ),
+                    "target_after_aggregation": (
+                        str(batch.target_after_aggregation)
+                        if batch.target_after_aggregation is not None
+                        else None
+                    ),
+                },
+                correlation_id=correlation_id,
+                instrument_id=bar.instrument_id,
+                account_id=self._account_id,
+                strategy_id=self._strategy_id,
+            )
+        )
+        if batch.conflict_reason:
+            self.write_batch_conflict_events(state, bar, batch, correlation_id)
+
+    def write_batch_conflict_events(
+        self,
+        state: BacktestActorLoopState,
+        bar: Bar,
+        batch: Any,
+        correlation_id: CorrelationId,
+    ) -> None:
+        """Emit conflict and rejection evidence for a rejected signal batch."""
+        state.sink.write(
+            RuntimeEvent(
+                kind="runtime.signal_conflict_detected",
+                payload={
+                    "conflict_reason": batch.conflict_reason,
+                    "aggregation_decision_id": batch.aggregation_decision_id,
+                    "rejected_strategy_ids": [
+                        strategy_id.value for strategy_id in batch.rejected_strategy_ids
+                    ],
+                    "conflicts": [
+                        {
+                            "instrument_key": conflict.instrument_key,
+                            "strategy_ids": [
+                                strategy_id.value for strategy_id in conflict.strategy_ids
+                            ],
+                            "reason": conflict.reason,
+                        }
+                        for conflict in batch.conflicts
+                    ],
+                    "conflict_group": batch.conflict_group,
+                    "aggregation_policy": batch.aggregation_policy.value,
+                },
+                correlation_id=correlation_id,
+                instrument_id=bar.instrument_id,
+                account_id=self._account_id,
+                strategy_id=self._strategy_id,
+            )
+        )
+        state.sink.write(
+            RuntimeEvent(
+                kind="runtime.signal_rejected",
+                payload={
+                    "conflict_reason": batch.conflict_reason,
+                    "aggregation_decision_id": batch.aggregation_decision_id,
+                    "rejected_strategy_ids": [
+                        strategy_id.value for strategy_id in batch.rejected_strategy_ids
+                    ],
+                    "conflict_group": batch.conflict_group,
+                    "aggregation_policy": batch.aggregation_policy.value,
+                    "target_before_risk": (
+                        str(batch.target_before_risk)
+                        if batch.target_before_risk is not None
+                        else None
+                    ),
+                    "target_after_aggregation": (
+                        str(batch.target_after_aggregation)
+                        if batch.target_after_aggregation is not None
+                        else None
+                    ),
+                },
+                correlation_id=correlation_id,
+                instrument_id=bar.instrument_id,
+                account_id=self._account_id,
+                strategy_id=self._strategy_id,
+            )
+        )
+
+    def process_strategy_intent(
+        self,
+        state: BacktestActorLoopState,
+        bar: Bar,
+        strategy_result: Any,
+        intent: Any,
+        correlation_id: CorrelationId,
+    ) -> None:
+        """Process one accepted strategy intent through risk/order/execution/account."""
+        try:
+            processed = self._process_intent(
+                intent,
+                bar=bar,
+                account_actor=state.account_actor,
+                order_manager_actor=state.order_manager_actor,
+                order_manager_ref=state.order_manager_ref,
+                execution_ref=state.execution_ref,
+                account_ref=state.account_ref,
+                account_id=self._account_id,
+                strategy_id=self._strategy_id,
+                correlation_id=correlation_id,
+                order_number=state.sink.order_count + 1,
+                contributing_strategy_ids=strategy_result.contributing_strategy_ids,
+                aggregation_decision_id=strategy_result.aggregation_decision_id,
+                conflict_reason=(
+                    strategy_result.conflict_reason if strategy_result.conflict_reason else None
+                ),
+            )
+        except ValueError as exc:
+            if not is_broker_capability_reject(exc):
+                raise
+            self.write_broker_reject_event(state, intent, correlation_id, exc)
+            return
+        order_payload = processed.orders
+        fill_payload = processed.fills
+        state.event_writer.write_risk_decision_events(
+            processed.risk_decisions,
+            correlation_id=correlation_id,
+            account_id=self._account_id,
+            instrument_id=intent.asset.instrument_id,
+            strategy_id=self._strategy_id,
+        )
+        state.sink.write_processed(orders=order_payload, fills=fill_payload, bar=bar)
+        state.event_writer.write_order_events(
+            order_payload,
+            state.order_manager_actor,
+            fallback_contributing_strategy_ids=strategy_result.contributing_strategy_ids,
+        )
+        state.event_writer.write_fill_events(fill_payload, state.order_manager_actor)
+        if state.compact_orders:
+            state.order_manager_actor.compact_for_streaming(
+                order.order_id for order in order_payload
+            )
+
+    def write_broker_reject_event(
+        self,
+        state: BacktestActorLoopState,
+        intent: Any,
+        correlation_id: CorrelationId,
+        exc: ValueError,
+    ) -> None:
+        """Emit a normalized broker capability rejection event."""
+        state.sink.write(
+            RuntimeEvent(
+                kind="runtime.broker_rejected",
+                payload={
+                    "reason_code": "unsupported_order_type",
+                    "reason": str(exc),
+                    "broker_capability_model": broker_capability_payload(self._execution_adapter),
+                },
+                correlation_id=correlation_id,
+                instrument_id=intent.asset.instrument_id,
+                account_id=self._account_id,
+                strategy_id=self._strategy_id,
+            )
+        )
+
+    def write_equity_and_account_snapshot(
+        self,
+        state: BacktestActorLoopState,
+        bar: Bar,
+    ) -> None:
+        """Emit end-of-bar equity and account snapshot artifacts."""
+        snapshot = state.account_actor.snapshot()
+        state.sink.write_equity_point(
+            self._equity_point(bar, snapshot, latest_prices=state.latest_prices)
+        )
+        self._write_account_snapshot(state.sink, snapshot)
 
     @staticmethod
     def _write_account_snapshot(

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
@@ -24,6 +25,7 @@ from qts.strategy_sdk.portfolio_view import PortfolioView
 from qts.strategy_sdk.subscription_registry import DataSubscription, StrategySubscriptionRegistry
 from qts.strategy_sdk.target import TargetIntent, TargetIntentType
 from qts.strategy_sdk.target_emitter import TargetIntentEmitter
+from qts.strategy_sdk.universe import Universe, UniverseMember, UniverseSelector
 
 
 @dataclass(slots=True)
@@ -42,6 +44,7 @@ class StrategyContext:
     _subscription_registry: StrategySubscriptionRegistry = field(
         default_factory=StrategySubscriptionRegistry, init=False
     )
+    _universe: Universe = field(default_factory=Universe.empty, init=False)
 
     def __post_init__(self) -> None:
         """Initialize internal SDK collaborators."""
@@ -60,6 +63,11 @@ class StrategyContext:
     def subscriptions(self) -> tuple[DataSubscription, ...]:
         """Return market data subscriptions requested by the strategy."""
         return self._subscription_registry.subscriptions
+
+    @property
+    def universe(self) -> Universe:
+        """Return the current strategy-declared universe."""
+        return self._universe
 
     def symbol(self, user_symbol: str) -> AssetRef:
         """Resolve a user-facing symbol such as ``AAPL``."""
@@ -117,6 +125,25 @@ class StrategyContext:
         """Subscribe to bars for an asset and timeframe."""
         subscription = DataSubscription(asset=asset, timeframe=timeframe, warmup=warmup)
         return self._subscription_registry.subscribe(subscription)
+
+    def set_universe(self, members: Iterable[UniverseMember]) -> Universe:
+        """Replace the strategy-declared universe."""
+        self._universe = Universe.from_members(members)
+        return self._universe
+
+    def set_universe_from_selector(self, selector: UniverseSelector) -> Universe:
+        """Replace the strategy-declared universe from a selector result."""
+        return self.set_universe(selector.select_universe())
+
+    def add_to_universe(self, members: Iterable[UniverseMember]) -> Universe:
+        """Add members to the strategy-declared universe."""
+        self._universe = self._universe.add(members)
+        return self._universe
+
+    def remove_from_universe(self, members: Iterable[UniverseMember]) -> Universe:
+        """Remove members from the strategy-declared universe."""
+        self._universe = self._universe.remove(members)
+        return self._universe
 
 
 __all__ = [

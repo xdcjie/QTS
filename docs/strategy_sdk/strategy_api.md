@@ -26,6 +26,38 @@ ctx.close(asset)
 
 These methods emit intents. They do not mutate portfolio state directly.
 
+## Strategy callbacks
+
+`Strategy` callback signatures use public SDK and domain value objects:
+
+```python
+def initialize(ctx: StrategyContext) -> None: ...
+def on_bar(ctx: StrategyContext, bar: Bar) -> None: ...
+def on_tick(ctx: StrategyContext, tick: Tick) -> None: ...
+def on_timer(ctx: StrategyContext, timer: TimerEvent) -> None: ...
+def on_order_update(ctx: StrategyContext, update: OrderUpdate) -> None: ...
+def on_fill(ctx: StrategyContext, fill: Fill) -> None: ...
+def finalize(ctx: StrategyContext) -> None: ...
+```
+
+`TimerEvent`, `OrderUpdate`, and `Fill` are Strategy SDK event types. Strategy
+code should not import runtime actors, execution adapters, broker adapters, or
+OrderManager internals for callback payloads.
+
+## Indicators
+
+Indicators are created through `ctx.indicator` and are updated by the runtime
+from completed strategy-facing bars. Strategy code should read indicator values
+inside `on_bar`; it should not call indicator update methods manually.
+
+```python
+MA_20 = ctx.indicator.ema(asset, window=20)
+ATR_7 = ctx.indicator.atr(asset, window=7)
+RSI_14 = ctx.indicator.rsi(asset, window=14)
+VWAP = ctx.indicator.session_vwap(asset)
+VOL_20 = ctx.indicator.volume_ratio(asset, window=20)
+```
+
 ## Hidden internals
 
 User strategies must not access:

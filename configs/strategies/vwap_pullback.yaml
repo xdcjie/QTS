@@ -1,0 +1,7 @@
+strategy_id: vwap-pullback
+class_path: examples.strategies.vwap_pullback:VwapPullbackStrategy
+account_id: backtest-account
+allocation: "1.0"
+enabled: true
+params:
+  symbol: GC

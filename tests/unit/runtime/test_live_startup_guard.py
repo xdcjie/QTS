@@ -240,6 +240,57 @@ def test_live_startup_checklist_includes_runtime_safety_gates() -> None:
     assert checklist.by_name("operator_signoff_check").status == "PASS"
 
 
+def test_startup_checklist_sections_are_independently_observable_and_fail_closed() -> None:
+    config = BrokerRuntimeConfig(
+        mode=RuntimeMode.LIVE_OBSERVATION.value,
+        broker_configured=True,
+        account_configured=True,
+        risk_configured=True,
+        calendar_configured=False,
+        kill_switch_configured=False,
+        market_data_permission_live=False,
+        open_order_reconciliation_passed=False,
+        position_reconciliation_passed=True,
+        cash_reconciliation_passed=False,
+        event_sink_writable=False,
+        snapshot_store_configured=True,
+    )
+
+    data_checks = BrokerRuntimeStartupChecklist.data_checks_from_config(config)
+    execution_checks = BrokerRuntimeStartupChecklist.execution_checks_from_config(config)
+    reconciliation_checks = BrokerRuntimeStartupChecklist.reconciliation_checks_from_config(config)
+    capital_checks = BrokerRuntimeStartupChecklist.capital_checks_from_config(config)
+    checklist = BrokerRuntimeStartupChecklist.from_config(config)
+
+    assert tuple(check.check_name for check in data_checks) == (
+        "market_data_permission_check",
+        "broker_time_check",
+        "calendar_configured",
+    )
+    assert "kill_switch_check" in {check.check_name for check in execution_checks}
+    assert tuple(check.check_name for check in reconciliation_checks) == (
+        "open_order_reconciliation_check",
+        "position_reconciliation_check",
+        "cash_reconciliation_check",
+    )
+    assert tuple(check.check_name for check in capital_checks) == (
+        "operator_signoff_check",
+        "live_capital_signoff_check",
+    )
+    assert checklist.passed is False
+
+    with pytest.raises(ValueError) as exc_info:
+        validate_live_startup(config)
+
+    message = str(exc_info.value)
+    assert "market_data_permission_check" in message
+    assert "calendar_configured" in message
+    assert "kill_switch_check" in message
+    assert "open_order_reconciliation_check" in message
+    assert "cash_reconciliation_check" in message
+    assert "event_sink_check" in message
+
+
 def test_observation_mode_allows_connections_but_blocks_real_order_submission() -> None:
     config = BrokerRuntimeConfig(
         mode=RuntimeMode.OBSERVATION.value,

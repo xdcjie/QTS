@@ -38,6 +38,15 @@ class FileInfo:
     functions: tuple[SymbolInfo, ...] = field(default_factory=tuple)
 
 
+@dataclass(frozen=True)
+class ClassIndexInfo:
+    path: Path
+    source_path: str
+    name: str
+    line: int
+    methods: tuple[tuple[str, int], ...]
+
+
 def collect_inventory(repo_root: Path) -> tuple[FileInfo, ...]:
     files: list[FileInfo] = []
     for root in SOURCE_ROOTS:
@@ -57,6 +66,81 @@ def collect_inventory(repo_root: Path) -> tuple[FileInfo, ...]:
                     FileInfo(path=relative_path, purpose=_fallback_file_purpose(relative_path))
                 )
     return tuple(files)
+
+
+def collect_class_index(repo_root: Path) -> tuple[ClassIndexInfo, ...]:
+    classes: list[ClassIndexInfo] = []
+    source_root = repo_root / "backend/src/qts"
+    if not source_root.exists():
+        return ()
+    for path in sorted(source_root.rglob("*.py")):
+        if path.name == "__init__.py":
+            continue
+        relative_path = path.relative_to(repo_root)
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                classes.append(
+                    ClassIndexInfo(
+                        path=Path("qts") / path.relative_to(source_root),
+                        source_path=relative_path.as_posix(),
+                        name=node.name,
+                        line=node.lineno,
+                        methods=_core_methods(node),
+                    )
+                )
+    return tuple(classes)
+
+
+def render_current_class_locations_section(repo_root: Path) -> str:
+    classes = collect_class_index(repo_root)
+    by_path: dict[Path, list[ClassIndexInfo]] = {}
+    for class_info in classes:
+        by_path.setdefault(class_info.path, []).append(class_info)
+
+    lines = [
+        '        <details class="inventory-group">',
+        "          <summary><span>自动同步补充 · current class locations</span>"
+        f'<span class="badge shared">{len(classes)} classes</span></summary>',
+        "          <ul>",
+    ]
+    for path, path_classes in by_path.items():
+        class_fragments = [
+            f"<code>{_esc(class_info.name)}</code> "
+            f'<span class="location">{_esc(class_info.source_path)}:{class_info.line}</span>'
+            for class_info in path_classes
+        ]
+        lines.append(
+            f"          <li><code>{_esc(path.as_posix())}</code> -> "
+            f"{', '.join(class_fragments)}</li>"
+        )
+    lines.extend(["          </ul>", "        </details>"])
+    return "\n".join(lines)
+
+
+def render_core_class_methods_section(repo_root: Path) -> str:
+    classes = collect_class_index(repo_root)
+    lines = [
+        '        <details class="inventory-group">',
+        "          <summary><span>自动同步补充 · core class methods</span>"
+        f'<span class="badge shared">{len(classes)} classes</span></summary>',
+        '          <ul class="method-index">',
+    ]
+    for class_info in classes:
+        if class_info.methods:
+            methods = ", ".join(
+                f"<code>{_esc(method_name)}:{method_line}</code>"
+                for method_name, method_line in class_info.methods
+            )
+        else:
+            methods = '<span class="muted">no public/core methods</span>'
+        lines.append(
+            f"          <li><code>{_esc(class_info.name)}</code> "
+            f'<span class="location">{_esc(class_info.source_path)}:{class_info.line}</span> '
+            f"-> {methods}</li>"
+        )
+    lines.extend(["          </ul>", "        </details>"])
+    return "\n".join(lines)
 
 
 def render_source_inventory_section(repo_root: Path) -> str:
@@ -129,6 +213,7 @@ def update_html(repo_root: Path, html_path: Path) -> bool:
             '<a href="#files">代码索引</a>',
             '<a href="#source-inventory">src 清单</a>\n        <a href="#files">代码索引</a>',
         )
+    updated = _update_class_index_sections(repo_root, updated)
     if updated == original:
         return False
     path.write_text(updated, encoding="utf-8")
@@ -137,6 +222,61 @@ def update_html(repo_root: Path, html_path: Path) -> bool:
 
 def find_stale_generated_doc_tokens(text: str) -> tuple[str, ...]:
     return tuple(token for token in STALE_GENERATED_DOC_TOKENS if token in text)
+
+
+def _update_class_index_sections(repo_root: Path, text: str) -> str:
+    if "自动同步补充 · current class locations" not in text:
+        return text
+    updated = re.sub(
+        r'        <details class="inventory-group">\n'
+        r"          <summary><span>自动同步补充 · current class locations</span>"
+        r".*?</details>",
+        render_current_class_locations_section(repo_root),
+        text,
+        flags=re.S,
+    )
+    return re.sub(
+        r'        <details class="inventory-group">\n'
+        r"          <summary><span>自动同步补充 · core class methods</span>"
+        r".*?</details>",
+        render_core_class_methods_section(repo_root),
+        updated,
+        flags=re.S,
+    )
+
+
+def _core_methods(node: ast.ClassDef) -> tuple[tuple[str, int], ...]:
+    core_dunders = {
+        "__init__",
+        "__post_init__",
+        "__call__",
+        "__enter__",
+        "__exit__",
+        "__iter__",
+        "__next__",
+        "__len__",
+        "__str__",
+        "__repr__",
+    }
+    methods: list[tuple[str, int]] = []
+    for child in node.body:
+        if not isinstance(child, ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        if child.name.startswith("_") and child.name not in core_dunders:
+            continue
+        suffix = " property" if _has_property_decorator(child) else "()"
+        prefix = "async " if isinstance(child, ast.AsyncFunctionDef) else ""
+        methods.append((f"{prefix}{child.name}{suffix}", child.lineno))
+    return tuple(methods)
+
+
+def _has_property_decorator(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    for decorator in node.decorator_list:
+        if isinstance(decorator, ast.Name) and decorator.id == "property":
+            return True
+        if isinstance(decorator, ast.Attribute) and decorator.attr == "setter":
+            return True
+    return False
 
 
 def _render_file(file_info: FileInfo) -> list[str]:
@@ -480,6 +620,12 @@ def main() -> int:
             return 1
         if current_match is None or current_match.group(0) != expected:
             print(f"{args.html} source inventory is stale")
+            return 1
+        if "自动同步补充 · current class locations" in original and (
+            render_current_class_locations_section(repo_root) not in original
+            or render_core_class_methods_section(repo_root) not in original
+        ):
+            print(f"{args.html} class index is stale")
             return 1
         return 0
     changed = update_html(repo_root, args.html)
