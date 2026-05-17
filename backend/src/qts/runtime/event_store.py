@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import json
 import os
-from collections.abc import Iterable
-from dataclasses import dataclass
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass, replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Protocol
@@ -23,6 +23,87 @@ from qts.domain.events import BaseEvent
 from qts.runtime.sinks.base import RuntimeEvent
 
 StoredEvent = BaseEvent | RuntimeEvent
+
+MigrationFn = Callable[[dict[str, Any]], dict[str, Any]]
+
+
+class SchemaMigrationMissing(KeyError):
+    """Raised when an event's stored schema version has no registered migration."""
+
+
+class SchemaMigrationRegistry:
+    """Registry of (kind, from_version) -> migration that advances to to_version.
+
+    Owner of the schema-evolution contract on the read path. Migrations are
+    chained: an event tagged ``from_version="0"`` will be advanced through
+    every registered hop until no further migration matches the current
+    version. The final version becomes the event's ``payload_schema_version``.
+
+    Unknown legacy versions raise :class:`SchemaMigrationMissing`; events
+    already at the current version pass through unchanged.
+    """
+
+    def __init__(self) -> None:
+        self._migrations: dict[tuple[str, str], tuple[str, MigrationFn]] = {}
+
+    def register(
+        self,
+        *,
+        kind: str,
+        from_version: str,
+        to_version: str,
+        migrate: MigrationFn,
+    ) -> None:
+        """Register a migration hop for one event kind/version pair."""
+        if from_version == to_version:
+            raise ValueError("from_version and to_version must differ")
+        key = (kind, from_version)
+        if key in self._migrations:
+            raise ValueError(
+                f"migration already registered for kind={kind!r} from_version={from_version!r}"
+            )
+        self._migrations[key] = (to_version, migrate)
+
+    def apply(self, event: RuntimeEvent) -> RuntimeEvent:
+        """Advance one event through every registered migration hop in order.
+
+        Termination rule:
+        - apply hops while available for ``(kind, current_version)``;
+        - once no hop matches, return the event as-is **unless** no hop
+          was applied and the stored version differs from the canonical
+          ``RuntimeEvent.SCHEMA_VERSION`` — in that case the registry is
+          incomplete and :class:`SchemaMigrationMissing` is raised.
+
+        This lets chained migrations terminate naturally at the final
+        version even if it overshoots the current constant, while still
+        catching legacy events whose schema has no migration path at all.
+        """
+        current = event
+        seen_versions: set[str] = set()
+        applied_any = False
+        while True:
+            version = current.payload_schema_version
+            if version in seen_versions:
+                raise SchemaMigrationMissing(
+                    f"migration cycle detected for kind={current.kind!r} version={version!r}"
+                )
+            seen_versions.add(version)
+            key = (current.kind, version)
+            hop = self._migrations.get(key)
+            if hop is None:
+                if not applied_any and version != RuntimeEvent.SCHEMA_VERSION:
+                    raise SchemaMigrationMissing(
+                        f"no migration registered for kind={current.kind!r} "
+                        f"from_version={version!r}"
+                    )
+                return current
+            applied_any = True
+            to_version, migrate = hop
+            current = replace(
+                current,
+                payload=migrate(dict(current.payload)),
+                payload_schema_version=to_version,
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,9 +143,10 @@ class EventStore(Protocol):
 class InMemoryEventStore:
     """Deterministic append-only in-memory event store."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, migration_registry: SchemaMigrationRegistry | None = None) -> None:
         """Perform __init__."""
         self._events: list[StoredEvent] = []
+        self._migration_registry = migration_registry
 
     def append(self, event: StoredEvent) -> int:
         """Perform append."""
@@ -79,8 +161,12 @@ class InMemoryEventStore:
     def replay(self, *, partition_key: str | None = None) -> tuple[StoredEvent, ...]:
         """Perform replay."""
         if partition_key is None:
-            return tuple(self._events)
-        return tuple(event for event in self._events if self._partition_key(event) == partition_key)
+            return tuple(self._with_migration(event) for event in self._events)
+        return tuple(
+            self._with_migration(event)
+            for event in self._events
+            if self._partition_key(event) == partition_key
+        )
 
     def replay_after(
         self,
@@ -91,14 +177,28 @@ class InMemoryEventStore:
         """Replay events appended after a 1-indexed sequence number."""
         if sequence < 0:
             raise ValueError("sequence must be non-negative")
-        events = tuple(self._events[sequence:])
+        candidates = tuple(self._events[sequence:])
         if partition_key is None:
-            return events
-        return tuple(event for event in events if self._partition_key(event) == partition_key)
+            return tuple(self._with_migration(event) for event in candidates)
+        return tuple(
+            self._with_migration(event)
+            for event in candidates
+            if self._partition_key(event) == partition_key
+        )
 
     def by_correlation_id(self, correlation_id: CorrelationId) -> tuple[StoredEvent, ...]:
         """Perform by_correlation_id."""
-        return tuple(event for event in self._events if event.correlation_id == correlation_id)
+        return tuple(
+            self._with_migration(event)
+            for event in self._events
+            if event.correlation_id == correlation_id
+        )
+
+    def _with_migration(self, event: StoredEvent) -> StoredEvent:
+        """Apply registered schema migrations to RuntimeEvent payloads."""
+        if self._migration_registry is None or not isinstance(event, RuntimeEvent):
+            return event
+        return self._migration_registry.apply(event)
 
     @staticmethod
     def _partition_key(event: StoredEvent) -> str | None:

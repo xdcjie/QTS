@@ -1445,8 +1445,8 @@
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>342 files</span>
-      <span>614 classes</span>
-      <span>2029 functions</span>
+      <span>616 classes</span>
+      <span>2033 functions</span>
       <span>325 backend</span>
       <span>17 frontend</span>
     </div>
@@ -10069,8 +10069,8 @@
       <summary>
         <code>backend/src/qts/runtime/event_store.py</code>
         <span class="inventory-counts">
-          <span>4 classes</span>
-          <span>24 functions</span>
+          <span>6 classes</span>
+          <span>28 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -10081,10 +10081,12 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>EventSequenceValidationReport</code></td><td>event_store:29</td><td>Validation result for persisted event sequence numbers.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>EventStore</code></td><td>event_store:37</td><td>Append-only event store contract.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
-              <tr><td><code>InMemoryEventStore</code></td><td>event_store:62</td><td>Deterministic append-only in-memory event store.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>FileEventStore</code></td><td>event_store:114</td><td>JSONL event store for local deterministic recovery tests.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>SchemaMigrationMissing</code></td><td>event_store:30</td><td>Raised when an event&#x27;s stored schema version has no registered migration.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>SchemaMigrationRegistry</code></td><td>event_store:34</td><td>Registry of (kind, from_version) -&gt; migration that advances to to_version.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>EventSequenceValidationReport</code></td><td>event_store:110</td><td>Validation result for persisted event sequence numbers.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>EventStore</code></td><td>event_store:118</td><td>Append-only event store contract.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>InMemoryEventStore</code></td><td>event_store:143</td><td>Deterministic append-only in-memory event store.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>FileEventStore</code></td><td>event_store:214</td><td>JSONL event store for local deterministic recovery tests.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10093,30 +10095,34 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>append</code></td><td>EventStore:40</td><td>Append an event to the store and return its sequence index.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>replay</code></td><td>EventStore:44</td><td>Replay events from the store, optionally filtered by partition key.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>replay_after</code></td><td>EventStore:48</td><td>Replay events after a persisted sequence number.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>by_correlation_id</code></td><td>EventStore:57</td><td>Replay all events with a given correlation identifier.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>InMemoryEventStore:65</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>append</code></td><td>InMemoryEventStore:69</td><td>Perform append.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>append_many</code></td><td>InMemoryEventStore:74</td><td>Perform append_many.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>replay</code></td><td>InMemoryEventStore:79</td><td>Perform replay.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>replay_after</code></td><td>InMemoryEventStore:85</td><td>Replay events appended after a 1-indexed sequence number.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>by_correlation_id</code></td><td>InMemoryEventStore:99</td><td>Perform by_correlation_id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_partition_key</code></td><td>InMemoryEventStore:104</td><td>实现 InMemoryEventStore 的 partition key 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>FileEventStore:117</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>append</code></td><td>FileEventStore:121</td><td>Perform append.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>replay</code></td><td>FileEventStore:140</td><td>Perform replay.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>replay_after</code></td><td>FileEventStore:154</td><td>Replay persisted events after a 1-indexed sequence number.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>by_correlation_id</code></td><td>FileEventStore:178</td><td>Perform by_correlation_id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_partition_key</code></td><td>FileEventStore:183</td><td>实现 FileEventStore 的 partition key 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>validate_sequence</code></td><td>FileEventStore:186</td><td>Detect missing or duplicate persisted sequence numbers.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_event_to_json</code></td><td>FileEventStore:206</td><td>Perform _event_to_json.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_event_from_json</code></td><td>FileEventStore:219</td><td>Perform _event_from_json.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_runtime_event_to_json</code></td><td>FileEventStore:234</td><td>实现 FileEventStore 的 runtime event to json 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_event_from_record</code></td><td>FileEventStore:238</td><td>实现 FileEventStore 的 event from record 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_runtime_event_from_json</code></td><td>FileEventStore:244</td><td>实现 FileEventStore 的 runtime event from json 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_read_sequences</code></td><td>FileEventStore:290</td><td>实现 FileEventStore 的 read sequences 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>SchemaMigrationRegistry:46</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>register</code></td><td>SchemaMigrationRegistry:49</td><td>Register a migration hop for one event kind/version pair.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>apply</code></td><td>SchemaMigrationRegistry:67</td><td>Advance one event through every registered migration hop in order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>append</code></td><td>EventStore:121</td><td>Append an event to the store and return its sequence index.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>replay</code></td><td>EventStore:125</td><td>Replay events from the store, optionally filtered by partition key.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>replay_after</code></td><td>EventStore:129</td><td>Replay events after a persisted sequence number.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>by_correlation_id</code></td><td>EventStore:138</td><td>Replay all events with a given correlation identifier.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>InMemoryEventStore:146</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>append</code></td><td>InMemoryEventStore:151</td><td>Perform append.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>append_many</code></td><td>InMemoryEventStore:156</td><td>Perform append_many.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>replay</code></td><td>InMemoryEventStore:161</td><td>Perform replay.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>replay_after</code></td><td>InMemoryEventStore:171</td><td>Replay events appended after a 1-indexed sequence number.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>by_correlation_id</code></td><td>InMemoryEventStore:189</td><td>Perform by_correlation_id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_with_migration</code></td><td>InMemoryEventStore:197</td><td>Apply registered schema migrations to RuntimeEvent payloads.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_partition_key</code></td><td>InMemoryEventStore:204</td><td>实现 InMemoryEventStore 的 partition key 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>FileEventStore:217</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>append</code></td><td>FileEventStore:221</td><td>Perform append.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>replay</code></td><td>FileEventStore:240</td><td>Perform replay.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>replay_after</code></td><td>FileEventStore:254</td><td>Replay persisted events after a 1-indexed sequence number.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>by_correlation_id</code></td><td>FileEventStore:278</td><td>Perform by_correlation_id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_partition_key</code></td><td>FileEventStore:283</td><td>实现 FileEventStore 的 partition key 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>validate_sequence</code></td><td>FileEventStore:286</td><td>Detect missing or duplicate persisted sequence numbers.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_event_to_json</code></td><td>FileEventStore:306</td><td>Perform _event_to_json.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_event_from_json</code></td><td>FileEventStore:319</td><td>Perform _event_from_json.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_runtime_event_to_json</code></td><td>FileEventStore:334</td><td>实现 FileEventStore 的 runtime event to json 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_event_from_record</code></td><td>FileEventStore:338</td><td>实现 FileEventStore 的 event from record 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_runtime_event_from_json</code></td><td>FileEventStore:344</td><td>实现 FileEventStore 的 runtime event from json 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_read_sequences</code></td><td>FileEventStore:390</td><td>实现 FileEventStore 的 read sequences 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>

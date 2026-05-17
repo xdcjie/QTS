@@ -1274,3 +1274,13 @@ exceptions:
     reason: OPT-47 reconciliation persistent-drift kill switch
     owner: platform
     expiry: 2027-05-17
+  - class_name: SchemaMigrationMissing
+    module: qts.runtime.event_store
+    reason: OPT-17 schema migration registry missing-version exception
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: SchemaMigrationRegistry
+    module: qts.runtime.event_store
+    reason: OPT-17 runtime event schema migration registry
+    owner: platform
+    expiry: 2027-05-17
