@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from enum import StrEnum
-from typing import Any, Protocol
 
 from qts.runtime.mailbox import Mailbox
+from qts.runtime.sinks.base import RuntimeEvent
 
 
 class RuntimeCounterMetric(StrEnum):
@@ -39,20 +39,6 @@ class RuntimeLatencyMetric(StrEnum):
     FILL_TO_ACCOUNT_APPLY_LATENCY = "fill_to_account_apply_latency"
 
 
-class RuntimeMetricEvent(Protocol):
-    """Runtime event shape consumed by metrics instrumentation."""
-
-    @property
-    def kind(self) -> str:
-        """Runtime event kind."""
-        ...
-
-    @property
-    def payload(self) -> Mapping[str, Any]:
-        """Runtime event payload."""
-        ...
-
-
 class MetricsRegistry:
     """Record counters and gauges with deterministic key formatting."""
 
@@ -83,7 +69,7 @@ class MetricsRegistry:
             raise ValueError("latency seconds must be non-negative")
         self.gauge(str(name), seconds, tags=tags)
 
-    def record_runtime_event(self, event: RuntimeMetricEvent) -> None:
+    def record_runtime_event(self, event: RuntimeEvent) -> None:
         """Increment standard metrics for normalized runtime events."""
         kind = event.kind.lower()
         if kind.startswith("market_data.") or kind == "runtime.market_data":

@@ -4,24 +4,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Protocol
 
-from qts.core.ids import AccountId, CausationId, CorrelationId, InstrumentId, OrderId, StrategyId
+from qts.core.ids import AccountId, CausationId, CorrelationId, InstrumentId, StrategyId
 from qts.domain.risk import RiskDecision
 from qts.execution.order_manager import Order, OrderFill
 from qts.portfolio.holdings import PositionClosed
-from qts.runtime.actors.order_manager_actor import OrderRouteMetadata
+from qts.runtime.actors.order_manager_actor import OrderManagerActor
 from qts.runtime.sinks.base import RuntimeEvent
-
-
-class _OrderManagerLike(Protocol):
-    """Protocol-like facade for order manager observability metadata."""
-
-    def route_metadata(self, order_id: OrderId) -> OrderRouteMetadata:
-        """Return route metadata for an order."""
-
-    def get_order(self, order_id: OrderId) -> Order:
-        """Return current order by order id."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,7 +55,7 @@ class RuntimeEventWriter:
     def write_order_events(
         self,
         orders: tuple[Order, ...],
-        order_manager: _OrderManagerLike,
+        order_manager: OrderManagerActor,
         *,
         fallback_contributing_strategy_ids: tuple[StrategyId, ...] = (),
     ) -> None:
@@ -121,7 +110,7 @@ class RuntimeEventWriter:
     def write_fill_events(
         self,
         fills: tuple[OrderFill, ...],
-        order_manager: _OrderManagerLike,
+        order_manager: OrderManagerActor,
     ) -> None:
         """Write fill events with routing metadata and account context."""
         for fill in fills:

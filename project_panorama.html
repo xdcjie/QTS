@@ -1445,8 +1445,8 @@
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>343 files</span>
-      <span>612 classes</span>
-      <span>2031 functions</span>
+      <span>610 classes</span>
+      <span>2027 functions</span>
       <span>326 backend</span>
       <span>17 frontend</span>
     </div>
@@ -6906,8 +6906,8 @@
       <summary>
         <code>backend/src/qts/observability/metrics.py</code>
         <span class="inventory-counts">
-          <span>4 classes</span>
-          <span>11 functions</span>
+          <span>3 classes</span>
+          <span>9 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -6920,8 +6920,7 @@
             <tbody>
               <tr><td><code>RuntimeCounterMetric</code></td><td>metrics:12</td><td>Standard runtime counter metrics emitted across execution modes.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
               <tr><td><code>RuntimeLatencyMetric</code></td><td>metrics:29</td><td>Standard runtime latency metrics emitted across execution modes.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>RuntimeMetricEvent</code></td><td>metrics:42</td><td>Runtime event shape consumed by metrics instrumentation.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
-              <tr><td><code>MetricsRegistry</code></td><td>metrics:56</td><td>Record counters and gauges with deterministic key formatting.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>MetricsRegistry</code></td><td>metrics:42</td><td>Record counters and gauges with deterministic key formatting.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -6930,17 +6929,15 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>kind</code></td><td>RuntimeMetricEvent:46</td><td>Runtime event kind.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>payload</code></td><td>RuntimeMetricEvent:51</td><td>Runtime event payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>MetricsRegistry:59</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>increment</code></td><td>MetricsRegistry:63</td><td>Perform increment.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>record_latency</code></td><td>MetricsRegistry:74</td><td>Record a runtime latency observation in seconds.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>record_runtime_event</code></td><td>MetricsRegistry:86</td><td>Increment standard metrics for normalized runtime events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>gauge</code></td><td>MetricsRegistry:122</td><td>Perform gauge.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>observe_queue</code></td><td>MetricsRegistry:128</td><td>Perform observe_queue.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>snapshot</code></td><td>MetricsRegistry:143</td><td>Perform snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_metric_key</code></td><td>MetricsRegistry:148</td><td>Perform _metric_key.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_reason_code_tags</code></td><td>MetricsRegistry:161</td><td>Return metric tags for standard runtime reason codes.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>MetricsRegistry:45</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>increment</code></td><td>MetricsRegistry:49</td><td>Perform increment.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>record_latency</code></td><td>MetricsRegistry:60</td><td>Record a runtime latency observation in seconds.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>record_runtime_event</code></td><td>MetricsRegistry:72</td><td>Increment standard metrics for normalized runtime events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>gauge</code></td><td>MetricsRegistry:108</td><td>Perform gauge.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>observe_queue</code></td><td>MetricsRegistry:114</td><td>Perform observe_queue.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>snapshot</code></td><td>MetricsRegistry:129</td><td>Perform snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_metric_key</code></td><td>MetricsRegistry:134</td><td>Perform _metric_key.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_reason_code_tags</code></td><td>MetricsRegistry:147</td><td>Return metric tags for standard runtime reason codes.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10643,8 +10640,8 @@
       <summary>
         <code>backend/src/qts/runtime/runtime_event_writer.py</code>
         <span class="inventory-counts">
-          <span>2 classes</span>
-          <span>7 functions</span>
+          <span>1 class</span>
+          <span>5 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -10655,8 +10652,7 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>_OrderManagerLike</code></td><td>runtime_event_writer:17</td><td>Protocol-like facade for order manager observability metadata.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
-              <tr><td><code>RuntimeEventWriter</code></td><td>runtime_event_writer:28</td><td>Write runtime observability events for order flow and risk decisions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>RuntimeEventWriter</code></td><td>runtime_event_writer:17</td><td>Write runtime observability events for order flow and risk decisions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10665,13 +10661,11 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>route_metadata</code></td><td>_OrderManagerLike:20</td><td>Return route metadata for an order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>get_order</code></td><td>_OrderManagerLike:23</td><td>Return current order by order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_risk_decision_events</code></td><td>RuntimeEventWriter:33</td><td>Write approved/rejected risk decision events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_order_events</code></td><td>RuntimeEventWriter:66</td><td>Write submitted/order-state events for emitted orders.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_fill_events</code></td><td>RuntimeEventWriter:121</td><td>Write fill events with routing metadata and account context.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_position_closed_events</code></td><td>RuntimeEventWriter:153</td><td>Write account.position_closed events into the runtime sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_risk_decision_payload</code></td><td>RuntimeEventWriter:190</td><td>Serialize shared risk decision fields for runtime events.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>write_risk_decision_events</code></td><td>RuntimeEventWriter:22</td><td>Write approved/rejected risk decision events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_order_events</code></td><td>RuntimeEventWriter:55</td><td>Write submitted/order-state events for emitted orders.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_fill_events</code></td><td>RuntimeEventWriter:110</td><td>Write fill events with routing metadata and account context.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_position_closed_events</code></td><td>RuntimeEventWriter:142</td><td>Write account.position_closed events into the runtime sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_risk_decision_payload</code></td><td>RuntimeEventWriter:179</td><td>Serialize shared risk decision fields for runtime events.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
