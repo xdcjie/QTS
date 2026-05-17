@@ -42,11 +42,6 @@ with ``#`` and blank lines are ignored.
 
 ```
 # wiring-followup (target=OPT-NN, 3-month horizon)
-qts.research.optimizer.job.OptimizationJob  expires=2026-08-17  target=OPT-65
-qts.research.optimizer.parameter_space.ParameterGrid  expires=2026-08-17  target=OPT-65
-qts.research.optimizer.parameter_space.ParameterSpace  expires=2026-08-17  target=OPT-65
-qts.research.optimizer.result.OptimizationResult  expires=2026-08-17  target=OPT-65
-qts.research.optimizer.runner.OptimizationRunner  expires=2026-08-17  target=OPT-65
 qts.application.strategy_lifecycle.StrategyRegistry  expires=2026-08-17  target=OPT-34
 # framework integration (1-year horizon)
 qts.api.schemas.common.RiskRuleSchema  expires=2027-05-17  target=framework
@@ -84,7 +79,6 @@ qts.runtime.intent_processing.OrderPlanBuilder  expires=2027-05-17  target=inter
 | `qts.quality.guardrails.PlatformFreezeConfig` | internal | Consumed inside the guardrails module via dynamic AST walks. |
 | `qts.reconciliation.persistent_drift.PersistentDriftKillSwitch` | OPT-63 | Runtime reconciliation integration (this batch). |
 | `qts.reporting.backtest.StreamingEquityMetrics` | internal | Composed into `BacktestArtifactWriter`. |
-| `qts.research.optimizer.*` (5) | OPT-65 | CLI driver + quickstart example (this batch). |
 | `qts.runtime.durability.RuntimeDurabilityDrill` | internal | Durability drill harness; remains opt-in. |
 | `qts.runtime.intent_processing.OrderPlanBuilder` | internal | Composed into `TargetIntentProcessor` in the same file. |
 | `qts.runtime.state_recovery.DurableSnapshotStore` | OPT-64 | Cross-restart state recovery wiring (this batch). |

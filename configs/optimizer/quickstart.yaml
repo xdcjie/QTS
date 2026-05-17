@@ -1,0 +1,17 @@
+# Quickstart optimizer config consumed by scripts/run_optimizer.py.
+#
+# Sweeps a 2×2 parameter grid over the quickstart strategy and ranks the
+# resulting backtest runs by total_return. The strategy module exports
+# ``build_strategy(params)`` and ``build_bars()`` factories that the CLI
+# loads dynamically.
+
+strategy_module: examples.strategies.quickstart_optimizer
+strategy_factory: build_strategy
+bars_factory: build_bars
+initial_cash: "100000"
+objective_metric: total_return
+parameters:
+  - name: entry_bar
+    values: [1, 2]
+  - name: target_quantity
+    values: ["1", "2"]
