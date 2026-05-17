@@ -66,6 +66,23 @@ def test_resampled_bar_close_not_visible_before_bucket_end() -> None:
     assert resampled.close == Decimal("104")
 
 
+def test_market_data_flow_drops_incomplete_derived_bucket_when_next_bucket_starts() -> None:
+    from qts.runtime.market_data_flow import MarketDataFlow
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    flow = MarketDataFlow(
+        target_timeframe="5m",
+        exchange_timezone_by_instrument={instrument_id: UTC},
+    )
+
+    for minute in range(4):
+        result = flow.publish_bar(_bar(start + timedelta(minutes=minute), close=str(100 + minute)))
+        assert result == ()
+
+    assert flow.publish_bar(_bar(start + timedelta(minutes=5), close="200")) == ()
+
+
 def test_market_data_flow_exposes_replay_data_anomalies_as_runtime_events() -> None:
     from qts.data.provenance import ReplayDataAnomalyEvent, ReplayDataAnomalyType
     from qts.runtime.market_data_flow import MarketDataFlow

@@ -25,7 +25,7 @@ from qts.strategy_sdk.portfolio_view import PortfolioView
 from qts.strategy_sdk.subscription_registry import DataSubscription, StrategySubscriptionRegistry
 from qts.strategy_sdk.target import TargetIntent, TargetIntentType
 from qts.strategy_sdk.target_emitter import TargetIntentEmitter
-from qts.strategy_sdk.universe import Universe, UniverseMember
+from qts.strategy_sdk.universe import Universe, UniverseMember, UniverseSelector
 
 
 @dataclass(slots=True)
@@ -130,6 +130,10 @@ class StrategyContext:
         """Replace the strategy-declared universe."""
         self._universe = Universe.from_members(members)
         return self._universe
+
+    def set_universe_from_selector(self, selector: UniverseSelector) -> Universe:
+        """Replace the strategy-declared universe from a selector result."""
+        return self.set_universe(selector.select_universe())
 
     def add_to_universe(self, members: Iterable[UniverseMember]) -> Universe:
         """Add members to the strategy-declared universe."""

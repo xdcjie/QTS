@@ -38,6 +38,7 @@ def test_brokerage_model_manifest_serializes_auditable_assumptions() -> None:
     assert payload["minimum_commission"] == "1"
     assert payload["initial_margin_rate"] == "0.50"
     assert payload["slippage_bps"] == "1"
+    assert payload["requires_live_market_data"] is True
     assert payload["capabilities"] == {
         "broker_id": BrokerId("ibkr-equity").value,
         "supports_market_orders": True,
@@ -55,3 +56,39 @@ def test_brokerage_model_manifest_serializes_auditable_assumptions() -> None:
         "supported_order_types": ["limit", "market"],
         "supported_time_in_force": ["day", "gtc"],
     }
+
+
+def test_brokerage_model_live_market_data_requirement_feeds_risk_engine() -> None:
+    from qts.core.ids import InstrumentId
+    from qts.domain.risk import MarketDataRiskContext, OrderRiskRequest
+    from qts.risk import RiskEngine
+
+    model = brokerage_model_for_name("IBKR_EQUITY")
+    engine = RiskEngine([]).with_brokerage_model(model)
+
+    decision = engine.check(
+        OrderRiskRequest(
+            instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+            quantity=Decimal("1"),
+            price=Decimal("100"),
+            multiplier=Decimal("1"),
+            market_data=MarketDataRiskContext(permission_state="delayed"),
+        )
+    )
+
+    assert model.requires_live_market_data is True
+    assert decision.reason_code == "MARKET_DATA_DELAYED_FOR_LIVE_ORDER"
+    assert (
+        RiskEngine([])
+        .with_brokerage_model(BrokerageModel.simulated())
+        .check(
+            OrderRiskRequest(
+                instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+                quantity=Decimal("1"),
+                price=Decimal("100"),
+                multiplier=Decimal("1"),
+                market_data=MarketDataRiskContext(permission_state="delayed"),
+            )
+        )
+        .approved
+    )

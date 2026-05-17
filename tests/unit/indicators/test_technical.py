@@ -136,3 +136,170 @@ def test_rate_of_change_compares_with_price_n_periods_ago_anchor() -> None:
 
     assert roc.ready is True
     assert value == Decimal("80")
+
+
+def test_adx_uses_wilder_directional_movement_anchor() -> None:
+    from qts.indicators.technical import ADX
+
+    adx = ADX(window=3)
+
+    assert adx.update_bar(_bar(0, high="10", low="8", close="9")) is None
+    assert adx.update_bar(_bar(1, high="12", low="9", close="11")) is None
+    first = adx.update_bar(_bar(2, high="11", low="7", close="8"))
+    second = adx.update_bar(_bar(3, high="13", low="8", close="12"))
+
+    assert first is not None
+    assert first.plus_di.quantize(Decimal("0.0001")) == Decimal("22.2222")
+    assert first.minus_di.quantize(Decimal("0.0001")) == Decimal("22.2222")
+    assert first.adx == Decimal("0")
+    assert second is not None
+    assert second.plus_di.quantize(Decimal("0.0001")) == Decimal("30.3030")
+    assert second.minus_di.quantize(Decimal("0.0001")) == Decimal("12.1212")
+    assert second.dx.quantize(Decimal("0.0001")) == Decimal("42.8571")
+    assert second.adx.quantize(Decimal("0.0001")) == Decimal("14.2857")
+
+
+def test_keltner_channel_uses_ema_middle_and_atr_width_anchor() -> None:
+    from qts.indicators.technical import KeltnerChannel
+
+    channel = KeltnerChannel(window=3, multiplier=Decimal("2"))
+
+    assert channel.update_bar(_bar(0, high="11", low="9", close="10")) is None
+    assert channel.update_bar(_bar(1, high="12", low="10", close="11")) is None
+    value = channel.update_bar(_bar(2, high="13", low="11", close="12"))
+
+    assert value is not None
+    assert value.middle == Decimal("11")
+    assert value.upper == Decimal("15")
+    assert value.lower == Decimal("7")
+
+
+def test_donchian_channel_uses_rolling_high_low_anchor() -> None:
+    from qts.indicators.technical import DonchianChannel
+
+    channel = DonchianChannel(window=3)
+
+    assert channel.update_bar(_bar(0, high="11", low="9", close="10")) is None
+    assert channel.update_bar(_bar(1, high="12", low="8", close="11")) is None
+    value = channel.update_bar(_bar(2, high="10", low="7", close="9"))
+
+    assert value is not None
+    assert value.upper == Decimal("12")
+    assert value.lower == Decimal("7")
+    assert value.middle == Decimal("9.5")
+
+
+def test_stochastic_oscillator_anchors_percent_k_and_percent_d() -> None:
+    from qts.indicators.technical import StochasticOscillator
+
+    stochastic = StochasticOscillator(window=3, signal_window=2)
+
+    assert stochastic.update_bar(_bar(0, high="10", low="8", close="9")) is None
+    assert stochastic.update_bar(_bar(1, high="12", low="9", close="11")) is None
+    assert stochastic.update_bar(_bar(2, high="14", low="10", close="13")) is None
+    value = stochastic.update_bar(_bar(3, high="15", low="11", close="12"))
+
+    assert value is not None
+    assert value.percent_k.quantize(Decimal("0.0001")) == Decimal("50.0000")
+    assert value.percent_d.quantize(Decimal("0.0001")) == Decimal("66.6667")
+
+
+def test_cci_uses_typical_price_mean_deviation_anchor() -> None:
+    from qts.indicators.technical import CommodityChannelIndex
+
+    cci = CommodityChannelIndex(window=3)
+
+    assert cci.update_bar(_bar(0, high="10", low="10", close="10")) is None
+    assert cci.update_bar(_bar(1, high="11", low="11", close="11")) is None
+    value = cci.update_bar(_bar(2, high="13", low="13", close="13"))
+
+    assert value is not None
+    assert value.quantize(Decimal("0.0001")) == Decimal("100.0000")
+
+
+def test_williams_r_uses_rolling_extremes_anchor() -> None:
+    from qts.indicators.technical import WilliamsR
+
+    williams = WilliamsR(window=3)
+
+    assert williams.update_bar(_bar(0, high="10", low="8", close="9")) is None
+    assert williams.update_bar(_bar(1, high="12", low="9", close="11")) is None
+    value = williams.update_bar(_bar(2, high="14", low="10", close="13"))
+
+    assert value is not None
+    assert value.quantize(Decimal("0.0001")) == Decimal("-16.6667")
+
+
+def test_standard_deviation_uses_population_window_anchor() -> None:
+    from qts.indicators.technical import StandardDeviation
+
+    deviation = StandardDeviation(window=3)
+
+    assert deviation.update(Decimal("1")) is None
+    assert deviation.update(Decimal("2")) is None
+    value = deviation.update(Decimal("3"))
+
+    assert value is not None
+    assert value.quantize(Decimal("0.00000001")) == Decimal("0.81649658")
+
+
+def test_historical_volatility_annualizes_rolling_simple_returns_anchor() -> None:
+    from qts.indicators.technical import HistoricalVolatility
+
+    volatility = HistoricalVolatility(window=3, periods_per_year=Decimal("252"))
+
+    assert volatility.update(Decimal("100")) is None
+    assert volatility.update(Decimal("110")) is None
+    assert volatility.update(Decimal("99")) is None
+    value = volatility.update(Decimal("108.9"))
+
+    assert value is not None
+    assert value.quantize(Decimal("0.00000001")) == Decimal("1.49666295")
+
+
+def test_on_balance_volume_accumulates_directional_volume_anchor() -> None:
+    from qts.indicators.technical import OnBalanceVolume
+
+    obv = OnBalanceVolume()
+
+    assert obv.update(close=Decimal("10"), volume=Decimal("100")) == Decimal("0")
+    assert obv.update(close=Decimal("11"), volume=Decimal("20")) == Decimal("20")
+    assert obv.update(close=Decimal("10.5"), volume=Decimal("5")) == Decimal("15")
+    assert obv.update(close=Decimal("10.5"), volume=Decimal("7")) == Decimal("15")
+
+
+def test_money_flow_index_uses_positive_and_negative_money_flow_anchor() -> None:
+    from qts.indicators.technical import MoneyFlowIndex
+
+    mfi = MoneyFlowIndex(window=3)
+
+    assert mfi.update_bar(_bar(0, high="10", low="10", close="10", volume="10")) is None
+    assert mfi.update_bar(_bar(1, high="11", low="11", close="11", volume="10")) is None
+    assert mfi.update_bar(_bar(2, high="9", low="9", close="9", volume="10")) is None
+    value = mfi.update_bar(_bar(3, high="12", low="12", close="12", volume="10"))
+
+    assert value is not None
+    assert value.quantize(Decimal("0.0001")) == Decimal("71.8750")
+
+
+def test_accumulation_distribution_tracks_cumulative_money_flow_volume_anchor() -> None:
+    from qts.indicators.technical import AccumulationDistribution
+
+    adl = AccumulationDistribution()
+
+    assert adl.update_bar(_bar(0, high="10", low="0", close="7", volume="100")) == Decimal("40")
+    assert adl.update_bar(_bar(1, high="20", low="10", close="15", volume="10")) == Decimal("40")
+    assert adl.update_bar(_bar(2, high="10", low="0", close="0", volume="5")) == Decimal("35")
+
+
+def test_chaikin_money_flow_uses_rolling_money_flow_volume_anchor() -> None:
+    from qts.indicators.technical import ChaikinMoneyFlow
+
+    cmf = ChaikinMoneyFlow(window=3)
+
+    assert cmf.update_bar(_bar(0, high="10", low="0", close="7", volume="100")) is None
+    assert cmf.update_bar(_bar(1, high="20", low="10", close="15", volume="10")) is None
+    value = cmf.update_bar(_bar(2, high="10", low="0", close="0", volume="5"))
+
+    assert value is not None
+    assert value.quantize(Decimal("0.00000001")) == Decimal("0.30434783")

@@ -1177,6 +1177,16 @@ def test_guardrail_script_uses_canonical_quality_entrypoint() -> None:
     assert guardrails.ProductionPlaceholderDocstringRule.__module__.startswith("qts.quality.rules.")
 
 
+def test_all_guardrail_rules_live_under_rule_modules() -> None:
+    guardrails = _load_guardrails_module()
+
+    rule_modules = {rule.__class__.__module__ for rule in guardrails.GuardrailSuite().rules}
+
+    assert rule_modules
+    assert all(module.startswith("qts.quality.rules.") for module in rule_modules)
+    assert "qts.quality.guardrails" not in rule_modules
+
+
 def test_guardrail_suite_default_preserves_expected_codes(tmp_path: Path) -> None:
     root = tmp_path
     _write(

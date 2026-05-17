@@ -11,19 +11,43 @@ from qts.domain.market_data import Bar
 from qts.indicators.price.ema import EMA
 from qts.indicators.price.sma import SMA
 from qts.indicators.technical import (
+    ADX,
     MACD,
     RSI,
+    AccumulationDistribution,
     AverageTrueRange,
     BollingerBands,
     BollingerBandsValue,
+    ChaikinMoneyFlow,
+    CommodityChannelIndex,
+    DirectionalMovementValue,
+    DonchianChannel,
+    DonchianChannelValue,
+    HistoricalVolatility,
+    KeltnerChannel,
+    KeltnerChannelValue,
     MACDValue,
+    MoneyFlowIndex,
+    OnBalanceVolume,
     RateOfChange,
     SessionVWAP,
+    StandardDeviation,
+    StochasticOscillator,
+    StochasticOscillatorValue,
     VolumeRatio,
+    WilliamsR,
 )
 from qts.strategy_sdk.asset_ref import AssetRef
 
-IndicatorValue: TypeAlias = Decimal | BollingerBandsValue | MACDValue
+IndicatorValue: TypeAlias = (
+    Decimal
+    | BollingerBandsValue
+    | DirectionalMovementValue
+    | DonchianChannelValue
+    | KeltnerChannelValue
+    | MACDValue
+    | StochasticOscillatorValue
+)
 
 
 @dataclass(slots=True)
@@ -119,6 +143,82 @@ class IndicatorFactory:
         """Create rate of change for close prices."""
         return self._bind_price_indicator(asset, RateOfChange(window=window))
 
+    def adx(self, asset: AssetRef, window: int) -> AssetIndicator:
+        """Create ADX for OHLC bars."""
+        indicator = ADX(window=window)
+        return self._bind_bar_indicator(asset, indicator.update_bar, indicator)
+
+    def keltner_channel(
+        self,
+        asset: AssetRef,
+        window: int,
+        multiplier: Decimal = Decimal("2"),
+    ) -> AssetIndicator:
+        """Create Keltner Channel for OHLC bars."""
+        indicator = KeltnerChannel(window=window, multiplier=multiplier)
+        return self._bind_bar_indicator(asset, indicator.update_bar, indicator)
+
+    def donchian_channel(self, asset: AssetRef, window: int) -> AssetIndicator:
+        """Create Donchian Channel for OHLC bars."""
+        indicator = DonchianChannel(window=window)
+        return self._bind_bar_indicator(asset, indicator.update_bar, indicator)
+
+    def stochastic(
+        self,
+        asset: AssetRef,
+        window: int,
+        signal_window: int = 3,
+    ) -> AssetIndicator:
+        """Create stochastic oscillator for OHLC bars."""
+        indicator = StochasticOscillator(window=window, signal_window=signal_window)
+        return self._bind_bar_indicator(asset, indicator.update_bar, indicator)
+
+    def cci(self, asset: AssetRef, window: int) -> AssetIndicator:
+        """Create Commodity Channel Index for OHLC bars."""
+        indicator = CommodityChannelIndex(window=window)
+        return self._bind_bar_indicator(asset, indicator.update_bar, indicator)
+
+    def williams_r(self, asset: AssetRef, window: int) -> AssetIndicator:
+        """Create Williams %R for OHLC bars."""
+        indicator = WilliamsR(window=window)
+        return self._bind_bar_indicator(asset, indicator.update_bar, indicator)
+
+    def standard_deviation(self, asset: AssetRef, window: int) -> AssetIndicator:
+        """Create rolling standard deviation for close prices."""
+        return self._bind_price_indicator(asset, StandardDeviation(window=window))
+
+    def historical_volatility(
+        self,
+        asset: AssetRef,
+        window: int,
+        periods_per_year: Decimal = Decimal("252"),
+    ) -> AssetIndicator:
+        """Create annualized historical volatility for close prices."""
+        return self._bind_price_indicator(
+            asset,
+            HistoricalVolatility(window=window, periods_per_year=periods_per_year),
+        )
+
+    def on_balance_volume(self, asset: AssetRef) -> AssetIndicator:
+        """Create On-Balance Volume for OHLCV bars."""
+        indicator = OnBalanceVolume()
+        return self._bind_bar_indicator(asset, indicator.update_bar, indicator)
+
+    def money_flow_index(self, asset: AssetRef, window: int) -> AssetIndicator:
+        """Create Money Flow Index for OHLCV bars."""
+        indicator = MoneyFlowIndex(window=window)
+        return self._bind_bar_indicator(asset, indicator.update_bar, indicator)
+
+    def accumulation_distribution(self, asset: AssetRef) -> AssetIndicator:
+        """Create Accumulation/Distribution Line for OHLCV bars."""
+        indicator = AccumulationDistribution()
+        return self._bind_bar_indicator(asset, indicator.update_bar, indicator)
+
+    def chaikin_money_flow(self, asset: AssetRef, window: int) -> AssetIndicator:
+        """Create Chaikin Money Flow for OHLCV bars."""
+        indicator = ChaikinMoneyFlow(window=window)
+        return self._bind_bar_indicator(asset, indicator.update_bar, indicator)
+
     def update_from_bar(self, bar: Bar) -> None:
         """Perform update_from_bar."""
         for item in self._created:
@@ -128,7 +228,14 @@ class IndicatorFactory:
     def _bind_price_indicator(
         self,
         asset: AssetRef,
-        indicator: SMA | EMA | RSI | BollingerBands | MACD | RateOfChange,
+        indicator: SMA
+        | EMA
+        | RSI
+        | BollingerBands
+        | MACD
+        | RateOfChange
+        | StandardDeviation
+        | HistoricalVolatility,
     ) -> AssetIndicator:
         """Bind a close-price indicator to an asset."""
 
@@ -150,7 +257,18 @@ class IndicatorFactory:
         self,
         asset: AssetRef,
         update_from_bar: Callable[[Bar], IndicatorValue | None],
-        indicator: AverageTrueRange | SessionVWAP,
+        indicator: AverageTrueRange
+        | SessionVWAP
+        | ADX
+        | KeltnerChannel
+        | DonchianChannel
+        | StochasticOscillator
+        | CommodityChannelIndex
+        | WilliamsR
+        | OnBalanceVolume
+        | MoneyFlowIndex
+        | AccumulationDistribution
+        | ChaikinMoneyFlow,
     ) -> AssetIndicator:
         """Bind a full-bar indicator to an asset."""
         bound = AssetIndicator(

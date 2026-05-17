@@ -1,6 +1,7 @@
 """Quality-focused runtime checks and guardrails."""
 
-from qts.quality.guardrails import (
+from qts.quality.guardrails import GuardrailRule, GuardrailViolation
+from qts.quality.rules import (
     BacktestActorLoopCohesionRule,
     BacktestEngineCohesionRule,
     BacktestInputCohesionRule,
@@ -10,8 +11,6 @@ from qts.quality.guardrails import (
     ClassInventoryBudgetRule,
     DataLiveNoSharedContractRule,
     DuplicateDtoNameRule,
-    GuardrailRule,
-    GuardrailViolation,
     ImportBoundaryRule,
     LivePackageNoReplayClassRule,
     OOPHelperOwnershipRule,
@@ -19,6 +18,7 @@ from qts.quality.guardrails import (
     PlatformFreezeRule,
     ProductionNoFakeClassRule,
     ProductionNoTestingImportRule,
+    ProductionPlaceholderDocstringRule,
     ProductSpecificRule,
     ProviderSdkImportRule,
     RemovedImportNoNewUsageRule,
@@ -33,7 +33,6 @@ from qts.quality.guardrails import (
     TransportAdapterImportRule,
     TransportCanonicalPathRule,
 )
-from qts.quality.rules import ProductionPlaceholderDocstringRule
 from qts.quality.suite import GuardrailSuite, main, run_guardrails
 
 __all__ = [

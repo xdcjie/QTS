@@ -19,3 +19,9 @@ class MovingAverageCross(Strategy):
         else:
             ctx.close(self.asset)
 ```
+
+Multi-timeframe strategies can subscribe to both source and derived bars through
+the same SDK boundary. See
+`examples/strategies/multi_timeframe_momentum.py` for a 1m/5m momentum example
+that reads `ctx.data.history(..., timeframe="1m")` and
+`ctx.data.history(..., timeframe="5m")` without resampling inside strategy code.

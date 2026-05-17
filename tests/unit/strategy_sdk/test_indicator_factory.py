@@ -53,7 +53,13 @@ def test_indicator_factory_binds_common_technical_indicators_to_asset_bars() -> 
 
 
 def test_indicator_factory_registers_anchored_core_indicator_group() -> None:
-    from qts.indicators.technical import BollingerBandsValue, MACDValue
+    from qts.indicators.technical import (
+        BollingerBandsValue,
+        DonchianChannelValue,
+        KeltnerChannelValue,
+        MACDValue,
+        StochasticOscillatorValue,
+    )
     from qts.strategy_sdk.indicators import IndicatorFactory
 
     asset = AssetRef(InstrumentId("EQUITY.US.NASDAQ.AAPL"), "AAPL")
@@ -61,6 +67,22 @@ def test_indicator_factory_registers_anchored_core_indicator_group() -> None:
     bands = indicators.bollinger_bands(asset, window=3, standard_deviations=Decimal("2"))
     macd = indicators.macd(asset, fast_window=3, slow_window=6, signal_window=3)
     roc = indicators.rate_of_change(asset, window=3)
+    adx = indicators.adx(asset, window=3)
+    keltner = indicators.keltner_channel(asset, window=3, multiplier=Decimal("2"))
+    donchian = indicators.donchian_channel(asset, window=3)
+    stochastic = indicators.stochastic(asset, window=3, signal_window=2)
+    cci = indicators.cci(asset, window=3)
+    williams = indicators.williams_r(asset, window=3)
+    standard_deviation = indicators.standard_deviation(asset, window=3)
+    historical_volatility = indicators.historical_volatility(
+        asset,
+        window=3,
+        periods_per_year=Decimal("252"),
+    )
+    obv = indicators.on_balance_volume(asset)
+    mfi = indicators.money_flow_index(asset, window=3)
+    adl = indicators.accumulation_distribution(asset)
+    cmf = indicators.chaikin_money_flow(asset, window=3)
 
     for index, close in enumerate(("1", "2", "3", "4", "5", "6", "8", "10", "9")):
         indicators.update_from_bar(_bar(index, close=close))
@@ -76,6 +98,22 @@ def test_indicator_factory_registers_anchored_core_indicator_group() -> None:
     assert macd_value.histogram.quantize(Decimal("0.00000001")) == Decimal("-0.07926385")
     assert roc.ready is True
     assert roc.value == Decimal("50")
+    assert adx.ready is True
+    assert adx.value is not None
+    keltner_value = keltner.value
+    assert isinstance(keltner_value, KeltnerChannelValue)
+    donchian_value = donchian.value
+    assert isinstance(donchian_value, DonchianChannelValue)
+    stochastic_value = stochastic.value
+    assert isinstance(stochastic_value, StochasticOscillatorValue)
+    assert cci.ready is True
+    assert williams.ready is True
+    assert standard_deviation.ready is True
+    assert historical_volatility.ready is True
+    assert obv.ready is True
+    assert mfi.ready is True
+    assert adl.ready is True
+    assert cmf.ready is True
 
 
 def test_indicator_factory_updates_only_matching_asset() -> None:

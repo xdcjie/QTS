@@ -19,6 +19,7 @@ class BrokerageModel:
     minimum_commission: Decimal = Decimal("0")
     initial_margin_rate: Decimal = Decimal("0")
     slippage_bps: Decimal = Decimal("0")
+    requires_live_market_data: bool = False
 
     def __post_init__(self) -> None:
         model_id = self.model_id.strip()
@@ -99,6 +100,7 @@ class BrokerageModel:
             "minimum_commission": str(self.minimum_commission),
             "initial_margin_rate": str(self.initial_margin_rate),
             "slippage_bps": str(self.slippage_bps),
+            "requires_live_market_data": self.requires_live_market_data,
             "capabilities": self.capabilities.to_manifest_payload(),
         }
 

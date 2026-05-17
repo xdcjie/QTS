@@ -40,5 +40,5 @@ def test_qts_vs_lean_p1_module_health_backlog_links_to_matrix() -> None:
             backlog[item_start:] if next_item_start == -1 else backlog[item_start:next_item_start]
         )
 
-        assert "- Status: IN-PROGRESS" in item
+        assert "- Status: DONE" in item
         assert f"- Review status matrix: `{MATRIX_PATH}`" in item

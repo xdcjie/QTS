@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from typing import Any
 
-from qts.core.ids import AccountId, CorrelationId
+from qts.core.ids import AccountId, CorrelationId, InstrumentId
 from qts.data.permissions import MarketDataPermissionEvent
 from qts.data.sources.streaming_market_data_source import (
     StreamingMarketDataDegradation,
     StreamingMarketDataSubscriptionEvent,
 )
+from qts.data.subscriptions import UniverseSubscriptionDelta, UniverseSubscriptionPlanner
 from qts.domain.market_data import Bar
 from qts.execution.order_manager import Order, OrderFill
 from qts.runtime.actors.account_actor import AccountSnapshot
@@ -25,6 +27,20 @@ class RuntimeMarketDataCoordinator:
     def __init__(self, session: Any) -> None:
         self._session = session
         self._runtime_event_writer = RuntimeEventWriter(write=session._write)
+
+    def materialize_universe_subscription_delta(
+        self,
+        target: Iterable[InstrumentId],
+    ) -> UniverseSubscriptionDelta:
+        """Apply a strategy universe update to runtime subscription membership."""
+        session = self._session
+        target_subscriptions = tuple(sorted(set(target), key=lambda item: item.value))
+        delta = UniverseSubscriptionPlanner().plan(
+            current=session._strategy_subscriptions,
+            target=target_subscriptions,
+        )
+        session._strategy_subscriptions = target_subscriptions
+        return delta
 
     def on_market_data_source_event(
         self,

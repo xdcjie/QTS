@@ -99,6 +99,74 @@ def test_consolidator_emits_complete_five_minute_bar_from_one_minute_fixture() -
     assert not consolidated.is_partial
 
 
+def test_consolidator_derived_five_minute_bar_matches_historical_fixture() -> None:
+    from qts.data.bars.consolidator import NMinuteConsolidator
+    from qts.data.bars.timeframe import Timeframe
+
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    consolidator = NMinuteConsolidator(
+        source_timeframe=Timeframe.parse("1m"),
+        target_timeframe=Timeframe.parse("5m"),
+        exchange_timezone=UTC,
+    )
+    source = (
+        _bar(start, open_price="100", high="101", low="99", close="100.5", volume="10"),
+        _bar(
+            start + timedelta(minutes=1),
+            open_price="100.5",
+            high="102",
+            low="100",
+            close="101",
+            volume="20",
+        ),
+        _bar(
+            start + timedelta(minutes=2),
+            open_price="101",
+            high="103",
+            low="100.5",
+            close="102",
+            volume="30",
+        ),
+        _bar(
+            start + timedelta(minutes=3),
+            open_price="102",
+            high="102.5",
+            low="98",
+            close="99",
+            volume="40",
+        ),
+        _bar(
+            start + timedelta(minutes=4),
+            open_price="99",
+            high="100",
+            low="97",
+            close="98",
+            volume="50",
+        ),
+    )
+    expected = Bar(
+        instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+        start_time=start,
+        end_time=start + timedelta(minutes=5),
+        timeframe="5m",
+        session_id="2026-01-02",
+        open=Decimal("100"),
+        high=Decimal("103"),
+        low=Decimal("97"),
+        close=Decimal("98"),
+        volume=Decimal("150"),
+        trade_count=5,
+        is_complete=True,
+        is_partial=False,
+    )
+
+    emitted: list[Bar] = []
+    for bar in source:
+        emitted.extend(consolidator.update(bar))
+
+    assert tuple(emitted) == (expected,)
+
+
 def test_consolidator_does_not_emit_partial_bucket_when_next_bucket_starts() -> None:
     from qts.data.bars.consolidator import NMinuteConsolidator
     from qts.data.bars.timeframe import Timeframe

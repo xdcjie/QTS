@@ -3,11 +3,21 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from typing import Protocol
 
 from qts.domain.risk import OrderRiskRequest, RiskDecision
 from qts.risk.rule import RiskRule
 from qts.risk.rules.market_data_freshness import MarketDataFreshnessRiskRule
 from qts.risk.rules.market_data_permission import MarketDataPermissionRiskRule
+
+
+class BrokerageRiskPolicy(Protocol):
+    """Brokerage assumptions needed by risk without importing execution models."""
+
+    @property
+    def requires_live_market_data(self) -> bool:
+        """Return whether broker-capable orders require live market data."""
+        ...
 
 
 class RiskEngine:
@@ -29,6 +39,12 @@ class RiskEngine:
             return self
         return RiskEngine(self._rules, require_live_market_data=True)
 
+    def with_brokerage_model(self, brokerage_model: BrokerageRiskPolicy) -> RiskEngine:
+        """Return a risk engine configured from brokerage-model risk requirements."""
+        if brokerage_model.requires_live_market_data:
+            return self.requiring_live_market_data()
+        return self
+
     def check(self, request: OrderRiskRequest) -> RiskDecision:
         """Perform check."""
         if self._require_live_market_data:
@@ -47,4 +63,4 @@ class RiskEngine:
         return RiskDecision.approve()
 
 
-__all__ = ["RiskEngine"]
+__all__ = ["BrokerageRiskPolicy", "RiskEngine"]

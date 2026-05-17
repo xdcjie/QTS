@@ -35,6 +35,7 @@ def brokerage_model_for_name(brokerage_model: str) -> BrokerageModel:
             minimum_commission=Decimal("1"),
             initial_margin_rate=Decimal("0.50"),
             slippage_bps=Decimal("1"),
+            requires_live_market_data=True,
         )
     if model == "IBKR_FUTURES":
         return BrokerageModel(
@@ -51,6 +52,7 @@ def brokerage_model_for_name(brokerage_model: str) -> BrokerageModel:
             ),
             initial_margin_rate=Decimal("0.10"),
             slippage_bps=Decimal("1"),
+            requires_live_market_data=True,
         )
     if model == "IBKR_OPTIONS":
         return BrokerageModel(
@@ -67,6 +69,7 @@ def brokerage_model_for_name(brokerage_model: str) -> BrokerageModel:
             ),
             initial_margin_rate=Decimal("1"),
             slippage_bps=Decimal("1"),
+            requires_live_market_data=True,
         )
     raise ValueError(f"unsupported brokerage_model: {brokerage_model}")
 
