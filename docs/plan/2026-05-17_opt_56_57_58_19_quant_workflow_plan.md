@@ -51,12 +51,12 @@ Items below must preserve the durable invariants from
 
 | Item | Status | First red gate | Verified green | Commit |
 |---|---|---|---|---|
-| OPT-56 wire `SchemaMigrationRegistry` | TODO | `test_canonical_event_migration_registry.py` | — | — |
-| OPT-57 wire `MetricsRegistry` into hot path | TODO | `test_metrics_populated_by_backtest_run.py` | — | — |
-| OPT-58 health probe split | TODO | `test_health_probes_differentiated.py` | — | — |
-| OPT-58 Prometheus alert rules | TODO | `test_alert_rules_yaml_schema.py` | — | — |
-| OPT-58 observability setup doc | TODO | `test_observability_setup_doc_references_alerts.py` | — | — |
-| OPT-19 ParameterSpace + grid runner | TODO | `test_optimization_runner_grid_sweep.py` | — | — |
+| OPT-56 wire `SchemaMigrationRegistry` | ✅ DONE | `test_canonical_event_migration_registry.py` | ✓ | `702a4bb` |
+| OPT-57 wire `MetricsRegistry` into hot path | ✅ DONE | `test_metrics_populated_by_backtest_run.py` | ✓ | `b7a3f61` |
+| OPT-58.A health probe split | ✅ DONE | `test_health_probes_differentiated.py` | ✓ | `ed5ff47` |
+| OPT-58.B Prometheus alert rules | ✅ DONE | `test_alert_rules_yaml_schema.py` | ✓ | `ed5ff47` |
+| OPT-58.C observability setup doc | ✅ DONE | `test_observability_setup_doc.py` | ✓ | `ed5ff47` |
+| OPT-19 ParameterSpace + grid runner | ✅ DONE | `test_optimization_runner_grid_sweep.py` | ✓ | `18a4e09` |
 
 Marking an item DONE requires: first red gate recorded, focused green
 recorded, `make check` recorded, commit linked, this matrix updated.
