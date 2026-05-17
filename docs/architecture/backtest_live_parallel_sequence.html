@@ -606,7 +606,7 @@
       <div class="surface class-inventory" aria-label="生产类全量索引">
         <h2>生产类全量索引（按阶段 / 模块）</h2>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">619 classes</span></summary>
+          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">622 classes</span></summary>
           <ul>
           <li><code>qts/api/schemas/backtest_schema.py</code> -> <code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span>, <code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span>, <code>BacktestRunResultSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:24</span>, <code>BacktestStrategyOptionSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:38</span></li>
           <li><code>qts/api/schemas/common.py</code> -> <code>StrategyStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:8</span>, <code>AccountSnapshotSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:15</span>, <code>OrderStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:22</span>, <code>RiskRuleSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:29</span>, <code>OperationalErrorSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:36</span></li>
@@ -632,8 +632,9 @@
           <li><code>qts/backtest/dependencies.py</code> -> <code>BacktestEngineDependencies</code> <span class="location">backend/src/qts/backtest/dependencies.py:37</span>, <code>BacktestActorLoopConfig</code> <span class="location">backend/src/qts/backtest/dependencies.py:78</span>, <code>BacktestActorLoopDependencies</code> <span class="location">backend/src/qts/backtest/dependencies.py:95</span></li>
           <li><code>qts/backtest/engine.py</code> -> <code>BacktestStreamResult</code> <span class="location">backend/src/qts/backtest/engine.py:64</span>, <code>BacktestEngine</code> <span class="location">backend/src/qts/backtest/engine.py:83</span></li>
           <li><code>qts/backtest/instrument_context.py</code> -> <code>BacktestInstrumentContext</code> <span class="location">backend/src/qts/backtest/instrument_context.py:16</span></li>
+          <li><code>qts/backtest/pipeline.py</code> -> <code>BacktestPipeline</code> <span class="location">backend/src/qts/backtest/pipeline.py:39</span></li>
           <li><code>qts/backtest/portfolio_projection.py</code> -> <code>BacktestPortfolioProjector</code> <span class="location">backend/src/qts/backtest/portfolio_projection.py:15</span></li>
-          <li><code>qts/backtest/runner.py</code> -> <code>BacktestRun</code> <span class="location">backend/src/qts/backtest/runner.py:24</span></li>
+          <li><code>qts/backtest/runner.py</code> -> <code>BacktestRun</code> <span class="location">backend/src/qts/backtest/runner.py:20</span></li>
           <li><code>qts/config/ibkr.py</code> -> <code>IbkrConnectionConfig</code> <span class="location">backend/src/qts/config/ibkr.py:18</span>, <code>IbkrOrderExecutionConfig</code> <span class="location">backend/src/qts/config/ibkr.py:39</span>, <code>IbkrSecretRefs</code> <span class="location">backend/src/qts/config/ibkr.py:67</span>, <code>IbkrEnvironmentConfig</code> <span class="location">backend/src/qts/config/ibkr.py:82</span></li>
           <li><code>qts/core/ids.py</code> -> <code>_StringId</code> <span class="location">backend/src/qts/core/ids.py:9</span>, <code>AccountId</code> <span class="location">backend/src/qts/core/ids.py:27</span>, <code>StrategyId</code> <span class="location">backend/src/qts/core/ids.py:31</span>, <code>InstrumentId</code> <span class="location">backend/src/qts/core/ids.py:35</span>, <code>OrderId</code> <span class="location">backend/src/qts/core/ids.py:39</span>, <code>BrokerId</code> <span class="location">backend/src/qts/core/ids.py:43</span>, <code>EventId</code> <span class="location">backend/src/qts/core/ids.py:47</span>, <code>RuntimeRunId</code> <span class="location">backend/src/qts/core/ids.py:51</span>, <code>RuntimeInstanceId</code> <span class="location">backend/src/qts/core/ids.py:55</span>, <code>CorrelationId</code> <span class="location">backend/src/qts/core/ids.py:59</span>, <code>CausationId</code> <span class="location">backend/src/qts/core/ids.py:63</span></li>
           <li><code>qts/core/time.py</code> -> <code>TimeInterval</code> <span class="location">backend/src/qts/core/time.py:28</span></li>
@@ -754,8 +755,9 @@
           <li><code>qts/research/experiment_manifest.py</code> -> <code>ExperimentManifestConfig</code> <span class="location">backend/src/qts/research/experiment_manifest.py:17</span>, <code>ExperimentManifestResult</code> <span class="location">backend/src/qts/research/experiment_manifest.py:55</span>, <code>ExperimentManifestWriter</code> <span class="location">backend/src/qts/research/experiment_manifest.py:62</span></li>
           <li><code>qts/research/optimizer/job.py</code> -> <code>OptimizationJob</code> <span class="location">backend/src/qts/research/optimizer/job.py:20</span></li>
           <li><code>qts/research/optimizer/parameter_space.py</code> -> <code>ParameterSpace</code> <span class="location">backend/src/qts/research/optimizer/parameter_space.py:12</span>, <code>ParameterGrid</code> <span class="location">backend/src/qts/research/optimizer/parameter_space.py:25</span></li>
+          <li><code>qts/research/optimizer/pipeline.py</code> -> <code>BacktestPipelineJob</code> <span class="location">backend/src/qts/research/optimizer/pipeline.py:23</span>, <code>BacktestPipelineRunner</code> <span class="location">backend/src/qts/research/optimizer/pipeline.py:43</span></li>
           <li><code>qts/research/optimizer/result.py</code> -> <code>OptimizationResult</code> <span class="location">backend/src/qts/research/optimizer/result.py:12</span></li>
-          <li><code>qts/research/optimizer/runner.py</code> -> <code>OptimizationRunner</code> <span class="location">backend/src/qts/research/optimizer/runner.py:20</span></li>
+          <li><code>qts/research/optimizer/runner.py</code> -> <code>OptimizationRunner</code> <span class="location">backend/src/qts/research/optimizer/runner.py:44</span></li>
           <li><code>qts/risk/config.py</code> -> <code>RiskRuleConfig</code> <span class="location">backend/src/qts/risk/config.py:15</span>, <code>RiskConfig</code> <span class="location">backend/src/qts/risk/config.py:43</span></li>
           <li><code>qts/risk/kill_switch.py</code> -> <code>KillSwitchScopeType</code> <span class="location">backend/src/qts/risk/kill_switch.py:12</span>, <code>KillSwitchScope</code> <span class="location">backend/src/qts/risk/kill_switch.py:22</span>, <code>KillSwitchState</code> <span class="location">backend/src/qts/risk/kill_switch.py:54</span>, <code>RuntimeKillSwitchCommand</code> <span class="location">backend/src/qts/risk/kill_switch.py:63</span>, <code>KillSwitchRegistry</code> <span class="location">backend/src/qts/risk/kill_switch.py:78</span></li>
           <li><code>qts/risk/risk_engine.py</code> -> <code>BrokerageRiskPolicy</code> <span class="location">backend/src/qts/risk/risk_engine.py:17</span>, <code>RiskEngine</code> <span class="location">backend/src/qts/risk/risk_engine.py:31</span></li>
@@ -838,7 +840,7 @@
           </ul>
         </details>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">619 classes</span></summary>
+          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">622 classes</span></summary>
           <ul class="method-index">
           <li><code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span> -> <span class="muted">no public/core methods</span></li>
@@ -901,8 +903,9 @@
           <li><code>BacktestStreamResult</code> <span class="location">backend/src/qts/backtest/engine.py:64</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>BacktestEngine</code> <span class="location">backend/src/qts/backtest/engine.py:83</span> -> <code>__init__():86</code>, <code>from_config():203</code>, <code>run_streaming():245</code></li>
           <li><code>BacktestInstrumentContext</code> <span class="location">backend/src/qts/backtest/instrument_context.py:16</span> -> <code>__init__():19</code>, <code>instrument_registry():34</code>, <code>order_instrument_for_intent():68</code>, <code>market_price_for_intent():79</code>, <code>update_rolling_prices():97</code>, <code>related_contracts_for():118</code>, <code>is_continuous():136</code></li>
+          <li><code>BacktestPipeline</code> <span class="location">backend/src/qts/backtest/pipeline.py:39</span> -> <code>__init__():42</code>, <code>from_yaml():47</code>, <code>config property:52</code>, <code>catalog():56</code>, <code>build_engine():62</code>, <code>with_strategy_params():84</code>, <code>load_strategy():96</code></li>
           <li><code>BacktestPortfolioProjector</code> <span class="location">backend/src/qts/backtest/portfolio_projection.py:15</span> -> <code>__init__():18</code>, <code>multiplier_for():22</code>, <code>portfolio_view():27</code>, <code>equity_point():56</code></li>
-          <li><code>BacktestRun</code> <span class="location">backend/src/qts/backtest/runner.py:24</span> -> <code>processed_bars property:34</code>, <code>report_hash property:39</code></li>
+          <li><code>BacktestRun</code> <span class="location">backend/src/qts/backtest/runner.py:20</span> -> <code>processed_bars property:30</code>, <code>report_hash property:35</code></li>
           <li><code>IbkrConnectionConfig</code> <span class="location">backend/src/qts/config/ibkr.py:18</span> -> <code>__post_init__():26</code></li>
           <li><code>IbkrOrderExecutionConfig</code> <span class="location">backend/src/qts/config/ibkr.py:39</span> -> <code>__post_init__():50</code></li>
           <li><code>IbkrSecretRefs</code> <span class="location">backend/src/qts/config/ibkr.py:67</span> -> <code>__post_init__():73</code></li>
@@ -1260,8 +1263,10 @@
           <li><code>OptimizationJob</code> <span class="location">backend/src/qts/research/optimizer/job.py:20</span> -> <code>__post_init__():35</code></li>
           <li><code>ParameterSpace</code> <span class="location">backend/src/qts/research/optimizer/parameter_space.py:12</span> -> <code>__post_init__():18</code></li>
           <li><code>ParameterGrid</code> <span class="location">backend/src/qts/research/optimizer/parameter_space.py:25</span> -> <code>__init__():33</code>, <code>__iter__():41</code>, <code>size():47</code></li>
+          <li><code>BacktestPipelineJob</code> <span class="location">backend/src/qts/research/optimizer/pipeline.py:23</span> -> <code>__post_init__():36</code></li>
+          <li><code>BacktestPipelineRunner</code> <span class="location">backend/src/qts/research/optimizer/pipeline.py:43</span> -> <code>run():46</code></li>
           <li><code>OptimizationResult</code> <span class="location">backend/src/qts/research/optimizer/result.py:12</span> -> <span class="muted">no public/core methods</span></li>
-          <li><code>OptimizationRunner</code> <span class="location">backend/src/qts/research/optimizer/runner.py:20</span> -> <code>run():23</code></li>
+          <li><code>OptimizationRunner</code> <span class="location">backend/src/qts/research/optimizer/runner.py:44</span> -> <code>run():47</code></li>
           <li><code>RiskRuleConfig</code> <span class="location">backend/src/qts/risk/config.py:15</span> -> <code>__post_init__():22</code>, <code>from_mapping():30</code></li>
           <li><code>RiskConfig</code> <span class="location">backend/src/qts/risk/config.py:43</span> -> <code>__post_init__():52</code>, <code>from_yaml():62</code></li>
           <li><code>KillSwitchScopeType</code> <span class="location">backend/src/qts/risk/kill_switch.py:12</span> -> <span class="muted">no public/core methods</span></li>
@@ -3141,10 +3146,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>352 files</span>
-      <span>621 classes</span>
-      <span>2066 functions</span>
-      <span>335 backend</span>
+      <span>354 files</span>
+      <span>624 classes</span>
+      <span>2074 functions</span>
+      <span>337 backend</span>
       <span>17 frontend</span>
     </div>
   </div>
@@ -4594,6 +4599,46 @@
     </details>
     <details class="inventory-file">
       <summary>
+        <code>backend/src/qts/backtest/pipeline.py</code>
+        <span class="inventory-counts">
+          <span>1 class</span>
+          <span>10 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Owning class for the shared backtest pipeline.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>BacktestPipeline</code></td><td>pipeline:39</td><td>Construct catalog + engine + strategy for a single backtest config.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>__init__</code></td><td>BacktestPipeline:42</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>from_yaml</code></td><td>BacktestPipeline:47</td><td>Load a config file and wrap it in a pipeline.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>config</code></td><td>BacktestPipeline:52</td><td>Return the underlying backtest runtime config.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>catalog</code></td><td>BacktestPipeline:56</td><td>Return the catalog for this config, loading it on first access.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>build_engine</code></td><td>BacktestPipeline:62</td><td>Build a fresh engine + replay bundle for one run.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>with_strategy_params</code></td><td>BacktestPipeline:84</td><td>Return a sibling pipeline whose strategy_params merge ``params`` on top.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>load_strategy</code></td><td>BacktestPipeline:96</td><td>Load a Strategy by its config-encoded class path and instantiate it.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_catalog_load_config</code></td><td>BacktestPipeline:111</td><td>实现 BacktestPipeline 的 catalog load config 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_import_strategy_module</code></td><td>BacktestPipeline:124</td><td>实现 BacktestPipeline 的 import strategy module 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_strategy_type_from_module</code></td><td>BacktestPipeline:139</td><td>实现 BacktestPipeline 的 strategy type from module 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
         <code>backend/src/qts/backtest/portfolio_projection.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
@@ -4631,7 +4676,7 @@
         <code>backend/src/qts/backtest/runner.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
-          <span>8 functions</span>
+          <span>4 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -4642,7 +4687,7 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>BacktestRun</code></td><td>runner:24</td><td>Output of a backtest runner invocation.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestRun</code></td><td>runner:20</td><td>Output of a backtest runner invocation.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -4651,14 +4696,10 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>processed_bars</code></td><td>BacktestRun:34</td><td>Perform processed_bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>report_hash</code></td><td>BacktestRun:39</td><td>Perform report_hash.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>run_backtest</code></td><td>module:44</td><td>Run a backtest and write partitioned streaming artifacts.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>_catalog_load_config</code></td><td>module:88</td><td>Perform _catalog_load_config.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_load_strategy</code></td><td>module:101</td><td>Perform _load_strategy.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_import_strategy_module</code></td><td>module:113</td><td>Load a module that defines the requested strategy class.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_strategy_type_from_module</code></td><td>module:129</td><td>Extract the strategy class from a strategy module.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_streaming_summary_payload</code></td><td>module:143</td><td>Perform _streaming_summary_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>processed_bars</code></td><td>BacktestRun:30</td><td>Perform processed_bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>report_hash</code></td><td>BacktestRun:35</td><td>Perform report_hash.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>run_backtest</code></td><td>module:40</td><td>Run a backtest and write partitioned streaming artifacts.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>_streaming_summary_payload</code></td><td>module:73</td><td>Perform _streaming_summary_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10411,7 +10452,7 @@
         </span>
       </summary>
       <div class="inventory-body">
-        <p><strong>文件作用：</strong>Parameter-sweep optimizer (first slice — sequential grid only).</p>
+        <p><strong>文件作用：</strong>Parameter-sweep optimizer (sequential grid; factory and pipeline-driven).</p>
         <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
       </div>
     </details>
@@ -10483,6 +10524,39 @@
     </details>
     <details class="inventory-file">
       <summary>
+        <code>backend/src/qts/research/optimizer/pipeline.py</code>
+        <span class="inventory-counts">
+          <span>2 classes</span>
+          <span>2 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Backtest-config-driven parameter sweep.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>BacktestPipelineJob</code></td><td>pipeline:23</td><td>Optimizer job rooted in a ``configs/backtest.yaml``-style file.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestPipelineRunner</code></td><td>pipeline:43</td><td>Iterate a parameter grid through the shared backtest pipeline.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>__post_init__</code></td><td>BacktestPipelineJob:36</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>run</code></td><td>BacktestPipelineRunner:46</td><td>Run every combination and return ranked results.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
         <code>backend/src/qts/research/optimizer/result.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
@@ -10519,7 +10593,7 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>OptimizationRunner</code></td><td>runner:20</td><td>Iterate a parameter grid sequentially and return ranked results.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>OptimizationRunner</code></td><td>runner:44</td><td>Iterate a parameter grid sequentially and return ranked results.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10528,8 +10602,8 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>run</code></td><td>OptimizationRunner:23</td><td>Run every combination in the job&#x27;s grid and return ranked results.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_extract_objective</code></td><td>OptimizationRunner:54</td><td>Pull a metric from the manifest&#x27;s statistics block.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>extract_objective_from_manifest</code></td><td>module:20</td><td>Pull a metric from a backtest manifest&#x27;s statistics/metrics block.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>run</code></td><td>OptimizationRunner:47</td><td>Run every combination in the job&#x27;s grid and return ranked results.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>

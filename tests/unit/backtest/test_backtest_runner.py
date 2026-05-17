@@ -7,16 +7,16 @@ from pathlib import Path
 from typing import Any, cast
 
 import pytest
-from qts.backtest.runner import _load_strategy
+from qts.backtest.pipeline import BacktestPipeline
 
 
 def test_load_strategy_supports_module_and_class_syntax() -> None:
     """Load strategies from both supported class path formats."""
-    colon_strategy = _load_strategy(
+    colon_strategy = BacktestPipeline.load_strategy(
         "tests.integration.test_backtest_gc_si:BuyOneGcStrategy",
         {},
     )
-    dotted_strategy = _load_strategy(
+    dotted_strategy = BacktestPipeline.load_strategy(
         "tests.integration.test_backtest_gc_si.BuyOneGcStrategy",
         {},
     )
@@ -48,20 +48,22 @@ def test_load_strategy_loads_from_relative_python_file(
     )
     monkeypatch.chdir(tmp_path)
 
-    strategy = _load_strategy(f"{module_name}:FileBacktestStrategy", {"note": "loaded"})
+    strategy = BacktestPipeline.load_strategy(
+        f"{module_name}:FileBacktestStrategy", {"note": "loaded"}
+    )
     assert cast(Any, strategy).note == "loaded"
 
 
 def test_load_strategy_rejects_invalid_class_path() -> None:
     """Reject malformed strategy class references."""
     with pytest.raises(ValueError, match="strategy_class must be 'module:Class'"):
-        _load_strategy("not_a_path", {})
+        BacktestPipeline.load_strategy("not_a_path", {})
 
 
 def test_load_strategy_rejects_missing_class() -> None:
     """Reject when class name does not exist in module."""
     with pytest.raises(ValueError, match="not found in module"):
-        _load_strategy(
+        BacktestPipeline.load_strategy(
             "tests.integration.test_backtest_gc_si:MissingBacktestStrategy",
             {},
         )
@@ -87,4 +89,4 @@ def test_load_strategy_rejects_non_strategy_class(
     monkeypatch.chdir(tmp_path)
 
     with pytest.raises(TypeError, match="must subclass"):
-        _load_strategy(f"{module_name}:NotStrategy", {})
+        BacktestPipeline.load_strategy(f"{module_name}:NotStrategy", {})

@@ -17,6 +17,30 @@ from qts.research.optimizer.job import OptimizationJob
 from qts.research.optimizer.result import OptimizationResult
 
 
+def extract_objective_from_manifest(payload: dict[str, Any], metric_name: str) -> Decimal:
+    """Pull a metric from a backtest manifest's statistics/metrics block.
+
+    Shared by the factory-based ``OptimizationRunner`` and the
+    config-driven ``BacktestPipelineRunner`` so both code paths use the
+    same objective lookup contract.
+    """
+    for section in ("statistics", "metrics"):
+        block = payload.get(section)
+        if not isinstance(block, dict):
+            continue
+        if metric_name not in block:
+            continue
+        raw = block[metric_name]
+        try:
+            return Decimal(str(raw))
+        except (InvalidOperation, ValueError):
+            continue
+    raise KeyError(
+        f"manifest at {payload.get('run_id')!r} has no Decimal-parseable "
+        f"objective {metric_name!r} under statistics/metrics"
+    )
+
+
 class OptimizationRunner:
     """Iterate a parameter grid sequentially and return ranked results."""
 
@@ -39,7 +63,7 @@ class OptimizationRunner:
             stream_result = engine.run_streaming(run_dir)
             manifest_path = Path(stream_result.manifest_path)
             payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-            objective_value = self._extract_objective(payload, job.objective_metric)
+            objective_value = extract_objective_from_manifest(payload, job.objective_metric)
             results.append(
                 OptimizationResult(
                     parameters=dict(combination),
@@ -50,24 +74,5 @@ class OptimizationRunner:
             )
         return tuple(sorted(results, key=lambda r: r.objective_value, reverse=True))
 
-    @staticmethod
-    def _extract_objective(payload: dict[str, Any], metric_name: str) -> Decimal:
-        """Pull a metric from the manifest's statistics block."""
-        for section in ("statistics", "metrics"):
-            block = payload.get(section)
-            if not isinstance(block, dict):
-                continue
-            if metric_name not in block:
-                continue
-            raw = block[metric_name]
-            try:
-                return Decimal(str(raw))
-            except (InvalidOperation, ValueError):
-                continue
-        raise KeyError(
-            f"manifest at {payload.get('run_id')!r} has no Decimal-parseable "
-            f"objective {metric_name!r} under statistics/metrics"
-        )
 
-
-__all__ = ["OptimizationRunner"]
+__all__ = ["OptimizationRunner", "extract_objective_from_manifest"]

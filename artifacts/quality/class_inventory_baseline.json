@@ -1,5 +1,5 @@
 {
-  "production_class_count": 592,
+  "production_class_count": 595,
   "production_classes": [
     "qts.observability.audit_sink.AuditSink",
     "qts.observability.audit_sink.InMemoryAuditSink",
@@ -11,6 +11,8 @@
     "qts.research.optimizer.job.OptimizationJob",
     "qts.research.optimizer.parameter_space.ParameterGrid",
     "qts.research.optimizer.parameter_space.ParameterSpace",
+    "qts.research.optimizer.pipeline.BacktestPipelineJob",
+    "qts.research.optimizer.pipeline.BacktestPipelineRunner",
     "qts.research.optimizer.result.OptimizationResult",
     "qts.research.optimizer.runner.OptimizationRunner",
     "qts.risk.rules.order_spec_validity.BrokerageOrderTypePolicy",
@@ -71,6 +73,7 @@
     "qts.backtest.engine.BacktestEngine",
     "qts.backtest.engine.BacktestStreamResult",
     "qts.backtest.instrument_context.BacktestInstrumentContext",
+    "qts.backtest.pipeline.BacktestPipeline",
     "qts.backtest.portfolio_projection.BacktestPortfolioProjector",
     "qts.backtest.runner.BacktestRun",
     "qts.config.ibkr.IbkrConnectionConfig",
