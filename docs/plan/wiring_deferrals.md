@@ -9,23 +9,18 @@ This document is the durable registry of production symbols that are
 Add a fully-qualified symbol to the code block below when one of the
 following is true and ``make guardrails`` currently rejects the symbol:
 
-1. **Documented deferral** — the wiring work belongs to a follow-up PR
-   and the source backlog entry has been flipped to
-   ``IN-PROGRESS / wiring deferred`` with an explicit successor commit
-   target. The deferral should be removed in the same PR that adds the
-   caller.
-2. **Library API meant for external consumers** — a public class
-   exported under e.g. ``qts.research.optimizer`` that is exercised by
-   user notebooks / external scripts rather than QTS-internal code.
-   These remain deferred indefinitely or until an in-repo example
-   strategy / script provides a wiring example.
-3. **Framework integration point** — a class that fastapi /
-   prometheus_client / pydantic / similar instantiates via reflection
-   and never explicitly imports by name.
-4. **Module-internal helper exported via a thin wrapper** — a class
-   whose only caller is a module-level helper function in the same file
-   (e.g. ``BarAggregator`` consumed by ``aggregate_bars``); the helper
-   is the public surface, the class is the implementation.
+1. **Documented deferral (target=OPT-NN)** — the wiring work belongs
+   to a follow-up PR. The deferral must be removed in the same PR that
+   adds the caller. **Maximum horizon: 3 months** from today.
+2. **Library API (target=library)** — a public class exposed for
+   external consumers (user notebooks / strategies). Maximum horizon:
+   1 year.
+3. **Framework integration (target=framework)** — fastapi /
+   prometheus_client / pydantic / similar instantiates by reflection.
+   Maximum horizon: 1 year.
+4. **Module-internal helper (target=internal)** — public class whose
+   only direct caller is a same-file helper function. Maximum horizon:
+   1 year.
 
 Items that **must not** appear here:
 
@@ -33,66 +28,73 @@ Items that **must not** appear here:
   rule).
 - ``StrEnum`` / ``IntEnum`` (auto-detected).
 - Exception subclasses caught by type (auto-detected).
-- Value objects returned from another class's methods in the same file
-  (auto-detected — the owner type is the wiring signal).
+- Value objects referenced as return / attribute / parameter
+  annotations in their defining module (auto-detected).
 - Classes that ought to be deleted instead — see the deletion safety
-  rules in CLAUDE.md before adding an entry that could be removed.
+  rules in CLAUDE.md §10.
 
 ## Format
 
-Inside the code block: one fully-qualified symbol per line,
-``qts.module.submodule.ClassName``. Comments and blank lines are ignored.
+Inside the fenced code block: one entry per line. Each entry has three
+whitespace-separated tokens: ``<symbol>``, ``expires=<YYYY-MM-DD>``,
+``target=<OPT-NN | library | framework | internal>``. Lines starting
+with ``#`` and blank lines are ignored.
 
 ```
-qts.api.schemas.common.RiskRuleSchema
-qts.application.commands.start_runtime.RuntimeStartResult
-qts.application.strategy_lifecycle.StrategyRegistry
-qts.backtest.runner.BacktestRun
-qts.core.ids.RuntimeInstanceId
-qts.data.bars.aggregator.BarAggregator
-qts.data.market_data_pipeline.MarketDataPipeline
-qts.data.sources.replay_market_data_source.ReplayClock
-qts.data.sources.replay_market_data_source.ReplayEventSequencer
-qts.observability.audit_sink.InMemoryAuditSink
-qts.quality.guardrails.PlatformFreezeConfig
-qts.reconciliation.persistent_drift.PersistentDriftKillSwitch
-qts.reporting.backtest.StreamingEquityMetrics
-qts.research.optimizer.job.OptimizationJob
-qts.research.optimizer.parameter_space.ParameterGrid
-qts.research.optimizer.parameter_space.ParameterSpace
-qts.research.optimizer.result.OptimizationResult
-qts.research.optimizer.runner.OptimizationRunner
-qts.runtime.durability.RuntimeDurabilityDrill
-qts.runtime.intent_processing.OrderPlanBuilder
-qts.runtime.state_recovery.DurableSnapshotStore
-qts.runtime.state_recovery.SnapshotFrequencyPolicy
+# wiring-followup (target=OPT-NN, 3-month horizon)
+qts.reconciliation.persistent_drift.PersistentDriftKillSwitch  expires=2026-08-17  target=OPT-63
+qts.runtime.state_recovery.DurableSnapshotStore  expires=2026-08-17  target=OPT-64
+qts.runtime.state_recovery.SnapshotFrequencyPolicy  expires=2026-08-17  target=OPT-64
+qts.research.optimizer.job.OptimizationJob  expires=2026-08-17  target=OPT-65
+qts.research.optimizer.parameter_space.ParameterGrid  expires=2026-08-17  target=OPT-65
+qts.research.optimizer.parameter_space.ParameterSpace  expires=2026-08-17  target=OPT-65
+qts.research.optimizer.result.OptimizationResult  expires=2026-08-17  target=OPT-65
+qts.research.optimizer.runner.OptimizationRunner  expires=2026-08-17  target=OPT-65
+qts.application.strategy_lifecycle.StrategyRegistry  expires=2026-08-17  target=OPT-34
+# framework integration (1-year horizon)
+qts.api.schemas.common.RiskRuleSchema  expires=2027-05-17  target=framework
+# library APIs (1-year horizon)
+qts.data.market_data_pipeline.MarketDataPipeline  expires=2027-05-17  target=library
+# module-internal helpers (1-year horizon)
+qts.application.commands.start_runtime.RuntimeStartResult  expires=2027-05-17  target=internal
+qts.backtest.runner.BacktestRun  expires=2027-05-17  target=internal
+qts.core.ids.RuntimeInstanceId  expires=2027-05-17  target=internal
+qts.data.bars.aggregator.BarAggregator  expires=2027-05-17  target=internal
+qts.data.sources.replay_market_data_source.ReplayClock  expires=2027-05-17  target=internal
+qts.data.sources.replay_market_data_source.ReplayEventSequencer  expires=2027-05-17  target=internal
+qts.observability.audit_sink.InMemoryAuditSink  expires=2027-05-17  target=internal
+qts.quality.guardrails.PlatformFreezeConfig  expires=2027-05-17  target=internal
+qts.reporting.backtest.StreamingEquityMetrics  expires=2027-05-17  target=internal
+qts.runtime.durability.RuntimeDurabilityDrill  expires=2027-05-17  target=internal
+qts.runtime.intent_processing.OrderPlanBuilder  expires=2027-05-17  target=internal
 ```
 
 ## Rationale for current entries
 
 | Symbol | Category | Notes |
 |---|---|---|
-| `qts.api.schemas.common.RiskRuleSchema` | framework integration | Pydantic schema; fastapi instantiates via reflection during request validation. |
-| `qts.application.commands.start_runtime.RuntimeStartResult` | DI value object | Application command result; consumed via DI through dynamic dispatch in tests / API layer. |
-| `qts.application.strategy_lifecycle.StrategyRegistry` | wiring follow-up | StrategyRegistry is the planned hub for OPT-34 scheduler integration; not yet wired into the runtime. |
-| `qts.backtest.runner.BacktestRun` | DI value object | Application-layer DTO; same pattern as RuntimeStartResult. |
-| `qts.core.ids.RuntimeInstanceId` | newtype | StringId-style ID; passed as a string, rarely named directly. |
-| `qts.data.bars.aggregator.BarAggregator` | module-internal helper | Public caller is `aggregate_bars` in the same file; BarAggregator is the implementation. |
-| `qts.data.market_data_pipeline.MarketDataPipeline` | library API | Library entry-point used by external research scripts; no in-repo caller yet. |
-| `qts.data.sources.replay_market_data_source.ReplayClock` | replay internals | Used through `ReplayMarketDataSource` composition; no direct external caller. |
-| `qts.data.sources.replay_market_data_source.ReplayEventSequencer` | replay internals | Same pattern as ReplayClock. |
-| `qts.observability.audit_sink.InMemoryAuditSink` | test helper | Documented test/in-process sink; production deployments use `StderrJsonAuditSink`. |
-| `qts.quality.guardrails.PlatformFreezeConfig` | guardrails internals | Consumed inside the guardrails module via dynamic AST walks. |
-| `qts.reconciliation.persistent_drift.PersistentDriftKillSwitch` | wiring follow-up | OPT-47 shipped the class and anchors; runtime integration is the next slice. |
-| `qts.reporting.backtest.StreamingEquityMetrics` | reporting internal | Composed into `BacktestArtifactWriter`; never directly instantiated by external code. |
-| `qts.research.optimizer.*` (5) | library API | OPT-19 first slice; external CLI / notebook driver pending. |
-| `qts.runtime.durability.RuntimeDurabilityDrill` | wiring follow-up | Durability drill harness; CLI wrapper pending. |
-| `qts.runtime.intent_processing.OrderPlanBuilder` | module-internal helper | Composed into `TargetIntentProcessor` in the same file. |
-| `qts.runtime.state_recovery.DurableSnapshotStore` | wiring follow-up | Production durable store; only FileSnapshotStore / InMemorySnapshotStore have current callers. |
-| `qts.runtime.state_recovery.SnapshotFrequencyPolicy` | wiring follow-up | Same as DurableSnapshotStore. |
+| `qts.api.schemas.common.RiskRuleSchema` | framework | Pydantic schema; fastapi instantiates via reflection during request validation. |
+| `qts.application.commands.start_runtime.RuntimeStartResult` | internal | Application command result; consumed via DI through dynamic dispatch in tests / API layer. |
+| `qts.application.strategy_lifecycle.StrategyRegistry` | OPT-34 | Planned hub for scheduler integration. |
+| `qts.backtest.runner.BacktestRun` | internal | Application-layer DTO; same pattern as RuntimeStartResult. |
+| `qts.core.ids.RuntimeInstanceId` | internal | StringId-style ID; passed as a string, rarely named directly. |
+| `qts.data.bars.aggregator.BarAggregator` | internal | Public caller is `aggregate_bars` in the same file. |
+| `qts.data.market_data_pipeline.MarketDataPipeline` | library | Library entry-point used by external research scripts. |
+| `qts.data.sources.replay_market_data_source.ReplayClock` | internal | Used through `ReplayMarketDataSource` composition. |
+| `qts.data.sources.replay_market_data_source.ReplayEventSequencer` | internal | Same pattern as ReplayClock. |
+| `qts.observability.audit_sink.InMemoryAuditSink` | internal | Test/in-process sink; production deployments use `StderrJsonAuditSink`. |
+| `qts.quality.guardrails.PlatformFreezeConfig` | internal | Consumed inside the guardrails module via dynamic AST walks. |
+| `qts.reconciliation.persistent_drift.PersistentDriftKillSwitch` | OPT-63 | Runtime reconciliation integration (this batch). |
+| `qts.reporting.backtest.StreamingEquityMetrics` | internal | Composed into `BacktestArtifactWriter`. |
+| `qts.research.optimizer.*` (5) | OPT-65 | CLI driver + quickstart example (this batch). |
+| `qts.runtime.durability.RuntimeDurabilityDrill` | internal | Durability drill harness; remains opt-in. |
+| `qts.runtime.intent_processing.OrderPlanBuilder` | internal | Composed into `TargetIntentProcessor` in the same file. |
+| `qts.runtime.state_recovery.DurableSnapshotStore` | OPT-64 | Cross-restart state recovery wiring (this batch). |
+| `qts.runtime.state_recovery.SnapshotFrequencyPolicy` | OPT-64 | Same as DurableSnapshotStore. |
 
 ## How the rule reads this file
 
 ``qts.quality.rules.caller_presence._load_deferrals`` parses every
-non-blank line inside fenced code blocks as a fully-qualified symbol.
-The single code block above is the canonical source.
+non-blank, non-comment line inside fenced code blocks. Each line must
+match the format above; the rule rejects expired entries by emitting
+``EXPIRED_DEFERRAL`` violations.

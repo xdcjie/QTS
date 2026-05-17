@@ -1445,7 +1445,7 @@
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>350 files</span>
-      <span>617 classes</span>
+      <span>618 classes</span>
       <span>2056 functions</span>
       <span>333 backend</span>
       <span>17 frontend</span>
@@ -7351,7 +7351,7 @@
       <summary>
         <code>backend/src/qts/quality/rules/caller_presence.py</code>
         <span class="inventory-counts">
-          <span>2 classes</span>
+          <span>3 classes</span>
           <span>14 functions</span>
         </span>
       </summary>
@@ -7363,8 +7363,9 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>_BaselineEntry</code></td><td>caller_presence:61</td><td>定义 baseline entry 概念及其相关状态或行为。</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>CallerPresenceRule</code></td><td>caller_presence:67</td><td>Reject baseline-listed public symbols without a non-test caller.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>_BaselineEntry</code></td><td>caller_presence:66</td><td>定义 baseline entry 概念及其相关状态或行为。</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>_DeferralEntry</code></td><td>caller_presence:73</td><td>定义 deferral entry 概念及其相关状态或行为。</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>CallerPresenceRule</code></td><td>caller_presence:79</td><td>Reject baseline-listed public symbols without a non-test caller.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -7373,20 +7374,20 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__init__</code></td><td>CallerPresenceRule:72</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>check</code></td><td>CallerPresenceRule:75</td><td>Per-file check is a no-op; the work happens in check_repository.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check_repository</code></td><td>CallerPresenceRule:86</td><td>Perform the repository-wide caller-presence check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_load_baseline</code></td><td>CallerPresenceRule:137</td><td>实现 CallerPresenceRule 的 load baseline 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_load_deferrals</code></td><td>CallerPresenceRule:152</td><td>实现 CallerPresenceRule 的 load deferrals 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_protocol_class</code></td><td>CallerPresenceRule:168</td><td>实现 CallerPresenceRule 的 is protocol class 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_enum_class</code></td><td>CallerPresenceRule:177</td><td>实现 CallerPresenceRule 的 is enum class 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_exception_class</code></td><td>CallerPresenceRule:186</td><td>实现 CallerPresenceRule 的 is exception class 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_file_tree</code></td><td>CallerPresenceRule:193</td><td>实现 CallerPresenceRule 的 file tree 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_file_class_node</code></td><td>CallerPresenceRule:204</td><td>实现 CallerPresenceRule 的 file class node 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_annotation_names</code></td><td>CallerPresenceRule:214</td><td>实现 CallerPresenceRule 的 annotation names 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_value_object_type_names</code></td><td>CallerPresenceRule:224</td><td>Return class names that appear as return / attribute annotations in the file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_build_caller_index</code></td><td>CallerPresenceRule:249</td><td>Build identifier → caller file paths under the search roots.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_defining_file</code></td><td>CallerPresenceRule:270</td><td>Map a fully-qualified module to its source file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>CallerPresenceRule:84</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>check</code></td><td>CallerPresenceRule:87</td><td>Per-file check is a no-op; the work happens in check_repository.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check_repository</code></td><td>CallerPresenceRule:98</td><td>Perform the repository-wide caller-presence check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_load_baseline</code></td><td>CallerPresenceRule:166</td><td>实现 CallerPresenceRule 的 load baseline 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_load_deferrals</code></td><td>CallerPresenceRule:181</td><td>Parse the wiring_deferrals.md fenced code block into entries.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_protocol_class</code></td><td>CallerPresenceRule:215</td><td>实现 CallerPresenceRule 的 is protocol class 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_enum_class</code></td><td>CallerPresenceRule:224</td><td>实现 CallerPresenceRule 的 is enum class 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_exception_class</code></td><td>CallerPresenceRule:233</td><td>实现 CallerPresenceRule 的 is exception class 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_file_tree</code></td><td>CallerPresenceRule:240</td><td>实现 CallerPresenceRule 的 file tree 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_file_class_node</code></td><td>CallerPresenceRule:251</td><td>实现 CallerPresenceRule 的 file class node 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_annotation_names</code></td><td>CallerPresenceRule:261</td><td>实现 CallerPresenceRule 的 annotation names 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_value_object_type_names</code></td><td>CallerPresenceRule:271</td><td>Return class names that appear as return / attribute annotations in the file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_build_caller_index</code></td><td>CallerPresenceRule:296</td><td>Build identifier → caller file paths under the search roots.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_defining_file</code></td><td>CallerPresenceRule:317</td><td>Map a fully-qualified module to its source file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>

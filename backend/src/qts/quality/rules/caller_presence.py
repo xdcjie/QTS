@@ -29,12 +29,17 @@ import ast
 import json
 import re
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
 from qts.quality.guardrails import GuardrailViolation
 
 _BASELINE_PATH = Path("artifacts/quality/class_inventory_baseline.json")
 _DEFERRALS_PATH = Path("docs/plan/wiring_deferrals.md")
+_DEFERRAL_LINE_PATTERN = re.compile(
+    r"^(?P<symbol>\S+)\s+expires=(?P<expires>\d{4}-\d{2}-\d{2})\s+target=(?P<target>\S+)$"
+)
+_EXPIRED_DEFERRAL_CODE = "EXPIRED_DEFERRAL"
 _SEARCH_ROOTS = (
     Path("backend/src/qts"),
     Path("scripts"),
@@ -64,6 +69,13 @@ class _BaselineEntry:
     fq_symbol: str
 
 
+@dataclass(frozen=True, slots=True)
+class _DeferralEntry:
+    symbol: str
+    expires_on: date
+    target: str
+
+
 class CallerPresenceRule:
     """Reject baseline-listed public symbols without a non-test caller."""
 
@@ -91,8 +103,25 @@ class CallerPresenceRule:
         deferrals = self._load_deferrals(repo_root)
         caller_index = self._build_caller_index(repo_root)
         value_object_cache: dict[Path, set[str]] = {}
+        today = date.today()
 
         violations: list[GuardrailViolation] = []
+        for symbol, deferral in deferrals.items():
+            if deferral.expires_on < today:
+                violations.append(
+                    GuardrailViolation(
+                        code=_EXPIRED_DEFERRAL_CODE,
+                        path=str(_DEFERRALS_PATH),
+                        line=1,
+                        message=(
+                            f"wiring deferral expired on {deferral.expires_on.isoformat()}; "
+                            f"add a real caller or refresh the expiry "
+                            f"(target={deferral.target})."
+                        ),
+                        symbol=symbol,
+                    )
+                )
+
         for entry in baseline:
             if entry.fq_symbol in deferrals:
                 continue
@@ -149,20 +178,38 @@ class CallerPresenceRule:
         return tuple(entries)
 
     @staticmethod
-    def _load_deferrals(repo_root: Path) -> frozenset[str]:
+    def _load_deferrals(repo_root: Path) -> dict[str, _DeferralEntry]:
+        """Parse the wiring_deferrals.md fenced code block into entries.
+
+        Each line must match ``<symbol>  expires=<YYYY-MM-DD>  target=<id>``.
+        Comment lines (``#`` prefix) and blank lines inside the block are
+        skipped. Mis-formatted lines raise so the deferral schema cannot
+        silently drift.
+        """
         path = repo_root / _DEFERRALS_PATH
         if not path.exists():
-            return frozenset()
-        deferred: set[str] = set()
+            return {}
+        entries: dict[str, _DeferralEntry] = {}
         in_code_block = False
         for line in path.read_text(encoding="utf-8").splitlines():
             stripped = line.strip()
             if stripped.startswith("```"):
                 in_code_block = not in_code_block
                 continue
-            if in_code_block and stripped:
-                deferred.add(stripped)
-        return frozenset(deferred)
+            if not in_code_block or not stripped or stripped.startswith("#"):
+                continue
+            match = _DEFERRAL_LINE_PATTERN.match(stripped)
+            if match is None:
+                raise ValueError(
+                    f"wiring_deferrals.md line does not match required format: {stripped!r}"
+                )
+            entry = _DeferralEntry(
+                symbol=match.group("symbol"),
+                expires_on=date.fromisoformat(match.group("expires")),
+                target=match.group("target"),
+            )
+            entries[entry.symbol] = entry
+        return entries
 
     @staticmethod
     def _is_protocol_class(node: ast.ClassDef) -> bool:
