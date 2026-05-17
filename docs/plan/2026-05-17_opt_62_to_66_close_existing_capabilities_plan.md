@@ -43,11 +43,11 @@ All items must preserve invariants from
 
 | Item | Status | First red gate | Verified green | Commit |
 |---|---|---|---|---|
-| OPT-62 deferral expiry + target_pr fields | TODO | `test_deferral_entries_have_expiry.py` | — | — |
-| OPT-63 wire `PersistentDriftKillSwitch` to runtime | TODO | `test_persistent_drift_trips_runtime_kill_switch.py` | — | — |
-| OPT-64 wire `DurableSnapshotStore` + cross-restart anchor | TODO | `test_durable_snapshot_cross_session_recovery.py` | — | — |
-| OPT-65 optimizer CLI + quickstart example | TODO | `test_run_optimizer_cli_outputs_ranked_results.py` | — | — |
-| OPT-66 `GETTING_STARTED.md` + `hello_world.py` | TODO | `test_getting_started_quickstart.py` | — | — |
+| OPT-62 deferral expiry + target_pr fields | DONE | `test_deferral_entries_have_expiry.py` | `make check` 82 passed | `2441198` |
+| OPT-63 wire `PersistentDriftKillSwitch` to runtime | DONE | `test_persistent_drift_trips_runtime_kill_switch.py` | `make check` 82 passed | `49ff321` |
+| OPT-64 wire `DurableSnapshotStore` + cross-restart anchor | DONE | `test_durable_snapshot_cross_session_recovery.py` | `make check` 82 passed | `0433b04` |
+| OPT-65 optimizer CLI + quickstart example | DONE | `test_run_optimizer_cli_outputs_ranked_results.py` | `make check` 82 passed | `fdc69bc` |
+| OPT-66 `GETTING_STARTED.md` + `hello_world.py` | DONE | `test_getting_started_quickstart.py` + `test_hello_world_strategy_runs.py` | `make check` 82 passed | (this commit) |
 
 Marking an item DONE requires: first red gate recorded, focused green
 recorded, `make check` recorded, commit linked, this matrix updated.
