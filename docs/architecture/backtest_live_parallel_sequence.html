@@ -630,7 +630,7 @@
           <li><code>qts/application/strategy_lifecycle.py</code> -> <code>StrategyStatus</code> <span class="location">backend/src/qts/application/strategy_lifecycle.py:14</span>, <code>StrategyInstance</code> <span class="location">backend/src/qts/application/strategy_lifecycle.py:22</span>, <code>StrategyRegistry</code> <span class="location">backend/src/qts/application/strategy_lifecycle.py:40</span></li>
           <li><code>qts/backtest/actor_loop.py</code> -> <code>BacktestRuntimeSink</code> <span class="location">backend/src/qts/backtest/actor_loop.py:33</span>, <code>BacktestActorLoopResult</code> <span class="location">backend/src/qts/backtest/actor_loop.py:71</span>, <code>BacktestActorLoop</code> <span class="location">backend/src/qts/backtest/actor_loop.py:88</span></li>
           <li><code>qts/backtest/dependencies.py</code> -> <code>BacktestEngineDependencies</code> <span class="location">backend/src/qts/backtest/dependencies.py:37</span>, <code>BacktestActorLoopConfig</code> <span class="location">backend/src/qts/backtest/dependencies.py:78</span>, <code>BacktestActorLoopDependencies</code> <span class="location">backend/src/qts/backtest/dependencies.py:95</span></li>
-          <li><code>qts/backtest/engine.py</code> -> <code>BacktestStreamResult</code> <span class="location">backend/src/qts/backtest/engine.py:63</span>, <code>BacktestEngine</code> <span class="location">backend/src/qts/backtest/engine.py:82</span></li>
+          <li><code>qts/backtest/engine.py</code> -> <code>BacktestStreamResult</code> <span class="location">backend/src/qts/backtest/engine.py:64</span>, <code>BacktestEngine</code> <span class="location">backend/src/qts/backtest/engine.py:83</span></li>
           <li><code>qts/backtest/instrument_context.py</code> -> <code>BacktestInstrumentContext</code> <span class="location">backend/src/qts/backtest/instrument_context.py:16</span></li>
           <li><code>qts/backtest/portfolio_projection.py</code> -> <code>BacktestPortfolioProjector</code> <span class="location">backend/src/qts/backtest/portfolio_projection.py:15</span></li>
           <li><code>qts/backtest/runner.py</code> -> <code>BacktestRun</code> <span class="location">backend/src/qts/backtest/runner.py:24</span></li>
@@ -713,7 +713,7 @@
           <li><code>qts/observability/audit_sink.py</code> -> <code>AuditSink</code> <span class="location">backend/src/qts/observability/audit_sink.py:20</span>, <code>InMemoryAuditSink</code> <span class="location">backend/src/qts/observability/audit_sink.py:28</span>, <code>StderrJsonAuditSink</code> <span class="location">backend/src/qts/observability/audit_sink.py:47</span></li>
           <li><code>qts/observability/dashboard.py</code> -> <code>RuntimeSubscriptionSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:10</span>, <code>OpenOrderSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:31</span>, <code>PositionSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:50</span>, <code>CashSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:67</span>, <code>RiskStatusSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:84</span>, <code>BrokerConnectionSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:99</span>, <code>OperationalDashboardSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:114</span></li>
           <li><code>qts/observability/errors.py</code> -> <code>OperationalErrorCode</code> <span class="location">backend/src/qts/observability/errors.py:10</span>, <code>RuntimeErrorReason</code> <span class="location">backend/src/qts/observability/errors.py:29</span></li>
-          <li><code>qts/observability/metrics.py</code> -> <code>RuntimeCounterMetric</code> <span class="location">backend/src/qts/observability/metrics.py:12</span>, <code>RuntimeLatencyMetric</code> <span class="location">backend/src/qts/observability/metrics.py:29</span>, <code>MetricsRegistry</code> <span class="location">backend/src/qts/observability/metrics.py:42</span></li>
+          <li><code>qts/observability/metrics.py</code> -> <code>RuntimeCounterMetric</code> <span class="location">backend/src/qts/observability/metrics.py:15</span>, <code>RuntimeLatencyMetric</code> <span class="location">backend/src/qts/observability/metrics.py:32</span>, <code>MetricsRegistry</code> <span class="location">backend/src/qts/observability/metrics.py:45</span></li>
           <li><code>qts/portfolio/accounting/fill_accounting.py</code> -> <code>TradeSide</code> <span class="location">backend/src/qts/portfolio/accounting/fill_accounting.py:14</span>, <code>Fill</code> <span class="location">backend/src/qts/portfolio/accounting/fill_accounting.py:22</span>, <code>FillAccounting</code> <span class="location">backend/src/qts/portfolio/accounting/fill_accounting.py:45</span></li>
           <li><code>qts/portfolio/cash_book.py</code> -> <code>CashBook</code> <span class="location">backend/src/qts/portfolio/cash_book.py:11</span></li>
           <li><code>qts/portfolio/holdings.py</code> -> <code>CostBasisMethod</code> <span class="location">backend/src/qts/portfolio/holdings.py:15</span>, <code>Holding</code> <span class="location">backend/src/qts/portfolio/holdings.py:22</span>, <code>PositionClosed</code> <span class="location">backend/src/qts/portfolio/holdings.py:55</span>, <code>HoldingBook</code> <span class="location">backend/src/qts/portfolio/holdings.py:66</span></li>
@@ -803,7 +803,7 @@
           <li><code>qts/runtime/safety_controller.py</code> -> <code>RuntimeSafetyController</code> <span class="location">backend/src/qts/runtime/safety_controller.py:18</span></li>
           <li><code>qts/runtime/session.py</code> -> <code>RuntimeSessionResult</code> <span class="location">backend/src/qts/runtime/session.py:48</span>, <code>RuntimeRollbackCommand</code> <span class="location">backend/src/qts/runtime/session.py:61</span>, <code>RuntimeRollbackEvidence</code> <span class="location">backend/src/qts/runtime/session.py:77</span>, <code>RuntimeSession</code> <span class="location">backend/src/qts/runtime/session.py:90</span></li>
           <li><code>qts/runtime/signal_policy.py</code> -> <code>SignalAggregationPolicy</code> <span class="location">backend/src/qts/runtime/signal_policy.py:13</span>, <code>SignalContribution</code> <span class="location">backend/src/qts/runtime/signal_policy.py:23</span>, <code>SignalConflict</code> <span class="location">backend/src/qts/runtime/signal_policy.py:48</span>, <code>SignalAggregationDecision</code> <span class="location">backend/src/qts/runtime/signal_policy.py:57</span>, <code>SignalPolicyEngine</code> <span class="location">backend/src/qts/runtime/signal_policy.py:70</span></li>
-          <li><code>qts/runtime/sinks/backtest.py</code> -> <code>BacktestRuntimeEventSink</code> <span class="location">backend/src/qts/runtime/sinks/backtest.py:17</span></li>
+          <li><code>qts/runtime/sinks/backtest.py</code> -> <code>BacktestRuntimeEventSink</code> <span class="location">backend/src/qts/runtime/sinks/backtest.py:21</span></li>
           <li><code>qts/runtime/sinks/base.py</code> -> <code>RuntimeEvent</code> <span class="location">backend/src/qts/runtime/sinks/base.py:27</span>, <code>RuntimeEventWriteResult</code> <span class="location">backend/src/qts/runtime/sinks/base.py:154</span>, <code>RuntimeEventContext</code> <span class="location">backend/src/qts/runtime/sinks/base.py:162</span>, <code>RuntimeEventSink</code> <span class="location">backend/src/qts/runtime/sinks/base.py:227</span></li>
           <li><code>qts/runtime/sinks/broker_runtime.py</code> -> <code>BrokerRuntimeEventSink</code> <span class="location">backend/src/qts/runtime/sinks/broker_runtime.py:21</span></li>
           <li><code>qts/runtime/startup_gate.py</code> -> <code>BrokerRuntimeStartupGate</code> <span class="location">backend/src/qts/runtime/startup_gate.py:12</span></li>
@@ -891,8 +891,8 @@
           <li><code>BacktestEngineDependencies</code> <span class="location">backend/src/qts/backtest/dependencies.py:37</span> -> <code>with_defaults():50</code></li>
           <li><code>BacktestActorLoopConfig</code> <span class="location">backend/src/qts/backtest/dependencies.py:78</span> -> <code>__post_init__():85</code></li>
           <li><code>BacktestActorLoopDependencies</code> <span class="location">backend/src/qts/backtest/dependencies.py:95</span> -> <span class="muted">no public/core methods</span></li>
-          <li><code>BacktestStreamResult</code> <span class="location">backend/src/qts/backtest/engine.py:63</span> -> <span class="muted">no public/core methods</span></li>
-          <li><code>BacktestEngine</code> <span class="location">backend/src/qts/backtest/engine.py:82</span> -> <code>__init__():85</code>, <code>from_config():202</code>, <code>run_streaming():244</code></li>
+          <li><code>BacktestStreamResult</code> <span class="location">backend/src/qts/backtest/engine.py:64</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>BacktestEngine</code> <span class="location">backend/src/qts/backtest/engine.py:83</span> -> <code>__init__():86</code>, <code>from_config():203</code>, <code>run_streaming():245</code></li>
           <li><code>BacktestInstrumentContext</code> <span class="location">backend/src/qts/backtest/instrument_context.py:16</span> -> <code>__init__():19</code>, <code>instrument_registry():34</code>, <code>order_instrument_for_intent():68</code>, <code>market_price_for_intent():79</code>, <code>update_rolling_prices():97</code>, <code>related_contracts_for():118</code>, <code>is_continuous():136</code></li>
           <li><code>BacktestPortfolioProjector</code> <span class="location">backend/src/qts/backtest/portfolio_projection.py:15</span> -> <code>__init__():18</code>, <code>multiplier_for():22</code>, <code>portfolio_view():27</code>, <code>equity_point():56</code></li>
           <li><code>BacktestRun</code> <span class="location">backend/src/qts/backtest/runner.py:24</span> -> <code>processed_bars property:34</code>, <code>report_hash property:39</code></li>
@@ -1134,9 +1134,9 @@
           <li><code>OperationalDashboardSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:114</span> -> <code>to_schema():126</code></li>
           <li><code>OperationalErrorCode</code> <span class="location">backend/src/qts/observability/errors.py:10</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>RuntimeErrorReason</code> <span class="location">backend/src/qts/observability/errors.py:29</span> -> <code>__post_init__():36</code>, <code>to_payload():40</code></li>
-          <li><code>RuntimeCounterMetric</code> <span class="location">backend/src/qts/observability/metrics.py:12</span> -> <span class="muted">no public/core methods</span></li>
-          <li><code>RuntimeLatencyMetric</code> <span class="location">backend/src/qts/observability/metrics.py:29</span> -> <span class="muted">no public/core methods</span></li>
-          <li><code>MetricsRegistry</code> <span class="location">backend/src/qts/observability/metrics.py:42</span> -> <code>__init__():45</code>, <code>increment():49</code>, <code>record_latency():60</code>, <code>record_runtime_event():72</code>, <code>gauge():108</code>, <code>observe_queue():114</code>, <code>snapshot():129</code></li>
+          <li><code>RuntimeCounterMetric</code> <span class="location">backend/src/qts/observability/metrics.py:15</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>RuntimeLatencyMetric</code> <span class="location">backend/src/qts/observability/metrics.py:32</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>MetricsRegistry</code> <span class="location">backend/src/qts/observability/metrics.py:45</span> -> <code>__init__():48</code>, <code>increment():52</code>, <code>record_latency():63</code>, <code>record_runtime_event():75</code>, <code>gauge():111</code>, <code>observe_queue():117</code>, <code>snapshot():132</code></li>
           <li><code>TradeSide</code> <span class="location">backend/src/qts/portfolio/accounting/fill_accounting.py:14</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>Fill</code> <span class="location">backend/src/qts/portfolio/accounting/fill_accounting.py:22</span> -> <code>__post_init__():33</code></li>
           <li><code>FillAccounting</code> <span class="location">backend/src/qts/portfolio/accounting/fill_accounting.py:45</span> -> <code>apply():49</code></li>
@@ -1381,7 +1381,7 @@
           <li><code>SignalConflict</code> <span class="location">backend/src/qts/runtime/signal_policy.py:48</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>SignalAggregationDecision</code> <span class="location">backend/src/qts/runtime/signal_policy.py:57</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>SignalPolicyEngine</code> <span class="location">backend/src/qts/runtime/signal_policy.py:70</span> -> <code>__init__():73</code>, <code>aggregate():77</code></li>
-          <li><code>BacktestRuntimeEventSink</code> <span class="location">backend/src/qts/runtime/sinks/backtest.py:17</span> -> <code>__init__():22</code>, <code>order_count property:35</code>, <code>write():39</code>, <code>write_processed():60</code>, <code>write_equity_point():76</code>, <code>write_holdings_snapshot():80</code></li>
+          <li><code>BacktestRuntimeEventSink</code> <span class="location">backend/src/qts/runtime/sinks/backtest.py:21</span> -> <code>__init__():26</code>, <code>order_count property:48</code>, <code>write():52</code>, <code>write_processed():102</code>, <code>write_equity_point():118</code>, <code>write_holdings_snapshot():122</code></li>
           <li><code>RuntimeEvent</code> <span class="location">backend/src/qts/runtime/sinks/base.py:27</span> -> <code>__post_init__():49</code>, <code>to_envelope():67</code>, <code>require_canonical_envelope():130</code></li>
           <li><code>RuntimeEventWriteResult</code> <span class="location">backend/src/qts/runtime/sinks/base.py:154</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>RuntimeEventContext</code> <span class="location">backend/src/qts/runtime/sinks/base.py:162</span> -> <code>__post_init__():171</code>, <code>apply():181</code></li>
@@ -3125,7 +3125,7 @@
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>344 files</span>
       <span>610 classes</span>
-      <span>2031 functions</span>
+      <span>2032 functions</span>
       <span>327 backend</span>
       <span>17 frontend</span>
     </div>
@@ -4505,8 +4505,8 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>BacktestStreamResult</code></td><td>engine:63</td><td>Backtest result written to partitioned streaming artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BacktestEngine</code></td><td>engine:82</td><td>Single-process backtest engine using the Strategy SDK and actor order flow.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestStreamResult</code></td><td>engine:64</td><td>Backtest result written to partitioned streaming artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestEngine</code></td><td>engine:83</td><td>Single-process backtest engine using the Strategy SDK and actor order flow.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -4515,18 +4515,18 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__init__</code></td><td>BacktestEngine:85</td><td>Create an engine from explicit config and dependency objects.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_backtest_broker_id</code></td><td>BacktestEngine:192</td><td>实现 BacktestEngine 的 backtest broker id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>from_config</code></td><td>BacktestEngine:202</td><td>Build an engine from a serialized backtest run config.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>run_streaming</code></td><td>BacktestEngine:244</td><td>Run the backtest and write streaming artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_execution_assumptions_payload</code></td><td>BacktestEngine:350</td><td>Return simulated execution assumptions when the adapter exposes them.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_manifest_dataset_metadata_payloads</code></td><td>BacktestEngine:357</td><td>Return dataset provenance rows with the M1 manifest aliases.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_dataset_time_bounds</code></td><td>BacktestEngine:371</td><td>实现 BacktestEngine 的 dataset time bounds 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_enrich_dataset_manifest_payload</code></td><td>BacktestEngine:384</td><td>实现 BacktestEngine 的 enrich dataset manifest payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_inline_dataset_manifest_payload</code></td><td>BacktestEngine:397</td><td>实现 BacktestEngine 的 inline dataset manifest payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_default_runtime_topology_payload</code></td><td>BacktestEngine:438</td><td>实现 BacktestEngine 的 default runtime topology payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_market_data_provenance_for</code></td><td>BacktestEngine:455</td><td>Return replay provenance for a market-data runtime event.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_dataset_provenance_payload</code></td><td>BacktestEngine:468</td><td>Serialize dataset metadata for a runtime market-data event.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>BacktestEngine:86</td><td>Create an engine from explicit config and dependency objects.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_backtest_broker_id</code></td><td>BacktestEngine:193</td><td>实现 BacktestEngine 的 backtest broker id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>from_config</code></td><td>BacktestEngine:203</td><td>Build an engine from a serialized backtest run config.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>run_streaming</code></td><td>BacktestEngine:245</td><td>Run the backtest and write streaming artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_execution_assumptions_payload</code></td><td>BacktestEngine:363</td><td>Return simulated execution assumptions when the adapter exposes them.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_manifest_dataset_metadata_payloads</code></td><td>BacktestEngine:370</td><td>Return dataset provenance rows with the M1 manifest aliases.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_dataset_time_bounds</code></td><td>BacktestEngine:384</td><td>实现 BacktestEngine 的 dataset time bounds 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_enrich_dataset_manifest_payload</code></td><td>BacktestEngine:397</td><td>实现 BacktestEngine 的 enrich dataset manifest payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_inline_dataset_manifest_payload</code></td><td>BacktestEngine:410</td><td>实现 BacktestEngine 的 inline dataset manifest payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_default_runtime_topology_payload</code></td><td>BacktestEngine:451</td><td>实现 BacktestEngine 的 default runtime topology payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_market_data_provenance_for</code></td><td>BacktestEngine:468</td><td>Return replay provenance for a market-data runtime event.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_dataset_provenance_payload</code></td><td>BacktestEngine:481</td><td>Serialize dataset metadata for a runtime market-data event.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -8597,9 +8597,9 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>RuntimeCounterMetric</code></td><td>metrics:12</td><td>Standard runtime counter metrics emitted across execution modes.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>RuntimeLatencyMetric</code></td><td>metrics:29</td><td>Standard runtime latency metrics emitted across execution modes.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>MetricsRegistry</code></td><td>metrics:42</td><td>Record counters and gauges with deterministic key formatting.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>RuntimeCounterMetric</code></td><td>metrics:15</td><td>Standard runtime counter metrics emitted across execution modes.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>RuntimeLatencyMetric</code></td><td>metrics:32</td><td>Standard runtime latency metrics emitted across execution modes.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>MetricsRegistry</code></td><td>metrics:45</td><td>Record counters and gauges with deterministic key formatting.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -8608,15 +8608,15 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__init__</code></td><td>MetricsRegistry:45</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>increment</code></td><td>MetricsRegistry:49</td><td>Perform increment.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>record_latency</code></td><td>MetricsRegistry:60</td><td>Record a runtime latency observation in seconds.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>record_runtime_event</code></td><td>MetricsRegistry:72</td><td>Increment standard metrics for normalized runtime events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>gauge</code></td><td>MetricsRegistry:108</td><td>Perform gauge.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>observe_queue</code></td><td>MetricsRegistry:114</td><td>Perform observe_queue.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>snapshot</code></td><td>MetricsRegistry:129</td><td>Perform snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_metric_key</code></td><td>MetricsRegistry:134</td><td>Perform _metric_key.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_reason_code_tags</code></td><td>MetricsRegistry:147</td><td>Return metric tags for standard runtime reason codes.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>MetricsRegistry:48</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>increment</code></td><td>MetricsRegistry:52</td><td>Perform increment.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>record_latency</code></td><td>MetricsRegistry:63</td><td>Record a runtime latency observation in seconds.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>record_runtime_event</code></td><td>MetricsRegistry:75</td><td>Increment standard metrics for normalized runtime events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>gauge</code></td><td>MetricsRegistry:111</td><td>Perform gauge.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>observe_queue</code></td><td>MetricsRegistry:117</td><td>Perform observe_queue.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>snapshot</code></td><td>MetricsRegistry:132</td><td>Perform snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_metric_key</code></td><td>MetricsRegistry:137</td><td>Perform _metric_key.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_reason_code_tags</code></td><td>MetricsRegistry:150</td><td>Return metric tags for standard runtime reason codes.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -12567,7 +12567,7 @@
         <code>backend/src/qts/runtime/sinks/backtest.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
-          <span>9 functions</span>
+          <span>10 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -12578,7 +12578,7 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>BacktestRuntimeEventSink</code></td><td>backtest:17</td><td>Write engine stream artifacts through a shared writer.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestRuntimeEventSink</code></td><td>backtest:21</td><td>Write engine stream artifacts through a shared writer.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -12587,15 +12587,16 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__init__</code></td><td>BacktestRuntimeEventSink:22</td><td>Create a backtest sink for runtime events and derived artifacts.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>order_count</code></td><td>BacktestRuntimeEventSink:35</td><td>Perform order_count.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write</code></td><td>BacktestRuntimeEventSink:39</td><td>Write one normalized runtime event envelope.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_processed</code></td><td>BacktestRuntimeEventSink:60</td><td>Perform write_processed.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_equity_point</code></td><td>BacktestRuntimeEventSink:76</td><td>Perform write_equity_point.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_holdings_snapshot</code></td><td>BacktestRuntimeEventSink:80</td><td>Forward a per-bar holdings notional snapshot to the writer.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_ledger_rows</code></td><td>BacktestRuntimeEventSink:95</td><td>Perform _ledger_rows.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_order_payload</code></td><td>BacktestRuntimeEventSink:113</td><td>Perform _order_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_fill_payload</code></td><td>BacktestRuntimeEventSink:126</td><td>Perform _fill_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>BacktestRuntimeEventSink:26</td><td>Create a backtest sink for runtime events and derived artifacts.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>order_count</code></td><td>BacktestRuntimeEventSink:48</td><td>Perform order_count.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write</code></td><td>BacktestRuntimeEventSink:52</td><td>Write one normalized runtime event envelope.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_observe_strategy_eval_latency</code></td><td>BacktestRuntimeEventSink:76</td><td>Record strategy_eval_latency as the perf-counter delta between a bar&#x27;s market_data emission and the first strategy signal it triggered.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>write_processed</code></td><td>BacktestRuntimeEventSink:102</td><td>Perform write_processed.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_equity_point</code></td><td>BacktestRuntimeEventSink:118</td><td>Perform write_equity_point.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_holdings_snapshot</code></td><td>BacktestRuntimeEventSink:122</td><td>Forward a per-bar holdings notional snapshot to the writer.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_ledger_rows</code></td><td>BacktestRuntimeEventSink:137</td><td>Perform _ledger_rows.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_order_payload</code></td><td>BacktestRuntimeEventSink:155</td><td>Perform _order_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_fill_payload</code></td><td>BacktestRuntimeEventSink:168</td><td>Perform _fill_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>

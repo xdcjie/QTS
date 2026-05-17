@@ -2,16 +2,20 @@
 
 from __future__ import annotations
 
+import time
 from collections.abc import Iterable
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from qts.core.hashing import stable_json_hash
 from qts.domain.market_data import Bar
 from qts.execution.order_manager import Order, OrderFill
 from qts.reporting.backtest import BacktestArtifactWriter, EquityCurvePoint, TradeLedgerEntry
 from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventContext, RuntimeEventSink
+
+if TYPE_CHECKING:
+    from qts.observability.metrics import MetricsRegistry
 
 
 class BacktestRuntimeEventSink(RuntimeEventSink):
@@ -24,12 +28,21 @@ class BacktestRuntimeEventSink(RuntimeEventSink):
         writer: BacktestArtifactWriter,
         *,
         context: RuntimeEventContext | None = None,
+        metrics: MetricsRegistry | None = None,
     ) -> None:
-        """Create a backtest sink for runtime events and derived artifacts."""
+        """Create a backtest sink for runtime events and derived artifacts.
+
+        When ``metrics`` is supplied, every ``RuntimeEvent`` written through
+        this sink is also classified into the standard counter set via
+        :meth:`MetricsRegistry.record_runtime_event` so the Prometheus
+        exporter sees populated data without a separate poller.
+        """
         self._writer = writer
         self._context = context
         self._order_count = 0
         self._event_count = 0
+        self._metrics = metrics
+        self._last_market_data_perf_counter: float | None = None
 
     @property
     def order_count(self) -> int:
@@ -55,7 +68,36 @@ class BacktestRuntimeEventSink(RuntimeEventSink):
         self._writer.write_runtime_event(row)
         if event.kind == "account.position_closed":
             self._writer.write_position_closed(dict(event.payload))
+        if self._metrics is not None:
+            self._metrics.record_runtime_event(event)
+            self._observe_strategy_eval_latency(event)
         return self._event_count
+
+    def _observe_strategy_eval_latency(self, event: RuntimeEvent) -> None:
+        """Record strategy_eval_latency as the perf-counter delta between a bar's
+        market_data emission and the first strategy signal it triggered.
+
+        This is an approximate measure (it includes pipeline overhead, not just
+        the strategy callback), but it gives a real wall-clock reading per bar
+        rather than a sentinel.
+        """
+        if self._metrics is None:
+            return
+        from qts.observability.metrics import RuntimeLatencyMetric
+
+        if event.kind == "runtime.market_data":
+            self._last_market_data_perf_counter = time.perf_counter()
+            return
+        if (
+            event.kind in {"runtime.signal_received", "runtime.strategy_intent"}
+            and self._last_market_data_perf_counter is not None
+        ):
+            elapsed = time.perf_counter() - self._last_market_data_perf_counter
+            self._metrics.record_latency(
+                RuntimeLatencyMetric.STRATEGY_EVAL_LATENCY,
+                max(elapsed, 0.0),
+            )
+            self._last_market_data_perf_counter = None
 
     def write_processed(
         self,

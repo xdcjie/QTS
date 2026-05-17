@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from qts.runtime.mailbox import Mailbox
-from qts.runtime.sinks.base import RuntimeEvent
+
+if TYPE_CHECKING:
+    from qts.runtime.sinks.base import RuntimeEvent
 
 
 class RuntimeCounterMetric(StrEnum):

@@ -28,6 +28,7 @@ from qts.data.provenance import DatasetMetadata
 from qts.domain.market_data import Bar
 from qts.execution.adapters.brokerage_capabilities import broker_capabilities_for_model
 from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
+from qts.observability.metrics import MetricsRegistry
 from qts.registry.future_roll import FutureRollRegistry
 from qts.registry.instrument_registry import InstrumentRegistry
 from qts.reporting.backtest import (
@@ -241,8 +242,19 @@ class BacktestEngine:
             backtest_runtime_config=config,
         )
 
-    def run_streaming(self, output_dir: Any) -> BacktestStreamResult:
-        """Run the backtest and write streaming artifacts."""
+    def run_streaming(
+        self,
+        output_dir: Any,
+        *,
+        metrics: MetricsRegistry | None = None,
+    ) -> BacktestStreamResult:
+        """Run the backtest and write streaming artifacts.
+
+        When ``metrics`` is supplied, every event written through the
+        backtest sink is classified into the canonical counter set so
+        external Prometheus scrapes against the same registry see populated
+        data without a separate poller.
+        """
         config_hash = stable_json_hash(self._config_hash_payload)
         runtime_run_id = RuntimeRunId(f"bt-{config_hash.removeprefix('sha256:')[:12]}")
         strategy_id = StrategyId("strategy")
@@ -273,6 +285,7 @@ class BacktestEngine:
                 account_id=account_id,
                 strategy_id=strategy_id,
             ),
+            metrics=metrics,
         )
         actor_loop = BacktestActorLoop(
             strategy=self._strategy,

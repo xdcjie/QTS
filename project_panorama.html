@@ -1446,7 +1446,7 @@
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>344 files</span>
       <span>610 classes</span>
-      <span>2031 functions</span>
+      <span>2032 functions</span>
       <span>327 backend</span>
       <span>17 frontend</span>
     </div>
@@ -2826,8 +2826,8 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>BacktestStreamResult</code></td><td>engine:63</td><td>Backtest result written to partitioned streaming artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BacktestEngine</code></td><td>engine:82</td><td>Single-process backtest engine using the Strategy SDK and actor order flow.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestStreamResult</code></td><td>engine:64</td><td>Backtest result written to partitioned streaming artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestEngine</code></td><td>engine:83</td><td>Single-process backtest engine using the Strategy SDK and actor order flow.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -2836,18 +2836,18 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__init__</code></td><td>BacktestEngine:85</td><td>Create an engine from explicit config and dependency objects.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_backtest_broker_id</code></td><td>BacktestEngine:192</td><td>实现 BacktestEngine 的 backtest broker id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>from_config</code></td><td>BacktestEngine:202</td><td>Build an engine from a serialized backtest run config.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>run_streaming</code></td><td>BacktestEngine:244</td><td>Run the backtest and write streaming artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_execution_assumptions_payload</code></td><td>BacktestEngine:350</td><td>Return simulated execution assumptions when the adapter exposes them.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_manifest_dataset_metadata_payloads</code></td><td>BacktestEngine:357</td><td>Return dataset provenance rows with the M1 manifest aliases.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_dataset_time_bounds</code></td><td>BacktestEngine:371</td><td>实现 BacktestEngine 的 dataset time bounds 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_enrich_dataset_manifest_payload</code></td><td>BacktestEngine:384</td><td>实现 BacktestEngine 的 enrich dataset manifest payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_inline_dataset_manifest_payload</code></td><td>BacktestEngine:397</td><td>实现 BacktestEngine 的 inline dataset manifest payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_default_runtime_topology_payload</code></td><td>BacktestEngine:438</td><td>实现 BacktestEngine 的 default runtime topology payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_market_data_provenance_for</code></td><td>BacktestEngine:455</td><td>Return replay provenance for a market-data runtime event.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_dataset_provenance_payload</code></td><td>BacktestEngine:468</td><td>Serialize dataset metadata for a runtime market-data event.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>BacktestEngine:86</td><td>Create an engine from explicit config and dependency objects.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_backtest_broker_id</code></td><td>BacktestEngine:193</td><td>实现 BacktestEngine 的 backtest broker id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>from_config</code></td><td>BacktestEngine:203</td><td>Build an engine from a serialized backtest run config.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>run_streaming</code></td><td>BacktestEngine:245</td><td>Run the backtest and write streaming artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_execution_assumptions_payload</code></td><td>BacktestEngine:363</td><td>Return simulated execution assumptions when the adapter exposes them.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_manifest_dataset_metadata_payloads</code></td><td>BacktestEngine:370</td><td>Return dataset provenance rows with the M1 manifest aliases.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_dataset_time_bounds</code></td><td>BacktestEngine:384</td><td>实现 BacktestEngine 的 dataset time bounds 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_enrich_dataset_manifest_payload</code></td><td>BacktestEngine:397</td><td>实现 BacktestEngine 的 enrich dataset manifest payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_inline_dataset_manifest_payload</code></td><td>BacktestEngine:410</td><td>实现 BacktestEngine 的 inline dataset manifest payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_default_runtime_topology_payload</code></td><td>BacktestEngine:451</td><td>实现 BacktestEngine 的 default runtime topology payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_market_data_provenance_for</code></td><td>BacktestEngine:468</td><td>Return replay provenance for a market-data runtime event.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_dataset_provenance_payload</code></td><td>BacktestEngine:481</td><td>Serialize dataset metadata for a runtime market-data event.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -6918,9 +6918,9 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>RuntimeCounterMetric</code></td><td>metrics:12</td><td>Standard runtime counter metrics emitted across execution modes.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>RuntimeLatencyMetric</code></td><td>metrics:29</td><td>Standard runtime latency metrics emitted across execution modes.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>MetricsRegistry</code></td><td>metrics:42</td><td>Record counters and gauges with deterministic key formatting.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>RuntimeCounterMetric</code></td><td>metrics:15</td><td>Standard runtime counter metrics emitted across execution modes.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>RuntimeLatencyMetric</code></td><td>metrics:32</td><td>Standard runtime latency metrics emitted across execution modes.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>MetricsRegistry</code></td><td>metrics:45</td><td>Record counters and gauges with deterministic key formatting.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -6929,15 +6929,15 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__init__</code></td><td>MetricsRegistry:45</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>increment</code></td><td>MetricsRegistry:49</td><td>Perform increment.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>record_latency</code></td><td>MetricsRegistry:60</td><td>Record a runtime latency observation in seconds.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>record_runtime_event</code></td><td>MetricsRegistry:72</td><td>Increment standard metrics for normalized runtime events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>gauge</code></td><td>MetricsRegistry:108</td><td>Perform gauge.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>observe_queue</code></td><td>MetricsRegistry:114</td><td>Perform observe_queue.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>snapshot</code></td><td>MetricsRegistry:129</td><td>Perform snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_metric_key</code></td><td>MetricsRegistry:134</td><td>Perform _metric_key.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_reason_code_tags</code></td><td>MetricsRegistry:147</td><td>Return metric tags for standard runtime reason codes.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>MetricsRegistry:48</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>increment</code></td><td>MetricsRegistry:52</td><td>Perform increment.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>record_latency</code></td><td>MetricsRegistry:63</td><td>Record a runtime latency observation in seconds.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>record_runtime_event</code></td><td>MetricsRegistry:75</td><td>Increment standard metrics for normalized runtime events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>gauge</code></td><td>MetricsRegistry:111</td><td>Perform gauge.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>observe_queue</code></td><td>MetricsRegistry:117</td><td>Perform observe_queue.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>snapshot</code></td><td>MetricsRegistry:132</td><td>Perform snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_metric_key</code></td><td>MetricsRegistry:137</td><td>Perform _metric_key.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_reason_code_tags</code></td><td>MetricsRegistry:150</td><td>Return metric tags for standard runtime reason codes.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10888,7 +10888,7 @@
         <code>backend/src/qts/runtime/sinks/backtest.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
-          <span>9 functions</span>
+          <span>10 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -10899,7 +10899,7 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>BacktestRuntimeEventSink</code></td><td>backtest:17</td><td>Write engine stream artifacts through a shared writer.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestRuntimeEventSink</code></td><td>backtest:21</td><td>Write engine stream artifacts through a shared writer.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10908,15 +10908,16 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__init__</code></td><td>BacktestRuntimeEventSink:22</td><td>Create a backtest sink for runtime events and derived artifacts.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>order_count</code></td><td>BacktestRuntimeEventSink:35</td><td>Perform order_count.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write</code></td><td>BacktestRuntimeEventSink:39</td><td>Write one normalized runtime event envelope.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_processed</code></td><td>BacktestRuntimeEventSink:60</td><td>Perform write_processed.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_equity_point</code></td><td>BacktestRuntimeEventSink:76</td><td>Perform write_equity_point.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_holdings_snapshot</code></td><td>BacktestRuntimeEventSink:80</td><td>Forward a per-bar holdings notional snapshot to the writer.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_ledger_rows</code></td><td>BacktestRuntimeEventSink:95</td><td>Perform _ledger_rows.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_order_payload</code></td><td>BacktestRuntimeEventSink:113</td><td>Perform _order_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_fill_payload</code></td><td>BacktestRuntimeEventSink:126</td><td>Perform _fill_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>BacktestRuntimeEventSink:26</td><td>Create a backtest sink for runtime events and derived artifacts.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>order_count</code></td><td>BacktestRuntimeEventSink:48</td><td>Perform order_count.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write</code></td><td>BacktestRuntimeEventSink:52</td><td>Write one normalized runtime event envelope.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_observe_strategy_eval_latency</code></td><td>BacktestRuntimeEventSink:76</td><td>Record strategy_eval_latency as the perf-counter delta between a bar&#x27;s market_data emission and the first strategy signal it triggered.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>write_processed</code></td><td>BacktestRuntimeEventSink:102</td><td>Perform write_processed.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_equity_point</code></td><td>BacktestRuntimeEventSink:118</td><td>Perform write_equity_point.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_holdings_snapshot</code></td><td>BacktestRuntimeEventSink:122</td><td>Forward a per-bar holdings notional snapshot to the writer.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_ledger_rows</code></td><td>BacktestRuntimeEventSink:137</td><td>Perform _ledger_rows.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_order_payload</code></td><td>BacktestRuntimeEventSink:155</td><td>Perform _order_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_fill_payload</code></td><td>BacktestRuntimeEventSink:168</td><td>Perform _fill_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
