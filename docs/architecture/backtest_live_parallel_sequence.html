@@ -611,7 +611,7 @@
           <li><code>qts/api/schemas/backtest_schema.py</code> -> <code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span>, <code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span>, <code>BacktestRunResultSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:24</span>, <code>BacktestStrategyOptionSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:38</span></li>
           <li><code>qts/api/schemas/common.py</code> -> <code>StrategyStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:8</span>, <code>AccountSnapshotSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:15</span>, <code>OrderStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:22</span>, <code>RiskRuleSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:29</span>, <code>OperationalErrorSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:36</span></li>
           <li><code>qts/api/schemas/operations.py</code> -> <code>RuntimeCommandResponseSchema</code> <span class="location">backend/src/qts/api/schemas/operations.py:10</span>, <code>RuntimeCommandResultResponseSchema</code> <span class="location">backend/src/qts/api/schemas/operations.py:16</span>, <code>KillSwitchScopeSchema</code> <span class="location">backend/src/qts/api/schemas/operations.py:27</span>, <code>KillSwitchCommandSchema</code> <span class="location">backend/src/qts/api/schemas/operations.py:36</span>, <code>KillSwitchResponseSchema</code> <span class="location">backend/src/qts/api/schemas/operations.py:55</span></li>
-          <li><code>qts/api/security.py</code> -> <code>Principal</code> <span class="location">backend/src/qts/api/security.py:58</span>, <code>AuthBackend</code> <span class="location">backend/src/qts/api/security.py:76</span>, <code>StaticTokenAuthBackend</code> <span class="location">backend/src/qts/api/security.py:84</span>, <code>BearerJWTAuthBackend</code> <span class="location">backend/src/qts/api/security.py:131</span>, <code>ApiSecurityMiddleware</code> <span class="location">backend/src/qts/api/security.py:186</span>, <code>_DevDefaultTokenAuthBackend</code> <span class="location">backend/src/qts/api/security.py:328</span></li>
+          <li><code>qts/api/security.py</code> -> <code>Principal</code> <span class="location">backend/src/qts/api/security.py:58</span>, <code>AuthBackend</code> <span class="location">backend/src/qts/api/security.py:76</span>, <code>StaticTokenAuthBackend</code> <span class="location">backend/src/qts/api/security.py:84</span>, <code>BearerJWTAuthBackend</code> <span class="location">backend/src/qts/api/security.py:131</span>, <code>ApiSecurityMiddleware</code> <span class="location">backend/src/qts/api/security.py:186</span>, <code>_DevDefaultTokenAuthBackend</code> <span class="location">backend/src/qts/api/security.py:334</span></li>
           <li><code>qts/api/services/command_idempotency.py</code> -> <code>CommandIdempotencyStore</code> <span class="location">backend/src/qts/api/services/command_idempotency.py:11</span></li>
           <li><code>qts/api/websocket/dtos.py</code> -> <code>StreamEventType</code> <span class="location">backend/src/qts/api/websocket/dtos.py:10</span>, <code>StreamEventDTO</code> <span class="location">backend/src/qts/api/websocket/dtos.py:24</span></li>
           <li><code>qts/api/websocket/manager.py</code> -> <code>JsonWebSocket</code> <span class="location">backend/src/qts/api/websocket/manager.py:8</span>, <code>WebSocketConnectionManager</code> <span class="location">backend/src/qts/api/websocket/manager.py:20</span></li>
@@ -852,7 +852,7 @@
           <li><code>StaticTokenAuthBackend</code> <span class="location">backend/src/qts/api/security.py:84</span> -> <code>__init__():87</code>, <code>verify():90</code></li>
           <li><code>BearerJWTAuthBackend</code> <span class="location">backend/src/qts/api/security.py:131</span> -> <code>__init__():134</code>, <code>replay_cache_capacity():143</code>, <code>seen_jti_size():147</code>, <code>verify():151</code></li>
           <li><code>ApiSecurityMiddleware</code> <span class="location">backend/src/qts/api/security.py:186</span> -> <code>__init__():189</code>, <code>async dispatch():203</code></li>
-          <li><code>_DevDefaultTokenAuthBackend</code> <span class="location">backend/src/qts/api/security.py:328</span> -> <code>__init__():331</code></li>
+          <li><code>_DevDefaultTokenAuthBackend</code> <span class="location">backend/src/qts/api/security.py:334</span> -> <code>__init__():337</code></li>
           <li><code>CommandIdempotencyStore</code> <span class="location">backend/src/qts/api/services/command_idempotency.py:11</span> -> <code>__init__():14</code>, <code>run():18</code></li>
           <li><code>StreamEventType</code> <span class="location">backend/src/qts/api/websocket/dtos.py:10</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>StreamEventDTO</code> <span class="location">backend/src/qts/api/websocket/dtos.py:24</span> -> <code>__post_init__():32</code></li>
@@ -3125,7 +3125,7 @@
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>344 files</span>
       <span>610 classes</span>
-      <span>2032 functions</span>
+      <span>2035 functions</span>
       <span>327 backend</span>
       <span>17 frontend</span>
     </div>
@@ -3289,7 +3289,7 @@
         <code>backend/src/qts/api/routes/health.py</code>
         <span class="inventory-counts">
           <span>0 classes</span>
-          <span>1 function</span>
+          <span>4 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -3300,7 +3300,10 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>health</code></td><td>module:13</td><td>Perform health.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>health</code></td><td>module:28</td><td>Return the legacy combined health status.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>liveness</code></td><td>module:35</td><td>Return liveness — true if the process is responsive.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>readiness</code></td><td>module:41</td><td>Return readiness — true if the runtime is ready to serve traffic.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>startup</code></td><td>module:51</td><td>Return startup completion — true once initial boot has finished.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
             </tbody>
           </table>
         </div>
@@ -3524,7 +3527,7 @@
               <tr><td><code>StaticTokenAuthBackend</code></td><td>security:84</td><td>Hash-based static token backend for local development and CI.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
               <tr><td><code>BearerJWTAuthBackend</code></td><td>security:131</td><td>Minimal HS256 JWT verifier for service tokens.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
               <tr><td><code>ApiSecurityMiddleware</code></td><td>security:186</td><td>Authenticate every non-public API request and enforce scopes.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>_DevDefaultTokenAuthBackend</code></td><td>security:328</td><td>Development-only static-token backend with two built-in principals.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>_DevDefaultTokenAuthBackend</code></td><td>security:334</td><td>Development-only static-token backend with two built-in principals.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -3544,17 +3547,17 @@
               <tr><td><code>verify</code></td><td>BearerJWTAuthBackend:151</td><td>Verify a compact HS256 bearer JWT.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>__init__</code></td><td>ApiSecurityMiddleware:189</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>dispatch</code></td><td>ApiSecurityMiddleware:203</td><td>Authenticate, authorize, rate-limit, and continue.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_emit_audit</code></td><td>ApiSecurityMiddleware:224</td><td>实现 ApiSecurityMiddleware 的 emit audit 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_consume_budget</code></td><td>ApiSecurityMiddleware:242</td><td>实现 ApiSecurityMiddleware 的 consume budget 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>required_scope_for</code></td><td>module:256</td><td>Return the configured scope for a route.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>require_scope</code></td><td>module:265</td><td>FastAPI dependency factory for route-level scope checks.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>dependency</code></td><td>require_scope.&lt;locals&gt;:268</td><td>实现 require_scope.&lt;locals&gt; 的 dependency 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>get_principal</code></td><td>module:276</td><td>FastAPI dependency returning the authenticated principal.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>verify_websocket_authorization</code></td><td>module:287</td><td>Verify a WebSocket handshake authorization header and enforce scope.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>default_auth_backend</code></td><td>module:305</td><td>Build the configured default auth backend.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>__init__</code></td><td>_DevDefaultTokenAuthBackend:331</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_bearer_token</code></td><td>module:348</td><td>提供模块级 bearer token 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_base64url_decode</code></td><td>module:357</td><td>提供模块级 base64url decode 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_emit_audit</code></td><td>ApiSecurityMiddleware:230</td><td>实现 ApiSecurityMiddleware 的 emit audit 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_consume_budget</code></td><td>ApiSecurityMiddleware:248</td><td>实现 ApiSecurityMiddleware 的 consume budget 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>required_scope_for</code></td><td>module:262</td><td>Return the configured scope for a route.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>require_scope</code></td><td>module:271</td><td>FastAPI dependency factory for route-level scope checks.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>dependency</code></td><td>require_scope.&lt;locals&gt;:274</td><td>实现 require_scope.&lt;locals&gt; 的 dependency 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>get_principal</code></td><td>module:282</td><td>FastAPI dependency returning the authenticated principal.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>verify_websocket_authorization</code></td><td>module:293</td><td>Verify a WebSocket handshake authorization header and enforce scope.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>default_auth_backend</code></td><td>module:311</td><td>Build the configured default auth backend.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>__init__</code></td><td>_DevDefaultTokenAuthBackend:337</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_bearer_token</code></td><td>module:354</td><td>提供模块级 bearer token 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_base64url_decode</code></td><td>module:363</td><td>提供模块级 base64url decode 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>

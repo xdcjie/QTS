@@ -1,0 +1,96 @@
+# QTS production alert rules (Prometheus format).
+#
+# Drop into an external Prometheus server's rule_files: directive. Every
+# alert references a metric populated by qts.observability.metrics (see
+# RuntimeCounterMetric / RuntimeLatencyMetric) and points at the relevant
+# section of docs/operations/incident_runbook.md.
+#
+# Schema is validated by tests/quality/test_alert_rules_yaml_schema.py.
+groups:
+  - name: qts.runtime.safety
+    rules:
+      - alert: KillSwitchActive
+        expr: increase(kill_switch_activations_total[5m]) > 0
+        for: 0s
+        labels:
+          severity: page
+        annotations:
+          summary: "QTS kill switch activated"
+          description: "The runtime kill switch has fired in the last 5 minutes; new order submission is blocked. Operator intervention required."
+          runbook_url: "docs/operations/incident_runbook.md#kill-switch-activation"
+
+      - alert: ReconciliationDrift
+        expr: reconciliation_drifts_total > 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: "Internal/broker state drift"
+          description: "Reconciliation reports persistent drift between internal state and broker state. Refer to OPT-47 persistent-drift kill switch for automated mitigation."
+          runbook_url: "docs/operations/incident_runbook.md#reconciliation-drift"
+
+      - alert: RuntimeRecoveryBlocked
+        expr: runtime_recovery_blocks_total > 0
+        for: 1m
+        labels:
+          severity: page
+        annotations:
+          summary: "Runtime recovery is blocked"
+          description: "The runtime cannot recover from its current degraded state. Inspect the latest runtime.recovery_blocked event for reason_code."
+          runbook_url: "docs/operations/incident_runbook.md#recovery-blocked"
+
+  - name: qts.market_data
+    rules:
+      - alert: MarketDataStale
+        expr: market_data_stale_total > 0
+        for: 30s
+        labels:
+          severity: page
+        annotations:
+          summary: "Market data is stale"
+          description: "At least one market-data subscription has reported a staleness event in the last 30 seconds. Live order paths gate on freshness."
+          runbook_url: "docs/operations/incident_runbook.md#market-data-stale"
+
+      - alert: MarketDataSubscriptionFailure
+        expr: increase(market_data_subscription_failures_total[5m]) > 0
+        for: 0s
+        labels:
+          severity: warn
+        annotations:
+          summary: "Market data subscription failures"
+          description: "One or more market-data subscriptions failed to establish in the last 5 minutes. Check broker capabilities and permissions."
+          runbook_url: "docs/operations/incident_runbook.md#market-data-subscription-failure"
+
+  - name: qts.execution
+    rules:
+      - alert: BrokerRejectionRate
+        expr: rate(broker_rejections_total[1m]) > 0.01
+        for: 1m
+        labels:
+          severity: warn
+        annotations:
+          summary: "Elevated broker rejection rate"
+          description: "Broker is rejecting > 1 in 100 submitted orders. Check broker_capability_model + recent order_spec changes."
+          runbook_url: "docs/operations/incident_runbook.md#broker-rejection-rate"
+
+      - alert: RiskRejectionRate
+        expr: rate(risk_rejections_total[1m]) > 0.1
+        for: 1m
+        labels:
+          severity: warn
+        annotations:
+          summary: "Elevated risk rejection rate"
+          description: "RiskEngine is rejecting > 10 in 100 intents. Likely a strategy producing intents outside configured risk envelope; review per-rule rejection reason_code."
+          runbook_url: "docs/operations/incident_runbook.md#risk-rejection-rate"
+
+  - name: qts.latency
+    rules:
+      - alert: HighStrategyEvalLatency
+        expr: strategy_eval_latency > 0.2
+        for: 5m
+        labels:
+          severity: warn
+        annotations:
+          summary: "Strategy evaluation latency above threshold"
+          description: "Per-bar strategy evaluation has exceeded 200ms for 5 minutes. Investigate strategy callback or upstream pipeline overhead."
+          runbook_url: "docs/operations/incident_runbook.md#strategy-eval-latency"
