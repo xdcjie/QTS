@@ -42,8 +42,6 @@ with ``#`` and blank lines are ignored.
 
 ```
 # wiring-followup (target=OPT-NN, 3-month horizon)
-qts.runtime.state_recovery.DurableSnapshotStore  expires=2026-08-17  target=OPT-64
-qts.runtime.state_recovery.SnapshotFrequencyPolicy  expires=2026-08-17  target=OPT-64
 qts.research.optimizer.job.OptimizationJob  expires=2026-08-17  target=OPT-65
 qts.research.optimizer.parameter_space.ParameterGrid  expires=2026-08-17  target=OPT-65
 qts.research.optimizer.parameter_space.ParameterSpace  expires=2026-08-17  target=OPT-65
@@ -54,6 +52,7 @@ qts.application.strategy_lifecycle.StrategyRegistry  expires=2026-08-17  target=
 qts.api.schemas.common.RiskRuleSchema  expires=2027-05-17  target=framework
 # library APIs (1-year horizon)
 qts.data.market_data_pipeline.MarketDataPipeline  expires=2027-05-17  target=library
+qts.runtime.durable_recovery.DurableAccountRecovery  expires=2027-05-17  target=library
 # module-internal helpers (1-year horizon)
 qts.application.commands.start_runtime.RuntimeStartResult  expires=2027-05-17  target=internal
 qts.backtest.runner.BacktestRun  expires=2027-05-17  target=internal

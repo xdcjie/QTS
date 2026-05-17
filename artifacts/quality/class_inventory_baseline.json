@@ -1,5 +1,5 @@
 {
-  "production_class_count": 591,
+  "production_class_count": 592,
   "production_classes": [
     "qts.observability.audit_sink.AuditSink",
     "qts.observability.audit_sink.InMemoryAuditSink",
@@ -489,6 +489,7 @@
     "qts.runtime.durability.RuntimeDurabilityDrillResult",
     "qts.runtime.durability.RuntimeDurabilityStateMismatch",
     "qts.runtime.durability.SnapshotSchemaMismatch",
+    "qts.runtime.durable_recovery.DurableAccountRecovery",
     "qts.runtime.event_store.EventSequenceValidationReport",
     "qts.runtime.event_store.EventStore",
     "qts.runtime.event_store.FileEventStore",

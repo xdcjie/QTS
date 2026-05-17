@@ -1279,6 +1279,11 @@ exceptions:
     reason: OPT-63 persistent-drift to safety-controller coordinator
     owner: platform
     expiry: 2027-05-17
+  - class_name: DurableAccountRecovery
+    module: qts.runtime.durable_recovery
+    reason: OPT-64 wires DurableSnapshotStore + SnapshotFrequencyPolicy
+    owner: platform
+    expiry: 2027-05-17
   - class_name: SchemaMigrationMissing
     module: qts.runtime.event_store
     reason: OPT-17 schema migration registry missing-version exception

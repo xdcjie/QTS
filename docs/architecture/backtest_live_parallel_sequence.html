@@ -606,7 +606,7 @@
       <div class="surface class-inventory" aria-label="生产类全量索引">
         <h2>生产类全量索引（按阶段 / 模块）</h2>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">618 classes</span></summary>
+          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">619 classes</span></summary>
           <ul>
           <li><code>qts/api/schemas/backtest_schema.py</code> -> <code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span>, <code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span>, <code>BacktestRunResultSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:24</span>, <code>BacktestStrategyOptionSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:38</span></li>
           <li><code>qts/api/schemas/common.py</code> -> <code>StrategyStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:8</span>, <code>AccountSnapshotSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:15</span>, <code>OrderStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:22</span>, <code>RiskRuleSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:29</span>, <code>OperationalErrorSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:36</span></li>
@@ -790,6 +790,7 @@
           <li><code>qts/runtime/config_loader.py</code> -> <code>BacktestConfigLoader</code> <span class="location">backend/src/qts/runtime/config_loader.py:24</span></li>
           <li><code>qts/runtime/dependencies.py</code> -> <code>RuntimeSessionDependencies</code> <span class="location">backend/src/qts/runtime/dependencies.py:37</span></li>
           <li><code>qts/runtime/durability.py</code> -> <code>DurableEventStore</code> <span class="location">backend/src/qts/runtime/durability.py:21</span>, <code>SnapshotSchemaMismatch</code> <span class="location">backend/src/qts/runtime/durability.py:37</span>, <code>RuntimeDurabilityStateMismatch</code> <span class="location">backend/src/qts/runtime/durability.py:41</span>, <code>RuntimeDurabilityDrillConfig</code> <span class="location">backend/src/qts/runtime/durability.py:46</span>, <code>RuntimeDurabilityDrillResult</code> <span class="location">backend/src/qts/runtime/durability.py:64</span>, <code>RuntimeDurabilityDrill</code> <span class="location">backend/src/qts/runtime/durability.py:74</span></li>
+          <li><code>qts/runtime/durable_recovery.py</code> -> <code>DurableAccountRecovery</code> <span class="location">backend/src/qts/runtime/durable_recovery.py:33</span></li>
           <li><code>qts/runtime/event_store.py</code> -> <code>SchemaMigrationMissing</code> <span class="location">backend/src/qts/runtime/event_store.py:30</span>, <code>SchemaMigrationRegistry</code> <span class="location">backend/src/qts/runtime/event_store.py:34</span>, <code>EventSequenceValidationReport</code> <span class="location">backend/src/qts/runtime/event_store.py:118</span>, <code>EventStore</code> <span class="location">backend/src/qts/runtime/event_store.py:126</span>, <code>InMemoryEventStore</code> <span class="location">backend/src/qts/runtime/event_store.py:151</span>, <code>FileEventStore</code> <span class="location">backend/src/qts/runtime/event_store.py:231</span></li>
           <li><code>qts/runtime/execution_report_handler.py</code> -> <code>ExecutionReportHandler</code> <span class="location">backend/src/qts/runtime/execution_report_handler.py:13</span></li>
           <li><code>qts/runtime/intent_processing.py</code> -> <code>InstrumentExecutionContext</code> <span class="location">backend/src/qts/runtime/intent_processing.py:29</span>, <code>ProcessedIntent</code> <span class="location">backend/src/qts/runtime/intent_processing.py:58</span>, <code>OrderPlan</code> <span class="location">backend/src/qts/runtime/intent_processing.py:67</span>, <code>OrderPlanBuilder</code> <span class="location">backend/src/qts/runtime/intent_processing.py:79</span>, <code>TargetIntentProcessor</code> <span class="location">backend/src/qts/runtime/intent_processing.py:189</span></li>
@@ -837,7 +838,7 @@
           </ul>
         </details>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">618 classes</span></summary>
+          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">619 classes</span></summary>
           <ul class="method-index">
           <li><code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span> -> <span class="muted">no public/core methods</span></li>
@@ -1350,6 +1351,7 @@
           <li><code>RuntimeDurabilityDrillConfig</code> <span class="location">backend/src/qts/runtime/durability.py:46</span> -> <code>__post_init__():54</code></li>
           <li><code>RuntimeDurabilityDrillResult</code> <span class="location">backend/src/qts/runtime/durability.py:64</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>RuntimeDurabilityDrill</code> <span class="location">backend/src/qts/runtime/durability.py:74</span> -> <code>__init__():77</code>, <code>run():80</code>, <code>recover():103</code></li>
+          <li><code>DurableAccountRecovery</code> <span class="location">backend/src/qts/runtime/durable_recovery.py:33</span> -> <code>persist_if_due():40</code>, <code>restore_account():69</code></li>
           <li><code>SchemaMigrationMissing</code> <span class="location">backend/src/qts/runtime/event_store.py:30</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>SchemaMigrationRegistry</code> <span class="location">backend/src/qts/runtime/event_store.py:34</span> -> <code>__init__():46</code>, <code>register():49</code>, <code>size():67</code>, <code>registered_keys():71</code>, <code>apply():75</code></li>
           <li><code>EventSequenceValidationReport</code> <span class="location">backend/src/qts/runtime/event_store.py:118</span> -> <span class="muted">no public/core methods</span></li>
@@ -3139,10 +3141,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>351 files</span>
-      <span>620 classes</span>
-      <span>2060 functions</span>
-      <span>334 backend</span>
+      <span>352 files</span>
+      <span>621 classes</span>
+      <span>2066 functions</span>
+      <span>335 backend</span>
       <span>17 frontend</span>
     </div>
   </div>
@@ -11983,6 +11985,42 @@
               <tr><td><code>_require_supported_schema</code></td><td>RuntimeDurabilityDrill:159</td><td>实现 RuntimeDurabilityDrill 的 require supported schema 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>_apply_replayed_event</code></td><td>RuntimeDurabilityDrill:167</td><td>实现 RuntimeDurabilityDrill 的 apply replayed event 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>_require_expected_state</code></td><td>RuntimeDurabilityDrill:177</td><td>实现 RuntimeDurabilityDrill 的 require expected state 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
+        <code>backend/src/qts/runtime/durable_recovery.py</code>
+        <span class="inventory-counts">
+          <span>1 class</span>
+          <span>6 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Durable account recovery — wires DurableSnapshotStore + SnapshotFrequencyPolicy.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>DurableAccountRecovery</code></td><td>durable_recovery:33</td><td>Coordinator for AccountActor snapshot persistence and recovery.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>persist_if_due</code></td><td>DurableAccountRecovery:40</td><td>Persist a snapshot when the policy&#x27;s cadence is reached.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>restore_account</code></td><td>DurableAccountRecovery:69</td><td>Return an actor rehydrated from the latest snapshot, or a fresh one.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_actor_id</code></td><td>DurableAccountRecovery:83</td><td>实现 DurableAccountRecovery 的 actor id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_serialize_account_snapshot</code></td><td>DurableAccountRecovery:89</td><td>实现 DurableAccountRecovery 的 serialize account snapshot 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_restore_from_payload</code></td><td>DurableAccountRecovery:111</td><td>实现 DurableAccountRecovery 的 restore from payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_parse_optional_datetime</code></td><td>DurableAccountRecovery:142</td><td>实现 DurableAccountRecovery 的 parse optional datetime 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
