@@ -257,6 +257,11 @@ def test_stop_limit_buy_holds_when_stop_triggered_but_limit_not_marketable() -> 
 
 
 def test_simulated_adapter_rejects_unsupported_order_types() -> None:
+    # After OPT-27.2 the simulated brokerage declares these types as
+    # unsupported in its capability matrix, so the adapter rejects them
+    # at validation time with a ValueError. The risk-engine path catches
+    # the same intent earlier via OrderSpecValidityRule + brokerage policy;
+    # the adapter rejection is defence-in-depth for callers that bypass risk.
     for unsupported in (
         BrokerOrderType.TRAILING_STOP,
         BrokerOrderType.MARKET_ON_OPEN,
@@ -267,7 +272,7 @@ def test_simulated_adapter_rejects_unsupported_order_types() -> None:
         if unsupported is BrokerOrderType.TRAILING_STOP:
             intent_kwargs["trail_amount"] = Decimal("1")
         intent = _intent("buy", order_type=unsupported, **intent_kwargs)
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(ValueError, match="order type is not supported by broker capabilities"):
             _execute(
                 _make_adapter(),
                 intent,

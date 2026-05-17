@@ -67,6 +67,11 @@ class BrokerageModel:
             ),
         )
 
+    @property
+    def supported_order_types(self) -> frozenset[BrokerOrderType]:
+        """Return the brokerage-accepted order types for risk-time gating."""
+        return self.capabilities.supported_order_types or frozenset(BrokerOrderType)
+
     def commission_for_notional(self, notional: Decimal) -> Decimal:
         """Estimate commission from notional under this model."""
         normalized = self._validate_notional(notional)

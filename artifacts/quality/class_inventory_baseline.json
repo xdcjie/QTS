@@ -1,9 +1,10 @@
 {
-  "production_class_count": 582,
+  "production_class_count": 583,
   "production_classes": [
     "qts.observability.audit_sink.AuditSink",
     "qts.observability.audit_sink.InMemoryAuditSink",
     "qts.observability.audit_sink.StderrJsonAuditSink",
+    "qts.risk.rules.order_spec_validity.BrokerageOrderTypePolicy",
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
     "qts.api.schemas.backtest_schema.BacktestRunSchema",

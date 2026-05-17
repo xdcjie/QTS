@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import replace
 from typing import Protocol
 
 from qts.domain.risk import OrderRiskRequest, RiskDecision
+from qts.execution.broker import BrokerOrderType
 from qts.risk.rule import RiskRule
 from qts.risk.rules.market_data_freshness import MarketDataFreshnessRiskRule
 from qts.risk.rules.market_data_permission import MarketDataPermissionRiskRule
+from qts.risk.rules.order_spec_validity import OrderSpecValidityRule
 
 
 class BrokerageRiskPolicy(Protocol):
@@ -17,6 +20,11 @@ class BrokerageRiskPolicy(Protocol):
     @property
     def requires_live_market_data(self) -> bool:
         """Return whether broker-capable orders require live market data."""
+        ...
+
+    @property
+    def supported_order_types(self) -> frozenset[BrokerOrderType]:
+        """Return the set of order types the active brokerage accepts."""
         ...
 
 
@@ -40,10 +48,31 @@ class RiskEngine:
         return RiskEngine(self._rules, require_live_market_data=True)
 
     def with_brokerage_model(self, brokerage_model: BrokerageRiskPolicy) -> RiskEngine:
-        """Return a risk engine configured from brokerage-model risk requirements."""
+        """Return a risk engine configured from brokerage-model risk requirements.
+
+        Injects the brokerage's ``supported_order_types`` into any
+        ``OrderSpecValidityRule`` so unsupported order types are rejected at
+        risk time rather than crashing inside the adapter.
+        """
+        rules = tuple(self._with_brokerage_rules(brokerage_model))
+        engine: RiskEngine = RiskEngine(
+            rules,
+            require_live_market_data=self._require_live_market_data,
+        )
         if brokerage_model.requires_live_market_data:
-            return self.requiring_live_market_data()
-        return self
+            return engine.requiring_live_market_data()
+        return engine
+
+    def _with_brokerage_rules(
+        self,
+        brokerage_model: BrokerageRiskPolicy,
+    ) -> Iterable[RiskRule]:
+        """Yield rules with order-spec validity bound to the brokerage policy."""
+        for rule in self._rules:
+            if isinstance(rule, OrderSpecValidityRule):
+                yield replace(rule, brokerage_policy=brokerage_model)
+            else:
+                yield rule
 
     def check(self, request: OrderRiskRequest) -> RiskDecision:
         """Perform check."""

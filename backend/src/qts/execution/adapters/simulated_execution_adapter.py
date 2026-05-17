@@ -43,6 +43,9 @@ _UNSUPPORTED_SIM_ORDER_TYPES: frozenset[BrokerOrderType] = frozenset(
         BrokerOrderType.ICEBERG,
     }
 )
+_SIM_SUPPORTED_ORDER_TYPES: frozenset[BrokerOrderType] = (
+    frozenset(BrokerOrderType) - _UNSUPPORTED_SIM_ORDER_TYPES
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,7 +67,7 @@ class SimulatedExecutionAdapter:
                     broker_id=BrokerId("simulated"),
                     supports_fractional=True,
                     supports_stop_orders=True,
-                    supported_order_types=frozenset(BrokerOrderType),
+                    supported_order_types=_SIM_SUPPORTED_ORDER_TYPES,
                     supported_time_in_force=frozenset(TimeInForce),
                 ),
             )

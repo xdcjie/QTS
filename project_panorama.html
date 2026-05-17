@@ -1445,8 +1445,8 @@
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>341 files</span>
-      <span>611 classes</span>
-      <span>2014 functions</span>
+      <span>612 classes</span>
+      <span>2018 functions</span>
       <span>324 backend</span>
       <span>17 frontend</span>
     </div>
@@ -5534,7 +5534,7 @@
             <tbody>
               <tr><td><code>SimulatedExecutionCostModel</code></td><td>simulated_execution_adapter:16</td><td>Cost-model fields required by simulated execution.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
               <tr><td><code>_FillDecision</code></td><td>simulated_execution_adapter:31</td><td>Outcome of bar-touch evaluation for one order.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>SimulatedExecutionAdapter</code></td><td>simulated_execution_adapter:49</td><td>Apply deterministic commission and slippage assumptions for backtests.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>SimulatedExecutionAdapter</code></td><td>simulated_execution_adapter:52</td><td>Apply deterministic commission and slippage assumptions for backtests.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5545,19 +5545,19 @@
             <tbody>
               <tr><td><code>fixed_commission_per_contract</code></td><td>SimulatedExecutionCostModel:20</td><td>Fixed commission charged per filled unit.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>slippage_bps</code></td><td>SimulatedExecutionCostModel:25</td><td>Slippage applied to simulated market fills.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>SimulatedExecutionAdapter:55</td><td>Validate and normalize cost-model-backed configuration.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>execute_market_order</code></td><td>SimulatedExecutionAdapter:72</td><td>Execute one order against a single bar&#x27;s price range.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>cancel_order</code></td><td>SimulatedExecutionAdapter:137</td><td>Return a deterministic cancellation report for actor parity.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>execution_assumptions_payload</code></td><td>SimulatedExecutionAdapter:155</td><td>Serialize simulated execution assumptions for report manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>broker_capability_payload</code></td><td>SimulatedExecutionAdapter:175</td><td>Serialize broker capability assumptions used by this adapter.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_validate_order</code></td><td>SimulatedExecutionAdapter:182</td><td>实现 SimulatedExecutionAdapter 的 validate order 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_resolve_bar_range</code></td><td>SimulatedExecutionAdapter:200</td><td>实现 SimulatedExecutionAdapter 的 resolve bar range 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_evaluate_fill</code></td><td>SimulatedExecutionAdapter:215</td><td>实现 SimulatedExecutionAdapter 的 evaluate fill 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_evaluate_limit</code></td><td>SimulatedExecutionAdapter:247</td><td>实现 SimulatedExecutionAdapter 的 evaluate limit 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_evaluate_stop</code></td><td>SimulatedExecutionAdapter:270</td><td>实现 SimulatedExecutionAdapter 的 evaluate stop 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_evaluate_stop_limit</code></td><td>SimulatedExecutionAdapter:290</td><td>实现 SimulatedExecutionAdapter 的 evaluate stop limit 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_slippage_model_name</code></td><td>SimulatedExecutionAdapter:313</td><td>实现 SimulatedExecutionAdapter 的 slippage model name 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_commission_model_name</code></td><td>SimulatedExecutionAdapter:316</td><td>实现 SimulatedExecutionAdapter 的 commission model name 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>SimulatedExecutionAdapter:58</td><td>Validate and normalize cost-model-backed configuration.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>execute_market_order</code></td><td>SimulatedExecutionAdapter:75</td><td>Execute one order against a single bar&#x27;s price range.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>cancel_order</code></td><td>SimulatedExecutionAdapter:140</td><td>Return a deterministic cancellation report for actor parity.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>execution_assumptions_payload</code></td><td>SimulatedExecutionAdapter:158</td><td>Serialize simulated execution assumptions for report manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>broker_capability_payload</code></td><td>SimulatedExecutionAdapter:178</td><td>Serialize broker capability assumptions used by this adapter.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_validate_order</code></td><td>SimulatedExecutionAdapter:185</td><td>实现 SimulatedExecutionAdapter 的 validate order 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_resolve_bar_range</code></td><td>SimulatedExecutionAdapter:203</td><td>实现 SimulatedExecutionAdapter 的 resolve bar range 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_evaluate_fill</code></td><td>SimulatedExecutionAdapter:218</td><td>实现 SimulatedExecutionAdapter 的 evaluate fill 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_evaluate_limit</code></td><td>SimulatedExecutionAdapter:250</td><td>实现 SimulatedExecutionAdapter 的 evaluate limit 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_evaluate_stop</code></td><td>SimulatedExecutionAdapter:273</td><td>实现 SimulatedExecutionAdapter 的 evaluate stop 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_evaluate_stop_limit</code></td><td>SimulatedExecutionAdapter:293</td><td>实现 SimulatedExecutionAdapter 的 evaluate stop limit 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_slippage_model_name</code></td><td>SimulatedExecutionAdapter:316</td><td>实现 SimulatedExecutionAdapter 的 slippage model name 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_commission_model_name</code></td><td>SimulatedExecutionAdapter:319</td><td>实现 SimulatedExecutionAdapter 的 commission model name 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5618,7 +5618,7 @@
         <code>backend/src/qts/execution/brokerage_model.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
-          <span>9 functions</span>
+          <span>10 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -5641,12 +5641,13 @@
               <tr><td><code>__post_init__</code></td><td>BrokerageModel:24</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>custom</code></td><td>BrokerageModel:43</td><td>Return a broad custom model for user-supplied broker assumptions.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>simulated</code></td><td>BrokerageModel:57</td><td>Return the default deterministic simulated execution assumptions.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>commission_for_notional</code></td><td>BrokerageModel:70</td><td>Estimate commission from notional under this model.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>initial_margin_for_notional</code></td><td>BrokerageModel:80</td><td>Estimate initial margin from notional under this model.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>slippage_for_notional</code></td><td>BrokerageModel:84</td><td>Estimate absolute notional slippage under this model.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>supports</code></td><td>BrokerageModel:88</td><td>Return whether the model supports the requested execution shape.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_manifest_payload</code></td><td>BrokerageModel:101</td><td>Serialize auditable brokerage assumptions.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_validate_notional</code></td><td>BrokerageModel:113</td><td>实现 BrokerageModel 的 validate notional 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>supported_order_types</code></td><td>BrokerageModel:71</td><td>Return the brokerage-accepted order types for risk-time gating.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>commission_for_notional</code></td><td>BrokerageModel:75</td><td>Estimate commission from notional under this model.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>initial_margin_for_notional</code></td><td>BrokerageModel:85</td><td>Estimate initial margin from notional under this model.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>slippage_for_notional</code></td><td>BrokerageModel:89</td><td>Estimate absolute notional slippage under this model.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>supports</code></td><td>BrokerageModel:93</td><td>Return whether the model supports the requested execution shape.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_manifest_payload</code></td><td>BrokerageModel:106</td><td>Serialize auditable brokerage assumptions.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_validate_notional</code></td><td>BrokerageModel:118</td><td>实现 BrokerageModel 的 validate notional 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -8693,7 +8694,7 @@
         <code>backend/src/qts/risk/risk_engine.py</code>
         <span class="inventory-counts">
           <span>2 classes</span>
-          <span>5 functions</span>
+          <span>7 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -8704,8 +8705,8 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>BrokerageRiskPolicy</code></td><td>risk_engine:14</td><td>Brokerage assumptions needed by risk without importing execution models.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
-              <tr><td><code>RiskEngine</code></td><td>risk_engine:23</td><td>Apply risk rules in order and return the first rejection.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BrokerageRiskPolicy</code></td><td>risk_engine:17</td><td>Brokerage assumptions needed by risk without importing execution models.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>RiskEngine</code></td><td>risk_engine:31</td><td>Apply risk rules in order and return the first rejection.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -8714,11 +8715,13 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>requires_live_market_data</code></td><td>BrokerageRiskPolicy:18</td><td>Return whether broker-capable orders require live market data.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>RiskEngine:26</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>requiring_live_market_data</code></td><td>RiskEngine:36</td><td>Return a risk engine that force-checks live market-data safety first.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>with_brokerage_model</code></td><td>RiskEngine:42</td><td>Return a risk engine configured from brokerage-model risk requirements.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>RiskEngine:48</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>requires_live_market_data</code></td><td>BrokerageRiskPolicy:21</td><td>Return whether broker-capable orders require live market data.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>supported_order_types</code></td><td>BrokerageRiskPolicy:26</td><td>Return the set of order types the active brokerage accepts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>RiskEngine:34</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>requiring_live_market_data</code></td><td>RiskEngine:44</td><td>Return a risk engine that force-checks live market-data safety first.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>with_brokerage_model</code></td><td>RiskEngine:50</td><td>Return a risk engine configured from brokerage-model risk requirements.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_with_brokerage_rules</code></td><td>RiskEngine:66</td><td>Yield rules with order-spec validity bound to the brokerage policy.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>check</code></td><td>RiskEngine:77</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -9027,19 +9030,20 @@
       <summary>
         <code>backend/src/qts/risk/rules/order_spec_validity.py</code>
         <span class="inventory-counts">
-          <span>1 class</span>
-          <span>1 function</span>
+          <span>2 classes</span>
+          <span>2 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
-        <p><strong>文件作用：</strong>Risk rule validating order specification shape.</p>
+        <p><strong>文件作用：</strong>Risk rule validating order specification shape and brokerage acceptance.</p>
         <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
         <div class="inventory-subsection">
           <h3>类</h3>
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>OrderSpecValidityRule</code></td><td>order_spec_validity:8</td><td>Reject invalid order spec combinations before order submission.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BrokerageOrderTypePolicy</code></td><td>order_spec_validity:23</td><td>Brokerage-acceptance subset consulted by the validity rule.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>OrderSpecValidityRule</code></td><td>order_spec_validity:33</td><td>Reject invalid order spec combinations before order submission.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -9048,7 +9052,8 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>check</code></td><td>OrderSpecValidityRule:13</td><td>Validate the request order spec.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>supported_order_types</code></td><td>BrokerageOrderTypePolicy:27</td><td>Return the set of order types the active brokerage accepts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>OrderSpecValidityRule:39</td><td>Validate the request order spec against shape and acceptance.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
