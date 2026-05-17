@@ -101,7 +101,8 @@ Priority: P0 (next sprint) > P1 (next quarter) > P2 (when capacity) > P3 (watch)
 ### P1 — Module health and breadth
 
 #### OPT-04 — Split `quality/guardrails.py` (2873 lines)
-- Status: TODO
+- Status: IN-PROGRESS
+- Review status matrix: `docs/plan/qts_vs_lean_p1_module_health_review_status_matrix.md`
 - Files: `backend/src/qts/quality/guardrails.py`
 - Problem: single file holds 30+ rule classes; violates its own complexity-budget philosophy; review cost high; change concurrency low.
 - Proposal: split into `qts/quality/rules/{imports,oop,naming,inventory,boundary,placeholder,...}.py` + `qts/quality/suite.py` registry. Keep public entrypoint `run_guardrails` stable for `scripts/verify_guardrails.py`.
@@ -111,19 +112,22 @@ Priority: P0 (next sprint) > P1 (next quarter) > P2 (when capacity) > P3 (watch)
 - Risk: low (mechanical refactor, but large)
 
 #### OPT-05 — Decompose `BrokerRuntimeStartupChecklist.from_config` (172 lines)
-- Status: TODO
+- Status: IN-PROGRESS
+- Review status matrix: `docs/plan/qts_vs_lean_p1_module_health_review_status_matrix.md`
 - Files: `backend/src/qts/runtime/broker_startup.py:56`
 - Proposal: turn `from_config` into a Builder; each broker subsystem (data, execution, capital, reconciliation) gets its own builder section.
 - ETA: 1 week
 - Risk: medium
 
 #### OPT-06 — Decompose `RuntimeTopologyBuilder.from_live_config` (101 lines)
-- Status: TODO
+- Status: IN-PROGRESS
+- Review status matrix: `docs/plan/qts_vs_lean_p1_module_health_review_status_matrix.md`
 - Files: `backend/src/qts/runtime/topology.py:346`
 - ETA: 0.5 week
 
 #### OPT-07 — Add core indicators to reach an industrial baseline
-- Status: TODO
+- Status: IN-PROGRESS
+- Review status matrix: `docs/plan/qts_vs_lean_p1_module_health_review_status_matrix.md`
 - Files: `backend/src/qts/indicators/`, `backend/src/qts/strategy_sdk/indicators.py`
 - Proposal — add these 12, grouped:
   - Trend: MACD, Bollinger Bands, ADX, Keltner Channel, Donchian Channel
@@ -135,7 +139,8 @@ Priority: P0 (next sprint) > P1 (next quarter) > P2 (when capacity) > P3 (watch)
 - Depends on: nothing
 
 #### OPT-08 — Introduce a Consolidator primitive for cross-timeframe synthesis
-- Status: TODO
+- Status: IN-PROGRESS
+- Review status matrix: `docs/plan/qts_vs_lean_p1_module_health_review_status_matrix.md`
 - Files: new `backend/src/qts/data/bars/consolidator.py`, integrate with `runtime/market_data_coordinator.py`
 - Problem: currently only the provider physical / strategy logical two-axis exists. Strategies that want 1m + 5m + 1h cannot chain consolidators.
 - Proposal: `Consolidator` protocol (input bar/tick -> emit derived bar). Compose: `TickConsolidator -> 1mBar -> NMinuteConsolidator -> 5mBar`. Backed by `RuntimeMarketDataCoordinator`.
@@ -144,7 +149,8 @@ Priority: P0 (next sprint) > P1 (next quarter) > P2 (when capacity) > P3 (watch)
 - Depends on: OPT-02 helps but not required
 
 #### OPT-09 — Pluginize risk rules and add the standard 5
-- Status: TODO
+- Status: IN-PROGRESS
+- Review status matrix: `docs/plan/qts_vs_lean_p1_module_health_review_status_matrix.md`
 - Files: `backend/src/qts/risk/rules/`, `backend/src/qts/risk/risk_engine.py`
 - Problem: only `MaxNotionalRule` is wired into the backtest engine; production live needs more.
 - Proposal — 5 anchor rules with config:
@@ -158,14 +164,16 @@ Priority: P0 (next sprint) > P1 (next quarter) > P2 (when capacity) > P3 (watch)
 - Depends on: nothing
 
 #### OPT-10 — Brokerage Model: fees, margin, capabilities matrix
-- Status: TODO
+- Status: IN-PROGRESS
+- Review status matrix: `docs/plan/qts_vs_lean_p1_module_health_review_status_matrix.md`
 - Files: `backend/src/qts/execution/adapters/`, new `qts/execution/brokerage_model.py`
 - Proposal: `BrokerageModel` aggregates `FeeModel`, `MarginModel`, `SlippageModel`, `CapabilityMatrix`. IBKR ships first; backtest sim uses a default. Capabilities table feeds `RiskEngine.requires_live_market_data` and order capability checks already in place.
 - ETA: 2 weeks
 - Depends on: OPT-09 helps with margin rule integration
 
 #### OPT-11 — Universe Selection framework
-- Status: TODO
+- Status: IN-PROGRESS
+- Review status matrix: `docs/plan/qts_vs_lean_p1_module_health_review_status_matrix.md`
 - Files: new `backend/src/qts/strategy_sdk/universe.py`, integrate with `MarketDataCoordinator`
 - Problem: `Universe` is named in `docs/strategy_sdk/strategy_api.md` but absent from code.
 - Proposal: `UniverseSelector` protocol returning a set of `InstrumentId` at scheduled intervals; the runtime materializes the subscription delta.
