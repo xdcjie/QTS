@@ -1445,8 +1445,8 @@
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>340 files</span>
-      <span>605 classes</span>
-      <span>1990 functions</span>
+      <span>607 classes</span>
+      <span>1998 functions</span>
       <span>323 backend</span>
       <span>17 frontend</span>
     </div>
@@ -1827,8 +1827,8 @@
       <summary>
         <code>backend/src/qts/api/security.py</code>
         <span class="inventory-counts">
-          <span>5 classes</span>
-          <span>17 functions</span>
+          <span>6 classes</span>
+          <span>21 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -1839,11 +1839,12 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>Principal</code></td><td>security:52</td><td>Authenticated API principal.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>AuthBackend</code></td><td>security:70</td><td>Authentication backend contract.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
-              <tr><td><code>StaticTokenAuthBackend</code></td><td>security:78</td><td>Hash-based static token backend for local development and CI.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BearerJWTAuthBackend</code></td><td>security:136</td><td>Minimal HS256 JWT verifier for service tokens.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ApiSecurityMiddleware</code></td><td>security:175</td><td>Authenticate every non-public API request and enforce scopes.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>Principal</code></td><td>security:54</td><td>Authenticated API principal.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>AuthBackend</code></td><td>security:72</td><td>Authentication backend contract.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>StaticTokenAuthBackend</code></td><td>security:80</td><td>Hash-based static token backend for local development and CI.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BearerJWTAuthBackend</code></td><td>security:127</td><td>Minimal HS256 JWT verifier for service tokens.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ApiSecurityMiddleware</code></td><td>security:182</td><td>Authenticate every non-public API request and enforce scopes.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>_DevDefaultTokenAuthBackend</code></td><td>security:299</td><td>Development-only static-token backend with two built-in principals.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -1852,23 +1853,27 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__post_init__</code></td><td>Principal:63</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>verify</code></td><td>AuthBackend:73</td><td>Verify an Authorization header and return a principal.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>StaticTokenAuthBackend:81</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>verify</code></td><td>StaticTokenAuthBackend:84</td><td>Verify a bearer token against configured SHA-256 token hashes.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_load</code></td><td>StaticTokenAuthBackend:94</td><td>实现 StaticTokenAuthBackend 的 load 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>BearerJWTAuthBackend:139</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>verify</code></td><td>BearerJWTAuthBackend:145</td><td>Verify a compact HS256 bearer JWT.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>ApiSecurityMiddleware:178</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>dispatch</code></td><td>ApiSecurityMiddleware:190</td><td>Authenticate, authorize, rate-limit, and continue.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_consume_budget</code></td><td>ApiSecurityMiddleware:206</td><td>实现 ApiSecurityMiddleware 的 consume budget 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>required_scope_for</code></td><td>module:220</td><td>Return the configured scope for a route.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>require_scope</code></td><td>module:229</td><td>FastAPI dependency factory for route-level scope checks.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>dependency</code></td><td>require_scope.&lt;locals&gt;:232</td><td>实现 require_scope.&lt;locals&gt; 的 dependency 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>get_principal</code></td><td>module:240</td><td>FastAPI dependency returning the authenticated principal.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>default_auth_backend</code></td><td>module:251</td><td>Build the configured default auth backend.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>_bearer_token</code></td><td>module:260</td><td>提供模块级 bearer token 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_base64url_decode</code></td><td>module:269</td><td>提供模块级 base64url decode 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>Principal:65</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>verify</code></td><td>AuthBackend:75</td><td>Verify an Authorization header and return a principal.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>StaticTokenAuthBackend:83</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>verify</code></td><td>StaticTokenAuthBackend:86</td><td>Verify a bearer token against configured SHA-256 token hashes.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_load</code></td><td>StaticTokenAuthBackend:98</td><td>实现 StaticTokenAuthBackend 的 load 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>BearerJWTAuthBackend:130</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>replay_cache_capacity</code></td><td>BearerJWTAuthBackend:139</td><td>Return the maximum jti replay cache size.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>seen_jti_size</code></td><td>BearerJWTAuthBackend:143</td><td>Return the current size of the jti replay cache.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>verify</code></td><td>BearerJWTAuthBackend:147</td><td>Verify a compact HS256 bearer JWT.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>ApiSecurityMiddleware:185</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>dispatch</code></td><td>ApiSecurityMiddleware:197</td><td>Authenticate, authorize, rate-limit, and continue.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_consume_budget</code></td><td>ApiSecurityMiddleware:213</td><td>实现 ApiSecurityMiddleware 的 consume budget 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>required_scope_for</code></td><td>module:227</td><td>Return the configured scope for a route.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>require_scope</code></td><td>module:236</td><td>FastAPI dependency factory for route-level scope checks.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>dependency</code></td><td>require_scope.&lt;locals&gt;:239</td><td>实现 require_scope.&lt;locals&gt; 的 dependency 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>get_principal</code></td><td>module:247</td><td>FastAPI dependency returning the authenticated principal.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>verify_websocket_authorization</code></td><td>module:258</td><td>Verify a WebSocket handshake authorization header and enforce scope.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>default_auth_backend</code></td><td>module:276</td><td>Build the configured default auth backend.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>__init__</code></td><td>_DevDefaultTokenAuthBackend:302</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_bearer_token</code></td><td>module:319</td><td>提供模块级 bearer token 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_base64url_decode</code></td><td>module:328</td><td>提供模块级 base64url decode 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -1980,13 +1985,13 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>_next_sequence</code></td><td>module:21</td><td>Allocate the next global stream sequence number.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_to_event</code></td><td>module:28</td><td>Build a typed stream envelope and append it to the replay buffer.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_snapshot_event</code></td><td>module:48</td><td>Return a synthetic bootstrap snapshot payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_resync_event</code></td><td>module:53</td><td>Build a stream resync event.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_emit_replay</code></td><td>module:70</td><td>Replay buffered events newer than `from_sequence` to the given socket.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>broadcast_stream_event</code></td><td>module:88</td><td>Build and broadcast one envelope to all active websocket clients.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>event_stream</code></td><td>module:101</td><td>Open a resumable event stream with sequence and replay support.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>_next_sequence</code></td><td>module:22</td><td>Allocate the next global stream sequence number.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_to_event</code></td><td>module:29</td><td>Build a typed stream envelope and append it to the replay buffer.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_snapshot_event</code></td><td>module:49</td><td>Return a synthetic bootstrap snapshot payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_resync_event</code></td><td>module:54</td><td>Build a stream resync event.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_emit_replay</code></td><td>module:71</td><td>Replay buffered events newer than `from_sequence` to the given socket.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>broadcast_stream_event</code></td><td>module:89</td><td>Build and broadcast one envelope to all active websocket clients.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>event_stream</code></td><td>module:102</td><td>Open a resumable event stream with sequence and replay support.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5514,8 +5519,8 @@
       <summary>
         <code>backend/src/qts/execution/adapters/simulated_execution_adapter.py</code>
         <span class="inventory-counts">
-          <span>2 classes</span>
-          <span>11 functions</span>
+          <span>3 classes</span>
+          <span>15 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -5527,7 +5532,8 @@
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
               <tr><td><code>SimulatedExecutionCostModel</code></td><td>simulated_execution_adapter:16</td><td>Cost-model fields required by simulated execution.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
-              <tr><td><code>SimulatedExecutionAdapter</code></td><td>simulated_execution_adapter:31</td><td>Apply deterministic commission and slippage assumptions for backtests.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>_FillDecision</code></td><td>simulated_execution_adapter:31</td><td>Outcome of bar-touch evaluation for one order.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>SimulatedExecutionAdapter</code></td><td>simulated_execution_adapter:49</td><td>Apply deterministic commission and slippage assumptions for backtests.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5538,15 +5544,19 @@
             <tbody>
               <tr><td><code>fixed_commission_per_contract</code></td><td>SimulatedExecutionCostModel:20</td><td>Fixed commission charged per filled unit.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>slippage_bps</code></td><td>SimulatedExecutionCostModel:25</td><td>Slippage applied to simulated market fills.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>SimulatedExecutionAdapter:37</td><td>Validate and normalize cost-model-backed configuration.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>execute_market_order</code></td><td>SimulatedExecutionAdapter:54</td><td>Execute a market order with cost-model adjustments.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_validate_order</code></td><td>SimulatedExecutionAdapter:87</td><td>实现 SimulatedExecutionAdapter 的 validate order 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_base_fill_price</code></td><td>SimulatedExecutionAdapter:105</td><td>实现 SimulatedExecutionAdapter 的 base fill price 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>cancel_order</code></td><td>SimulatedExecutionAdapter:115</td><td>Return a deterministic cancellation report for actor parity.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>execution_assumptions_payload</code></td><td>SimulatedExecutionAdapter:133</td><td>Serialize simulated execution assumptions for report manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>broker_capability_payload</code></td><td>SimulatedExecutionAdapter:152</td><td>Serialize broker capability assumptions used by this adapter.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_slippage_model_name</code></td><td>SimulatedExecutionAdapter:159</td><td>实现 SimulatedExecutionAdapter 的 slippage model name 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_commission_model_name</code></td><td>SimulatedExecutionAdapter:162</td><td>实现 SimulatedExecutionAdapter 的 commission model name 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>SimulatedExecutionAdapter:55</td><td>Validate and normalize cost-model-backed configuration.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>execute_market_order</code></td><td>SimulatedExecutionAdapter:72</td><td>Execute one order against a single bar&#x27;s price range.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>cancel_order</code></td><td>SimulatedExecutionAdapter:137</td><td>Return a deterministic cancellation report for actor parity.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>execution_assumptions_payload</code></td><td>SimulatedExecutionAdapter:155</td><td>Serialize simulated execution assumptions for report manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>broker_capability_payload</code></td><td>SimulatedExecutionAdapter:175</td><td>Serialize broker capability assumptions used by this adapter.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_validate_order</code></td><td>SimulatedExecutionAdapter:182</td><td>实现 SimulatedExecutionAdapter 的 validate order 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_resolve_bar_range</code></td><td>SimulatedExecutionAdapter:200</td><td>实现 SimulatedExecutionAdapter 的 resolve bar range 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_evaluate_fill</code></td><td>SimulatedExecutionAdapter:215</td><td>实现 SimulatedExecutionAdapter 的 evaluate fill 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_evaluate_limit</code></td><td>SimulatedExecutionAdapter:247</td><td>实现 SimulatedExecutionAdapter 的 evaluate limit 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_evaluate_stop</code></td><td>SimulatedExecutionAdapter:270</td><td>实现 SimulatedExecutionAdapter 的 evaluate stop 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_evaluate_stop_limit</code></td><td>SimulatedExecutionAdapter:290</td><td>实现 SimulatedExecutionAdapter 的 evaluate stop limit 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_slippage_model_name</code></td><td>SimulatedExecutionAdapter:313</td><td>实现 SimulatedExecutionAdapter 的 slippage model name 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_commission_model_name</code></td><td>SimulatedExecutionAdapter:316</td><td>实现 SimulatedExecutionAdapter 的 commission model name 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
