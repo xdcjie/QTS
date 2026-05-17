@@ -30,7 +30,7 @@ def test_backtest_engine_order_path_uses_shared_actor_chain() -> None:
     from qts.runtime.intent_processing import OrderPlanBuilder, TargetIntentProcessor
     from qts.runtime.strategy_execution_pipeline import StrategyExecutionPipeline
 
-    actor_loop_source = inspect.getsource(BacktestActorLoop.run)
+    actor_loop_source = inspect.getsource(BacktestActorLoop)
     order_manager_actor_source = inspect.getsource(OrderManagerActor)
     order_plan_builder_source = inspect.getsource(OrderPlanBuilder)
     processor_source = inspect.getsource(TargetIntentProcessor)

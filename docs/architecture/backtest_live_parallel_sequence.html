@@ -627,7 +627,7 @@
           <li><code>qts/application/services/operations.py</code> -> <code>OperationsService</code> <span class="location">backend/src/qts/application/services/operations.py:26</span></li>
           <li><code>qts/application/services/strategy_service.py</code> -> <code>StrategyLifecycleService</code> <span class="location">backend/src/qts/application/services/strategy_service.py:9</span></li>
           <li><code>qts/application/strategy_lifecycle.py</code> -> <code>StrategyStatus</code> <span class="location">backend/src/qts/application/strategy_lifecycle.py:14</span>, <code>StrategyInstance</code> <span class="location">backend/src/qts/application/strategy_lifecycle.py:22</span>, <code>StrategyRegistry</code> <span class="location">backend/src/qts/application/strategy_lifecycle.py:40</span></li>
-          <li><code>qts/backtest/actor_loop.py</code> -> <code>BacktestRuntimeSink</code> <span class="location">backend/src/qts/backtest/actor_loop.py:32</span>, <code>BacktestActorLoopResult</code> <span class="location">backend/src/qts/backtest/actor_loop.py:62</span>, <code>BacktestActorLoop</code> <span class="location">backend/src/qts/backtest/actor_loop.py:76</span></li>
+          <li><code>qts/backtest/actor_loop.py</code> -> <code>BacktestRuntimeSink</code> <span class="location">backend/src/qts/backtest/actor_loop.py:33</span>, <code>BacktestActorLoopResult</code> <span class="location">backend/src/qts/backtest/actor_loop.py:63</span>, <code>BacktestActorLoop</code> <span class="location">backend/src/qts/backtest/actor_loop.py:80</span></li>
           <li><code>qts/backtest/dependencies.py</code> -> <code>BacktestEngineDependencies</code> <span class="location">backend/src/qts/backtest/dependencies.py:37</span>, <code>BacktestActorLoopConfig</code> <span class="location">backend/src/qts/backtest/dependencies.py:78</span>, <code>BacktestActorLoopDependencies</code> <span class="location">backend/src/qts/backtest/dependencies.py:95</span></li>
           <li><code>qts/backtest/engine.py</code> -> <code>BacktestStreamResult</code> <span class="location">backend/src/qts/backtest/engine.py:63</span>, <code>BacktestEngine</code> <span class="location">backend/src/qts/backtest/engine.py:82</span></li>
           <li><code>qts/backtest/instrument_context.py</code> -> <code>BacktestInstrumentContext</code> <span class="location">backend/src/qts/backtest/instrument_context.py:16</span></li>
@@ -783,7 +783,7 @@
           <li><code>qts/runtime/intent_processing.py</code> -> <code>InstrumentExecutionContext</code> <span class="location">backend/src/qts/runtime/intent_processing.py:28</span>, <code>ProcessedIntent</code> <span class="location">backend/src/qts/runtime/intent_processing.py:57</span>, <code>OrderPlan</code> <span class="location">backend/src/qts/runtime/intent_processing.py:66</span>, <code>OrderPlanBuilder</code> <span class="location">backend/src/qts/runtime/intent_processing.py:77</span>, <code>TargetIntentProcessor</code> <span class="location">backend/src/qts/runtime/intent_processing.py:180</span></li>
           <li><code>qts/runtime/live_capital.py</code> -> <code>OperatorSignoff</code> <span class="location">backend/src/qts/runtime/live_capital.py:18</span>, <code>LiveCapitalEnablementRequest</code> <span class="location">backend/src/qts/runtime/live_capital.py:79</span>, <code>LiveCapitalEnablementDecision</code> <span class="location">backend/src/qts/runtime/live_capital.py:174</span>, <code>LiveCapitalOrderDecision</code> <span class="location">backend/src/qts/runtime/live_capital.py:234</span>, <code>LiveCapitalReadinessDecision</code> <span class="location">backend/src/qts/runtime/live_capital.py:316</span></li>
           <li><code>qts/runtime/mailbox.py</code> -> <code>Mailbox</code> <span class="location">backend/src/qts/runtime/mailbox.py:8</span></li>
-          <li><code>qts/runtime/market_data_coordinator.py</code> -> <code>RuntimeMarketDataCoordinator</code> <span class="location">backend/src/qts/runtime/market_data_coordinator.py:24</span></li>
+          <li><code>qts/runtime/market_data_coordinator.py</code> -> <code>RuntimeMarketDataCoordinator</code> <span class="location">backend/src/qts/runtime/market_data_coordinator.py:26</span></li>
           <li><code>qts/runtime/market_data_flow.py</code> -> <code>MarketDataFlowResult</code> <span class="location">backend/src/qts/runtime/market_data_flow.py:26</span>, <code>MarketDataFlow</code> <span class="location">backend/src/qts/runtime/market_data_flow.py:33</span></li>
           <li><code>qts/runtime/mode.py</code> -> <code>RuntimeMode</code> <span class="location">backend/src/qts/runtime/mode.py:8</span>, <code>MarketDataEnvironment</code> <span class="location">backend/src/qts/runtime/mode.py:30</span>, <code>ExecutionEnvironment</code> <span class="location">backend/src/qts/runtime/mode.py:50</span>, <code>AccountEnvironment</code> <span class="location">backend/src/qts/runtime/mode.py:73</span></li>
           <li><code>qts/runtime/order_result.py</code> -> <code>RuntimeOrderResult</code> <span class="location">backend/src/qts/runtime/order_result.py:12</span></li>
@@ -873,9 +873,9 @@
           <li><code>StrategyStatus</code> <span class="location">backend/src/qts/application/strategy_lifecycle.py:14</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>StrategyInstance</code> <span class="location">backend/src/qts/application/strategy_lifecycle.py:22</span> -> <code>__post_init__():32</code></li>
           <li><code>StrategyRegistry</code> <span class="location">backend/src/qts/application/strategy_lifecycle.py:40</span> -> <code>__init__():43</code>, <code>register():47</code>, <code>resolve():55</code></li>
-          <li><code>BacktestRuntimeSink</code> <span class="location">backend/src/qts/backtest/actor_loop.py:32</span> -> <code>order_count property:36</code>, <code>write():39</code>, <code>write_processed():42</code>, <code>write_equity_point():51</code></li>
-          <li><code>BacktestActorLoopResult</code> <span class="location">backend/src/qts/backtest/actor_loop.py:62</span> -> <code>processed_bars property:71</code></li>
-          <li><code>BacktestActorLoop</code> <span class="location">backend/src/qts/backtest/actor_loop.py:76</span> -> <code>__init__():79</code>, <code>run():129</code></li>
+          <li><code>BacktestRuntimeSink</code> <span class="location">backend/src/qts/backtest/actor_loop.py:33</span> -> <code>order_count property:37</code>, <code>write():40</code>, <code>write_processed():43</code>, <code>write_equity_point():52</code></li>
+          <li><code>BacktestActorLoopResult</code> <span class="location">backend/src/qts/backtest/actor_loop.py:63</span> -> <code>processed_bars property:72</code></li>
+          <li><code>BacktestActorLoop</code> <span class="location">backend/src/qts/backtest/actor_loop.py:80</span> -> <code>__init__():83</code>, <code>run():133</code>, <code>initialize_run_phase():150</code>, <code>process_market_data_phase():219</code>, <code>process_warmup_phase():237</code>, <code>process_trading_phase():243</code>, <code>finalize_run_phase():265</code>, <code>market_data_correlation_id():275</code>, <code>write_market_data_event():281</code>, <code>execute_strategy_bar():304</code>, <code>write_strategy_signal_events():320</code>, <code>write_signal_batch_events():357</code>, <code>write_batch_conflict_events():396</code>, <code>process_strategy_intent():461</code>, <code>write_broker_reject_event():515</code>, <code>write_equity_and_account_snapshot():538</code></li>
           <li><code>BacktestEngineDependencies</code> <span class="location">backend/src/qts/backtest/dependencies.py:37</span> -> <code>with_defaults():50</code></li>
           <li><code>BacktestActorLoopConfig</code> <span class="location">backend/src/qts/backtest/dependencies.py:78</span> -> <code>__post_init__():85</code></li>
           <li><code>BacktestActorLoopDependencies</code> <span class="location">backend/src/qts/backtest/dependencies.py:95</span> -> <span class="muted">no public/core methods</span></li>
@@ -1326,7 +1326,7 @@
           <li><code>LiveCapitalOrderDecision</code> <span class="location">backend/src/qts/runtime/live_capital.py:234</span> -> <code>disabled():252</code>, <code>assert_live_order_allowed():270</code>, <code>blocked_reason():277</code></li>
           <li><code>LiveCapitalReadinessDecision</code> <span class="location">backend/src/qts/runtime/live_capital.py:316</span> -> <code>from_kill_switch_drill_evidence():324</code></li>
           <li><code>Mailbox</code> <span class="location">backend/src/qts/runtime/mailbox.py:8</span> -> <code>__init__():11</code>, <code>size property:16</code>, <code>put():20</code>, <code>get():24</code>, <code>empty():28</code></li>
-          <li><code>RuntimeMarketDataCoordinator</code> <span class="location">backend/src/qts/runtime/market_data_coordinator.py:24</span> -> <code>__init__():27</code>, <code>materialize_universe_subscription_delta():31</code>, <code>on_market_data_source_event():45</code>, <code>on_market_data():77</code></li>
+          <li><code>RuntimeMarketDataCoordinator</code> <span class="location">backend/src/qts/runtime/market_data_coordinator.py:26</span> -> <code>__init__():29</code>, <code>materialize_universe_subscription_delta():33</code>, <code>on_market_data_source_event():47</code>, <code>on_market_data():79</code>, <code>route_source_bar():96</code>, <code>derive_market_data():117</code>, <code>trigger_strategy_for_bar():131</code>, <code>finish_market_data_dispatch():171</code>, <code>market_data_correlation_id():194</code>, <code>record_market_data_bar():200</code>, <code>bind_strategy_pipelines():215</code>, <code>execute_strategy_bindings():224</code>, <code>write_strategy_intent_events():255</code>, <code>collect_signal_contributions():293</code>, <code>process_aggregated_signal_contributions():312</code>, <code>process_signal_batch():340</code>, <code>write_signal_conflict_events():380</code>, <code>write_signal_aggregated_event():439</code>, <code>process_batch_intent():472</code></li>
           <li><code>MarketDataFlowResult</code> <span class="location">backend/src/qts/runtime/market_data_flow.py:26</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>MarketDataFlow</code> <span class="location">backend/src/qts/runtime/market_data_flow.py:33</span> -> <code>__init__():36</code>, <code>publish_bar():51</code>, <code>publish_source_event():65</code>, <code>risk_context_for():97</code></li>
           <li><code>RuntimeMode</code> <span class="location">backend/src/qts/runtime/mode.py:8</span> -> <code>from_value():19</code></li>
@@ -3100,7 +3100,7 @@
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>333 files</span>
       <span>590 classes</span>
-      <span>1893 functions</span>
+      <span>1922 functions</span>
       <span>319 backend</span>
       <span>14 frontend</span>
     </div>
@@ -4314,7 +4314,7 @@
         <code>backend/src/qts/backtest/actor_loop.py</code>
         <span class="inventory-counts">
           <span>3 classes</span>
-          <span>9 functions</span>
+          <span>23 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -4325,9 +4325,9 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>BacktestRuntimeSink</code></td><td>actor_loop:32</td><td>Minimal backtest sink contract used by the actor loop.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
-              <tr><td><code>BacktestActorLoopResult</code></td><td>actor_loop:62</td><td>Result summary produced by an actor loop run.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BacktestActorLoop</code></td><td>actor_loop:76</td><td>Run backtest bars through strategy/order execution actors.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestRuntimeSink</code></td><td>actor_loop:33</td><td>Minimal backtest sink contract used by the actor loop.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>BacktestActorLoopResult</code></td><td>actor_loop:63</td><td>Result summary produced by an actor loop run.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestActorLoop</code></td><td>actor_loop:80</td><td>Run backtest bars through strategy/order execution actors.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -4336,15 +4336,29 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>order_count</code></td><td>BacktestRuntimeSink:36</td><td>Return total processed orders.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write</code></td><td>BacktestRuntimeSink:39</td><td>Write one normalized runtime event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_processed</code></td><td>BacktestRuntimeSink:42</td><td>Record processed orders and fills.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_equity_point</code></td><td>BacktestRuntimeSink:51</td><td>Record per-bar equity point.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>processed_bars</code></td><td>BacktestActorLoopResult:71</td><td>Perform processed_bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>BacktestActorLoop:79</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_resolve_actor_classes</code></td><td>BacktestActorLoop:121</td><td>Perform _resolve_actor_classes.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>run</code></td><td>BacktestActorLoop:129</td><td>Perform run.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_write_account_snapshot</code></td><td>BacktestActorLoop:439</td><td>Emit a normalized account snapshot event.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>order_count</code></td><td>BacktestRuntimeSink:37</td><td>Return total processed orders.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write</code></td><td>BacktestRuntimeSink:40</td><td>Write one normalized runtime event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_processed</code></td><td>BacktestRuntimeSink:43</td><td>Record processed orders and fills.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_equity_point</code></td><td>BacktestRuntimeSink:52</td><td>Record per-bar equity point.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>processed_bars</code></td><td>BacktestActorLoopResult:72</td><td>Perform processed_bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>BacktestActorLoop:83</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_resolve_actor_classes</code></td><td>BacktestActorLoop:125</td><td>Perform _resolve_actor_classes.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>run</code></td><td>BacktestActorLoop:133</td><td>Run all bars through explicit initialization, bar, and final phases.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>initialize_run_phase</code></td><td>BacktestActorLoop:150</td><td>Initialize actors, pipeline, market-data flow, and run state.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>process_market_data_phase</code></td><td>BacktestActorLoop:219</td><td>Convert one source bar into strategy-facing bar phases.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>process_warmup_phase</code></td><td>BacktestActorLoop:237</td><td>Record warmup accounting without submitting aggregated intents.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>process_trading_phase</code></td><td>BacktestActorLoop:243</td><td>Process aggregated signals, order flow, and end-of-bar accounting.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>finalize_run_phase</code></td><td>BacktestActorLoop:265</td><td>Finalize the strategy pipeline and return the run summary.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>market_data_correlation_id</code></td><td>BacktestActorLoop:275</td><td>Create the stable correlation id for one strategy-facing bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_market_data_event</code></td><td>BacktestActorLoop:281</td><td>Update latest price state and emit the normalized market-data event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>execute_strategy_bar</code></td><td>BacktestActorLoop:304</td><td>Execute the strategy pipeline for one bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_strategy_signal_events</code></td><td>BacktestActorLoop:320</td><td>Emit raw strategy signal and intent events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_signal_batch_events</code></td><td>BacktestActorLoop:357</td><td>Emit aggregation, conflict, and rejection events for a signal batch.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_batch_conflict_events</code></td><td>BacktestActorLoop:396</td><td>Emit conflict and rejection evidence for a rejected signal batch.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>process_strategy_intent</code></td><td>BacktestActorLoop:461</td><td>Process one accepted strategy intent through risk/order/execution/account.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_broker_reject_event</code></td><td>BacktestActorLoop:515</td><td>Emit a normalized broker capability rejection event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_equity_and_account_snapshot</code></td><td>BacktestActorLoop:538</td><td>Emit end-of-bar equity and account snapshot artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_write_account_snapshot</code></td><td>BacktestActorLoop:551</td><td>Emit a normalized account snapshot event.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -11639,7 +11653,7 @@
         <code>backend/src/qts/runtime/market_data_coordinator.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
-          <span>6 functions</span>
+          <span>21 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -11650,7 +11664,7 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>RuntimeMarketDataCoordinator</code></td><td>market_data_coordinator:24</td><td>Own market-data source events and strategy/order actor coordination.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>RuntimeMarketDataCoordinator</code></td><td>market_data_coordinator:26</td><td>Own market-data source events and strategy/order actor coordination.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -11659,12 +11673,27 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__init__</code></td><td>RuntimeMarketDataCoordinator:27</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>materialize_universe_subscription_delta</code></td><td>RuntimeMarketDataCoordinator:31</td><td>Apply a strategy universe update to runtime subscription membership.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_market_data_source_event</code></td><td>RuntimeMarketDataCoordinator:45</td><td>Handle a source market-data event, including degradation and permission signals.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_market_data</code></td><td>RuntimeMarketDataCoordinator:77</td><td>Handle one source bar through market-data, strategy, risk, and actors.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_single_account_snapshot</code></td><td>RuntimeMarketDataCoordinator:361</td><td>实现 RuntimeMarketDataCoordinator 的 single account snapshot 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_write_account_snapshots</code></td><td>RuntimeMarketDataCoordinator:368</td><td>实现 RuntimeMarketDataCoordinator 的 write account snapshots 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>RuntimeMarketDataCoordinator:29</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>materialize_universe_subscription_delta</code></td><td>RuntimeMarketDataCoordinator:33</td><td>Apply a strategy universe update to runtime subscription membership.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_market_data_source_event</code></td><td>RuntimeMarketDataCoordinator:47</td><td>Handle a source market-data event, including degradation and permission signals.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_market_data</code></td><td>RuntimeMarketDataCoordinator:79</td><td>Handle one source bar through named runtime dispatch stages.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>route_source_bar</code></td><td>RuntimeMarketDataCoordinator:96</td><td>Reject source bars that do not match topology subscriptions.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>derive_market_data</code></td><td>RuntimeMarketDataCoordinator:117</td><td>Publish a source bar and return strategy-facing bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>trigger_strategy_for_bar</code></td><td>RuntimeMarketDataCoordinator:131</td><td>Trigger strategy/risk/order processing for one strategy-facing bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>finish_market_data_dispatch</code></td><td>RuntimeMarketDataCoordinator:171</td><td>Build the runtime result and emit account snapshots for processed bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>market_data_correlation_id</code></td><td>RuntimeMarketDataCoordinator:194</td><td>Create the stable correlation id for one strategy-facing bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>record_market_data_bar</code></td><td>RuntimeMarketDataCoordinator:200</td><td>Record latest price state and the normalized market-data runtime event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>bind_strategy_pipelines</code></td><td>RuntimeMarketDataCoordinator:215</td><td>Return enabled strategy bindings that should see this bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>execute_strategy_bindings</code></td><td>RuntimeMarketDataCoordinator:224</td><td>Execute strategy pipelines and collect contributions for aggregation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_strategy_intent_events</code></td><td>RuntimeMarketDataCoordinator:255</td><td>Emit raw strategy signal and intent events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>collect_signal_contributions</code></td><td>RuntimeMarketDataCoordinator:293</td><td>Group strategy contributions by account for signal aggregation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>process_aggregated_signal_contributions</code></td><td>RuntimeMarketDataCoordinator:312</td><td>Aggregate collected signals and submit resulting intents.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>process_signal_batch</code></td><td>RuntimeMarketDataCoordinator:340</td><td>Emit aggregation events and process accepted batch intents.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_signal_conflict_events</code></td><td>RuntimeMarketDataCoordinator:380</td><td>Emit conflict and rejection evidence for an aggregated signal batch.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_signal_aggregated_event</code></td><td>RuntimeMarketDataCoordinator:439</td><td>Emit the accepted aggregate signal event for a batch.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>process_batch_intent</code></td><td>RuntimeMarketDataCoordinator:472</td><td>Submit one post-aggregation intent through risk, order, and fill stages.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_single_account_snapshot</code></td><td>RuntimeMarketDataCoordinator:523</td><td>实现 RuntimeMarketDataCoordinator 的 single account snapshot 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_write_account_snapshots</code></td><td>RuntimeMarketDataCoordinator:530</td><td>实现 RuntimeMarketDataCoordinator 的 write account snapshots 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>

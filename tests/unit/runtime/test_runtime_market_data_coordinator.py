@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -21,6 +22,24 @@ from tests.unit.runtime.test_runtime_session import (
     _RecordingExecutionAdapter,
     _registry,
 )
+
+
+def test_runtime_market_data_coordinator_has_named_dispatch_stages() -> None:
+    from qts.runtime.market_data_coordinator import RuntimeMarketDataCoordinator
+
+    required_stages = (
+        "route_source_bar",
+        "derive_market_data",
+        "trigger_strategy_for_bar",
+        "finish_market_data_dispatch",
+    )
+
+    for stage in required_stages:
+        method = getattr(RuntimeMarketDataCoordinator, stage, None)
+        assert method is not None, f"missing market-data dispatch stage: {stage}"
+
+    source_lines = inspect.getsourcelines(RuntimeMarketDataCoordinator.on_market_data)[0]
+    assert len(source_lines) <= 80
 
 
 def test_runtime_market_data_coordinator_matches_session_unsubscribed_result() -> None:

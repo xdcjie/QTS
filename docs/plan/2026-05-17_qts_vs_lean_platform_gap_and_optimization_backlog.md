@@ -77,7 +77,7 @@ Priority: P0 (next sprint) > P1 (next quarter) > P2 (when capacity) > P3 (watch)
 - Risk: low
 
 #### OPT-02 — Decompose `RuntimeMarketDataCoordinator.on_market_data` (282 lines, hot path)
-- Status: IN-PROGRESS
+- Status: DONE
 - Review status matrix: `docs/plan/qts_vs_lean_p0_review_status_matrix.md`
 - Files: `backend/src/qts/runtime/market_data_coordinator.py:61`
 - Problem: every market data event traverses this monolithic function. Hard to profile, hard to test individual stages, currently flagged as untested hotspot (degree 57).
@@ -88,7 +88,7 @@ Priority: P0 (next sprint) > P1 (next quarter) > P2 (when capacity) > P3 (watch)
 - Risk: medium (hot path; regression risk in event ordering)
 
 #### OPT-03 — Decompose `BacktestActorLoop.run` (308 lines)
-- Status: IN-PROGRESS
+- Status: DONE
 - Review status matrix: `docs/plan/qts_vs_lean_p0_review_status_matrix.md`
 - Files: `backend/src/qts/backtest/actor_loop.py:129`
 - Problem: longest function in backend; untested hotspot (degree 67).

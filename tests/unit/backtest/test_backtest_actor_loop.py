@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -47,6 +48,25 @@ class _RecordingBacktestSink:
     def write_account_snapshot(self, point: AccountSnapshot) -> None:
         """Ignore account snapshots in this in-memory sink."""
         del point
+
+
+def test_backtest_actor_loop_run_is_named_phase_orchestrator() -> None:
+    from qts.backtest.actor_loop import BacktestActorLoop
+
+    required_phases = (
+        "initialize_run_phase",
+        "process_market_data_phase",
+        "process_warmup_phase",
+        "process_trading_phase",
+        "finalize_run_phase",
+    )
+
+    for phase in required_phases:
+        method = getattr(BacktestActorLoop, phase, None)
+        assert method is not None, f"missing backtest actor-loop phase: {phase}"
+
+    source_lines = inspect.getsourcelines(BacktestActorLoop.run)[0]
+    assert len(source_lines) <= 80
 
 
 def _bar(start: datetime, close: str = "100") -> Bar:

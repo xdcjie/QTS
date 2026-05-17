@@ -32,8 +32,8 @@ def test_qts_vs_lean_p0_backlog_links_to_review_status_matrix() -> None:
     backlog = BACKLOG_PATH.read_text(encoding="utf-8")
     expected_status = {
         "OPT-01": "DONE",
-        "OPT-02": "IN-PROGRESS",
-        "OPT-03": "IN-PROGRESS",
+        "OPT-02": "DONE",
+        "OPT-03": "DONE",
     }
 
     for opt_id, status in expected_status.items():

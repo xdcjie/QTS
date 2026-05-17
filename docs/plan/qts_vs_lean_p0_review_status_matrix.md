@@ -36,8 +36,8 @@ evidence in this repository:
 | Task | Status | Evidence Candidates | Blocking Gaps | First Red Gate |
 | --- | --- | --- | --- | --- |
 | OPT-01 Strongly-type Strategy SDK callbacks | DONE / Focused gates passed | `qts.strategy_sdk.events` owns public `TimerEvent`, `OrderUpdate`, and `Fill`; `Strategy` callbacks use `StrategyContext`, `Bar`, `Tick`, and SDK events; VWAP example has no `Any`; `strategy_api.md` documents callback payloads. | None for focused SDK typing gates. | `test_strategy_callback_signatures_use_public_sdk_types` and `test_vwap_pullback_example_does_not_use_any` failed before the SDK event module and typed signatures existed. |
-| OPT-02 Decompose `RuntimeMarketDataCoordinator.on_market_data` | IN-PROGRESS / Gate planned | `backend/src/qts/runtime/market_data_coordinator.py`, existing market-data flow tests, replay/paper integration tests. | Hot path is still monolithic; named stage boundaries and tests are not yet in place. | Add tests for normalize, route, derive-bar, and strategy-trigger stages that fail until stages exist. |
-| OPT-03 Decompose `BacktestActorLoop.run` | IN-PROGRESS / Gate planned | `backend/src/qts/backtest/actor_loop.py`, backtest integration and anchor tests. | Loop phases are not yet explicit; phase-level tests are not yet in place. | Add tests that require warmup, trading, and finalize phase ownership before extracting production code. |
+| OPT-02 Decompose `RuntimeMarketDataCoordinator.on_market_data` | DONE / Focused gates passed | `on_market_data` is a 16-line orchestrator over `route_source_bar`, `derive_market_data`, `trigger_strategy_for_bar`, and `finish_market_data_dispatch`; runtime flow and paper full-chain tests remain green. | None for focused coordinator decomposition gates. | `test_runtime_market_data_coordinator_has_named_dispatch_stages` failed before the named stages existed. |
+| OPT-03 Decompose `BacktestActorLoop.run` | DONE / Focused gates passed | `run` is a 16-line orchestrator over `initialize_run_phase`, `process_market_data_phase`, `process_warmup_phase`, `process_trading_phase`, and `finalize_run_phase`; backtest integration and parity anchors remain green. | None for focused actor-loop decomposition gates. | `test_backtest_actor_loop_run_is_named_phase_orchestrator` failed before the phase methods existed. |
 
 ## Execution Lanes
 
@@ -56,8 +56,8 @@ Run red gates before each production edit, then focused green checks:
 uv run pytest tests/unit/docs/test_qts_vs_lean_p0_review_status_matrix.py -q
 uv run pytest tests/unit/strategy_sdk tests/unit/strategies/test_vwap_pullback.py -q
 uv run mypy examples/strategies/vwap_pullback.py
-uv run pytest tests/unit/runtime/test_market_data_flow.py tests/integration/test_paper_runtime_full_chain.py -q
-uv run pytest tests/integration/test_backtest_runtime_flow.py tests/anchor -q
+uv run pytest tests/unit/runtime/test_market_data_flow.py tests/unit/runtime/test_runtime_market_data_coordinator.py tests/integration/test_paper_runtime_full_chain.py -q
+uv run pytest tests/unit/backtest/test_backtest_actor_loop.py tests/integration/test_backtest_engine_flow.py tests/integration/test_backtest_live_parity_flow.py tests/integration/test_bar_to_fill_flow.py tests/anchor -q
 make guardrails
 ```
 
@@ -120,4 +120,32 @@ make test-unit
 
 make test-integration
 # 78 passed, 4 skipped
+```
+
+OPT-02 and OPT-03 focused gates on 2026-05-17:
+
+```bash
+PYTHONPATH=backend/src uv run pytest tests/unit/runtime/test_runtime_market_data_coordinator.py -q
+# 1 failed as expected before the named coordinator stages existed.
+
+PYTHONPATH=backend/src uv run pytest tests/unit/backtest/test_backtest_actor_loop.py -q
+# 1 failed as expected before the named actor-loop phases existed.
+
+make format
+# 2 files reformatted, 551 files left unchanged
+
+PYTHONPATH=backend/src uv run pytest tests/unit/runtime/test_market_data_flow.py tests/unit/runtime/test_runtime_market_data_coordinator.py tests/integration/test_paper_runtime_full_chain.py -q
+# 12 passed
+
+PYTHONPATH=backend/src uv run pytest tests/unit/backtest/test_backtest_actor_loop.py tests/integration/test_backtest_engine_flow.py tests/integration/test_backtest_live_parity_flow.py tests/integration/test_bar_to_fill_flow.py tests/anchor -q
+# 55 passed, 2 skipped
+
+make check
+# format: 553 files left unchanged
+# lint: All checks passed
+# guardrails: Architecture guardrails passed
+# typecheck: Success: no issues found in 529 source files
+# test-unit: 902 passed
+# test-integration: 78 passed, 4 skipped
+# test-anchor: 39 passed, 2 skipped
 ```
