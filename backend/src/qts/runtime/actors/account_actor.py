@@ -95,8 +95,25 @@ class AccountActor(Actor):
 
     @property
     def position_closed_events(self) -> tuple[PositionClosed, ...]:
-        """Return close events emitted by this actor."""
+        """Return close events emitted by this actor (read-only).
+
+        Prefer :meth:`drain_position_closed_events` from the runtime
+        coordinator; this property is kept for legacy snapshot tests that
+        inspect the buffer without consuming it.
+        """
         return tuple(self._position_closed_events)
+
+    def drain_position_closed_events(self) -> tuple[PositionClosed, ...]:
+        """Return and clear the buffered PositionClosed events.
+
+        The runtime market-data coordinator calls this after every dispatch
+        tick to emit ``account.position_closed`` events through the shared
+        sink, keeping Holdings and the report artifacts in single-source-of-
+        truth agreement on realized PnL.
+        """
+        events = tuple(self._position_closed_events)
+        self._position_closed_events.clear()
+        return events
 
     def _apply_fill(self, message: ApplyFill) -> None:
         """Perform _apply_fill."""

@@ -518,6 +518,14 @@ class RuntimeMarketDataCoordinator:
             processed.fills,
             partition.order_manager_actor,
         )
+        closed_events = partition.account_actor.drain_position_closed_events()
+        if closed_events:
+            self._runtime_event_writer.write_position_closed_events(
+                closed_events,
+                account_id=partition.account_id,
+                strategy_id=strategy_id,
+                correlation_id=correlation_id,
+            )
 
     @staticmethod
     def _single_account_snapshot(

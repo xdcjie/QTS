@@ -9,6 +9,7 @@ from typing import Protocol
 from qts.core.ids import AccountId, CausationId, CorrelationId, InstrumentId, OrderId, StrategyId
 from qts.domain.risk import RiskDecision
 from qts.execution.order_manager import Order, OrderFill
+from qts.portfolio.holdings import PositionClosed
 from qts.runtime.actors.order_manager_actor import OrderRouteMetadata
 from qts.runtime.sinks.base import RuntimeEvent
 
@@ -146,6 +147,42 @@ class RuntimeEventWriter:
                     strategy_id=metadata.strategy_id,
                     account_id=metadata.account_id,
                     causation_id=CausationId(f"{metadata.client_order_id}:broker_report"),
+                )
+            )
+
+    def write_position_closed_events(
+        self,
+        events: tuple[PositionClosed, ...],
+        *,
+        account_id: AccountId | None,
+        strategy_id: StrategyId | None = None,
+        correlation_id: CorrelationId | None = None,
+    ) -> None:
+        """Write account.position_closed events into the runtime sink.
+
+        These events are the single source of truth for trade-level realized
+        PnL; the backtest artifact writer persists them into
+        ``closed_trades.ndjson`` and the statistics builder consumes them in
+        place of its previous private fill tracker.
+        """
+        for closed in events:
+            self.write(
+                RuntimeEvent(
+                    kind="account.position_closed",
+                    payload={
+                        "instrument_id": closed.instrument_id.value,
+                        "closed_quantity": str(closed.closed_quantity),
+                        "exit_price": str(closed.exit_price),
+                        "realized_pnl": str(closed.realized_pnl),
+                        "opened_at": (
+                            None if closed.opened_at is None else closed.opened_at.isoformat()
+                        ),
+                        "closed_at": closed.closed_at.isoformat(),
+                    },
+                    account_id=account_id,
+                    strategy_id=strategy_id,
+                    instrument_id=closed.instrument_id,
+                    correlation_id=correlation_id,
                 )
             )
 

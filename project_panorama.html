@@ -1446,7 +1446,7 @@
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>340 files</span>
       <span>607 classes</span>
-      <span>1998 functions</span>
+      <span>2000 functions</span>
       <span>323 backend</span>
       <span>17 frontend</span>
     </div>
@@ -2763,9 +2763,9 @@
               <tr><td><code>write_signal_batch_events</code></td><td>BacktestActorLoop:359</td><td>Emit aggregation, conflict, and rejection events for a signal batch.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>write_batch_conflict_events</code></td><td>BacktestActorLoop:398</td><td>Emit conflict and rejection evidence for a rejected signal batch.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>process_strategy_intent</code></td><td>BacktestActorLoop:463</td><td>Process one accepted strategy intent through risk/order/execution/account.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_broker_reject_event</code></td><td>BacktestActorLoop:517</td><td>Emit a normalized broker capability rejection event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_equity_and_account_snapshot</code></td><td>BacktestActorLoop:540</td><td>Emit end-of-bar equity and account snapshot artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_write_account_snapshot</code></td><td>BacktestActorLoop:553</td><td>Emit a normalized account snapshot event.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>write_broker_reject_event</code></td><td>BacktestActorLoop:525</td><td>Emit a normalized broker capability rejection event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_equity_and_account_snapshot</code></td><td>BacktestActorLoop:548</td><td>Emit end-of-bar equity and account snapshot artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_write_account_snapshot</code></td><td>BacktestActorLoop:561</td><td>Emit a normalized account snapshot event.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -9212,7 +9212,7 @@
         <code>backend/src/qts/runtime/actors/account_actor.py</code>
         <span class="inventory-counts">
           <span>3 classes</span>
-          <span>8 functions</span>
+          <span>9 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -9240,8 +9240,9 @@
               <tr><td><code>handle</code></td><td>AccountActor:72</td><td>Perform handle.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>snapshot</code></td><td>AccountActor:79</td><td>Perform snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>restore</code></td><td>AccountActor:89</td><td>Restore account-owned state from an actor snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>position_closed_events</code></td><td>AccountActor:97</td><td>Return close events emitted by this actor.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_apply_fill</code></td><td>AccountActor:101</td><td>Perform _apply_fill.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>position_closed_events</code></td><td>AccountActor:97</td><td>Return close events emitted by this actor (read-only).</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>drain_position_closed_events</code></td><td>AccountActor:106</td><td>Return and clear the buffered PositionClosed events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_apply_fill</code></td><td>AccountActor:118</td><td>Perform _apply_fill.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10237,8 +10238,8 @@
               <tr><td><code>write_signal_conflict_events</code></td><td>RuntimeMarketDataCoordinator:380</td><td>Emit conflict and rejection evidence for an aggregated signal batch.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>write_signal_aggregated_event</code></td><td>RuntimeMarketDataCoordinator:439</td><td>Emit the accepted aggregate signal event for a batch.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>process_batch_intent</code></td><td>RuntimeMarketDataCoordinator:472</td><td>Submit one post-aggregation intent through risk, order, and fill stages.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_single_account_snapshot</code></td><td>RuntimeMarketDataCoordinator:523</td><td>实现 RuntimeMarketDataCoordinator 的 single account snapshot 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_write_account_snapshots</code></td><td>RuntimeMarketDataCoordinator:530</td><td>实现 RuntimeMarketDataCoordinator 的 write account snapshots 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_single_account_snapshot</code></td><td>RuntimeMarketDataCoordinator:531</td><td>实现 RuntimeMarketDataCoordinator 的 single account snapshot 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_write_account_snapshots</code></td><td>RuntimeMarketDataCoordinator:538</td><td>实现 RuntimeMarketDataCoordinator 的 write account snapshots 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10529,7 +10530,7 @@
         <code>backend/src/qts/runtime/runtime_event_writer.py</code>
         <span class="inventory-counts">
           <span>2 classes</span>
-          <span>6 functions</span>
+          <span>7 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -10540,8 +10541,8 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>_OrderManagerLike</code></td><td>runtime_event_writer:16</td><td>Protocol-like facade for order manager observability metadata.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
-              <tr><td><code>RuntimeEventWriter</code></td><td>runtime_event_writer:27</td><td>Write runtime observability events for order flow and risk decisions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>_OrderManagerLike</code></td><td>runtime_event_writer:17</td><td>Protocol-like facade for order manager observability metadata.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>RuntimeEventWriter</code></td><td>runtime_event_writer:28</td><td>Write runtime observability events for order flow and risk decisions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10550,12 +10551,13 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>route_metadata</code></td><td>_OrderManagerLike:19</td><td>Return route metadata for an order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>get_order</code></td><td>_OrderManagerLike:22</td><td>Return current order by order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_risk_decision_events</code></td><td>RuntimeEventWriter:32</td><td>Write approved/rejected risk decision events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_order_events</code></td><td>RuntimeEventWriter:65</td><td>Write submitted/order-state events for emitted orders.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_fill_events</code></td><td>RuntimeEventWriter:120</td><td>Write fill events with routing metadata and account context.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_risk_decision_payload</code></td><td>RuntimeEventWriter:153</td><td>Serialize shared risk decision fields for runtime events.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>route_metadata</code></td><td>_OrderManagerLike:20</td><td>Return route metadata for an order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>get_order</code></td><td>_OrderManagerLike:23</td><td>Return current order by order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_risk_decision_events</code></td><td>RuntimeEventWriter:33</td><td>Write approved/rejected risk decision events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_order_events</code></td><td>RuntimeEventWriter:66</td><td>Write submitted/order-state events for emitted orders.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_fill_events</code></td><td>RuntimeEventWriter:121</td><td>Write fill events with routing metadata and account context.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_position_closed_events</code></td><td>RuntimeEventWriter:153</td><td>Write account.position_closed events into the runtime sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_risk_decision_payload</code></td><td>RuntimeEventWriter:190</td><td>Serialize shared risk decision fields for runtime events.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>

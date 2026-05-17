@@ -509,6 +509,14 @@ class BacktestActorLoop:
             fallback_contributing_strategy_ids=strategy_result.contributing_strategy_ids,
         )
         state.event_writer.write_fill_events(fill_payload, state.order_manager_actor)
+        closed_events = state.account_actor.drain_position_closed_events()
+        if closed_events:
+            state.event_writer.write_position_closed_events(
+                closed_events,
+                account_id=getattr(state.account_actor.snapshot(), "account_id", None),
+                strategy_id=None,
+                correlation_id=None,
+            )
         if state.compact_orders:
             state.order_manager_actor.compact_for_streaming(
                 order.order_id for order in order_payload

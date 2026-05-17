@@ -796,7 +796,7 @@
           <li><code>qts/runtime/recovery.py</code> -> <code>RuntimeRecoveryCoordinator</code> <span class="location">backend/src/qts/runtime/recovery.py:10</span></li>
           <li><code>qts/runtime/rollback.py</code> -> <code>RuntimeRollbackCoordinator</code> <span class="location">backend/src/qts/runtime/rollback.py:10</span></li>
           <li><code>qts/runtime/router.py</code> -> <code>RouteNotFoundError</code> <span class="location">backend/src/qts/runtime/router.py:10</span>, <code>EventRouter</code> <span class="location">backend/src/qts/runtime/router.py:14</span></li>
-          <li><code>qts/runtime/runtime_event_writer.py</code> -> <code>_OrderManagerLike</code> <span class="location">backend/src/qts/runtime/runtime_event_writer.py:16</span>, <code>RuntimeEventWriter</code> <span class="location">backend/src/qts/runtime/runtime_event_writer.py:27</span></li>
+          <li><code>qts/runtime/runtime_event_writer.py</code> -> <code>_OrderManagerLike</code> <span class="location">backend/src/qts/runtime/runtime_event_writer.py:17</span>, <code>RuntimeEventWriter</code> <span class="location">backend/src/qts/runtime/runtime_event_writer.py:28</span></li>
           <li><code>qts/runtime/safety.py</code> -> <code>RuntimeKillSwitchDeactivateCommand</code> <span class="location">backend/src/qts/runtime/safety.py:11</span>, <code>RuntimeKillSwitchEvidence</code> <span class="location">backend/src/qts/runtime/safety.py:27</span></li>
           <li><code>qts/runtime/safety_controller.py</code> -> <code>RuntimeSafetyController</code> <span class="location">backend/src/qts/runtime/safety_controller.py:18</span></li>
           <li><code>qts/runtime/session.py</code> -> <code>RuntimeSessionResult</code> <span class="location">backend/src/qts/runtime/session.py:48</span>, <code>RuntimeRollbackCommand</code> <span class="location">backend/src/qts/runtime/session.py:61</span>, <code>RuntimeRollbackEvidence</code> <span class="location">backend/src/qts/runtime/session.py:77</span>, <code>RuntimeSession</code> <span class="location">backend/src/qts/runtime/session.py:90</span></li>
@@ -885,7 +885,7 @@
           <li><code>StrategyRegistry</code> <span class="location">backend/src/qts/application/strategy_lifecycle.py:40</span> -> <code>__init__():43</code>, <code>register():47</code>, <code>resolve():55</code></li>
           <li><code>BacktestRuntimeSink</code> <span class="location">backend/src/qts/backtest/actor_loop.py:33</span> -> <code>order_count property:37</code>, <code>write():40</code>, <code>write_processed():43</code>, <code>write_equity_point():52</code></li>
           <li><code>BacktestActorLoopResult</code> <span class="location">backend/src/qts/backtest/actor_loop.py:63</span> -> <code>processed_bars property:72</code></li>
-          <li><code>BacktestActorLoop</code> <span class="location">backend/src/qts/backtest/actor_loop.py:80</span> -> <code>__init__():83</code>, <code>run():133</code>, <code>initialize_run_phase():150</code>, <code>process_market_data_phase():219</code>, <code>process_warmup_phase():237</code>, <code>process_trading_phase():243</code>, <code>finalize_run_phase():265</code>, <code>market_data_correlation_id():275</code>, <code>write_market_data_event():281</code>, <code>execute_strategy_bar():304</code>, <code>write_strategy_signal_events():320</code>, <code>write_signal_batch_events():359</code>, <code>write_batch_conflict_events():398</code>, <code>process_strategy_intent():463</code>, <code>write_broker_reject_event():517</code>, <code>write_equity_and_account_snapshot():540</code></li>
+          <li><code>BacktestActorLoop</code> <span class="location">backend/src/qts/backtest/actor_loop.py:80</span> -> <code>__init__():83</code>, <code>run():133</code>, <code>initialize_run_phase():150</code>, <code>process_market_data_phase():219</code>, <code>process_warmup_phase():237</code>, <code>process_trading_phase():243</code>, <code>finalize_run_phase():265</code>, <code>market_data_correlation_id():275</code>, <code>write_market_data_event():281</code>, <code>execute_strategy_bar():304</code>, <code>write_strategy_signal_events():320</code>, <code>write_signal_batch_events():359</code>, <code>write_batch_conflict_events():398</code>, <code>process_strategy_intent():463</code>, <code>write_broker_reject_event():525</code>, <code>write_equity_and_account_snapshot():548</code></li>
           <li><code>BacktestEngineDependencies</code> <span class="location">backend/src/qts/backtest/dependencies.py:37</span> -> <code>with_defaults():50</code></li>
           <li><code>BacktestActorLoopConfig</code> <span class="location">backend/src/qts/backtest/dependencies.py:78</span> -> <code>__post_init__():85</code></li>
           <li><code>BacktestActorLoopDependencies</code> <span class="location">backend/src/qts/backtest/dependencies.py:95</span> -> <span class="muted">no public/core methods</span></li>
@@ -1269,7 +1269,7 @@
           <li><code>ActorRef</code> <span class="location">backend/src/qts/runtime/actor_ref.py:12</span> -> <code>tell():18</code>, <code>process_one():22</code>, <code>process_all():29</code></li>
           <li><code>ApplyFill</code> <span class="location">backend/src/qts/runtime/actors/account_actor.py:19</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>AccountSnapshot</code> <span class="location">backend/src/qts/runtime/actors/account_actor.py:28</span> -> <code>__init__():36</code>, <code>positions property:51</code></li>
-          <li><code>AccountActor</code> <span class="location">backend/src/qts/runtime/actors/account_actor.py:56</span> -> <code>__init__():59</code>, <code>handle():72</code>, <code>snapshot():79</code>, <code>restore():89</code>, <code>position_closed_events property:97</code></li>
+          <li><code>AccountActor</code> <span class="location">backend/src/qts/runtime/actors/account_actor.py:56</span> -> <code>__init__():59</code>, <code>handle():72</code>, <code>snapshot():79</code>, <code>restore():89</code>, <code>position_closed_events property:97</code>, <code>drain_position_closed_events():106</code></li>
           <li><code>ExecutionAdapter</code> <span class="location">backend/src/qts/runtime/actors/execution_actor.py:20</span> -> <code>execute_market_order():23</code>, <code>cancel_order():37</code></li>
           <li><code>OrderExecutionRequest</code> <span class="location">backend/src/qts/runtime/actors/execution_actor.py:52</span> -> <code>__post_init__():62</code></li>
           <li><code>OrderCancelRequest</code> <span class="location">backend/src/qts/runtime/actors/execution_actor.py:71</span> -> <code>__post_init__():80</code></li>
@@ -1362,8 +1362,8 @@
           <li><code>RuntimeRollbackCoordinator</code> <span class="location">backend/src/qts/runtime/rollback.py:10</span> -> <code>__init__():13</code>, <code>rollback():16</code></li>
           <li><code>RouteNotFoundError</code> <span class="location">backend/src/qts/runtime/router.py:10</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>EventRouter</code> <span class="location">backend/src/qts/runtime/router.py:14</span> -> <code>__init__():17</code>, <code>register():24</code>, <code>route():28</code></li>
-          <li><code>_OrderManagerLike</code> <span class="location">backend/src/qts/runtime/runtime_event_writer.py:16</span> -> <code>route_metadata():19</code>, <code>get_order():22</code></li>
-          <li><code>RuntimeEventWriter</code> <span class="location">backend/src/qts/runtime/runtime_event_writer.py:27</span> -> <code>write_risk_decision_events():32</code>, <code>write_order_events():65</code>, <code>write_fill_events():120</code></li>
+          <li><code>_OrderManagerLike</code> <span class="location">backend/src/qts/runtime/runtime_event_writer.py:17</span> -> <code>route_metadata():20</code>, <code>get_order():23</code></li>
+          <li><code>RuntimeEventWriter</code> <span class="location">backend/src/qts/runtime/runtime_event_writer.py:28</span> -> <code>write_risk_decision_events():33</code>, <code>write_order_events():66</code>, <code>write_fill_events():121</code>, <code>write_position_closed_events():153</code></li>
           <li><code>RuntimeKillSwitchDeactivateCommand</code> <span class="location">backend/src/qts/runtime/safety.py:11</span> -> <code>__post_init__():18</code></li>
           <li><code>RuntimeKillSwitchEvidence</code> <span class="location">backend/src/qts/runtime/safety.py:27</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>RuntimeSafetyController</code> <span class="location">backend/src/qts/runtime/safety_controller.py:18</span> -> <code>__init__():21</code>, <code>blocked_reason():24</code>, <code>activate_kill_switch():43</code>, <code>deactivate_kill_switch():113</code></li>
@@ -3120,7 +3120,7 @@
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>340 files</span>
       <span>607 classes</span>
-      <span>1998 functions</span>
+      <span>2000 functions</span>
       <span>323 backend</span>
       <span>17 frontend</span>
     </div>
@@ -4437,9 +4437,9 @@
               <tr><td><code>write_signal_batch_events</code></td><td>BacktestActorLoop:359</td><td>Emit aggregation, conflict, and rejection events for a signal batch.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>write_batch_conflict_events</code></td><td>BacktestActorLoop:398</td><td>Emit conflict and rejection evidence for a rejected signal batch.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>process_strategy_intent</code></td><td>BacktestActorLoop:463</td><td>Process one accepted strategy intent through risk/order/execution/account.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_broker_reject_event</code></td><td>BacktestActorLoop:517</td><td>Emit a normalized broker capability rejection event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_equity_and_account_snapshot</code></td><td>BacktestActorLoop:540</td><td>Emit end-of-bar equity and account snapshot artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_write_account_snapshot</code></td><td>BacktestActorLoop:553</td><td>Emit a normalized account snapshot event.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>write_broker_reject_event</code></td><td>BacktestActorLoop:525</td><td>Emit a normalized broker capability rejection event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_equity_and_account_snapshot</code></td><td>BacktestActorLoop:548</td><td>Emit end-of-bar equity and account snapshot artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_write_account_snapshot</code></td><td>BacktestActorLoop:561</td><td>Emit a normalized account snapshot event.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10886,7 +10886,7 @@
         <code>backend/src/qts/runtime/actors/account_actor.py</code>
         <span class="inventory-counts">
           <span>3 classes</span>
-          <span>8 functions</span>
+          <span>9 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -10914,8 +10914,9 @@
               <tr><td><code>handle</code></td><td>AccountActor:72</td><td>Perform handle.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>snapshot</code></td><td>AccountActor:79</td><td>Perform snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>restore</code></td><td>AccountActor:89</td><td>Restore account-owned state from an actor snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>position_closed_events</code></td><td>AccountActor:97</td><td>Return close events emitted by this actor.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_apply_fill</code></td><td>AccountActor:101</td><td>Perform _apply_fill.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>position_closed_events</code></td><td>AccountActor:97</td><td>Return close events emitted by this actor (read-only).</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>drain_position_closed_events</code></td><td>AccountActor:106</td><td>Return and clear the buffered PositionClosed events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_apply_fill</code></td><td>AccountActor:118</td><td>Perform _apply_fill.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -11911,8 +11912,8 @@
               <tr><td><code>write_signal_conflict_events</code></td><td>RuntimeMarketDataCoordinator:380</td><td>Emit conflict and rejection evidence for an aggregated signal batch.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>write_signal_aggregated_event</code></td><td>RuntimeMarketDataCoordinator:439</td><td>Emit the accepted aggregate signal event for a batch.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>process_batch_intent</code></td><td>RuntimeMarketDataCoordinator:472</td><td>Submit one post-aggregation intent through risk, order, and fill stages.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_single_account_snapshot</code></td><td>RuntimeMarketDataCoordinator:523</td><td>实现 RuntimeMarketDataCoordinator 的 single account snapshot 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_write_account_snapshots</code></td><td>RuntimeMarketDataCoordinator:530</td><td>实现 RuntimeMarketDataCoordinator 的 write account snapshots 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_single_account_snapshot</code></td><td>RuntimeMarketDataCoordinator:531</td><td>实现 RuntimeMarketDataCoordinator 的 single account snapshot 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_write_account_snapshots</code></td><td>RuntimeMarketDataCoordinator:538</td><td>实现 RuntimeMarketDataCoordinator 的 write account snapshots 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -12203,7 +12204,7 @@
         <code>backend/src/qts/runtime/runtime_event_writer.py</code>
         <span class="inventory-counts">
           <span>2 classes</span>
-          <span>6 functions</span>
+          <span>7 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -12214,8 +12215,8 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>_OrderManagerLike</code></td><td>runtime_event_writer:16</td><td>Protocol-like facade for order manager observability metadata.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
-              <tr><td><code>RuntimeEventWriter</code></td><td>runtime_event_writer:27</td><td>Write runtime observability events for order flow and risk decisions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>_OrderManagerLike</code></td><td>runtime_event_writer:17</td><td>Protocol-like facade for order manager observability metadata.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>RuntimeEventWriter</code></td><td>runtime_event_writer:28</td><td>Write runtime observability events for order flow and risk decisions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -12224,12 +12225,13 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>route_metadata</code></td><td>_OrderManagerLike:19</td><td>Return route metadata for an order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>get_order</code></td><td>_OrderManagerLike:22</td><td>Return current order by order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_risk_decision_events</code></td><td>RuntimeEventWriter:32</td><td>Write approved/rejected risk decision events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_order_events</code></td><td>RuntimeEventWriter:65</td><td>Write submitted/order-state events for emitted orders.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_fill_events</code></td><td>RuntimeEventWriter:120</td><td>Write fill events with routing metadata and account context.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_risk_decision_payload</code></td><td>RuntimeEventWriter:153</td><td>Serialize shared risk decision fields for runtime events.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>route_metadata</code></td><td>_OrderManagerLike:20</td><td>Return route metadata for an order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>get_order</code></td><td>_OrderManagerLike:23</td><td>Return current order by order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_risk_decision_events</code></td><td>RuntimeEventWriter:33</td><td>Write approved/rejected risk decision events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_order_events</code></td><td>RuntimeEventWriter:66</td><td>Write submitted/order-state events for emitted orders.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_fill_events</code></td><td>RuntimeEventWriter:121</td><td>Write fill events with routing metadata and account context.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_position_closed_events</code></td><td>RuntimeEventWriter:153</td><td>Write account.position_closed events into the runtime sink.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_risk_decision_payload</code></td><td>RuntimeEventWriter:190</td><td>Serialize shared risk decision fields for runtime events.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
