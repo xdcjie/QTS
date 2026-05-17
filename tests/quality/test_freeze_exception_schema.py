@@ -16,7 +16,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 from pathlib import Path
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 _EXCEPTIONS_PATH = Path("docs/architecture/platform_freeze_exceptions.yaml")
 _MAX_EXPIRY_HORIZON = timedelta(days=365)

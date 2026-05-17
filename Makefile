@@ -41,6 +41,9 @@ test-reconciliation:
 test-soak:
 	uv run pytest tests/soak
 
+test-benchmarks:
+	uv run pytest tests/benchmarks --benchmark-only --benchmark-json=evidence/benchmarks/latest.json
+
 test:
 	uv run pytest
 

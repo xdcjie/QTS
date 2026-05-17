@@ -26,6 +26,7 @@ api = [
 dev = [
     "pytest",
     "pytest-cov",
+    "pytest-benchmark",
     "ruff",
     "mypy",
     "httpx>=0.28.1",
@@ -57,4 +58,5 @@ markers = [
     "anchor: domain correctness invariant tests",
     "slow: slow tests not required for quick local feedback",
     "external: tests requiring externally collected broker or service evidence",
+    "benchmark: performance benchmarks measured under pytest-benchmark",
 ]
