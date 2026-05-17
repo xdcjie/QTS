@@ -64,6 +64,14 @@ class SchemaMigrationRegistry:
             )
         self._migrations[key] = (to_version, migrate)
 
+    def size(self) -> int:
+        """Return the number of registered migration hops."""
+        return len(self._migrations)
+
+    def registered_keys(self) -> frozenset[tuple[str, str]]:
+        """Return the (kind, from_version) keys currently registered."""
+        return frozenset(self._migrations.keys())
+
     def apply(self, event: RuntimeEvent) -> RuntimeEvent:
         """Advance one event through every registered migration hop in order.
 
@@ -144,8 +152,17 @@ class InMemoryEventStore:
     """Deterministic append-only in-memory event store."""
 
     def __init__(self, *, migration_registry: SchemaMigrationRegistry | None = None) -> None:
-        """Perform __init__."""
+        """Perform __init__.
+
+        When ``migration_registry`` is omitted, defaults to the canonical
+        production registry from ``qts.runtime.event_migrations`` so a fresh
+        production event store gets schema-aware replay out of the box.
+        """
         self._events: list[StoredEvent] = []
+        if migration_registry is None:
+            from qts.runtime.event_migrations import canonical_runtime_event_migrations
+
+            migration_registry = canonical_runtime_event_migrations()
         self._migration_registry = migration_registry
 
     def append(self, event: StoredEvent) -> int:
