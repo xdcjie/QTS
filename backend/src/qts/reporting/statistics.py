@@ -1,7 +1,18 @@
-"""Streaming backtest statistics."""
+"""Streaming backtest statistics.
+
+Owns the math for return / risk-adjusted / trade-level / exposure statistics
+emitted by ``BacktestArtifactWriter``. Every metric is either computed from
+real data or omitted; no field is filled with a sentinel constant.
+
+PSR uses the López de Prado formulation (``ProbabilisticSharpeRatio``). The
+normal CDF step is evaluated in ``float`` (sufficient precision for a
+probability) while every other accumulator stays ``Decimal`` for parity with
+the rest of the reporting stack.
+"""
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -28,6 +39,14 @@ class _OpenTrade:
     opened_index: int
 
 
+@dataclass(frozen=True, slots=True)
+class _HoldingsSnapshot:
+    """One per-bar holdings snapshot used for exposure averaging."""
+
+    gross_notional: Decimal
+    net_notional: Decimal
+
+
 class StatisticsBuilder:
     """Incrementally compute return, trade, exposure, and cost statistics."""
 
@@ -41,12 +60,15 @@ class StatisticsBuilder:
         self._drawdown_duration = 0
         self._max_drawdown_duration = 0
         self._returns: list[Decimal] = []
+        self._equity_points: list[Decimal] = []
         self._open_trades: dict[str, _OpenTrade] = {}
         self._closed_pnls: list[Decimal] = []
         self._holding_bars: list[int] = []
         self._total_orders = 0
         self._total_commission = Decimal("0")
         self._total_slippage = Decimal("0")
+        self._occupied_bars = 0
+        self._holdings_snapshots: list[_HoldingsSnapshot] = []
 
     def on_equity_point(self, *, time: datetime, equity: Decimal) -> None:
         """Ingest one equity observation."""
@@ -58,6 +80,8 @@ class StatisticsBuilder:
             self._peak = equity
         if self._previous is not None and self._previous != Decimal("0"):
             self._returns.append((equity - self._previous) / self._previous)
+        if self._open_trades:
+            self._occupied_bars += 1
         assert self._peak is not None
         if equity >= self._peak:
             self._peak = equity
@@ -74,6 +98,7 @@ class StatisticsBuilder:
         self._previous = equity
         self._last = equity
         self._points += 1
+        self._equity_points.append(equity)
 
     def on_fill(
         self,
@@ -142,23 +167,49 @@ class StatisticsBuilder:
         self._closed_pnls.append(realized_pnl)
         self._holding_bars.append(holding_bars)
 
+    def on_holdings_snapshot(
+        self,
+        *,
+        gross_notional: Decimal,
+        net_notional: Decimal,
+    ) -> None:
+        """Ingest one per-bar holdings snapshot for exposure averaging.
+
+        Exposure fields ``avg_gross_exposure`` and ``avg_net_exposure`` appear
+        in the finalized payload only when the caller has fed at least one
+        snapshot through this method.
+        """
+        if gross_notional < Decimal("0"):
+            raise ValueError("gross_notional must be non-negative")
+        self._holdings_snapshots.append(
+            _HoldingsSnapshot(gross_notional=gross_notional, net_notional=net_notional)
+        )
+
     def finalize(
         self,
         *,
         trading_bars: int,
         bars_per_year: Decimal | None = None,
+        benchmark_returns: tuple[Decimal, ...] | None = None,
         benchmark_series: object | None = None,
     ) -> StatisticsPayload:
-        """Return final statistics payload."""
+        """Return final statistics payload.
+
+        ``benchmark_returns`` must be aligned bar-for-bar with the strategy's
+        per-period return series (i.e. one element per equity point after the
+        first). ``benchmark_series`` is accepted for backward compatibility
+        and ignored unless it is a tuple of ``Decimal``.
+        """
         if self._first is None or self._last is None:
             raise ValueError("equity curve must not be empty")
         annualization = bars_per_year or Decimal("252")
         total_return = (self._last - self._first) / self._first
-        volatility = _stddev(self._returns) * annualization.sqrt()
+        std = _stddev(self._returns)
+        volatility = std * annualization.sqrt()
         mean_return = _mean(self._returns)
         downside = [item for item in self._returns if item < Decimal("0")]
         downside_std = _stddev(downside)
-        sharpe = _ratio(mean_return, _stddev(self._returns)) * annualization.sqrt()
+        sharpe = _ratio(mean_return, std) * annualization.sqrt()
         sortino = _ratio(mean_return, downside_std) * annualization.sqrt()
         car = _compound_annual_return(self._first, self._last, self._points, annualization)
         wins = [pnl for pnl in self._closed_pnls if pnl > Decimal("0")]
@@ -175,9 +226,7 @@ class StatisticsBuilder:
             "calmar_ratio": _ratio(car, abs(self._max_drawdown)),
             "sharpe_ratio": sharpe,
             "sortino_ratio": sortino,
-            "probabilistic_sharpe_ratio": Decimal("0.5")
-            if len(self._returns) < 2
-            else Decimal("1"),
+            "probabilistic_sharpe_ratio": _probabilistic_sharpe_ratio(self._returns),
             "total_trades": total_trades,
             "total_orders": self._total_orders,
             "win_rate": _ratio(Decimal(len(wins)), Decimal(total_trades)),
@@ -189,26 +238,56 @@ class StatisticsBuilder:
             "profit_factor": _ratio(sum(wins, Decimal("0")), abs(sum(losses, Decimal("0")))),
             "expectancy": _mean(self._closed_pnls),
             "avg_holding_period_bars": _mean([Decimal(item) for item in self._holding_bars]),
-            "time_in_market": Decimal("0")
-            if trading_bars <= 0
-            else Decimal(total_trades) / Decimal(trading_bars),
-            "avg_gross_exposure": Decimal("0"),
-            "avg_net_exposure": Decimal("0"),
+            "time_in_market": _ratio(
+                Decimal(self._occupied_bars),
+                Decimal(max(trading_bars, 0)),
+            ),
             "total_commission": self._total_commission,
             "total_slippage": self._total_slippage,
             "commission_per_trade": _ratio(self._total_commission, Decimal(total_trades)),
             "slippage_per_trade": _ratio(self._total_slippage, Decimal(total_trades)),
         }
-        if benchmark_series is not None:
-            payload.update(
-                {
-                    "alpha_annual": Decimal("0"),
-                    "beta": Decimal("0"),
-                    "information_ratio": Decimal("0"),
-                    "tracking_error_annual": Decimal("0"),
-                }
-            )
+        bench = self._benchmark_returns_or_none(benchmark_returns, benchmark_series)
+        if bench is not None:
+            payload.update(_benchmark_metrics(self._returns, bench, annualization))
+        if self._holdings_snapshots:
+            payload.update(self._exposure_metrics())
         return StatisticsPayload(payload)
+
+    def _benchmark_returns_or_none(
+        self,
+        benchmark_returns: tuple[Decimal, ...] | None,
+        benchmark_series: object | None,
+    ) -> tuple[Decimal, ...] | None:
+        if benchmark_returns is not None:
+            return benchmark_returns
+        if isinstance(benchmark_series, tuple) and all(
+            isinstance(item, Decimal) for item in benchmark_series
+        ):
+            return benchmark_series
+        return None
+
+    def _exposure_metrics(self) -> dict[str, Decimal]:
+        # Align snapshot i to equity point i; compute fraction of equity.
+        snapshots = self._holdings_snapshots
+        equity = self._equity_points
+        pairs = min(len(snapshots), len(equity))
+        if pairs == 0:
+            return {}
+        gross_fractions: list[Decimal] = []
+        net_fractions: list[Decimal] = []
+        for index in range(pairs):
+            denom = equity[index]
+            if denom == Decimal("0"):
+                gross_fractions.append(Decimal("0"))
+                net_fractions.append(Decimal("0"))
+                continue
+            gross_fractions.append(snapshots[index].gross_notional / denom)
+            net_fractions.append(snapshots[index].net_notional / denom)
+        return {
+            "avg_gross_exposure": _mean(gross_fractions),
+            "avg_net_exposure": _mean(net_fractions),
+        }
 
 
 def _mean(values: list[Decimal]) -> Decimal:
@@ -242,6 +321,77 @@ def _compound_annual_return(
     if points <= 0 or first <= Decimal("0") or last <= Decimal("0"):
         return Decimal("0")
     return ((last / first).ln() * (annualization / Decimal(points))).exp() - Decimal("1")
+
+
+def _probabilistic_sharpe_ratio(returns: list[Decimal]) -> Decimal:
+    """Compute López de Prado's Probabilistic Sharpe Ratio with SR_benchmark = 0.
+
+    PSR = Φ( SR̂ · √(n-1) / √(1 - skew · SR̂ + (kurt-1)/4 · SR̂²) ).
+    """
+    if len(returns) < 4:
+        return Decimal("0")
+    sample = [float(r) for r in returns]
+    n = len(sample)
+    mean = sum(sample) / n
+    variance = sum((r - mean) ** 2 for r in sample) / (n - 1)
+    if variance <= 0.0:
+        return Decimal("0")
+    std = math.sqrt(variance)
+    sharpe = mean / std
+    skew = sum(((r - mean) / std) ** 3 for r in sample) / n
+    kurt = sum(((r - mean) / std) ** 4 for r in sample) / n
+    denom_squared = 1.0 - skew * sharpe + (kurt - 1.0) / 4.0 * sharpe**2
+    if denom_squared <= 0.0:
+        return Decimal("0")
+    sigma_sharpe = math.sqrt(denom_squared / (n - 1))
+    if sigma_sharpe == 0.0:
+        return Decimal("0")
+    z = sharpe / sigma_sharpe
+    probability = 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
+    return Decimal(str(probability))
+
+
+def _benchmark_metrics(
+    returns: list[Decimal],
+    bench: tuple[Decimal, ...],
+    annualization: Decimal,
+) -> dict[str, Decimal]:
+    n = min(len(returns), len(bench))
+    if n < 2:
+        return {
+            "alpha_annual": Decimal("0"),
+            "beta": Decimal("0"),
+            "information_ratio": Decimal("0"),
+            "tracking_error_annual": Decimal("0"),
+        }
+    r_values = [returns[i] for i in range(n)]
+    b_values = [bench[i] for i in range(n)]
+    mean_r = _mean(r_values)
+    mean_b = _mean(b_values)
+    cov = sum(
+        ((r_values[i] - mean_r) * (b_values[i] - mean_b) for i in range(n)),
+        Decimal("0"),
+    ) / Decimal(n - 1)
+    var_b = sum(((b_values[i] - mean_b) ** 2 for i in range(n)), Decimal("0")) / Decimal(n - 1)
+    if var_b == Decimal("0"):
+        beta = Decimal("0")
+    else:
+        beta = cov / var_b
+    alpha_period = mean_r - beta * mean_b
+    diffs = [r_values[i] - b_values[i] for i in range(n)]
+    mean_diff = _mean(diffs)
+    diff_std = _stddev(diffs)
+    sqrt_annualization = annualization.sqrt()
+    if diff_std == Decimal("0"):
+        information_ratio = Decimal("0")
+    else:
+        information_ratio = (mean_diff / diff_std) * sqrt_annualization
+    return {
+        "alpha_annual": alpha_period * annualization,
+        "beta": beta,
+        "tracking_error_annual": diff_std * sqrt_annualization,
+        "information_ratio": information_ratio,
+    }
 
 
 def payload_from_json(row: dict[str, Any]) -> StatisticsPayload:

@@ -60,8 +60,6 @@ def test_statistics_builder_emits_platform_readiness_metric_set() -> None:
         "expectancy",
         "avg_holding_period_bars",
         "time_in_market",
-        "avg_gross_exposure",
-        "avg_net_exposure",
         "total_commission",
         "total_slippage",
         "commission_per_trade",
@@ -70,5 +68,7 @@ def test_statistics_builder_emits_platform_readiness_metric_set() -> None:
     assert expected_keys <= payload.keys()
     assert "alpha_annual" not in payload
     assert "beta" not in payload
+    assert "avg_gross_exposure" not in payload
+    assert "avg_net_exposure" not in payload
     assert payload["total_orders"] == 2
     assert payload["total_trades"] == 1
