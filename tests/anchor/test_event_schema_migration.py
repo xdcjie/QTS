@@ -84,7 +84,9 @@ def test_current_version_events_pass_through_unchanged() -> None:
 
     replayed = store.replay()
     assert len(replayed) == 1
-    assert replayed[0].payload_schema_version == "1"
+    head = replayed[0]
+    assert isinstance(head, RuntimeEvent)
+    assert head.payload_schema_version == "1"
 
 
 def test_chained_migrations_advance_through_intermediate_versions() -> None:
@@ -115,5 +117,7 @@ def test_chained_migrations_advance_through_intermediate_versions() -> None:
     store.append(legacy)
 
     replayed = store.replay()
-    assert replayed[0].payload_schema_version == "2"
-    assert replayed[0].payload["stage"] == "v2"
+    head = replayed[0]
+    assert isinstance(head, RuntimeEvent)
+    assert head.payload_schema_version == "2"
+    assert head.payload["stage"] == "v2"
