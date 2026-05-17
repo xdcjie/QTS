@@ -1,5 +1,5 @@
 {
-  "production_class_count": 589,
+  "production_class_count": 590,
   "production_classes": [
     "qts.observability.audit_sink.AuditSink",
     "qts.observability.audit_sink.InMemoryAuditSink",
@@ -323,6 +323,7 @@
     "qts.quality.rules.boundaries.SharedCapabilityRule",
     "qts.quality.rules.boundaries.StrategySdkPublicSurfaceRule",
     "qts.quality.rules.boundaries.TestSupportRule",
+    "qts.quality.rules.caller_presence.CallerPresenceRule",
     "qts.quality.rules.docstrings.ProductionPlaceholderDocstringRule",
     "qts.quality.rules.imports.ImportBoundaryRule",
     "qts.quality.rules.imports.ProductionNoTestingImportRule",

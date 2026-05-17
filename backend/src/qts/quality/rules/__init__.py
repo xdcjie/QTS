@@ -8,6 +8,7 @@ from qts.quality.rules.boundaries import (
     StrategySdkPublicSurfaceRule,
     TestSupportRule,
 )
+from qts.quality.rules.caller_presence import CallerPresenceRule
 from qts.quality.rules.docstrings import ProductionPlaceholderDocstringRule
 from qts.quality.rules.imports import (
     ImportBoundaryRule,
@@ -54,6 +55,7 @@ __all__ = [
     "BacktestRunnerCohesionRule",
     "BrokerSpecificRule",
     "BrokerSymbolBoundaryRule",
+    "CallerPresenceRule",
     "ClassInventoryBudgetRule",
     "DataLiveNoSharedContractRule",
     "DuplicateDtoNameRule",

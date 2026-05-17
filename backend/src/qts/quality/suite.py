@@ -13,6 +13,7 @@ from qts.quality.rules import (
     BacktestRunnerCohesionRule,
     BrokerSpecificRule,
     BrokerSymbolBoundaryRule,
+    CallerPresenceRule,
     ClassInventoryBudgetRule,
     DataLiveNoSharedContractRule,
     DuplicateDtoNameRule,
@@ -77,6 +78,7 @@ class GuardrailSuite:
             ClassInventoryBudgetRule(repo_root=repo_root),
             SingleFieldDtoJustificationRule(repo_root=repo_root),
             DuplicateDtoNameRule(),
+            CallerPresenceRule(repo_root=repo_root),
         )
 
     def check_file(

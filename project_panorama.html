@@ -1444,10 +1444,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>349 files</span>
-      <span>615 classes</span>
-      <span>2042 functions</span>
-      <span>332 backend</span>
+      <span>350 files</span>
+      <span>617 classes</span>
+      <span>2056 functions</span>
+      <span>333 backend</span>
       <span>17 frontend</span>
     </div>
   </div>
@@ -7349,6 +7349,51 @@
     </details>
     <details class="inventory-file">
       <summary>
+        <code>backend/src/qts/quality/rules/caller_presence.py</code>
+        <span class="inventory-counts">
+          <span>2 classes</span>
+          <span>14 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>CallerPresenceRule — every baseline production symbol must have a non-test caller.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>_BaselineEntry</code></td><td>caller_presence:61</td><td>定义 baseline entry 概念及其相关状态或行为。</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>CallerPresenceRule</code></td><td>caller_presence:67</td><td>Reject baseline-listed public symbols without a non-test caller.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>__init__</code></td><td>CallerPresenceRule:72</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>check</code></td><td>CallerPresenceRule:75</td><td>Per-file check is a no-op; the work happens in check_repository.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check_repository</code></td><td>CallerPresenceRule:86</td><td>Perform the repository-wide caller-presence check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_load_baseline</code></td><td>CallerPresenceRule:137</td><td>实现 CallerPresenceRule 的 load baseline 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_load_deferrals</code></td><td>CallerPresenceRule:152</td><td>实现 CallerPresenceRule 的 load deferrals 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_protocol_class</code></td><td>CallerPresenceRule:168</td><td>实现 CallerPresenceRule 的 is protocol class 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_enum_class</code></td><td>CallerPresenceRule:177</td><td>实现 CallerPresenceRule 的 is enum class 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_exception_class</code></td><td>CallerPresenceRule:186</td><td>实现 CallerPresenceRule 的 is exception class 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_file_tree</code></td><td>CallerPresenceRule:193</td><td>实现 CallerPresenceRule 的 file tree 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_file_class_node</code></td><td>CallerPresenceRule:204</td><td>实现 CallerPresenceRule 的 file class node 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_annotation_names</code></td><td>CallerPresenceRule:214</td><td>实现 CallerPresenceRule 的 annotation names 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_value_object_type_names</code></td><td>CallerPresenceRule:224</td><td>Return class names that appear as return / attribute annotations in the file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_build_caller_index</code></td><td>CallerPresenceRule:249</td><td>Build identifier → caller file paths under the search roots.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_defining_file</code></td><td>CallerPresenceRule:270</td><td>Map a fully-qualified module to its source file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
         <code>backend/src/qts/quality/rules/docstrings.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
@@ -7678,7 +7723,7 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>GuardrailSuite</code></td><td>suite:43</td><td>Execute a configured set of guardrail rules against Python files.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>GuardrailSuite</code></td><td>suite:44</td><td>Execute a configured set of guardrail rules against Python files.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -7687,11 +7732,11 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__init__</code></td><td>GuardrailSuite:46</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>check_file</code></td><td>GuardrailSuite:82</td><td>Perform check_file.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check</code></td><td>GuardrailSuite:101</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>run_guardrails</code></td><td>module:126</td><td>Return all guardrail violations under the repository root.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>main</code></td><td>module:131</td><td>Perform main.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>__init__</code></td><td>GuardrailSuite:47</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>check_file</code></td><td>GuardrailSuite:84</td><td>Perform check_file.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check</code></td><td>GuardrailSuite:103</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>run_guardrails</code></td><td>module:128</td><td>Return all guardrail violations under the repository root.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>main</code></td><td>module:133</td><td>Perform main.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
             </tbody>
           </table>
         </div>
