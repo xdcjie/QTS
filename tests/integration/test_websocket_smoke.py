@@ -10,10 +10,12 @@ def test_websocket_event_stream_connects_and_emits_synthetic_event() -> None:
     client = TestClient(create_app())
 
     with client.websocket_connect("/ws/events") as websocket:
-        assert websocket.receive_json() == {
-            "event_type": "system.synthetic",
-            "message": "connected",
-        }
+        snapshot = websocket.receive_json()
+    assert snapshot["event_type"] == "snapshot"
+    assert snapshot["replayed"] is False
+    assert isinstance(snapshot["sequence_number"], int)
+    assert isinstance(snapshot["event_time_utc"], str)
+    assert snapshot["payload"] == {"samples": []}
 
 
 def test_fill_event_can_be_transformed_into_stream_dto_and_delivered() -> None:

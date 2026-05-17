@@ -1,34 +1,14 @@
-export type StrategyStatus = 'CREATED' | 'WARMING_UP' | 'ACTIVE' | 'PAUSED' | 'STOPPED' | 'FAILED'
+import type { components } from '@/api/types.gen'
 
-export type OrderSide = 'BUY' | 'SELL'
-export type OrderType = 'MARKET' | 'LIMIT' | 'STOP' | 'STOP_LIMIT'
-export type OrderState = 'CREATED' | 'SENT' | 'PARTIALLY_FILLED' | 'FILLED' | 'CANCELED' | 'REJECTED'
-
-export interface AccountSnapshot {
-  account_id: string
-  cash: Record<string, string>
-}
-
-export interface StrategyStatusEntry {
-  strategy_id: string
-  status: string
-}
-
-export interface OrderStatusEntry {
-  order_id: string
-  status: string
-}
-
-export interface BacktestRun {
-  run_id: string
-  config_path: string
-  status: string
-}
-
-export interface BacktestStrategyOption {
-  label: string
-  config_path: string
-}
+export type StrategyStatus = components['schemas']['StrategyStatusSchema']
+export type StrategyStatusEntry = StrategyStatus
+export type AccountSnapshot = components['schemas']['AccountSnapshotSchema']
+export type OrderStatusEntry = components['schemas']['OrderStatusSchema']
+export type BacktestRun = components['schemas']['BacktestRunSchema']
+export type BacktestStrategyOption = components['schemas']['BacktestStrategyOptionSchema']
+export type RuntimeCommandResponse = components['schemas']['RuntimeCommandResponseSchema']
+export type RuntimeCommandResultResponse = components['schemas']['RuntimeCommandResultResponseSchema']
+export type KillSwitchResponse = components['schemas']['KillSwitchResponseSchema']
 
 export interface Position {
   instrument_id: string

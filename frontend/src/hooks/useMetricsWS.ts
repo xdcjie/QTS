@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
+
+import { StreamClient } from '@/ws/stream-client'
 
 export interface MetricSample {
   name: string
@@ -26,66 +28,63 @@ export function useMetricsWS(): MetricsState {
     connected: false,
     error: null,
   })
-  const wsRef = useRef<WebSocket | null>(null)
-  const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const retryCount = useRef(0)
-
-  const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return
-
-    try {
-      const ws = new WebSocket(WS_URL)
-      wsRef.current = ws
-
-      ws.onopen = () => {
-        retryCount.current = 0
-        setState(s => ({ ...s, connected: true, error: null }))
-      }
-
-      ws.onmessage = (event) => {
-        try {
-          const msg = JSON.parse(event.data)
-          if (msg.type === 'snapshot') {
-            setState(s => ({
-              ...s,
-              latest: msg.data,
-              history: [...s.history.slice(-(MAX_HISTORY - 1)), msg.data],
-            }))
-          }
-        } catch {
-          // ignore non-JSON messages (e.g. system.synthetic)
-        }
-      }
-
-      ws.onerror = () => {
-        setState(s => ({ ...s, connected: false, error: 'WebSocket error' }))
-      }
-
-      ws.onclose = () => {
-        setState(s => ({ ...s, connected: false }))
-        const delay = Math.min(1000 * Math.pow(2, retryCount.current), 30000)
-        retryCount.current += 1
-        retryRef.current = setTimeout(connect, delay)
-      }
-    } catch (err) {
-      setState(s => ({ ...s, error: String(err) }))
-    }
-  }, [])
 
   useEffect(() => {
-    connect()
-    const hb = setInterval(() => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send('ping')
-      }
-    }, 20000)
+    const client = new StreamClient(WS_URL, {
+      heartbeatMs: 20000,
+      onConnected: () => {
+        setState(s => ({ ...s, connected: true, error: null }))
+      },
+      onMessage: (event) => {
+        if (event.event_type !== 'snapshot') {
+          return
+        }
+
+        const payload = event.payload
+        const samples = Array.isArray(payload?.samples) ? payload.samples : []
+        const normalized = samples.map((raw): MetricSample => ({
+          name: typeof (raw as Record<string, unknown>).name === 'string' ? String((raw as Record<string, unknown>).name) : '',
+          value: typeof (raw as Record<string, unknown>).value === 'number'
+            ? Number((raw as Record<string, unknown>).value)
+            : 0,
+          labels: (raw as Record<string, unknown>).labels && typeof (raw as Record<string, unknown>).labels === 'object'
+            ? { ...(raw as Record<string, unknown>).labels as Record<string, string> }
+            : {},
+          count: typeof (raw as Record<string, unknown>).count === 'number'
+            ? Number((raw as Record<string, unknown>).count)
+            : 0,
+          sum: typeof (raw as Record<string, unknown>).sum === 'number'
+            ? Number((raw as Record<string, unknown>).sum)
+            : 0,
+          sampled_at_utc:
+            typeof (raw as Record<string, unknown>).sampled_at_utc === 'string'
+              ? String((raw as Record<string, unknown>).sampled_at_utc)
+              : event.event_time_utc,
+        }))
+
+        setState((s) => ({
+          ...s,
+          latest: normalized,
+          history: [...s.history.slice(-(MAX_HISTORY - 1)), normalized],
+        }))
+      },
+      onSequenceGap: (fromSequence, receivedSequence) => {
+        setState((s) => ({
+          ...s,
+          error: `Event stream gap detected (${fromSequence} → ${receivedSequence})`,
+        }))
+      },
+      onError: (error) => {
+        setState(s => ({ ...s, connected: false, error: error.message }))
+      },
+    })
+
+    client.connect()
 
     return () => {
-      clearInterval(hb)
-      if (retryRef.current) clearTimeout(retryRef.current)
-      wsRef.current?.close()
+      client.close()
     }
-  }, [connect])
+  }, [])
 
   return state
 }

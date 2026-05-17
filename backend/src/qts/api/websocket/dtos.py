@@ -26,7 +26,7 @@ class StreamEventDTO:
 
     event_type: str
     event_time: datetime
-    payload: dict[str, str]
+    payload: dict[str, object]
     correlation_id: str | None = None
 
     def __post_init__(self) -> None:

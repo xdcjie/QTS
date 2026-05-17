@@ -7,7 +7,11 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test",
+    "gen:openapi": "openapi-typescript openapi.json -o src/api/types.gen.ts",
+    "gen:openapi-json": "cd .. && PYTHONPATH=backend/src uv run python scripts/generate_openapi_json.py --output frontend/openapi.json"
   },
   "dependencies": {
     "axios": "^1.6.8",
@@ -22,11 +26,19 @@
   "devDependencies": {
     "@types/react": "^18.2.66",
     "@types/react-dom": "^18.2.22",
+    "@playwright/test": "^1.46.0",
+    "@testing-library/jest-dom": "^6.4.2",
+    "@testing-library/react": "^16.0.1",
+    "@testing-library/user-event": "^14.5.2",
     "@vitejs/plugin-react": "^6.0.0",
+    "@vitest/coverage-v8": "^2.1.2",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.38",
+    "openapi-typescript": "^6.7.6",
+    "jsdom": "^24.1.2",
     "tailwindcss": "^3.4.3",
     "typescript": "^5.2.2",
-    "vite": "^8.0.10"
+    "vite": "^8.0.10",
+    "vitest": "^2.1.1"
   }
 }

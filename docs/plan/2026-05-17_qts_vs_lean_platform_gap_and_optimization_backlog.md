@@ -184,20 +184,23 @@ Priority: P0 (next sprint) > P1 (next quarter) > P2 (when capacity) > P3 (watch)
 ### P1 — Frontend and DX
 
 #### OPT-12 — OpenAPI -> TS types pipeline
-- Status: TODO
-- Files: `backend/src/qts/api/`, `frontend/src/api/client.ts`
+- Status: DONE
+- Review status matrix: `docs/plan/qts_vs_lean_p1_frontend_dx_review_status_matrix.md`
+- Files: `backend/src/qts/api/`, `backend/scripts/generate_openapi_json.py`, `frontend/src/api/`, `frontend/package.json`
 - Problem: FastAPI emits OpenAPI; frontend types are hand-written; DTO drift is inevitable.
 - Proposal: build step running `openapi-typescript` against `/openapi.json`; replace hand-written DTOs in `frontend/src/api/`.
 - ETA: 3 days
 
 #### OPT-13 — Frontend test baseline (vitest + Playwright smoke)
-- Status: TODO
+- Status: DONE
+- Review status matrix: `docs/plan/qts_vs_lean_p1_frontend_dx_review_status_matrix.md`
 - Problem: 0 frontend tests; high-degree `App` component is untested.
 - Proposal: vitest for component logic, Playwright headless for one smoke test per route (Dashboard, BacktestLab, StrategyManagement, Operations).
 - ETA: 1 week
 
 #### OPT-14 — WebSocket client robustness
-- Status: TODO
+- Status: DONE
+- Review status matrix: `docs/plan/qts_vs_lean_p1_frontend_dx_review_status_matrix.md`
 - Files: `frontend/src/` (find/create ws client), `backend/src/qts/api/websocket/manager.py`
 - Proposal: standardize a client wrapper with reconnect, sequence-number gap detection, and buffered replay. Document the wire contract.
 - ETA: 1 week
