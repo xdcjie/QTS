@@ -83,16 +83,24 @@ def test_operational_api_idempotency_and_kill_switch_endpoints() -> None:
 
     first = client.post(
         "/operations/runtime/pause",
-        headers={"Idempotency-Key": "pause-1", "X-QTS-Operator": "tester"},
+        headers={
+            "Authorization": "Bearer dev-token",
+            "Idempotency-Key": "pause-1",
+            "X-QTS-Operator": "tester",
+        },
     )
     duplicate = client.post(
         "/operations/runtime/pause",
-        headers={"Idempotency-Key": "pause-1", "X-QTS-Operator": "tester"},
+        headers={
+            "Authorization": "Bearer dev-token",
+            "Idempotency-Key": "pause-1",
+            "X-QTS-Operator": "tester",
+        },
     )
     halt = client.post(
         "/operations/kill-switches",
         json={"scope": "global", "scope_id": None, "reason": "test halt"},
-        headers={"X-QTS-Operator": "tester"},
+        headers={"Authorization": "Bearer dev-token", "X-QTS-Operator": "tester"},
     )
 
     assert first.status_code == 200

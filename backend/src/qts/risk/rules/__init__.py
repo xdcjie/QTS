@@ -5,6 +5,7 @@ from qts.risk.rules.market_data_freshness import MarketDataFreshnessRiskRule
 from qts.risk.rules.market_data_permission import MarketDataPermissionRiskRule
 from qts.risk.rules.max_notional import MaxNotionalRule
 from qts.risk.rules.max_order_qty import MaxOrderQuantityRule
+from qts.risk.rules.order_spec_validity import OrderSpecValidityRule
 from qts.risk.rules.position_limit import PositionLimitRule
 from qts.risk.rules.trading_session_rule import TradingSessionRule
 from qts.risk.rules.volatility_adjusted_sizing import VolatilityAdjustedSizingRule
@@ -17,6 +18,7 @@ __all__ = [
     "MarketDataPermissionRiskRule",
     "MaxNotionalRule",
     "MaxOrderQuantityRule",
+    "OrderSpecValidityRule",
     "PositionLimitRule",
     "TradingSessionRule",
     "VolatilityAdjustedSizingRule",

@@ -83,6 +83,7 @@ class RuntimeEventWriter:
                         "broker_order_id": order.broker_order_id,
                         "client_order_id": metadata.client_order_id,
                         "instrument_id": order.intent.instrument_id.value,
+                        "order_spec": order.intent.order_spec.to_payload(),
                         "aggregation_decision_id": metadata.aggregation_decision_id,
                         "contributing_strategy_ids": [
                             strategy_id.value for strategy_id in contributing_strategy_ids
@@ -100,6 +101,7 @@ class RuntimeEventWriter:
                     payload={
                         "order_id": order.order_id.value,
                         "state": order.state.value,
+                        "order_spec": order.intent.order_spec.to_payload(),
                         "broker_order_id": order.broker_order_id,
                         "client_order_id": metadata.client_order_id,
                         "aggregation_decision_id": metadata.aggregation_decision_id,

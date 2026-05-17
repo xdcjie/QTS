@@ -8,7 +8,7 @@ from typing import Protocol
 
 from qts.core.ids import AccountId, BrokerId, CorrelationId, OrderId, StrategyId
 from qts.domain.orders import OrderSide
-from qts.execution.broker import BrokerCapabilities, BrokerOrderType
+from qts.execution.broker import BrokerCapabilities, BrokerOrderType, TimeInForce
 from qts.execution.order_manager import ExecutionReport, ExecutionReportStatus, OrderIntent
 from qts.execution.simulator.fill_model import ImmediateFillModel
 
@@ -45,6 +45,9 @@ class SimulatedExecutionAdapter:
                 BrokerCapabilities(
                     broker_id=BrokerId("simulated"),
                     supports_fractional=True,
+                    supports_stop_orders=True,
+                    supported_order_types=frozenset(BrokerOrderType),
+                    supported_time_in_force=frozenset(TimeInForce),
                 ),
             )
 
@@ -63,10 +66,11 @@ class SimulatedExecutionAdapter:
         _ = account_id, strategy_id, client_order_id, correlation_id
         if market_price < Decimal("0"):
             raise ValueError("market_price must be non-negative")
-        self._validate_market_order(intent)
-        slippage = market_price * self.cost_model.slippage_bps / Decimal("10000")
+        self._validate_order(intent)
+        base_price = self._base_fill_price(intent, market_price)
+        slippage = base_price * self.cost_model.slippage_bps / Decimal("10000")
         fill_price = (
-            market_price + slippage if intent.side is OrderSide.BUY else market_price - slippage
+            base_price + slippage if intent.side is OrderSide.BUY else base_price - slippage
         )
         commission = self.cost_model.fixed_commission_per_contract * intent.quantity
         return ExecutionReport(
@@ -77,21 +81,36 @@ class SimulatedExecutionAdapter:
             fill_price=fill_price,
             fill_id=f"{broker_order_id}-fill-1",
             commission=commission,
-            slippage=abs(fill_price - market_price),
+            slippage=abs(fill_price - base_price),
         )
 
-    def _validate_market_order(self, intent: OrderIntent) -> None:
+    def _validate_order(self, intent: OrderIntent) -> None:
         capabilities = self.capabilities
         if capabilities is None:
             raise RuntimeError("simulated execution capabilities are not configured")
-        if not capabilities.supports_order_type(BrokerOrderType.MARKET):
-            raise ValueError("market orders are not supported by broker capabilities")
+        if not capabilities.supports_order_type(intent.order_spec.order_type):
+            if intent.order_spec.order_type is BrokerOrderType.MARKET:
+                raise ValueError("market orders are not supported by broker capabilities")
+            raise ValueError("order type is not supported by broker capabilities")
+        if not capabilities.supports_tif(intent.order_spec.time_in_force):
+            raise ValueError("time in force is not supported by broker capabilities")
         if (
             not capabilities.supports_fractional
             and intent.quantity != intent.quantity.to_integral_value()
         ):
             raise ValueError("fractional quantity is not supported")
         capabilities.validate_order_quantity(intent.quantity)
+
+    @staticmethod
+    def _base_fill_price(intent: OrderIntent, market_price: Decimal) -> Decimal:
+        spec = intent.order_spec
+        if spec.order_type is BrokerOrderType.LIMIT and spec.limit_price is not None:
+            return spec.limit_price
+        if spec.order_type is BrokerOrderType.STOP and spec.stop_price is not None:
+            return spec.stop_price
+        if spec.order_type is BrokerOrderType.STOP_LIMIT and spec.limit_price is not None:
+            return spec.limit_price
+        return market_price
 
     def cancel_order(
         self,

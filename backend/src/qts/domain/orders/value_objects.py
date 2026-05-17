@@ -7,6 +7,7 @@ from decimal import Decimal
 from enum import StrEnum
 
 from qts.core.ids import AccountId, InstrumentId, OrderId
+from qts.domain.orders.order_spec import OrderSpec
 
 
 class OrderState(StrEnum):
@@ -39,6 +40,7 @@ class OrderIntent:
     side: OrderSide
     quantity: Decimal
     account_id: AccountId | None = None
+    order_spec: OrderSpec = OrderSpec()
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""
@@ -158,5 +160,6 @@ __all__ = [
     "OrderManagerResult",
     "OrderManagerSnapshot",
     "OrderSide",
+    "OrderSpec",
     "ReplaceIntent",
 ]

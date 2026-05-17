@@ -10,9 +10,10 @@ from typing import Protocol
 
 from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
 from qts.domain.market_data import Bar
+from qts.domain.orders import OrderSpec
 from qts.domain.risk import MarketDataRiskContext, OrderRiskRequest, RiskDecision
 from qts.execution.order_manager import Order, OrderFill, OrderIntent, OrderSide
-from qts.portfolio.position_book import Position
+from qts.portfolio.holdings import Holding
 from qts.risk.risk_engine import RiskEngine
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.account_actor import AccountActor
@@ -71,6 +72,7 @@ class OrderPlan:
     quantity_delta: Decimal
     market_price: Decimal
     order_time: datetime | None
+    order_spec: OrderSpec
     aggregation_decision_id: str | None = None
 
 
@@ -87,7 +89,7 @@ class OrderPlanBuilder:
         *,
         account_id: AccountId,
         bar: Bar,
-        positions: Mapping[InstrumentId, Position],
+        positions: Mapping[InstrumentId, Holding],
         aggregation_decision_id: str | None = None,
     ) -> tuple[OrderPlan, ...]:
         """Build concrete order plans for a target intent."""
@@ -119,13 +121,19 @@ class OrderPlanBuilder:
                                 bar=bar,
                             ),
                             order_time=bar.end_time,
+                            order_spec=intent.order_spec,
                             aggregation_decision_id=aggregation_decision_id,
                         )
                     )
 
         current_quantity = positions.get(
             target_instrument,
-            Position(instrument_id=target_instrument, quantity=Decimal("0")),
+            Holding(
+                instrument_id=target_instrument,
+                quantity=Decimal("0"),
+                average_cost=Decimal("0"),
+                realized_pnl=Decimal("0"),
+            ),
         ).quantity
         desired_quantity = self._desired_quantity(
             intent,
@@ -145,6 +153,7 @@ class OrderPlanBuilder:
                         bar=bar,
                     ),
                     order_time=bar.end_time,
+                    order_spec=intent.order_spec,
                     aggregation_decision_id=aggregation_decision_id,
                 )
             )
@@ -245,6 +254,7 @@ class TargetIntentProcessor:
                 quantity_delta=plan.quantity_delta,
                 market_price=plan.market_price,
                 order_time=plan.order_time,
+                order_spec=plan.order_spec,
                 order_manager_actor=order_manager_actor,
                 order_manager_ref=order_manager_ref,
                 execution_ref=execution_ref,
@@ -275,6 +285,7 @@ class TargetIntentProcessor:
         quantity_delta: Decimal,
         market_price: Decimal,
         order_time: datetime | None,
+        order_spec: OrderSpec,
         order_manager_actor: OrderManagerActor,
         order_manager_ref: ActorRef,
         execution_ref: ActorRef,
@@ -300,6 +311,7 @@ class TargetIntentProcessor:
                 quantity=quantity,
                 price=market_price,
                 multiplier=self._multiplier_for(instrument_id),
+                order_spec=order_spec,
                 order_time=order_time,
                 contributing_strategy_ids=contributing_strategy_ids,
                 aggregation_decision_id=aggregation_decision_id,
@@ -331,6 +343,7 @@ class TargetIntentProcessor:
             side=side,
             quantity=quantity,
             account_id=account_id,
+            order_spec=order_spec,
         )
         route_metadata = OrderRouteMetadata(
             broker_id=self._broker_id,

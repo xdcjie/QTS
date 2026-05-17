@@ -332,6 +332,7 @@ class BacktestActorLoop:
                         "instrument_id": intent.asset.instrument_id.value,
                         "intent_type": intent.intent_type.value,
                         "value": str(intent.value) if intent.value is not None else None,
+                        "order_spec": intent.order_spec.to_payload(),
                     },
                     correlation_id=correlation_id,
                     instrument_id=intent.asset.instrument_id,
@@ -346,6 +347,7 @@ class BacktestActorLoop:
                         "instrument_id": intent.asset.instrument_id.value,
                         "intent_type": intent.intent_type.value,
                         "value": str(intent.value) if intent.value is not None else None,
+                        "order_spec": intent.order_spec.to_payload(),
                     },
                     correlation_id=correlation_id,
                     instrument_id=intent.asset.instrument_id,
@@ -561,6 +563,14 @@ class BacktestActorLoop:
                     "positions": {
                         instrument_id.value: str(position.quantity)
                         for instrument_id, position in snapshot.positions.items()
+                    },
+                    "holdings": {
+                        instrument_id.value: {
+                            "quantity": str(holding.quantity),
+                            "average_cost": str(holding.average_cost),
+                            "realized_pnl": str(holding.realized_pnl),
+                        }
+                        for instrument_id, holding in snapshot.holdings.items()
                     },
                 },
             )

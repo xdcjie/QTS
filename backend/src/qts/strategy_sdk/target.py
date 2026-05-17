@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
 
+from qts.domain.orders import BrokerOrderType, OrderSpec
 from qts.strategy_sdk.asset_ref import AssetRef
 
 
@@ -25,6 +26,12 @@ class TargetIntent:
     asset: AssetRef
     intent_type: TargetIntentType
     value: Decimal | None
+    order_spec: OrderSpec = OrderSpec()
+
+    @property
+    def spec(self) -> OrderSpec:
+        """Return the typed execution specification for this target."""
+        return self.order_spec
 
 
-__all__ = ["TargetIntent", "TargetIntentType"]
+__all__ = ["BrokerOrderType", "OrderSpec", "TargetIntent", "TargetIntentType"]

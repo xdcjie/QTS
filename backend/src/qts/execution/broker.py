@@ -8,12 +8,21 @@ the surface remains stable and small.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import ROUND_FLOOR, ROUND_HALF_UP, Decimal
 from enum import StrEnum
 from typing import Protocol
 
 from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
-from qts.domain.orders import ExecutionReport, ExecutionReportStatus, OrderSide
+from qts.domain.orders import (
+    BracketLeg,
+    BrokerOrderType,
+    ExecutionReport,
+    ExecutionReportStatus,
+    OrderSide,
+    OrderSpec,
+    TimeInForce,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,6 +71,14 @@ class BrokerCapabilities:
             BrokerOrderType.MARKET: self.supports_market_orders,
             BrokerOrderType.LIMIT: self.supports_limit_orders,
             BrokerOrderType.STOP: self.supports_stop_orders,
+            BrokerOrderType.STOP_LIMIT: self.supports_limit_orders and self.supports_stop_orders,
+            BrokerOrderType.TRAILING_STOP: self.supports_stop_orders,
+            BrokerOrderType.MARKET_ON_OPEN: self.supports_market_orders,
+            BrokerOrderType.MARKET_ON_CLOSE: self.supports_market_orders,
+            BrokerOrderType.BRACKET: self.supports_market_orders
+            or self.supports_limit_orders
+            or self.supports_stop_orders,
+            BrokerOrderType.ICEBERG: False,
         }[order_type]
 
     def supports_tif(self, time_in_force: TimeInForce) -> bool:
@@ -131,22 +148,6 @@ class BrokerCapabilities:
         }
 
 
-class BrokerOrderType(StrEnum):
-    """Order types modeled before broker submission."""
-
-    MARKET = "market"
-    LIMIT = "limit"
-    STOP = "stop"
-
-
-class TimeInForce(StrEnum):
-    """Time-in-force values modeled at the execution boundary."""
-
-    DAY = "day"
-    GTC = "gtc"
-    IOC = "ioc"
-
-
 @dataclass(frozen=True, slots=True)
 class BrokerOrderRequest:
     """Internal order request sent to the broker adapter boundary."""
@@ -158,12 +159,38 @@ class BrokerOrderRequest:
     instrument_id: InstrumentId
     side: OrderSide
     quantity: Decimal
+    order_type: BrokerOrderType = BrokerOrderType.MARKET
+    time_in_force: TimeInForce = TimeInForce.DAY
+    limit_price: Decimal | None = None
+    stop_price: Decimal | None = None
+    trail_amount: Decimal | None = None
+    trail_percent: Decimal | None = None
+    good_til_date: datetime | None = None
+    bracket_legs: tuple[BracketLeg, ...] | None = None
 
     def __post_init__(self) -> None:
         if not self.client_order_id.strip():
             raise ValueError("client_order_id must not be empty")
         if self.quantity <= Decimal("0"):
             raise ValueError("quantity must be positive")
+
+        _ = self.order_spec
+
+    @property
+    def order_spec(self) -> OrderSpec:
+        """Return the request fields as a single execution specification."""
+        from qts.domain.orders import BracketSpec
+
+        return OrderSpec(
+            order_type=self.order_type,
+            time_in_force=self.time_in_force,
+            limit_price=self.limit_price,
+            stop_price=self.stop_price,
+            trail_amount=self.trail_amount,
+            trail_percent=self.trail_percent,
+            good_til_date=self.good_til_date if self.good_til_date is not None else None,
+            bracket=None if self.bracket_legs is None else BracketSpec(self.bracket_legs),
+        )
 
 
 class BrokerExecutionReportStatus(StrEnum):

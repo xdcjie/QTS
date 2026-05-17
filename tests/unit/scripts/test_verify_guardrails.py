@@ -176,10 +176,21 @@ def test_guardrails_reject_execution_adapter_state_dependency(tmp_path: Path) ->
         root,
         "backend/src/qts/execution/adapters/bad.py",
         "from qts.runtime.actors.account_actor import AccountActor\n"
-        "from qts.portfolio.position_book import PositionBook\n",
+        "from qts.portfolio.holdings import HoldingBook\n",
     )
 
     assert _codes(root) == {"ADAPTER_STATE_DEPENDENCY"}
+
+
+def test_guardrails_reject_removed_position_book_import(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/runtime/bad.py",
+        "from qts.portfolio.position_book import PositionBook\n",
+    )
+
+    assert _codes(root) == {"REMOVED_IMPORT_USAGE"}
 
 
 def test_guardrails_reject_product_specific_identifiers_in_core_implementation(

@@ -11,7 +11,7 @@ from qts.core.ids import AccountId, InstrumentId
 from qts.execution.idempotency import FillIdempotencyStore
 from qts.execution.order_manager import OrderFill, OrderSide
 from qts.portfolio.cash_book import CashBook
-from qts.portfolio.position_book import Position, PositionBook
+from qts.portfolio.holdings import Holding, HoldingBook, PositionClosed
 from qts.runtime.actor import Actor
 
 
@@ -24,14 +24,33 @@ class ApplyFill:
     multiplier: Decimal
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, init=False)
 class AccountSnapshot:
     """Read-only account snapshot."""
 
     cash: Mapping[str, Decimal]
-    positions: Mapping[InstrumentId, Position]
+    holdings: Mapping[InstrumentId, Holding]
     account_id: AccountId | None = None
     seen_fill_ids: tuple[str, ...] = ()
+
+    def __init__(
+        self,
+        *,
+        cash: Mapping[str, Decimal],
+        holdings: Mapping[InstrumentId, Holding] | None = None,
+        positions: Mapping[InstrumentId, Holding] | None = None,
+        account_id: AccountId | None = None,
+        seen_fill_ids: tuple[str, ...] = (),
+    ) -> None:
+        object.__setattr__(self, "cash", cash)
+        object.__setattr__(self, "holdings", holdings if holdings is not None else positions or {})
+        object.__setattr__(self, "account_id", account_id)
+        object.__setattr__(self, "seen_fill_ids", seen_fill_ids)
+
+    @property
+    def positions(self) -> Mapping[InstrumentId, Holding]:
+        """Return holdings as quantity-bearing position snapshots."""
+        return self.holdings
 
 
 class AccountActor(Actor):
@@ -46,8 +65,9 @@ class AccountActor(Actor):
         """Perform __init__."""
         self._account_id = account_id
         self._cash = CashBook(initial_cash)
-        self._positions = PositionBook()
+        self._holdings = HoldingBook()
         self._fill_ids = FillIdempotencyStore()
+        self._position_closed_events: list[PositionClosed] = []
 
     def handle(self, message: object) -> None:
         """Perform handle."""
@@ -60,7 +80,7 @@ class AccountActor(Actor):
         """Perform snapshot."""
         return AccountSnapshot(
             cash=MappingProxyType({"USD": self._cash.balance("USD")}),
-            positions=self._positions.snapshot(),
+            holdings=self._holdings.snapshot(),
             account_id=self._account_id,
             seen_fill_ids=self._fill_ids.snapshot(),
         )
@@ -69,11 +89,14 @@ class AccountActor(Actor):
     def restore(cls, snapshot: AccountSnapshot) -> AccountActor:
         """Restore account-owned state from an actor snapshot."""
         actor = cls(initial_cash=snapshot.cash, account_id=snapshot.account_id)
-        actor._positions = PositionBook(
-            {position.instrument_id: position.quantity for position in snapshot.positions.values()}
-        )
+        actor._holdings = HoldingBook.restore(snapshot.holdings)
         actor._fill_ids = FillIdempotencyStore.restore(snapshot.seen_fill_ids)
         return actor
+
+    @property
+    def position_closed_events(self) -> tuple[PositionClosed, ...]:
+        """Return close events emitted by this actor."""
+        return tuple(self._position_closed_events)
 
     def _apply_fill(self, message: ApplyFill) -> None:
         """Perform _apply_fill."""
@@ -83,7 +106,15 @@ class AccountActor(Actor):
         if not self._fill_ids.mark_seen(fill.fill_id):
             return
         signed_quantity = fill.quantity if fill.side is OrderSide.BUY else -fill.quantity
-        self._positions.apply_delta(fill.instrument_id, signed_quantity)
+        self._position_closed_events.extend(
+            self._holdings.apply_fill(
+                instrument_id=fill.instrument_id,
+                signed_quantity=signed_quantity,
+                price=fill.price,
+                multiplier=message.multiplier,
+                fill_time=None,
+            )
+        )
         cash_delta = (-signed_quantity * fill.price * message.multiplier) - fill.commission
         self._cash.apply_delta(message.currency, cash_delta)
 

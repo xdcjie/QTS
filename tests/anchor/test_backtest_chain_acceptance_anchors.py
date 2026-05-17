@@ -143,6 +143,8 @@ def test_backtest_artifact_contract_contains_auditable_inputs_outputs_and_hashes
         "run_id",
         "runtime_instance_id",
         "runtime_mode",
+        "statistics",
+        "statistics_hash",
         "source_commit",
         "startup_checklist_hash",
         "platform_baseline_version",
@@ -158,6 +160,7 @@ def test_backtest_artifact_contract_contains_auditable_inputs_outputs_and_hashes
         "fills",
         "trade_ledger",
         "equity_curve",
+        "statistics",
     }
     assert manifest["run_id"] == run.result.run_id.value
     assert runtime_manifest.run_id == run.result.run_id.value

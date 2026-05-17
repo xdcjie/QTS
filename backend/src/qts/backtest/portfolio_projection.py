@@ -46,7 +46,12 @@ class BacktestPortfolioProjector:
             (position.market_value for position in positions.values()),
             Decimal("0"),
         )
-        return PortfolioView(cash=cash, equity=equity, positions=positions)
+        return PortfolioView(
+            cash=cash,
+            equity=equity,
+            positions=positions,
+            holdings=snapshot.holdings,
+        )
 
     def equity_point(
         self,

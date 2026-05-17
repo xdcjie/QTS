@@ -9,6 +9,7 @@ from decimal import Decimal
 
 from qts.core.ids import InstrumentId, StrategyId
 from qts.core.time import require_aware_datetime
+from qts.domain.orders import OrderSpec
 from qts.domain.risk.market_data_context import MarketDataRiskContext
 
 
@@ -20,6 +21,7 @@ class OrderRiskRequest:
     quantity: Decimal
     price: Decimal
     multiplier: Decimal
+    order_spec: OrderSpec = OrderSpec()
     order_time: datetime | None = None
     current_position: Decimal = Decimal("0")
     contributing_strategy_ids: tuple[StrategyId, ...] = ()

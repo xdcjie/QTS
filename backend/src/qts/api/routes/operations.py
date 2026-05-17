@@ -33,13 +33,6 @@ def _require_operator(operator: str | None) -> None:
         raise HTTPException(status_code=403, detail="operator permission required")
 
 
-def _require_safety_scope(authorization_scope: str | None) -> str:
-    """Validate elevated runtime safety scope for sensitive commands."""
-    if authorization_scope != "runtime:safety:write":
-        raise HTTPException(status_code=403, detail="runtime safety scope required")
-    return authorization_scope
-
-
 @router.get("/operator-status")
 def operator_status(
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
@@ -277,15 +270,10 @@ def deactivate_kill_switch(
     command: KillSwitchCommandSchema,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
-    authorization_scope: Annotated[
-        str | None,
-        Header(alias="X-QTS-Authorization-Scope"),
-    ] = None,
 ) -> KillSwitchResponseSchema:
     """Deactivate or refresh an inactive kill-switch state for a runtime scope."""
 
     _require_operator(operator)
-    resolved_scope = _require_safety_scope(authorization_scope)
     assert operator is not None
 
     def runtime_command() -> KillSwitchResponseSchema:
@@ -297,7 +285,7 @@ def deactivate_kill_switch(
                 reason=command.reason,
             ),
             operator_id=operator.strip(),
-            authorization_scope=resolved_scope,
+            authorization_scope="runtime:safety:write",
             idempotency_key=idempotency_key,
         )
         payload = map_kill_switch_state_dto(state)

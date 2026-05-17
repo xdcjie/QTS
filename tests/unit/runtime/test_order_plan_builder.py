@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from qts.core.ids import AccountId, InstrumentId
 from qts.domain.market_data import Bar
-from qts.portfolio.position_book import Position
+from qts.portfolio.holdings import Holding
 from qts.strategy_sdk import TargetIntent, TargetIntentType
 from qts.strategy_sdk.asset_ref import AssetRef
 
@@ -45,7 +45,12 @@ def test_order_plan_builder_converts_quantity_target_to_delta_plan() -> None:
         account_id=AccountId("acct-backtest"),
         bar=bar,
         positions={
-            bar.instrument_id: Position(instrument_id=bar.instrument_id, quantity=Decimal("1"))
+            bar.instrument_id: Holding(
+                instrument_id=bar.instrument_id,
+                quantity=Decimal("1"),
+                average_cost=Decimal("0"),
+                realized_pnl=Decimal("0"),
+            )
         },
     )
 
@@ -69,7 +74,12 @@ def test_order_plan_builder_returns_no_plan_when_target_already_matches_position
         account_id=AccountId("acct-backtest"),
         bar=bar,
         positions={
-            bar.instrument_id: Position(instrument_id=bar.instrument_id, quantity=Decimal("1"))
+            bar.instrument_id: Holding(
+                instrument_id=bar.instrument_id,
+                quantity=Decimal("1"),
+                average_cost=Decimal("0"),
+                realized_pnl=Decimal("0"),
+            )
         },
     )
 
@@ -88,7 +98,12 @@ def test_order_plan_builder_carries_aggregation_decision_id() -> None:
         account_id=AccountId("acct-backtest"),
         bar=bar,
         positions={
-            bar.instrument_id: Position(instrument_id=bar.instrument_id, quantity=Decimal("1"))
+            bar.instrument_id: Holding(
+                instrument_id=bar.instrument_id,
+                quantity=Decimal("1"),
+                average_cost=Decimal("0"),
+                realized_pnl=Decimal("0"),
+            )
         },
         aggregation_decision_id="sigagg-plan",
     )

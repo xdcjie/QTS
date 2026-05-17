@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 
+def _auth_headers() -> dict[str, str]:
+    return {"Authorization": "Bearer dev-token"}
+
+
 def test_api_can_submit_backtest_request() -> None:
     from fastapi.testclient import TestClient
     from qts.api.app import create_app
@@ -9,7 +13,7 @@ def test_api_can_submit_backtest_request() -> None:
 
     client = TestClient(create_app())
 
-    response = client.post("/backtests", json={"config_path": config_path})
+    response = client.post("/backtests", json={"config_path": config_path}, headers=_auth_headers())
 
     assert response.status_code == 200
     payload = response.json()
@@ -33,8 +37,8 @@ def test_api_can_list_backtest_runs() -> None:
     config_path = "configs/backtest.gc_si.example.yaml"
 
     client = TestClient(create_app())
-    client.post("/backtests", json={"config_path": config_path})
-    response = client.get("/backtests?limit=5")
+    client.post("/backtests", json={"config_path": config_path}, headers=_auth_headers())
+    response = client.get("/backtests?limit=5", headers=_auth_headers())
 
     assert response.status_code == 200
     payload = response.json()
@@ -49,7 +53,7 @@ def test_api_can_list_backtest_strategy_options() -> None:
 
     client = TestClient(create_app())
 
-    response = client.get("/backtests/strategy-options")
+    response = client.get("/backtests/strategy-options", headers=_auth_headers())
 
     assert response.status_code == 200
     payload = response.json()

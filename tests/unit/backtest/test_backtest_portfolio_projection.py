@@ -6,7 +6,7 @@ from decimal import Decimal
 from qts.backtest.portfolio_projection import BacktestPortfolioProjector
 from qts.core.ids import InstrumentId
 from qts.domain.market_data import Bar
-from qts.portfolio.position_book import Position
+from qts.portfolio.holdings import Holding
 from qts.runtime.actors.account_actor import AccountSnapshot
 
 
@@ -16,7 +16,12 @@ def _snapshot_with_position() -> tuple[AccountSnapshot, InstrumentId]:
         AccountSnapshot(
             cash={"USD": Decimal("10000")},
             positions={
-                instrument_id: Position(instrument_id=instrument_id, quantity=Decimal("2")),
+                instrument_id: Holding(
+                    instrument_id=instrument_id,
+                    quantity=Decimal("2"),
+                    average_cost=Decimal("0"),
+                    realized_pnl=Decimal("0"),
+                ),
             },
         ),
         instrument_id,

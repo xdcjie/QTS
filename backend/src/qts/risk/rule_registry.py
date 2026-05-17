@@ -13,6 +13,7 @@ from qts.risk.rules.market_data_freshness import MarketDataFreshnessRiskRule
 from qts.risk.rules.market_data_permission import MarketDataPermissionRiskRule
 from qts.risk.rules.max_notional import MaxNotionalRule
 from qts.risk.rules.max_order_qty import MaxOrderQuantityRule
+from qts.risk.rules.order_spec_validity import OrderSpecValidityRule
 from qts.risk.rules.position_limit import PositionLimitRule
 from qts.risk.rules.volatility_adjusted_sizing import VolatilityAdjustedSizingRule
 
@@ -45,6 +46,8 @@ class RiskRuleRegistry:
             return MarketDataPermissionRiskRule()
         if config.name == "market_data_freshness":
             return MarketDataFreshnessRiskRule()
+        if config.name == "order_spec_validity":
+            return OrderSpecValidityRule()
         raise KeyError(f"unknown risk rule: {config.name}")
 
     def build_all(self, configs: tuple[RiskRuleConfig, ...]) -> tuple[RiskRule, ...]:

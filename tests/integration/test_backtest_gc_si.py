@@ -824,7 +824,14 @@ def test_backtest_writes_partitioned_artifacts(tmp_path: Path) -> None:
     assert summary["processed_bars"] == 6
     assert manifest["report_hash"] == run.report_hash
     assert summary["report_hash"] == run.report_hash
-    assert set(run.artifact_paths) == {"events", "orders", "fills", "trade_ledger", "equity_curve"}
+    assert set(run.artifact_paths) == {
+        "events",
+        "orders",
+        "fills",
+        "trade_ledger",
+        "equity_curve",
+        "statistics",
+    }
     assert manifest["artifacts"]["equity_curve"]["rows"] == 6
     assert manifest["artifacts"]["orders"]["rows"] == manifest["artifacts"]["fills"]["rows"]
     assert manifest["artifacts"]["fills"]["rows"] == manifest["artifacts"]["trade_ledger"]["rows"]

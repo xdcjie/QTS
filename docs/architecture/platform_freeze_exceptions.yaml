@@ -1,4 +1,94 @@
 exceptions:
+  - class_name: Principal
+    module: qts.api.security
+    reason: OPT-29 API security principal value object
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: AuthBackend
+    module: qts.api.security
+    reason: OPT-29 API security auth backend contract
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: StaticTokenAuthBackend
+    module: qts.api.security
+    reason: OPT-29 local and CI static token auth backend
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BearerJWTAuthBackend
+    module: qts.api.security
+    reason: OPT-29 JWT bearer auth backend
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: ApiSecurityMiddleware
+    module: qts.api.security
+    reason: OPT-29 API authentication authorization and rate limit middleware
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BrokerOrderType
+    module: qts.domain.orders.order_spec
+    reason: OPT-27 order type domain enum
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: TimeInForce
+    module: qts.domain.orders.order_spec
+    reason: OPT-27 time in force domain enum
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BracketLeg
+    module: qts.domain.orders.order_spec
+    reason: OPT-27 bracket order child value object
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: BracketSpec
+    module: qts.domain.orders.order_spec
+    reason: OPT-27 bracket order value object
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: OrderSpec
+    module: qts.domain.orders.order_spec
+    reason: OPT-27 single source order execution specification
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: CostBasisMethod
+    module: qts.portfolio.holdings
+    reason: OPT-26 holdings cost basis enum
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: Holding
+    module: qts.portfolio.holdings
+    reason: OPT-26 average cost holding value object
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: PositionClosed
+    module: qts.portfolio.holdings
+    reason: OPT-26 holding close event value object
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: HoldingBook
+    module: qts.portfolio.holdings
+    reason: OPT-26 account-owned holdings book
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: StatisticsPayload
+    module: qts.reporting.statistics
+    reason: OPT-25 backtest statistics payload
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: _OpenTrade
+    module: qts.reporting.statistics
+    reason: OPT-25 internal streaming trade accumulator
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: StatisticsBuilder
+    module: qts.reporting.statistics
+    reason: OPT-25 streaming backtest statistics builder
+    owner: platform
+    expiry: 2099-12-31
+  - class_name: OrderSpecValidityRule
+    module: qts.risk.rules.order_spec_validity
+    reason: OPT-27 pre-trade order specification validation
+    owner: platform
+    expiry: 2099-12-31
   - class_name: Actor
     module: qts.runtime.actor
     reason: baseline allowance

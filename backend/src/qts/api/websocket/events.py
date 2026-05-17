@@ -10,7 +10,6 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from qts.api.websocket.manager import WebSocketConnectionManager
 
-
 router = APIRouter()
 
 

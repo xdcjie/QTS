@@ -1444,11 +1444,11 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>333 files</span>
-      <span>590 classes</span>
-      <span>1922 functions</span>
-      <span>319 backend</span>
-      <span>14 frontend</span>
+      <span>340 files</span>
+      <span>605 classes</span>
+      <span>1986 functions</span>
+      <span>323 backend</span>
+      <span>17 frontend</span>
     </div>
   </div>
   <div class="inventory-list">
@@ -1507,7 +1507,7 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>create_app</code></td><td>module:18</td><td>Perform create_app.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>create_app</code></td><td>module:20</td><td>Perform create_app.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
             </tbody>
           </table>
         </div>
@@ -1631,7 +1631,7 @@
         <code>backend/src/qts/api/routes/operations.py</code>
         <span class="inventory-counts">
           <span>0 classes</span>
-          <span>23 functions</span>
+          <span>22 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -1643,28 +1643,27 @@
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
               <tr><td><code>_require_operator</code></td><td>module:30</td><td>Validate X-QTS-Operator header is present.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_require_safety_scope</code></td><td>module:36</td><td>Validate elevated runtime safety scope for sensitive commands.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>operator_status</code></td><td>module:44</td><td>Return application-owned operator dashboard status.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>start_runtime</code></td><td>module:54</td><td>Start runtime processing.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>command</code></td><td>start_runtime.&lt;locals&gt;:62</td><td>Execute start command and return updated runtime state.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>stop_runtime</code></td><td>module:78</td><td>Stop runtime processing.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>command</code></td><td>stop_runtime.&lt;locals&gt;:86</td><td>Execute stop command and return updated runtime state.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>pause_runtime</code></td><td>module:102</td><td>Pause runtime execution for all strategies and data actors.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>command</code></td><td>pause_runtime.&lt;locals&gt;:110</td><td>Execute pause command and return updated runtime state.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>resume_runtime</code></td><td>module:126</td><td>Resume runtime execution after an operator pause.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>command</code></td><td>resume_runtime.&lt;locals&gt;:134</td><td>Execute resume command and return updated runtime state.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>enter_observation</code></td><td>module:150</td><td>Enter observation mode while keeping runtime visibility.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>command</code></td><td>enter_observation.&lt;locals&gt;:158</td><td>Execute enter-observation command and return updated runtime state.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>exit_observation</code></td><td>module:174</td><td>Exit observation mode after operator approval.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>command</code></td><td>exit_observation.&lt;locals&gt;:182</td><td>Execute exit-observation command and return updated runtime state.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>reconcile_runtime</code></td><td>module:198</td><td>Request runtime reconciliation through the operational command boundary.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>command</code></td><td>reconcile_runtime.&lt;locals&gt;:206</td><td>Execute reconcile command and return audit evidence.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>snapshot_runtime</code></td><td>module:222</td><td>Request a runtime snapshot through the operational command boundary.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>command</code></td><td>snapshot_runtime.&lt;locals&gt;:230</td><td>Execute snapshot command and return audit evidence.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>activate_kill_switch</code></td><td>module:246</td><td>Activate or refresh a kill-switch for a runtime scope.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>runtime_command</code></td><td>activate_kill_switch.&lt;locals&gt;:256</td><td>Execute kill-switch command and return updated switch state.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>deactivate_kill_switch</code></td><td>module:276</td><td>Deactivate or refresh an inactive kill-switch state for a runtime scope.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>runtime_command</code></td><td>deactivate_kill_switch.&lt;locals&gt;:291</td><td>Execute kill-switch deactivation and return updated switch state.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>operator_status</code></td><td>module:37</td><td>Return application-owned operator dashboard status.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>start_runtime</code></td><td>module:47</td><td>Start runtime processing.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>command</code></td><td>start_runtime.&lt;locals&gt;:55</td><td>Execute start command and return updated runtime state.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>stop_runtime</code></td><td>module:71</td><td>Stop runtime processing.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>command</code></td><td>stop_runtime.&lt;locals&gt;:79</td><td>Execute stop command and return updated runtime state.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>pause_runtime</code></td><td>module:95</td><td>Pause runtime execution for all strategies and data actors.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>command</code></td><td>pause_runtime.&lt;locals&gt;:103</td><td>Execute pause command and return updated runtime state.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>resume_runtime</code></td><td>module:119</td><td>Resume runtime execution after an operator pause.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>command</code></td><td>resume_runtime.&lt;locals&gt;:127</td><td>Execute resume command and return updated runtime state.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>enter_observation</code></td><td>module:143</td><td>Enter observation mode while keeping runtime visibility.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>command</code></td><td>enter_observation.&lt;locals&gt;:151</td><td>Execute enter-observation command and return updated runtime state.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>exit_observation</code></td><td>module:167</td><td>Exit observation mode after operator approval.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>command</code></td><td>exit_observation.&lt;locals&gt;:175</td><td>Execute exit-observation command and return updated runtime state.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>reconcile_runtime</code></td><td>module:191</td><td>Request runtime reconciliation through the operational command boundary.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>command</code></td><td>reconcile_runtime.&lt;locals&gt;:199</td><td>Execute reconcile command and return audit evidence.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>snapshot_runtime</code></td><td>module:215</td><td>Request a runtime snapshot through the operational command boundary.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>command</code></td><td>snapshot_runtime.&lt;locals&gt;:223</td><td>Execute snapshot command and return audit evidence.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>activate_kill_switch</code></td><td>module:239</td><td>Activate or refresh a kill-switch for a runtime scope.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>runtime_command</code></td><td>activate_kill_switch.&lt;locals&gt;:249</td><td>Execute kill-switch command and return updated switch state.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>deactivate_kill_switch</code></td><td>module:269</td><td>Deactivate or refresh an inactive kill-switch state for a runtime scope.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>runtime_command</code></td><td>deactivate_kill_switch.&lt;locals&gt;:279</td><td>Execute kill-switch deactivation and return updated switch state.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -1826,6 +1825,57 @@
     </details>
     <details class="inventory-file">
       <summary>
+        <code>backend/src/qts/api/security.py</code>
+        <span class="inventory-counts">
+          <span>5 classes</span>
+          <span>17 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>API authentication, authorization, CORS, and rate-limit helpers.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>Principal</code></td><td>security:52</td><td>Authenticated API principal.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>AuthBackend</code></td><td>security:70</td><td>Authentication backend contract.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>StaticTokenAuthBackend</code></td><td>security:78</td><td>Hash-based static token backend for local development and CI.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BearerJWTAuthBackend</code></td><td>security:136</td><td>Minimal HS256 JWT verifier for service tokens.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ApiSecurityMiddleware</code></td><td>security:175</td><td>Authenticate every non-public API request and enforce scopes.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>__post_init__</code></td><td>Principal:63</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>verify</code></td><td>AuthBackend:73</td><td>Verify an Authorization header and return a principal.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>StaticTokenAuthBackend:81</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>verify</code></td><td>StaticTokenAuthBackend:84</td><td>Verify a bearer token against configured SHA-256 token hashes.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_load</code></td><td>StaticTokenAuthBackend:94</td><td>实现 StaticTokenAuthBackend 的 load 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>BearerJWTAuthBackend:139</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>verify</code></td><td>BearerJWTAuthBackend:145</td><td>Verify a compact HS256 bearer JWT.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>ApiSecurityMiddleware:178</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>dispatch</code></td><td>ApiSecurityMiddleware:190</td><td>Authenticate, authorize, rate-limit, and continue.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_consume_budget</code></td><td>ApiSecurityMiddleware:206</td><td>实现 ApiSecurityMiddleware 的 consume budget 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>required_scope_for</code></td><td>module:220</td><td>Return the configured scope for a route.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>require_scope</code></td><td>module:229</td><td>FastAPI dependency factory for route-level scope checks.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>dependency</code></td><td>require_scope.&lt;locals&gt;:232</td><td>实现 require_scope.&lt;locals&gt; 的 dependency 行为。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>get_principal</code></td><td>module:240</td><td>FastAPI dependency returning the authenticated principal.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>default_auth_backend</code></td><td>module:251</td><td>Build the configured default auth backend.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>_bearer_token</code></td><td>module:260</td><td>提供模块级 bearer token 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_base64url_decode</code></td><td>module:269</td><td>提供模块级 base64url decode 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
         <code>backend/src/qts/api/services/__init__.py</code>
         <span class="inventory-counts">
           <span>0 classes</span>
@@ -1919,18 +1969,24 @@
         <code>backend/src/qts/api/websocket/events.py</code>
         <span class="inventory-counts">
           <span>0 classes</span>
-          <span>1 function</span>
+          <span>7 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
-        <p><strong>文件作用：</strong>WebSocket event stream skeleton.</p>
+        <p><strong>文件作用：</strong>WebSocket event stream with sequence tracking and replay support.</p>
         <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
         <div class="inventory-subsection">
           <h3>函数 / 方法</h3>
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>event_stream</code></td><td>module:11</td><td>Perform event_stream.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>_next_sequence</code></td><td>module:21</td><td>Allocate the next global stream sequence number.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_to_event</code></td><td>module:28</td><td>Build a typed stream envelope and append it to the replay buffer.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_snapshot_event</code></td><td>module:48</td><td>Return a synthetic bootstrap snapshot payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_resync_event</code></td><td>module:53</td><td>Build a stream resync event.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_emit_replay</code></td><td>module:70</td><td>Replay buffered events newer than `from_sequence` to the given socket.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>broadcast_stream_event</code></td><td>module:88</td><td>Build and broadcast one envelope to all active websocket clients.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>event_stream</code></td><td>module:101</td><td>Open a resumable event stream with sequence and replay support.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
             </tbody>
           </table>
         </div>
@@ -2699,12 +2755,12 @@
               <tr><td><code>write_market_data_event</code></td><td>BacktestActorLoop:281</td><td>Update latest price state and emit the normalized market-data event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>execute_strategy_bar</code></td><td>BacktestActorLoop:304</td><td>Execute the strategy pipeline for one bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>write_strategy_signal_events</code></td><td>BacktestActorLoop:320</td><td>Emit raw strategy signal and intent events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_signal_batch_events</code></td><td>BacktestActorLoop:357</td><td>Emit aggregation, conflict, and rejection events for a signal batch.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_batch_conflict_events</code></td><td>BacktestActorLoop:396</td><td>Emit conflict and rejection evidence for a rejected signal batch.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>process_strategy_intent</code></td><td>BacktestActorLoop:461</td><td>Process one accepted strategy intent through risk/order/execution/account.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_broker_reject_event</code></td><td>BacktestActorLoop:515</td><td>Emit a normalized broker capability rejection event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_equity_and_account_snapshot</code></td><td>BacktestActorLoop:538</td><td>Emit end-of-bar equity and account snapshot artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_write_account_snapshot</code></td><td>BacktestActorLoop:551</td><td>Emit a normalized account snapshot event.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>write_signal_batch_events</code></td><td>BacktestActorLoop:359</td><td>Emit aggregation, conflict, and rejection events for a signal batch.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_batch_conflict_events</code></td><td>BacktestActorLoop:398</td><td>Emit conflict and rejection evidence for a rejected signal batch.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>process_strategy_intent</code></td><td>BacktestActorLoop:463</td><td>Process one accepted strategy intent through risk/order/execution/account.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_broker_reject_event</code></td><td>BacktestActorLoop:517</td><td>Emit a normalized broker capability rejection event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_equity_and_account_snapshot</code></td><td>BacktestActorLoop:540</td><td>Emit end-of-bar equity and account snapshot artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_write_account_snapshot</code></td><td>BacktestActorLoop:553</td><td>Emit a normalized account snapshot event.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -2855,7 +2911,7 @@
               <tr><td><code>__init__</code></td><td>BacktestPortfolioProjector:18</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>multiplier_for</code></td><td>BacktestPortfolioProjector:22</td><td>Return multiplier used for portfolio valuation and risk checks.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>portfolio_view</code></td><td>BacktestPortfolioProjector:27</td><td>Perform portfolio_view.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>equity_point</code></td><td>BacktestPortfolioProjector:51</td><td>Perform equity_point.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>equity_point</code></td><td>BacktestPortfolioProjector:56</td><td>Perform equity_point.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -4975,6 +5031,46 @@
     </details>
     <details class="inventory-file">
       <summary>
+        <code>backend/src/qts/domain/orders/order_spec.py</code>
+        <span class="inventory-counts">
+          <span>5 classes</span>
+          <span>6 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Order execution specification value objects.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>BrokerOrderType</code></td><td>order_spec:13</td><td>Order types modeled before broker submission.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>TimeInForce</code></td><td>order_spec:27</td><td>Time-in-force values modeled at the execution boundary.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BracketLeg</code></td><td>order_spec:40</td><td>One child leg of a bracket order.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BracketSpec</code></td><td>order_spec:59</td><td>Parent order bracket with child OCO legs.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>OrderSpec</code></td><td>order_spec:70</td><td>Typed execution shape carried from strategy intent to broker request.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>__post_init__</code></td><td>BracketLeg:49</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>BracketSpec:64</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>OrderSpec:82</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>OrderSpec:94</td><td>Serialize the execution spec for events and manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_validate_shape</code></td><td>OrderSpec:118</td><td>实现 OrderSpec 的 validate shape 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_validate_optional_price</code></td><td>module:146</td><td>提供模块级 validate optional price 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
         <code>backend/src/qts/domain/orders/value_objects.py</code>
         <span class="inventory-counts">
           <span>11 classes</span>
@@ -4989,17 +5085,17 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>OrderState</code></td><td>value_objects:12</td><td>Execution lifecycle states for orders.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>OrderSide</code></td><td>value_objects:26</td><td>Order side.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>OrderIntent</code></td><td>value_objects:34</td><td>Approved order instruction before broker submission.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>CancelIntent</code></td><td>value_objects:50</td><td>Intent to cancel an order through OrderManager.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ReplaceIntent</code></td><td>value_objects:58</td><td>Intent to replace an order through OrderManager.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>Order</code></td><td>value_objects:71</td><td>Order snapshot owned by OrderManager.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ExecutionReportStatus</code></td><td>value_objects:80</td><td>Normalized broker report status.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ExecutionReport</code></td><td>value_objects:91</td><td>Normalized broker execution report.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>OrderFill</code></td><td>value_objects:118</td><td>OrderManager-validated fill event.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>OrderManagerResult</code></td><td>value_objects:133</td><td>Events emitted by processing an execution report.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>OrderManagerSnapshot</code></td><td>value_objects:141</td><td>Serializable OrderManager state for reconnect/recovery.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>OrderState</code></td><td>value_objects:13</td><td>Execution lifecycle states for orders.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>OrderSide</code></td><td>value_objects:27</td><td>Order side.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>OrderIntent</code></td><td>value_objects:35</td><td>Approved order instruction before broker submission.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>CancelIntent</code></td><td>value_objects:52</td><td>Intent to cancel an order through OrderManager.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ReplaceIntent</code></td><td>value_objects:60</td><td>Intent to replace an order through OrderManager.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>Order</code></td><td>value_objects:73</td><td>Order snapshot owned by OrderManager.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ExecutionReportStatus</code></td><td>value_objects:82</td><td>Normalized broker report status.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ExecutionReport</code></td><td>value_objects:93</td><td>Normalized broker execution report.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>OrderFill</code></td><td>value_objects:120</td><td>OrderManager-validated fill event.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>OrderManagerResult</code></td><td>value_objects:135</td><td>Events emitted by processing an execution report.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>OrderManagerSnapshot</code></td><td>value_objects:143</td><td>Serializable OrderManager state for reconnect/recovery.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5008,9 +5104,9 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__post_init__</code></td><td>OrderIntent:43</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>ReplaceIntent:64</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>ExecutionReport:103</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>OrderIntent:45</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>ReplaceIntent:66</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>ExecutionReport:105</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5124,7 +5220,7 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>OrderRiskRequest</code></td><td>request:16</td><td>Pre-trade risk input for a proposed order.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
+              <tr><td><code>OrderRiskRequest</code></td><td>request:17</td><td>Pre-trade risk input for a proposed order.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5133,8 +5229,8 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__post_init__</code></td><td>OrderRiskRequest:35</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>notional</code></td><td>OrderRiskRequest:66</td><td>Perform notional.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>OrderRiskRequest:37</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>notional</code></td><td>OrderRiskRequest:68</td><td>Perform notional.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5324,35 +5420,35 @@
               <tr><td><code>callback_events</code></td><td>IbkrOrderExecutionAdapter:172</td><td>Read-only IBKR callback audit events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>has_unresolved_callbacks</code></td><td>IbkrOrderExecutionAdapter:177</td><td>Return whether unresolved IBKR callbacks remain quarantined.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>to_order_request</code></td><td>IbkrOrderExecutionAdapter:182</td><td>Perform to_order_request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_assert_live_capital_order_allowed</code></td><td>IbkrOrderExecutionAdapter:225</td><td>实现 IbkrOrderExecutionAdapter 的 assert live capital order allowed 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>record_submitted_order</code></td><td>IbkrOrderExecutionAdapter:231</td><td>Record a submitted IBKR order id for callback reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>resolve_cancel_broker_order_id</code></td><td>IbkrOrderExecutionAdapter:256</td><td>Resolve the IBKR order id for a cancel request through route metadata.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>normalize_execution_report</code></td><td>IbkrOrderExecutionAdapter:275</td><td>Perform normalize_execution_report.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_order_status</code></td><td>IbkrOrderExecutionAdapter:287</td><td>Normalize a raw IBKR order-status callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_open_order</code></td><td>IbkrOrderExecutionAdapter:346</td><td>Record an IBKR openOrder callback against the broker-order map.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_position</code></td><td>IbkrOrderExecutionAdapter:414</td><td>Record an IBKR position callback for broker reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_account_summary</code></td><td>IbkrOrderExecutionAdapter:431</td><td>Record an IBKR account summary callback for broker reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>broker_reconciliation_snapshot</code></td><td>IbkrOrderExecutionAdapter:449</td><td>Return the latest normalized broker-side snapshot for reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_execution</code></td><td>IbkrOrderExecutionAdapter:469</td><td>Stage a raw IBKR execution callback until its commission arrives.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_commission</code></td><td>IbkrOrderExecutionAdapter:516</td><td>Normalize a raw IBKR commission callback and complete matching fills.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>resolve_quarantined_callbacks</code></td><td>IbkrOrderExecutionAdapter:547</td><td>Try to resolve quarantined callbacks after order mapping changes.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_error</code></td><td>IbkrOrderExecutionAdapter:605</td><td>Normalize a raw IBKR error callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_disconnect</code></td><td>IbkrOrderExecutionAdapter:614</td><td>Normalize a raw IBKR disconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_reconnect</code></td><td>IbkrOrderExecutionAdapter:619</td><td>Normalize a raw IBKR reconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_status_from_ibkr</code></td><td>IbkrOrderExecutionAdapter:625</td><td>实现 IbkrOrderExecutionAdapter 的 status from ibkr 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_order_side_from_ibkr</code></td><td>IbkrOrderExecutionAdapter:643</td><td>实现 IbkrOrderExecutionAdapter 的 order side from ibkr 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>validate_cancel_supported</code></td><td>IbkrOrderExecutionAdapter:651</td><td>Validate cancel support before sending an IBKR cancel request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>validate_replace_supported</code></td><td>IbkrOrderExecutionAdapter:657</td><td>Validate replace support before sending an IBKR replace request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>validate_no_unresolved_callbacks</code></td><td>IbkrOrderExecutionAdapter:663</td><td>Fail closed while broker callbacks remain unresolved.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_validate_order_request</code></td><td>IbkrOrderExecutionAdapter:669</td><td>实现 IbkrOrderExecutionAdapter 的 validate order request 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_execution_key</code></td><td>IbkrOrderExecutionAdapter:698</td><td>实现 IbkrOrderExecutionAdapter 的 execution key 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_open_order_key</code></td><td>IbkrOrderExecutionAdapter:703</td><td>实现 IbkrOrderExecutionAdapter 的 open order key 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_late_cancel_after_fill</code></td><td>IbkrOrderExecutionAdapter:717</td><td>实现 IbkrOrderExecutionAdapter 的 is late cancel after fill 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_pop_commissioned_execution_by_execution_id</code></td><td>IbkrOrderExecutionAdapter:723</td><td>实现 IbkrOrderExecutionAdapter 的 pop commissioned execution by execution id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_pop_commissioned_execution</code></td><td>IbkrOrderExecutionAdapter:732</td><td>实现 IbkrOrderExecutionAdapter 的 pop commissioned execution 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_record_callback_event</code></td><td>IbkrOrderExecutionAdapter:755</td><td>实现 IbkrOrderExecutionAdapter 的 record callback event 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_record_account_mismatch_event</code></td><td>IbkrOrderExecutionAdapter:778</td><td>实现 IbkrOrderExecutionAdapter 的 record account mismatch event 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_mask_account_id</code></td><td>IbkrOrderExecutionAdapter:797</td><td>实现 IbkrOrderExecutionAdapter 的 mask account id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_assert_live_capital_order_allowed</code></td><td>IbkrOrderExecutionAdapter:229</td><td>实现 IbkrOrderExecutionAdapter 的 assert live capital order allowed 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>record_submitted_order</code></td><td>IbkrOrderExecutionAdapter:235</td><td>Record a submitted IBKR order id for callback reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>resolve_cancel_broker_order_id</code></td><td>IbkrOrderExecutionAdapter:260</td><td>Resolve the IBKR order id for a cancel request through route metadata.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>normalize_execution_report</code></td><td>IbkrOrderExecutionAdapter:279</td><td>Perform normalize_execution_report.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_order_status</code></td><td>IbkrOrderExecutionAdapter:291</td><td>Normalize a raw IBKR order-status callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_open_order</code></td><td>IbkrOrderExecutionAdapter:350</td><td>Record an IBKR openOrder callback against the broker-order map.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_position</code></td><td>IbkrOrderExecutionAdapter:418</td><td>Record an IBKR position callback for broker reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_account_summary</code></td><td>IbkrOrderExecutionAdapter:435</td><td>Record an IBKR account summary callback for broker reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>broker_reconciliation_snapshot</code></td><td>IbkrOrderExecutionAdapter:453</td><td>Return the latest normalized broker-side snapshot for reconciliation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_execution</code></td><td>IbkrOrderExecutionAdapter:473</td><td>Stage a raw IBKR execution callback until its commission arrives.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_commission</code></td><td>IbkrOrderExecutionAdapter:520</td><td>Normalize a raw IBKR commission callback and complete matching fills.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>resolve_quarantined_callbacks</code></td><td>IbkrOrderExecutionAdapter:551</td><td>Try to resolve quarantined callbacks after order mapping changes.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_error</code></td><td>IbkrOrderExecutionAdapter:609</td><td>Normalize a raw IBKR error callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_disconnect</code></td><td>IbkrOrderExecutionAdapter:618</td><td>Normalize a raw IBKR disconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_reconnect</code></td><td>IbkrOrderExecutionAdapter:623</td><td>Normalize a raw IBKR reconnect callback.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_status_from_ibkr</code></td><td>IbkrOrderExecutionAdapter:629</td><td>实现 IbkrOrderExecutionAdapter 的 status from ibkr 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_order_side_from_ibkr</code></td><td>IbkrOrderExecutionAdapter:647</td><td>实现 IbkrOrderExecutionAdapter 的 order side from ibkr 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>validate_cancel_supported</code></td><td>IbkrOrderExecutionAdapter:655</td><td>Validate cancel support before sending an IBKR cancel request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>validate_replace_supported</code></td><td>IbkrOrderExecutionAdapter:661</td><td>Validate replace support before sending an IBKR replace request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>validate_no_unresolved_callbacks</code></td><td>IbkrOrderExecutionAdapter:667</td><td>Fail closed while broker callbacks remain unresolved.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_validate_order_request</code></td><td>IbkrOrderExecutionAdapter:673</td><td>实现 IbkrOrderExecutionAdapter 的 validate order request 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_execution_key</code></td><td>IbkrOrderExecutionAdapter:702</td><td>实现 IbkrOrderExecutionAdapter 的 execution key 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_open_order_key</code></td><td>IbkrOrderExecutionAdapter:707</td><td>实现 IbkrOrderExecutionAdapter 的 open order key 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_late_cancel_after_fill</code></td><td>IbkrOrderExecutionAdapter:721</td><td>实现 IbkrOrderExecutionAdapter 的 is late cancel after fill 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_pop_commissioned_execution_by_execution_id</code></td><td>IbkrOrderExecutionAdapter:727</td><td>实现 IbkrOrderExecutionAdapter 的 pop commissioned execution by execution id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_pop_commissioned_execution</code></td><td>IbkrOrderExecutionAdapter:736</td><td>实现 IbkrOrderExecutionAdapter 的 pop commissioned execution 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_record_callback_event</code></td><td>IbkrOrderExecutionAdapter:759</td><td>实现 IbkrOrderExecutionAdapter 的 record callback event 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_record_account_mismatch_event</code></td><td>IbkrOrderExecutionAdapter:782</td><td>实现 IbkrOrderExecutionAdapter 的 record account mismatch event 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_mask_account_id</code></td><td>IbkrOrderExecutionAdapter:801</td><td>实现 IbkrOrderExecutionAdapter 的 mask account id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5419,7 +5515,7 @@
         <code>backend/src/qts/execution/adapters/simulated_execution_adapter.py</code>
         <span class="inventory-counts">
           <span>2 classes</span>
-          <span>10 functions</span>
+          <span>11 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -5443,13 +5539,14 @@
               <tr><td><code>fixed_commission_per_contract</code></td><td>SimulatedExecutionCostModel:20</td><td>Fixed commission charged per filled unit.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>slippage_bps</code></td><td>SimulatedExecutionCostModel:25</td><td>Slippage applied to simulated market fills.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>__post_init__</code></td><td>SimulatedExecutionAdapter:37</td><td>Validate and normalize cost-model-backed configuration.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>execute_market_order</code></td><td>SimulatedExecutionAdapter:51</td><td>Execute a market order with cost-model adjustments.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_validate_market_order</code></td><td>SimulatedExecutionAdapter:83</td><td>实现 SimulatedExecutionAdapter 的 validate market order 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>cancel_order</code></td><td>SimulatedExecutionAdapter:96</td><td>Return a deterministic cancellation report for actor parity.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>execution_assumptions_payload</code></td><td>SimulatedExecutionAdapter:114</td><td>Serialize simulated execution assumptions for report manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>broker_capability_payload</code></td><td>SimulatedExecutionAdapter:133</td><td>Serialize broker capability assumptions used by this adapter.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_slippage_model_name</code></td><td>SimulatedExecutionAdapter:140</td><td>实现 SimulatedExecutionAdapter 的 slippage model name 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_commission_model_name</code></td><td>SimulatedExecutionAdapter:143</td><td>实现 SimulatedExecutionAdapter 的 commission model name 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>execute_market_order</code></td><td>SimulatedExecutionAdapter:54</td><td>Execute a market order with cost-model adjustments.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_validate_order</code></td><td>SimulatedExecutionAdapter:87</td><td>实现 SimulatedExecutionAdapter 的 validate order 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_base_fill_price</code></td><td>SimulatedExecutionAdapter:105</td><td>实现 SimulatedExecutionAdapter 的 base fill price 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>cancel_order</code></td><td>SimulatedExecutionAdapter:115</td><td>Return a deterministic cancellation report for actor parity.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>execution_assumptions_payload</code></td><td>SimulatedExecutionAdapter:133</td><td>Serialize simulated execution assumptions for report manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>broker_capability_payload</code></td><td>SimulatedExecutionAdapter:152</td><td>Serialize broker capability assumptions used by this adapter.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_slippage_model_name</code></td><td>SimulatedExecutionAdapter:159</td><td>实现 SimulatedExecutionAdapter 的 slippage model name 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_commission_model_name</code></td><td>SimulatedExecutionAdapter:162</td><td>实现 SimulatedExecutionAdapter 的 commission model name 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5459,8 +5556,8 @@
       <summary>
         <code>backend/src/qts/execution/broker.py</code>
         <span class="inventory-counts">
-          <span>7 classes</span>
-          <span>15 functions</span>
+          <span>5 classes</span>
+          <span>16 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -5471,13 +5568,11 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>BrokerCapabilities</code></td><td>broker:20</td><td>Broker-supported live execution features.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BrokerOrderType</code></td><td>broker:134</td><td>Order types modeled before broker submission.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>TimeInForce</code></td><td>broker:142</td><td>Time-in-force values modeled at the execution boundary.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BrokerOrderRequest</code></td><td>broker:151</td><td>Internal order request sent to the broker adapter boundary.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
-              <tr><td><code>BrokerExecutionReportStatus</code></td><td>broker:169</td><td>Broker-boundary execution report status.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BrokerExecutionReport</code></td><td>broker:180</td><td>Normalized broker callback before it reaches OrderManager.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BrokerAdapter</code></td><td>broker:206</td><td>Stable broker execution boundary.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>BrokerCapabilities</code></td><td>broker:29</td><td>Broker-supported live execution features.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BrokerOrderRequest</code></td><td>broker:152</td><td>Internal order request sent to the broker adapter boundary.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
+              <tr><td><code>BrokerExecutionReportStatus</code></td><td>broker:196</td><td>Broker-boundary execution report status.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BrokerExecutionReport</code></td><td>broker:207</td><td>Normalized broker callback before it reaches OrderManager.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BrokerAdapter</code></td><td>broker:233</td><td>Stable broker execution boundary.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5486,21 +5581,22 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__post_init__</code></td><td>BrokerCapabilities:39</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>supports_asset_class</code></td><td>BrokerCapabilities:51</td><td>Perform supports_asset_class.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>supports_order_type</code></td><td>BrokerCapabilities:57</td><td>Perform supports_order_type.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>supports_tif</code></td><td>BrokerCapabilities:67</td><td>Perform supports_tif.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>validate_order_quantity</code></td><td>BrokerCapabilities:71</td><td>Validate quantity against broker size constraints.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>round_price</code></td><td>BrokerCapabilities:82</td><td>Round a price to the nearest configured minimum tick.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>round_quantity</code></td><td>BrokerCapabilities:92</td><td>Round a quantity down to the configured lot size.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_manifest_payload</code></td><td>BrokerCapabilities:105</td><td>Serialize auditable broker capability assumptions.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>BrokerOrderRequest:162</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>BrokerExecutionReport:195</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>capabilities</code></td><td>BrokerAdapter:210</td><td>Return broker capabilities.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>submit_order</code></td><td>BrokerAdapter:214</td><td>Submit an order request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>cancel_order</code></td><td>BrokerAdapter:218</td><td>Cancel an order by internal ID.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>normalize_broker_status</code></td><td>module:223</td><td>Map broker status to normalized execution status.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>normalize_broker_execution_report</code></td><td>module:229</td><td>Convert broker-boundary report into the OrderManager report type.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>BrokerCapabilities:48</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>supports_asset_class</code></td><td>BrokerCapabilities:60</td><td>Perform supports_asset_class.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>supports_order_type</code></td><td>BrokerCapabilities:66</td><td>Perform supports_order_type.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>supports_tif</code></td><td>BrokerCapabilities:84</td><td>Perform supports_tif.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>validate_order_quantity</code></td><td>BrokerCapabilities:88</td><td>Validate quantity against broker size constraints.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>round_price</code></td><td>BrokerCapabilities:99</td><td>Round a price to the nearest configured minimum tick.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>round_quantity</code></td><td>BrokerCapabilities:109</td><td>Round a quantity down to the configured lot size.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_manifest_payload</code></td><td>BrokerCapabilities:122</td><td>Serialize auditable broker capability assumptions.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>BrokerOrderRequest:171</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>order_spec</code></td><td>BrokerOrderRequest:180</td><td>Return the request fields as a single execution specification.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>BrokerExecutionReport:222</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>capabilities</code></td><td>BrokerAdapter:237</td><td>Return broker capabilities.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>submit_order</code></td><td>BrokerAdapter:241</td><td>Submit an order request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>cancel_order</code></td><td>BrokerAdapter:245</td><td>Cancel an order by internal ID.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>normalize_broker_status</code></td><td>module:250</td><td>Map broker status to normalized execution status.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>normalize_broker_execution_report</code></td><td>module:256</td><td>Convert broker-boundary report into the OrderManager report type.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5533,13 +5629,13 @@
             <tbody>
               <tr><td><code>__post_init__</code></td><td>BrokerageModel:24</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>custom</code></td><td>BrokerageModel:43</td><td>Return a broad custom model for user-supplied broker assumptions.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>simulated</code></td><td>BrokerageModel:54</td><td>Return the default deterministic simulated execution assumptions.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>commission_for_notional</code></td><td>BrokerageModel:64</td><td>Estimate commission from notional under this model.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>initial_margin_for_notional</code></td><td>BrokerageModel:74</td><td>Estimate initial margin from notional under this model.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>slippage_for_notional</code></td><td>BrokerageModel:78</td><td>Estimate absolute notional slippage under this model.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>supports</code></td><td>BrokerageModel:82</td><td>Return whether the model supports the requested execution shape.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_manifest_payload</code></td><td>BrokerageModel:95</td><td>Serialize auditable brokerage assumptions.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_validate_notional</code></td><td>BrokerageModel:107</td><td>实现 BrokerageModel 的 validate notional 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>simulated</code></td><td>BrokerageModel:57</td><td>Return the default deterministic simulated execution assumptions.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>commission_for_notional</code></td><td>BrokerageModel:70</td><td>Estimate commission from notional under this model.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>initial_margin_for_notional</code></td><td>BrokerageModel:80</td><td>Estimate initial margin from notional under this model.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>slippage_for_notional</code></td><td>BrokerageModel:84</td><td>Estimate absolute notional slippage under this model.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>supports</code></td><td>BrokerageModel:88</td><td>Return whether the model supports the requested execution shape.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_manifest_payload</code></td><td>BrokerageModel:101</td><td>Serialize auditable brokerage assumptions.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_validate_notional</code></td><td>BrokerageModel:113</td><td>实现 BrokerageModel 的 validate notional 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5610,14 +5706,14 @@
               <tr><td><code>mark_sent</code></td><td>OrderManager:51</td><td>Perform mark_sent.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>request_cancel</code></td><td>OrderManager:61</td><td>Perform request_cancel.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>request_replace</code></td><td>OrderManager:66</td><td>Perform request_replace.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>process_report</code></td><td>OrderManager:88</td><td>Perform process_report.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>get_order</code></td><td>OrderManager:100</td><td>Perform get_order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>discard_terminal_order</code></td><td>OrderManager:104</td><td>Perform discard_terminal_order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>snapshot</code></td><td>OrderManager:118</td><td>Perform snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>restore</code></td><td>OrderManager:128</td><td>Perform restore.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_replace_order</code></td><td>OrderManager:142</td><td>Perform _replace_order.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_fills_for_report</code></td><td>OrderManager:162</td><td>Perform _fills_for_report.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_event_for_report</code></td><td>OrderManager:186</td><td>Perform _event_for_report.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>process_report</code></td><td>OrderManager:89</td><td>Perform process_report.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>get_order</code></td><td>OrderManager:101</td><td>Perform get_order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>discard_terminal_order</code></td><td>OrderManager:105</td><td>Perform discard_terminal_order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>snapshot</code></td><td>OrderManager:119</td><td>Perform snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>restore</code></td><td>OrderManager:129</td><td>Perform restore.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_replace_order</code></td><td>OrderManager:143</td><td>Perform _replace_order.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_fills_for_report</code></td><td>OrderManager:163</td><td>Perform _fills_for_report.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_event_for_report</code></td><td>OrderManager:187</td><td>Perform _event_for_report.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -6915,22 +7011,24 @@
     </details>
     <details class="inventory-file">
       <summary>
-        <code>backend/src/qts/portfolio/position_book.py</code>
+        <code>backend/src/qts/portfolio/holdings.py</code>
         <span class="inventory-counts">
-          <span>2 classes</span>
-          <span>4 functions</span>
+          <span>4 classes</span>
+          <span>13 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
-        <p><strong>文件作用：</strong>Position book keyed by internal instrument IDs.</p>
+        <p><strong>文件作用：</strong>Average-cost holdings owned by account state.</p>
         <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
         <div class="inventory-subsection">
           <h3>类</h3>
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>Position</code></td><td>position_book:14</td><td>Immutable position snapshot.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>PositionBook</code></td><td>position_book:21</td><td>Mutable position book owned by AccountActor for account-state mutation.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>CostBasisMethod</code></td><td>holdings:15</td><td>Supported holding cost basis convention.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>Holding</code></td><td>holdings:22</td><td>Immutable holding snapshot using average-cost accounting.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>PositionClosed</code></td><td>holdings:55</td><td>Runtime accounting event emitted when a holding reaches flat.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>HoldingBook</code></td><td>holdings:66</td><td>Mutable average-cost holding book.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -6939,10 +7037,19 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__init__</code></td><td>PositionBook:24</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>apply_delta</code></td><td>PositionBook:28</td><td>Perform apply_delta.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>quantity</code></td><td>PositionBook:32</td><td>Perform quantity.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>snapshot</code></td><td>PositionBook:36</td><td>Perform snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>market_value</code></td><td>Holding:36</td><td>Return signed market value at the supplied mark.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>unrealized_pnl</code></td><td>Holding:40</td><td>Return unrealized PnL at the supplied mark.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>holding_period</code></td><td>Holding:47</td><td>Return elapsed time since the holding opened.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>HoldingBook:69</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>holding</code></td><td>HoldingBook:72</td><td>Return the current holding or a flat zero-cost snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>quantity</code></td><td>HoldingBook:84</td><td>Return signed quantity for order planning.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>apply_fill</code></td><td>HoldingBook:88</td><td>Apply one signed fill and return close events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>snapshot</code></td><td>HoldingBook:123</td><td>Return immutable mapping of all holdings, including flat realized rows.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>restore</code></td><td>HoldingBook:128</td><td>Restore a holding book from a snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_increase</code></td><td>HoldingBook:132</td><td>实现 HoldingBook 的 increase 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_reduce_or_flip</code></td><td>HoldingBook:157</td><td>实现 HoldingBook 的 reduce or flip 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_close_time</code></td><td>HoldingBook:216</td><td>实现 HoldingBook 的 close time 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_same_direction</code></td><td>module:220</td><td>提供模块级 same direction 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -7050,13 +7157,13 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>GuardrailViolation</code></td><td>guardrails:374</td><td>One architecture or domain-boundary guardrail violation.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>_ClassInventoryBaseline</code></td><td>guardrails:407</td><td>定义 class inventory baseline 概念及其相关状态或行为。</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>_ProductionClassEntry</code></td><td>guardrails:415</td><td>定义 production class entry 概念及其相关状态或行为。</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>PlatformFreezeException</code></td><td>guardrails:425</td><td>Structured allowlisted class exception for the platform freeze rule.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>PlatformFreezeConfig</code></td><td>guardrails:457</td><td>Runtime configuration for `PlatformFreezeRule`.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
-              <tr><td><code>Rule</code></td><td>guardrails:551</td><td>Pluggable guardrail rule interface.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
-              <tr><td><code>RepositoryRule</code></td><td>guardrails:571</td><td>Optional guardrail rule interface for repository-wide checks.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>GuardrailViolation</code></td><td>guardrails:376</td><td>One architecture or domain-boundary guardrail violation.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>_ClassInventoryBaseline</code></td><td>guardrails:409</td><td>定义 class inventory baseline 概念及其相关状态或行为。</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>_ProductionClassEntry</code></td><td>guardrails:417</td><td>定义 production class entry 概念及其相关状态或行为。</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>PlatformFreezeException</code></td><td>guardrails:427</td><td>Structured allowlisted class exception for the platform freeze rule.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>PlatformFreezeConfig</code></td><td>guardrails:459</td><td>Runtime configuration for `PlatformFreezeRule`.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>Rule</code></td><td>guardrails:553</td><td>Pluggable guardrail rule interface.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>RepositoryRule</code></td><td>guardrails:573</td><td>Optional guardrail rule interface for repository-wide checks.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
             </tbody>
           </table>
         </div>
@@ -7065,52 +7172,52 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__post_init__</code></td><td>GuardrailViolation:384</td><td>Attach a default remediation for report consumers.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>format</code></td><td>GuardrailViolation:397</td><td>Perform format.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>from_raw</code></td><td>PlatformFreezeException:435</td><td>Return an exception object or a parse violation message.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_is_platform_freeze_module</code></td><td>module:465</td><td>Return whether module lives under a frozen package.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_load_platform_freeze_config</code></td><td>module:473</td><td>Load platform freeze exceptions from docs file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_iter_top_level_classes</code></td><td>module:540</td><td>Return top-level class definitions from module body.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_public_class</code></td><td>module:546</td><td>Return whether class definition is production-public.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>check</code></td><td>Rule:556</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check_repository</code></td><td>RepositoryRule:574</td><td>Perform repository-wide check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_check_import</code></td><td>module:579</td><td>提供模块级 check import 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_forbidden_dependency</code></td><td>module:645</td><td>提供模块级 is forbidden dependency 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_forbidden_broker_adapter_dependency</code></td><td>module:673</td><td>提供模块级 is forbidden broker adapter dependency 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_forbidden_adapter_dependency</code></td><td>module:685</td><td>提供模块级 is forbidden adapter dependency 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_transport_actor_import</code></td><td>module:696</td><td>提供模块级 is transport actor import 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_pipeline_actor_import</code></td><td>module:702</td><td>提供模块级 is pipeline actor import 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_runtime_actor_module</code></td><td>module:710</td><td>提供模块级 is runtime actor module 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_provider_sdk_module</code></td><td>module:721</td><td>提供模块级 is provider sdk module 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_product_specific_code</code></td><td>module:728</td><td>提供模块级 check product specific code 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_broker_specific_code</code></td><td>module:744</td><td>提供模块级 check broker specific code 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_test_support_code</code></td><td>module:760</td><td>提供模块级 check test support code 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_shared_capability_placement</code></td><td>module:791</td><td>提供模块级 check shared capability placement 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_oop_public_factory_functions</code></td><td>module:813</td><td>提供模块级 check oop public factory functions 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_oop_helper_ownership</code></td><td>module:844</td><td>提供模块级 check oop helper ownership 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_backtest_runner_cohesion</code></td><td>module:911</td><td>提供模块级 check backtest runner cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_backtest_input_cohesion</code></td><td>module:967</td><td>提供模块级 check backtest input cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_backtest_engine_cohesion</code></td><td>module:1023</td><td>提供模块级 check backtest engine cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_backtest_actor_loop_cohesion</code></td><td>module:1063</td><td>提供模块级 check backtest actor loop cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_strategy_sdk_internal_leak</code></td><td>module:1139</td><td>提供模块级 check strategy sdk internal leak 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_forbidden_tokens</code></td><td>module:1201</td><td>提供模块级 check forbidden tokens 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_node_identifier_name</code></td><td>module:1234</td><td>提供模块级 node identifier name 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_contains_forbidden_token</code></td><td>module:1244</td><td>提供模块级 contains forbidden token 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_node_references_name</code></td><td>module:1248</td><td>提供模块级 node references name 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_identifier_tokens</code></td><td>module:1255</td><td>提供模块级 identifier tokens 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_iter_imports</code></td><td>module:1267</td><td>提供模块级 iter imports 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_iter_imported_names</code></td><td>module:1277</td><td>提供模块级 iter imported names 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_iter_docstrings</code></td><td>module:1285</td><td>提供模块级 iter docstrings 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_iter_architecture_text_paths</code></td><td>module:1299</td><td>提供模块级 iter architecture text paths 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_line_number_containing</code></td><td>module:1312</td><td>提供模块级 line number containing 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_has_allowed_prefix</code></td><td>module:1323</td><td>提供模块级 has allowed prefix 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_class_inventory_baseline_optional</code></td><td>module:1327</td><td>提供模块级 class inventory baseline optional 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_load_class_inventory_baseline</code></td><td>module:1334</td><td>提供模块级 load class inventory baseline 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_class_inventory_parse_violations</code></td><td>module:1393</td><td>提供模块级 class inventory parse violations 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_scan_production_classes</code></td><td>module:1407</td><td>提供模块级 scan production classes 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_class_field_count</code></td><td>module:1438</td><td>提供模块级 class field count 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_class_var_annotation</code></td><td>module:1453</td><td>提供模块级 is class var annotation 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_dto_or_value_object_name</code></td><td>module:1463</td><td>提供模块级 is dto or value object name 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>GuardrailViolation:386</td><td>Attach a default remediation for report consumers.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>format</code></td><td>GuardrailViolation:399</td><td>Perform format.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>from_raw</code></td><td>PlatformFreezeException:437</td><td>Return an exception object or a parse violation message.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_is_platform_freeze_module</code></td><td>module:467</td><td>Return whether module lives under a frozen package.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_load_platform_freeze_config</code></td><td>module:475</td><td>Load platform freeze exceptions from docs file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_iter_top_level_classes</code></td><td>module:542</td><td>Return top-level class definitions from module body.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_public_class</code></td><td>module:548</td><td>Return whether class definition is production-public.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>check</code></td><td>Rule:558</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check_repository</code></td><td>RepositoryRule:576</td><td>Perform repository-wide check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_check_import</code></td><td>module:581</td><td>提供模块级 check import 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_forbidden_dependency</code></td><td>module:647</td><td>提供模块级 is forbidden dependency 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_forbidden_broker_adapter_dependency</code></td><td>module:675</td><td>提供模块级 is forbidden broker adapter dependency 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_forbidden_adapter_dependency</code></td><td>module:687</td><td>提供模块级 is forbidden adapter dependency 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_transport_actor_import</code></td><td>module:698</td><td>提供模块级 is transport actor import 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_pipeline_actor_import</code></td><td>module:704</td><td>提供模块级 is pipeline actor import 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_runtime_actor_module</code></td><td>module:712</td><td>提供模块级 is runtime actor module 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_provider_sdk_module</code></td><td>module:723</td><td>提供模块级 is provider sdk module 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_product_specific_code</code></td><td>module:730</td><td>提供模块级 check product specific code 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_broker_specific_code</code></td><td>module:746</td><td>提供模块级 check broker specific code 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_test_support_code</code></td><td>module:762</td><td>提供模块级 check test support code 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_shared_capability_placement</code></td><td>module:793</td><td>提供模块级 check shared capability placement 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_oop_public_factory_functions</code></td><td>module:815</td><td>提供模块级 check oop public factory functions 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_oop_helper_ownership</code></td><td>module:846</td><td>提供模块级 check oop helper ownership 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_backtest_runner_cohesion</code></td><td>module:913</td><td>提供模块级 check backtest runner cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_backtest_input_cohesion</code></td><td>module:969</td><td>提供模块级 check backtest input cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_backtest_engine_cohesion</code></td><td>module:1025</td><td>提供模块级 check backtest engine cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_backtest_actor_loop_cohesion</code></td><td>module:1065</td><td>提供模块级 check backtest actor loop cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_strategy_sdk_internal_leak</code></td><td>module:1141</td><td>提供模块级 check strategy sdk internal leak 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_forbidden_tokens</code></td><td>module:1203</td><td>提供模块级 check forbidden tokens 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_node_identifier_name</code></td><td>module:1236</td><td>提供模块级 node identifier name 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_contains_forbidden_token</code></td><td>module:1246</td><td>提供模块级 contains forbidden token 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_node_references_name</code></td><td>module:1250</td><td>提供模块级 node references name 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_identifier_tokens</code></td><td>module:1257</td><td>提供模块级 identifier tokens 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_iter_imports</code></td><td>module:1269</td><td>提供模块级 iter imports 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_iter_imported_names</code></td><td>module:1279</td><td>提供模块级 iter imported names 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_iter_docstrings</code></td><td>module:1287</td><td>提供模块级 iter docstrings 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_iter_architecture_text_paths</code></td><td>module:1301</td><td>提供模块级 iter architecture text paths 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_line_number_containing</code></td><td>module:1314</td><td>提供模块级 line number containing 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_has_allowed_prefix</code></td><td>module:1325</td><td>提供模块级 has allowed prefix 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_class_inventory_baseline_optional</code></td><td>module:1329</td><td>提供模块级 class inventory baseline optional 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_load_class_inventory_baseline</code></td><td>module:1336</td><td>提供模块级 load class inventory baseline 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_class_inventory_parse_violations</code></td><td>module:1395</td><td>提供模块级 class inventory parse violations 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_scan_production_classes</code></td><td>module:1409</td><td>提供模块级 scan production classes 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_class_field_count</code></td><td>module:1440</td><td>提供模块级 class field count 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_class_var_annotation</code></td><td>module:1455</td><td>提供模块级 is class var annotation 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_dto_or_value_object_name</code></td><td>module:1465</td><td>提供模块级 is dto or value object name 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -8106,13 +8213,13 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>EquityCurvePoint</code></td><td>backtest:92</td><td>One timestamped equity observation.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>TradeLedgerEntry</code></td><td>backtest:100</td><td>Auditable row for a simulated fill.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>StreamingEquityMetrics</code></td><td>backtest:114</td><td>Incremental metrics for a streamed equity curve.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BacktestArtifacts</code></td><td>backtest:154</td><td>Final paths and row counts for streamed backtest artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>_NdjsonArtifact</code></td><td>backtest:163</td><td>_NdjsonArtifact.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BacktestArtifactWriter</code></td><td>backtest:198</td><td>Write large backtest outputs as line-delimited artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BacktestReportWriter</code></td><td>backtest:404</td><td>Backtest report writer for partitioned artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>EquityCurvePoint</code></td><td>backtest:93</td><td>One timestamped equity observation.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>TradeLedgerEntry</code></td><td>backtest:101</td><td>Auditable row for a simulated fill.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>StreamingEquityMetrics</code></td><td>backtest:115</td><td>Incremental metrics for a streamed equity curve.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestArtifacts</code></td><td>backtest:155</td><td>Final paths and row counts for streamed backtest artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>_NdjsonArtifact</code></td><td>backtest:164</td><td>_NdjsonArtifact.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestArtifactWriter</code></td><td>backtest:199</td><td>Write large backtest outputs as line-delimited artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestReportWriter</code></td><td>backtest:426</td><td>Backtest report writer for partitioned artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -8121,31 +8228,31 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>is_broker_capability_reject</code></td><td>module:52</td><td>Return whether a broker rejection came from the capability model.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>broker_capability_payload</code></td><td>module:57</td><td>Return broker capability evidence for a runtime rejection event.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>dataset_metadata_payload</code></td><td>module:65</td><td>Serialize one dataset provenance row for reporting.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>zero_time</code></td><td>module:84</td><td>Return the epoch boundary used for empty-equity bootstrap.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>__init__</code></td><td>StreamingEquityMetrics:117</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>update</code></td><td>StreamingEquityMetrics:125</td><td>Perform update.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_payload</code></td><td>StreamingEquityMetrics:142</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>_NdjsonArtifact:166</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>write</code></td><td>_NdjsonArtifact:173</td><td>Perform write.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>close</code></td><td>_NdjsonArtifact:188</td><td>Perform close.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>content_hash</code></td><td>_NdjsonArtifact:193</td><td>Perform content_hash.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>BacktestArtifactWriter:203</td><td>Create a writer for partitioned backtest artifacts.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>write_order</code></td><td>BacktestArtifactWriter:214</td><td>Perform write_order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_runtime_event</code></td><td>BacktestArtifactWriter:218</td><td>Write one normalized runtime event envelope.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_event</code></td><td>BacktestArtifactWriter:222</td><td>Write one normalized runtime event through the artifact contract.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_snapshot</code></td><td>BacktestArtifactWriter:226</td><td>Write one runtime snapshot evidence row through the event artifact.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_manifest</code></td><td>BacktestArtifactWriter:230</td><td>Write a shared manifest payload for contract-level callers.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_fill</code></td><td>BacktestArtifactWriter:242</td><td>Perform write_fill.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_trade_ledger</code></td><td>BacktestArtifactWriter:246</td><td>Perform write_trade_ledger.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_equity_point</code></td><td>BacktestArtifactWriter:262</td><td>Perform write_equity_point.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>finalize</code></td><td>BacktestArtifactWriter:267</td><td>Perform finalize.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_normalize_dataset_metadata_payload</code></td><td>module:408</td><td>提供模块级 normalize dataset metadata payload 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_normalize_execution_assumptions_payload</code></td><td>module:419</td><td>提供模块级 normalize execution assumptions payload 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_validate_m1_backtest_manifest</code></td><td>module:432</td><td>提供模块级 validate m1 backtest manifest 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_require_manifest_value</code></td><td>module:452</td><td>提供模块级 require manifest value 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>is_broker_capability_reject</code></td><td>module:53</td><td>Return whether a broker rejection came from the capability model.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>broker_capability_payload</code></td><td>module:58</td><td>Return broker capability evidence for a runtime rejection event.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>dataset_metadata_payload</code></td><td>module:66</td><td>Serialize one dataset provenance row for reporting.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>zero_time</code></td><td>module:85</td><td>Return the epoch boundary used for empty-equity bootstrap.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>__init__</code></td><td>StreamingEquityMetrics:118</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>update</code></td><td>StreamingEquityMetrics:126</td><td>Perform update.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>StreamingEquityMetrics:143</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>_NdjsonArtifact:167</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>write</code></td><td>_NdjsonArtifact:174</td><td>Perform write.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>close</code></td><td>_NdjsonArtifact:189</td><td>Perform close.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>content_hash</code></td><td>_NdjsonArtifact:194</td><td>Perform content_hash.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>BacktestArtifactWriter:204</td><td>Create a writer for partitioned backtest artifacts.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>write_order</code></td><td>BacktestArtifactWriter:216</td><td>Perform write_order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_runtime_event</code></td><td>BacktestArtifactWriter:220</td><td>Write one normalized runtime event envelope.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_event</code></td><td>BacktestArtifactWriter:224</td><td>Write one normalized runtime event through the artifact contract.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_snapshot</code></td><td>BacktestArtifactWriter:228</td><td>Write one runtime snapshot evidence row through the event artifact.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_manifest</code></td><td>BacktestArtifactWriter:232</td><td>Write a shared manifest payload for contract-level callers.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_fill</code></td><td>BacktestArtifactWriter:244</td><td>Perform write_fill.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_trade_ledger</code></td><td>BacktestArtifactWriter:248</td><td>Perform write_trade_ledger.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_equity_point</code></td><td>BacktestArtifactWriter:273</td><td>Perform write_equity_point.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>finalize</code></td><td>BacktestArtifactWriter:279</td><td>Perform finalize.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_normalize_dataset_metadata_payload</code></td><td>module:430</td><td>提供模块级 normalize dataset metadata payload 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_normalize_execution_assumptions_payload</code></td><td>module:441</td><td>提供模块级 normalize execution assumptions payload 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_validate_m1_backtest_manifest</code></td><td>module:454</td><td>提供模块级 validate m1 backtest manifest 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_require_manifest_value</code></td><td>module:474</td><td>提供模块级 require manifest value 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -8156,7 +8263,7 @@
         <code>backend/src/qts/reporting/backtest_analyst.py</code>
         <span class="inventory-counts">
           <span>9 classes</span>
-          <span>27 functions</span>
+          <span>28 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -8169,13 +8276,13 @@
             <tbody>
               <tr><td><code>BacktestReportError</code></td><td>backtest_analyst:16</td><td>Raised when finalized backtest artifacts cannot produce an analyst report.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
               <tr><td><code>ArtifactRows</code></td><td>backtest_analyst:21</td><td>Loaded rows from the finalized backtest artifact set.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BacktestReportMetrics</code></td><td>backtest_analyst:32</td><td>Human-facing display metrics derived from finalized artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>AnalystBacktestReportArtifacts</code></td><td>backtest_analyst:47</td><td>Generated analyst report output paths.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BacktestReportDataset</code></td><td>backtest_analyst:56</td><td>Validated report input loaded from a completed backtest run.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BacktestRunReportLoader</code></td><td>backtest_analyst:95</td><td>Load finalized backtest artifacts for analyst report rendering.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>AnalystBacktestReportRenderer</code></td><td>backtest_analyst:218</td><td>Render a static analyst HTML report from finalized backtest artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BacktestPdfExporter</code></td><td>backtest_analyst:421</td><td>Export analyst HTML reports to PDF through a local Chrome executable.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>AnalystBacktestReportGenerator</code></td><td>backtest_analyst:482</td><td>Generate analyst HTML and PDF reports from completed backtest runs.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestReportMetrics</code></td><td>backtest_analyst:33</td><td>Human-facing display metrics derived from finalized artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>AnalystBacktestReportArtifacts</code></td><td>backtest_analyst:53</td><td>Generated analyst report output paths.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestReportDataset</code></td><td>backtest_analyst:62</td><td>Validated report input loaded from a completed backtest run.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestRunReportLoader</code></td><td>backtest_analyst:106</td><td>Load finalized backtest artifacts for analyst report rendering.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>AnalystBacktestReportRenderer</code></td><td>backtest_analyst:247</td><td>Render a static analyst HTML report from finalized backtest artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestPdfExporter</code></td><td>backtest_analyst:455</td><td>Export analyst HTML reports to PDF through a local Chrome executable.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>AnalystBacktestReportGenerator</code></td><td>backtest_analyst:516</td><td>Generate analyst HTML and PDF reports from completed backtest runs.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -8184,33 +8291,34 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>run_id</code></td><td>BacktestReportDataset:66</td><td>Return the finalized backtest run id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>metrics</code></td><td>BacktestReportDataset:71</td><td>Return display metrics derived from finalized artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_final_equity</code></td><td>BacktestReportDataset:89</td><td>实现 BacktestReportDataset 的 final equity 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>from_summary</code></td><td>BacktestRunReportLoader:101</td><td>Load a completed backtest report dataset from a summary artifact.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>from_run_directory</code></td><td>BacktestRunReportLoader:134</td><td>Load the only completed summary in a run directory.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_resolve_manifest_path</code></td><td>BacktestRunReportLoader:144</td><td>实现 BacktestRunReportLoader 的 resolve manifest path 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_validate_identity</code></td><td>BacktestRunReportLoader:156</td><td>实现 BacktestRunReportLoader 的 validate identity 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_read_artifact_rows</code></td><td>BacktestRunReportLoader:167</td><td>实现 BacktestRunReportLoader 的 read artifact rows 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_read_json_object</code></td><td>BacktestRunReportLoader:191</td><td>实现 BacktestRunReportLoader 的 read json object 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_read_ndjson</code></td><td>BacktestRunReportLoader:201</td><td>实现 BacktestRunReportLoader 的 read ndjson 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>render</code></td><td>AnalystBacktestReportRenderer:221</td><td>Return a complete static HTML report document.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_style</code></td><td>AnalystBacktestReportRenderer:292</td><td>实现 AnalystBacktestReportRenderer 的 style 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_metric_card</code></td><td>AnalystBacktestReportRenderer:325</td><td>实现 AnalystBacktestReportRenderer 的 metric card 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_strategy_name</code></td><td>AnalystBacktestReportRenderer:334</td><td>实现 AnalystBacktestReportRenderer 的 strategy name 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_artifact_links</code></td><td>AnalystBacktestReportRenderer:345</td><td>实现 AnalystBacktestReportRenderer 的 artifact links 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_equity_svg</code></td><td>AnalystBacktestReportRenderer:361</td><td>实现 AnalystBacktestReportRenderer 的 equity svg 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_decimal_value</code></td><td>module:392</td><td>提供模块级 decimal value 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_format_percent</code></td><td>module:401</td><td>提供模块级 format percent 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_format_decimal</code></td><td>module:407</td><td>提供模块级 format decimal 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_svg_number</code></td><td>module:414</td><td>提供模块级 svg number 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>BacktestPdfExporter:427</td><td>Create a PDF exporter with optional Chrome path override.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>export</code></td><td>BacktestPdfExporter:438</td><td>Export a local HTML file to PDF and return the PDF path.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_command</code></td><td>BacktestPdfExporter:460</td><td>实现 BacktestPdfExporter 的 command 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_detect_chrome</code></td><td>BacktestPdfExporter:472</td><td>实现 BacktestPdfExporter 的 detect chrome 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>AnalystBacktestReportGenerator:485</td><td>Create a report generator with injectable rendering boundaries.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>generate</code></td><td>AnalystBacktestReportGenerator:495</td><td>Generate an analyst report from a summary path or run directory.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_load_dataset</code></td><td>AnalystBacktestReportGenerator:518</td><td>实现 AnalystBacktestReportGenerator 的 load dataset 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>run_id</code></td><td>BacktestReportDataset:72</td><td>Return the finalized backtest run id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>metrics</code></td><td>BacktestReportDataset:77</td><td>Return display metrics derived from finalized artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_final_equity</code></td><td>BacktestReportDataset:100</td><td>实现 BacktestReportDataset 的 final equity 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>from_summary</code></td><td>BacktestRunReportLoader:112</td><td>Load a completed backtest report dataset from a summary artifact.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>from_run_directory</code></td><td>BacktestRunReportLoader:150</td><td>Load the only completed summary in a run directory.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_resolve_manifest_path</code></td><td>BacktestRunReportLoader:160</td><td>实现 BacktestRunReportLoader 的 resolve manifest path 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_validate_identity</code></td><td>BacktestRunReportLoader:172</td><td>实现 BacktestRunReportLoader 的 validate identity 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_read_artifact_rows</code></td><td>BacktestRunReportLoader:183</td><td>实现 BacktestRunReportLoader 的 read artifact rows 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_read_optional_artifact_rows</code></td><td>BacktestRunReportLoader:207</td><td>实现 BacktestRunReportLoader 的 read optional artifact rows 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_read_json_object</code></td><td>BacktestRunReportLoader:220</td><td>实现 BacktestRunReportLoader 的 read json object 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_read_ndjson</code></td><td>BacktestRunReportLoader:230</td><td>实现 BacktestRunReportLoader 的 read ndjson 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>render</code></td><td>AnalystBacktestReportRenderer:250</td><td>Return a complete static HTML report document.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_style</code></td><td>AnalystBacktestReportRenderer:326</td><td>实现 AnalystBacktestReportRenderer 的 style 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_metric_card</code></td><td>AnalystBacktestReportRenderer:359</td><td>实现 AnalystBacktestReportRenderer 的 metric card 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_strategy_name</code></td><td>AnalystBacktestReportRenderer:368</td><td>实现 AnalystBacktestReportRenderer 的 strategy name 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_artifact_links</code></td><td>AnalystBacktestReportRenderer:379</td><td>实现 AnalystBacktestReportRenderer 的 artifact links 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_equity_svg</code></td><td>AnalystBacktestReportRenderer:395</td><td>实现 AnalystBacktestReportRenderer 的 equity svg 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_decimal_value</code></td><td>module:426</td><td>提供模块级 decimal value 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_format_percent</code></td><td>module:435</td><td>提供模块级 format percent 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_format_decimal</code></td><td>module:441</td><td>提供模块级 format decimal 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_svg_number</code></td><td>module:448</td><td>提供模块级 svg number 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>BacktestPdfExporter:461</td><td>Create a PDF exporter with optional Chrome path override.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>export</code></td><td>BacktestPdfExporter:472</td><td>Export a local HTML file to PDF and return the PDF path.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_command</code></td><td>BacktestPdfExporter:494</td><td>实现 BacktestPdfExporter 的 command 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_detect_chrome</code></td><td>BacktestPdfExporter:506</td><td>实现 BacktestPdfExporter 的 detect chrome 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>AnalystBacktestReportGenerator:519</td><td>Create a report generator with injectable rendering boundaries.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>generate</code></td><td>AnalystBacktestReportGenerator:529</td><td>Generate an analyst report from a summary path or run directory.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_load_dataset</code></td><td>AnalystBacktestReportGenerator:552</td><td>实现 AnalystBacktestReportGenerator 的 load dataset 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -8300,6 +8408,49 @@
               <tr><td><code>_redacted_connection_metadata</code></td><td>BrokerRuntimeReportWriter:212</td><td>实现 BrokerRuntimeReportWriter 的 redacted connection metadata 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>_non_empty_or_default</code></td><td>BrokerRuntimeReportWriter:225</td><td>Return a stripped value or a manifest-safe fallback.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>_required_non_empty</code></td><td>BrokerRuntimeReportWriter:233</td><td>Return a stripped required manifest value.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
+        <code>backend/src/qts/reporting/statistics.py</code>
+        <span class="inventory-counts">
+          <span>3 classes</span>
+          <span>11 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Streaming backtest statistics.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>StatisticsPayload</code></td><td>statistics:12</td><td>Stable statistics payload serialized into backtest artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>_OpenTrade</code></td><td>statistics:23</td><td>定义 open trade 概念及其相关状态或行为。</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>StatisticsBuilder</code></td><td>statistics:31</td><td>Incrementally compute return, trade, exposure, and cost statistics.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>to_payload</code></td><td>StatisticsPayload:17</td><td>Return a JSON-stable metrics mapping.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>StatisticsBuilder:34</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>on_equity_point</code></td><td>StatisticsBuilder:51</td><td>Ingest one equity observation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_fill</code></td><td>StatisticsBuilder:78</td><td>Ingest one fill row for costs and round-trip trade statistics.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_position_close</code></td><td>StatisticsBuilder:140</td><td>Ingest an explicit holding close event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>finalize</code></td><td>StatisticsBuilder:145</td><td>Return final statistics payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_mean</code></td><td>module:214</td><td>提供模块级 mean 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_stddev</code></td><td>module:220</td><td>提供模块级 stddev 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_ratio</code></td><td>module:230</td><td>提供模块级 ratio 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_compound_annual_return</code></td><td>module:236</td><td>提供模块级 compound annual return 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>payload_from_json</code></td><td>module:247</td><td>Rehydrate a statistics payload from JSON-compatible data.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
             </tbody>
           </table>
         </div>
@@ -8559,7 +8710,7 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>RiskRuleRegistry</code></td><td>rule_registry:20</td><td>Map configured rule names to executable risk rules.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>RiskRuleRegistry</code></td><td>rule_registry:21</td><td>Map configured rule names to executable risk rules.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -8568,9 +8719,9 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>build</code></td><td>RiskRuleRegistry:23</td><td>Perform build.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>build_all</code></td><td>RiskRuleRegistry:50</td><td>Build all configured rules in declared order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_param</code></td><td>RiskRuleRegistry:55</td><td>Perform _param.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>build</code></td><td>RiskRuleRegistry:24</td><td>Perform build.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>build_all</code></td><td>RiskRuleRegistry:53</td><td>Build all configured rules in declared order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_param</code></td><td>RiskRuleRegistry:58</td><td>Perform _param.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -8813,6 +8964,37 @@
     </details>
     <details class="inventory-file">
       <summary>
+        <code>backend/src/qts/risk/rules/order_spec_validity.py</code>
+        <span class="inventory-counts">
+          <span>1 class</span>
+          <span>1 function</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Risk rule validating order specification shape.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>OrderSpecValidityRule</code></td><td>order_spec_validity:8</td><td>Reject invalid order spec combinations before order submission.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>check</code></td><td>OrderSpecValidityRule:13</td><td>Validate the request order spec.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
         <code>backend/src/qts/risk/rules/position_limit.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
@@ -9016,7 +9198,7 @@
         <code>backend/src/qts/runtime/actors/account_actor.py</code>
         <span class="inventory-counts">
           <span>3 classes</span>
-          <span>5 functions</span>
+          <span>8 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -9029,7 +9211,7 @@
             <tbody>
               <tr><td><code>ApplyFill</code></td><td>account_actor:19</td><td>Message instructing AccountActor to apply a validated fill.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
               <tr><td><code>AccountSnapshot</code></td><td>account_actor:28</td><td>Read-only account snapshot.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>AccountActor</code></td><td>account_actor:37</td><td>Owns account cash and position state.</td><td>保持 actor-owned state 只在消息边界内变化，避免跨 actor 直接调用业务方法。</td></tr>
+              <tr><td><code>AccountActor</code></td><td>account_actor:56</td><td>Owns account cash and position state.</td><td>保持 actor-owned state 只在消息边界内变化，避免跨 actor 直接调用业务方法。</td></tr>
             </tbody>
           </table>
         </div>
@@ -9038,11 +9220,14 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__init__</code></td><td>AccountActor:40</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>handle</code></td><td>AccountActor:52</td><td>Perform handle.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>snapshot</code></td><td>AccountActor:59</td><td>Perform snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>restore</code></td><td>AccountActor:69</td><td>Restore account-owned state from an actor snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_apply_fill</code></td><td>AccountActor:78</td><td>Perform _apply_fill.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>AccountSnapshot:36</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>positions</code></td><td>AccountSnapshot:51</td><td>Return holdings as quantity-bearing position snapshots.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>AccountActor:59</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>handle</code></td><td>AccountActor:72</td><td>Perform handle.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>snapshot</code></td><td>AccountActor:79</td><td>Perform snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>restore</code></td><td>AccountActor:89</td><td>Restore account-owned state from an actor snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>position_closed_events</code></td><td>AccountActor:97</td><td>Return close events emitted by this actor.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_apply_fill</code></td><td>AccountActor:101</td><td>Perform _apply_fill.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -9878,11 +10063,11 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>InstrumentExecutionContext</code></td><td>intent_processing:28</td><td>Instrument resolution required to turn target intents into order plans.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
-              <tr><td><code>ProcessedIntent</code></td><td>intent_processing:57</td><td>Orders and fills generated for a single strategy intent.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>OrderPlan</code></td><td>intent_processing:66</td><td>One concrete order delta planned from a strategy target intent.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>OrderPlanBuilder</code></td><td>intent_processing:77</td><td>Convert target intents and positions into concrete order plans.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>TargetIntentProcessor</code></td><td>intent_processing:180</td><td>Translate strategy target intents into validated runtime order submissions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>InstrumentExecutionContext</code></td><td>intent_processing:29</td><td>Instrument resolution required to turn target intents into order plans.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>ProcessedIntent</code></td><td>intent_processing:58</td><td>Orders and fills generated for a single strategy intent.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>OrderPlan</code></td><td>intent_processing:67</td><td>One concrete order delta planned from a strategy target intent.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>OrderPlanBuilder</code></td><td>intent_processing:79</td><td>Convert target intents and positions into concrete order plans.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>TargetIntentProcessor</code></td><td>intent_processing:189</td><td>Translate strategy target intents into validated runtime order submissions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -9891,16 +10076,16 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>order_instrument_for_intent</code></td><td>InstrumentExecutionContext:31</td><td>Return the concrete instrument to order for a target intent.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>market_price_for_intent</code></td><td>InstrumentExecutionContext:35</td><td>Return the execution price for a planned order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>is_continuous</code></td><td>InstrumentExecutionContext:45</td><td>Return whether an instrument ID represents a continuous instrument.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>related_contracts_for</code></td><td>InstrumentExecutionContext:49</td><td>Return concrete contracts related to a continuous instrument.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>OrderPlanBuilder:80</td><td>Create an order plan builder.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>build</code></td><td>OrderPlanBuilder:84</td><td>Build concrete order plans for a target intent.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_desired_quantity</code></td><td>OrderPlanBuilder:155</td><td>Return the desired quantity implied by a target intent.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>TargetIntentProcessor:183</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>process_intent</code></td><td>TargetIntentProcessor:205</td><td>Process a single target intent; account_id is required for routing.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_process_order_delta</code></td><td>TargetIntentProcessor:271</td><td>Perform _process_order_delta.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>order_instrument_for_intent</code></td><td>InstrumentExecutionContext:32</td><td>Return the concrete instrument to order for a target intent.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>market_price_for_intent</code></td><td>InstrumentExecutionContext:36</td><td>Return the execution price for a planned order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>is_continuous</code></td><td>InstrumentExecutionContext:46</td><td>Return whether an instrument ID represents a continuous instrument.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>related_contracts_for</code></td><td>InstrumentExecutionContext:50</td><td>Return concrete contracts related to a continuous instrument.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>OrderPlanBuilder:82</td><td>Create an order plan builder.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>build</code></td><td>OrderPlanBuilder:86</td><td>Build concrete order plans for a target intent.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_desired_quantity</code></td><td>OrderPlanBuilder:164</td><td>Return the desired quantity implied by a target intent.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>TargetIntentProcessor:192</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>process_intent</code></td><td>TargetIntentProcessor:214</td><td>Process a single target intent; account_id is required for routing.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_process_order_delta</code></td><td>TargetIntentProcessor:281</td><td>Perform _process_order_delta.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10355,8 +10540,8 @@
               <tr><td><code>get_order</code></td><td>_OrderManagerLike:22</td><td>Return current order by order id.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>write_risk_decision_events</code></td><td>RuntimeEventWriter:32</td><td>Write approved/rejected risk decision events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>write_order_events</code></td><td>RuntimeEventWriter:65</td><td>Write submitted/order-state events for emitted orders.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_fill_events</code></td><td>RuntimeEventWriter:118</td><td>Write fill events with routing metadata and account context.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_risk_decision_payload</code></td><td>RuntimeEventWriter:151</td><td>Serialize shared risk decision fields for runtime events.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>write_fill_events</code></td><td>RuntimeEventWriter:120</td><td>Write fill events with routing metadata and account context.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_risk_decision_payload</code></td><td>RuntimeEventWriter:153</td><td>Serialize shared risk decision fields for runtime events.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10581,7 +10766,7 @@
               <tr><td><code>write_equity_point</code></td><td>BacktestRuntimeEventSink:74</td><td>Perform write_equity_point.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>_ledger_rows</code></td><td>BacktestRuntimeEventSink:79</td><td>Perform _ledger_rows.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>_order_payload</code></td><td>BacktestRuntimeEventSink:97</td><td>Perform _order_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_fill_payload</code></td><td>BacktestRuntimeEventSink:109</td><td>Perform _fill_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_fill_payload</code></td><td>BacktestRuntimeEventSink:110</td><td>Perform _fill_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -11084,7 +11269,7 @@
         <code>backend/src/qts/strategy_sdk/context.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
-          <span>17 functions</span>
+          <span>21 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -11095,7 +11280,7 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>StrategyContext</code></td><td>context:32</td><td>User-facing strategy facade for data, assets, targets, and subscriptions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>StrategyContext</code></td><td>context:33</td><td>User-facing strategy facade for data, assets, targets, and subscriptions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -11104,23 +11289,27 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__post_init__</code></td><td>StrategyContext:49</td><td>Initialize internal SDK collaborators.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>intents</code></td><td>StrategyContext:58</td><td>Return target intents emitted by the strategy.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>subscriptions</code></td><td>StrategyContext:63</td><td>Return market data subscriptions requested by the strategy.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>universe</code></td><td>StrategyContext:68</td><td>Return the current strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>symbol</code></td><td>StrategyContext:72</td><td>Resolve a user-facing symbol such as ``AAPL``.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>future</code></td><td>StrategyContext:76</td><td>Resolve a futures root to a selectable contract reference.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>option</code></td><td>StrategyContext:80</td><td>Resolve an option by underlying symbol/ref and contract attributes.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>target_percent</code></td><td>StrategyContext:96</td><td>Emit a portfolio-weight target for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>target_quantity</code></td><td>StrategyContext:102</td><td>Emit a quantity target for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>target_value</code></td><td>StrategyContext:108</td><td>Emit a notional value target for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>close</code></td><td>StrategyContext:114</td><td>Emit a target that closes an asset position.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>rebalance</code></td><td>StrategyContext:120</td><td>Emit one percent target per asset in ``weights``.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>subscribe</code></td><td>StrategyContext:124</td><td>Subscribe to bars for an asset and timeframe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>set_universe</code></td><td>StrategyContext:129</td><td>Replace the strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>set_universe_from_selector</code></td><td>StrategyContext:134</td><td>Replace the strategy-declared universe from a selector result.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>add_to_universe</code></td><td>StrategyContext:138</td><td>Add members to the strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>remove_from_universe</code></td><td>StrategyContext:143</td><td>Remove members from the strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>StrategyContext:50</td><td>Initialize internal SDK collaborators.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>intents</code></td><td>StrategyContext:59</td><td>Return target intents emitted by the strategy.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>subscriptions</code></td><td>StrategyContext:64</td><td>Return market data subscriptions requested by the strategy.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>universe</code></td><td>StrategyContext:69</td><td>Return the current strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>symbol</code></td><td>StrategyContext:73</td><td>Resolve a user-facing symbol such as ``AAPL``.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>future</code></td><td>StrategyContext:77</td><td>Resolve a futures root to a selectable contract reference.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>option</code></td><td>StrategyContext:81</td><td>Resolve an option by underlying symbol/ref and contract attributes.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>target_percent</code></td><td>StrategyContext:97</td><td>Emit a portfolio-weight target for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>target_quantity</code></td><td>StrategyContext:114</td><td>Emit a quantity target for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>target_value</code></td><td>StrategyContext:131</td><td>Emit a notional value target for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>close</code></td><td>StrategyContext:148</td><td>Emit a target that closes an asset position.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>holding</code></td><td>StrategyContext:159</td><td>Return the current holding for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>unrealized_pnl</code></td><td>StrategyContext:165</td><td>Return current unrealized PnL if a portfolio mark is available.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>realized_pnl</code></td><td>StrategyContext:171</td><td>Return cumulative realized PnL for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>avg_cost</code></td><td>StrategyContext:177</td><td>Return average cost for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>rebalance</code></td><td>StrategyContext:183</td><td>Emit one percent target per asset in ``weights``.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>subscribe</code></td><td>StrategyContext:187</td><td>Subscribe to bars for an asset and timeframe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>set_universe</code></td><td>StrategyContext:192</td><td>Replace the strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>set_universe_from_selector</code></td><td>StrategyContext:197</td><td>Replace the strategy-declared universe from a selector result.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>add_to_universe</code></td><td>StrategyContext:201</td><td>Add members to the strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>remove_from_universe</code></td><td>StrategyContext:206</td><td>Remove members from the strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -11293,7 +11482,7 @@
         <code>backend/src/qts/strategy_sdk/portfolio_view.py</code>
         <span class="inventory-counts">
           <span>2 classes</span>
-          <span>4 functions</span>
+          <span>8 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -11304,8 +11493,8 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>PortfolioPosition</code></td><td>portfolio_view:15</td><td>Read-only position snapshot.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>PortfolioView</code></td><td>portfolio_view:23</td><td>Immutable user-facing portfolio snapshot.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>PortfolioPosition</code></td><td>portfolio_view:16</td><td>Read-only position snapshot.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>PortfolioView</code></td><td>portfolio_view:24</td><td>Immutable user-facing portfolio snapshot.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -11314,10 +11503,14 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__post_init__</code></td><td>PortfolioView:30</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>position</code></td><td>PortfolioView:34</td><td>Perform position.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>exposure</code></td><td>PortfolioView:38</td><td>Perform exposure.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>weight</code></td><td>PortfolioView:42</td><td>Perform weight.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>PortfolioView:32</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>position</code></td><td>PortfolioView:37</td><td>Perform position.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>exposure</code></td><td>PortfolioView:41</td><td>Perform exposure.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>holding</code></td><td>PortfolioView:45</td><td>Return the holding snapshot for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>unrealized_pnl</code></td><td>PortfolioView:49</td><td>Return unrealized PnL for an asset when a mark is supplied.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>realized_pnl</code></td><td>PortfolioView:64</td><td>Return cumulative realized PnL for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>avg_cost</code></td><td>PortfolioView:69</td><td>Return average cost for an asset holding.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>weight</code></td><td>PortfolioView:74</td><td>Perform weight.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -11400,7 +11593,7 @@
         <code>backend/src/qts/strategy_sdk/target.py</code>
         <span class="inventory-counts">
           <span>2 classes</span>
-          <span>0 functions</span>
+          <span>1 function</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -11411,8 +11604,17 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>TargetIntentType</code></td><td>target:12</td><td>Supported target intent kinds.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>TargetIntent</code></td><td>target:22</td><td>Strategy-emitted intent, later handled by platform risk/order flow.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>TargetIntentType</code></td><td>target:13</td><td>Supported target intent kinds.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>TargetIntent</code></td><td>target:23</td><td>Strategy-emitted intent, later handled by platform risk/order flow.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>spec</code></td><td>TargetIntent:32</td><td>Return the typed execution specification for this target.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -11654,6 +11856,19 @@
       <summary>
         <code>frontend/src/api/client.ts</code>
         <span class="inventory-counts">
+          <span>0 classes</span>
+          <span>0 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>封装前端到后端 API 的调用边界。</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
+        <code>frontend/src/api/http.ts</code>
+        <span class="inventory-counts">
           <span>1 class</span>
           <span>1 function</span>
         </span>
@@ -11666,7 +11881,7 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>ApiClient</code></td><td>client:3</td><td>定义 api client 概念及其相关状态或行为。</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ApiClient</code></td><td>http:11</td><td>定义 api client 概念及其相关状态或行为。</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -11675,10 +11890,23 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>constructor</code></td><td>ApiClient:6</td><td>初始化对象依赖、配置和内部状态。</td><td>确保对象一创建就满足依赖、默认值和不变量要求。</td></tr>
+              <tr><td><code>constructor</code></td><td>ApiClient:14</td><td>初始化对象依赖、配置和内部状态。</td><td>确保对象一创建就满足依赖、默认值和不变量要求。</td></tr>
             </tbody>
           </table>
         </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
+        <code>frontend/src/api/types.gen.ts</code>
+        <span class="inventory-counts">
+          <span>0 classes</span>
+          <span>0 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>封装前端到后端 API 的调用边界。</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
       </div>
     </details>
     <details class="inventory-file">
@@ -11896,7 +12124,7 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>useMetricsWS</code></td><td>module:22</td><td>提供模块级 use metrics ws 操作。</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>useMetricsWS</code></td><td>module:24</td><td>提供模块级 use metrics ws 操作。</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
             </tbody>
           </table>
         </div>
@@ -11939,6 +12167,28 @@
       <div class="inventory-body">
         <p><strong>文件作用：</strong>承载 frontend.src.models.index 边界内的实现、契约或适配逻辑。</p>
         <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
+        <code>frontend/src/ws/stream-client.ts</code>
+        <span class="inventory-counts">
+          <span>1 class</span>
+          <span>0 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>承载 frontend.src.ws.stream-client 边界内的实现、契约或适配逻辑。</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>StreamClient</code></td><td>stream-client:29</td><td>定义 stream client 概念及其相关状态或行为。</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </details>
   </div>

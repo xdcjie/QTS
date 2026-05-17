@@ -4,25 +4,31 @@ import ast
 from pathlib import Path
 
 
+def _auth_headers(**extra: str) -> dict[str, str]:
+    headers = {"Authorization": "Bearer dev-token"}
+    headers.update(extra)
+    return headers
+
+
 def test_api_strategy_account_order_routes_return_public_dtos() -> None:
     from fastapi.testclient import TestClient
     from qts.api.app import create_app
 
     client = TestClient(create_app())
 
-    assert client.get("/strategies").json()[0] == {
+    assert client.get("/strategies", headers=_auth_headers()).json()[0] == {
         "strategy_id": "strategy-001",
         "status": "stopped",
     }
-    assert client.post("/strategies/strategy-001/start").json() == {
+    assert client.post("/strategies/strategy-001/start", headers=_auth_headers()).json() == {
         "strategy_id": "strategy-001",
         "status": "running",
     }
-    assert client.get("/accounts/acct-001").json() == {
+    assert client.get("/accounts/acct-001", headers=_auth_headers()).json() == {
         "account_id": "acct-001",
         "cash": {"USD": "0"},
     }
-    assert client.get("/orders/ord-001").json() == {
+    assert client.get("/orders/ord-001", headers=_auth_headers()).json() == {
         "order_id": "ord-001",
         "status": "unknown",
     }
@@ -36,7 +42,7 @@ def test_operational_routes_validate_non_global_scope_id() -> None:
     response = client.post(
         "/operations/kill-switches",
         json={"scope": "account", "reason": "halt"},
-        headers={"X-QTS-Operator": "tester"},
+        headers=_auth_headers(**{"X-QTS-Operator": "tester"}),
     )
 
     assert response.status_code == 422
@@ -50,15 +56,15 @@ def test_operational_runtime_command_routes_return_command_evidence() -> None:
 
     reconcile = client.post(
         "/operations/runtime/reconcile",
-        headers={"Idempotency-Key": "reconcile-1", "X-QTS-Operator": "tester"},
+        headers=_auth_headers(**{"Idempotency-Key": "reconcile-1", "X-QTS-Operator": "tester"}),
     )
     duplicate = client.post(
         "/operations/runtime/reconcile",
-        headers={"Idempotency-Key": "reconcile-1", "X-QTS-Operator": "tester"},
+        headers=_auth_headers(**{"Idempotency-Key": "reconcile-1", "X-QTS-Operator": "tester"}),
     )
     snapshot = client.post(
         "/operations/runtime/snapshot",
-        headers={"Idempotency-Key": "snapshot-1", "X-QTS-Operator": "tester"},
+        headers=_auth_headers(**{"Idempotency-Key": "snapshot-1", "X-QTS-Operator": "tester"}),
     )
 
     assert reconcile.status_code == 200
@@ -78,23 +84,25 @@ def test_operational_runtime_lifecycle_and_observation_routes() -> None:
 
     started = client.post(
         "/operations/runtime/start",
-        headers={"Idempotency-Key": "start-1", "X-QTS-Operator": "tester"},
+        headers=_auth_headers(**{"Idempotency-Key": "start-1", "X-QTS-Operator": "tester"}),
     )
     stopped = client.post(
         "/operations/runtime/stop",
-        headers={"Idempotency-Key": "stop-1", "X-QTS-Operator": "tester"},
+        headers=_auth_headers(**{"Idempotency-Key": "stop-1", "X-QTS-Operator": "tester"}),
     )
     observation = client.post(
         "/operations/runtime/enter-observation",
-        headers={"Idempotency-Key": "observation-1", "X-QTS-Operator": "tester"},
+        headers=_auth_headers(**{"Idempotency-Key": "observation-1", "X-QTS-Operator": "tester"}),
     )
     duplicate_observation = client.post(
         "/operations/runtime/enter-observation",
-        headers={"Idempotency-Key": "observation-1", "X-QTS-Operator": "tester"},
+        headers=_auth_headers(**{"Idempotency-Key": "observation-1", "X-QTS-Operator": "tester"}),
     )
     running = client.post(
         "/operations/runtime/exit-observation",
-        headers={"Idempotency-Key": "exit-observation-1", "X-QTS-Operator": "tester"},
+        headers=_auth_headers(
+            **{"Idempotency-Key": "exit-observation-1", "X-QTS-Operator": "tester"}
+        ),
     )
 
     assert started.status_code == 200
@@ -117,24 +125,24 @@ def test_operational_kill_switch_deactivate_route_is_idempotent() -> None:
     active = client.post(
         "/operations/kill-switches",
         json={"scope": "global", "reason": "operator stop"},
-        headers={"Idempotency-Key": "kill-on-1", "X-QTS-Operator": "tester"},
+        headers=_auth_headers(**{"Idempotency-Key": "kill-on-1", "X-QTS-Operator": "tester"}),
     )
     inactive = client.post(
         "/operations/kill-switches/deactivate",
         json={"scope": "global", "reason": "operator resume"},
         headers={
+            "Authorization": "Bearer dev-token",
             "Idempotency-Key": "kill-off-1",
             "X-QTS-Operator": "tester",
-            "X-QTS-Authorization-Scope": "runtime:safety:write",
         },
     )
     duplicate = client.post(
         "/operations/kill-switches/deactivate",
         json={"scope": "global", "reason": "different reason"},
         headers={
+            "Authorization": "Bearer dev-token",
             "Idempotency-Key": "kill-off-1",
             "X-QTS-Operator": "tester",
-            "X-QTS-Authorization-Scope": "runtime:safety:write",
         },
     )
 
@@ -155,7 +163,11 @@ def test_operational_kill_switch_deactivate_route_requires_safety_scope() -> Non
     response = client.post(
         "/operations/kill-switches/deactivate",
         json={"scope": "global", "reason": "operator resume"},
-        headers={"Idempotency-Key": "kill-off-denied", "X-QTS-Operator": "tester"},
+        headers={
+            "Authorization": "Bearer read-token",
+            "Idempotency-Key": "kill-off-denied",
+            "X-QTS-Operator": "tester",
+        },
     )
 
     assert response.status_code == 403
@@ -169,11 +181,15 @@ def test_operational_routes_scope_idempotency_by_command_kind() -> None:
 
     pause = client.post(
         "/operations/runtime/pause",
-        headers={"Idempotency-Key": "shared-command-key", "X-QTS-Operator": "tester"},
+        headers=_auth_headers(
+            **{"Idempotency-Key": "shared-command-key", "X-QTS-Operator": "tester"}
+        ),
     )
     reconcile = client.post(
         "/operations/runtime/reconcile",
-        headers={"Idempotency-Key": "shared-command-key", "X-QTS-Operator": "tester"},
+        headers=_auth_headers(
+            **{"Idempotency-Key": "shared-command-key", "X-QTS-Operator": "tester"}
+        ),
     )
 
     assert pause.status_code == 200
@@ -192,7 +208,7 @@ def test_operator_status_route_returns_timestamped_dashboard_dto() -> None:
 
     response = client.get(
         "/operations/operator-status",
-        headers={"X-QTS-Operator": "tester"},
+        headers=_auth_headers(**{"X-QTS-Operator": "tester"}),
     )
 
     assert response.status_code == 200

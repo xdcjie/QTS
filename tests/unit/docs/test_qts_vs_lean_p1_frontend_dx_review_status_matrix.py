@@ -36,7 +36,9 @@ def test_qts_vs_lean_p1_frontend_dx_backlog_links_to_matrix() -> None:
     for opt_id in P1_FRONTEND_DX_IDS:
         item_start = backlog.index(f"#### {opt_id}")
         next_item_start = backlog.find("#### OPT-", item_start + 1)
-        item = backlog[item_start:] if next_item_start == -1 else backlog[item_start:next_item_start]
+        item = (
+            backlog[item_start:] if next_item_start == -1 else backlog[item_start:next_item_start]
+        )
 
         assert "- Status: DONE" in item
         assert f"- Review status matrix: `{MATRIX_PATH}`" in item

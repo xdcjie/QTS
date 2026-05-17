@@ -101,6 +101,7 @@ class BacktestRuntimeEventSink(RuntimeEventSink):
             "instrument_id": order.intent.instrument_id.value,
             "side": order.intent.side.value,
             "quantity": str(order.intent.quantity),
+            "order_spec": order.intent.order_spec.to_payload(),
             "state": order.state.value,
             "broker_order_id": order.broker_order_id,
         }

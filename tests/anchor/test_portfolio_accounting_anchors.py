@@ -41,10 +41,10 @@ def test_fill_accounting_anchor_uses_contract_multiplier_for_futures_and_options
     from qts.core.ids import InstrumentId, OrderId
     from qts.portfolio.accounting.fill_accounting import Fill, FillAccounting, TradeSide
     from qts.portfolio.cash_book import CashBook
-    from qts.portfolio.position_book import PositionBook
+    from qts.portfolio.holdings import HoldingBook
 
     future_cash = CashBook({"USD": Decimal("1000000")})
-    future_positions = PositionBook()
+    future_holdings = HoldingBook()
     future_fill = Fill(
         fill_id=OrderId("fill-future-001"),
         instrument_id=InstrumentId("FUTURE.US.COMEX.GC.202606"),
@@ -55,13 +55,13 @@ def test_fill_accounting_anchor_uses_contract_multiplier_for_futures_and_options
         multiplier=Decimal("100"),
     )
 
-    FillAccounting.apply(future_fill, cash_book=future_cash, position_book=future_positions)
+    FillAccounting.apply(future_fill, cash_book=future_cash, holding_book=future_holdings)
 
-    assert future_positions.quantity(future_fill.instrument_id) == Decimal("2")
+    assert future_holdings.quantity(future_fill.instrument_id) == Decimal("2")
     assert future_cash.balance("USD") == Decimal("529980.00")
 
     option_cash = CashBook({"USD": Decimal("10000")})
-    option_positions = PositionBook()
+    option_holdings = HoldingBook()
     option_fill = Fill(
         fill_id=OrderId("fill-option-001"),
         instrument_id=InstrumentId("OPTION.US.OPRA.AAPL.20260619.C.200"),
@@ -72,7 +72,7 @@ def test_fill_accounting_anchor_uses_contract_multiplier_for_futures_and_options
         multiplier=Decimal("100"),
     )
 
-    FillAccounting.apply(option_fill, cash_book=option_cash, position_book=option_positions)
+    FillAccounting.apply(option_fill, cash_book=option_cash, holding_book=option_holdings)
 
-    assert option_positions.quantity(option_fill.instrument_id) == Decimal("3")
+    assert option_holdings.quantity(option_fill.instrument_id) == Decimal("3")
     assert option_cash.balance("USD") == Decimal("8725.00")

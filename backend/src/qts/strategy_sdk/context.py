@@ -9,6 +9,7 @@ from decimal import Decimal
 
 from qts.core.ids import InstrumentId
 from qts.domain.instruments import OptionRight
+from qts.portfolio.holdings import Holding
 from qts.strategy_sdk.asset_ref import AssetRef
 from qts.strategy_sdk.asset_resolver import (
     ContinuousFutureResolver,
@@ -23,7 +24,7 @@ from qts.strategy_sdk.factors import FactorFactory
 from qts.strategy_sdk.indicators import IndicatorFactory
 from qts.strategy_sdk.portfolio_view import PortfolioView
 from qts.strategy_sdk.subscription_registry import DataSubscription, StrategySubscriptionRegistry
-from qts.strategy_sdk.target import TargetIntent, TargetIntentType
+from qts.strategy_sdk.target import OrderSpec, TargetIntent, TargetIntentType
 from qts.strategy_sdk.target_emitter import TargetIntentEmitter
 from qts.strategy_sdk.universe import Universe, UniverseMember, UniverseSelector
 
@@ -93,29 +94,91 @@ class StrategyContext:
             right=right,
         )
 
-    def target_percent(self, asset: AssetRef, weight: Decimal) -> TargetIntent:
+    def target_percent(
+        self,
+        asset: AssetRef,
+        weight: Decimal,
+        *,
+        spec: OrderSpec | None = None,
+    ) -> TargetIntent:
         """Emit a portfolio-weight target for an asset."""
         return self._intent_emitter.emit(
-            TargetIntent(asset=asset, intent_type=TargetIntentType.PERCENT, value=weight)
+            TargetIntent(
+                asset=asset,
+                intent_type=TargetIntentType.PERCENT,
+                value=weight,
+                order_spec=spec or OrderSpec(),
+            )
         )
 
-    def target_quantity(self, asset: AssetRef, quantity: Decimal) -> TargetIntent:
+    def target_quantity(
+        self,
+        asset: AssetRef,
+        quantity: Decimal,
+        *,
+        spec: OrderSpec | None = None,
+    ) -> TargetIntent:
         """Emit a quantity target for an asset."""
         return self._intent_emitter.emit(
-            TargetIntent(asset=asset, intent_type=TargetIntentType.QUANTITY, value=quantity)
+            TargetIntent(
+                asset=asset,
+                intent_type=TargetIntentType.QUANTITY,
+                value=quantity,
+                order_spec=spec or OrderSpec(),
+            )
         )
 
-    def target_value(self, asset: AssetRef, value: Decimal) -> TargetIntent:
+    def target_value(
+        self,
+        asset: AssetRef,
+        value: Decimal,
+        *,
+        spec: OrderSpec | None = None,
+    ) -> TargetIntent:
         """Emit a notional value target for an asset."""
         return self._intent_emitter.emit(
-            TargetIntent(asset=asset, intent_type=TargetIntentType.VALUE, value=value)
+            TargetIntent(
+                asset=asset,
+                intent_type=TargetIntentType.VALUE,
+                value=value,
+                order_spec=spec or OrderSpec(),
+            )
         )
 
-    def close(self, asset: AssetRef) -> TargetIntent:
+    def close(self, asset: AssetRef, *, spec: OrderSpec | None = None) -> TargetIntent:
         """Emit a target that closes an asset position."""
         return self._intent_emitter.emit(
-            TargetIntent(asset=asset, intent_type=TargetIntentType.CLOSE, value=None)
+            TargetIntent(
+                asset=asset,
+                intent_type=TargetIntentType.CLOSE,
+                value=None,
+                order_spec=spec or OrderSpec(),
+            )
         )
+
+    def holding(self, asset: AssetRef) -> Holding | None:
+        """Return the current holding for an asset."""
+        if self.portfolio is None:
+            return None
+        return self.portfolio.holding(asset)
+
+    def unrealized_pnl(self, asset: AssetRef) -> Decimal:
+        """Return current unrealized PnL if a portfolio mark is available."""
+        if self.portfolio is None:
+            return Decimal("0")
+        return self.portfolio.unrealized_pnl(asset)
+
+    def realized_pnl(self, asset: AssetRef) -> Decimal:
+        """Return cumulative realized PnL for an asset."""
+        if self.portfolio is None:
+            return Decimal("0")
+        return self.portfolio.realized_pnl(asset)
+
+    def avg_cost(self, asset: AssetRef) -> Decimal | None:
+        """Return average cost for an asset."""
+        if self.portfolio is None:
+            return None
+        return self.portfolio.avg_cost(asset)
 
     def rebalance(self, weights: dict[AssetRef, Decimal]) -> tuple[TargetIntent, ...]:
         """Emit one percent target per asset in ``weights``."""

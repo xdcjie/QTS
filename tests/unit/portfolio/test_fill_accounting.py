@@ -7,10 +7,10 @@ def test_equity_buy_fill_updates_position_and_cash() -> None:
     from qts.core.ids import InstrumentId, OrderId
     from qts.portfolio.accounting.fill_accounting import Fill, FillAccounting, TradeSide
     from qts.portfolio.cash_book import CashBook
-    from qts.portfolio.position_book import PositionBook
+    from qts.portfolio.holdings import HoldingBook
 
     cash = CashBook({"USD": Decimal("10000")})
-    positions = PositionBook()
+    holdings = HoldingBook()
     fill = Fill(
         fill_id=OrderId("fill-001"),
         instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
@@ -21,9 +21,9 @@ def test_equity_buy_fill_updates_position_and_cash() -> None:
         multiplier=Decimal("1"),
     )
 
-    FillAccounting.apply(fill, cash_book=cash, position_book=positions)
+    FillAccounting.apply(fill, cash_book=cash, holding_book=holdings)
 
-    assert positions.quantity(fill.instrument_id) == Decimal("10")
+    assert holdings.quantity(fill.instrument_id) == Decimal("10")
     assert cash.balance("USD") == Decimal("9000")
 
 
@@ -31,10 +31,10 @@ def test_sell_fill_updates_position_and_cash() -> None:
     from qts.core.ids import InstrumentId, OrderId
     from qts.portfolio.accounting.fill_accounting import Fill, FillAccounting, TradeSide
     from qts.portfolio.cash_book import CashBook
-    from qts.portfolio.position_book import PositionBook
+    from qts.portfolio.holdings import HoldingBook
 
     cash = CashBook({"USD": Decimal("1000")})
-    positions = PositionBook()
+    holdings = HoldingBook()
     fill = Fill(
         fill_id=OrderId("fill-002"),
         instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
@@ -45,7 +45,7 @@ def test_sell_fill_updates_position_and_cash() -> None:
         multiplier=Decimal("1"),
     )
 
-    FillAccounting.apply(fill, cash_book=cash, position_book=positions)
+    FillAccounting.apply(fill, cash_book=cash, holding_book=holdings)
 
-    assert positions.quantity(fill.instrument_id) == Decimal("-3")
+    assert holdings.quantity(fill.instrument_id) == Decimal("-3")
     assert cash.balance("USD") == Decimal("1150")

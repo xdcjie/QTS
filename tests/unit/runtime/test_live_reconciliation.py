@@ -9,7 +9,7 @@ from qts.runtime.actors.account_actor import AccountSnapshot
 
 
 def test_live_reconciliation_builds_internal_snapshot_and_blocks_startup_on_drift() -> None:
-    from qts.portfolio.position_book import Position
+    from qts.portfolio.holdings import Holding
     from qts.reconciliation.snapshots import CashSnapshot, ReconciliationSnapshot
     from qts.runtime.broker_runtime_reconciliation import BrokerRuntimeReconciliation
 
@@ -36,7 +36,14 @@ def test_live_reconciliation_builds_internal_snapshot_and_blocks_startup_on_drif
         ),
         account=AccountSnapshot(
             cash={"USD": Decimal("1000")},
-            positions={instrument_id: Position(instrument_id=instrument_id, quantity=Decimal("1"))},
+            positions={
+                instrument_id: Holding(
+                    instrument_id=instrument_id,
+                    quantity=Decimal("1"),
+                    average_cost=Decimal("0"),
+                    realized_pnl=Decimal("0"),
+                )
+            },
         ),
     )
     broker = ReconciliationSnapshot(

@@ -47,6 +47,9 @@ class BrokerageModel:
             capabilities=BrokerCapabilities(
                 broker_id=BrokerId("custom"),
                 supports_fractional=True,
+                supports_stop_orders=True,
+                supported_order_types=frozenset(BrokerOrderType),
+                supported_time_in_force=frozenset(TimeInForce),
             ),
         )
 
@@ -58,6 +61,9 @@ class BrokerageModel:
             capabilities=BrokerCapabilities(
                 broker_id=BrokerId("simulated"),
                 supports_fractional=True,
+                supports_stop_orders=True,
+                supported_order_types=frozenset(BrokerOrderType),
+                supported_time_in_force=frozenset(TimeInForce),
             ),
         )
 

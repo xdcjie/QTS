@@ -8,7 +8,7 @@ from enum import StrEnum
 
 from qts.core.ids import InstrumentId, OrderId
 from qts.portfolio.cash_book import CashBook
-from qts.portfolio.position_book import PositionBook
+from qts.portfolio.holdings import HoldingBook
 
 
 class TradeSide(StrEnum):
@@ -46,11 +46,17 @@ class FillAccounting:
     """Fill accounting operations."""
 
     @staticmethod
-    def apply(fill: Fill, *, cash_book: CashBook, position_book: PositionBook) -> None:
+    def apply(fill: Fill, *, cash_book: CashBook, holding_book: HoldingBook) -> None:
         """Perform apply."""
         signed_quantity = fill.quantity if fill.side is TradeSide.BUY else -fill.quantity
         cash_delta = -signed_quantity * fill.price * fill.multiplier
-        position_book.apply_delta(fill.instrument_id, signed_quantity)
+        holding_book.apply_fill(
+            instrument_id=fill.instrument_id,
+            signed_quantity=signed_quantity,
+            price=fill.price,
+            multiplier=fill.multiplier,
+            fill_time=None,
+        )
         cash_book.apply_delta(fill.currency, cash_delta)
 
 

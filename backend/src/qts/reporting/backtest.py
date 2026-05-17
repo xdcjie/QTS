@@ -20,6 +20,7 @@ from qts.reporting.base import (
     RUNTIME_ARTIFACT_SCHEMA_VERSION,
     RuntimeManifest,
 )
+from qts.reporting.statistics import StatisticsBuilder
 
 RUNTIME_EVENT_SCHEMA_VERSION = "1"
 _REQUIRED_M1_MANIFEST_FIELDS = (
@@ -198,7 +199,7 @@ class _NdjsonArtifact:
 class BacktestArtifactWriter:
     """Write large backtest outputs as line-delimited artifacts."""
 
-    _KINDS = ("events", "orders", "fills", "trade_ledger", "equity_curve")
+    _KINDS = ("events", "orders", "fills", "trade_ledger", "equity_curve", "statistics")
 
     def __init__(self, output_dir: Path, *, run_id: RuntimeRunId | None = None) -> None:
         """Create a writer for partitioned backtest artifacts."""
@@ -210,6 +211,7 @@ class BacktestArtifactWriter:
             for kind in self._KINDS
         }
         self._equity_metrics = StreamingEquityMetrics()
+        self._statistics = StatisticsBuilder()
 
     def write_order(self, payload: dict[str, Any]) -> None:
         """Perform write_order."""
@@ -245,23 +247,33 @@ class BacktestArtifactWriter:
 
     def write_trade_ledger(self, row: TradeLedgerEntry) -> None:
         """Perform write_trade_ledger."""
-        self._artifacts["trade_ledger"].write(
-            {
-                "order_id": row.order_id,
-                "instrument_id": row.instrument_id,
-                "side": row.side,
-                "quantity": row.quantity,
-                "fill_price": row.fill_price,
-                "commission": row.commission,
-                "slippage": row.slippage,
-                "fill_time": row.fill_time,
-                "source_bar_time": row.source_bar_time,
-            }
+        payload = {
+            "order_id": row.order_id,
+            "instrument_id": row.instrument_id,
+            "side": row.side,
+            "quantity": row.quantity,
+            "fill_price": row.fill_price,
+            "commission": row.commission,
+            "slippage": row.slippage,
+            "fill_time": row.fill_time,
+            "source_bar_time": row.source_bar_time,
+        }
+        self._statistics.on_fill(
+            order_id=row.order_id,
+            instrument_id=row.instrument_id,
+            side=row.side,
+            quantity=row.quantity,
+            price=row.fill_price,
+            commission=row.commission,
+            slippage=row.slippage,
+            fill_time=row.fill_time,
         )
+        self._artifacts["trade_ledger"].write(payload)
 
     def write_equity_point(self, point: EquityCurvePoint) -> None:
         """Perform write_equity_point."""
         self._equity_metrics.update(point.equity)
+        self._statistics.on_equity_point(time=point.time, equity=point.equity)
         self._artifacts["equity_curve"].write({"time": point.time, "equity": point.equity})
 
     def finalize(
@@ -282,10 +294,16 @@ class BacktestArtifactWriter:
     ) -> tuple[str, str, dict[str, Any], BacktestArtifacts]:
         """Perform finalize."""
         finalized_at = datetime.now(UTC)
+        statistics_payload = self._statistics.finalize(
+            trading_bars=trading_bars,
+            bars_per_year=Decimal("252") * Decimal(max(trading_bars, 1)),
+        ).to_payload()
+        self._artifacts["statistics"].write(statistics_payload)
         for artifact in self._artifacts.values():
             artifact.close()
 
         metrics = self._equity_metrics.to_payload()
+        metrics.update(statistics_payload)
         normalized_dataset_metadata = tuple(
             _normalize_dataset_metadata_payload(item) for item in dataset_metadata
         )
@@ -309,6 +327,7 @@ class BacktestArtifactWriter:
             "execution_assumptions": normalized_execution_assumptions,
             "risk_config_hash": risk_config_hash,
             "metrics": metrics,
+            "statistics": statistics_payload,
             "artifacts": {
                 kind: {
                     "rows": artifact_rows[kind],
@@ -317,6 +336,7 @@ class BacktestArtifactWriter:
                 for kind in self._KINDS
             },
         }
+        report_payload["statistics_hash"] = stable_json_hash(statistics_payload)
         if runtime_topology_payload is not None:
             report_payload["runtime_topology"] = runtime_topology_payload
         report_hash = stable_json_hash(report_payload)
@@ -364,6 +384,8 @@ class BacktestArtifactWriter:
             "execution_assumptions": normalized_execution_assumptions,
             "risk_config_hash": risk_config_hash,
             "metrics": metrics,
+            "statistics": statistics_payload,
+            "statistics_hash": report_payload["statistics_hash"],
             "artifacts": {
                 kind: {
                     "path": str(artifact_paths[kind]),

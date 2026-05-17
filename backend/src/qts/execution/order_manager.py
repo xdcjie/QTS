@@ -75,6 +75,7 @@ class OrderManager:
             side=current.intent.side,
             quantity=intent.new_quantity,
             account_id=current.intent.account_id,
+            order_spec=current.intent.order_spec,
         )
         order = Order(
             order_id=current.order_id,

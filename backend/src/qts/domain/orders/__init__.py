@@ -1,3 +1,10 @@
+from qts.domain.orders.order_spec import (
+    BracketLeg,
+    BracketSpec,
+    BrokerOrderType,
+    OrderSpec,
+    TimeInForce,
+)
 from qts.domain.orders.value_objects import (
     CancelIntent,
     ExecutionReport,
@@ -13,6 +20,9 @@ from qts.domain.orders.value_objects import (
 )
 
 __all__ = [
+    "BracketLeg",
+    "BracketSpec",
+    "BrokerOrderType",
     "CancelIntent",
     "ExecutionReport",
     "ExecutionReportStatus",
@@ -23,5 +33,7 @@ __all__ = [
     "OrderManagerResult",
     "OrderManagerSnapshot",
     "OrderSide",
+    "OrderSpec",
     "ReplaceIntent",
+    "TimeInForce",
 ]

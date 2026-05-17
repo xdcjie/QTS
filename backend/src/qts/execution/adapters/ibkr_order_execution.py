@@ -185,8 +185,8 @@ class IbkrOrderExecutionAdapter:
         *,
         client_order_id: str,
         strategy_id: StrategyId | None = None,
-        order_type: BrokerOrderType = BrokerOrderType.MARKET,
-        time_in_force: TimeInForce = TimeInForce.DAY,
+        order_type: BrokerOrderType | None = None,
+        time_in_force: TimeInForce | None = None,
         limit_price: Decimal | None = None,
         asset_class: str = "equity",
         opens_short: bool = False,
@@ -196,13 +196,17 @@ class IbkrOrderExecutionAdapter:
         """Perform to_order_request."""
         if not client_order_id.strip():
             raise ValueError("client_order_id must not be empty")
+        spec = intent.order_spec
+        resolved_order_type = order_type or spec.order_type
+        resolved_time_in_force = time_in_force or spec.time_in_force
+        resolved_limit_price = limit_price if limit_price is not None else spec.limit_price
         self._assert_live_capital_order_allowed()
         self.validate_no_unresolved_callbacks()
         self._validate_order_request(
             intent,
-            order_type=order_type,
-            time_in_force=time_in_force,
-            limit_price=limit_price,
+            order_type=resolved_order_type,
+            time_in_force=resolved_time_in_force,
+            limit_price=resolved_limit_price,
             asset_class=asset_class,
             opens_short=opens_short,
         )
@@ -215,9 +219,9 @@ class IbkrOrderExecutionAdapter:
             broker_symbol=self._symbol_mapping.to_broker_symbol(intent.instrument_id),
             side=intent.side.value,
             quantity=intent.quantity,
-            order_type=order_type,
-            time_in_force=time_in_force,
-            limit_price=limit_price,
+            order_type=resolved_order_type,
+            time_in_force=resolved_time_in_force,
+            limit_price=resolved_limit_price,
             contract=contract,
             outside_regular_trading_hours=outside_regular_trading_hours,
         )

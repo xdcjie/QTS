@@ -8,7 +8,7 @@ from qts.core.ids import CorrelationId, EventId, InstrumentId, OrderId
 from qts.domain.events import BaseEvent
 from qts.execution.order_manager import OrderIntent, OrderManager, OrderSide
 from qts.portfolio.cash_book import CashBook
-from qts.portfolio.position_book import PositionBook
+from qts.portfolio.holdings import HoldingBook
 from qts.runtime.event_store import InMemoryEventStore
 
 
@@ -119,14 +119,19 @@ def test_replayed_events_reconstruct_order_and_position_state() -> None:
                 result = manager.process_report(report)
 
                 # Step 3: Reconstruct position state from fills
-                positions = PositionBook()
+                holdings = HoldingBook()
                 cash = CashBook({"USD": Decimal("100000")})
                 for fill in result.fills:
                     signed_qty = fill.quantity if fill.side is OrderSide.BUY else -fill.quantity
-                    positions.apply_delta(fill.instrument_id, signed_qty)
+                    holdings.apply_fill(
+                        instrument_id=fill.instrument_id,
+                        signed_quantity=signed_qty,
+                        price=fill.price,
+                        multiplier=Decimal("1"),
+                    )
                     cash.apply_delta("USD", -signed_qty * fill.price * Decimal("1"))
 
-                assert positions.quantity(instrument_id) == Decimal("10")
+                assert holdings.quantity(instrument_id) == Decimal("10")
                 assert cash.balance("USD") == Decimal("98500")
 
     order = manager.get_order(order_id)

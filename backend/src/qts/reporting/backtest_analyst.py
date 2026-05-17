@@ -26,6 +26,7 @@ class ArtifactRows:
     fills: tuple[dict[str, Any], ...]
     trade_ledger: tuple[dict[str, Any], ...]
     equity_curve: tuple[dict[str, Any], ...]
+    statistics: tuple[dict[str, Any], ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,6 +42,11 @@ class BacktestReportMetrics:
     processed_bars: int
     warmup_bars: int
     trading_bars: int
+    sharpe_ratio: str = "n/a"
+    sortino_ratio: str = "n/a"
+    calmar_ratio: str = "n/a"
+    win_rate: str = "n/a"
+    profit_factor: str = "n/a"
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,7 +76,7 @@ class BacktestReportDataset:
     @property
     def metrics(self) -> BacktestReportMetrics:
         """Return display metrics derived from finalized artifacts."""
-        manifest_metrics = self.manifest.get("metrics", {})
+        manifest_metrics = self.manifest.get("statistics", self.manifest.get("metrics", {}))
         if not isinstance(manifest_metrics, dict):
             manifest_metrics = {}
         final_equity = self._final_equity()
@@ -84,6 +90,11 @@ class BacktestReportDataset:
             processed_bars=int(self.manifest.get("processed_bars", 0)),
             warmup_bars=int(self.manifest.get("warmup_bars", 0)),
             trading_bars=int(self.manifest.get("trading_bars", 0)),
+            sharpe_ratio=_format_decimal(_decimal_value(manifest_metrics.get("sharpe_ratio"))),
+            sortino_ratio=_format_decimal(_decimal_value(manifest_metrics.get("sortino_ratio"))),
+            calmar_ratio=_format_decimal(_decimal_value(manifest_metrics.get("calmar_ratio"))),
+            win_rate=_format_percent(_decimal_value(manifest_metrics.get("win_rate"))),
+            profit_factor=_format_decimal(_decimal_value(manifest_metrics.get("profit_factor"))),
         )
 
     def _final_equity(self) -> Decimal | None:
@@ -117,6 +128,11 @@ class BacktestRunReportLoader:
             equity_curve=cls._read_artifact_rows(
                 manifest,
                 "equity_curve",
+                base_dir=manifest_path.parent,
+            ),
+            statistics=cls._read_optional_artifact_rows(
+                manifest,
+                "statistics",
                 base_dir=manifest_path.parent,
             ),
         )
@@ -188,6 +204,19 @@ class BacktestRunReportLoader:
         return cls._read_ndjson(path)
 
     @classmethod
+    def _read_optional_artifact_rows(
+        cls,
+        manifest: dict[str, Any],
+        artifact_kind: str,
+        *,
+        base_dir: Path,
+    ) -> tuple[dict[str, Any], ...]:
+        artifacts = manifest.get("artifacts")
+        if not isinstance(artifacts, dict) or artifact_kind not in artifacts:
+            return ()
+        return cls._read_artifact_rows(manifest, artifact_kind, base_dir=base_dir)
+
+    @classmethod
     def _read_json_object(cls, path: Path, *, label: str) -> dict[str, Any]:
         try:
             payload = json.loads(path.read_text(encoding="utf-8"))
@@ -247,6 +276,11 @@ class AnalystBacktestReportRenderer:
                 self._metric_card("Total Return", metrics.total_return),
                 self._metric_card("Max Drawdown", metrics.max_drawdown),
                 self._metric_card("Final Equity", metrics.final_equity),
+                self._metric_card("Sharpe", metrics.sharpe_ratio),
+                self._metric_card("Sortino", metrics.sortino_ratio),
+                self._metric_card("Calmar", metrics.calmar_ratio),
+                self._metric_card("Win Rate", metrics.win_rate),
+                self._metric_card("Profit Factor", metrics.profit_factor),
                 self._metric_card("Trade Count", str(metrics.trade_count)),
                 self._metric_card("Fill Count", str(metrics.fill_count)),
                 self._metric_card("Processed Bars", str(metrics.processed_bars)),
