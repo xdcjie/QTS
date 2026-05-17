@@ -42,7 +42,6 @@ with ``#`` and blank lines are ignored.
 
 ```
 # wiring-followup (target=OPT-NN, 3-month horizon)
-qts.reconciliation.persistent_drift.PersistentDriftKillSwitch  expires=2026-08-17  target=OPT-63
 qts.runtime.state_recovery.DurableSnapshotStore  expires=2026-08-17  target=OPT-64
 qts.runtime.state_recovery.SnapshotFrequencyPolicy  expires=2026-08-17  target=OPT-64
 qts.research.optimizer.job.OptimizationJob  expires=2026-08-17  target=OPT-65

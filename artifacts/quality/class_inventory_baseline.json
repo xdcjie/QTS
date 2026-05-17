@@ -1,5 +1,5 @@
 {
-  "production_class_count": 590,
+  "production_class_count": 591,
   "production_classes": [
     "qts.observability.audit_sink.AuditSink",
     "qts.observability.audit_sink.InMemoryAuditSink",
@@ -7,6 +7,7 @@
     "qts.reconciliation.persistent_drift.PersistentDriftConfig",
     "qts.reconciliation.persistent_drift.PersistentDriftDecision",
     "qts.reconciliation.persistent_drift.PersistentDriftKillSwitch",
+    "qts.reconciliation.persistent_drift_coordinator.PersistentDriftCoordinator",
     "qts.research.optimizer.job.OptimizationJob",
     "qts.research.optimizer.parameter_space.ParameterGrid",
     "qts.research.optimizer.parameter_space.ParameterSpace",

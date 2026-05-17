@@ -110,6 +110,23 @@ class RuntimeSafetyController:
         )
         return evidence
 
+    def activate_kill_switch_via_persistent_drift(self, *, key: str, reason: str) -> None:
+        """Activate the kill switch from a persistent reconciliation-drift event.
+
+        This is the production-side adapter consumed by
+        :class:`qts.reconciliation.persistent_drift_coordinator.PersistentDriftCoordinator`.
+        It wraps :meth:`activate_kill_switch` with a system-identity command so
+        the existing audit trail (``runtime.kill_switch`` event + snapshot
+        refs) records the trigger as drift-driven rather than operator-driven.
+        """
+        self.activate_kill_switch(
+            RuntimeKillSwitchCommand(
+                operator_id="system:persistent_drift",
+                reason=f"persistent drift key={key}: {reason}",
+                cancel_active_orders=True,
+            )
+        )
+
     def deactivate_kill_switch(self, command: RuntimeKillSwitchDeactivateCommand) -> None:
         """Resume order submission only after explicit safety authorization."""
         if not command.authorized:

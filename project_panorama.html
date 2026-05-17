@@ -1444,10 +1444,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>350 files</span>
-      <span>618 classes</span>
-      <span>2056 functions</span>
-      <span>333 backend</span>
+      <span>351 files</span>
+      <span>620 classes</span>
+      <span>2060 functions</span>
+      <span>334 backend</span>
       <span>17 frontend</span>
     </div>
   </div>
@@ -7870,6 +7870,40 @@
     </details>
     <details class="inventory-file">
       <summary>
+        <code>backend/src/qts/reconciliation/persistent_drift_coordinator.py</code>
+        <span class="inventory-counts">
+          <span>2 classes</span>
+          <span>3 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Persistent drift coordinator — wires the OPT-47 kill switch to runtime safety.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>_SafetyControllerLike</code></td><td>persistent_drift_coordinator:21</td><td>Minimal safety-controller surface the coordinator depends on.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>PersistentDriftCoordinator</code></td><td>persistent_drift_coordinator:28</td><td>Feed reconciliation reports into the kill-switch streak counter.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>activate_kill_switch_via_persistent_drift</code></td><td>_SafetyControllerLike:24</td><td>Activate the runtime kill switch with persistent-drift evidence.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>PersistentDriftCoordinator:37</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>observe</code></td><td>PersistentDriftCoordinator:47</td><td>Process one reconciliation cycle&#x27;s report.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
         <code>backend/src/qts/reconciliation/report.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
@@ -10915,7 +10949,7 @@
         <code>backend/src/qts/runtime/safety_controller.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
-          <span>4 functions</span>
+          <span>5 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -10938,7 +10972,8 @@
               <tr><td><code>__init__</code></td><td>RuntimeSafetyController:21</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>blocked_reason</code></td><td>RuntimeSafetyController:24</td><td>Return the current order-blocking reason code, if any.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>activate_kill_switch</code></td><td>RuntimeSafetyController:43</td><td>Block new orders and optionally cancel active orders through actors.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>deactivate_kill_switch</code></td><td>RuntimeSafetyController:113</td><td>Resume order submission only after explicit safety authorization.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>activate_kill_switch_via_persistent_drift</code></td><td>RuntimeSafetyController:113</td><td>Activate the kill switch from a persistent reconciliation-drift event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>deactivate_kill_switch</code></td><td>RuntimeSafetyController:130</td><td>Resume order submission only after explicit safety authorization.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
