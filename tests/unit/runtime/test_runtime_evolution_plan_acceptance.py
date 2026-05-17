@@ -426,37 +426,6 @@ def test_market_data_sources_expose_subscription_snapshot() -> None:
     assert snapshot[0]["requested_timeframe"] == "1m"
 
 
-def test_fill_models_include_next_bar_quote_volume_and_partial_variants() -> None:
-    from qts.execution.simulator.fill_model import (
-        ImmediateFillModel,
-        NextBarOpenFillModel,
-        PartialFillModel,
-        QuoteAwareFillModel,
-        VolumeParticipationFillModel,
-    )
-
-    assert NextBarOpenFillModel()
-    assert QuoteAwareFillModel()
-    assert VolumeParticipationFillModel(max_participation_rate=Decimal("0.1"))
-    assert PartialFillModel(max_fill_quantity=Decimal("2"))
-    assert (
-        ImmediateFillModel().to_manifest_payload()["fill_model_name"]
-        != NextBarOpenFillModel().to_manifest_payload()["fill_model_name"]
-    )
-    assert (
-        VolumeParticipationFillModel(max_participation_rate=Decimal("0.1")).to_manifest_payload()[
-            "volume_participation_limit"
-        ]
-        == "0.1"
-    )
-    assert (
-        PartialFillModel(max_fill_quantity=Decimal("2")).to_manifest_payload()[
-            "partial_fill_policy"
-        ]
-        == "max_fill_quantity"
-    )
-
-
 def test_min_tick_rounding() -> None:
     from qts.core.ids import BrokerId
     from qts.execution.broker import BrokerCapabilities
@@ -479,34 +448,6 @@ def test_lot_size_rounding() -> None:
     )
 
     assert capabilities.round_quantity(Decimal("12")) == Decimal("10")
-
-
-def test_limit_order_fill_model_differs_from_market_order() -> None:
-    from qts.core.ids import InstrumentId, OrderId
-    from qts.domain.orders import OrderIntent, OrderSide
-    from qts.execution.simulator.fill_model import ImmediateFillModel, NextBarOpenFillModel
-
-    intent = OrderIntent(
-        order_id=OrderId("ord-fill-model"),
-        instrument_id=InstrumentId("EQUITY.US.NASDAQ.MSFT"),
-        side=OrderSide.BUY,
-        quantity=Decimal("1"),
-    )
-
-    market_report = ImmediateFillModel().fill(
-        intent,
-        broker_order_id="broker-1",
-        market_price=Decimal("100"),
-    )
-    next_open_report = NextBarOpenFillModel().fill(
-        intent,
-        broker_order_id="broker-2",
-        market_price=Decimal("100"),
-        next_open_price=Decimal("101"),
-    )
-
-    assert market_report.fill_price == Decimal("100")
-    assert next_open_report.fill_price == Decimal("101")
 
 
 def test_fractional_quantity_rejected_when_not_supported() -> None:

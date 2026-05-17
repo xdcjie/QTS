@@ -1,5 +1,5 @@
 {
-  "production_class_count": 588,
+  "production_class_count": 584,
   "production_classes": [
     "qts.observability.audit_sink.AuditSink",
     "qts.observability.audit_sink.InMemoryAuditSink",
@@ -224,10 +224,6 @@
     "qts.execution.order_state_machine.OrderStateMachine",
     "qts.execution.order_state_machine.OrderTransitionError",
     "qts.execution.simulator.fill_model.ImmediateFillModel",
-    "qts.execution.simulator.fill_model.NextBarOpenFillModel",
-    "qts.execution.simulator.fill_model.PartialFillModel",
-    "qts.execution.simulator.fill_model.QuoteAwareFillModel",
-    "qts.execution.simulator.fill_model.VolumeParticipationFillModel",
     "qts.execution.simulator.simulated_broker.SimulatedBroker",
     "qts.execution.transports.ib_async_order_execution_transport.IbAsyncOrderExecutionTransport",
     "qts.execution.transports.ib_async_order_execution_transport.IbAsyncOrderExecutionTransportConfig",

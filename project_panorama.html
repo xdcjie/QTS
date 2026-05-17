@@ -1445,8 +1445,8 @@
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>343 files</span>
-      <span>616 classes</span>
-      <span>2041 functions</span>
+      <span>612 classes</span>
+      <span>2031 functions</span>
       <span>326 backend</span>
       <span>17 frontend</span>
     </div>
@@ -5784,8 +5784,8 @@
       <summary>
         <code>backend/src/qts/execution/simulator/fill_model.py</code>
         <span class="inventory-counts">
-          <span>5 classes</span>
-          <span>12 functions</span>
+          <span>1 class</span>
+          <span>2 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -5796,11 +5796,7 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>ImmediateFillModel</code></td><td>fill_model:10</td><td>Fills market orders at the provided market price.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>NextBarOpenFillModel</code></td><td>fill_model:45</td><td>Fills orders at the next visible bar open price.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>QuoteAwareFillModel</code></td><td>fill_model:83</td><td>Fills buy orders at ask and sell orders at bid when quote data is present.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>VolumeParticipationFillModel</code></td><td>fill_model:129</td><td>Caps simulated fill quantity by visible volume participation.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>PartialFillModel</code></td><td>fill_model:183</td><td>Caps simulated fill quantity at a deterministic maximum.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ImmediateFillModel</code></td><td>fill_model:16</td><td>Fills market orders at the provided market price.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5809,18 +5805,8 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>to_manifest_payload</code></td><td>ImmediateFillModel:16</td><td>Serialize fill-model assumptions for run manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>fill</code></td><td>ImmediateFillModel:25</td><td>Perform fill.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_manifest_payload</code></td><td>NextBarOpenFillModel:51</td><td>Serialize fill-model assumptions for run manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>fill</code></td><td>NextBarOpenFillModel:60</td><td>Fill at next_open_price when supplied, otherwise at market_price.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_manifest_payload</code></td><td>QuoteAwareFillModel:89</td><td>Serialize fill-model assumptions for run manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>fill</code></td><td>QuoteAwareFillModel:98</td><td>Fill with quote-side pricing when bid/ask are available.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>VolumeParticipationFillModel:135</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>to_manifest_payload</code></td><td>VolumeParticipationFillModel:142</td><td>Serialize fill-model assumptions for run manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>fill</code></td><td>VolumeParticipationFillModel:151</td><td>Fill at most the configured share of visible volume.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>PartialFillModel:189</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>to_manifest_payload</code></td><td>PartialFillModel:194</td><td>Serialize fill-model assumptions for run manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>fill</code></td><td>PartialFillModel:204</td><td>Fill no more than max_fill_quantity.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_manifest_payload</code></td><td>ImmediateFillModel:22</td><td>Serialize fill-model assumptions for run manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>fill</code></td><td>ImmediateFillModel:31</td><td>Fill at the supplied market price.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>

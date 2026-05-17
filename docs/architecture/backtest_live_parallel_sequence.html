@@ -606,7 +606,7 @@
       <div class="surface class-inventory" aria-label="生产类全量索引">
         <h2>生产类全量索引（按阶段 / 模块）</h2>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">614 classes</span></summary>
+          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">610 classes</span></summary>
           <ul>
           <li><code>qts/api/schemas/backtest_schema.py</code> -> <code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span>, <code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span>, <code>BacktestRunResultSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:24</span>, <code>BacktestStrategyOptionSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:38</span></li>
           <li><code>qts/api/schemas/common.py</code> -> <code>StrategyStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:8</span>, <code>AccountSnapshotSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:15</span>, <code>OrderStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:22</span>, <code>RiskRuleSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:29</span>, <code>OperationalErrorSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:36</span></li>
@@ -692,7 +692,7 @@
           <li><code>qts/execution/idempotency.py</code> -> <code>FillIdempotencyStore</code> <span class="location">backend/src/qts/execution/idempotency.py:6</span></li>
           <li><code>qts/execution/order_manager.py</code> -> <code>OrderManager</code> <span class="location">backend/src/qts/execution/order_manager.py:28</span></li>
           <li><code>qts/execution/order_state_machine.py</code> -> <code>OrderEvent</code> <span class="location">backend/src/qts/execution/order_state_machine.py:11</span>, <code>OrderTransitionError</code> <span class="location">backend/src/qts/execution/order_state_machine.py:24</span>, <code>OrderStateMachine</code> <span class="location">backend/src/qts/execution/order_state_machine.py:81</span></li>
-          <li><code>qts/execution/simulator/fill_model.py</code> -> <code>ImmediateFillModel</code> <span class="location">backend/src/qts/execution/simulator/fill_model.py:10</span>, <code>NextBarOpenFillModel</code> <span class="location">backend/src/qts/execution/simulator/fill_model.py:45</span>, <code>QuoteAwareFillModel</code> <span class="location">backend/src/qts/execution/simulator/fill_model.py:83</span>, <code>VolumeParticipationFillModel</code> <span class="location">backend/src/qts/execution/simulator/fill_model.py:129</span>, <code>PartialFillModel</code> <span class="location">backend/src/qts/execution/simulator/fill_model.py:183</span></li>
+          <li><code>qts/execution/simulator/fill_model.py</code> -> <code>ImmediateFillModel</code> <span class="location">backend/src/qts/execution/simulator/fill_model.py:16</span></li>
           <li><code>qts/execution/simulator/simulated_broker.py</code> -> <code>SimulatedBroker</code> <span class="location">backend/src/qts/execution/simulator/simulated_broker.py:12</span></li>
           <li><code>qts/execution/transports/ib_async_order_execution_transport.py</code> -> <code>IbAsyncOrderExecutionTransportConfig</code> <span class="location">backend/src/qts/execution/transports/ib_async_order_execution_transport.py:28</span>, <code>IbAsyncOrderExecutionTransport</code> <span class="location">backend/src/qts/execution/transports/ib_async_order_execution_transport.py:47</span></li>
           <li><code>qts/execution/transports/ibkr_order_ids.py</code> -> <code>IbkrOrderIdAllocator</code> <span class="location">backend/src/qts/execution/transports/ibkr_order_ids.py:9</span></li>
@@ -831,7 +831,7 @@
           </ul>
         </details>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">614 classes</span></summary>
+          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">610 classes</span></summary>
           <ul class="method-index">
           <li><code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span> -> <span class="muted">no public/core methods</span></li>
@@ -1059,11 +1059,7 @@
           <li><code>OrderEvent</code> <span class="location">backend/src/qts/execution/order_state_machine.py:11</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>OrderTransitionError</code> <span class="location">backend/src/qts/execution/order_state_machine.py:24</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>OrderStateMachine</code> <span class="location">backend/src/qts/execution/order_state_machine.py:81</span> -> <code>apply():86</code></li>
-          <li><code>ImmediateFillModel</code> <span class="location">backend/src/qts/execution/simulator/fill_model.py:10</span> -> <code>to_manifest_payload():16</code>, <code>fill():25</code></li>
-          <li><code>NextBarOpenFillModel</code> <span class="location">backend/src/qts/execution/simulator/fill_model.py:45</span> -> <code>to_manifest_payload():51</code>, <code>fill():60</code></li>
-          <li><code>QuoteAwareFillModel</code> <span class="location">backend/src/qts/execution/simulator/fill_model.py:83</span> -> <code>to_manifest_payload():89</code>, <code>fill():98</code></li>
-          <li><code>VolumeParticipationFillModel</code> <span class="location">backend/src/qts/execution/simulator/fill_model.py:129</span> -> <code>__init__():135</code>, <code>to_manifest_payload():142</code>, <code>fill():151</code></li>
-          <li><code>PartialFillModel</code> <span class="location">backend/src/qts/execution/simulator/fill_model.py:183</span> -> <code>__init__():189</code>, <code>to_manifest_payload():194</code>, <code>fill():204</code></li>
+          <li><code>ImmediateFillModel</code> <span class="location">backend/src/qts/execution/simulator/fill_model.py:16</span> -> <code>to_manifest_payload():22</code>, <code>fill():31</code></li>
           <li><code>SimulatedBroker</code> <span class="location">backend/src/qts/execution/simulator/simulated_broker.py:12</span> -> <code>__init__():15</code>, <code>execute_market_order():19</code>, <code>cancel_order():38</code></li>
           <li><code>IbAsyncOrderExecutionTransportConfig</code> <span class="location">backend/src/qts/execution/transports/ib_async_order_execution_transport.py:28</span> -> <code>__post_init__():36</code></li>
           <li><code>IbAsyncOrderExecutionTransport</code> <span class="location">backend/src/qts/execution/transports/ib_async_order_execution_transport.py:47</span> -> <code>__init__():50</code>, <code>connected property:69</code>, <code>managed_accounts property:76</code>, <code>connect():81</code>, <code>disconnect():97</code>, <code>submit_order():109</code>, <code>submit_order_with_broker_id():114</code>, <code>cancel_order():128</code>, <code>wait_for_order_status():135</code>, <code>wait_for_fill_report():152</code></li>
@@ -3130,8 +3126,8 @@
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>343 files</span>
-      <span>616 classes</span>
-      <span>2041 functions</span>
+      <span>612 classes</span>
+      <span>2031 functions</span>
       <span>326 backend</span>
       <span>17 frontend</span>
     </div>
@@ -7469,8 +7465,8 @@
       <summary>
         <code>backend/src/qts/execution/simulator/fill_model.py</code>
         <span class="inventory-counts">
-          <span>5 classes</span>
-          <span>12 functions</span>
+          <span>1 class</span>
+          <span>2 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -7481,11 +7477,7 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>ImmediateFillModel</code></td><td>fill_model:10</td><td>Fills market orders at the provided market price.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>NextBarOpenFillModel</code></td><td>fill_model:45</td><td>Fills orders at the next visible bar open price.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>QuoteAwareFillModel</code></td><td>fill_model:83</td><td>Fills buy orders at ask and sell orders at bid when quote data is present.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>VolumeParticipationFillModel</code></td><td>fill_model:129</td><td>Caps simulated fill quantity by visible volume participation.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>PartialFillModel</code></td><td>fill_model:183</td><td>Caps simulated fill quantity at a deterministic maximum.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ImmediateFillModel</code></td><td>fill_model:16</td><td>Fills market orders at the provided market price.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -7494,18 +7486,8 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>to_manifest_payload</code></td><td>ImmediateFillModel:16</td><td>Serialize fill-model assumptions for run manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>fill</code></td><td>ImmediateFillModel:25</td><td>Perform fill.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_manifest_payload</code></td><td>NextBarOpenFillModel:51</td><td>Serialize fill-model assumptions for run manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>fill</code></td><td>NextBarOpenFillModel:60</td><td>Fill at next_open_price when supplied, otherwise at market_price.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_manifest_payload</code></td><td>QuoteAwareFillModel:89</td><td>Serialize fill-model assumptions for run manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>fill</code></td><td>QuoteAwareFillModel:98</td><td>Fill with quote-side pricing when bid/ask are available.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>VolumeParticipationFillModel:135</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>to_manifest_payload</code></td><td>VolumeParticipationFillModel:142</td><td>Serialize fill-model assumptions for run manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>fill</code></td><td>VolumeParticipationFillModel:151</td><td>Fill at most the configured share of visible volume.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>PartialFillModel:189</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>to_manifest_payload</code></td><td>PartialFillModel:194</td><td>Serialize fill-model assumptions for run manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>fill</code></td><td>PartialFillModel:204</td><td>Fill no more than max_fill_quantity.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_manifest_payload</code></td><td>ImmediateFillModel:22</td><td>Serialize fill-model assumptions for run manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>fill</code></td><td>ImmediateFillModel:31</td><td>Fill at the supplied market price.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
