@@ -53,6 +53,8 @@ class BacktestRuntimeEventSink(RuntimeEventSink):
             {key: value for key, value in row.items() if key not in {"sequence_no", "ts_ingest"}}
         )
         self._writer.write_runtime_event(row)
+        if event.kind == "account.position_closed":
+            self._writer.write_position_closed(dict(event.payload))
         return self._event_count
 
     def write_processed(

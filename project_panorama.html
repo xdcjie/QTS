@@ -1445,8 +1445,8 @@
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>341 files</span>
-      <span>612 classes</span>
-      <span>2018 functions</span>
+      <span>611 classes</span>
+      <span>2020 functions</span>
       <span>324 backend</span>
       <span>17 frontend</span>
     </div>
@@ -8258,7 +8258,7 @@
         <code>backend/src/qts/reporting/backtest.py</code>
         <span class="inventory-counts">
           <span>7 classes</span>
-          <span>25 functions</span>
+          <span>27 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -8275,7 +8275,7 @@
               <tr><td><code>BacktestArtifacts</code></td><td>backtest:155</td><td>Final paths and row counts for streamed backtest artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
               <tr><td><code>_NdjsonArtifact</code></td><td>backtest:164</td><td>_NdjsonArtifact.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
               <tr><td><code>BacktestArtifactWriter</code></td><td>backtest:199</td><td>Write large backtest outputs as line-delimited artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BacktestReportWriter</code></td><td>backtest:426</td><td>Backtest report writer for partitioned artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestReportWriter</code></td><td>backtest:463</td><td>Backtest report writer for partitioned artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -8300,15 +8300,17 @@
               <tr><td><code>write_runtime_event</code></td><td>BacktestArtifactWriter:220</td><td>Write one normalized runtime event envelope.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>write_event</code></td><td>BacktestArtifactWriter:224</td><td>Write one normalized runtime event through the artifact contract.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>write_snapshot</code></td><td>BacktestArtifactWriter:228</td><td>Write one runtime snapshot evidence row through the event artifact.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_manifest</code></td><td>BacktestArtifactWriter:232</td><td>Write a shared manifest payload for contract-level callers.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_fill</code></td><td>BacktestArtifactWriter:244</td><td>Perform write_fill.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_trade_ledger</code></td><td>BacktestArtifactWriter:248</td><td>Perform write_trade_ledger.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_equity_point</code></td><td>BacktestArtifactWriter:273</td><td>Perform write_equity_point.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>finalize</code></td><td>BacktestArtifactWriter:279</td><td>Perform finalize.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_normalize_dataset_metadata_payload</code></td><td>module:430</td><td>提供模块级 normalize dataset metadata payload 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_normalize_execution_assumptions_payload</code></td><td>module:441</td><td>提供模块级 normalize execution assumptions payload 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_validate_m1_backtest_manifest</code></td><td>module:454</td><td>提供模块级 validate m1 backtest manifest 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_require_manifest_value</code></td><td>module:474</td><td>提供模块级 require manifest value 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>write_position_closed</code></td><td>BacktestArtifactWriter:232</td><td>Route an ``account.position_closed`` event payload into statistics.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_holding_bars_from_payload</code></td><td>BacktestArtifactWriter:251</td><td>Compute the holding period in bars from event timestamps.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>write_manifest</code></td><td>BacktestArtifactWriter:269</td><td>Write a shared manifest payload for contract-level callers.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_fill</code></td><td>BacktestArtifactWriter:281</td><td>Perform write_fill.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_trade_ledger</code></td><td>BacktestArtifactWriter:285</td><td>Perform write_trade_ledger.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_equity_point</code></td><td>BacktestArtifactWriter:310</td><td>Perform write_equity_point.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>finalize</code></td><td>BacktestArtifactWriter:316</td><td>Perform finalize.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_normalize_dataset_metadata_payload</code></td><td>module:467</td><td>提供模块级 normalize dataset metadata payload 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_normalize_execution_assumptions_payload</code></td><td>module:478</td><td>提供模块级 normalize execution assumptions payload 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_validate_m1_backtest_manifest</code></td><td>module:491</td><td>提供模块级 validate m1 backtest manifest 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_require_manifest_value</code></td><td>module:511</td><td>提供模块级 require manifest value 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -8473,7 +8475,7 @@
       <summary>
         <code>backend/src/qts/reporting/statistics.py</code>
         <span class="inventory-counts">
-          <span>4 classes</span>
+          <span>3 classes</span>
           <span>16 functions</span>
         </span>
       </summary>
@@ -8486,9 +8488,8 @@
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
               <tr><td><code>StatisticsPayload</code></td><td>statistics:23</td><td>Stable statistics payload serialized into backtest artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>_OpenTrade</code></td><td>statistics:34</td><td>定义 open trade 概念及其相关状态或行为。</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>_HoldingsSnapshot</code></td><td>statistics:43</td><td>One per-bar holdings snapshot used for exposure averaging.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>StatisticsBuilder</code></td><td>statistics:50</td><td>Incrementally compute return, trade, exposure, and cost statistics.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>_HoldingsSnapshot</code></td><td>statistics:34</td><td>One per-bar holdings snapshot used for exposure averaging.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>StatisticsBuilder</code></td><td>statistics:41</td><td>Incrementally compute return, trade, exposure, and cost statistics.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -8498,21 +8499,21 @@
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
               <tr><td><code>to_payload</code></td><td>StatisticsPayload:28</td><td>Return a JSON-stable metrics mapping.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>StatisticsBuilder:53</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>on_equity_point</code></td><td>StatisticsBuilder:73</td><td>Ingest one equity observation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_fill</code></td><td>StatisticsBuilder:103</td><td>Ingest one fill row for costs and round-trip trade statistics.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_position_close</code></td><td>StatisticsBuilder:165</td><td>Ingest an explicit holding close event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_holdings_snapshot</code></td><td>StatisticsBuilder:170</td><td>Ingest one per-bar holdings snapshot for exposure averaging.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>finalize</code></td><td>StatisticsBuilder:188</td><td>Return final statistics payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_benchmark_returns_or_none</code></td><td>StatisticsBuilder:257</td><td>实现 StatisticsBuilder 的 benchmark returns or none 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_exposure_metrics</code></td><td>StatisticsBuilder:270</td><td>实现 StatisticsBuilder 的 exposure metrics 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_mean</code></td><td>module:293</td><td>提供模块级 mean 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_stddev</code></td><td>module:299</td><td>提供模块级 stddev 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_ratio</code></td><td>module:309</td><td>提供模块级 ratio 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_compound_annual_return</code></td><td>module:315</td><td>提供模块级 compound annual return 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_probabilistic_sharpe_ratio</code></td><td>module:326</td><td>Compute López de Prado&#x27;s Probabilistic Sharpe Ratio with SR_benchmark = 0.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_benchmark_metrics</code></td><td>module:354</td><td>提供模块级 benchmark metrics 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>payload_from_json</code></td><td>module:397</td><td>Rehydrate a statistics payload from JSON-compatible data.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>__init__</code></td><td>StatisticsBuilder:44</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>on_equity_point</code></td><td>StatisticsBuilder:64</td><td>Ingest one equity observation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_fill</code></td><td>StatisticsBuilder:94</td><td>Ingest one fill row.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_position_close</code></td><td>StatisticsBuilder:120</td><td>Ingest one holding close event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_holdings_snapshot</code></td><td>StatisticsBuilder:138</td><td>Ingest one per-bar holdings snapshot for exposure averaging.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>finalize</code></td><td>StatisticsBuilder:156</td><td>Return final statistics payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_benchmark_returns_or_none</code></td><td>StatisticsBuilder:225</td><td>实现 StatisticsBuilder 的 benchmark returns or none 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_exposure_metrics</code></td><td>StatisticsBuilder:238</td><td>实现 StatisticsBuilder 的 exposure metrics 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_mean</code></td><td>module:261</td><td>提供模块级 mean 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_stddev</code></td><td>module:267</td><td>提供模块级 stddev 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_ratio</code></td><td>module:277</td><td>提供模块级 ratio 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_compound_annual_return</code></td><td>module:283</td><td>提供模块级 compound annual return 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_probabilistic_sharpe_ratio</code></td><td>module:294</td><td>Compute López de Prado&#x27;s Probabilistic Sharpe Ratio with SR_benchmark = 0.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_benchmark_metrics</code></td><td>module:322</td><td>提供模块级 benchmark metrics 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>payload_from_json</code></td><td>module:365</td><td>Rehydrate a statistics payload from JSON-compatible data.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10830,11 +10831,11 @@
               <tr><td><code>__init__</code></td><td>BacktestRuntimeEventSink:22</td><td>Create a backtest sink for runtime events and derived artifacts.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>order_count</code></td><td>BacktestRuntimeEventSink:35</td><td>Perform order_count.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>write</code></td><td>BacktestRuntimeEventSink:39</td><td>Write one normalized runtime event envelope.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_processed</code></td><td>BacktestRuntimeEventSink:58</td><td>Perform write_processed.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_equity_point</code></td><td>BacktestRuntimeEventSink:74</td><td>Perform write_equity_point.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_ledger_rows</code></td><td>BacktestRuntimeEventSink:79</td><td>Perform _ledger_rows.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_order_payload</code></td><td>BacktestRuntimeEventSink:97</td><td>Perform _order_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_fill_payload</code></td><td>BacktestRuntimeEventSink:110</td><td>Perform _fill_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>write_processed</code></td><td>BacktestRuntimeEventSink:60</td><td>Perform write_processed.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_equity_point</code></td><td>BacktestRuntimeEventSink:76</td><td>Perform write_equity_point.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_ledger_rows</code></td><td>BacktestRuntimeEventSink:81</td><td>Perform _ledger_rows.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_order_payload</code></td><td>BacktestRuntimeEventSink:99</td><td>Perform _order_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_fill_payload</code></td><td>BacktestRuntimeEventSink:112</td><td>Perform _fill_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>

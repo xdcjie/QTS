@@ -30,15 +30,6 @@ class StatisticsPayload:
         return dict(self.metrics)
 
 
-@dataclass(slots=True)
-class _OpenTrade:
-    instrument_id: str
-    side: str
-    quantity: Decimal
-    price: Decimal
-    opened_index: int
-
-
 @dataclass(frozen=True, slots=True)
 class _HoldingsSnapshot:
     """One per-bar holdings snapshot used for exposure averaging."""
@@ -61,7 +52,7 @@ class StatisticsBuilder:
         self._max_drawdown_duration = 0
         self._returns: list[Decimal] = []
         self._equity_points: list[Decimal] = []
-        self._open_trades: dict[str, _OpenTrade] = {}
+        self._open_instruments: set[str] = set()
         self._closed_pnls: list[Decimal] = []
         self._holding_bars: list[int] = []
         self._total_orders = 0
@@ -80,7 +71,7 @@ class StatisticsBuilder:
             self._peak = equity
         if self._previous is not None and self._previous != Decimal("0"):
             self._returns.append((equity - self._previous) / self._previous)
-        if self._open_trades:
+        if self._open_instruments:
             self._occupied_bars += 1
         assert self._peak is not None
         if equity >= self._peak:
@@ -112,60 +103,37 @@ class StatisticsBuilder:
         slippage: Decimal,
         fill_time: datetime,
     ) -> None:
-        """Ingest one fill row for costs and round-trip trade statistics."""
-        _ = order_id, fill_time
+        """Ingest one fill row.
+
+        Records cost (commission, slippage, total_orders) and marks the
+        instrument as held for the ``time_in_market`` exposure counter.
+        Trade-level realized PnL is **not** computed here — it flows through
+        ``on_position_close`` from ``account.position_closed`` events so
+        Holdings stays the single source of truth.
+        """
+        _ = order_id, side, quantity, price, fill_time
         self._total_orders += 1
         self._total_commission += commission
         self._total_slippage += slippage
-        current = self._open_trades.get(instrument_id)
-        normalized_side = side.lower()
-        if current is None:
-            self._open_trades[instrument_id] = _OpenTrade(
-                instrument_id=instrument_id,
-                side=normalized_side,
-                quantity=quantity,
-                price=price,
-                opened_index=self._points,
-            )
-            return
-        if current.side == normalized_side:
-            total_quantity = current.quantity + quantity
-            self._open_trades[instrument_id] = _OpenTrade(
-                instrument_id=instrument_id,
-                side=current.side,
-                quantity=total_quantity,
-                price=((current.quantity * current.price) + (quantity * price)) / total_quantity,
-                opened_index=current.opened_index,
-            )
-            return
-        close_quantity = min(current.quantity, quantity)
-        sign = Decimal("1") if current.side == "buy" else Decimal("-1")
-        self._closed_pnls.append(close_quantity * (price - current.price) * sign)
-        self._holding_bars.append(max(self._points - current.opened_index, 0))
-        remaining = current.quantity - close_quantity
-        if remaining > Decimal("0"):
-            self._open_trades[instrument_id] = _OpenTrade(
-                instrument_id=instrument_id,
-                side=current.side,
-                quantity=remaining,
-                price=current.price,
-                opened_index=current.opened_index,
-            )
-        elif quantity > close_quantity:
-            self._open_trades[instrument_id] = _OpenTrade(
-                instrument_id=instrument_id,
-                side=normalized_side,
-                quantity=quantity - close_quantity,
-                price=price,
-                opened_index=self._points,
-            )
-        else:
-            self._open_trades.pop(instrument_id, None)
+        self._open_instruments.add(instrument_id)
 
-    def on_position_close(self, realized_pnl: Decimal, holding_bars: int) -> None:
-        """Ingest an explicit holding close event."""
+    def on_position_close(
+        self,
+        realized_pnl: Decimal,
+        holding_bars: int,
+        instrument_id: str | None = None,
+    ) -> None:
+        """Ingest one holding close event.
+
+        Appends realized PnL and holding period to the trade-level lists used
+        by the finalize step. When ``instrument_id`` is supplied, clears the
+        open-instrument tracker so ``time_in_market`` stops counting that
+        instrument as held.
+        """
         self._closed_pnls.append(realized_pnl)
         self._holding_bars.append(holding_bars)
+        if instrument_id is not None:
+            self._open_instruments.discard(instrument_id)
 
     def on_holdings_snapshot(
         self,

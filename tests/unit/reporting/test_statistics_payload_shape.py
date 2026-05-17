@@ -71,4 +71,7 @@ def test_statistics_builder_emits_platform_readiness_metric_set() -> None:
     assert "avg_gross_exposure" not in payload
     assert "avg_net_exposure" not in payload
     assert payload["total_orders"] == 2
-    assert payload["total_trades"] == 1
+    # Trades are sourced from on_position_close (i.e. account.position_closed
+    # runtime events), not derived from fill streams; this fixture only feeds
+    # fills, so total_trades is zero.
+    assert payload["total_trades"] == 0

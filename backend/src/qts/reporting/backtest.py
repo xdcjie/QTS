@@ -229,6 +229,43 @@ class BacktestArtifactWriter:
         """Write one runtime snapshot evidence row through the event artifact."""
         self.write_runtime_event({"kind": "runtime.snapshot", "payload": dict(payload)})
 
+    def write_position_closed(self, payload: dict[str, Any]) -> None:
+        """Route an ``account.position_closed`` event payload into statistics.
+
+        ``HoldingBook`` is the single source of trade-level realized PnL;
+        this method translates one event payload into a
+        ``StatisticsBuilder.on_position_close`` call so the builder no
+        longer maintains a parallel fill aggregator.
+        """
+        instrument_id = str(payload["instrument_id"])
+        realized_pnl = Decimal(str(payload["realized_pnl"]))
+        opened_at = payload.get("opened_at")
+        closed_at = payload.get("closed_at")
+        holding_bars = self._holding_bars_from_payload(opened_at, closed_at)
+        self._statistics.on_position_close(
+            realized_pnl=realized_pnl,
+            holding_bars=holding_bars,
+            instrument_id=instrument_id,
+        )
+
+    def _holding_bars_from_payload(self, opened_at: object, closed_at: object) -> int:
+        """Compute the holding period in bars from event timestamps.
+
+        Falls back to ``0`` when the event lacks an open timestamp (e.g. a
+        position opened before the artifact writer started). The conversion
+        uses a one-minute baseline; downstream callers can override via a
+        future ``bar_duration_seconds`` configuration.
+        """
+        if not isinstance(opened_at, str) or not isinstance(closed_at, str):
+            return 0
+        try:
+            opened = datetime.fromisoformat(opened_at)
+            closed = datetime.fromisoformat(closed_at)
+        except ValueError:
+            return 0
+        seconds = (closed - opened).total_seconds()
+        return max(int(seconds // 60), 0)
+
     def write_manifest(self, manifest: RuntimeManifest | dict[str, Any]) -> Path:
         """Write a shared manifest payload for contract-level callers."""
         payload = manifest.to_payload() if isinstance(manifest, RuntimeManifest) else dict(manifest)

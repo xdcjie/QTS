@@ -606,7 +606,7 @@
       <div class="surface class-inventory" aria-label="生产类全量索引">
         <h2>生产类全量索引（按阶段 / 模块）</h2>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">610 classes</span></summary>
+          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">609 classes</span></summary>
           <ul>
           <li><code>qts/api/schemas/backtest_schema.py</code> -> <code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span>, <code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span>, <code>BacktestRunResultSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:24</span>, <code>BacktestStrategyOptionSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:38</span></li>
           <li><code>qts/api/schemas/common.py</code> -> <code>StrategyStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:8</span>, <code>AccountSnapshotSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:15</span>, <code>OrderStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:22</span>, <code>RiskRuleSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:29</span>, <code>OperationalErrorSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:36</span></li>
@@ -743,11 +743,11 @@
           <li><code>qts/registry/providers/comex_gold_calendar_provider.py</code> -> <code>ComexGoldCalendarProvider</code> <span class="location">backend/src/qts/registry/providers/comex_gold_calendar_provider.py:12</span></li>
           <li><code>qts/registry/providers/exchange_calendar_provider.py</code> -> <code>ExchangeCalendarProvider</code> <span class="location">backend/src/qts/registry/providers/exchange_calendar_provider.py:14</span></li>
           <li><code>qts/registry/symbol_resolution.py</code> -> <code>SourceSymbolResolver</code> <span class="location">backend/src/qts/registry/symbol_resolution.py:12</span>, <code>StaticSymbolResolver</code> <span class="location">backend/src/qts/registry/symbol_resolution.py:25</span></li>
-          <li><code>qts/reporting/backtest.py</code> -> <code>EquityCurvePoint</code> <span class="location">backend/src/qts/reporting/backtest.py:93</span>, <code>TradeLedgerEntry</code> <span class="location">backend/src/qts/reporting/backtest.py:101</span>, <code>StreamingEquityMetrics</code> <span class="location">backend/src/qts/reporting/backtest.py:115</span>, <code>BacktestArtifacts</code> <span class="location">backend/src/qts/reporting/backtest.py:155</span>, <code>_NdjsonArtifact</code> <span class="location">backend/src/qts/reporting/backtest.py:164</span>, <code>BacktestArtifactWriter</code> <span class="location">backend/src/qts/reporting/backtest.py:199</span>, <code>BacktestReportWriter</code> <span class="location">backend/src/qts/reporting/backtest.py:426</span></li>
+          <li><code>qts/reporting/backtest.py</code> -> <code>EquityCurvePoint</code> <span class="location">backend/src/qts/reporting/backtest.py:93</span>, <code>TradeLedgerEntry</code> <span class="location">backend/src/qts/reporting/backtest.py:101</span>, <code>StreamingEquityMetrics</code> <span class="location">backend/src/qts/reporting/backtest.py:115</span>, <code>BacktestArtifacts</code> <span class="location">backend/src/qts/reporting/backtest.py:155</span>, <code>_NdjsonArtifact</code> <span class="location">backend/src/qts/reporting/backtest.py:164</span>, <code>BacktestArtifactWriter</code> <span class="location">backend/src/qts/reporting/backtest.py:199</span>, <code>BacktestReportWriter</code> <span class="location">backend/src/qts/reporting/backtest.py:463</span></li>
           <li><code>qts/reporting/backtest_analyst.py</code> -> <code>BacktestReportError</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:16</span>, <code>ArtifactRows</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:21</span>, <code>BacktestReportMetrics</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:33</span>, <code>AnalystBacktestReportArtifacts</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:53</span>, <code>BacktestReportDataset</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:62</span>, <code>BacktestRunReportLoader</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:106</span>, <code>AnalystBacktestReportRenderer</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:247</span>, <code>BacktestPdfExporter</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:455</span>, <code>AnalystBacktestReportGenerator</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:516</span></li>
           <li><code>qts/reporting/base.py</code> -> <code>RuntimeManifest</code> <span class="location">backend/src/qts/reporting/base.py:43</span>, <code>RuntimeManifestRecord</code> <span class="location">backend/src/qts/reporting/base.py:175</span>, <code>ReportWriter</code> <span class="location">backend/src/qts/reporting/base.py:206</span>, <code>RuntimeArtifactWriter</code> <span class="location">backend/src/qts/reporting/base.py:219</span></li>
           <li><code>qts/reporting/broker_runtime.py</code> -> <code>BrokerRuntimeReportManifest</code> <span class="location">backend/src/qts/reporting/broker_runtime.py:31</span>, <code>BrokerRuntimeReportWriter</code> <span class="location">backend/src/qts/reporting/broker_runtime.py:39</span>, <code>BrokerRuntimeEventReporter</code> <span class="location">backend/src/qts/reporting/broker_runtime.py:240</span></li>
-          <li><code>qts/reporting/statistics.py</code> -> <code>StatisticsPayload</code> <span class="location">backend/src/qts/reporting/statistics.py:23</span>, <code>_OpenTrade</code> <span class="location">backend/src/qts/reporting/statistics.py:34</span>, <code>_HoldingsSnapshot</code> <span class="location">backend/src/qts/reporting/statistics.py:43</span>, <code>StatisticsBuilder</code> <span class="location">backend/src/qts/reporting/statistics.py:50</span></li>
+          <li><code>qts/reporting/statistics.py</code> -> <code>StatisticsPayload</code> <span class="location">backend/src/qts/reporting/statistics.py:23</span>, <code>_HoldingsSnapshot</code> <span class="location">backend/src/qts/reporting/statistics.py:34</span>, <code>StatisticsBuilder</code> <span class="location">backend/src/qts/reporting/statistics.py:41</span></li>
           <li><code>qts/research/experiment_manifest.py</code> -> <code>ExperimentManifestConfig</code> <span class="location">backend/src/qts/research/experiment_manifest.py:17</span>, <code>ExperimentManifestResult</code> <span class="location">backend/src/qts/research/experiment_manifest.py:55</span>, <code>ExperimentManifestWriter</code> <span class="location">backend/src/qts/research/experiment_manifest.py:62</span></li>
           <li><code>qts/risk/config.py</code> -> <code>RiskRuleConfig</code> <span class="location">backend/src/qts/risk/config.py:15</span>, <code>RiskConfig</code> <span class="location">backend/src/qts/risk/config.py:43</span></li>
           <li><code>qts/risk/kill_switch.py</code> -> <code>KillSwitchScopeType</code> <span class="location">backend/src/qts/risk/kill_switch.py:12</span>, <code>KillSwitchScope</code> <span class="location">backend/src/qts/risk/kill_switch.py:22</span>, <code>KillSwitchState</code> <span class="location">backend/src/qts/risk/kill_switch.py:54</span>, <code>RuntimeKillSwitchCommand</code> <span class="location">backend/src/qts/risk/kill_switch.py:63</span>, <code>KillSwitchRegistry</code> <span class="location">backend/src/qts/risk/kill_switch.py:78</span></li>
@@ -830,7 +830,7 @@
           </ul>
         </details>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">610 classes</span></summary>
+          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">609 classes</span></summary>
           <ul class="method-index">
           <li><code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span> -> <span class="muted">no public/core methods</span></li>
@@ -1222,8 +1222,8 @@
           <li><code>StreamingEquityMetrics</code> <span class="location">backend/src/qts/reporting/backtest.py:115</span> -> <code>__init__():118</code>, <code>update():126</code>, <code>to_payload():143</code></li>
           <li><code>BacktestArtifacts</code> <span class="location">backend/src/qts/reporting/backtest.py:155</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>_NdjsonArtifact</code> <span class="location">backend/src/qts/reporting/backtest.py:164</span> -> <code>__init__():167</code>, <code>write():174</code>, <code>close():189</code>, <code>content_hash property:194</code></li>
-          <li><code>BacktestArtifactWriter</code> <span class="location">backend/src/qts/reporting/backtest.py:199</span> -> <code>__init__():204</code>, <code>write_order():216</code>, <code>write_runtime_event():220</code>, <code>write_event():224</code>, <code>write_snapshot():228</code>, <code>write_manifest():232</code>, <code>write_fill():244</code>, <code>write_trade_ledger():248</code>, <code>write_equity_point():273</code>, <code>finalize():279</code></li>
-          <li><code>BacktestReportWriter</code> <span class="location">backend/src/qts/reporting/backtest.py:426</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>BacktestArtifactWriter</code> <span class="location">backend/src/qts/reporting/backtest.py:199</span> -> <code>__init__():204</code>, <code>write_order():216</code>, <code>write_runtime_event():220</code>, <code>write_event():224</code>, <code>write_snapshot():228</code>, <code>write_position_closed():232</code>, <code>write_manifest():269</code>, <code>write_fill():281</code>, <code>write_trade_ledger():285</code>, <code>write_equity_point():310</code>, <code>finalize():316</code></li>
+          <li><code>BacktestReportWriter</code> <span class="location">backend/src/qts/reporting/backtest.py:463</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>BacktestReportError</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:16</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>ArtifactRows</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:21</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>BacktestReportMetrics</code> <span class="location">backend/src/qts/reporting/backtest_analyst.py:33</span> -> <span class="muted">no public/core methods</span></li>
@@ -1241,9 +1241,8 @@
           <li><code>BrokerRuntimeReportWriter</code> <span class="location">backend/src/qts/reporting/broker_runtime.py:39</span> -> <code>__init__():42</code>, <code>write_manifest():47</code>, <code>finalize():190</code></li>
           <li><code>BrokerRuntimeEventReporter</code> <span class="location">backend/src/qts/reporting/broker_runtime.py:240</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>StatisticsPayload</code> <span class="location">backend/src/qts/reporting/statistics.py:23</span> -> <code>to_payload():28</code></li>
-          <li><code>_OpenTrade</code> <span class="location">backend/src/qts/reporting/statistics.py:34</span> -> <span class="muted">no public/core methods</span></li>
-          <li><code>_HoldingsSnapshot</code> <span class="location">backend/src/qts/reporting/statistics.py:43</span> -> <span class="muted">no public/core methods</span></li>
-          <li><code>StatisticsBuilder</code> <span class="location">backend/src/qts/reporting/statistics.py:50</span> -> <code>__init__():53</code>, <code>on_equity_point():73</code>, <code>on_fill():103</code>, <code>on_position_close():165</code>, <code>on_holdings_snapshot():170</code>, <code>finalize():188</code></li>
+          <li><code>_HoldingsSnapshot</code> <span class="location">backend/src/qts/reporting/statistics.py:34</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>StatisticsBuilder</code> <span class="location">backend/src/qts/reporting/statistics.py:41</span> -> <code>__init__():44</code>, <code>on_equity_point():64</code>, <code>on_fill():94</code>, <code>on_position_close():120</code>, <code>on_holdings_snapshot():138</code>, <code>finalize():156</code></li>
           <li><code>ExperimentManifestConfig</code> <span class="location">backend/src/qts/research/experiment_manifest.py:17</span> -> <code>__post_init__():29</code>, <code>config_hash property:35</code></li>
           <li><code>ExperimentManifestResult</code> <span class="location">backend/src/qts/research/experiment_manifest.py:55</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>ExperimentManifestWriter</code> <span class="location">backend/src/qts/research/experiment_manifest.py:62</span> -> <code>__init__():65</code>, <code>write_manifest():68</code></li>
@@ -1382,7 +1381,7 @@
           <li><code>SignalConflict</code> <span class="location">backend/src/qts/runtime/signal_policy.py:48</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>SignalAggregationDecision</code> <span class="location">backend/src/qts/runtime/signal_policy.py:57</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>SignalPolicyEngine</code> <span class="location">backend/src/qts/runtime/signal_policy.py:70</span> -> <code>__init__():73</code>, <code>aggregate():77</code></li>
-          <li><code>BacktestRuntimeEventSink</code> <span class="location">backend/src/qts/runtime/sinks/backtest.py:17</span> -> <code>__init__():22</code>, <code>order_count property:35</code>, <code>write():39</code>, <code>write_processed():58</code>, <code>write_equity_point():74</code></li>
+          <li><code>BacktestRuntimeEventSink</code> <span class="location">backend/src/qts/runtime/sinks/backtest.py:17</span> -> <code>__init__():22</code>, <code>order_count property:35</code>, <code>write():39</code>, <code>write_processed():60</code>, <code>write_equity_point():76</code></li>
           <li><code>RuntimeEvent</code> <span class="location">backend/src/qts/runtime/sinks/base.py:27</span> -> <code>__post_init__():49</code>, <code>to_envelope():67</code>, <code>require_canonical_envelope():130</code></li>
           <li><code>RuntimeEventWriteResult</code> <span class="location">backend/src/qts/runtime/sinks/base.py:154</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>RuntimeEventContext</code> <span class="location">backend/src/qts/runtime/sinks/base.py:162</span> -> <code>__post_init__():171</code>, <code>apply():181</code></li>
@@ -3125,8 +3124,8 @@
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>341 files</span>
-      <span>612 classes</span>
-      <span>2018 functions</span>
+      <span>611 classes</span>
+      <span>2020 functions</span>
       <span>324 backend</span>
       <span>17 frontend</span>
     </div>
@@ -9938,7 +9937,7 @@
         <code>backend/src/qts/reporting/backtest.py</code>
         <span class="inventory-counts">
           <span>7 classes</span>
-          <span>25 functions</span>
+          <span>27 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -9955,7 +9954,7 @@
               <tr><td><code>BacktestArtifacts</code></td><td>backtest:155</td><td>Final paths and row counts for streamed backtest artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
               <tr><td><code>_NdjsonArtifact</code></td><td>backtest:164</td><td>_NdjsonArtifact.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
               <tr><td><code>BacktestArtifactWriter</code></td><td>backtest:199</td><td>Write large backtest outputs as line-delimited artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BacktestReportWriter</code></td><td>backtest:426</td><td>Backtest report writer for partitioned artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestReportWriter</code></td><td>backtest:463</td><td>Backtest report writer for partitioned artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -9980,15 +9979,17 @@
               <tr><td><code>write_runtime_event</code></td><td>BacktestArtifactWriter:220</td><td>Write one normalized runtime event envelope.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>write_event</code></td><td>BacktestArtifactWriter:224</td><td>Write one normalized runtime event through the artifact contract.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>write_snapshot</code></td><td>BacktestArtifactWriter:228</td><td>Write one runtime snapshot evidence row through the event artifact.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_manifest</code></td><td>BacktestArtifactWriter:232</td><td>Write a shared manifest payload for contract-level callers.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_fill</code></td><td>BacktestArtifactWriter:244</td><td>Perform write_fill.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_trade_ledger</code></td><td>BacktestArtifactWriter:248</td><td>Perform write_trade_ledger.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_equity_point</code></td><td>BacktestArtifactWriter:273</td><td>Perform write_equity_point.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>finalize</code></td><td>BacktestArtifactWriter:279</td><td>Perform finalize.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_normalize_dataset_metadata_payload</code></td><td>module:430</td><td>提供模块级 normalize dataset metadata payload 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_normalize_execution_assumptions_payload</code></td><td>module:441</td><td>提供模块级 normalize execution assumptions payload 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_validate_m1_backtest_manifest</code></td><td>module:454</td><td>提供模块级 validate m1 backtest manifest 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_require_manifest_value</code></td><td>module:474</td><td>提供模块级 require manifest value 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>write_position_closed</code></td><td>BacktestArtifactWriter:232</td><td>Route an ``account.position_closed`` event payload into statistics.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_holding_bars_from_payload</code></td><td>BacktestArtifactWriter:251</td><td>Compute the holding period in bars from event timestamps.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>write_manifest</code></td><td>BacktestArtifactWriter:269</td><td>Write a shared manifest payload for contract-level callers.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_fill</code></td><td>BacktestArtifactWriter:281</td><td>Perform write_fill.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_trade_ledger</code></td><td>BacktestArtifactWriter:285</td><td>Perform write_trade_ledger.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_equity_point</code></td><td>BacktestArtifactWriter:310</td><td>Perform write_equity_point.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>finalize</code></td><td>BacktestArtifactWriter:316</td><td>Perform finalize.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_normalize_dataset_metadata_payload</code></td><td>module:467</td><td>提供模块级 normalize dataset metadata payload 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_normalize_execution_assumptions_payload</code></td><td>module:478</td><td>提供模块级 normalize execution assumptions payload 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_validate_m1_backtest_manifest</code></td><td>module:491</td><td>提供模块级 validate m1 backtest manifest 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_require_manifest_value</code></td><td>module:511</td><td>提供模块级 require manifest value 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10153,7 +10154,7 @@
       <summary>
         <code>backend/src/qts/reporting/statistics.py</code>
         <span class="inventory-counts">
-          <span>4 classes</span>
+          <span>3 classes</span>
           <span>16 functions</span>
         </span>
       </summary>
@@ -10166,9 +10167,8 @@
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
               <tr><td><code>StatisticsPayload</code></td><td>statistics:23</td><td>Stable statistics payload serialized into backtest artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>_OpenTrade</code></td><td>statistics:34</td><td>定义 open trade 概念及其相关状态或行为。</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>_HoldingsSnapshot</code></td><td>statistics:43</td><td>One per-bar holdings snapshot used for exposure averaging.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>StatisticsBuilder</code></td><td>statistics:50</td><td>Incrementally compute return, trade, exposure, and cost statistics.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>_HoldingsSnapshot</code></td><td>statistics:34</td><td>One per-bar holdings snapshot used for exposure averaging.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>StatisticsBuilder</code></td><td>statistics:41</td><td>Incrementally compute return, trade, exposure, and cost statistics.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10178,21 +10178,21 @@
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
               <tr><td><code>to_payload</code></td><td>StatisticsPayload:28</td><td>Return a JSON-stable metrics mapping.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>StatisticsBuilder:53</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>on_equity_point</code></td><td>StatisticsBuilder:73</td><td>Ingest one equity observation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_fill</code></td><td>StatisticsBuilder:103</td><td>Ingest one fill row for costs and round-trip trade statistics.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_position_close</code></td><td>StatisticsBuilder:165</td><td>Ingest an explicit holding close event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_holdings_snapshot</code></td><td>StatisticsBuilder:170</td><td>Ingest one per-bar holdings snapshot for exposure averaging.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>finalize</code></td><td>StatisticsBuilder:188</td><td>Return final statistics payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_benchmark_returns_or_none</code></td><td>StatisticsBuilder:257</td><td>实现 StatisticsBuilder 的 benchmark returns or none 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_exposure_metrics</code></td><td>StatisticsBuilder:270</td><td>实现 StatisticsBuilder 的 exposure metrics 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_mean</code></td><td>module:293</td><td>提供模块级 mean 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_stddev</code></td><td>module:299</td><td>提供模块级 stddev 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_ratio</code></td><td>module:309</td><td>提供模块级 ratio 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_compound_annual_return</code></td><td>module:315</td><td>提供模块级 compound annual return 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_probabilistic_sharpe_ratio</code></td><td>module:326</td><td>Compute López de Prado&#x27;s Probabilistic Sharpe Ratio with SR_benchmark = 0.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_benchmark_metrics</code></td><td>module:354</td><td>提供模块级 benchmark metrics 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>payload_from_json</code></td><td>module:397</td><td>Rehydrate a statistics payload from JSON-compatible data.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>__init__</code></td><td>StatisticsBuilder:44</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>on_equity_point</code></td><td>StatisticsBuilder:64</td><td>Ingest one equity observation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_fill</code></td><td>StatisticsBuilder:94</td><td>Ingest one fill row.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_position_close</code></td><td>StatisticsBuilder:120</td><td>Ingest one holding close event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_holdings_snapshot</code></td><td>StatisticsBuilder:138</td><td>Ingest one per-bar holdings snapshot for exposure averaging.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>finalize</code></td><td>StatisticsBuilder:156</td><td>Return final statistics payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_benchmark_returns_or_none</code></td><td>StatisticsBuilder:225</td><td>实现 StatisticsBuilder 的 benchmark returns or none 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_exposure_metrics</code></td><td>StatisticsBuilder:238</td><td>实现 StatisticsBuilder 的 exposure metrics 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_mean</code></td><td>module:261</td><td>提供模块级 mean 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_stddev</code></td><td>module:267</td><td>提供模块级 stddev 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_ratio</code></td><td>module:277</td><td>提供模块级 ratio 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_compound_annual_return</code></td><td>module:283</td><td>提供模块级 compound annual return 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_probabilistic_sharpe_ratio</code></td><td>module:294</td><td>Compute López de Prado&#x27;s Probabilistic Sharpe Ratio with SR_benchmark = 0.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_benchmark_metrics</code></td><td>module:322</td><td>提供模块级 benchmark metrics 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>payload_from_json</code></td><td>module:365</td><td>Rehydrate a statistics payload from JSON-compatible data.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
             </tbody>
           </table>
         </div>
@@ -12510,11 +12510,11 @@
               <tr><td><code>__init__</code></td><td>BacktestRuntimeEventSink:22</td><td>Create a backtest sink for runtime events and derived artifacts.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>order_count</code></td><td>BacktestRuntimeEventSink:35</td><td>Perform order_count.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>write</code></td><td>BacktestRuntimeEventSink:39</td><td>Write one normalized runtime event envelope.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_processed</code></td><td>BacktestRuntimeEventSink:58</td><td>Perform write_processed.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>write_equity_point</code></td><td>BacktestRuntimeEventSink:74</td><td>Perform write_equity_point.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_ledger_rows</code></td><td>BacktestRuntimeEventSink:79</td><td>Perform _ledger_rows.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_order_payload</code></td><td>BacktestRuntimeEventSink:97</td><td>Perform _order_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_fill_payload</code></td><td>BacktestRuntimeEventSink:110</td><td>Perform _fill_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>write_processed</code></td><td>BacktestRuntimeEventSink:60</td><td>Perform write_processed.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write_equity_point</code></td><td>BacktestRuntimeEventSink:76</td><td>Perform write_equity_point.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_ledger_rows</code></td><td>BacktestRuntimeEventSink:81</td><td>Perform _ledger_rows.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_order_payload</code></td><td>BacktestRuntimeEventSink:99</td><td>Perform _order_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_fill_payload</code></td><td>BacktestRuntimeEventSink:112</td><td>Perform _fill_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>

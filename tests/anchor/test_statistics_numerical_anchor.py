@@ -137,6 +137,9 @@ def test_time_in_market_counts_bars_with_open_position() -> None:
                 fill_time=start + timedelta(minutes=index),
             )
         if index == 3:
+            # Closing fill is paired with a PositionClosed event from
+            # HoldingBook; the builder removes the instrument from the open
+            # set so subsequent bars are not counted as occupied.
             builder.on_fill(
                 order_id="o-2",
                 instrument_id="AAPL",
@@ -147,12 +150,16 @@ def test_time_in_market_counts_bars_with_open_position() -> None:
                 slippage=Decimal("0"),
                 fill_time=start + timedelta(minutes=index),
             )
+            builder.on_position_close(
+                realized_pnl=Decimal("0"),
+                holding_bars=2,
+                instrument_id="AAPL",
+            )
 
     payload = builder.finalize(trading_bars=6, bars_per_year=Decimal("252")).to_payload()
 
-    # Open at bar index 1, closed at bar index 3, so bars 2,3 had open position.
-    # Definition: count bars where any open trade existed at the start of the
-    # bar; that's bars 2 and 3 → 2 / 6 ≈ 0.333.
+    # Open at bar index 1 (after equity point); occupied at bar starts 2, 3.
+    # Closed at index 3 → bars 4, 5 empty.
     assert float(payload["time_in_market"]) == pytest.approx(2.0 / 6.0, abs=1e-6)
 
 
