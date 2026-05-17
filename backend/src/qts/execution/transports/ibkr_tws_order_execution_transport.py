@@ -249,7 +249,7 @@ class IbkrOrderRequest:
             child.transmit = self.what_if or index == len(self.bracket_legs) - 1
             child.outsideRth = self.outside_regular_trading_hours
             child.whatIf = self.what_if
-            _apply_bracket_leg_price(child, leg)
+            self._apply_bracket_leg_price(child, leg)
             children.append(child)
 
         return (parent, *children)
@@ -258,6 +258,29 @@ class IbkrOrderRequest:
     def _new_order() -> Any:
         order_class = _ibapi_attr("ibapi.order", "Order")
         return order_class()
+
+    @staticmethod
+    def _apply_bracket_leg_price(order: Any, leg: BracketLeg) -> None:
+        if leg.order_type is BrokerOrderType.LIMIT:
+            if leg.limit_price is None:
+                raise ValueError("limit bracket legs require limit_price")
+            order.orderType = "LMT"
+            order.lmtPrice = float(leg.limit_price)
+            return
+        if leg.order_type is BrokerOrderType.STOP:
+            if leg.stop_price is None:
+                raise ValueError("stop bracket legs require stop_price")
+            order.orderType = "STP"
+            order.auxPrice = float(leg.stop_price)
+            return
+        if leg.order_type is BrokerOrderType.STOP_LIMIT:
+            if leg.stop_price is None or leg.limit_price is None:
+                raise ValueError("stop_limit bracket legs require stop_price and limit_price")
+            order.orderType = "STP LMT"
+            order.auxPrice = float(leg.stop_price)
+            order.lmtPrice = float(leg.limit_price)
+            return
+        raise ValueError(f"unsupported bracket leg order type: {leg.order_type.value}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -1030,29 +1053,6 @@ def _connect_ibapi_app(
 
 def _to_decimal(value: object) -> Decimal:
     return Decimal(str(value))
-
-
-def _apply_bracket_leg_price(order: Any, leg: BracketLeg) -> None:
-    if leg.order_type is BrokerOrderType.LIMIT:
-        if leg.limit_price is None:
-            raise ValueError("limit bracket legs require limit_price")
-        order.orderType = "LMT"
-        order.lmtPrice = float(leg.limit_price)
-        return
-    if leg.order_type is BrokerOrderType.STOP:
-        if leg.stop_price is None:
-            raise ValueError("stop bracket legs require stop_price")
-        order.orderType = "STP"
-        order.auxPrice = float(leg.stop_price)
-        return
-    if leg.order_type is BrokerOrderType.STOP_LIMIT:
-        if leg.stop_price is None or leg.limit_price is None:
-            raise ValueError("stop_limit bracket legs require stop_price and limit_price")
-        order.orderType = "STP LMT"
-        order.auxPrice = float(leg.stop_price)
-        order.lmtPrice = float(leg.limit_price)
-        return
-    raise ValueError(f"unsupported bracket leg order type: {leg.order_type.value}")
 
 
 def _format_error(error: IbkrTransportError) -> str:

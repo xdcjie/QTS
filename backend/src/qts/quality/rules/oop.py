@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ast
 from pathlib import Path
+from typing import cast
 
 from qts.quality.guardrails import (
     GuardrailViolation,
@@ -11,8 +12,32 @@ from qts.quality.guardrails import (
     _check_backtest_engine_cohesion,
     _check_backtest_input_cohesion,
     _check_backtest_runner_cohesion,
-    _check_oop_helper_ownership,
-    _check_oop_public_factory_functions,
+)
+
+OOP_FACTORY_FUNCTION_PREFIXES = ("build_", "create_", "load_", "make_")
+OOP_CLASS_OWNED_HELPER_PREFIXES = (
+    "_apply",
+    "_map",
+    "_normalize",
+    "_parse",
+    "_render",
+    "_require",
+    "_select",
+    "_validate",
+)
+OOP_PUBLIC_FACTORY_ALLOWED = frozenset(
+    {
+        ("api/app.py", "create_app"),  # FastAPI framework entrypoint.
+        ("observability/logging.py", "build_log_record"),  # pure DTO transformation.
+    }
+)
+OOP_HELPER_OWNERSHIP_ALLOWED_FILES = frozenset(
+    {
+        "config/ibkr.py",
+        "data/bars/alignment.py",
+        "data/sessions/filter.py",
+        "observability/logging.py",
+    }
 )
 
 
@@ -46,6 +71,111 @@ class OOPHelperOwnershipRule:
     ) -> list[GuardrailViolation]:
         """Perform check."""
         return _check_oop_helper_ownership(relative_path, qts_relative_path, tree)
+
+
+def _check_oop_public_factory_functions(
+    relative_path: Path,
+    qts_relative_path: Path,
+    tree: ast.AST,
+) -> list[GuardrailViolation]:
+    module_path = qts_relative_path.as_posix()
+    violations: list[GuardrailViolation] = []
+    module = cast(ast.Module, tree)
+    for node in module.body:
+        if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        if node.name.startswith("_"):
+            continue
+        if not node.name.startswith(OOP_FACTORY_FUNCTION_PREFIXES):
+            continue
+        if (module_path, node.name) in OOP_PUBLIC_FACTORY_ALLOWED:
+            continue
+        violations.append(
+            GuardrailViolation(
+                code="OOP_PUBLIC_FACTORY_FUNCTION",
+                path=str(relative_path),
+                line=node.lineno,
+                message=(
+                    "stable concept construction belongs on the owning class or config object, "
+                    f"not module-level factory function {node.name}"
+                ),
+            )
+        )
+    return violations
+
+
+def _check_oop_helper_ownership(
+    relative_path: Path,
+    qts_relative_path: Path,
+    tree: ast.AST,
+) -> list[GuardrailViolation]:
+    module_path = qts_relative_path.as_posix()
+    if module_path in OOP_HELPER_OWNERSHIP_ALLOWED_FILES:
+        return []
+    module = cast(ast.Module, tree)
+    public_classes = [
+        node
+        for node in module.body
+        if isinstance(node, ast.ClassDef) and not node.name.startswith("_")
+    ]
+    public_functions = [
+        node
+        for node in module.body
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+        and not node.name.startswith("_")
+    ]
+    private_functions = [
+        node
+        for node in module.body
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef) and node.name.startswith("_")
+    ]
+    if public_functions or not private_functions:
+        return []
+    if len(public_classes) == 1:
+        return [
+            GuardrailViolation(
+                code="OOP_HELPER_OWNERSHIP",
+                path=str(relative_path),
+                line=node.lineno,
+                message=(
+                    "module-private helper next to a single public class should be owned by "
+                    f"{public_classes[0].name}: {node.name}"
+                ),
+            )
+            for node in private_functions
+        ]
+    if len(public_classes) < 2:
+        return []
+    violations: list[GuardrailViolation] = []
+    for node in private_functions:
+        if not node.name.startswith(OOP_CLASS_OWNED_HELPER_PREFIXES):
+            continue
+        owner_classes = [
+            class_node.name
+            for class_node in public_classes
+            if _node_references_name(class_node, node.name)
+        ]
+        if len(owner_classes) != 1:
+            continue
+        violations.append(
+            GuardrailViolation(
+                code="OOP_HELPER_OWNERSHIP",
+                path=str(relative_path),
+                line=node.lineno,
+                message=(
+                    "module-private helper used by one public class should be owned by "
+                    f"{owner_classes[0]}: {node.name}"
+                ),
+            )
+        )
+    return violations
+
+
+def _node_references_name(node: ast.AST, name: str) -> bool:
+    return any(
+        isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load) and child.id == name
+        for child in ast.walk(node)
+    )
 
 
 class BacktestRunnerCohesionRule:

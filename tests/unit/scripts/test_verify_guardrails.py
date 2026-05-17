@@ -408,6 +408,27 @@ def test_guardrails_reject_private_helper_owned_by_one_class_in_multi_class_modu
     assert _codes(root) == {"OOP_HELPER_OWNERSHIP"}
 
 
+def test_guardrails_reject_apply_helper_owned_by_one_class_in_multi_class_module(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/domain/widget.py",
+        "class WidgetConfig:\n"
+        "    pass\n\n"
+        "class Widget:\n"
+        "    def __init__(self, payload: str) -> None:\n"
+        "        self.payload = payload\n\n"
+        "    def render(self) -> str:\n"
+        "        return _apply_payload(self.payload)\n\n"
+        "def _apply_payload(payload: str) -> str:\n"
+        "    return payload.strip()\n",
+    )
+
+    assert _codes(root) == {"OOP_HELPER_OWNERSHIP"}
+
+
 def test_guardrails_allow_class_owned_private_helper(
     tmp_path: Path,
 ) -> None:
