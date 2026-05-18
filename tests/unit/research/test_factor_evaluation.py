@@ -53,6 +53,42 @@ def test_factor_evaluation_computes_rank_ic_and_bucket_spread() -> None:
     assert evaluation.metrics.return_count == 3
 
 
+def test_factor_evaluation_long_short_spread_uses_bucket_average_returns() -> None:
+    aaa = Asset("AAA")
+    bbb = Asset("BBB")
+    ccc = Asset("CCC")
+    ddd = Asset("DDD")
+    eee = Asset("EEE")
+    fff = Asset("FFF")
+
+    evaluation = FactorEvaluation.evaluate(
+        FactorEvaluationInput(
+            as_of=date(2026, 1, 2),
+            factor_name="momentum",
+            factor_version="1",
+            factor_result=_factor_result(
+                (aaa, "6"),
+                (bbb, "5"),
+                (ccc, "4"),
+                (ddd, "3"),
+                (eee, "2"),
+                (fff, "1"),
+            ),
+            forward_returns={
+                aaa.symbol: Decimal("0.10"),
+                bbb.symbol: Decimal("0.00"),
+                ccc.symbol: Decimal("0.02"),
+                ddd.symbol: Decimal("0.01"),
+                eee.symbol: Decimal("-0.01"),
+                fff.symbol: Decimal("-0.03"),
+            },
+            bucket_count=3,
+        )
+    )
+
+    assert evaluation.metrics.long_short_spread == Decimal("0.07")
+
+
 def test_factor_evaluation_records_coverage_and_missing_forward_returns() -> None:
     aaa = Asset("AAA")
     bbb = Asset("BBB")
@@ -447,3 +483,24 @@ def test_factor_evaluation_artifact_is_stable_json(tmp_path: Path) -> None:
             "turnover": "0.5",
         },
     }
+
+
+def test_factor_evaluation_artifact_rejects_path_like_identity(tmp_path: Path) -> None:
+    writer = FactorEvaluationArtifactWriter(tmp_path)
+    result = FactorEvaluationResult(
+        as_of=date(2026, 1, 2),
+        factor_name="momentum/unsafe",
+        factor_version="1",
+        metrics=FactorEvaluationMetrics(
+            rank_ic=Decimal("1"),
+            long_short_spread=Decimal("0.05"),
+            coverage=Decimal("1"),
+            turnover=None,
+            scored_count=3,
+            return_count=3,
+            missing_symbols=(),
+        ),
+    )
+
+    with pytest.raises(ValueError, match="factor_name must be filename-safe"):
+        writer.write(result)

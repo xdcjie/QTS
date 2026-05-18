@@ -83,3 +83,24 @@ stringified implicitly.
 validation summary after the existing optimizer runner returns ranked results.
 The flag does not change factory resolution, `BacktestPipelineRunner`, manifest
 generation, result ranking, or the human-readable ranked table.
+
+Configs may include optional validation evidence:
+
+```yaml
+validation:
+  constraints:
+    - metric: total_return
+      operator: ">="
+      threshold: "0.05"
+  walk_forward:
+    splits:
+      - name: split-1
+        train_start: "2026-01-01"
+        train_end: "2026-01-15"
+        test_start: "2026-01-15"
+        test_end: "2026-01-31"
+```
+
+When present, the CLI applies constraints to the validation summary and records
+walk-forward split metadata. Without `validation`, the summary remains
+unconstrained and accepts every completed optimizer result.

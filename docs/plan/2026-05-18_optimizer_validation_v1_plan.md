@@ -33,7 +33,8 @@ Forbidden shortcut:
 Required gates / verification:
 
 - Unit tests for constraints and split definitions.
-- Integration test proving CLI writes validation summary artifacts.
+- Integration tests proving the CLI writes validation summary artifacts and applies
+  configured validation constraints/walk-forward metadata.
 - Existing optimizer integration tests still pass.
 - `make guardrails`, `make test-unit`, and `make test-integration`.
 
@@ -45,7 +46,7 @@ Required gates / verification:
 | `backend/src/qts/research/optimizer/walk_forward.py` | Create | Deterministic train/test split value objects |
 | `backend/src/qts/research/optimizer/validation.py` | Create | Validation summary artifact payload and writer |
 | `backend/src/qts/research/optimizer/__init__.py` | Modify | Export public optimizer validation APIs |
-| `scripts/run_optimizer.py` | Modify | Optional `--validation-output` path; no execution-path rewrite |
+| `scripts/run_optimizer.py` | Modify | Optional `--validation-output` path and optional `validation:` config parsing; no execution-path rewrite |
 | `docs/research/optimizer_validation_v1.md` | Create | Durable validation contract |
 | `tests/unit/research/test_optimizer_constraints.py` | Create | Constraint behavior |
 | `tests/unit/research/test_optimizer_walk_forward.py` | Create | Split validation |

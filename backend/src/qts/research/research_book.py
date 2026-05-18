@@ -6,15 +6,16 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from qts.core.time import TimeInterval, require_aware_datetime
-from qts.data.historical.catalog import HistoricalCatalog, HistoricalCatalogLoadConfig
-from qts.data.historical.csv_dataset import iter_historical_bars
+from qts.data.bars.pipeline import BarAggregationPipeline
+from qts.data.historical.catalog import (
+    HistoricalCatalog,
+    HistoricalCatalogLoadConfig,
+    HistoricalDataset,
+)
+from qts.data.historical.csv_dataset import HistoricalBarStream, iter_historical_bars
 from qts.domain.market_data import Bar
-
-if TYPE_CHECKING:
-    from qts.runtime.config import BacktestRuntimeConfig
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,22 +102,6 @@ class ResearchBook:
         )
         return cls(config=config, catalog=catalog)
 
-    @classmethod
-    def from_backtest_config(cls, config: BacktestRuntimeConfig) -> ResearchBook:
-        """Build from a backtest config's read-only market data reference."""
-
-        market_data = config.market_data
-        if market_data.config_path is None or market_data.catalog is None:
-            raise RuntimeError("market data reference is partially configured")
-        return cls.from_config(
-            ResearchBookConfig(
-                data_config_path=market_data.config_path,
-                catalog_name=market_data.catalog,
-                roots=config.roots,
-                timeframe=config.timeframe,
-            )
-        )
-
     @property
     def dataset_ids(self) -> tuple[str, ...]:
         """Return deterministic dataset identifiers for experiment manifests."""
@@ -131,16 +116,58 @@ class ResearchBook:
 
         root = request.root.strip().upper()
         dataset = self._catalog.datasets[root]
+        source_timeframe = dataset.source_timeframe or dataset.dataset.timeframe
         stream = iter_historical_bars(
             dataset.csv_path,
             dataset.symbol_resolver,
-            timeframe=request.timeframe,
+            timeframe=source_timeframe,
             start=request.start,
             end=request.end,
             session_window=dataset.chain.session_window() if dataset.chain is not None else None,
             schema=dataset.csv_schema,
         )
-        return ResearchHistoryFrame(bars=tuple(stream))
+        if source_timeframe == request.timeframe:
+            return ResearchHistoryFrame(bars=tuple(stream))
+        return ResearchHistoryFrame(
+            bars=self._aggregate_stream(
+                stream,
+                dataset=dataset,
+                source_timeframe=source_timeframe,
+                target_timeframe=request.timeframe,
+            )
+        )
+
+    @classmethod
+    def _aggregate_stream(
+        cls,
+        stream: HistoricalBarStream,
+        *,
+        dataset: HistoricalDataset,
+        source_timeframe: str,
+        target_timeframe: str,
+    ) -> tuple[Bar, ...]:
+        exchange_timezone = cls._exchange_timezone_for(dataset)
+        if exchange_timezone is None:
+            raise RuntimeError("exchange timezone is required to aggregate research history")
+        pipeline = BarAggregationPipeline(exchange_timezone)
+        aggregated: list[Bar] = []
+        for bar in stream:
+            aggregated.extend(
+                pipeline.aggregate_logical(
+                    bar,
+                    source_timeframe=source_timeframe,
+                    target_timeframe=target_timeframe,
+                )
+            )
+        return tuple(aggregated)
+
+    @staticmethod
+    def _exchange_timezone_for(dataset: HistoricalDataset) -> str | None:
+        if dataset.exchange_timezone is not None:
+            return dataset.exchange_timezone
+        if dataset.chain is not None:
+            return dataset.chain.timezone
+        return None
 
 
 __all__ = [

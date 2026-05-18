@@ -295,7 +295,7 @@ class FactorEvaluationArtifactWriter:
 `docs/research/factor_evaluation_v1.md` must define:
 
 - rank IC as Spearman rank correlation between factor score ranks and forward return ranks;
-- long-short spread as top-ranked forward return minus bottom-ranked forward return for V1;
+- long-short spread as top-bucket average forward return minus bottom-bucket average forward return for V1;
 - coverage as scored assets with forward returns divided by scored assets;
 - missing forward returns are excluded and counted by `return_count`.
 

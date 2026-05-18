@@ -139,7 +139,7 @@ STRATEGY_SDK_FORBIDDEN_SYMBOLS = frozenset(
         "AccountActor",
     }
 )
-STRATEGY_SDK_PUBLIC_SURFACE_MODULES = frozenset({("strategy_sdk",), ("factors",)})
+STRATEGY_SDK_PUBLIC_SURFACE_MODULES = frozenset({("strategy_sdk",), ("factors",), ("research",)})
 BACKTEST_RUNNER_FORBIDDEN_IMPORT_PREFIXES = (
     "qts.data.historical.config",
     "qts.data.historical.csv_dataset",
@@ -1042,7 +1042,8 @@ def _check_strategy_sdk_internal_leak(
                     path=str(relative_path),
                     line=line,
                     message=(
-                        "Strategy SDK public modules must not import execution/runtime "
+                        "Strategy SDK, factor, and research public modules must not import "
+                        "execution/runtime "
                         f"internals: {imported_module}"
                     ),
                 )
@@ -1062,8 +1063,8 @@ def _check_strategy_sdk_internal_leak(
                     path=str(relative_path),
                     line=line,
                     message=(
-                        "Strategy SDK public modules must not reference internal actor/risk "
-                        f"symbol {imported_name}"
+                        "Strategy SDK, factor, and research public modules must not reference "
+                        f"internal actor/risk symbol {imported_name}"
                     ),
                 )
             )
@@ -1080,8 +1081,8 @@ def _check_strategy_sdk_internal_leak(
                     path=str(relative_path),
                     line=getattr(node, "lineno", 1),
                     message=(
-                        "Strategy SDK public modules must not reference internal actor/risk symbol "
-                        f"{node.id}"
+                        "Strategy SDK, factor, and research public modules must not reference "
+                        f"internal actor/risk symbol {node.id}"
                     ),
                 )
             )

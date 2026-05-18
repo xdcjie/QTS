@@ -39,9 +39,11 @@ serializes canonical decimal strings with trailing zeros stripped, so identical
 inputs produce identical artifact bytes and manifest hashes regardless of the
 caller's ambient decimal context.
 
-Long-short spread V1 is the top-ranked available forward return minus the
-bottom-ranked available forward return after excluding assets with missing
-forward returns.
+Long-short spread V1 is the average forward return of the top-ranked bucket
+minus the average forward return of the bottom-ranked bucket after excluding
+assets with missing forward returns. Bucket size follows the same top-bucket
+rule used by turnover: `ceil(return_count / bucket_count)` with a minimum of
+one asset.
 
 Coverage is:
 
@@ -74,6 +76,10 @@ bucket to compare.
 - trailing newline;
 - `Decimal` values serialized as strings;
 - missing symbols serialized as a JSON list.
+
+`factor_name` and `factor_version` must be filename-safe identity tokens:
+letters, numbers, `.`, `_`, and `-` only. The writer rejects path-like identity
+values instead of creating nested artifact paths.
 
 The resulting artifact path can be passed to `ExperimentManifestWriter` through
 `ExperimentManifestConfig.artifact_paths`, where manifest hashing remains owned

@@ -125,6 +125,19 @@ def test_factor_package_has_no_runtime_dependency(tmp_path: Path) -> None:
     assert "STRATEGY_SDK_INTERNAL_LEAK" in _codes(root)
 
 
+def test_research_package_has_no_runtime_dependency(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/research/bad.py",
+        "from typing import TYPE_CHECKING\n\n"
+        "if TYPE_CHECKING:\n"
+        "    from qts.runtime.config import BacktestRuntimeConfig\n",
+    )
+
+    assert "STRATEGY_SDK_INTERNAL_LEAK" in _codes(root)
+
+
 def test_factor_package_has_no_runtime_execution_broker_imports(tmp_path: Path) -> None:
     root = tmp_path
     _write(

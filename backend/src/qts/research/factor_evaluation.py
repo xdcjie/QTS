@@ -29,6 +29,8 @@ class FactorEvaluationInput:
             raise ValueError("factor_name is required")
         if not self.factor_version:
             raise ValueError("factor_version is required")
+        _require_filename_safe_token(self.factor_name, "factor_name")
+        _require_filename_safe_token(self.factor_version, "factor_version")
         if self.bucket_count <= 0:
             raise ValueError("bucket_count must be positive")
 
@@ -79,7 +81,7 @@ class FactorEvaluation:
         coverage = coverage.normalize(context=_METRIC_CONTEXT)
         metrics = FactorEvaluationMetrics(
             rank_ic=cls._spearman([item[0] for item in scored], [item[1] for item in scored]),
-            long_short_spread=_METRIC_CONTEXT.subtract(scored[0][1], scored[-1][1]),
+            long_short_spread=cls._long_short_spread(scored, evaluation_input.bucket_count),
             coverage=coverage,
             turnover=cls._turnover(
                 evaluation_input.factor_result,
@@ -104,6 +106,21 @@ class FactorEvaluation:
             for item in evaluation_input.factor_result.ranked
             if item.asset.symbol in evaluation_input.forward_returns
         ]
+
+    @classmethod
+    def _long_short_spread(
+        cls,
+        scored: list[tuple[Decimal, Decimal]],
+        bucket_count: int,
+    ) -> Decimal:
+        bucket_size = cls._bucket_size(len(scored), bucket_count)
+        top_returns = [forward_return for _score, forward_return in scored[:bucket_size]]
+        bottom_returns = [forward_return for _score, forward_return in scored[-bucket_size:]]
+        with localcontext(_METRIC_CONTEXT):
+            top_average = sum(top_returns, Decimal("0")) / Decimal(len(top_returns))
+            bottom_average = sum(bottom_returns, Decimal("0")) / Decimal(len(bottom_returns))
+            spread = top_average - bottom_average
+            return spread.quantize(_METRIC_QUANTUM).normalize()
 
     @classmethod
     def _spearman(cls, left: list[Decimal], right: list[Decimal]) -> Decimal:
@@ -160,8 +177,12 @@ class FactorEvaluation:
     def _top_bucket_symbols(factor_result: FactorResult, bucket_count: int) -> set[str]:
         if not factor_result.ranked:
             return set()
-        bucket_size = max(1, -(-len(factor_result.ranked) // bucket_count))
+        bucket_size = FactorEvaluation._bucket_size(len(factor_result.ranked), bucket_count)
         return {item.asset.symbol for item in factor_result.ranked[:bucket_size]}
+
+    @staticmethod
+    def _bucket_size(item_count: int, bucket_count: int) -> int:
+        return max(1, -(-item_count // bucket_count))
 
 
 class FactorEvaluationArtifactWriter:
@@ -173,6 +194,8 @@ class FactorEvaluationArtifactWriter:
     def write(self, result: FactorEvaluationResult) -> Path:
         """Write a deterministic JSON artifact and return its path."""
 
+        _require_filename_safe_token(result.factor_name, "factor_name")
+        _require_filename_safe_token(result.factor_version, "factor_version")
         self._root_dir.mkdir(parents=True, exist_ok=True)
         path = self._root_dir / (
             f"{result.as_of.isoformat()}-{result.factor_name}-{result.factor_version}.json"
@@ -212,6 +235,11 @@ class FactorEvaluationArtifactWriter:
         return value
 
 
+def _require_filename_safe_token(value: str, name: str) -> None:
+    if not value or any(character not in _FILENAME_SAFE_CHARS for character in value):
+        raise ValueError(f"{name} must be filename-safe")
+
+
 __all__ = [
     "FactorEvaluation",
     "FactorEvaluationArtifactWriter",
@@ -222,3 +250,6 @@ __all__ = [
 
 _METRIC_CONTEXT = Context(prec=50, rounding=ROUND_HALF_EVEN)
 _METRIC_QUANTUM = Decimal("0.0000000001")
+_FILENAME_SAFE_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
+)

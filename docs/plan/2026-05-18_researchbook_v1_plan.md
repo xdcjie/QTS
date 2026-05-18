@@ -4,9 +4,9 @@
 
 **Goal:** Build a read-only `ResearchBook` facade that gives notebooks and scripts a QuantBook-style way to request bounded QTS historical bars without exposing runtime, broker, actor, or order internals.
 
-**Architecture:** `ResearchBookConfig` owns catalog construction inputs, `ResearchBook` owns read-only historical queries, and `HistoryRequest` describes one bounded query. The facade delegates to `HistoricalCatalog` and `HistoricalBarStream`; it does not own CSV parsing, futures roll rules, sessions, or backtest execution.
+**Architecture:** `ResearchBookConfig` owns catalog construction inputs, `ResearchBook` owns read-only historical queries, and `HistoryRequest` describes one bounded query. The facade delegates to `HistoricalCatalog`, `HistoricalBarStream`, and the shared QTS bar aggregation pipeline; it does not own CSV parsing, futures roll rules, sessions, or backtest execution.
 
-**Tech Stack:** Python dataclasses, existing `HistoricalCatalog`, existing `iter_historical_bars`, `pytest`, `ruff`, `mypy`.
+**Tech Stack:** Python dataclasses, existing `HistoricalCatalog`, existing `iter_historical_bars`, existing `BarAggregationPipeline`, `pytest`, `ruff`, `mypy`.
 
 ---
 
@@ -20,6 +20,7 @@ Correct owner or abstraction boundary:
 
 - `qts.research.research_book` owns the research-facing facade and request validation.
 - `qts.data.historical` owns CSV parsing and catalog loading.
+- `qts.data.bars` owns derived clock-aligned bar aggregation.
 - `qts.registry` owns instrument and futures roll semantics.
 
 Forbidden shortcut:
@@ -31,7 +32,11 @@ Forbidden shortcut:
 Required gates / verification:
 
 - Unit tests for request validation and half-open bounded query behavior.
-- Integration test proving `ResearchBook.from_backtest_config(...)` reads through `HistoricalCatalog`.
+- Integration test proving `ResearchBook.from_config(...)` reads through `HistoricalCatalog`.
+- Integration regression proving derived requested timeframes are aggregated from source
+  bars instead of relabeling source rows.
+- Guardrail regression proving `qts.research` cannot import runtime config even under
+  `TYPE_CHECKING`.
 - `make guardrails`, `make test-unit`, and `make test-integration`.
 
 ## File Structure

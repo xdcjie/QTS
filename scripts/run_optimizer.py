@@ -24,6 +24,7 @@ import argparse
 import importlib
 import sys
 from collections.abc import Sequence
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -32,6 +33,7 @@ import yaml
 from qts.research.optimizer import (
     BacktestPipelineJob,
     BacktestPipelineRunner,
+    MetricConstraint,
     OptimizationJob,
     OptimizationResult,
     OptimizationRunner,
@@ -39,6 +41,8 @@ from qts.research.optimizer import (
     OptimizerValidationSummaryWriter,
     ParameterGrid,
     ParameterSpace,
+    WalkForwardPlan,
+    WalkForwardSplit,
 )
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -80,6 +84,71 @@ def _build_grid(raw_parameters: list[dict[str, Any]]) -> ParameterGrid:
     return ParameterGrid(
         *(ParameterSpace(name=str(p["name"]), values=tuple(p["values"])) for p in raw_parameters)
     )
+
+
+def _validation_constraints(config: dict[str, Any]) -> tuple[MetricConstraint, ...]:
+    validation = config.get("validation")
+    if validation is None:
+        return ()
+    validation_config = _require_mapping(validation, "validation")
+    raw_constraints = validation_config.get("constraints", ())
+    if raw_constraints is None:
+        return ()
+    if not isinstance(raw_constraints, list):
+        raise ValueError("validation.constraints must be a list")
+    constraints: list[MetricConstraint] = []
+    for index, raw_constraint in enumerate(raw_constraints):
+        constraint = _require_mapping(raw_constraint, f"validation.constraints[{index}]")
+        constraints.append(
+            MetricConstraint(
+                metric_name=str(constraint["metric"]),
+                operator=str(constraint["operator"]),
+                threshold=Decimal(str(constraint["threshold"])),
+            )
+        )
+    return tuple(constraints)
+
+
+def _walk_forward_plan(config: dict[str, Any]) -> WalkForwardPlan | None:
+    validation = config.get("validation")
+    if validation is None:
+        return None
+    validation_config = _require_mapping(validation, "validation")
+    raw_walk_forward = validation_config.get("walk_forward")
+    if raw_walk_forward is None:
+        return None
+    walk_forward = _require_mapping(raw_walk_forward, "validation.walk_forward")
+    raw_splits = walk_forward.get("splits")
+    if not isinstance(raw_splits, list):
+        raise ValueError("validation.walk_forward.splits must be a list")
+    splits: list[WalkForwardSplit] = []
+    for index, raw_split in enumerate(raw_splits):
+        split = _require_mapping(raw_split, f"validation.walk_forward.splits[{index}]")
+        splits.append(
+            WalkForwardSplit(
+                name=str(split["name"]),
+                train_start=_parse_iso_date(split["train_start"], "train_start"),
+                train_end=_parse_iso_date(split["train_end"], "train_end"),
+                test_start=_parse_iso_date(split["test_start"], "test_start"),
+                test_end=_parse_iso_date(split["test_end"], "test_end"),
+            )
+        )
+    return WalkForwardPlan(tuple(splits))
+
+
+def _require_mapping(value: Any, name: str) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{name} must be a mapping")
+    return value
+
+
+def _parse_iso_date(value: Any, name: str) -> date:
+    if isinstance(value, date):
+        return value
+    try:
+        return date.fromisoformat(str(value))
+    except ValueError as exc:
+        raise ValueError(f"{name} must be an ISO date") from exc
 
 
 def _format_ranked_table(results: Sequence[OptimizationResult], objective_metric: str) -> str:
@@ -169,7 +238,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     else:
         results, objective_metric = _run_factory_path(config, output_root=args.output_root)
     if args.validation_output is not None:
-        summary = OptimizerValidationSummary.from_results(results)
+        summary = OptimizerValidationSummary.from_results(
+            results,
+            _validation_constraints(config),
+            walk_forward_plan=_walk_forward_plan(config),
+        )
         OptimizerValidationSummaryWriter().write(args.validation_output, summary)
     print(_format_ranked_table(results, objective_metric))
     return 0
