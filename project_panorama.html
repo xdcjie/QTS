@@ -1444,10 +1444,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>367 files</span>
-      <span>641 classes</span>
-      <span>2198 functions</span>
-      <span>350 backend</span>
+      <span>368 files</span>
+      <span>646 classes</span>
+      <span>2209 functions</span>
+      <span>351 backend</span>
       <span>17 frontend</span>
     </div>
   </div>
@@ -9125,6 +9125,51 @@
               <tr><td><code>__init__</code></td><td>ExperimentManifestWriter:65</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>write_manifest</code></td><td>ExperimentManifestWriter:68</td><td>Write `manifest.json` under the experiment artifact directory.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>_sha256_file</code></td><td>ExperimentManifestWriter:102</td><td>实现 ExperimentManifestWriter 的 sha256 file 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
+        <code>backend/src/qts/research/factor_evaluation.py</code>
+        <span class="inventory-counts">
+          <span>5 classes</span>
+          <span>11 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Deterministic factor evaluation metrics and artifact writing.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>FactorEvaluationInput</code></td><td>factor_evaluation:16</td><td>Owns one dated factor evaluation input snapshot.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>FactorEvaluationMetrics</code></td><td>factor_evaluation:37</td><td>Owns deterministic factor evaluation metric values.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>FactorEvaluationResult</code></td><td>factor_evaluation:50</td><td>Owns the dated result of evaluating one factor snapshot.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>FactorEvaluation</code></td><td>factor_evaluation:59</td><td>Owns deterministic factor evaluation metric calculations.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>FactorEvaluationArtifactWriter</code></td><td>factor_evaluation:167</td><td>Owns deterministic factor evaluation artifact serialization.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>__post_init__</code></td><td>FactorEvaluationInput:27</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>evaluate</code></td><td>FactorEvaluation:63</td><td>Evaluate a scored factor snapshot against aligned forward returns.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_scored_returns</code></td><td>FactorEvaluation:101</td><td>实现 FactorEvaluation 的 scored returns 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_spearman</code></td><td>FactorEvaluation:109</td><td>实现 FactorEvaluation 的 spearman 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_average_ranks</code></td><td>FactorEvaluation:127</td><td>实现 FactorEvaluation 的 average ranks 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_turnover</code></td><td>FactorEvaluation:144</td><td>实现 FactorEvaluation 的 turnover 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_top_bucket_symbols</code></td><td>FactorEvaluation:160</td><td>实现 FactorEvaluation 的 top bucket symbols 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>FactorEvaluationArtifactWriter:170</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>write</code></td><td>FactorEvaluationArtifactWriter:173</td><td>Write a deterministic JSON artifact and return its path.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_metrics_payload</code></td><td>FactorEvaluationArtifactWriter:193</td><td>实现 FactorEvaluationArtifactWriter 的 metrics payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_json_value</code></td><td>FactorEvaluationArtifactWriter:200</td><td>实现 FactorEvaluationArtifactWriter 的 json value 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>

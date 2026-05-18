@@ -1209,6 +1209,31 @@ exceptions:
     reason: RB-1 read-only ResearchBook facade/value object
     owner: platform
     expiry: 2027-05-17
+  - class_name: FactorEvaluationInput
+    module: qts.research.factor_evaluation
+    reason: FE-1 factor evaluation requires an explicit research snapshot input boundary
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: FactorEvaluationMetrics
+    module: qts.research.factor_evaluation
+    reason: FE-1 factor evaluation records deterministic predictive-evidence metrics
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: FactorEvaluationResult
+    module: qts.research.factor_evaluation
+    reason: FE-1 factor evaluation returns dated metric evidence without runtime internals
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: FactorEvaluation
+    module: qts.research.factor_evaluation
+    reason: FE-1 factor evaluation owns research metrics without computing factors or orders
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: FactorEvaluationArtifactWriter
+    module: qts.research.factor_evaluation
+    reason: FE-1 factor evaluation writes deterministic JSON artifacts for manifest hashing
+    owner: platform
+    expiry: 2027-05-17
   - class_name: AverageTrueRange
     module: qts.indicators.technical
     reason: VWAP pullback strategy requires reusable bar-level ATR indicator behind the Strategy SDK

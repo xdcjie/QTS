@@ -607,7 +607,7 @@
       <div class="surface class-inventory" aria-label="生产类全量索引">
         <h2>生产类全量索引（按阶段 / 模块）</h2>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">639 classes</span></summary>
+          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">644 classes</span></summary>
           <ul>
           <li><code>qts/api/auth_backend_factory.py</code> -> <code>_DevDefaultTokenAuthBackend</code> <span class="location">backend/src/qts/api/auth_backend_factory.py:38</span></li>
           <li><code>qts/api/schemas/backtest_schema.py</code> -> <code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span>, <code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span>, <code>BacktestRunResultSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:24</span>, <code>BacktestStrategyOptionSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:38</span></li>
@@ -764,6 +764,7 @@
           <li><code>qts/reporting/broker_runtime.py</code> -> <code>BrokerRuntimeReportManifest</code> <span class="location">backend/src/qts/reporting/broker_runtime.py:31</span>, <code>BrokerRuntimeReportWriter</code> <span class="location">backend/src/qts/reporting/broker_runtime.py:39</span>, <code>BrokerRuntimeEventReporter</code> <span class="location">backend/src/qts/reporting/broker_runtime.py:240</span></li>
           <li><code>qts/reporting/statistics.py</code> -> <code>StatisticsPayload</code> <span class="location">backend/src/qts/reporting/statistics.py:23</span>, <code>_HoldingsSnapshot</code> <span class="location">backend/src/qts/reporting/statistics.py:34</span>, <code>StatisticsBuilder</code> <span class="location">backend/src/qts/reporting/statistics.py:41</span></li>
           <li><code>qts/research/experiment_manifest.py</code> -> <code>ExperimentManifestConfig</code> <span class="location">backend/src/qts/research/experiment_manifest.py:17</span>, <code>ExperimentManifestResult</code> <span class="location">backend/src/qts/research/experiment_manifest.py:55</span>, <code>ExperimentManifestWriter</code> <span class="location">backend/src/qts/research/experiment_manifest.py:62</span></li>
+          <li><code>qts/research/factor_evaluation.py</code> -> <code>FactorEvaluationInput</code> <span class="location">backend/src/qts/research/factor_evaluation.py:16</span>, <code>FactorEvaluationMetrics</code> <span class="location">backend/src/qts/research/factor_evaluation.py:37</span>, <code>FactorEvaluationResult</code> <span class="location">backend/src/qts/research/factor_evaluation.py:50</span>, <code>FactorEvaluation</code> <span class="location">backend/src/qts/research/factor_evaluation.py:59</span>, <code>FactorEvaluationArtifactWriter</code> <span class="location">backend/src/qts/research/factor_evaluation.py:167</span></li>
           <li><code>qts/research/optimizer/job.py</code> -> <code>OptimizationJob</code> <span class="location">backend/src/qts/research/optimizer/job.py:20</span></li>
           <li><code>qts/research/optimizer/parameter_space.py</code> -> <code>ParameterSpace</code> <span class="location">backend/src/qts/research/optimizer/parameter_space.py:12</span>, <code>ParameterGrid</code> <span class="location">backend/src/qts/research/optimizer/parameter_space.py:25</span></li>
           <li><code>qts/research/optimizer/pipeline.py</code> -> <code>BacktestPipelineJob</code> <span class="location">backend/src/qts/research/optimizer/pipeline.py:23</span>, <code>BacktestPipelineRunner</code> <span class="location">backend/src/qts/research/optimizer/pipeline.py:43</span></li>
@@ -853,7 +854,7 @@
           </ul>
         </details>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">639 classes</span></summary>
+          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">644 classes</span></summary>
           <ul class="method-index">
           <li><code>_DevDefaultTokenAuthBackend</code> <span class="location">backend/src/qts/api/auth_backend_factory.py:38</span> -> <code>__init__():41</code></li>
           <li><code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span> -> <span class="muted">no public/core methods</span></li>
@@ -1285,6 +1286,11 @@
           <li><code>ExperimentManifestConfig</code> <span class="location">backend/src/qts/research/experiment_manifest.py:17</span> -> <code>__post_init__():29</code>, <code>config_hash property:35</code></li>
           <li><code>ExperimentManifestResult</code> <span class="location">backend/src/qts/research/experiment_manifest.py:55</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>ExperimentManifestWriter</code> <span class="location">backend/src/qts/research/experiment_manifest.py:62</span> -> <code>__init__():65</code>, <code>write_manifest():68</code></li>
+          <li><code>FactorEvaluationInput</code> <span class="location">backend/src/qts/research/factor_evaluation.py:16</span> -> <code>__post_init__():27</code></li>
+          <li><code>FactorEvaluationMetrics</code> <span class="location">backend/src/qts/research/factor_evaluation.py:37</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>FactorEvaluationResult</code> <span class="location">backend/src/qts/research/factor_evaluation.py:50</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>FactorEvaluation</code> <span class="location">backend/src/qts/research/factor_evaluation.py:59</span> -> <code>evaluate():63</code></li>
+          <li><code>FactorEvaluationArtifactWriter</code> <span class="location">backend/src/qts/research/factor_evaluation.py:167</span> -> <code>__init__():170</code>, <code>write():173</code></li>
           <li><code>OptimizationJob</code> <span class="location">backend/src/qts/research/optimizer/job.py:20</span> -> <code>__post_init__():35</code></li>
           <li><code>ParameterSpace</code> <span class="location">backend/src/qts/research/optimizer/parameter_space.py:12</span> -> <code>__post_init__():18</code></li>
           <li><code>ParameterGrid</code> <span class="location">backend/src/qts/research/optimizer/parameter_space.py:25</span> -> <code>__init__():33</code>, <code>__iter__():41</code>, <code>size():47</code></li>
@@ -3181,10 +3187,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>367 files</span>
-      <span>641 classes</span>
-      <span>2198 functions</span>
-      <span>350 backend</span>
+      <span>368 files</span>
+      <span>646 classes</span>
+      <span>2209 functions</span>
+      <span>351 backend</span>
       <span>17 frontend</span>
     </div>
   </div>
@@ -10862,6 +10868,51 @@
               <tr><td><code>__init__</code></td><td>ExperimentManifestWriter:65</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>write_manifest</code></td><td>ExperimentManifestWriter:68</td><td>Write `manifest.json` under the experiment artifact directory.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>_sha256_file</code></td><td>ExperimentManifestWriter:102</td><td>实现 ExperimentManifestWriter 的 sha256 file 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
+        <code>backend/src/qts/research/factor_evaluation.py</code>
+        <span class="inventory-counts">
+          <span>5 classes</span>
+          <span>11 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Deterministic factor evaluation metrics and artifact writing.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>FactorEvaluationInput</code></td><td>factor_evaluation:16</td><td>Owns one dated factor evaluation input snapshot.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>FactorEvaluationMetrics</code></td><td>factor_evaluation:37</td><td>Owns deterministic factor evaluation metric values.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>FactorEvaluationResult</code></td><td>factor_evaluation:50</td><td>Owns the dated result of evaluating one factor snapshot.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>FactorEvaluation</code></td><td>factor_evaluation:59</td><td>Owns deterministic factor evaluation metric calculations.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>FactorEvaluationArtifactWriter</code></td><td>factor_evaluation:167</td><td>Owns deterministic factor evaluation artifact serialization.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>__post_init__</code></td><td>FactorEvaluationInput:27</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>evaluate</code></td><td>FactorEvaluation:63</td><td>Evaluate a scored factor snapshot against aligned forward returns.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_scored_returns</code></td><td>FactorEvaluation:101</td><td>实现 FactorEvaluation 的 scored returns 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_spearman</code></td><td>FactorEvaluation:109</td><td>实现 FactorEvaluation 的 spearman 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_average_ranks</code></td><td>FactorEvaluation:127</td><td>实现 FactorEvaluation 的 average ranks 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_turnover</code></td><td>FactorEvaluation:144</td><td>实现 FactorEvaluation 的 turnover 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_top_bucket_symbols</code></td><td>FactorEvaluation:160</td><td>实现 FactorEvaluation 的 top bucket symbols 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>FactorEvaluationArtifactWriter:170</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>write</code></td><td>FactorEvaluationArtifactWriter:173</td><td>Write a deterministic JSON artifact and return its path.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_metrics_payload</code></td><td>FactorEvaluationArtifactWriter:193</td><td>实现 FactorEvaluationArtifactWriter 的 metrics payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_json_value</code></td><td>FactorEvaluationArtifactWriter:200</td><td>实现 FactorEvaluationArtifactWriter 的 json value 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
