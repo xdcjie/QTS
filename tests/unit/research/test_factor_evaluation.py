@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal
+from decimal import Decimal, localcontext
 from pathlib import Path
 
 import pytest
@@ -109,6 +109,75 @@ def test_factor_evaluation_computes_top_bucket_turnover() -> None:
     assert evaluation.metrics.turnover == Decimal("0.5")
 
 
+def test_factor_evaluation_canonicalizes_non_perfect_rank_ic_across_decimal_contexts(
+    tmp_path: Path,
+) -> None:
+    aaa = Asset("AAA")
+    bbb = Asset("BBB")
+    ccc = Asset("CCC")
+    ddd = Asset("DDD")
+    eee = Asset("EEE")
+
+    def evaluate_and_write(precision: int) -> tuple[Decimal, str]:
+        with localcontext() as context:
+            context.prec = precision
+            evaluation = FactorEvaluation.evaluate(
+                FactorEvaluationInput(
+                    as_of=date(2026, 1, 2),
+                    factor_name="momentum",
+                    factor_version="1",
+                    factor_result=_factor_result(
+                        (aaa, "5"),
+                        (bbb, "4"),
+                        (ccc, "3"),
+                        (ddd, "2"),
+                        (eee, "1"),
+                    ),
+                    forward_returns={
+                        aaa.symbol: Decimal("0.05"),
+                        bbb.symbol: Decimal("0.03"),
+                        ccc.symbol: Decimal("0.02"),
+                        ddd.symbol: Decimal("0.01"),
+                        eee.symbol: Decimal("0.04"),
+                    },
+                    bucket_count=5,
+                )
+            )
+            path = FactorEvaluationArtifactWriter(tmp_path / str(precision)).write(evaluation)
+            return evaluation.metrics.rank_ic, path.read_text(encoding="utf-8")
+
+    low_precision_ic, low_precision_artifact = evaluate_and_write(10)
+    high_precision_ic, high_precision_artifact = evaluate_and_write(50)
+
+    assert low_precision_ic == Decimal("0.4")
+    assert high_precision_ic == Decimal("0.4")
+    assert json.loads(low_precision_artifact)["metrics"]["rank_ic"] == "0.4"
+    assert low_precision_artifact == high_precision_artifact
+
+
+def test_factor_evaluation_handles_non_constant_tied_ranks() -> None:
+    aaa = Asset("AAA")
+    bbb = Asset("BBB")
+    ccc = Asset("CCC")
+
+    evaluation = FactorEvaluation.evaluate(
+        FactorEvaluationInput(
+            as_of=date(2026, 1, 2),
+            factor_name="tied_factor",
+            factor_version="1",
+            factor_result=_factor_result((aaa, "2"), (bbb, "2"), (ccc, "1")),
+            forward_returns={
+                aaa.symbol: Decimal("0.03"),
+                bbb.symbol: Decimal("0.01"),
+                ccc.symbol: Decimal("0.02"),
+            },
+            bucket_count=3,
+        )
+    )
+
+    assert evaluation.metrics.rank_ic == Decimal("0")
+
+
 def test_factor_evaluation_without_previous_snapshot_has_no_turnover() -> None:
     aaa = Asset("AAA")
     bbb = Asset("BBB")
@@ -156,6 +225,50 @@ def test_factor_evaluation_rejects_constant_factor_and_return_ranks() -> None:
                 factor_name="flat_factor",
                 factor_version="1",
                 factor_result=_factor_result((aaa, "1"), (bbb, "1"), (ccc, "1")),
+                forward_returns={
+                    aaa.symbol: Decimal("0.01"),
+                    bbb.symbol: Decimal("0.01"),
+                    ccc.symbol: Decimal("0.01"),
+                },
+                bucket_count=3,
+            )
+        )
+
+
+def test_factor_evaluation_rejects_constant_factor_ranks_only() -> None:
+    aaa = Asset("AAA")
+    bbb = Asset("BBB")
+    ccc = Asset("CCC")
+
+    with pytest.raises(ValueError, match="rank IC is undefined for constant ranks"):
+        FactorEvaluation.evaluate(
+            FactorEvaluationInput(
+                as_of=date(2026, 1, 2),
+                factor_name="flat_factor",
+                factor_version="1",
+                factor_result=_factor_result((aaa, "1"), (bbb, "1"), (ccc, "1")),
+                forward_returns={
+                    aaa.symbol: Decimal("0.03"),
+                    bbb.symbol: Decimal("0.02"),
+                    ccc.symbol: Decimal("0.01"),
+                },
+                bucket_count=3,
+            )
+        )
+
+
+def test_factor_evaluation_rejects_constant_return_ranks_only() -> None:
+    aaa = Asset("AAA")
+    bbb = Asset("BBB")
+    ccc = Asset("CCC")
+
+    with pytest.raises(ValueError, match="rank IC is undefined for constant ranks"):
+        FactorEvaluation.evaluate(
+            FactorEvaluationInput(
+                as_of=date(2026, 1, 2),
+                factor_name="momentum",
+                factor_version="1",
+                factor_result=_factor_result((aaa, "3"), (bbb, "2"), (ccc, "1")),
                 forward_returns={
                     aaa.symbol: Decimal("0.01"),
                     bbb.symbol: Decimal("0.01"),
