@@ -22,7 +22,9 @@ from qts.strategy_sdk.asset_resolver import (
 from qts.strategy_sdk.data_view import DataView
 from qts.strategy_sdk.factors import FactorFactory
 from qts.strategy_sdk.indicators import IndicatorFactory
+from qts.strategy_sdk.portfolio_construction import PortfolioConstructionModel
 from qts.strategy_sdk.portfolio_view import PortfolioView
+from qts.strategy_sdk.signals import Signal
 from qts.strategy_sdk.subscription_registry import DataSubscription, StrategySubscriptionRegistry
 from qts.strategy_sdk.target import OrderSpec, TargetIntent, TargetIntentType
 from qts.strategy_sdk.target_emitter import TargetIntentEmitter
@@ -46,6 +48,7 @@ class StrategyContext:
         default_factory=StrategySubscriptionRegistry, init=False
     )
     _universe: Universe = field(default_factory=Universe.empty, init=False)
+    _signals: list[Signal] = field(default_factory=list, init=False)
 
     def __post_init__(self) -> None:
         """Initialize internal SDK collaborators."""
@@ -59,6 +62,11 @@ class StrategyContext:
     def intents(self) -> tuple[TargetIntent, ...]:
         """Return target intents emitted by the strategy."""
         return self._intent_emitter.intents
+
+    @property
+    def signals(self) -> tuple[Signal, ...]:
+        """Return signals emitted by the strategy."""
+        return tuple(self._signals)
 
     @property
     def subscriptions(self) -> tuple[DataSubscription, ...]:
@@ -156,6 +164,21 @@ class StrategyContext:
             )
         )
 
+    def emit_signal(self, signal: Signal) -> Signal:
+        """Record a forecast signal for later portfolio construction."""
+        self._signals.append(signal)
+        return signal
+
+    def construct_targets(
+        self,
+        model: PortfolioConstructionModel,
+    ) -> tuple[TargetIntent, ...]:
+        """Construct and emit target intents from active signals."""
+        targets = model.construct(tuple(self._signals))
+        for target in targets:
+            self._intent_emitter.emit(target)
+        return targets
+
     def holding(self, asset: AssetRef) -> Holding | None:
         """Return the current holding for an asset."""
         if self.portfolio is None:
@@ -218,4 +241,5 @@ __all__ = [
     "StrategyAssetResolver",
     "SymbolResolver",
     "StrategyContext",
+    "Signal",
 ]

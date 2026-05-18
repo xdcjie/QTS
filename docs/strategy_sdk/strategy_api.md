@@ -26,6 +26,28 @@ ctx.close(asset)
 
 These methods emit intents. They do not mutate portfolio state directly.
 
+## Optional signal path
+
+Strategies may separate forecasts from target construction by emitting
+`Signal` values and then running a `PortfolioConstructionModel`.
+
+```python
+ctx.emit_signal(
+    Signal(
+        asset=asset,
+        direction=SignalDirection.UP,
+        generated_at=bar.end_time,
+        horizon=timedelta(days=1),
+        source_model="momentum-v1",
+    )
+)
+ctx.construct_targets(EqualWeightSignalPortfolioConstruction())
+```
+
+Signals are forecasts, not orders. Portfolio construction emits existing
+`TargetIntent` objects, so risk, order management, execution, and account
+mutation keep the same ownership path used by direct target APIs.
+
 ## Strategy callbacks
 
 `Strategy` callback signatures use public SDK and domain value objects:

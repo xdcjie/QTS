@@ -1444,10 +1444,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>368 files</span>
-      <span>646 classes</span>
-      <span>2209 functions</span>
-      <span>351 backend</span>
+      <span>370 files</span>
+      <span>650 classes</span>
+      <span>2216 functions</span>
+      <span>353 backend</span>
       <span>17 frontend</span>
     </div>
   </div>
@@ -12297,7 +12297,7 @@
         <code>backend/src/qts/strategy_sdk/context.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
-          <span>21 functions</span>
+          <span>24 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -12308,7 +12308,7 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>StrategyContext</code></td><td>context:33</td><td>User-facing strategy facade for data, assets, targets, and subscriptions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>StrategyContext</code></td><td>context:35</td><td>User-facing strategy facade for data, assets, targets, and subscriptions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -12317,27 +12317,30 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__post_init__</code></td><td>StrategyContext:50</td><td>Initialize internal SDK collaborators.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>intents</code></td><td>StrategyContext:59</td><td>Return target intents emitted by the strategy.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>subscriptions</code></td><td>StrategyContext:64</td><td>Return market data subscriptions requested by the strategy.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>universe</code></td><td>StrategyContext:69</td><td>Return the current strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>symbol</code></td><td>StrategyContext:73</td><td>Resolve a user-facing symbol such as ``AAPL``.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>future</code></td><td>StrategyContext:77</td><td>Resolve a futures root to a selectable contract reference.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>option</code></td><td>StrategyContext:81</td><td>Resolve an option by underlying symbol/ref and contract attributes.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>target_percent</code></td><td>StrategyContext:97</td><td>Emit a portfolio-weight target for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>target_quantity</code></td><td>StrategyContext:114</td><td>Emit a quantity target for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>target_value</code></td><td>StrategyContext:131</td><td>Emit a notional value target for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>close</code></td><td>StrategyContext:148</td><td>Emit a target that closes an asset position.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>holding</code></td><td>StrategyContext:159</td><td>Return the current holding for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>unrealized_pnl</code></td><td>StrategyContext:165</td><td>Return current unrealized PnL if a portfolio mark is available.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>realized_pnl</code></td><td>StrategyContext:171</td><td>Return cumulative realized PnL for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>avg_cost</code></td><td>StrategyContext:177</td><td>Return average cost for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>rebalance</code></td><td>StrategyContext:183</td><td>Emit one percent target per asset in ``weights``.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>subscribe</code></td><td>StrategyContext:187</td><td>Subscribe to bars for an asset and timeframe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>set_universe</code></td><td>StrategyContext:192</td><td>Replace the strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>set_universe_from_selector</code></td><td>StrategyContext:197</td><td>Replace the strategy-declared universe from a selector result.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>add_to_universe</code></td><td>StrategyContext:201</td><td>Add members to the strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>remove_from_universe</code></td><td>StrategyContext:206</td><td>Remove members from the strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>StrategyContext:53</td><td>Initialize internal SDK collaborators.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>intents</code></td><td>StrategyContext:62</td><td>Return target intents emitted by the strategy.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>signals</code></td><td>StrategyContext:67</td><td>Return signals emitted by the strategy.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>subscriptions</code></td><td>StrategyContext:72</td><td>Return market data subscriptions requested by the strategy.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>universe</code></td><td>StrategyContext:77</td><td>Return the current strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>symbol</code></td><td>StrategyContext:81</td><td>Resolve a user-facing symbol such as ``AAPL``.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>future</code></td><td>StrategyContext:85</td><td>Resolve a futures root to a selectable contract reference.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>option</code></td><td>StrategyContext:89</td><td>Resolve an option by underlying symbol/ref and contract attributes.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>target_percent</code></td><td>StrategyContext:105</td><td>Emit a portfolio-weight target for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>target_quantity</code></td><td>StrategyContext:122</td><td>Emit a quantity target for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>target_value</code></td><td>StrategyContext:139</td><td>Emit a notional value target for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>close</code></td><td>StrategyContext:156</td><td>Emit a target that closes an asset position.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>emit_signal</code></td><td>StrategyContext:167</td><td>Record a forecast signal for later portfolio construction.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>construct_targets</code></td><td>StrategyContext:172</td><td>Construct and emit target intents from active signals.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>holding</code></td><td>StrategyContext:182</td><td>Return the current holding for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>unrealized_pnl</code></td><td>StrategyContext:188</td><td>Return current unrealized PnL if a portfolio mark is available.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>realized_pnl</code></td><td>StrategyContext:194</td><td>Return cumulative realized PnL for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>avg_cost</code></td><td>StrategyContext:200</td><td>Return average cost for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>rebalance</code></td><td>StrategyContext:206</td><td>Emit one percent target per asset in ``weights``.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>subscribe</code></td><td>StrategyContext:210</td><td>Subscribe to bars for an asset and timeframe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>set_universe</code></td><td>StrategyContext:215</td><td>Replace the strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>set_universe_from_selector</code></td><td>StrategyContext:220</td><td>Replace the strategy-declared universe from a selector result.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>add_to_universe</code></td><td>StrategyContext:224</td><td>Add members to the strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>remove_from_universe</code></td><td>StrategyContext:229</td><td>Remove members from the strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -12507,6 +12510,40 @@
     </details>
     <details class="inventory-file">
       <summary>
+        <code>backend/src/qts/strategy_sdk/portfolio_construction.py</code>
+        <span class="inventory-counts">
+          <span>2 classes</span>
+          <span>3 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Strategy SDK portfolio construction models.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>PortfolioConstructionModel</code></td><td>portfolio_construction:13</td><td>Converts active strategy signals into target intents.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>EqualWeightSignalPortfolioConstruction</code></td><td>portfolio_construction:22</td><td>Map directional signals to equal gross percent targets.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>construct</code></td><td>PortfolioConstructionModel:16</td><td>Construct target intents from active signals.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>EqualWeightSignalPortfolioConstruction:27</td><td>Validate portfolio construction configuration.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>construct</code></td><td>EqualWeightSignalPortfolioConstruction:33</td><td>Convert UP/DOWN/FLAT signals into percent or close target intents.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
         <code>backend/src/qts/strategy_sdk/portfolio_view.py</code>
         <span class="inventory-counts">
           <span>2 classes</span>
@@ -12539,6 +12576,38 @@
               <tr><td><code>realized_pnl</code></td><td>PortfolioView:64</td><td>Return cumulative realized PnL for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>avg_cost</code></td><td>PortfolioView:69</td><td>Return average cost for an asset holding.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>weight</code></td><td>PortfolioView:74</td><td>Perform weight.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
+        <code>backend/src/qts/strategy_sdk/signals.py</code>
+        <span class="inventory-counts">
+          <span>2 classes</span>
+          <span>1 function</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Strategy SDK signal value objects.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>SignalDirection</code></td><td>signals:14</td><td>Forecast direction expressed by a strategy signal.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>Signal</code></td><td>signals:23</td><td>Forecast emitted by a strategy before portfolio construction.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>__post_init__</code></td><td>Signal:36</td><td>Validate and normalize signal metadata.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>

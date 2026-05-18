@@ -1,4 +1,24 @@
 exceptions:
+  - class_name: SignalDirection
+    module: qts.strategy_sdk.signals
+    reason: SIG-1 public strategy forecast direction enum
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: Signal
+    module: qts.strategy_sdk.signals
+    reason: SIG-1 public strategy forecast value object
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: PortfolioConstructionModel
+    module: qts.strategy_sdk.portfolio_construction
+    reason: SIG-1 public signal-to-target portfolio construction protocol
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: EqualWeightSignalPortfolioConstruction
+    module: qts.strategy_sdk.portfolio_construction
+    reason: SIG-1 public equal-weight signal portfolio construction model
+    owner: platform
+    expiry: 2027-05-17
   - class_name: Principal
     module: qts.api.security
     reason: OPT-29 API security principal value object
