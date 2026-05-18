@@ -1067,7 +1067,7 @@
           <li><code>BrokerExecutionReport</code> <span class="location">backend/src/qts/execution/broker.py:207</span> -> <code>__post_init__():222</code></li>
           <li><code>BrokerAdapter</code> <span class="location">backend/src/qts/execution/broker.py:233</span> -> <code>capabilities property:237</code>, <code>submit_order():241</code>, <code>cancel_order():245</code></li>
           <li><code>BrokerageModel</code> <span class="location">backend/src/qts/execution/brokerage_model.py:13</span> -> <code>__post_init__():24</code>, <code>custom():43</code>, <code>simulated():57</code>, <code>supported_order_types property:71</code>, <code>commission_for_notional():75</code>, <code>initial_margin_for_notional():85</code>, <code>slippage_for_notional():89</code>, <code>supports():93</code>, <code>to_manifest_payload():106</code></li>
-          <li><code>FillIdempotencyStore</code> <span class="location">backend/src/qts/execution/idempotency.py:6</span> -> <code>__init__():9</code>, <code>mark_seen():13</code>, <code>discard():22</code>, <code>snapshot():26</code>, <code>restore():31</code></li>
+          <li><code>FillIdempotencyStore</code> <span class="location">backend/src/qts/execution/idempotency.py:6</span> -> <code>__init__():18</code>, <code>mark_seen():23</code>, <code>discard():33</code>, <code>snapshot():39</code>, <code>restore():46</code></li>
           <li><code>OrderManager</code> <span class="location">backend/src/qts/execution/order_manager.py:28</span> -> <code>__init__():31</code>, <code>create_order():41</code>, <code>mark_sent():51</code>, <code>request_cancel():61</code>, <code>request_replace():66</code>, <code>process_report():89</code>, <code>get_order():101</code>, <code>discard_terminal_order():105</code>, <code>snapshot():119</code>, <code>restore():129</code></li>
           <li><code>OrderEvent</code> <span class="location">backend/src/qts/execution/order_state_machine.py:11</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>OrderTransitionError</code> <span class="location">backend/src/qts/execution/order_state_machine.py:24</span> -> <span class="muted">no public/core methods</span></li>
@@ -7464,11 +7464,11 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__init__</code></td><td>FillIdempotencyStore:9</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>mark_seen</code></td><td>FillIdempotencyStore:13</td><td>Perform mark_seen.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>discard</code></td><td>FillIdempotencyStore:22</td><td>Perform discard.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>snapshot</code></td><td>FillIdempotencyStore:26</td><td>Perform snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>restore</code></td><td>FillIdempotencyStore:31</td><td>Perform restore.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>FillIdempotencyStore:18</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>mark_seen</code></td><td>FillIdempotencyStore:23</td><td>Perform mark_seen.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>discard</code></td><td>FillIdempotencyStore:33</td><td>Perform discard.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>snapshot</code></td><td>FillIdempotencyStore:39</td><td>Perform snapshot.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>restore</code></td><td>FillIdempotencyStore:46</td><td>Perform restore.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
