@@ -378,6 +378,7 @@ class IbkrExecutionPayload:
     filled_quantity: Decimal
     fill_price: Decimal
     account_id: str | None = None
+    fill_time: datetime | None = None
 
     def __post_init__(self) -> None:
         if not self.report_id.strip():

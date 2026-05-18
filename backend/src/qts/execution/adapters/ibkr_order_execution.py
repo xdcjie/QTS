@@ -75,6 +75,7 @@ class IbkrExecutionReport:
     fill_price: Decimal | None = None
     fill_id: str | None = None
     commission: Decimal = Decimal("0")
+    fill_time: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -289,6 +290,7 @@ class IbkrOrderExecutionAdapter:
             fill_price=report.fill_price,
             fill_id=report.fill_id,
             commission=report.commission,
+            fill_time=report.fill_time,
         )
 
     def on_order_status(self, payload: IbkrOrderStatusPayload) -> ExecutionReport | None:
@@ -759,6 +761,7 @@ class IbkrOrderExecutionAdapter:
                 fill_price=execution.fill_price,
                 fill_id=execution.execution_id,
                 commission=commission.commission,
+                fill_time=execution.fill_time,
             )
         )
 

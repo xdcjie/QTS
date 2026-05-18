@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import datetime
 from decimal import Decimal
 from typing import Any, cast
 
@@ -44,10 +45,10 @@ class BrokerExecutionAdapter:
         strategy_id: StrategyId,
         client_order_id: str,
         correlation_id: CorrelationId | None = None,
-        bar_time: object | None = None,
+        bar_time: datetime | None = None,
     ) -> ExecutionReport:
         """Submit a market order and normalize the broker acknowledgement."""
-        _ = market_price, correlation_id, bar_time
+        _ = market_price, correlation_id
         self._assert_live_capital_order_allowed()
         if intent.account_id is not None and intent.account_id != account_id:
             raise ValueError("intent account_id does not match execution route account_id")
@@ -66,7 +67,7 @@ class BrokerExecutionAdapter:
         self._runtime_broker_order_id_by_broker_order_id[broker_report.broker_order_id] = (
             broker_order_id
         )
-        return self._normalize_with_runtime_broker_order_id(broker_report)
+        return self._normalize_with_runtime_broker_order_id(broker_report, bar_time=bar_time)
 
     def normalize_execution_report(
         self,
@@ -127,16 +128,20 @@ class BrokerExecutionAdapter:
     def _normalize_with_runtime_broker_order_id(
         self,
         report: BrokerExecutionReport,
+        *,
+        bar_time: datetime | None = None,
     ) -> ExecutionReport:
         runtime_broker_order_id = self._runtime_broker_order_id_by_broker_order_id.get(
             report.broker_order_id
         )
         if runtime_broker_order_id is None:
             raise ValueError(f"unknown broker_order_id: {report.broker_order_id}")
-        return replace(
-            normalize_broker_execution_report(report),
-            broker_order_id=runtime_broker_order_id,
-        )
+        runtime_report = normalize_broker_execution_report(report)
+        # Prefer the broker's own fill timestamp; fall back to bar_time when the
+        # broker omits it so downstream holding-bar tracking stays correct.
+        if runtime_report.fill_time is None and bar_time is not None:
+            runtime_report = replace(runtime_report, fill_time=bar_time)
+        return replace(runtime_report, broker_order_id=runtime_broker_order_id)
 
 
 __all__ = ["BrokerExecutionAdapter"]

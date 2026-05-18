@@ -218,6 +218,7 @@ class BrokerExecutionReport:
     filled_quantity: Decimal = Decimal("0")
     fill_price: Decimal | None = None
     fill_id: str | None = None
+    fill_time: datetime | None = None
 
     def __post_init__(self) -> None:
         if not self.report_id.strip():
@@ -263,6 +264,7 @@ def normalize_broker_execution_report(report: BrokerExecutionReport) -> Executio
         filled_quantity=report.filled_quantity,
         fill_price=report.fill_price,
         fill_id=report.fill_id,
+        fill_time=report.fill_time,
     )
 
 
