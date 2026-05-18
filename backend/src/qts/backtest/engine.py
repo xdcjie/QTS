@@ -247,6 +247,7 @@ class BacktestEngine:
         output_dir: Any,
         *,
         metrics: MetricsRegistry | None = None,
+        compact_events: bool = False,
     ) -> BacktestStreamResult:
         """Run the backtest and write streaming artifacts.
 
@@ -254,6 +255,13 @@ class BacktestEngine:
         backtest sink is classified into the canonical counter set so
         external Prometheus scrapes against the same registry see populated
         data without a separate poller.
+
+        ``compact_events`` opts into dropping per-bar ``runtime.market_data``
+        and ``runtime.account_snapshot`` events from ``events.ndjson`` to
+        shrink long-run artifacts (~30x reduction on multi-year backtests).
+        Default ``False`` for forensic completeness; CLI / pipeline entry
+        points (``qts.backtest.runner.run_backtest`` and the optimizer
+        runners) opt in.
         """
         config_hash = stable_json_hash(self._config_hash_payload)
         runtime_run_id = RuntimeRunId(f"bt-{config_hash.removeprefix('sha256:')[:12]}")
@@ -275,7 +283,11 @@ class BacktestEngine:
                 account_id=account_id,
                 strategy_id=strategy_id,
             )
-        writer = BacktestArtifactWriter(output_dir, run_id=runtime_run_id)
+        writer = BacktestArtifactWriter(
+            output_dir,
+            run_id=runtime_run_id,
+            compact_events=compact_events,
+        )
         sink = BacktestRuntimeEventSink(
             writer,
             context=RuntimeEventContext(

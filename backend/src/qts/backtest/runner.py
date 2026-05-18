@@ -46,7 +46,7 @@ def run_backtest(
 
     pipeline = BacktestPipeline.from_yaml(config_path)
     engine, inputs = pipeline.build_engine()
-    result = engine.run_streaming(output_dir)
+    result = engine.run_streaming(output_dir, compact_events=True)
     summary_path = output_dir / f"{result.run_id.value}.summary.json"
     summary_path.write_text(
         json.dumps(

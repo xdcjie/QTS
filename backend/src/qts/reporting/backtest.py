@@ -200,11 +200,28 @@ class BacktestArtifactWriter:
     """Write large backtest outputs as line-delimited artifacts."""
 
     _KINDS = ("events", "orders", "fills", "trade_ledger", "equity_curve", "statistics")
+    _COMPACT_EXCLUDED_KINDS = frozenset({"runtime.market_data", "runtime.account_snapshot"})
 
-    def __init__(self, output_dir: Path, *, run_id: RuntimeRunId | None = None) -> None:
-        """Create a writer for partitioned backtest artifacts."""
+    def __init__(
+        self,
+        output_dir: Path,
+        *,
+        run_id: RuntimeRunId | None = None,
+        compact_events: bool = False,
+    ) -> None:
+        """Create a writer for partitioned backtest artifacts.
+
+        ``compact_events`` opt-in suppresses per-bar event kinds
+        (``runtime.market_data`` + ``runtime.account_snapshot``) from
+        the events artifact. The equity curve and holdings snapshot
+        artifacts already capture per-bar account state, so for a
+        long-running backtest this drops 30x+ from events.ndjson.
+        All other event kinds (trading lifecycle, kill switch,
+        snapshot, position_closed) are always persisted.
+        """
         self._output_dir = output_dir
         self._run_id = run_id
+        self._compact_events = compact_events
         self._output_dir.mkdir(parents=True, exist_ok=True)
         self._artifacts = {
             kind: _NdjsonArtifact(self._output_dir / f".{kind}.partial.ndjson")
@@ -219,6 +236,8 @@ class BacktestArtifactWriter:
 
     def write_runtime_event(self, payload: dict[str, Any]) -> None:
         """Write one normalized runtime event envelope."""
+        if self._compact_events and payload.get("kind") in self._COMPACT_EXCLUDED_KINDS:
+            return
         self._artifacts["events"].write(payload)
 
     def write_event(self, payload: dict[str, Any]) -> None:

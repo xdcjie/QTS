@@ -60,7 +60,7 @@ class OptimizationRunner:
                 bars=list(job.bars_factory()),
                 initial_cash=job.initial_cash,
             )
-            stream_result = engine.run_streaming(run_dir)
+            stream_result = engine.run_streaming(run_dir, compact_events=True)
             manifest_path = Path(stream_result.manifest_path)
             payload = json.loads(manifest_path.read_text(encoding="utf-8"))
             objective_value = extract_objective_from_manifest(payload, job.objective_metric)

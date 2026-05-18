@@ -53,7 +53,7 @@ class BacktestPipelineRunner:
             run_dir = job.output_root / f"run-{index:04d}"
             run_pipeline = base_pipeline.with_strategy_params(combination)
             engine, _bundle = run_pipeline.build_engine()
-            stream_result = engine.run_streaming(run_dir)
+            stream_result = engine.run_streaming(run_dir, compact_events=True)
             manifest_path = Path(stream_result.manifest_path)
             payload = json.loads(manifest_path.read_text(encoding="utf-8"))
             objective_value = extract_objective_from_manifest(payload, job.objective_metric)
