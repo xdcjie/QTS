@@ -1444,10 +1444,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>354 files</span>
-      <span>624 classes</span>
-      <span>2074 functions</span>
-      <span>337 backend</span>
+      <span>355 files</span>
+      <span>626 classes</span>
+      <span>2080 functions</span>
+      <span>338 backend</span>
       <span>17 frontend</span>
     </div>
   </div>
@@ -3448,6 +3448,42 @@
     </details>
     <details class="inventory-file">
       <summary>
+        <code>backend/src/qts/data/bars/time_grid_synthesizer.py</code>
+        <span class="inventory-counts">
+          <span>2 classes</span>
+          <span>5 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Fill clock-aligned `&lt;1d` bars to a complete time grid within each session.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>_InstrumentState</code></td><td>time_grid_synthesizer:35</td><td>Per-instrument cursor used to detect and fill intra-session gaps.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BarTimeGridSynthesizer</code></td><td>time_grid_synthesizer:41</td><td>Wrap a sparse clock-aligned bar stream into a time-grid-complete stream.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>__init__</code></td><td>BarTimeGridSynthesizer:49</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>synthesize</code></td><td>BarTimeGridSynthesizer:58</td><td>Yield bars with intra-session gaps filled by synthetic bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_should_fill_between</code></td><td>BarTimeGridSynthesizer:74</td><td>Decide whether to synthesize bars in the gap between two real bars.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_fill_gap</code></td><td>BarTimeGridSynthesizer:82</td><td>Emit one synthetic bar per missing slot in the half-open gap.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_synthetic_bar</code></td><td>BarTimeGridSynthesizer:94</td><td>Build one synthetic bar carrying ``template``&#x27;s close as flat OHLC.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
         <code>backend/src/qts/data/bars/timeframe.py</code>
         <span class="inventory-counts">
           <span>2 classes</span>
@@ -4321,7 +4357,7 @@
         <code>backend/src/qts/data/sources/replay_market_data_source.py</code>
         <span class="inventory-counts">
           <span>6 classes</span>
-          <span>35 functions</span>
+          <span>36 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -4332,12 +4368,12 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>ReplayClock</code></td><td>replay_market_data_source:34</td><td>Deterministic replay clock advanced by event visibility time.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ReplaySequencedEvent</code></td><td>replay_market_data_source:49</td><td>Replay event with deterministic ordering metadata.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
-              <tr><td><code>ReplayEventSequencer</code></td><td>replay_market_data_source:62</td><td>Order replay bars by visibility time and detect stream anomalies.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>SubscriptionReplayMarketDataSource</code></td><td>replay_market_data_source:150</td><td>Broker-like replay source that emits only active logical subscriptions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ReplayMarketDataBundle</code></td><td>replay_market_data_source:321</td><td>Streaming inputs and side-channel metadata required by a backtest run.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ReplayMarketDataSource</code></td><td>replay_market_data_source:349</td><td>Build replay-ready market data, registry, and provenance inputs.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ReplayClock</code></td><td>replay_market_data_source:36</td><td>Deterministic replay clock advanced by event visibility time.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ReplaySequencedEvent</code></td><td>replay_market_data_source:51</td><td>Replay event with deterministic ordering metadata.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
+              <tr><td><code>ReplayEventSequencer</code></td><td>replay_market_data_source:64</td><td>Order replay bars by visibility time and detect stream anomalies.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>SubscriptionReplayMarketDataSource</code></td><td>replay_market_data_source:152</td><td>Broker-like replay source that emits only active logical subscriptions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ReplayMarketDataBundle</code></td><td>replay_market_data_source:323</td><td>Streaming inputs and side-channel metadata required by a backtest run.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ReplayMarketDataSource</code></td><td>replay_market_data_source:351</td><td>Build replay-ready market data, registry, and provenance inputs.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -4346,41 +4382,42 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>advance_to_next_event</code></td><td>ReplayClock:39</td><td>Advance to the next market-data event visibility timestamp.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>visible_at</code></td><td>ReplaySequencedEvent:57</td><td>Return the timestamp when this event can become strategy-visible.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>ReplayEventSequencer:65</td><td>Create a sequencer for one replay source.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>sequence</code></td><td>ReplayEventSequencer:72</td><td>Return deterministic, de-duplicated replay events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>drain_diagnostic_events</code></td><td>ReplayEventSequencer:125</td><td>Return queued replay sequencing diagnostics.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_diagnostic_event</code></td><td>ReplayEventSequencer:131</td><td>实现 ReplayEventSequencer 的 diagnostic event 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>SubscriptionReplayMarketDataSource:153</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>current_time</code></td><td>SubscriptionReplayMarketDataSource:176</td><td>Return the current replay clock frontier.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>subscribe</code></td><td>SubscriptionReplayMarketDataSource:180</td><td>Register a replay subscription.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>unsubscribe</code></td><td>SubscriptionReplayMarketDataSource:200</td><td>Remove a replay subscription.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>poll_next</code></td><td>SubscriptionReplayMarketDataSource:220</td><td>Return the next visible bar for active subscriptions.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_event</code></td><td>SubscriptionReplayMarketDataSource:240</td><td>Register a callback invoked for every emitted replay event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>drain_control_events</code></td><td>SubscriptionReplayMarketDataSource:245</td><td>Return queued replay subscription lifecycle events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>drain_diagnostic_events</code></td><td>SubscriptionReplayMarketDataSource:252</td><td>Return queued replay data-quality diagnostics.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>subscription_snapshot</code></td><td>SubscriptionReplayMarketDataSource:259</td><td>Return deterministic active replay subscriptions for recovery.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>close</code></td><td>SubscriptionReplayMarketDataSource:276</td><td>Stop emitting replay events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_is_active</code></td><td>SubscriptionReplayMarketDataSource:283</td><td>实现 SubscriptionReplayMarketDataSource 的 is active 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_subscription_event</code></td><td>SubscriptionReplayMarketDataSource:293</td><td>实现 SubscriptionReplayMarketDataSource 的 subscription event 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_observed_at</code></td><td>SubscriptionReplayMarketDataSource:309</td><td>实现 SubscriptionReplayMarketDataSource 的 observed at 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>provenance_payload_for</code></td><td>ReplayMarketDataBundle:332</td><td>Return dataset provenance payload for a replayed market-data event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>ReplayMarketDataSource:352</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>build</code></td><td>ReplayMarketDataSource:357</td><td>Perform build.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_roll_registry</code></td><td>ReplayMarketDataSource:377</td><td>Perform _roll_registry.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_stream_configured_bars</code></td><td>ReplayMarketDataSource:383</td><td>Perform _stream_configured_bars.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_iter_root_bars</code></td><td>ReplayMarketDataSource:450</td><td>Perform _iter_root_bars.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_merge_ordered_bar_streams</code></td><td>ReplayMarketDataSource:490</td><td>Perform _merge_ordered_bar_streams.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_record_exchange_timezone</code></td><td>ReplayMarketDataSource:514</td><td>Perform _record_exchange_timezone.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_exchange_timezone_for</code></td><td>ReplayMarketDataSource:525</td><td>Perform _exchange_timezone_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_instrument_registry_for</code></td><td>ReplayMarketDataSource:533</td><td>Perform _instrument_registry_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_instrument_for</code></td><td>ReplayMarketDataSource:588</td><td>Perform _instrument_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_dataset_metadata</code></td><td>ReplayMarketDataSource:613</td><td>Perform _dataset_metadata.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_file_content_hash</code></td><td>ReplayMarketDataSource:638</td><td>Return a stable content hash for the replay source file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_file_row_count</code></td><td>ReplayMarketDataSource:647</td><td>Return the number of data rows in a replay CSV source file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_dataset_instrument_id</code></td><td>ReplayMarketDataSource:653</td><td>Perform _dataset_instrument_id.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_contract_multipliers_for</code></td><td>ReplayMarketDataSource:659</td><td>Perform _contract_multipliers_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>advance_to_next_event</code></td><td>ReplayClock:41</td><td>Advance to the next market-data event visibility timestamp.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>visible_at</code></td><td>ReplaySequencedEvent:59</td><td>Return the timestamp when this event can become strategy-visible.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>ReplayEventSequencer:67</td><td>Create a sequencer for one replay source.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>sequence</code></td><td>ReplayEventSequencer:74</td><td>Return deterministic, de-duplicated replay events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>drain_diagnostic_events</code></td><td>ReplayEventSequencer:127</td><td>Return queued replay sequencing diagnostics.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_diagnostic_event</code></td><td>ReplayEventSequencer:133</td><td>实现 ReplayEventSequencer 的 diagnostic event 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>SubscriptionReplayMarketDataSource:155</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>current_time</code></td><td>SubscriptionReplayMarketDataSource:178</td><td>Return the current replay clock frontier.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>subscribe</code></td><td>SubscriptionReplayMarketDataSource:182</td><td>Register a replay subscription.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>unsubscribe</code></td><td>SubscriptionReplayMarketDataSource:202</td><td>Remove a replay subscription.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>poll_next</code></td><td>SubscriptionReplayMarketDataSource:222</td><td>Return the next visible bar for active subscriptions.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_event</code></td><td>SubscriptionReplayMarketDataSource:242</td><td>Register a callback invoked for every emitted replay event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>drain_control_events</code></td><td>SubscriptionReplayMarketDataSource:247</td><td>Return queued replay subscription lifecycle events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>drain_diagnostic_events</code></td><td>SubscriptionReplayMarketDataSource:254</td><td>Return queued replay data-quality diagnostics.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>subscription_snapshot</code></td><td>SubscriptionReplayMarketDataSource:261</td><td>Return deterministic active replay subscriptions for recovery.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>close</code></td><td>SubscriptionReplayMarketDataSource:278</td><td>Stop emitting replay events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_is_active</code></td><td>SubscriptionReplayMarketDataSource:285</td><td>实现 SubscriptionReplayMarketDataSource 的 is active 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_subscription_event</code></td><td>SubscriptionReplayMarketDataSource:295</td><td>实现 SubscriptionReplayMarketDataSource 的 subscription event 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_observed_at</code></td><td>SubscriptionReplayMarketDataSource:311</td><td>实现 SubscriptionReplayMarketDataSource 的 observed at 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>provenance_payload_for</code></td><td>ReplayMarketDataBundle:334</td><td>Return dataset provenance payload for a replayed market-data event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>ReplayMarketDataSource:354</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>build</code></td><td>ReplayMarketDataSource:359</td><td>Perform build.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_roll_registry</code></td><td>ReplayMarketDataSource:379</td><td>Perform _roll_registry.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_stream_configured_bars</code></td><td>ReplayMarketDataSource:385</td><td>Perform _stream_configured_bars.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_with_time_grid_synthesis</code></td><td>ReplayMarketDataSource:453</td><td>Wrap a per-root bar stream so intra-session gaps emit synthetic bars.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_iter_root_bars</code></td><td>ReplayMarketDataSource:464</td><td>Perform _iter_root_bars.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_merge_ordered_bar_streams</code></td><td>ReplayMarketDataSource:504</td><td>Perform _merge_ordered_bar_streams.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_record_exchange_timezone</code></td><td>ReplayMarketDataSource:528</td><td>Perform _record_exchange_timezone.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_exchange_timezone_for</code></td><td>ReplayMarketDataSource:539</td><td>Perform _exchange_timezone_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_instrument_registry_for</code></td><td>ReplayMarketDataSource:547</td><td>Perform _instrument_registry_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_instrument_for</code></td><td>ReplayMarketDataSource:602</td><td>Perform _instrument_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_dataset_metadata</code></td><td>ReplayMarketDataSource:627</td><td>Perform _dataset_metadata.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_file_content_hash</code></td><td>ReplayMarketDataSource:652</td><td>Return a stable content hash for the replay source file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_file_row_count</code></td><td>ReplayMarketDataSource:661</td><td>Return the number of data rows in a replay CSV source file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_dataset_instrument_id</code></td><td>ReplayMarketDataSource:667</td><td>Perform _dataset_instrument_id.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_contract_multipliers_for</code></td><td>ReplayMarketDataSource:673</td><td>Perform _contract_multipliers_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5043,8 +5080,8 @@
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
               <tr><td><code>Bar</code></td><td>bar:14</td><td>OHLCV bar over a half-open interval.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>Quote</code></td><td>bar:67</td><td>Top-of-book quote.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>Tick</code></td><td>bar:92</td><td>Trade tick.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>Quote</code></td><td>bar:68</td><td>Top-of-book quote.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>Tick</code></td><td>bar:93</td><td>Trade tick.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -5053,12 +5090,12 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__post_init__</code></td><td>Bar:33</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>interval</code></td><td>Bar:55</td><td>Perform interval.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_require_non_negative</code></td><td>Bar:60</td><td>Perform _require_non_negative.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>Quote:77</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>spread</code></td><td>Quote:86</td><td>Perform spread.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>Tick:100</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>Bar:34</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>interval</code></td><td>Bar:56</td><td>Perform interval.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_require_non_negative</code></td><td>Bar:61</td><td>Perform _require_non_negative.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>Quote:78</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>spread</code></td><td>Quote:87</td><td>Perform spread.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>Tick:101</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>

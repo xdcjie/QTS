@@ -13,6 +13,8 @@ from pathlib import Path
 
 from qts.core.ids import InstrumentId
 from qts.core.time import require_aware_datetime
+from qts.data.bars.time_grid_synthesizer import BarTimeGridSynthesizer
+from qts.data.bars.timeframe import AlignmentMode, Timeframe
 from qts.data.historical.catalog import HistoricalCatalog, HistoricalDataset
 from qts.data.historical.csv_dataset import HistoricalBarStream, iter_historical_bars
 from qts.data.provenance import DatasetMetadata, ReplayDataAnomalyEvent, ReplayDataAnomalyType
@@ -430,22 +432,34 @@ class ReplayMarketDataSource:
                 continuous_instrument_id=continuous_id,
                 schema=dataset.csv_schema,
             )
+            per_root = self._iter_root_bars(
+                root,
+                stream,
+                requested=requested,
+                rolling_root=rolling_root,
+                roll_registry=roll_registry,
+                stats=stats,
+                exchange_timezones=exchange_timezones,
+                exchange_timezone=exchange_timezone,
+            )
             streams.append(
                 (
                     root_index,
-                    self._iter_root_bars(
-                        root,
-                        stream,
-                        requested=requested,
-                        rolling_root=rolling_root,
-                        roll_registry=roll_registry,
-                        stats=stats,
-                        exchange_timezones=exchange_timezones,
-                        exchange_timezone=exchange_timezone,
-                    ),
+                    self._with_time_grid_synthesis(per_root),
                 )
             )
         return self._merge_ordered_bar_streams(streams), stats, exchange_timezones
+
+    def _with_time_grid_synthesis(self, stream: Iterator[Bar]) -> Iterator[Bar]:
+        """Wrap a per-root bar stream so intra-session gaps emit synthetic bars.
+
+        Skipped for ``1d`` (session-aligned) bars because their time
+        grid is defined by session boundaries, not wall-clock slots.
+        """
+        timeframe = Timeframe.parse(self._config.timeframe)
+        if timeframe.alignment is not AlignmentMode.CLOCK:
+            return stream
+        return BarTimeGridSynthesizer(timeframe=self._config.timeframe).synthesize(stream)
 
     def _iter_root_bars(
         self,

@@ -29,6 +29,7 @@ class Bar:
     trade_count: int | None = None
     is_complete: bool = False
     is_partial: bool = False
+    is_synthetic: bool = False
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""

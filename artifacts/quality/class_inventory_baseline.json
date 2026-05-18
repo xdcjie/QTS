@@ -1,5 +1,5 @@
 {
-  "production_class_count": 595,
+  "production_class_count": 596,
   "production_classes": [
     "qts.observability.audit_sink.AuditSink",
     "qts.observability.audit_sink.InMemoryAuditSink",
@@ -100,6 +100,7 @@
     "qts.data.bars.consolidator.Consolidator",
     "qts.data.bars.consolidator.NMinuteConsolidator",
     "qts.data.bars.pipeline.BarAggregationPipeline",
+    "qts.data.bars.time_grid_synthesizer.BarTimeGridSynthesizer",
     "qts.data.bars.timeframe.AlignmentMode",
     "qts.data.bars.timeframe.Timeframe",
     "qts.data.capabilities.MarketDataFeedCapabilities",

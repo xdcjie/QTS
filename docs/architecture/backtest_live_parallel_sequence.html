@@ -606,7 +606,7 @@
       <div class="surface class-inventory" aria-label="生产类全量索引">
         <h2>生产类全量索引（按阶段 / 模块）</h2>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">622 classes</span></summary>
+          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">624 classes</span></summary>
           <ul>
           <li><code>qts/api/schemas/backtest_schema.py</code> -> <code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span>, <code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span>, <code>BacktestRunResultSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:24</span>, <code>BacktestStrategyOptionSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:38</span></li>
           <li><code>qts/api/schemas/common.py</code> -> <code>StrategyStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:8</span>, <code>AccountSnapshotSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:15</span>, <code>OrderStatusSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:22</span>, <code>RiskRuleSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:29</span>, <code>OperationalErrorSchema</code> <span class="location">backend/src/qts/api/schemas/common.py:36</span></li>
@@ -642,6 +642,7 @@
           <li><code>qts/data/bars/aggregator.py</code> -> <code>AggregationState</code> <span class="location">backend/src/qts/data/bars/aggregator.py:18</span>, <code>AggregationResult</code> <span class="location">backend/src/qts/data/bars/aggregator.py:33</span>, <code>BarAggregator</code> <span class="location">backend/src/qts/data/bars/aggregator.py:40</span></li>
           <li><code>qts/data/bars/consolidator.py</code> -> <code>Consolidator</code> <span class="location">backend/src/qts/data/bars/consolidator.py:15</span>, <code>NMinuteConsolidator</code> <span class="location">backend/src/qts/data/bars/consolidator.py:23</span></li>
           <li><code>qts/data/bars/pipeline.py</code> -> <code>BarAggregationPipeline</code> <span class="location">backend/src/qts/data/bars/pipeline.py:15</span></li>
+          <li><code>qts/data/bars/time_grid_synthesizer.py</code> -> <code>_InstrumentState</code> <span class="location">backend/src/qts/data/bars/time_grid_synthesizer.py:35</span>, <code>BarTimeGridSynthesizer</code> <span class="location">backend/src/qts/data/bars/time_grid_synthesizer.py:41</span></li>
           <li><code>qts/data/bars/timeframe.py</code> -> <code>AlignmentMode</code> <span class="location">backend/src/qts/data/bars/timeframe.py:10</span>, <code>Timeframe</code> <span class="location">backend/src/qts/data/bars/timeframe.py:29</span></li>
           <li><code>qts/data/capabilities.py</code> -> <code>MarketDataFeedCapabilities</code> <span class="location">backend/src/qts/data/capabilities.py:15</span></li>
           <li><code>qts/data/events.py</code> -> <code>MarketDataSubscription</code> <span class="location">backend/src/qts/data/events.py:14</span>, <code>MarketDataSourceEvent</code> <span class="location">backend/src/qts/data/events.py:29</span>, <code>MarketDataSourceFailure</code> <span class="location">backend/src/qts/data/events.py:37</span>, <code>MarketDataSubscribed</code> <span class="location">backend/src/qts/data/events.py:50</span></li>
@@ -663,7 +664,7 @@
           <li><code>qts/data/provenance.py</code> -> <code>ReplayDataAnomalyType</code> <span class="location">backend/src/qts/data/provenance.py:13</span>, <code>ReplayDataAnomalyEvent</code> <span class="location">backend/src/qts/data/provenance.py:24</span>, <code>DatasetMetadata</code> <span class="location">backend/src/qts/data/provenance.py:55</span></li>
           <li><code>qts/data/sessions/filter.py</code> -> <code>SessionLookup</code> <span class="location">backend/src/qts/data/sessions/filter.py:13</span></li>
           <li><code>qts/data/sessions/window.py</code> -> <code>RegularSessionWindow</code> <span class="location">backend/src/qts/data/sessions/window.py:12</span></li>
-          <li><code>qts/data/sources/replay_market_data_source.py</code> -> <code>ReplayClock</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:34</span>, <code>ReplaySequencedEvent</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:49</span>, <code>ReplayEventSequencer</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:62</span>, <code>SubscriptionReplayMarketDataSource</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:150</span>, <code>ReplayMarketDataBundle</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:321</span>, <code>ReplayMarketDataSource</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:349</span></li>
+          <li><code>qts/data/sources/replay_market_data_source.py</code> -> <code>ReplayClock</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:36</span>, <code>ReplaySequencedEvent</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:51</span>, <code>ReplayEventSequencer</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:64</span>, <code>SubscriptionReplayMarketDataSource</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:152</span>, <code>ReplayMarketDataBundle</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:323</span>, <code>ReplayMarketDataSource</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:351</span></li>
           <li><code>qts/data/sources/streaming_market_data_source.py</code> -> <code>StreamingMarketDataSubscription</code> <span class="location">backend/src/qts/data/sources/streaming_market_data_source.py:34</span>, <code>StreamingMarketDataDegradation</code> <span class="location">backend/src/qts/data/sources/streaming_market_data_source.py:54</span>, <code>StreamingMarketDataSource</code> <span class="location">backend/src/qts/data/sources/streaming_market_data_source.py:74</span></li>
           <li><code>qts/data/stores/base.py</code> -> <code>MarketDataStore</code> <span class="location">backend/src/qts/data/stores/base.py:13</span></li>
           <li><code>qts/data/stores/memory_store.py</code> -> <code>InMemoryMarketDataStore</code> <span class="location">backend/src/qts/data/stores/memory_store.py:13</span></li>
@@ -677,7 +678,7 @@
           <li><code>qts/domain/instruments/contract_spec.py</code> -> <code>SettlementType</code> <span class="location">backend/src/qts/domain/instruments/contract_spec.py:10</span>, <code>ContractSpec</code> <span class="location">backend/src/qts/domain/instruments/contract_spec.py:18</span></li>
           <li><code>qts/domain/instruments/derivative_spec.py</code> -> <code>OptionRight</code> <span class="location">backend/src/qts/domain/instruments/derivative_spec.py:13</span>, <code>ExerciseStyle</code> <span class="location">backend/src/qts/domain/instruments/derivative_spec.py:20</span>, <code>DerivativeSpec</code> <span class="location">backend/src/qts/domain/instruments/derivative_spec.py:28</span>, <code>FutureSpec</code> <span class="location">backend/src/qts/domain/instruments/derivative_spec.py:36</span>, <code>OptionSpec</code> <span class="location">backend/src/qts/domain/instruments/derivative_spec.py:48</span></li>
           <li><code>qts/domain/instruments/instrument.py</code> -> <code>AssetClass</code> <span class="location">backend/src/qts/domain/instruments/instrument.py:19</span>, <code>Instrument</code> <span class="location">backend/src/qts/domain/instruments/instrument.py:28</span></li>
-          <li><code>qts/domain/market_data/bar.py</code> -> <code>Bar</code> <span class="location">backend/src/qts/domain/market_data/bar.py:14</span>, <code>Quote</code> <span class="location">backend/src/qts/domain/market_data/bar.py:67</span>, <code>Tick</code> <span class="location">backend/src/qts/domain/market_data/bar.py:92</span></li>
+          <li><code>qts/domain/market_data/bar.py</code> -> <code>Bar</code> <span class="location">backend/src/qts/domain/market_data/bar.py:14</span>, <code>Quote</code> <span class="location">backend/src/qts/domain/market_data/bar.py:68</span>, <code>Tick</code> <span class="location">backend/src/qts/domain/market_data/bar.py:93</span></li>
           <li><code>qts/domain/orders/order_spec.py</code> -> <code>BrokerOrderType</code> <span class="location">backend/src/qts/domain/orders/order_spec.py:13</span>, <code>TimeInForce</code> <span class="location">backend/src/qts/domain/orders/order_spec.py:27</span>, <code>BracketLeg</code> <span class="location">backend/src/qts/domain/orders/order_spec.py:40</span>, <code>BracketSpec</code> <span class="location">backend/src/qts/domain/orders/order_spec.py:59</span>, <code>OrderSpec</code> <span class="location">backend/src/qts/domain/orders/order_spec.py:70</span></li>
           <li><code>qts/domain/orders/value_objects.py</code> -> <code>OrderState</code> <span class="location">backend/src/qts/domain/orders/value_objects.py:13</span>, <code>OrderSide</code> <span class="location">backend/src/qts/domain/orders/value_objects.py:27</span>, <code>OrderIntent</code> <span class="location">backend/src/qts/domain/orders/value_objects.py:35</span>, <code>CancelIntent</code> <span class="location">backend/src/qts/domain/orders/value_objects.py:52</span>, <code>ReplaceIntent</code> <span class="location">backend/src/qts/domain/orders/value_objects.py:60</span>, <code>Order</code> <span class="location">backend/src/qts/domain/orders/value_objects.py:73</span>, <code>ExecutionReportStatus</code> <span class="location">backend/src/qts/domain/orders/value_objects.py:82</span>, <code>ExecutionReport</code> <span class="location">backend/src/qts/domain/orders/value_objects.py:93</span>, <code>OrderFill</code> <span class="location">backend/src/qts/domain/orders/value_objects.py:120</span>, <code>OrderManagerResult</code> <span class="location">backend/src/qts/domain/orders/value_objects.py:135</span>, <code>OrderManagerSnapshot</code> <span class="location">backend/src/qts/domain/orders/value_objects.py:143</span></li>
           <li><code>qts/domain/risk/decision.py</code> -> <code>RiskDecisionStatus</code> <span class="location">backend/src/qts/domain/risk/decision.py:13</span>, <code>RiskDecision</code> <span class="location">backend/src/qts/domain/risk/decision.py:22</span></li>
@@ -840,7 +841,7 @@
           </ul>
         </details>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">622 classes</span></summary>
+          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">624 classes</span></summary>
           <ul class="method-index">
           <li><code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span> -> <span class="muted">no public/core methods</span></li>
@@ -931,6 +932,8 @@
           <li><code>Consolidator</code> <span class="location">backend/src/qts/data/bars/consolidator.py:15</span> -> <code>update():18</code></li>
           <li><code>NMinuteConsolidator</code> <span class="location">backend/src/qts/data/bars/consolidator.py:23</span> -> <code>__init__():26</code>, <code>update():50</code></li>
           <li><code>BarAggregationPipeline</code> <span class="location">backend/src/qts/data/bars/pipeline.py:15</span> -> <code>__init__():18</code>, <code>aggregate():23</code>, <code>aggregate_logical():34</code></li>
+          <li><code>_InstrumentState</code> <span class="location">backend/src/qts/data/bars/time_grid_synthesizer.py:35</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>BarTimeGridSynthesizer</code> <span class="location">backend/src/qts/data/bars/time_grid_synthesizer.py:41</span> -> <code>__init__():49</code>, <code>synthesize():58</code></li>
           <li><code>AlignmentMode</code> <span class="location">backend/src/qts/data/bars/timeframe.py:10</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>Timeframe</code> <span class="location">backend/src/qts/data/bars/timeframe.py:29</span> -> <code>parse():37</code>, <code>__str__():50</code></li>
           <li><code>MarketDataFeedCapabilities</code> <span class="location">backend/src/qts/data/capabilities.py:15</span> -> <code>__post_init__():25</code>, <code>supports_timeframe():33</code>, <code>source_timeframe_for():40</code></li>
@@ -973,12 +976,12 @@
           <li><code>DatasetMetadata</code> <span class="location">backend/src/qts/data/provenance.py:55</span> -> <code>__post_init__():69</code>, <code>reference property:84</code></li>
           <li><code>SessionLookup</code> <span class="location">backend/src/qts/data/sessions/filter.py:13</span> -> <code>session_for():16</code></li>
           <li><code>RegularSessionWindow</code> <span class="location">backend/src/qts/data/sessions/window.py:12</span> -> <code>__post_init__():23</code>, <code>session_id_for_timestamp():30</code>, <code>session_date_for_timestamp():36</code>, <code>to_payload():51</code></li>
-          <li><code>ReplayClock</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:34</span> -> <code>advance_to_next_event():39</code></li>
-          <li><code>ReplaySequencedEvent</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:49</span> -> <code>visible_at property:57</code></li>
-          <li><code>ReplayEventSequencer</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:62</span> -> <code>__init__():65</code>, <code>sequence():72</code>, <code>drain_diagnostic_events():125</code></li>
-          <li><code>SubscriptionReplayMarketDataSource</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:150</span> -> <code>__init__():153</code>, <code>current_time property:176</code>, <code>subscribe():180</code>, <code>unsubscribe():200</code>, <code>poll_next():220</code>, <code>on_event():240</code>, <code>drain_control_events():245</code>, <code>drain_diagnostic_events():252</code>, <code>subscription_snapshot():259</code>, <code>close():276</code></li>
-          <li><code>ReplayMarketDataBundle</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:321</span> -> <code>provenance_payload_for():332</code></li>
-          <li><code>ReplayMarketDataSource</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:349</span> -> <code>__init__():352</code>, <code>build():357</code></li>
+          <li><code>ReplayClock</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:36</span> -> <code>advance_to_next_event():41</code></li>
+          <li><code>ReplaySequencedEvent</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:51</span> -> <code>visible_at property:59</code></li>
+          <li><code>ReplayEventSequencer</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:64</span> -> <code>__init__():67</code>, <code>sequence():74</code>, <code>drain_diagnostic_events():127</code></li>
+          <li><code>SubscriptionReplayMarketDataSource</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:152</span> -> <code>__init__():155</code>, <code>current_time property:178</code>, <code>subscribe():182</code>, <code>unsubscribe():202</code>, <code>poll_next():222</code>, <code>on_event():242</code>, <code>drain_control_events():247</code>, <code>drain_diagnostic_events():254</code>, <code>subscription_snapshot():261</code>, <code>close():278</code></li>
+          <li><code>ReplayMarketDataBundle</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:323</span> -> <code>provenance_payload_for():334</code></li>
+          <li><code>ReplayMarketDataSource</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:351</span> -> <code>__init__():354</code>, <code>build():359</code></li>
           <li><code>StreamingMarketDataSubscription</code> <span class="location">backend/src/qts/data/sources/streaming_market_data_source.py:34</span> -> <code>__post_init__():43</code></li>
           <li><code>StreamingMarketDataDegradation</code> <span class="location">backend/src/qts/data/sources/streaming_market_data_source.py:54</span> -> <code>__post_init__():64</code></li>
           <li><code>StreamingMarketDataSource</code> <span class="location">backend/src/qts/data/sources/streaming_market_data_source.py:74</span> -> <code>__init__():77</code>, <code>permission_state property:104</code>, <code>subscribe():109</code>, <code>unsubscribe():139</code>, <code>mark_resubscribed():160</code>, <code>resubscribe_active_subscriptions():177</code>, <code>mark_subscription_failed():203</code>, <code>on_tick():222</code>, <code>on_quote():234</code>, <code>on_bar():246</code>, <code>on_market_data_type():259</code>, <code>drain():266</code>, <code>subscription_snapshot():284</code></li>
@@ -1024,9 +1027,9 @@
           <li><code>OptionSpec</code> <span class="location">backend/src/qts/domain/instruments/derivative_spec.py:48</span> -> <code>__post_init__():55</code></li>
           <li><code>AssetClass</code> <span class="location">backend/src/qts/domain/instruments/instrument.py:19</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>Instrument</code> <span class="location">backend/src/qts/domain/instruments/instrument.py:28</span> -> <code>__post_init__():39</code></li>
-          <li><code>Bar</code> <span class="location">backend/src/qts/domain/market_data/bar.py:14</span> -> <code>__post_init__():33</code>, <code>interval property:55</code></li>
-          <li><code>Quote</code> <span class="location">backend/src/qts/domain/market_data/bar.py:67</span> -> <code>__post_init__():77</code>, <code>spread property:86</code></li>
-          <li><code>Tick</code> <span class="location">backend/src/qts/domain/market_data/bar.py:92</span> -> <code>__post_init__():100</code></li>
+          <li><code>Bar</code> <span class="location">backend/src/qts/domain/market_data/bar.py:14</span> -> <code>__post_init__():34</code>, <code>interval property:56</code></li>
+          <li><code>Quote</code> <span class="location">backend/src/qts/domain/market_data/bar.py:68</span> -> <code>__post_init__():78</code>, <code>spread property:87</code></li>
+          <li><code>Tick</code> <span class="location">backend/src/qts/domain/market_data/bar.py:93</span> -> <code>__post_init__():101</code></li>
           <li><code>BrokerOrderType</code> <span class="location">backend/src/qts/domain/orders/order_spec.py:13</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>TimeInForce</code> <span class="location">backend/src/qts/domain/orders/order_spec.py:27</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>BracketLeg</code> <span class="location">backend/src/qts/domain/orders/order_spec.py:40</span> -> <code>__post_init__():49</code></li>
@@ -3146,10 +3149,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>354 files</span>
-      <span>624 classes</span>
-      <span>2074 functions</span>
-      <span>337 backend</span>
+      <span>355 files</span>
+      <span>626 classes</span>
+      <span>2080 functions</span>
+      <span>338 backend</span>
       <span>17 frontend</span>
     </div>
   </div>
@@ -5150,6 +5153,42 @@
     </details>
     <details class="inventory-file">
       <summary>
+        <code>backend/src/qts/data/bars/time_grid_synthesizer.py</code>
+        <span class="inventory-counts">
+          <span>2 classes</span>
+          <span>5 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Fill clock-aligned `&lt;1d` bars to a complete time grid within each session.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>_InstrumentState</code></td><td>time_grid_synthesizer:35</td><td>Per-instrument cursor used to detect and fill intra-session gaps.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BarTimeGridSynthesizer</code></td><td>time_grid_synthesizer:41</td><td>Wrap a sparse clock-aligned bar stream into a time-grid-complete stream.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>__init__</code></td><td>BarTimeGridSynthesizer:49</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>synthesize</code></td><td>BarTimeGridSynthesizer:58</td><td>Yield bars with intra-session gaps filled by synthetic bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_should_fill_between</code></td><td>BarTimeGridSynthesizer:74</td><td>Decide whether to synthesize bars in the gap between two real bars.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_fill_gap</code></td><td>BarTimeGridSynthesizer:82</td><td>Emit one synthetic bar per missing slot in the half-open gap.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_synthetic_bar</code></td><td>BarTimeGridSynthesizer:94</td><td>Build one synthetic bar carrying ``template``&#x27;s close as flat OHLC.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
         <code>backend/src/qts/data/bars/timeframe.py</code>
         <span class="inventory-counts">
           <span>2 classes</span>
@@ -6023,7 +6062,7 @@
         <code>backend/src/qts/data/sources/replay_market_data_source.py</code>
         <span class="inventory-counts">
           <span>6 classes</span>
-          <span>35 functions</span>
+          <span>36 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -6034,12 +6073,12 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>ReplayClock</code></td><td>replay_market_data_source:34</td><td>Deterministic replay clock advanced by event visibility time.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ReplaySequencedEvent</code></td><td>replay_market_data_source:49</td><td>Replay event with deterministic ordering metadata.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
-              <tr><td><code>ReplayEventSequencer</code></td><td>replay_market_data_source:62</td><td>Order replay bars by visibility time and detect stream anomalies.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>SubscriptionReplayMarketDataSource</code></td><td>replay_market_data_source:150</td><td>Broker-like replay source that emits only active logical subscriptions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ReplayMarketDataBundle</code></td><td>replay_market_data_source:321</td><td>Streaming inputs and side-channel metadata required by a backtest run.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ReplayMarketDataSource</code></td><td>replay_market_data_source:349</td><td>Build replay-ready market data, registry, and provenance inputs.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ReplayClock</code></td><td>replay_market_data_source:36</td><td>Deterministic replay clock advanced by event visibility time.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ReplaySequencedEvent</code></td><td>replay_market_data_source:51</td><td>Replay event with deterministic ordering metadata.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
+              <tr><td><code>ReplayEventSequencer</code></td><td>replay_market_data_source:64</td><td>Order replay bars by visibility time and detect stream anomalies.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>SubscriptionReplayMarketDataSource</code></td><td>replay_market_data_source:152</td><td>Broker-like replay source that emits only active logical subscriptions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ReplayMarketDataBundle</code></td><td>replay_market_data_source:323</td><td>Streaming inputs and side-channel metadata required by a backtest run.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ReplayMarketDataSource</code></td><td>replay_market_data_source:351</td><td>Build replay-ready market data, registry, and provenance inputs.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -6048,41 +6087,42 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>advance_to_next_event</code></td><td>ReplayClock:39</td><td>Advance to the next market-data event visibility timestamp.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>visible_at</code></td><td>ReplaySequencedEvent:57</td><td>Return the timestamp when this event can become strategy-visible.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>ReplayEventSequencer:65</td><td>Create a sequencer for one replay source.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>sequence</code></td><td>ReplayEventSequencer:72</td><td>Return deterministic, de-duplicated replay events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>drain_diagnostic_events</code></td><td>ReplayEventSequencer:125</td><td>Return queued replay sequencing diagnostics.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_diagnostic_event</code></td><td>ReplayEventSequencer:131</td><td>实现 ReplayEventSequencer 的 diagnostic event 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>SubscriptionReplayMarketDataSource:153</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>current_time</code></td><td>SubscriptionReplayMarketDataSource:176</td><td>Return the current replay clock frontier.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>subscribe</code></td><td>SubscriptionReplayMarketDataSource:180</td><td>Register a replay subscription.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>unsubscribe</code></td><td>SubscriptionReplayMarketDataSource:200</td><td>Remove a replay subscription.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>poll_next</code></td><td>SubscriptionReplayMarketDataSource:220</td><td>Return the next visible bar for active subscriptions.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_event</code></td><td>SubscriptionReplayMarketDataSource:240</td><td>Register a callback invoked for every emitted replay event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>drain_control_events</code></td><td>SubscriptionReplayMarketDataSource:245</td><td>Return queued replay subscription lifecycle events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>drain_diagnostic_events</code></td><td>SubscriptionReplayMarketDataSource:252</td><td>Return queued replay data-quality diagnostics.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>subscription_snapshot</code></td><td>SubscriptionReplayMarketDataSource:259</td><td>Return deterministic active replay subscriptions for recovery.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>close</code></td><td>SubscriptionReplayMarketDataSource:276</td><td>Stop emitting replay events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_is_active</code></td><td>SubscriptionReplayMarketDataSource:283</td><td>实现 SubscriptionReplayMarketDataSource 的 is active 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_subscription_event</code></td><td>SubscriptionReplayMarketDataSource:293</td><td>实现 SubscriptionReplayMarketDataSource 的 subscription event 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_observed_at</code></td><td>SubscriptionReplayMarketDataSource:309</td><td>实现 SubscriptionReplayMarketDataSource 的 observed at 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>provenance_payload_for</code></td><td>ReplayMarketDataBundle:332</td><td>Return dataset provenance payload for a replayed market-data event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>ReplayMarketDataSource:352</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>build</code></td><td>ReplayMarketDataSource:357</td><td>Perform build.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_roll_registry</code></td><td>ReplayMarketDataSource:377</td><td>Perform _roll_registry.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_stream_configured_bars</code></td><td>ReplayMarketDataSource:383</td><td>Perform _stream_configured_bars.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_iter_root_bars</code></td><td>ReplayMarketDataSource:450</td><td>Perform _iter_root_bars.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_merge_ordered_bar_streams</code></td><td>ReplayMarketDataSource:490</td><td>Perform _merge_ordered_bar_streams.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_record_exchange_timezone</code></td><td>ReplayMarketDataSource:514</td><td>Perform _record_exchange_timezone.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_exchange_timezone_for</code></td><td>ReplayMarketDataSource:525</td><td>Perform _exchange_timezone_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_instrument_registry_for</code></td><td>ReplayMarketDataSource:533</td><td>Perform _instrument_registry_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_instrument_for</code></td><td>ReplayMarketDataSource:588</td><td>Perform _instrument_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_dataset_metadata</code></td><td>ReplayMarketDataSource:613</td><td>Perform _dataset_metadata.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_file_content_hash</code></td><td>ReplayMarketDataSource:638</td><td>Return a stable content hash for the replay source file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_file_row_count</code></td><td>ReplayMarketDataSource:647</td><td>Return the number of data rows in a replay CSV source file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_dataset_instrument_id</code></td><td>ReplayMarketDataSource:653</td><td>Perform _dataset_instrument_id.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_contract_multipliers_for</code></td><td>ReplayMarketDataSource:659</td><td>Perform _contract_multipliers_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>advance_to_next_event</code></td><td>ReplayClock:41</td><td>Advance to the next market-data event visibility timestamp.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>visible_at</code></td><td>ReplaySequencedEvent:59</td><td>Return the timestamp when this event can become strategy-visible.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>ReplayEventSequencer:67</td><td>Create a sequencer for one replay source.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>sequence</code></td><td>ReplayEventSequencer:74</td><td>Return deterministic, de-duplicated replay events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>drain_diagnostic_events</code></td><td>ReplayEventSequencer:127</td><td>Return queued replay sequencing diagnostics.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_diagnostic_event</code></td><td>ReplayEventSequencer:133</td><td>实现 ReplayEventSequencer 的 diagnostic event 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>SubscriptionReplayMarketDataSource:155</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>current_time</code></td><td>SubscriptionReplayMarketDataSource:178</td><td>Return the current replay clock frontier.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>subscribe</code></td><td>SubscriptionReplayMarketDataSource:182</td><td>Register a replay subscription.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>unsubscribe</code></td><td>SubscriptionReplayMarketDataSource:202</td><td>Remove a replay subscription.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>poll_next</code></td><td>SubscriptionReplayMarketDataSource:222</td><td>Return the next visible bar for active subscriptions.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_event</code></td><td>SubscriptionReplayMarketDataSource:242</td><td>Register a callback invoked for every emitted replay event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>drain_control_events</code></td><td>SubscriptionReplayMarketDataSource:247</td><td>Return queued replay subscription lifecycle events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>drain_diagnostic_events</code></td><td>SubscriptionReplayMarketDataSource:254</td><td>Return queued replay data-quality diagnostics.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>subscription_snapshot</code></td><td>SubscriptionReplayMarketDataSource:261</td><td>Return deterministic active replay subscriptions for recovery.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>close</code></td><td>SubscriptionReplayMarketDataSource:278</td><td>Stop emitting replay events.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_is_active</code></td><td>SubscriptionReplayMarketDataSource:285</td><td>实现 SubscriptionReplayMarketDataSource 的 is active 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_subscription_event</code></td><td>SubscriptionReplayMarketDataSource:295</td><td>实现 SubscriptionReplayMarketDataSource 的 subscription event 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_observed_at</code></td><td>SubscriptionReplayMarketDataSource:311</td><td>实现 SubscriptionReplayMarketDataSource 的 observed at 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>provenance_payload_for</code></td><td>ReplayMarketDataBundle:334</td><td>Return dataset provenance payload for a replayed market-data event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>ReplayMarketDataSource:354</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>build</code></td><td>ReplayMarketDataSource:359</td><td>Perform build.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_roll_registry</code></td><td>ReplayMarketDataSource:379</td><td>Perform _roll_registry.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_stream_configured_bars</code></td><td>ReplayMarketDataSource:385</td><td>Perform _stream_configured_bars.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_with_time_grid_synthesis</code></td><td>ReplayMarketDataSource:453</td><td>Wrap a per-root bar stream so intra-session gaps emit synthetic bars.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_iter_root_bars</code></td><td>ReplayMarketDataSource:464</td><td>Perform _iter_root_bars.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_merge_ordered_bar_streams</code></td><td>ReplayMarketDataSource:504</td><td>Perform _merge_ordered_bar_streams.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_record_exchange_timezone</code></td><td>ReplayMarketDataSource:528</td><td>Perform _record_exchange_timezone.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_exchange_timezone_for</code></td><td>ReplayMarketDataSource:539</td><td>Perform _exchange_timezone_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_instrument_registry_for</code></td><td>ReplayMarketDataSource:547</td><td>Perform _instrument_registry_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_instrument_for</code></td><td>ReplayMarketDataSource:602</td><td>Perform _instrument_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_dataset_metadata</code></td><td>ReplayMarketDataSource:627</td><td>Perform _dataset_metadata.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_file_content_hash</code></td><td>ReplayMarketDataSource:652</td><td>Return a stable content hash for the replay source file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_file_row_count</code></td><td>ReplayMarketDataSource:661</td><td>Return the number of data rows in a replay CSV source file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_dataset_instrument_id</code></td><td>ReplayMarketDataSource:667</td><td>Perform _dataset_instrument_id.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_contract_multipliers_for</code></td><td>ReplayMarketDataSource:673</td><td>Perform _contract_multipliers_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -6745,8 +6785,8 @@
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
               <tr><td><code>Bar</code></td><td>bar:14</td><td>OHLCV bar over a half-open interval.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>Quote</code></td><td>bar:67</td><td>Top-of-book quote.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>Tick</code></td><td>bar:92</td><td>Trade tick.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>Quote</code></td><td>bar:68</td><td>Top-of-book quote.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>Tick</code></td><td>bar:93</td><td>Trade tick.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -6755,12 +6795,12 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__post_init__</code></td><td>Bar:33</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>interval</code></td><td>Bar:55</td><td>Perform interval.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_require_non_negative</code></td><td>Bar:60</td><td>Perform _require_non_negative.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>Quote:77</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>spread</code></td><td>Quote:86</td><td>Perform spread.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>Tick:100</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>Bar:34</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>interval</code></td><td>Bar:56</td><td>Perform interval.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_require_non_negative</code></td><td>Bar:61</td><td>Perform _require_non_negative.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>Quote:78</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>spread</code></td><td>Quote:87</td><td>Perform spread.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>Tick:101</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>

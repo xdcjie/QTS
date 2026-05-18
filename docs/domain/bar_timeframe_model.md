@@ -25,6 +25,31 @@ qts/data/bars/validation.py    data quality and interval validation
 - `1d` must not be treated as 24 hours.
 - All intervals use `[start, end)`.
 
+## Time-grid completeness
+
+For `<1d` clock-aligned bars, **every wall-clock slot inside an active
+session must produce a Bar**, even when the underlying tape was silent
+for that slot. Sources whose raw rows are trade-only (e.g. Databento
+OHLCV CSVs that omit silent minutes) are wrapped by
+`BarTimeGridSynthesizer` at the source boundary; the synthesizer emits
+one synthetic bar per missing slot:
+
+- `open = high = low = close = previous bar's close`
+- `volume = 0`
+- `is_synthetic = True`
+- same `instrument_id`, `timeframe`, `session_id` as the trailing real bar
+
+Synthesis only spans gaps **between observed bars of the same
+`session_id`**. Leading slots before the first observed bar are not
+synthesized (no previous close to carry forward); trailing slots after
+the last observed bar are not synthesized. Cross-session gaps are
+natural session breaks and are never bridged.
+
+Strategy SDK indicators (`SMA`, `EMA`, `ATR`, `RSI`, `session_vwap`,
+`volume_ratio`, etc.) consume the post-synthesis stream, so windows
+expressed in bar counts have stable wall-clock semantics: `EMA(20)` on
+a `1m` series always covers exactly 20 wall-clock minutes.
+
 ## Requested and source timeframes
 
 Requested timeframe is strategy intent. Source timeframe is provider capability.
