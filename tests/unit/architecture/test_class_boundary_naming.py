@@ -5,7 +5,6 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-
 BACKEND_ROOT = Path("backend/src/qts")
 
 

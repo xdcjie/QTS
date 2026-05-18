@@ -4,24 +4,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
-from typing import Protocol
 
+from qts.data.sessions import CalendarSessionLookup
 from qts.domain.risk import OrderRiskRequest, RiskDecision
-from qts.registry.calendar_registry import MarketSession
-
-
-class SessionLookup(Protocol):
-    """Calendar session lookup required by the rule."""
-
-    def session_for(self, calendar_id: str, session_date: date) -> MarketSession:
-        """Return the internal market session for the date."""
 
 
 @dataclass(frozen=True, slots=True)
 class TradingSessionRule:
     """Reject orders whose order time is outside the configured session."""
 
-    calendar_registry: SessionLookup
+    calendar_registry: CalendarSessionLookup
     calendar_id: str
     session_date: date
 

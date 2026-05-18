@@ -5,10 +5,10 @@ from decimal import Decimal
 from qts.core.ids import AccountId, InstrumentId, OrderId
 from qts.execution.order_manager import OrderSide
 from qts.reconciliation import (
-    CashSnapshot,
     DriftKind,
     OrderSnapshot,
-    PositionSnapshot,
+    ReconciliationCashSnapshot,
+    ReconciliationPositionSnapshot,
     ReconciliationSnapshot,
     reconcile_snapshots,
 )
@@ -35,8 +35,10 @@ def test_reconciliation_classifies_order_position_and_cash_drift_deterministical
                 status="accepted",
             ),
         ),
-        positions=(PositionSnapshot(instrument_id=instrument_id, quantity=Decimal("10")),),
-        cash=(CashSnapshot(currency="USD", balance=Decimal("1000.00")),),
+        positions=(
+            ReconciliationPositionSnapshot(instrument_id=instrument_id, quantity=Decimal("10")),
+        ),
+        cash=(ReconciliationCashSnapshot(currency="USD", balance=Decimal("1000.00")),),
     )
     broker = ReconciliationSnapshot(
         account_id=account_id,
@@ -56,8 +58,10 @@ def test_reconciliation_classifies_order_position_and_cash_drift_deterministical
                 status="accepted",
             ),
         ),
-        positions=(PositionSnapshot(instrument_id=instrument_id, quantity=Decimal("10")),),
-        cash=(CashSnapshot(currency="USD", balance=Decimal("1000.005")),),
+        positions=(
+            ReconciliationPositionSnapshot(instrument_id=instrument_id, quantity=Decimal("10")),
+        ),
+        cash=(ReconciliationCashSnapshot(currency="USD", balance=Decimal("1000.005")),),
     )
 
     report = reconcile_snapshots(internal=internal, broker=broker, tolerance=Decimal("0.01"))

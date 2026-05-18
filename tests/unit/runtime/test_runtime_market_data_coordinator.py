@@ -24,6 +24,43 @@ from tests.unit.runtime.test_runtime_session import (
 )
 
 
+def test_runtime_market_data_coordinator_accepts_narrow_context_for_subscription_delta() -> None:
+    from qts.runtime.market_data_coordinator import RuntimeMarketDataCoordinator
+
+    class MarketDataContext:
+        def __init__(self) -> None:
+            self.strategy_subscriptions: tuple[InstrumentId, ...] = (
+                InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+                InstrumentId("EQUITY.US.NASDAQ.MSFT"),
+            )
+
+        def replace_strategy_subscriptions(
+            self,
+            subscriptions: tuple[InstrumentId, ...],
+        ) -> None:
+            self.strategy_subscriptions = subscriptions
+
+        def write(self, event: object) -> None:
+            del event
+
+    context = MarketDataContext()
+    coordinator = RuntimeMarketDataCoordinator(context)
+
+    delta = coordinator.materialize_universe_subscription_delta(
+        (
+            InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+            InstrumentId("EQUITY.US.NASDAQ.NVDA"),
+        )
+    )
+
+    assert delta.subscribe == (InstrumentId("EQUITY.US.NASDAQ.NVDA"),)
+    assert delta.unsubscribe == (InstrumentId("EQUITY.US.NASDAQ.MSFT"),)
+    assert context.strategy_subscriptions == (
+        InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+        InstrumentId("EQUITY.US.NASDAQ.NVDA"),
+    )
+
+
 def test_runtime_market_data_coordinator_has_named_dispatch_stages() -> None:
     from qts.runtime.market_data_coordinator import RuntimeMarketDataCoordinator
 

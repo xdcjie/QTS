@@ -10,7 +10,7 @@ from qts.runtime.actors.account_actor import AccountSnapshot
 
 def test_live_reconciliation_builds_internal_snapshot_and_blocks_startup_on_drift() -> None:
     from qts.portfolio.holdings import Holding
-    from qts.reconciliation.snapshots import CashSnapshot, ReconciliationSnapshot
+    from qts.reconciliation.snapshots import ReconciliationCashSnapshot, ReconciliationSnapshot
     from qts.runtime.broker_runtime_reconciliation import BrokerRuntimeReconciliation
 
     account_id = AccountId("acct-a")
@@ -48,7 +48,7 @@ def test_live_reconciliation_builds_internal_snapshot_and_blocks_startup_on_drif
     )
     broker = ReconciliationSnapshot(
         account_id=account_id,
-        cash=(CashSnapshot(currency="USD", balance=Decimal("900")),),
+        cash=(ReconciliationCashSnapshot(currency="USD", balance=Decimal("900")),),
     )
 
     decision = reconciler.startup_decision(internal=internal, broker=broker)
@@ -63,7 +63,7 @@ def test_live_reconciliation_builds_internal_snapshot_and_blocks_startup_on_drif
 
 
 def test_live_reconciliation_periodic_drift_emits_degradation_event() -> None:
-    from qts.reconciliation.snapshots import CashSnapshot, ReconciliationSnapshot
+    from qts.reconciliation.snapshots import ReconciliationCashSnapshot, ReconciliationSnapshot
     from qts.runtime.broker_runtime_reconciliation import BrokerRuntimeReconciliation
 
     account_id = AccountId("acct-a")
@@ -72,11 +72,11 @@ def test_live_reconciliation_periodic_drift_emits_degradation_event() -> None:
     result = reconciler.periodic_check(
         internal=ReconciliationSnapshot(
             account_id=account_id,
-            cash=(CashSnapshot(currency="USD", balance=Decimal("1000")),),
+            cash=(ReconciliationCashSnapshot(currency="USD", balance=Decimal("1000")),),
         ),
         broker=ReconciliationSnapshot(
             account_id=account_id,
-            cash=(CashSnapshot(currency="USD", balance=Decimal("999")),),
+            cash=(ReconciliationCashSnapshot(currency="USD", balance=Decimal("999")),),
         ),
     )
 

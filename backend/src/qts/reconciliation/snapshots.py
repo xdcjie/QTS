@@ -28,7 +28,7 @@ class OrderSnapshot:
 
 
 @dataclass(frozen=True, slots=True)
-class PositionSnapshot:
+class ReconciliationPositionSnapshot:
     """Normalized position entry used for reconciliation."""
 
     instrument_id: InstrumentId
@@ -36,7 +36,7 @@ class PositionSnapshot:
 
 
 @dataclass(frozen=True, slots=True)
-class CashSnapshot:
+class ReconciliationCashSnapshot:
     """Normalized cash entry used for reconciliation."""
 
     currency: str
@@ -54,13 +54,13 @@ class ReconciliationSnapshot:
 
     account_id: AccountId
     orders: tuple[OrderSnapshot, ...] = ()
-    positions: tuple[PositionSnapshot, ...] = ()
-    cash: tuple[CashSnapshot, ...] = ()
+    positions: tuple[ReconciliationPositionSnapshot, ...] = ()
+    cash: tuple[ReconciliationCashSnapshot, ...] = ()
 
 
 __all__ = [
-    "CashSnapshot",
     "OrderSnapshot",
-    "PositionSnapshot",
+    "ReconciliationCashSnapshot",
+    "ReconciliationPositionSnapshot",
     "ReconciliationSnapshot",
 ]

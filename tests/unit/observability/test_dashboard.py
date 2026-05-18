@@ -6,10 +6,10 @@ from decimal import Decimal
 def test_operational_dashboard_snapshot_serializes_runtime_schema() -> None:
     from qts.observability.dashboard import (
         BrokerConnectionSnapshot,
-        CashSnapshot,
+        DashboardCashSnapshot,
+        DashboardPositionSnapshot,
         OpenOrderSnapshot,
         OperationalDashboardSnapshot,
-        PositionSnapshot,
         RiskStatusSnapshot,
         RuntimeSubscriptionSnapshot,
     )
@@ -34,13 +34,13 @@ def test_operational_dashboard_snapshot_serializes_runtime_schema() -> None:
             ),
         ),
         positions=(
-            PositionSnapshot(
+            DashboardPositionSnapshot(
                 account_id="acct-1",
                 instrument_id="EQUITY.US.NASDAQ.AAPL",
                 quantity=Decimal("10"),
             ),
         ),
-        cash=(CashSnapshot(account_id="acct-1", currency="USD", balance=Decimal("1000")),),
+        cash=(DashboardCashSnapshot(account_id="acct-1", currency="USD", balance=Decimal("1000")),),
         risk=RiskStatusSnapshot(status="enabled", kill_switch_active=False),
         broker_connection=BrokerConnectionSnapshot(status="connected", broker_id="broker-1"),
         reconciliation_status="clean",

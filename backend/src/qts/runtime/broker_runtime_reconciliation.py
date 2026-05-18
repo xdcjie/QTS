@@ -10,9 +10,9 @@ from qts.execution.order_manager import OrderManagerSnapshot
 from qts.reconciliation.engine import ReconciliationEngine
 from qts.reconciliation.report import ReconciliationReport
 from qts.reconciliation.snapshots import (
-    CashSnapshot,
     OrderSnapshot,
-    PositionSnapshot,
+    ReconciliationCashSnapshot,
+    ReconciliationPositionSnapshot,
     ReconciliationSnapshot,
 )
 from qts.reconciliation.startup_gate import StartupReconciliationDecision
@@ -62,14 +62,14 @@ class BrokerRuntimeReconciliation:
                 for order in order_manager.orders
             ),
             positions=tuple(
-                PositionSnapshot(
+                ReconciliationPositionSnapshot(
                     instrument_id=instrument_id,
                     quantity=position.quantity,
                 )
                 for instrument_id, position in account.positions.items()
             ),
             cash=tuple(
-                CashSnapshot(currency=currency, balance=balance)
+                ReconciliationCashSnapshot(currency=currency, balance=balance)
                 for currency, balance in account.cash.items()
             ),
         )

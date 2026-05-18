@@ -1,10 +1,10 @@
 from qts.observability.audit import AuditEvent
 from qts.observability.dashboard import (
     BrokerConnectionSnapshot,
-    CashSnapshot,
+    DashboardCashSnapshot,
+    DashboardPositionSnapshot,
     OpenOrderSnapshot,
     OperationalDashboardSnapshot,
-    PositionSnapshot,
     RiskStatusSnapshot,
     RuntimeSubscriptionSnapshot,
 )
@@ -15,12 +15,12 @@ from qts.observability.metrics import MetricsRegistry, RuntimeCounterMetric, Run
 __all__ = [
     "AuditEvent",
     "BrokerConnectionSnapshot",
-    "CashSnapshot",
+    "DashboardCashSnapshot",
+    "DashboardPositionSnapshot",
     "MetricsRegistry",
     "OpenOrderSnapshot",
     "OperationalDashboardSnapshot",
     "OperationalErrorCode",
-    "PositionSnapshot",
     "REDACTED",
     "RiskStatusSnapshot",
     "RuntimeCounterMetric",

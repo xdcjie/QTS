@@ -8,6 +8,48 @@ if TYPE_CHECKING:
     from qts.execution.adapters.ibkr_order_execution import IbkrOrderExecutionAdapter
 
 
+def test_ibkr_callback_normalizer_drops_duplicate_order_status_callbacks() -> None:
+    from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+    from qts.execution.adapters.ibkr_callback_normalizer import IbkrCallbackNormalizer
+    from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
+    from qts.execution.order_manager import ExecutionReportStatus
+    from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOrderStatusPayload
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    status = IbkrOrderStatusPayload(
+        report_id="status-1",
+        broker_order_id="ibkr-001",
+        status="Submitted",
+        perm_id="perm-001",
+    )
+    order_map = BrokerOrderMap()
+    order_map.record_pending_submission(
+        internal_order_id=OrderId("ord-001"),
+        client_order_id="client-001",
+        account_id=AccountId("acct-ibkr"),
+        strategy_id=StrategyId("strategy-ibkr"),
+        submitted_at=datetime(2026, 1, 2, 14, 30, tzinfo=UTC),
+    )
+    order_map.attach_ibkr_order_id(client_order_id="client-001", ibkr_order_id="ibkr-001")
+    normalizer = IbkrCallbackNormalizer(
+        account_id="DU1234567",
+        symbol_mapping=mapping,
+        order_map=order_map,
+    )
+
+    first = normalizer.on_order_status(status)
+    duplicate = normalizer.on_order_status(status)
+
+    assert first is not None
+    assert first.status is ExecutionReportStatus.ACCEPTED
+    assert duplicate is None
+    assert normalizer.callback_events[-1].kind == "ibkr_order_callback_duplicate_dropped"
+    assert normalizer.callback_events[-1].reason == "order_status_already_seen"
+
+
 def test_duplicate_order_status_is_idempotent() -> None:
     from qts.execution.order_manager import ExecutionReportStatus
     from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOrderStatusPayload

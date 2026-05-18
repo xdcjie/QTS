@@ -332,6 +332,7 @@ def test_guardrails_reject_backtest_input_catalog_construction(
         "backend/src/qts/backtest/inputs.py",
         "from qts.data.historical.catalog import load_historical_catalog\n\n"
         "class ReplayMarketDataSource:\n"
+        '    """Owns replay market data source test behavior."""\n'
         "    def _load_catalog(self):\n"
         "        return load_historical_catalog\n",
     )
@@ -447,6 +448,135 @@ def test_guardrails_allow_class_owned_private_helper(
     assert _codes(root) == set()
 
 
+def test_guardrails_require_large_production_classes_in_boundary_matrix(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write_platform_freeze_stub(root)
+    _write(
+        root,
+        "backend/src/qts/domain/large_service.py",
+        "class LargeService:\n"
+        '    """Owns runtime test behavior for matrix coverage."""\n'
+        + "\n".join(
+            f"    def method_{index}(self):\n        return {index}" for index in range(155)
+        )
+        + "\n",
+    )
+
+    violations = run_guardrails(root)
+
+    assert {violation.code for violation in violations} == {"CLASS_BOUNDARY_MATRIX"}
+    assert violations[0].symbol == "qts.domain.large_service.LargeService"
+    assert "over 300 lines" in violations[0].message
+
+
+def test_guardrails_require_split_or_retain_evidence_for_very_large_classes(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write_platform_freeze_stub(root)
+    _write(
+        root,
+        "backend/src/qts/domain/large_service.py",
+        "class LargeService:\n"
+        '    """Owns runtime test behavior for matrix coverage."""\n'
+        + "\n".join(
+            f"    def method_{index}(self):\n        return {index}" for index in range(260)
+        )
+        + "\n",
+    )
+    _write(
+        root,
+        "docs/plan/backend_class_boundary_review_status_matrix.md",
+        "# Backend Class Boundary Review Status Matrix\n\n"
+        "| Class | Current lines | Owner | Risk | Decision | Target | Evidence | Status |\n"
+        "| --- | ---: | --- | --- | --- | --- | --- | --- |\n"
+        "| LargeService | 522 | runtime | High | Review | "
+        "Split into lifecycle and routing owners |  | Open |\n",
+    )
+
+    violations = run_guardrails(root)
+
+    assert {violation.code for violation in violations} == {"CLASS_BOUNDARY_MATRIX"}
+    assert violations[0].symbol == "qts.domain.large_service.LargeService"
+    assert "split/retain decision and evidence" in violations[0].message
+
+
+def test_guardrails_allow_large_classes_with_matrix_decision_and_evidence(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write_platform_freeze_stub(root)
+    _write(
+        root,
+        "backend/src/qts/domain/large_service.py",
+        "class LargeService:\n"
+        '    """Owns runtime test behavior for matrix coverage."""\n'
+        + "\n".join(
+            f"    def method_{index}(self):\n        return {index}" for index in range(260)
+        )
+        + "\n",
+    )
+    _write(
+        root,
+        "docs/plan/backend_class_boundary_review_status_matrix.md",
+        "# Backend Class Boundary Review Status Matrix\n\n"
+        "| Class | Current lines | Owner | Risk | Decision | Target | Evidence | Status |\n"
+        "| --- | ---: | --- | --- | --- | --- | --- | --- |\n"
+        "| LargeService | 522 | runtime | High | Retain | Keep as facade pending split | "
+        "`tests/unit/scripts/test_verify_guardrails.py` | Complete |\n",
+    )
+
+    assert run_guardrails(root) == []
+
+
+def test_guardrails_require_ownership_verb_for_broad_class_suffix_docstrings(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write_platform_freeze_stub(root)
+    _write(
+        root,
+        "backend/src/qts/domain/services.py",
+        "class RuntimeService:\n"
+        '    """Runtime utilities for tests."""\n'
+        "    pass\n\n"
+        "class RuntimeCoordinator:\n"
+        "    pass\n",
+    )
+
+    violations = run_guardrails(root)
+
+    assert {violation.code for violation in violations} == {"CLASS_OWNERSHIP_DOCSTRING"}
+    assert {violation.symbol for violation in violations} == {
+        "qts.domain.services.RuntimeCoordinator",
+        "qts.domain.services.RuntimeService",
+    }
+
+
+def test_guardrails_allow_ownership_verb_for_broad_suffix_classes_and_small_protocols(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write_platform_freeze_stub(root)
+    _write(
+        root,
+        "backend/src/qts/domain/services.py",
+        "from typing import Protocol\n\n"
+        "class RuntimeService:\n"
+        '    """Owns runtime test behavior."""\n'
+        "    pass\n\n"
+        "class RuntimeCoordinator:\n"
+        '    """Coordinates runtime test behavior."""\n'
+        "    pass\n\n"
+        "class MarketDataSource(Protocol):\n"
+        "    def subscribe(self) -> None: ...\n",
+    )
+
+    assert run_guardrails(root) == []
+
+
 def test_guardrails_reject_backtest_engine_historical_input_assembly(
     tmp_path: Path,
 ) -> None:
@@ -521,7 +651,9 @@ def test_guardrails_reject_replay_classes_in_live_package(tmp_path: Path) -> Non
     _write(
         root,
         "backend/src/qts/data/live/adapter.py",
-        "class ReplayMarketDataAdapter:\n    pass\n",
+        "class ReplayMarketDataAdapter:\n"
+        '    """Adapts replay market data for guardrail tests."""\n'
+        "    pass\n",
     )
 
     assert _codes(root) == {"LIVE_PACKAGE_REPLAY_CLASS"}
@@ -532,7 +664,9 @@ def test_guardrails_reject_fake_classes_in_production_data_package(tmp_path: Pat
     _write(
         root,
         "backend/src/qts/data/live/fake_adapter.py",
-        "class FakeMarketDataAdapter:\n    pass\n",
+        "class FakeMarketDataAdapter:\n"
+        '    """Adapts fake market data for guardrail tests."""\n'
+        "    pass\n",
     )
 
     assert _codes(root) == {"PRODUCTION_FAKE_CLASS"}
@@ -585,7 +719,7 @@ def test_default_guardrails_reject_shared_contract_classes_in_data_live_package(
     _write(
         root,
         "backend/src/qts/data/live/adapter.py",
-        "class MarketDataAdapter:\n    pass\n",
+        'class MarketDataAdapter:\n    """Adapts market data for guardrail tests."""\n    pass\n',
     )
 
     assert _codes(root) == {"DATA_LIVE_SHARED_CONTRACT"}
@@ -1043,7 +1177,10 @@ def test_guardrails_reject_runtime_coordinator_without_decision_evidence(
     _write(
         root,
         "backend/src/qts/runtime/recovery.py",
-        "class RuntimeRecoveryCoordinator:\n    def recover(self):\n        pass\n",
+        "class RuntimeRecoveryCoordinator:\n"
+        '    """Coordinates runtime recovery test behavior."""\n'
+        "    def recover(self):\n"
+        "        pass\n",
     )
 
     assert _codes(root) == {"RUNTIME_COORDINATOR_DECISION"}
@@ -1061,7 +1198,13 @@ def test_every_runtime_coordinator_has_decision_record(tmp_path: Path) -> None:
         "backend/src/qts/runtime/broker_runtime_topology.py": "BrokerRuntimeTopologyResolver",
     }
     for relative_path, class_name in coordinator_sources.items():
-        _write(root, relative_path, f"class {class_name}:\n    pass\n")
+        _write(
+            root,
+            relative_path,
+            f"class {class_name}:\n"
+            '    """Coordinates runtime decision test behavior."""\n'
+            "    pass\n",
+        )
     _write(
         root,
         "docs/architecture/runtime_coordinator_decisions.md",
@@ -1105,7 +1248,9 @@ def test_kept_coordinator_has_state_policy_or_evidence_responsibility(
     _write(
         root,
         "backend/src/qts/runtime/recovery.py",
-        "class RuntimeRecoveryCoordinator:\n    pass\n",
+        "class RuntimeRecoveryCoordinator:\n"
+        '    """Coordinates runtime recovery tests."""\n'
+        "    pass\n",
     )
     _write(
         root,

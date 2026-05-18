@@ -396,3 +396,149 @@ def test_operator_status_alerts_stale_drift_and_unresolved_callbacks() -> None:
         ("RECONCILIATION_DRIFT", observed_at),
         ("UNRESOLVED_BROKER_CALLBACKS", observed_at),
     }
+
+
+def test_runtime_lifecycle_service_owns_state_command_results() -> None:
+    from datetime import UTC, datetime
+
+    from qts.application.services.runtime_lifecycle import RuntimeLifecycleService
+    from qts.runtime.commands import RuntimeCommand, RuntimeCommandType
+
+    service = RuntimeLifecycleService()
+    accepted_at = datetime(2026, 5, 18, tzinfo=UTC)
+
+    result = service.handle(
+        RuntimeCommand(
+            command_id="pause-1",
+            command_type=RuntimeCommandType.PAUSE,
+            idempotency_key="pause-key",
+            operator_id="ops-a",
+        ),
+        accepted_at=accepted_at,
+    )
+
+    assert service.state == "paused"
+    assert result is not None
+    assert result.evidence["state"] == "paused"
+    assert result.evidence["operator_id"] == "ops-a"
+
+
+def test_kill_switch_command_service_owns_scope_state_and_evidence() -> None:
+    from datetime import UTC, datetime
+
+    from qts.application.services.kill_switch_commands import KillSwitchCommandService
+    from qts.runtime.commands import RuntimeCommand, RuntimeCommandType
+
+    service = KillSwitchCommandService()
+    accepted_at = datetime(2026, 5, 18, tzinfo=UTC)
+
+    result = service.handle(
+        RuntimeCommand(
+            command_id="kill-1",
+            command_type=RuntimeCommandType.ACTIVATE_KILL_SWITCH,
+            idempotency_key="kill-key",
+            operator_id="ops-a",
+            payload={"scope": "global", "reason": "operator stop"},
+        ),
+        accepted_at=accepted_at,
+    )
+
+    assert service.state == {
+        "scope": "global",
+        "scope_id": None,
+        "active": True,
+        "reason": "operator stop",
+    }
+    assert result is not None
+    assert result.evidence["active"] is True
+    assert result.evidence["reason"] == "operator stop"
+
+
+def test_operator_dashboard_service_owns_default_status_projection() -> None:
+    from qts.application.services.operator_dashboard import OperatorDashboardService
+
+    status = OperatorDashboardService().status(
+        runtime_state="paused",
+        runtime_mode="paper",
+        kill_switch_state={
+            "scope": "global",
+            "scope_id": None,
+            "active": True,
+            "reason": "operator stop",
+        },
+    )
+
+    assert status.runtime_state.value == "paused"
+    assert status.runtime_mode.value == "paper"
+    assert isinstance(status.kill_switch_state.value, dict)
+    assert status.kill_switch_state.value["active"] is True
+    assert status.event_sink.value == {"path": None, "hash": None, "row_count": 0}
+
+
+def test_operations_command_router_owns_idempotent_command_submission() -> None:
+    from datetime import UTC, datetime
+
+    from qts.application.services.operations_command_router import OperationsCommandRouter
+    from qts.runtime.commands import (
+        RuntimeCommand,
+        RuntimeCommandResult,
+        RuntimeCommandResultStatus,
+        RuntimeCommandType,
+    )
+
+    def handle(command: RuntimeCommand) -> RuntimeCommandResult:
+        return RuntimeCommandResult(
+            command_id=command.command_id,
+            idempotency_key=command.idempotency_key,
+            accepted_at=datetime(2026, 5, 18, tzinfo=UTC),
+            result_status=RuntimeCommandResultStatus.COMPLETED,
+            evidence={"operator_id": command.operator_id, "state": "running"},
+        )
+
+    router = OperationsCommandRouter(handler=handle)
+
+    first = router.submit(
+        RuntimeCommandType.RECONCILE,
+        operator_id="ops-a",
+        idempotency_key="shared-key",
+    )
+    duplicate = router.submit(
+        RuntimeCommandType.RECONCILE,
+        operator_id="ops-a",
+        idempotency_key="shared-key",
+    )
+    other_operator = router.submit(
+        RuntimeCommandType.RECONCILE,
+        operator_id="ops-b",
+        idempotency_key="shared-key",
+    )
+
+    assert duplicate == first
+    assert other_operator.command_id != first.command_id
+    assert first.evidence["operator_id"] == "ops-a"
+    assert other_operator.evidence["operator_id"] == "ops-b"
+
+
+def test_operations_command_handler_owns_reconcile_and_snapshot_results() -> None:
+    from qts.application.services.kill_switch_commands import KillSwitchCommandService
+    from qts.application.services.operations_command_handler import OperationsCommandHandler
+    from qts.application.services.runtime_lifecycle import RuntimeLifecycleService
+    from qts.runtime.commands import RuntimeCommand, RuntimeCommandType
+
+    handler = OperationsCommandHandler(
+        lifecycle=RuntimeLifecycleService(initial_state="paused"),
+        kill_switch_commands=KillSwitchCommandService(),
+    )
+
+    result = handler.handle(
+        RuntimeCommand(
+            command_id="reconcile-1",
+            command_type=RuntimeCommandType.RECONCILE,
+            idempotency_key="reconcile-key",
+            operator_id="ops-a",
+        )
+    )
+
+    assert result.evidence["state"] == "paused"
+    assert result.evidence["reconciliation"] == "requested"
+    assert result.evidence["operator_id"] == "ops-a"

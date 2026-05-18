@@ -5,6 +5,60 @@ from decimal import Decimal
 import pytest
 
 
+def test_ibkr_order_request_mapper_maps_order_intent_to_ibkr_request() -> None:
+    from qts.core.ids import BrokerId, InstrumentId, OrderId, StrategyId
+    from qts.execution.adapters.ibkr_order_request_mapper import IbkrOrderRequestMapper
+    from qts.execution.broker import BrokerCapabilities, BrokerOrderType, TimeInForce
+    from qts.execution.order_manager import OrderIntent, OrderSide
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    mapper = IbkrOrderRequestMapper(
+        account_id="DU1234567",
+        symbol_mapping=mapping,
+        capabilities=BrokerCapabilities(
+            broker_id=BrokerId("IBKR"),
+            supports_market_orders=True,
+            supports_limit_orders=True,
+            supports_fractional=False,
+        ),
+    )
+
+    request = mapper.to_order_request(
+        OrderIntent(
+            order_id=OrderId("ord-001"),
+            instrument_id=instrument_id,
+            side=OrderSide.BUY,
+            quantity=Decimal("10"),
+        ),
+        client_order_id="client-001",
+        strategy_id=StrategyId("strategy-ibkr"),
+        order_type=BrokerOrderType.LIMIT,
+        limit_price=Decimal("101.25"),
+        time_in_force=TimeInForce.DAY,
+    )
+
+    assert request.account_id == "DU1234567"
+    assert request.broker_symbol == "AAPL"
+    assert request.client_order_id == "client-001"
+    assert request.strategy_id == StrategyId("strategy-ibkr")
+    assert request.order_type is BrokerOrderType.LIMIT
+    assert request.limit_price == Decimal("101.25")
+
+    with pytest.raises(ValueError, match="fractional"):
+        mapper.to_order_request(
+            OrderIntent(
+                order_id=OrderId("ord-fractional"),
+                instrument_id=instrument_id,
+                side=OrderSide.BUY,
+                quantity=Decimal("1.5"),
+            ),
+            client_order_id="client-fractional",
+        )
+
+
 def test_ibkr_order_execution_adapter_maps_order_and_report_without_market_data_methods() -> None:
     from qts.core.ids import BrokerId, InstrumentId, OrderId
     from qts.execution.adapters.ibkr_order_execution import (

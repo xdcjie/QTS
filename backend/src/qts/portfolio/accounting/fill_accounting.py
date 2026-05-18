@@ -19,7 +19,7 @@ class TradeSide(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
-class Fill:
+class AccountingFill:
     """Executed fill used by accounting."""
 
     fill_id: OrderId
@@ -46,7 +46,12 @@ class FillAccounting:
     """Fill accounting operations."""
 
     @staticmethod
-    def apply(fill: Fill, *, cash_book: CashBook, holding_book: HoldingBook) -> None:
+    def apply(
+        fill: AccountingFill,
+        *,
+        cash_book: CashBook,
+        holding_book: HoldingBook,
+    ) -> None:
         """Perform apply."""
         signed_quantity = fill.quantity if fill.side is TradeSide.BUY else -fill.quantity
         cash_delta = -signed_quantity * fill.price * fill.multiplier
@@ -60,4 +65,4 @@ class FillAccounting:
         cash_book.apply_delta(fill.currency, cash_delta)
 
 
-__all__ = ["Fill", "FillAccounting", "TradeSide"]
+__all__ = ["AccountingFill", "FillAccounting", "TradeSide"]

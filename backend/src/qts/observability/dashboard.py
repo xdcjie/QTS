@@ -47,7 +47,7 @@ class OpenOrderSnapshot:
 
 
 @dataclass(frozen=True, slots=True)
-class PositionSnapshot:
+class DashboardPositionSnapshot:
     """One account position row."""
 
     account_id: str
@@ -64,7 +64,7 @@ class PositionSnapshot:
 
 
 @dataclass(frozen=True, slots=True)
-class CashSnapshot:
+class DashboardCashSnapshot:
     """One account cash balance row."""
 
     account_id: str
@@ -117,8 +117,8 @@ class OperationalDashboardSnapshot:
     runtime_state: str
     subscriptions: tuple[RuntimeSubscriptionSnapshot, ...]
     open_orders: tuple[OpenOrderSnapshot, ...]
-    positions: tuple[PositionSnapshot, ...]
-    cash: tuple[CashSnapshot, ...]
+    positions: tuple[DashboardPositionSnapshot, ...]
+    cash: tuple[DashboardCashSnapshot, ...]
     risk: RiskStatusSnapshot
     broker_connection: BrokerConnectionSnapshot
     reconciliation_status: str
@@ -139,10 +139,10 @@ class OperationalDashboardSnapshot:
 
 __all__ = [
     "BrokerConnectionSnapshot",
-    "CashSnapshot",
+    "DashboardCashSnapshot",
+    "DashboardPositionSnapshot",
     "OpenOrderSnapshot",
     "OperationalDashboardSnapshot",
-    "PositionSnapshot",
     "RiskStatusSnapshot",
     "RuntimeSubscriptionSnapshot",
 ]

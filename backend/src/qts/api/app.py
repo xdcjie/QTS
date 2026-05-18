@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 
+from qts.api.auth_backend_factory import default_auth_backend
 from qts.api.routes import (
     accounts_router,
     backtests_router,
@@ -13,7 +14,7 @@ from qts.api.routes import (
     orders_router,
     strategies_router,
 )
-from qts.api.security import ApiSecurityMiddleware, default_auth_backend
+from qts.api.security import ApiSecurityMiddleware
 from qts.api.websocket import events_router
 from qts.observability.metrics import MetricsRegistry
 from qts.observability.prometheus import PROMETHEUS_CONTENT_TYPE, render_prometheus_text

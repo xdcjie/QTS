@@ -9,6 +9,7 @@ from qts.quality.guardrails import (
     CLASS_INVENTORY_BASELINE_PATH,
     PLATFORM_FREEZE_EXCEPTIONS_PATH,
     PLATFORM_FREEZE_RULE_KEY,
+    QTS_ROOT,
     GuardrailViolation,
     _class_inventory_baseline_optional,
     _class_inventory_parse_violations,
@@ -20,6 +21,61 @@ from qts.quality.guardrails import (
     _load_platform_freeze_config,
     _ProductionClassEntry,
     _scan_production_classes,
+)
+
+BACKEND_CLASS_BOUNDARY_MATRIX_PATH = Path(
+    "docs/plan/backend_class_boundary_review_status_matrix.md"
+)
+BROAD_CLASS_SUFFIXES = ("Service", "Coordinator", "Manager", "Builder", "Source", "Adapter")
+OWNERSHIP_DOCSTRING_VERBS = frozenset(
+    {
+        "own",
+        "owns",
+        "build",
+        "builds",
+        "adapt",
+        "adapts",
+        "resolve",
+        "resolves",
+        "coordinate",
+        "coordinates",
+        "run",
+        "runs",
+        "write",
+        "writes",
+        "load",
+        "loads",
+        "apply",
+        "applies",
+        "convert",
+        "converts",
+        "map",
+        "maps",
+        "normalize",
+        "normalizes",
+        "assemble",
+        "assembles",
+        "compute",
+        "computes",
+        "track",
+        "tracks",
+        "return",
+        "returns",
+        "start",
+        "starts",
+        "feed",
+        "feeds",
+    }
+)
+MATRIX_COLUMNS = (
+    "Class",
+    "Current lines",
+    "Owner",
+    "Risk",
+    "Decision",
+    "Target",
+    "Evidence",
+    "Status",
 )
 
 
@@ -105,14 +161,53 @@ class ClassInventoryBudgetRule:
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
         """Perform per-file check."""
-        return []
+        if qts_relative_path.parts[:1] in (("quality",), ("testing",)):
+            return []
+        module_name = "qts." + qts_relative_path.with_suffix("").as_posix().replace("/", ".")
+        violations: list[GuardrailViolation] = []
+        for node in _iter_top_level_classes(tree):
+            if not _is_public_class(node):
+                continue
+            if not self._requires_ownership_docstring(module_name, node):
+                continue
+            first_line = _class_docstring_first_line(node)
+            if _has_ownership_verb(first_line):
+                continue
+            violations.append(
+                GuardrailViolation(
+                    code="CLASS_OWNERSHIP_DOCSTRING",
+                    path=str(relative_path),
+                    line=node.lineno,
+                    message=(
+                        f"{node.name} uses a broad class suffix and its docstring first line "
+                        "must include a clear ownership verb"
+                    ),
+                    symbol=f"{module_name}.{node.name}",
+                )
+            )
+        return violations
+
+    def _requires_ownership_docstring(self, module_name: str, node: ast.ClassDef) -> bool:
+        if not node.name.endswith(BROAD_CLASS_SUFFIXES):
+            return False
+        if _is_protocol_class(node) or _is_small_boundary_value_class(node):
+            return False
+        if (
+            self._baseline is not None
+            and f"{module_name}.{node.name}" in self._baseline.production_classes
+        ):
+            return False
+        return True
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
         """Perform repository-wide check."""
+        classes = _scan_production_classes(repo_root)
+        violations = _class_boundary_matrix_violations(classes, repo_root)
+
         if _class_inventory_baseline_optional(repo_root) and self._baseline is None:
-            return []
+            return violations
         if self._baseline is None:
-            return [
+            return violations + [
                 GuardrailViolation(
                     code=self.code,
                     path=str(CLASS_INVENTORY_BASELINE_PATH),
@@ -122,11 +217,9 @@ class ClassInventoryBudgetRule:
             ]
         parse_violations = _class_inventory_parse_violations(self.code, self._baseline)
         if parse_violations:
-            return parse_violations
+            return violations + parse_violations
 
-        classes = _scan_production_classes(repo_root)
         freeze_config = _load_platform_freeze_config(repo_root)
-        violations: list[GuardrailViolation] = []
         for class_entry in classes:
             if class_entry.symbol in self._baseline.production_classes:
                 continue
@@ -159,6 +252,201 @@ class ClassInventoryBudgetRule:
             )
         )
         return violations
+
+
+def _class_boundary_matrix_violations(
+    classes: list[_ProductionClassEntry], repo_root: Path
+) -> list[GuardrailViolation]:
+    line_counts = _production_class_line_counts(repo_root)
+    oversized_classes = [
+        class_entry for class_entry in classes if line_counts.get(class_entry.symbol, 1) > 300
+    ]
+    if not oversized_classes:
+        return []
+
+    matrix_path = repo_root / BACKEND_CLASS_BOUNDARY_MATRIX_PATH
+    matrix_rows, parse_violation = _load_backend_class_boundary_matrix(matrix_path)
+    if parse_violation is not None:
+        if parse_violation.startswith("missing "):
+            return [
+                GuardrailViolation(
+                    code="CLASS_BOUNDARY_MATRIX",
+                    path=str(class_entry.relative_path),
+                    line=class_entry.line,
+                    message=(
+                        f"production class {class_entry.name} is over 300 lines "
+                        f"({line_counts.get(class_entry.symbol, 1)}) and must be present in "
+                        f"{BACKEND_CLASS_BOUNDARY_MATRIX_PATH}"
+                    ),
+                    symbol=class_entry.symbol,
+                )
+                for class_entry in oversized_classes
+            ]
+        return [
+            GuardrailViolation(
+                code="CLASS_BOUNDARY_MATRIX",
+                path=str(BACKEND_CLASS_BOUNDARY_MATRIX_PATH),
+                line=1,
+                message=parse_violation,
+            )
+        ]
+
+    violations: list[GuardrailViolation] = []
+    for class_entry in oversized_classes:
+        line_count = line_counts.get(class_entry.symbol, 1)
+        row = matrix_rows.get(class_entry.name)
+        if row is None:
+            violations.append(
+                GuardrailViolation(
+                    code="CLASS_BOUNDARY_MATRIX",
+                    path=str(class_entry.relative_path),
+                    line=class_entry.line,
+                    message=(
+                        f"production class {class_entry.name} is over 300 lines "
+                        f"({line_count}) and must be present in "
+                        f"{BACKEND_CLASS_BOUNDARY_MATRIX_PATH}"
+                    ),
+                    symbol=class_entry.symbol,
+                )
+            )
+            continue
+        if line_count <= 500:
+            continue
+        decision = row.get("Decision", "").lower()
+        evidence = row.get("Evidence", "").strip()
+        if ("split" in decision or "retain" in decision) and evidence:
+            continue
+        violations.append(
+            GuardrailViolation(
+                code="CLASS_BOUNDARY_MATRIX",
+                path=str(BACKEND_CLASS_BOUNDARY_MATRIX_PATH),
+                line=1,
+                message=(
+                    f"production class {class_entry.name} is over 500 lines "
+                    f"({line_count}) and must have a split/retain decision "
+                    "and evidence"
+                ),
+                symbol=class_entry.symbol,
+            )
+        )
+    return violations
+
+
+def _production_class_line_counts(repo_root: Path) -> dict[str, int]:
+    source_root = repo_root / QTS_ROOT
+    if not source_root.exists():
+        return {}
+    line_counts: dict[str, int] = {}
+    for path in sorted(source_root.rglob("*.py")):
+        if "__pycache__" in path.parts:
+            continue
+        qts_relative_path = path.relative_to(source_root)
+        if qts_relative_path.parts[:1] == ("testing",):
+            continue
+        source = path.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(path.relative_to(repo_root)))
+        module_name = "qts." + qts_relative_path.with_suffix("").as_posix().replace("/", ".")
+        for node in _iter_top_level_classes(tree):
+            if not _is_public_class(node):
+                continue
+            line_counts[f"{module_name}.{node.name}"] = _class_line_count(node)
+    return line_counts
+
+
+def _class_line_count(node: ast.ClassDef) -> int:
+    end_lineno = getattr(node, "end_lineno", None)
+    if not isinstance(end_lineno, int):
+        return 1
+    return max(1, end_lineno - node.lineno + 1)
+
+
+def _load_backend_class_boundary_matrix(
+    path: Path,
+) -> tuple[dict[str, dict[str, str]], str | None]:
+    if not path.exists():
+        return {}, f"missing backend class boundary review matrix: {path}"
+    rows: dict[str, dict[str, str]] = {}
+    header: tuple[str, ...] | None = None
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = tuple(cell.strip() for cell in line.strip().strip("|").split("|"))
+        if not cells:
+            continue
+        if cells == MATRIX_COLUMNS:
+            header = cells
+            continue
+        if header is None:
+            continue
+        if _is_markdown_separator(cells):
+            continue
+        if len(cells) != len(header):
+            return rows, f"invalid row in backend class boundary matrix: {line}"
+        row = dict(zip(header, cells, strict=True))
+        class_name = row["Class"]
+        if class_name:
+            rows[class_name] = row
+    if header is None:
+        return rows, "backend class boundary matrix is missing the required table header"
+    return rows, None
+
+
+def _is_markdown_separator(cells: tuple[str, ...]) -> bool:
+    return all(cell.replace(":", "").replace("-", "").strip() == "" for cell in cells)
+
+
+def _is_protocol_class(node: ast.ClassDef) -> bool:
+    return any(_base_name(base) == "Protocol" for base in node.bases)
+
+
+def _is_small_boundary_value_class(node: ast.ClassDef) -> bool:
+    if not node.name.endswith(
+        (
+            "DTO",
+            "Value",
+            "ValueObject",
+            "Config",
+            "Result",
+            "Event",
+            "Command",
+            "Request",
+            "Response",
+        )
+    ):
+        return False
+    public_methods = [
+        item
+        for item in node.body
+        if isinstance(item, ast.FunctionDef | ast.AsyncFunctionDef)
+        and not item.name.startswith("_")
+    ]
+    return len(public_methods) <= 1
+
+
+def _base_name(node: ast.AST) -> str:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    if isinstance(node, ast.Subscript):
+        return _base_name(node.value)
+    return ""
+
+
+def _class_docstring_first_line(node: ast.ClassDef) -> str:
+    docstring = ast.get_docstring(node)
+    if docstring is None:
+        return ""
+    return docstring.splitlines()[0].strip()
+
+
+def _has_ownership_verb(first_line: str) -> bool:
+    words = {
+        word.strip(".,:;()[]{}'\"`").lower()
+        for word in first_line.split()
+        if word.strip(".,:;()[]{}'\"`")
+    }
+    return bool(words & OWNERSHIP_DOCSTRING_VERBS)
 
 
 class SingleFieldDtoJustificationRule:

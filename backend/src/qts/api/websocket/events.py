@@ -8,7 +8,8 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 
-from qts.api.security import default_auth_backend, verify_websocket_authorization
+from qts.api.auth_backend_factory import default_auth_backend
+from qts.api.security import verify_websocket_authorization
 from qts.api.websocket.manager import WebSocketConnectionManager
 
 router = APIRouter()

@@ -6,7 +6,6 @@ import base64
 import hashlib
 import hmac
 import json
-import os
 import time
 from collections import OrderedDict, defaultdict, deque
 from collections.abc import Callable, Mapping
@@ -287,6 +286,8 @@ def get_principal(
     principal = getattr(request.state, "principal", None)
     if isinstance(principal, Principal):
         return principal
+    from qts.api.auth_backend_factory import default_auth_backend
+
     return default_auth_backend().verify(authorization)
 
 
@@ -306,49 +307,6 @@ def verify_websocket_authorization(
     if required_scope and required_scope not in principal.scopes:
         raise HTTPException(status_code=403, detail="insufficient scope")
     return principal
-
-
-def default_auth_backend() -> AuthBackend:
-    """Build the configured default auth backend.
-
-    Resolution order:
-    1. ``QTS_API_JWT_SECRET`` set → HS256 JWT backend.
-    2. ``QTS_API_STATIC_TOKENS`` set → static-token backend loaded from that file.
-    3. ``QTS_API_DEV_TOKENS=1`` set → built-in development tokens
-       (``dev-token`` with full scopes, ``read-token`` with read-only scopes).
-       This is the only opt-in to default tokens; production deployments must
-       leave it unset.
-    4. Otherwise → static-token backend with no principals (fail-closed).
-    """
-    secret = os.getenv("QTS_API_JWT_SECRET")
-    if secret:
-        return BearerJWTAuthBackend(secret)
-    token_path = os.getenv("QTS_API_STATIC_TOKENS")
-    if token_path is not None:
-        return StaticTokenAuthBackend(Path(token_path))
-    if os.getenv("QTS_API_DEV_TOKENS") == "1":
-        return _DevDefaultTokenAuthBackend()
-    return StaticTokenAuthBackend(None)
-
-
-class _DevDefaultTokenAuthBackend(StaticTokenAuthBackend):
-    """Development-only static-token backend with two built-in principals."""
-
-    def __init__(self) -> None:
-        self._principals = {
-            hashlib.sha256(b"dev-token").hexdigest(): Principal(
-                id="local-dev",
-                kind="human",
-                scopes=DEFAULT_SCOPES,
-                session_id="local",
-            ),
-            hashlib.sha256(b"read-token").hexdigest(): Principal(
-                id="local-read",
-                kind="human",
-                scopes=frozenset(scope for scope in DEFAULT_SCOPES if scope.endswith(":read")),
-                session_id="local-read",
-            ),
-        }
 
 
 def _bearer_token(authorization_header: str | None) -> str:
@@ -374,7 +332,6 @@ __all__ = [
     "Principal",
     "StaticTokenAuthBackend",
     "WEBSOCKET_REQUIRED_SCOPE",
-    "default_auth_backend",
     "get_principal",
     "require_scope",
     "required_scope_for",

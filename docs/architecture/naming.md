@@ -27,3 +27,7 @@ Guardrails enforce the highest-risk parts of this vocabulary:
 - no `Fake*` classes in production `qts.data`;
 - no runtime actor imports from `*pipeline*` modules;
 - no runtime actor imports from `*transport*` modules.
+- new broad-suffix classes ending in `Service`, `Coordinator`, `Manager`,
+  `Builder`, `Source`, or `Adapter` must start their docstring with a clear
+  ownership verb such as `Owns`, `Builds`, `Adapts`, `Resolves`,
+  `Coordinates`, `Runs`, `Writes`, `Loads`, `Applies`, `Converts`, or `Maps`.

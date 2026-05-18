@@ -157,6 +157,7 @@ class RuntimeSession:
             ),
         )
         from qts.runtime.broker_lifecycle import RuntimeBrokerLifecycleCoordinator
+        from qts.runtime.market_data_context import RuntimeMarketDataSessionContext
         from qts.runtime.market_data_coordinator import RuntimeMarketDataCoordinator
         from qts.runtime.recovery import RuntimeRecoveryCoordinator
         from qts.runtime.rollback import RuntimeRollbackCoordinator
@@ -166,7 +167,9 @@ class RuntimeSession:
         self._recovery_coordinator = RuntimeRecoveryCoordinator(self)
         self._rollback_coordinator = RuntimeRollbackCoordinator(self)
         self._safety_controller = RuntimeSafetyController(self)
-        self._market_data_coordinator = RuntimeMarketDataCoordinator(self)
+        self._market_data_coordinator = RuntimeMarketDataCoordinator(
+            RuntimeMarketDataSessionContext(self)
+        )
 
     @property
     def _primary_partition_id(self) -> AccountId | None:

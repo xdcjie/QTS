@@ -1294,3 +1294,58 @@ exceptions:
     reason: OPT-17 runtime event schema migration registry
     owner: platform
     expiry: 2027-05-17
+  - class_name: CalendarSessionLookup
+    module: qts.data.sessions.calendar_lookup
+    reason: CBO-01 explicit calendar session lookup boundary replaces duplicate SessionLookup protocols
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: ReplayMarketDataBundle
+    module: qts.data.sources.replay_bundle_builder
+    reason: CBO-04 cohesive replay market-data bundle returned by the replay input assembly boundary
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: ReplayMarketDataBundleBuilder
+    module: qts.data.sources.replay_bundle_builder
+    reason: CBO-04 replay market-data source delegates dataset loading and stream assembly to a cohesive builder
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: IbkrExecutionReport
+    module: qts.execution.adapters.ibkr_callback_normalizer
+    reason: CBO-03 IBKR callback normalization returns an explicit execution report value object
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: IbkrOrderCallbackEvent
+    module: qts.execution.adapters.ibkr_callback_normalizer
+    reason: CBO-03 IBKR callback normalization owns callback idempotency inputs before internal events
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: IbkrCallbackNormalizer
+    module: qts.execution.adapters.ibkr_callback_normalizer
+    reason: CBO-03 IBKR adapter delegates broker callback normalization to a focused owner
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: IbkrOrderRequestMapper
+    module: qts.execution.adapters.ibkr_order_request_mapper
+    reason: CBO-03 IBKR adapter delegates order request mapping to a focused owner
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: ReconciliationPositionSnapshot
+    module: qts.reconciliation.snapshots
+    reason: CBO-01 context-explicit reconciliation snapshot replaces ambiguous PositionSnapshot naming
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: ReconciliationCashSnapshot
+    module: qts.reconciliation.snapshots
+    reason: CBO-01 context-explicit reconciliation snapshot replaces ambiguous CashSnapshot naming
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: RuntimeMarketDataCoordinatorContext
+    module: qts.runtime.market_data_context
+    reason: CBO-05 runtime market-data coordinator depends on an explicit context protocol instead of RuntimeSession internals
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: RuntimeMarketDataSessionContext
+    module: qts.runtime.market_data_context
+    reason: CBO-05 runtime session exposes only the market-data coordinator context surface it owns
+    owner: platform
+    expiry: 2027-05-17

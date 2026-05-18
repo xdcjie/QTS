@@ -164,6 +164,10 @@ prove every design decision, but it should block obvious placement mistakes:
 - broker-specific implementation outside config/adapters;
 - forbidden imports across core, domain, strategy SDK, API, and adapter
   boundaries.
+- production classes over 300 lines must be present in
+  `docs/plan/backend_class_boundary_review_status_matrix.md`;
+- production classes over 500 lines must have a split/retain decision and
+  evidence in that matrix.
 
 When a new module boundary is introduced, update this document and the guardrail
 tests in the same change.

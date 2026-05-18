@@ -6,7 +6,11 @@ from dataclasses import dataclass
 from decimal import Decimal
 from enum import StrEnum
 
-from .snapshots import CashSnapshot, OrderSnapshot, PositionSnapshot
+from .snapshots import (
+    OrderSnapshot,
+    ReconciliationCashSnapshot,
+    ReconciliationPositionSnapshot,
+)
 
 
 class DriftKind(StrEnum):
@@ -75,8 +79,8 @@ def compare_orders(
 
 
 def compare_positions(
-    internal: tuple[PositionSnapshot, ...],
-    broker: tuple[PositionSnapshot, ...],
+    internal: tuple[ReconciliationPositionSnapshot, ...],
+    broker: tuple[ReconciliationPositionSnapshot, ...],
     tolerance: Decimal,
 ) -> list[DriftItem]:
     """Compare position snapshots and return drift entries."""
@@ -92,8 +96,8 @@ def compare_positions(
 
 
 def compare_cash(
-    internal: tuple[CashSnapshot, ...],
-    broker: tuple[CashSnapshot, ...],
+    internal: tuple[ReconciliationCashSnapshot, ...],
+    broker: tuple[ReconciliationCashSnapshot, ...],
     tolerance: Decimal,
 ) -> list[DriftItem]:
     """Compare cash snapshots and return drift entries."""
@@ -117,8 +121,8 @@ def drift_sort_key(key: str) -> tuple[int, str]:
 
 def _quantity_item(
     key: str,
-    internal: PositionSnapshot | CashSnapshot | None,
-    broker: PositionSnapshot | CashSnapshot | None,
+    internal: ReconciliationPositionSnapshot | ReconciliationCashSnapshot | None,
+    broker: ReconciliationPositionSnapshot | ReconciliationCashSnapshot | None,
     tolerance: Decimal,
 ) -> DriftItem:
     """Build drift record for comparable quantity-like entries."""
@@ -144,14 +148,16 @@ def _order_repr(order: OrderSnapshot | None) -> str | None:
     return f"{order.side.value}:{order.quantity}:{order.status}:{order.instrument_id.value}"
 
 
-def _amount(item: PositionSnapshot | CashSnapshot) -> Decimal:
+def _amount(item: ReconciliationPositionSnapshot | ReconciliationCashSnapshot) -> Decimal:
     """Return numeric amount for an order-independent snapshot entry."""
-    if isinstance(item, PositionSnapshot):
+    if isinstance(item, ReconciliationPositionSnapshot):
         return item.quantity
     return item.balance
 
 
-def _amount_repr(item: PositionSnapshot | CashSnapshot | None) -> str | None:
+def _amount_repr(
+    item: ReconciliationPositionSnapshot | ReconciliationCashSnapshot | None,
+) -> str | None:
     """Serialize amount for drift output."""
     if item is None:
         return None

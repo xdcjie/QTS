@@ -4,23 +4,16 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from datetime import date
-from typing import Protocol
 
+from qts.data.sessions.calendar_lookup import CalendarSessionLookup
 from qts.domain.market_data import Bar
 from qts.registry.calendar_registry import MarketSession
-
-
-class SessionLookup(Protocol):
-    """Calendar session lookup required by session filters."""
-
-    def session_for(self, calendar_id: str, session_date: date) -> MarketSession:
-        """Return the internal market session for the date."""
 
 
 def filter_session_bars(
     bars: Iterable[Bar],
     *,
-    calendar_registry: SessionLookup,
+    calendar_registry: CalendarSessionLookup,
     calendar_id: str,
     session_date: date,
 ) -> list[Bar]:

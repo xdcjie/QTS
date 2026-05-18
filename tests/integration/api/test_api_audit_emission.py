@@ -6,6 +6,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.testclient import TestClient
+from qts.api.auth_backend_factory import default_auth_backend
 from qts.api.routes import (
     accounts_router,
     backtests_router,
@@ -14,7 +15,7 @@ from qts.api.routes import (
     orders_router,
     strategies_router,
 )
-from qts.api.security import ApiSecurityMiddleware, default_auth_backend
+from qts.api.security import ApiSecurityMiddleware
 from qts.api.websocket import events_router
 from qts.observability.audit_sink import InMemoryAuditSink
 
