@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 from collections.abc import Iterator
 from dataclasses import dataclass, replace
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
@@ -132,6 +132,11 @@ class HistoricalBarStream:
             if self._session_window is not None and session_override is None:
                 # Break-time row: skip the whole timestamp group.
                 continue
+            session_date = (
+                date.fromisoformat(session_override)
+                if session_override is not None
+                else timestamp.date()
+            )
             candidates: list[FutureContractCandidate] = []
             bars_by_instrument: dict[InstrumentId, Bar] = {}
             for row in rows:
@@ -156,11 +161,16 @@ class HistoricalBarStream:
                         as_of=bar.end_time,
                         close=bar.close,
                         volume=bar.volume,
+                        session_date=session_date,
                     )
                 )
             if not candidates:
                 continue
-            selected = contract_selector.select(tuple(candidates))
+            try:
+                selected = contract_selector.select(tuple(candidates))
+            except LookupError:
+                self.stats.contracts_excluded += len(candidates)
+                continue
             selected_bar = bars_by_instrument[selected.instrument_id]
             output_instrument_id = self._continuous_instrument_id or selected.instrument_id
             output_bar = (

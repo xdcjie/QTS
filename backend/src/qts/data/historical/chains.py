@@ -40,6 +40,7 @@ class HistoricalChain:
     multiplier: Decimal
     trading_calendar: str
     contracts: tuple[HistoricalContract, ...]
+    active_months: tuple[int, ...] = ()
     trading_hours: str = ""
     _contracts_by_symbol: dict[str, HistoricalContract] = field(init=False, repr=False)
 
@@ -119,6 +120,7 @@ class HistoricalChain:
         trading_calendar = cls._required_text(payload, "trading_calendar")
         raw_trading_hours = payload.get("trading_hours")
         trading_hours = str(raw_trading_hours) if isinstance(raw_trading_hours, str) else ""
+        active_months = cls._parse_active_months(payload.get("active_months"))
         raw_contracts = payload.get("contracts")
         if not isinstance(raw_contracts, list):
             raise ValueError("contracts must be a list")
@@ -144,6 +146,7 @@ class HistoricalChain:
             multiplier=multiplier,
             trading_calendar=trading_calendar,
             contracts=contracts,
+            active_months=active_months,
             trading_hours=trading_hours,
         )
 
@@ -195,6 +198,19 @@ class HistoricalChain:
         if value <= Decimal("0"):
             raise ValueError(f"{field} must be positive")
         return value
+
+    @staticmethod
+    def _parse_active_months(payload: object) -> tuple[int, ...]:
+        """Parse optional active delivery months from chain metadata."""
+        if payload is None:
+            return ()
+        if not isinstance(payload, list):
+            raise ValueError("active_months must be a list")
+        months = tuple(int(month) for month in payload)
+        invalid = [month for month in months if month < 1 or month > 12]
+        if invalid:
+            raise ValueError("active_months entries must be in 1..12")
+        return months
 
     @staticmethod
     def _exchange_code(market: str) -> str:

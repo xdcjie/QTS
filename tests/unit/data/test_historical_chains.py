@@ -16,6 +16,7 @@ def test_historical_chain_load_parses_gc_contract_metadata() -> None:
     assert chain.timezone == "US/Eastern"
     assert chain.tick_size == Decimal("0.1")
     assert chain.multiplier == Decimal("100.0")
+    assert chain.active_months == (2, 4, 6, 8, 12)
     assert len(chain.contracts) == 224
 
     contract = chain.contract_for_symbol("GCM0")

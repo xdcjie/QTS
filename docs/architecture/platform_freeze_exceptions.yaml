@@ -84,6 +84,16 @@ exceptions:
     reason: OPT-25 streaming backtest statistics builder
     owner: platform
     expiry: 2027-05-17
+  - class_name: FutureContractRollSpec
+    module: qts.registry.future_roll
+    reason: GC continuous futures first-notice roll contract metadata value object
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: FirstNoticeDateFutureContractSelector
+    module: qts.registry.future_roll
+    reason: GC continuous futures first-notice minus exchange sessions roll selector
+    owner: platform
+    expiry: 2027-05-17
   - class_name: OrderSpecValidityRule
     module: qts.risk.rules.order_spec_validity
     reason: OPT-27 pre-trade order specification validation

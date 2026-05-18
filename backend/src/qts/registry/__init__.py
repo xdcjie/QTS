@@ -2,7 +2,9 @@ from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 from qts.registry.calendar_registry import CalendarProvider, CalendarRegistry, MarketSession
 from qts.registry.future_chain_registry import ContinuousFutureRef, FutureChain, FutureChainRegistry
 from qts.registry.future_roll import (
+    FirstNoticeDateFutureContractSelector,
     FutureContractCandidate,
+    FutureContractRollSpec,
     FutureContractSelector,
     FutureRollRegistry,
     FutureRollSelection,
@@ -17,7 +19,9 @@ __all__ = [
     "CalendarProvider",
     "CalendarRegistry",
     "ContinuousFutureRef",
+    "FirstNoticeDateFutureContractSelector",
     "FutureContractCandidate",
+    "FutureContractRollSpec",
     "FutureContractSelector",
     "FutureChain",
     "FutureChainRegistry",

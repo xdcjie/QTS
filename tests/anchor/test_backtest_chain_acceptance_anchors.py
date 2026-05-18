@@ -5,6 +5,51 @@ from decimal import Decimal
 from pathlib import Path
 
 
+def test_real_gc_roll_uses_first_notice_offset_for_2025_active_contracts() -> None:
+    from qts.core.ids import InstrumentId
+    from qts.data.historical.chains import HistoricalChain
+    from qts.data.historical.csv_dataset import iter_historical_bars
+    from qts.registry.future_roll import (
+        FirstNoticeDateFutureContractSelector,
+        FutureContractRollSpec,
+    )
+    from qts.registry.providers.exchange_calendar_provider import ExchangeCalendarProvider
+
+    chain = HistoricalChain.load(Path("historical/chains/GC.json"))
+    continuous_id = InstrumentId("CONTINUOUS_FUTURE.CME.GC")
+    selector = FirstNoticeDateFutureContractSelector(
+        contracts=tuple(
+            FutureContractRollSpec(
+                symbol=contract.symbol,
+                instrument_id=chain.instrument_id_for_symbol(contract.symbol),
+                first_notice_day=contract.first_notice_day,
+                expiry=contract.expiry,
+            )
+            for contract in chain.contracts
+        ),
+        session_offset=ExchangeCalendarProvider(chain.trading_calendar).session_offset,
+        active_months=chain.active_months,
+        roll_sessions_before_first_notice=3,
+    )
+
+    stream = iter_historical_bars(
+        Path("historical/data/gc.csv"),
+        chain,
+        timeframe="1m",
+        start=datetime(2025, 7, 27, 21, 50, tzinfo=UTC),
+        end=datetime(2025, 7, 27, 22, 5, tzinfo=UTC),
+        contract_selector=selector,
+        continuous_instrument_id=continuous_id,
+        session_window=chain.session_window(),
+    )
+
+    bars = tuple(stream)
+
+    assert bars[0].start_time == datetime(2025, 7, 27, 22, 0, tzinfo=UTC)
+    assert stream.roll_selections[0].source_symbol == "GCZ5"
+    assert stream.roll_selections[0].concrete_instrument_id == InstrumentId("FUTURE.CME.GC.GCZ5")
+
+
 def test_real_gc_first_timestamp_roll_selects_highest_volume_outright_contract() -> None:
     from qts.core.ids import InstrumentId
     from qts.data.historical.chains import HistoricalChain

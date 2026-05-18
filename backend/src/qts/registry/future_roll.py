@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from bisect import bisect_right
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Protocol
 
@@ -22,6 +22,7 @@ class FutureContractCandidate:
     as_of: datetime
     close: Decimal
     volume: Decimal
+    session_date: date | None = None
 
     def __post_init__(self) -> None:
         if not self.root_symbol.strip():
@@ -30,6 +31,20 @@ class FutureContractCandidate:
             raise ValueError("symbol must not be empty")
         if self.volume < Decimal("0"):
             raise ValueError("volume must be non-negative")
+
+
+@dataclass(frozen=True, slots=True)
+class FutureContractRollSpec:
+    """Contract metadata required to build a scheduled futures roll."""
+
+    symbol: str
+    instrument_id: InstrumentId
+    first_notice_day: date
+    expiry: datetime
+
+    def __post_init__(self) -> None:
+        if not self.symbol.strip():
+            raise ValueError("symbol must not be empty")
 
 
 class FutureContractSelector(Protocol):
@@ -61,6 +76,78 @@ class HighestVolumeFutureContractSelector:
                 candidate.instrument_id.value,
             ),
         )
+
+
+class FirstNoticeDateFutureContractSelector:
+    """Roll to the next active contract before first notice day."""
+
+    def __init__(
+        self,
+        *,
+        contracts: tuple[FutureContractRollSpec, ...],
+        session_offset: Callable[[date, int], date],
+        active_months: tuple[int, ...] = (),
+        roll_sessions_before_first_notice: int = 3,
+    ) -> None:
+        if roll_sessions_before_first_notice <= 0:
+            raise ValueError("roll_sessions_before_first_notice must be positive")
+        active_month_set = frozenset(active_months)
+        filtered_contracts = tuple(
+            sorted(
+                (
+                    contract
+                    for contract in contracts
+                    if not active_month_set or contract.expiry.month in active_month_set
+                ),
+                key=lambda contract: (contract.expiry, contract.symbol),
+            )
+        )
+        if not filtered_contracts:
+            raise ValueError("at least one roll contract is required")
+        self._contracts = filtered_contracts
+        self._session_offset = session_offset
+        self._roll_sessions_before_first_notice = roll_sessions_before_first_notice
+        self._roll_sessions: dict[tuple[InstrumentId, datetime], date] = {}
+
+    def select(
+        self,
+        candidates: tuple[FutureContractCandidate, ...],
+    ) -> FutureContractCandidate:
+        """Select the scheduled active contract for the candidates' exchange session."""
+        if not candidates:
+            raise ValueError("candidates must not be empty")
+        session_dates = {candidate.session_date for candidate in candidates}
+        if len(session_dates) != 1 or None in session_dates:
+            raise ValueError("first-notice roll selection requires one exchange session date")
+        session_date = next(iter(session_dates))
+        if session_date is None:
+            raise ValueError("first-notice roll selection requires an exchange session date")
+        target = self._contract_for_session(session_date)
+        candidates_by_instrument = {candidate.instrument_id: candidate for candidate in candidates}
+        try:
+            return candidates_by_instrument[target.instrument_id]
+        except KeyError as exc:
+            raise LookupError(
+                f"scheduled contract {target.instrument_id} is unavailable "
+                f"for session {session_date.isoformat()}"
+            ) from exc
+
+    def _contract_for_session(self, session_date: date) -> FutureContractRollSpec:
+        for contract in self._contracts:
+            if session_date < self._roll_session_for(contract):
+                return contract
+        return self._contracts[-1]
+
+    def _roll_session_for(self, contract: FutureContractRollSpec) -> date:
+        key = (contract.instrument_id, contract.expiry)
+        roll_session = self._roll_sessions.get(key)
+        if roll_session is None:
+            roll_session = self._session_offset(
+                contract.first_notice_day,
+                -self._roll_sessions_before_first_notice,
+            )
+            self._roll_sessions[key] = roll_session
+        return roll_session
 
 
 @dataclass(frozen=True, slots=True)
@@ -217,7 +304,9 @@ class FutureRollRegistry:
 
 
 __all__ = [
+    "FirstNoticeDateFutureContractSelector",
     "FutureContractCandidate",
+    "FutureContractRollSpec",
     "FutureContractSelector",
     "FutureRollRegistry",
     "FutureRollSelection",

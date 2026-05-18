@@ -254,18 +254,25 @@ class RollPolicyConfig:
     """Continuous futures roll policy for config-driven backtest runs."""
 
     enabled: bool = False
-    method: str = "highest_volume"
+    method: str = "first_notice_date"
+    roll_sessions_before_first_notice: int = 3
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""
         normalized = self.method.strip().lower()
-        if normalized != "highest_volume":
-            raise ValueError("roll_policy.method must be highest_volume")
+        if normalized != "first_notice_date":
+            raise ValueError("roll_policy.method must be first_notice_date")
+        if self.roll_sessions_before_first_notice <= 0:
+            raise ValueError("roll_sessions_before_first_notice must be positive")
         object.__setattr__(self, "method", normalized)
 
     def to_payload(self) -> dict[str, object]:
         """Perform to_payload."""
-        return {"enabled": self.enabled, "method": self.method}
+        return {
+            "enabled": self.enabled,
+            "method": self.method,
+            "roll_sessions_before_first_notice": self.roll_sessions_before_first_notice,
+        }
 
 
 @dataclass(frozen=True, slots=True)

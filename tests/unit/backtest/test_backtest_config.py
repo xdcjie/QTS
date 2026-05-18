@@ -107,7 +107,8 @@ def test_backtest_run_config_loads_gc_full_example_yaml() -> None:
     assert config.roots == ("GC",)
     assert config.symbols == ("GC",)
     assert config.roll_policy.enabled is True
-    assert config.roll_policy.method == "highest_volume"
+    assert config.roll_policy.method == "first_notice_date"
+    assert config.roll_policy.roll_sessions_before_first_notice == 3
     assert config.start == datetime(2010, 6, 6, 22, 0, tzinfo=UTC)
     assert config.end == datetime(2026, 4, 10, 0, 0, tzinfo=UTC)
     assert config.timeframe == "1m"
@@ -310,7 +311,6 @@ initial_cash: "100000"
 strategy_class: "tests.integration.test_backtest_gc_si:RollingGcStrategy"
 roll_policy:
   enabled: true
-  method: highest_volume
 """,
         encoding="utf-8",
     )
@@ -318,7 +318,8 @@ roll_policy:
     config = BacktestRuntimeConfig.from_yaml(config_path)
 
     assert config.roll_policy.enabled is True
-    assert config.roll_policy.method == "highest_volume"
+    assert config.roll_policy.method == "first_notice_date"
+    assert config.roll_policy.roll_sessions_before_first_notice == 3
 
 
 def test_backtest_run_config_validates_material_fields() -> None:

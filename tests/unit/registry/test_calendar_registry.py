@@ -23,6 +23,15 @@ def test_exchange_calendar_provider_returns_internal_session_objects() -> None:
     assert not session.__class__.__module__.startswith("exchange_calendars")
 
 
+def test_exchange_calendar_provider_offsets_exchange_sessions() -> None:
+    from qts.registry.providers.exchange_calendar_provider import ExchangeCalendarProvider
+
+    provider = ExchangeCalendarProvider("CMES")
+
+    assert provider.session_offset(date(2025, 7, 31), -3) == date(2025, 7, 28)
+    assert provider.session_offset(date(2025, 5, 30), -3) == date(2025, 5, 27)
+
+
 def test_calendar_registry_reports_missing_calendars_explicitly() -> None:
     from qts.registry.calendar_registry import CalendarRegistry
 

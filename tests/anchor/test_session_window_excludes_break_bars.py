@@ -131,7 +131,8 @@ risk_config:
   max_notional: "100000000"
 roll_policy:
   enabled: true
-  method: highest_volume
+  method: first_notice_date
+  roll_sessions_before_first_notice: 3
 """,
         encoding="utf-8",
     )

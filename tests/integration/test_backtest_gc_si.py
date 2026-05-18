@@ -700,7 +700,7 @@ risk_config:
     assert run.result.processed_bars == 1
 
 
-def test_backtest_runner_rolls_continuous_future_positions(
+def test_backtest_runner_resolves_continuous_future_with_first_notice_policy(
     tmp_path: Path,
 ) -> None:
     from qts.backtest.runner import run_backtest
@@ -736,7 +736,8 @@ initial_cash: "1000000"
 strategy_class: "tests.integration.test_backtest_gc_si:RollingGcStrategy"
 roll_policy:
   enabled: true
-  method: highest_volume
+  method: first_notice_date
+  roll_sessions_before_first_notice: 3
 risk_config:
   max_notional: "100000000"
 """,
@@ -747,23 +748,14 @@ risk_config:
     captured = capture_stream_result(run.result)
 
     assert [fill["instrument_id"] for fill in captured.fills] == [
-        "FUTURE.CME.GC.GCN0",
-        "FUTURE.CME.GC.GCN0",
         "FUTURE.CME.GC.GCQ0",
     ]
     assert [fill["side"] for fill in captured.fills] == [
         "buy",
-        "sell",
-        "buy",
     ]
     assert [Decimal(fill["price"]) for fill in captured.fills] == [
-        Decimal("100"),
-        Decimal("101"),
-        Decimal("111"),
+        Decimal("110"),
     ]
-    assert run.result.final_account.positions[
-        InstrumentId("FUTURE.CME.GC.GCN0")
-    ].quantity == Decimal("0")
     assert run.result.final_account.positions[
         InstrumentId("FUTURE.CME.GC.GCQ0")
     ].quantity == Decimal("1")

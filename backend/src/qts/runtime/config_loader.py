@@ -103,7 +103,10 @@ class BacktestConfigLoader:
             ),
             roll_policy=RollPolicyConfig(
                 enabled=bool(roll_payload.get("enabled", False)),
-                method=str(roll_payload.get("method", "highest_volume")),
+                method=str(roll_payload.get("method", "first_notice_date")),
+                roll_sessions_before_first_notice=int(
+                    roll_payload.get("roll_sessions_before_first_notice", 3)
+                ),
             ),
             warmup_bars=int(payload.get("warmup_bars", 0)),
             schema_version=str(payload.get("schema_version", "1")),

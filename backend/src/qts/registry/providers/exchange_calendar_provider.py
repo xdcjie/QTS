@@ -32,6 +32,16 @@ class ExchangeCalendarProvider:
             interval=TimeInterval(start=open_time, end=close_time),
         )
 
+    def session_offset(self, session_date: date, offset: int) -> date:
+        """Return the exchange session date at ``offset`` from ``session_date``."""
+        session = self._calendar.date_to_session(session_date.isoformat(), direction="previous")
+        for _ in range(abs(offset)):
+            if offset < 0:
+                session = self._calendar.previous_session(session)
+            else:
+                session = self._calendar.next_session(session)
+        return self._to_datetime(session).date()
+
     @staticmethod
     def _to_datetime(value: Any) -> datetime:
         """Perform _to_datetime."""

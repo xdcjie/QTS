@@ -40,3 +40,8 @@ selected at a specific time. Historical CSV loading may build the selection from
 same-timestamp candidates, while live adapters may build it from live market
 data or a precomputed schedule. In both cases, the order path must receive a
 concrete `InstrumentId`.
+
+Default continuous futures roll policy: roll from the current active contract to
+the next active contract at `first_notice_day - 3 exchange business sessions`.
+The exchange session calendar, not UTC calendar days or per-bar volume, defines
+the roll session. Product active months come from chain metadata.

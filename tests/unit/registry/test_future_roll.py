@@ -1,16 +1,100 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import pytest
 from qts.core.ids import InstrumentId
 from qts.registry.future_roll import (
+    FirstNoticeDateFutureContractSelector,
     FutureContractCandidate,
+    FutureContractRollSpec,
     FutureRollRegistry,
     FutureRollSelection,
     HighestVolumeFutureContractSelector,
 )
+
+
+class _SessionOffsetCalendar:
+    def session_offset(self, session_date: date, offset: int) -> date:
+        sessions = (
+            date(2025, 5, 23),
+            date(2025, 5, 27),
+            date(2025, 5, 28),
+            date(2025, 5, 29),
+            date(2025, 5, 30),
+            date(2025, 6, 2),
+            date(2025, 7, 28),
+            date(2025, 7, 29),
+            date(2025, 7, 30),
+            date(2025, 7, 31),
+        )
+        index = sessions.index(session_date)
+        return sessions[index + offset]
+
+
+def test_first_notice_selector_rolls_on_session_offset_not_highest_volume() -> None:
+    before_roll = datetime(2025, 5, 23, 22, 1, tzinfo=UTC)
+    roll_session = datetime(2025, 5, 26, 22, 1, tzinfo=UTC)
+    june = FutureContractCandidate(
+        root_symbol="GC",
+        symbol="GCM5",
+        instrument_id=InstrumentId("FUTURE.CME.GC.GCM5"),
+        as_of=before_roll,
+        session_date=date(2025, 5, 23),
+        close=Decimal("3300"),
+        volume=Decimal("1"),
+    )
+    august = FutureContractCandidate(
+        root_symbol="GC",
+        symbol="GCQ5",
+        instrument_id=InstrumentId("FUTURE.CME.GC.GCQ5"),
+        as_of=before_roll,
+        session_date=date(2025, 5, 23),
+        close=Decimal("3310"),
+        volume=Decimal("999"),
+    )
+    selector = FirstNoticeDateFutureContractSelector(
+        contracts=(
+            FutureContractRollSpec(
+                symbol="GCM5",
+                instrument_id=june.instrument_id,
+                first_notice_day=date(2025, 5, 30),
+                expiry=datetime(2025, 6, 26, 22, tzinfo=UTC),
+            ),
+            FutureContractRollSpec(
+                symbol="GCQ5",
+                instrument_id=august.instrument_id,
+                first_notice_day=date(2025, 7, 31),
+                expiry=datetime(2025, 8, 27, 22, tzinfo=UTC),
+            ),
+        ),
+        session_offset=_SessionOffsetCalendar().session_offset,
+        roll_sessions_before_first_notice=3,
+    )
+
+    assert selector.select((june, august)) == june
+
+    june_on_roll = FutureContractCandidate(
+        root_symbol="GC",
+        symbol="GCM5",
+        instrument_id=june.instrument_id,
+        as_of=roll_session,
+        session_date=date(2025, 5, 27),
+        close=Decimal("3301"),
+        volume=Decimal("999"),
+    )
+    august_on_roll = FutureContractCandidate(
+        root_symbol="GC",
+        symbol="GCQ5",
+        instrument_id=august.instrument_id,
+        as_of=roll_session,
+        session_date=date(2025, 5, 27),
+        close=Decimal("3311"),
+        volume=Decimal("1"),
+    )
+
+    assert selector.select((june_on_roll, august_on_roll)) == august_on_roll
 
 
 def test_highest_volume_selector_picks_one_contract_per_root_timestamp() -> None:

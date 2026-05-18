@@ -18,8 +18,13 @@ from qts.data.historical.csv_dataset import HistoricalBarStream, iter_historical
 from qts.data.provenance import DatasetMetadata
 from qts.domain.instruments import AssetClass, ContractSpec, Instrument, SettlementType
 from qts.domain.market_data import Bar
-from qts.registry.future_roll import FutureRollRegistry, HighestVolumeFutureContractSelector
+from qts.registry.future_roll import (
+    FirstNoticeDateFutureContractSelector,
+    FutureContractRollSpec,
+    FutureRollRegistry,
+)
 from qts.registry.instrument_registry import InstrumentRegistry
+from qts.registry.providers.exchange_calendar_provider import ExchangeCalendarProvider
 
 if TYPE_CHECKING:
     from qts.runtime.config import BacktestRuntimeConfig
@@ -115,7 +120,24 @@ class ReplayMarketDataBundleBuilder:
                         for contract in dataset.chain.contracts
                     ),
                 )
-                contract_selector = HighestVolumeFutureContractSelector()
+                contract_selector = FirstNoticeDateFutureContractSelector(
+                    contracts=tuple(
+                        FutureContractRollSpec(
+                            symbol=contract.symbol,
+                            instrument_id=dataset.chain.instrument_id_for_symbol(contract.symbol),
+                            first_notice_day=contract.first_notice_day,
+                            expiry=contract.expiry,
+                        )
+                        for contract in dataset.chain.contracts
+                    ),
+                    session_offset=ExchangeCalendarProvider(
+                        dataset.chain.trading_calendar
+                    ).session_offset,
+                    active_months=dataset.chain.active_months,
+                    roll_sessions_before_first_notice=(
+                        self._config.roll_policy.roll_sessions_before_first_notice
+                    ),
+                )
             exchange_timezone = self._exchange_timezone_for(dataset)
             if exchange_timezone is not None and dataset.chain is not None:
                 for contract in dataset.chain.contracts:
