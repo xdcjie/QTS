@@ -1189,6 +1189,26 @@ exceptions:
     reason: M6 experiment manifest writer owns artifacts/research manifest persistence
     owner: research
     expiry: 2026-12-31
+  - class_name: ResearchBookConfig
+    module: qts.research.research_book
+    reason: RB-1 read-only ResearchBook facade/value object
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: HistoryRequest
+    module: qts.research.research_book
+    reason: RB-1 read-only ResearchBook facade/value object
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: ResearchHistoryFrame
+    module: qts.research.research_book
+    reason: RB-1 read-only ResearchBook facade/value object
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: ResearchBook
+    module: qts.research.research_book
+    reason: RB-1 read-only ResearchBook facade/value object
+    owner: platform
+    expiry: 2027-05-17
   - class_name: AverageTrueRange
     module: qts.indicators.technical
     reason: VWAP pullback strategy requires reusable bar-level ATR indicator behind the Strategy SDK

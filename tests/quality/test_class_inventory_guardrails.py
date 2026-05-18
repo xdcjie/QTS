@@ -67,7 +67,7 @@ def test_class_inventory_does_not_exceed_platform_baseline_without_exception(
     _write(
         tmp_path,
         "backend/src/qts/application/new_service.py",
-        "class NewService:\n    pass\n",
+        'class NewService:\n    """Owns synthetic class inventory fixture behavior."""\n',
     )
 
     assert _suite_codes(

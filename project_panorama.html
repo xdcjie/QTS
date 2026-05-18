@@ -1444,10 +1444,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>366 files</span>
-      <span>637 classes</span>
-      <span>2188 functions</span>
-      <span>349 backend</span>
+      <span>367 files</span>
+      <span>641 classes</span>
+      <span>2198 functions</span>
+      <span>350 backend</span>
       <span>17 frontend</span>
     </div>
   </div>
@@ -9291,6 +9291,49 @@
             <tbody>
               <tr><td><code>extract_objective_from_manifest</code></td><td>module:20</td><td>Pull a metric from a backtest manifest&#x27;s statistics/metrics block.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
               <tr><td><code>run</code></td><td>OptimizationRunner:47</td><td>Run every combination in the job&#x27;s grid and return ranked results.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
+        <code>backend/src/qts/research/research_book.py</code>
+        <span class="inventory-counts">
+          <span>4 classes</span>
+          <span>10 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Read-only research facade for configured historical bars.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>ResearchBookConfig</code></td><td>research_book:21</td><td>Construction inputs for a configured research history facade.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>HistoryRequest</code></td><td>research_book:42</td><td>One bounded historical bar request using `[start, end)` semantics.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
+              <tr><td><code>ResearchHistoryFrame</code></td><td>research_book:67</td><td>Deterministic row-like collection of historical bars.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ResearchBook</code></td><td>research_book:83</td><td>Read-only research facade over configured historical data.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>__post_init__</code></td><td>ResearchBookConfig:29</td><td>Validate and normalize config inputs.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>HistoryRequest:50</td><td>Validate request identity and interval bounds.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>includes</code></td><td>HistoryRequest:59</td><td>Return whether ``timestamp`` belongs to this half-open request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__iter__</code></td><td>ResearchHistoryFrame:72</td><td>Iterate over frame bars in source order.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__len__</code></td><td>ResearchHistoryFrame:77</td><td>Return the number of bars in the frame.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>ResearchBook:86</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>from_config</code></td><td>ResearchBook:91</td><td>Load a configured historical catalog for research queries.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>from_backtest_config</code></td><td>ResearchBook:105</td><td>Build from a backtest config&#x27;s read-only market data reference.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>dataset_ids</code></td><td>ResearchBook:121</td><td>Return deterministic dataset identifiers for experiment manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>history</code></td><td>ResearchBook:129</td><td>Return bars from the configured catalog within ``request`` bounds.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
