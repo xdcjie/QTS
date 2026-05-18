@@ -35,6 +35,8 @@ from qts.research.optimizer import (
     OptimizationJob,
     OptimizationResult,
     OptimizationRunner,
+    OptimizerValidationSummary,
+    OptimizerValidationSummaryWriter,
     ParameterGrid,
     ParameterSpace,
 )
@@ -149,6 +151,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=Path("runs/optimizer"),
         help="Root directory for per-combination backtest manifests",
     )
+    parser.add_argument(
+        "--validation-output",
+        type=Path,
+        default=None,
+        help="Optional path for optimizer validation summary JSON",
+    )
     args = parser.parse_args(argv)
 
     config = _load_config(args.config)
@@ -160,6 +168,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
     else:
         results, objective_metric = _run_factory_path(config, output_root=args.output_root)
+    if args.validation_output is not None:
+        summary = OptimizerValidationSummary.from_results(results)
+        OptimizerValidationSummaryWriter().write(args.validation_output, summary)
     print(_format_ranked_table(results, objective_metric))
     return 0
 

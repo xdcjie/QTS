@@ -1444,10 +1444,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>370 files</span>
-      <span>650 classes</span>
-      <span>2216 functions</span>
-      <span>353 backend</span>
+      <span>373 files</span>
+      <span>657 classes</span>
+      <span>2228 functions</span>
+      <span>356 backend</span>
       <span>17 frontend</span>
     </div>
   </div>
@@ -9190,6 +9190,42 @@
     </details>
     <details class="inventory-file">
       <summary>
+        <code>backend/src/qts/research/optimizer/constraints.py</code>
+        <span class="inventory-counts">
+          <span>3 classes</span>
+          <span>4 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Post-run optimizer validation constraints.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>ConstraintDecision</code></td><td>constraints:16</td><td>Result of applying one validation constraint to one optimizer result.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>OptimizationConstraint</code></td><td>constraints:23</td><td>Contract for constraints that mark optimizer results accepted or rejected.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>MetricConstraint</code></td><td>constraints:31</td><td>Validate a Decimal metric from the run manifest against a threshold.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>evaluate</code></td><td>OptimizationConstraint:26</td><td>Return the validation decision for one optimization result.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>MetricConstraint:46</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>evaluate</code></td><td>MetricConstraint:53</td><td>Evaluate this constraint against metrics in the result manifest.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_read_manifest_metric</code></td><td>MetricConstraint:75</td><td>实现 MetricConstraint 的 read manifest metric 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
         <code>backend/src/qts/research/optimizer/job.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
@@ -9336,6 +9372,76 @@
             <tbody>
               <tr><td><code>extract_objective_from_manifest</code></td><td>module:20</td><td>Pull a metric from a backtest manifest&#x27;s statistics/metrics block.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
               <tr><td><code>run</code></td><td>OptimizationRunner:47</td><td>Run every combination in the job&#x27;s grid and return ranked results.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
+        <code>backend/src/qts/research/optimizer/validation.py</code>
+        <span class="inventory-counts">
+          <span>2 classes</span>
+          <span>4 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Optimizer validation summary artifacts.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>OptimizerValidationSummary</code></td><td>validation:17</td><td>Accepted/rejected optimizer run summary with validation evidence.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>OptimizerValidationSummaryWriter</code></td><td>validation:83</td><td>Write optimizer validation summaries as deterministic JSON artifacts.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>from_results</code></td><td>OptimizerValidationSummary:28</td><td>Build a validation summary from ranked optimizer results.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_result_evidence</code></td><td>OptimizerValidationSummary:63</td><td>实现 OptimizerValidationSummary 的 result evidence 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>OptimizerValidationSummary:71</td><td>Return a deterministic JSON-ready payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>write</code></td><td>OptimizerValidationSummaryWriter:86</td><td>Write ``summary`` to ``path`` with stable formatting.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
+        <code>backend/src/qts/research/optimizer/walk_forward.py</code>
+        <span class="inventory-counts">
+          <span>2 classes</span>
+          <span>4 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Walk-forward split definitions for optimizer validation.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>WalkForwardSplit</code></td><td>walk_forward:10</td><td>One deterministic train/test window definition.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>WalkForwardPlan</code></td><td>walk_forward:41</td><td>Collection of walk-forward split definitions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>__post_init__</code></td><td>WalkForwardSplit:19</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>to_metadata</code></td><td>WalkForwardSplit:29</td><td>Return a deterministic JSON-ready representation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>WalkForwardPlan:46</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>to_metadata</code></td><td>WalkForwardPlan:53</td><td>Return deterministic JSON-ready split metadata.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>

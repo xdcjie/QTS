@@ -1,0 +1,99 @@
+"""Unit tests for optimizer validation constraints."""
+
+from __future__ import annotations
+
+import json
+from decimal import Decimal
+from pathlib import Path
+
+import pytest
+from qts.research.optimizer import (
+    MetricConstraint,
+    OptimizationResult,
+    OptimizerValidationSummary,
+)
+
+
+def _result_with_manifest(tmp_path: Path, metrics: dict[str, str]) -> OptimizationResult:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "run_id": "run-0001",
+                "manifest_hash": "abcdef123456",
+                "metrics": metrics,
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    return OptimizationResult(
+        parameters={"window": 20},
+        manifest_path=manifest_path,
+        manifest_hash="abcdef123456",
+        objective_value=Decimal(metrics.get("total_return", "0")),
+    )
+
+
+def test_constraint_rejects_result_below_minimum_metric(tmp_path: Path) -> None:
+    result = _result_with_manifest(tmp_path, {"total_return": "0.049"})
+    constraint = MetricConstraint("total_return", ">=", Decimal("0.05"))
+
+    decision = constraint.evaluate(result)
+
+    assert not decision.accepted
+    assert "total_return" in decision.reason
+    assert "0.049" in decision.reason
+    assert ">= 0.05" in decision.reason
+
+
+def test_constraint_accepts_result_that_meets_metric_threshold(tmp_path: Path) -> None:
+    result = _result_with_manifest(tmp_path, {"sharpe_ratio": "1.25"})
+    constraint = MetricConstraint("sharpe_ratio", ">", Decimal("1.0"))
+
+    decision = constraint.evaluate(result)
+
+    assert decision.accepted
+    assert "sharpe_ratio" in decision.reason
+
+
+def test_constraint_rejects_missing_metric_with_reason(tmp_path: Path) -> None:
+    result = _result_with_manifest(tmp_path, {"total_return": "0.1"})
+    constraint = MetricConstraint("max_drawdown", "<=", Decimal("0.2"))
+
+    decision = constraint.evaluate(result)
+
+    assert not decision.accepted
+    assert "max_drawdown" in decision.reason
+    assert "missing" in decision.reason
+
+
+def test_invalid_metric_constraint_operator_rejected() -> None:
+    with pytest.raises(ValueError, match="unsupported constraint operator"):
+        MetricConstraint("total_return", "!=", Decimal("0"))
+
+
+def test_validation_summary_counts_rejected_results(tmp_path: Path) -> None:
+    accepted = _result_with_manifest(tmp_path / "accepted", {"total_return": "0.08"})
+    rejected = _result_with_manifest(tmp_path / "rejected", {"total_return": "0.01"})
+    constraint = MetricConstraint("total_return", ">=", Decimal("0.05"))
+
+    summary = OptimizerValidationSummary.from_results((accepted, rejected), (constraint,))
+
+    assert summary.run_count == 2
+    assert summary.accepted_count == 1
+    assert summary.rejected_count == 1
+    assert summary.rejections[0]["manifest_hash"] == rejected.manifest_hash
+    assert "total_return" in summary.rejections[0]["reasons"][0]
+
+
+def test_validation_summary_accepts_all_results_without_constraints(tmp_path: Path) -> None:
+    result = _result_with_manifest(tmp_path, {"total_return": "0.01"})
+
+    summary = OptimizerValidationSummary.from_results((result,))
+
+    assert summary.run_count == 1
+    assert summary.accepted_count == 1
+    assert summary.rejected_count == 0
+    assert summary.rejections == ()

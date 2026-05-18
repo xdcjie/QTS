@@ -1,4 +1,39 @@
 exceptions:
+  - class_name: ConstraintDecision
+    module: qts.research.optimizer.constraints
+    reason: OPTV-1 optimizer constraint decision evidence value object
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: OptimizationConstraint
+    module: qts.research.optimizer.constraints
+    reason: OPTV-1 optimizer validation constraint protocol boundary
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: MetricConstraint
+    module: qts.research.optimizer.constraints
+    reason: OPTV-1 manifest-backed optimizer metric constraint
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: WalkForwardSplit
+    module: qts.research.optimizer.walk_forward
+    reason: OPTV-1 deterministic optimizer train/test split metadata
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: WalkForwardPlan
+    module: qts.research.optimizer.walk_forward
+    reason: OPTV-1 optimizer walk-forward validation metadata plan
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: OptimizerValidationSummary
+    module: qts.research.optimizer.validation
+    reason: OPTV-1 accepted/rejected optimizer run summary artifact
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: OptimizerValidationSummaryWriter
+    module: qts.research.optimizer.validation
+    reason: OPTV-1 deterministic optimizer validation JSON writer
+    owner: platform
+    expiry: 2027-05-17
   - class_name: SignalDirection
     module: qts.strategy_sdk.signals
     reason: SIG-1 public strategy forecast direction enum
