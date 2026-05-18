@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import json
+import math
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -65,8 +67,34 @@ class OptimizerValidationSummary:
             "manifest_hash": result.manifest_hash,
             "manifest_path": str(result.manifest_path),
             "objective_value": str(result.objective_value),
-            "parameters": dict(result.parameters),
+            "parameters": OptimizerValidationSummary._json_safe_parameters(result.parameters),
         }
+
+    @staticmethod
+    def _json_safe_parameters(parameters: dict[str, Any]) -> dict[str, Any]:
+        return {
+            str(name): OptimizerValidationSummary._json_safe_parameter_value(value, path=str(name))
+            for name, value in parameters.items()
+        }
+
+    @staticmethod
+    def _json_safe_parameter_value(value: Any, *, path: str) -> Any:
+        if isinstance(value, Decimal):
+            if not value.is_finite():
+                raise ValueError(f"optimizer parameter {path} must be finite")
+            return str(value)
+        if value is None or isinstance(value, (str, bool, int)):
+            return value
+        if isinstance(value, float):
+            if not math.isfinite(value):
+                raise ValueError(f"optimizer parameter {path} must be finite")
+            return value
+        if isinstance(value, (list, tuple)):
+            return [
+                OptimizerValidationSummary._json_safe_parameter_value(item, path=f"{path}[{index}]")
+                for index, item in enumerate(value)
+            ]
+        raise ValueError(f"unsupported optimizer parameter value at {path}: {type(value).__name__}")
 
     def to_payload(self) -> dict[str, Any]:
         """Return a deterministic JSON-ready payload."""

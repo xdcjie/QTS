@@ -11,6 +11,7 @@ from qts.research.optimizer import (
     MetricConstraint,
     OptimizationResult,
     OptimizerValidationSummary,
+    OptimizerValidationSummaryWriter,
 )
 
 
@@ -69,6 +70,38 @@ def test_constraint_rejects_missing_metric_with_reason(tmp_path: Path) -> None:
     assert "missing" in decision.reason
 
 
+def test_constraint_rejects_non_parseable_metric_with_distinct_reason(tmp_path: Path) -> None:
+    result = _result_with_manifest(tmp_path, {"sharpe_ratio": "abc"})
+    constraint = MetricConstraint("sharpe_ratio", ">=", Decimal("1.0"))
+
+    decision = constraint.evaluate(result)
+
+    assert not decision.accepted
+    assert decision.reason == "sharpe_ratio value 'abc' is not Decimal-parseable"
+
+
+def test_constraint_rejects_nan_metric_without_decimal_signal(tmp_path: Path) -> None:
+    result = _result_with_manifest(tmp_path, {"sharpe_ratio": "NaN"})
+    constraint = MetricConstraint("sharpe_ratio", ">=", Decimal("1.0"))
+
+    decision = constraint.evaluate(result)
+
+    assert not decision.accepted
+    assert decision.reason == "sharpe_ratio value 'NaN' is not finite"
+
+
+def test_constraint_rejects_infinite_metric_even_when_comparison_would_pass(
+    tmp_path: Path,
+) -> None:
+    result = _result_with_manifest(tmp_path, {"sharpe_ratio": "Infinity"})
+    constraint = MetricConstraint("sharpe_ratio", ">=", Decimal("1.0"))
+
+    decision = constraint.evaluate(result)
+
+    assert not decision.accepted
+    assert decision.reason == "sharpe_ratio value 'Infinity' is not finite"
+
+
 def test_invalid_metric_constraint_operator_rejected() -> None:
     with pytest.raises(ValueError, match="unsupported constraint operator"):
         MetricConstraint("total_return", "!=", Decimal("0"))
@@ -97,3 +130,23 @@ def test_validation_summary_accepts_all_results_without_constraints(tmp_path: Pa
     assert summary.accepted_count == 1
     assert summary.rejected_count == 0
     assert summary.rejections == ()
+
+
+def test_validation_summary_writer_serializes_decimal_parameters(tmp_path: Path) -> None:
+    result = _result_with_manifest(tmp_path, {"total_return": "0.01"})
+    result.parameters["threshold"] = Decimal("0.25")
+    summary = OptimizerValidationSummary.from_results((result,))
+    output_path = tmp_path / "validation.json"
+
+    OptimizerValidationSummaryWriter().write(output_path, summary)
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["accepted_runs"][0]["parameters"]["threshold"] == "0.25"
+
+
+def test_validation_summary_rejects_unsupported_parameter_values(tmp_path: Path) -> None:
+    result = _result_with_manifest(tmp_path, {"total_return": "0.01"})
+    result.parameters["callback"] = object()
+
+    with pytest.raises(ValueError, match="unsupported optimizer parameter value"):
+        OptimizerValidationSummary.from_results((result,))

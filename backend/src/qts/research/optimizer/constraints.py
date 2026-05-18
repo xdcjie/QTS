@@ -7,7 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import ClassVar, Protocol
+from typing import Any, ClassVar, Protocol
 
 from qts.research.optimizer.result import OptimizationResult
 
@@ -42,23 +42,39 @@ class MetricConstraint:
         "<=": lambda left, right: left <= right,
         "==": lambda left, right: left == right,
     }
+    _MISSING: ClassVar[object] = object()
 
     def __post_init__(self) -> None:
         if not self.metric_name.strip():
             raise ValueError("metric_name must not be empty")
         if self.operator not in self._OPERATORS:
             raise ValueError(f"unsupported constraint operator: {self.operator!r}")
-        object.__setattr__(self, "threshold", Decimal(str(self.threshold)))
+        threshold = Decimal(str(self.threshold))
+        if not threshold.is_finite():
+            raise ValueError("constraint threshold must be finite")
+        object.__setattr__(self, "threshold", threshold)
 
     def evaluate(self, result: OptimizationResult) -> ConstraintDecision:
         """Evaluate this constraint against metrics in the result manifest."""
-        metric = self._read_manifest_metric(result.manifest_path)
-        if metric is None:
+        raw_metric = self._read_manifest_metric_value(result.manifest_path)
+        if raw_metric is self._MISSING:
             return ConstraintDecision(
                 accepted=False,
                 reason=(
                     f"metric {self.metric_name!r} missing from manifest {result.manifest_path}"
                 ),
+            )
+        try:
+            metric = Decimal(str(raw_metric))
+        except (InvalidOperation, ValueError):
+            return ConstraintDecision(
+                accepted=False,
+                reason=(f"{self.metric_name} value {str(raw_metric)!r} is not Decimal-parseable"),
+            )
+        if not metric.is_finite():
+            return ConstraintDecision(
+                accepted=False,
+                reason=f"{self.metric_name} value {str(raw_metric)!r} is not finite",
             )
         accepted = self._OPERATORS[self.operator](metric, self.threshold)
         comparison = f"{self.operator} {self.threshold}"
@@ -72,17 +88,14 @@ class MetricConstraint:
             reason=f"{self.metric_name}={metric} failed {comparison}",
         )
 
-    def _read_manifest_metric(self, manifest_path: Path) -> Decimal | None:
+    def _read_manifest_metric_value(self, manifest_path: Path) -> Any:
         payload = json.loads(manifest_path.read_text(encoding="utf-8"))
         for section in ("statistics", "metrics"):
             block = payload.get(section)
             if not isinstance(block, dict) or self.metric_name not in block:
                 continue
-            try:
-                return Decimal(str(block[self.metric_name]))
-            except (InvalidOperation, ValueError):
-                return None
-        return None
+            return block[self.metric_name]
+        return self._MISSING
 
 
 __all__ = ["ConstraintDecision", "MetricConstraint", "OptimizationConstraint"]

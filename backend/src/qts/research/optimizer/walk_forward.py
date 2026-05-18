@@ -49,6 +49,9 @@ class WalkForwardPlan:
         names = [split.name for split in self.splits]
         if len(set(names)) != len(names):
             raise ValueError("WalkForwardPlan split names must be unique")
+        for previous, current in zip(self.splits, self.splits[1:], strict=False):
+            if previous.test_end > current.train_start:
+                raise ValueError("WalkForwardPlan splits must be ordered and non-overlapping")
 
     def to_metadata(self) -> tuple[dict[str, str], ...]:
         """Return deterministic JSON-ready split metadata."""

@@ -31,8 +31,11 @@ Each evaluation returns a `ConstraintDecision` containing:
 - `accepted`: whether the result passed the constraint;
 - `reason`: a human-readable acceptance or rejection reason.
 
-Missing or non-Decimal-parseable metrics reject the run with an explicit reason.
-The rejected `OptimizationResult` remains part of the validation summary.
+Missing, non-Decimal-parseable, and non-finite metrics reject the run with
+distinct explicit reasons. `NaN`, `Infinity`, and `-Infinity` are not valid
+constraint inputs, even when a comparison such as `>=` would otherwise accept
+the value. The rejected `OptimizationResult` remains part of the validation
+summary.
 
 ## Walk-Forward Metadata
 
@@ -42,10 +45,11 @@ The rejected `OptimizationResult` remains part of the validation summary.
 train_start < train_end <= test_start < test_end
 ```
 
-`WalkForwardPlan` requires at least one split and serializes the windows as
-ISO-8601 dates. V1 does not alter the optimizer execution path from split
-metadata; it provides deterministic validation evidence for workflows that
-separate in-sample and out-of-sample evaluation.
+`WalkForwardPlan` requires at least one split, unique split names, and an
+ordered non-overlapping sequence across splits. A later split must not start
+before the prior split's `test_end`. V1 does not alter the optimizer execution
+path from split metadata; it provides deterministic validation evidence for
+workflows that separate in-sample and out-of-sample evaluation.
 
 ## Validation Summary
 
@@ -66,6 +70,12 @@ failed constraint rejects the run and stores every rejection reason.
 - `sort_keys=True`;
 - two-space indentation;
 - trailing newline.
+
+Optimizer parameter evidence is made JSON-safe before writing. `Decimal`
+parameters serialize as strings. Strings, booleans, integers, finite floats,
+`null`, lists, and tuples of those values are allowed. Unsupported parameter
+values and non-finite numeric parameters raise `ValueError` instead of being
+stringified implicitly.
 
 ## CLI
 

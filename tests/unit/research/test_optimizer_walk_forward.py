@@ -56,3 +56,56 @@ def test_walk_forward_split_rejects_empty_train_window() -> None:
 def test_walk_forward_plan_requires_at_least_one_split() -> None:
     with pytest.raises(ValueError, match="requires at least one split"):
         WalkForwardPlan(())
+
+
+def test_walk_forward_plan_rejects_duplicate_split_names() -> None:
+    split = WalkForwardSplit(
+        name="split-001",
+        train_start=date(2026, 1, 1),
+        train_end=date(2026, 1, 31),
+        test_start=date(2026, 2, 1),
+        test_end=date(2026, 2, 28),
+    )
+
+    with pytest.raises(ValueError, match="split names must be unique"):
+        WalkForwardPlan((split, split))
+
+
+def test_walk_forward_plan_rejects_cross_split_overlap() -> None:
+    first = WalkForwardSplit(
+        name="split-001",
+        train_start=date(2026, 1, 1),
+        train_end=date(2026, 1, 31),
+        test_start=date(2026, 2, 1),
+        test_end=date(2026, 2, 28),
+    )
+    overlapping = WalkForwardSplit(
+        name="split-002",
+        train_start=date(2026, 2, 15),
+        train_end=date(2026, 3, 15),
+        test_start=date(2026, 3, 16),
+        test_end=date(2026, 3, 31),
+    )
+
+    with pytest.raises(ValueError, match="ordered and non-overlapping"):
+        WalkForwardPlan((first, overlapping))
+
+
+def test_walk_forward_plan_rejects_out_of_order_splits() -> None:
+    first = WalkForwardSplit(
+        name="split-001",
+        train_start=date(2026, 3, 1),
+        train_end=date(2026, 3, 31),
+        test_start=date(2026, 4, 1),
+        test_end=date(2026, 4, 30),
+    )
+    earlier = WalkForwardSplit(
+        name="split-002",
+        train_start=date(2026, 1, 1),
+        train_end=date(2026, 1, 31),
+        test_start=date(2026, 2, 1),
+        test_end=date(2026, 2, 28),
+    )
+
+    with pytest.raises(ValueError, match="ordered and non-overlapping"):
+        WalkForwardPlan((first, earlier))
