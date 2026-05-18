@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import csv
 import hashlib
 import heapq
 from collections.abc import Callable, Iterator
@@ -631,39 +630,65 @@ class ReplayMarketDataSource:
         catalog: HistoricalCatalog,
     ) -> tuple[DatasetMetadata, ...]:
         """Perform _dataset_metadata."""
-        return tuple(
-            DatasetMetadata(
-                dataset_id=(
-                    f"{root}-{self._config.timeframe}-"
-                    f"{self._config.start.isoformat()}-{self._config.end.isoformat()}"
-                ),
-                source=str(catalog.datasets[root].csv_path),
-                instrument_id=self._dataset_instrument_id(root, catalog.datasets[root]),
-                timeframe=self._config.timeframe,
-                timezone_policy=catalog.datasets[root].dataset.timezone_policy,
-                adjustment_policy=catalog.datasets[root].dataset.normalization_policy,
-                normalization_version="historical-csv-v1",
-                created_at=self._config.start,
-                content_hash=self._file_content_hash(catalog.datasets[root].csv_path),
-                row_count=self._file_row_count(catalog.datasets[root].csv_path),
+        metadata_entries: list[DatasetMetadata] = []
+        for root in self._config.roots:
+            csv_path = catalog.datasets[root].csv_path
+            content_hash, row_count = self._file_content_hash_and_row_count(csv_path)
+            metadata_entries.append(
+                DatasetMetadata(
+                    dataset_id=(
+                        f"{root}-{self._config.timeframe}-"
+                        f"{self._config.start.isoformat()}-{self._config.end.isoformat()}"
+                    ),
+                    source=str(csv_path),
+                    instrument_id=self._dataset_instrument_id(root, catalog.datasets[root]),
+                    timeframe=self._config.timeframe,
+                    timezone_policy=catalog.datasets[root].dataset.timezone_policy,
+                    adjustment_policy=catalog.datasets[root].dataset.normalization_policy,
+                    normalization_version="historical-csv-v1",
+                    created_at=self._config.start,
+                    content_hash=content_hash,
+                    row_count=row_count,
+                )
             )
-            for root in self._config.roots
-        )
+        return tuple(metadata_entries)
+
+    @staticmethod
+    def _file_content_hash_and_row_count(path: Path) -> tuple[str, int]:
+        """Return SHA-256 content hash and CSV data-row count in one pass.
+
+        Reads the file once as binary, updating the hasher and counting
+        ``\\n`` bytes simultaneously. Subtracts 1 for the header row.
+        Tolerates files without a trailing newline by counting any
+        bytes after the last newline as one additional row.
+        """
+        hasher = hashlib.sha256()
+        newline_count = 0
+        trailing_bytes_after_newline = 0
+        with path.open("rb") as handle:
+            while chunk := handle.read(1024 * 1024):
+                hasher.update(chunk)
+                chunk_newlines = chunk.count(b"\n")
+                newline_count += chunk_newlines
+                if chunk.endswith(b"\n"):
+                    trailing_bytes_after_newline = 0
+                else:
+                    last_newline = chunk.rfind(b"\n")
+                    trailing_bytes_after_newline = (
+                        len(chunk) - last_newline - 1 if last_newline >= 0 else 1
+                    )
+        total_lines = newline_count + (1 if trailing_bytes_after_newline > 0 else 0)
+        return f"sha256:{hasher.hexdigest()}", max(total_lines - 1, 0)
 
     @staticmethod
     def _file_content_hash(path: Path) -> str:
         """Return a stable content hash for the replay source file."""
-        hasher = hashlib.sha256()
-        with path.open("rb") as handle:
-            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                hasher.update(chunk)
-        return f"sha256:{hasher.hexdigest()}"
+        return ReplayMarketDataSource._file_content_hash_and_row_count(path)[0]
 
     @staticmethod
     def _file_row_count(path: Path) -> int:
         """Return the number of data rows in a replay CSV source file."""
-        with path.open(encoding="utf-8", newline="") as handle:
-            return sum(1 for _ in csv.DictReader(handle))
+        return ReplayMarketDataSource._file_content_hash_and_row_count(path)[1]
 
     @staticmethod
     def _dataset_instrument_id(root: str, dataset: HistoricalDataset) -> InstrumentId:
