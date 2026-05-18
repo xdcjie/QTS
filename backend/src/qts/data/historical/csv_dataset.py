@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import csv
-from collections import defaultdict
 from collections.abc import Iterator
 from dataclasses import dataclass, replace
 from datetime import datetime
-from decimal import Decimal
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
@@ -17,7 +15,6 @@ from qts.data.historical.csv_format import (
     DEFAULT_HISTORICAL_CSV_SCHEMA,
     EXPECTED_HISTORICAL_COLUMNS,
     HistoricalCsvSchema,
-    historical_timeframe_delta,
     parse_historical_ts_event,
     validate_historical_csv_columns,
 )
@@ -91,8 +88,6 @@ class HistoricalBarStream:
             )
             if self._contract_selector is None:
                 yield from self._iter_all_supported_rows(reader)
-            elif self._session_window is not None:
-                yield from self._iter_session_selected_contract_rows(reader)
             else:
                 yield from self._iter_selected_contract_rows(reader)
 
@@ -108,6 +103,9 @@ class HistoricalBarStream:
                 continue
             if self._end is not None and timestamp >= self._end:
                 break
+            session_override = self._session_id_for(timestamp)
+            if self._session_window is not None and session_override is None:
+                continue
             try:
                 bar = self._row_mapper.to_bar(
                     row,
@@ -116,6 +114,8 @@ class HistoricalBarStream:
             except ValueError:
                 self.stats.invalid_rows += 1
                 continue
+            if session_override is not None and bar.session_id != session_override:
+                bar = replace(bar, session_id=session_override)
             self.stats.bars_emitted += 1
             yield bar
 
@@ -128,6 +128,10 @@ class HistoricalBarStream:
                 continue
             if self._end is not None and timestamp >= self._end:
                 break
+            session_override = self._session_id_for(timestamp)
+            if self._session_window is not None and session_override is None:
+                # Break-time row: skip the whole timestamp group.
+                continue
             candidates: list[FutureContractCandidate] = []
             bars_by_instrument: dict[InstrumentId, Bar] = {}
             for row in rows:
@@ -164,6 +168,8 @@ class HistoricalBarStream:
                 if output_instrument_id == selected.instrument_id
                 else replace(selected_bar, instrument_id=output_instrument_id)
             )
+            if session_override is not None and output_bar.session_id != session_override:
+                output_bar = replace(output_bar, session_id=session_override)
             self.roll_selections.append(
                 FutureRollSelection(
                     continuous_instrument_id=output_instrument_id,
@@ -180,138 +186,11 @@ class HistoricalBarStream:
             self.stats.bars_emitted += 1
             yield output_bar
 
-    def _iter_session_selected_contract_rows(
-        self,
-        reader: csv.DictReader[str],
-    ) -> Iterator[Bar]:
-        contract_selector = self._contract_selector
-        session_window = self._session_window
-        if contract_selector is None:
-            raise RuntimeError("contract selector is not configured")
-        if session_window is None:
-            raise RuntimeError("session window is not configured")
-
-        current_session_id: str | None = None
-        current_groups: list[tuple[datetime, list[dict[str, str]]]] = []
-        for timestamp, rows in self._timestamp_groups(reader):
-            if self._start is not None and timestamp < self._start:
-                continue
-            if self._end is not None and timestamp >= self._end:
-                break
-            session_id = session_window.session_id_for_timestamp(timestamp)
-            if session_id is None:
-                if current_session_id is not None:
-                    yield from self._emit_selected_session_rows(
-                        current_session_id,
-                        current_groups,
-                        contract_selector=contract_selector,
-                    )
-                    current_session_id = None
-                    current_groups = []
-                continue
-            if current_session_id is not None and session_id != current_session_id:
-                yield from self._emit_selected_session_rows(
-                    current_session_id,
-                    current_groups,
-                    contract_selector=contract_selector,
-                )
-                current_groups = []
-            current_session_id = session_id
-            current_groups.append((timestamp, rows))
-
-        if current_session_id is not None:
-            yield from self._emit_selected_session_rows(
-                current_session_id,
-                current_groups,
-                contract_selector=contract_selector,
-            )
-
-    def _emit_selected_session_rows(
-        self,
-        session_id: str,
-        groups: list[tuple[datetime, list[dict[str, str]]]],
-        *,
-        contract_selector: FutureContractSelector,
-    ) -> Iterator[Bar]:
-        rows_by_timestamp: list[dict[InstrumentId, dict[str, str]]] = []
-        closes_by_timestamp: list[dict[InstrumentId, Decimal]] = []
-        total_volume_by_instrument: dict[InstrumentId, Decimal] = defaultdict(lambda: Decimal("0"))
-        latest_as_of_by_instrument: dict[InstrumentId, datetime] = {}
-        latest_close_by_instrument: dict[InstrumentId, Decimal] = {}
-        symbol_by_instrument: dict[InstrumentId, str] = {}
-        timeframe_delta = historical_timeframe_delta(self._timeframe)
-
-        for timestamp, rows in groups:
-            rows_by_instrument: dict[InstrumentId, dict[str, str]] = {}
-            closes_by_instrument: dict[InstrumentId, Decimal] = {}
-            for row in rows:
-                symbol = self._field(row, "symbol")
-                if not self._symbol_resolver.is_supported_symbol(symbol):
-                    self._count_excluded_symbol(symbol)
-                    continue
-                try:
-                    _, _, _, close, volume = self._row_mapper.extract_ohlcv(row)
-                except ValueError:
-                    self.stats.invalid_rows += 1
-                    continue
-                instrument_id = self._symbol_resolver.instrument_id_for_symbol(symbol)
-                rows_by_instrument[instrument_id] = row
-                closes_by_instrument[instrument_id] = close
-                total_volume_by_instrument[instrument_id] += volume
-                latest_as_of_by_instrument[instrument_id] = timestamp + timeframe_delta
-                latest_close_by_instrument[instrument_id] = close
-                symbol_by_instrument[instrument_id] = symbol
-            if rows_by_instrument:
-                rows_by_timestamp.append(rows_by_instrument)
-                closes_by_timestamp.append(closes_by_instrument)
-
-        if not total_volume_by_instrument:
-            return
-
-        candidates = tuple(
-            FutureContractCandidate(
-                root_symbol=self._resolver_root(),
-                symbol=symbol_by_instrument[instrument_id],
-                instrument_id=instrument_id,
-                as_of=latest_as_of_by_instrument[instrument_id],
-                close=latest_close_by_instrument[instrument_id],
-                volume=volume,
-            )
-            for instrument_id, volume in total_volume_by_instrument.items()
-        )
-        selected = contract_selector.select(candidates)
-
-        for rows_by_instrument, closes_by_instrument in zip(
-            rows_by_timestamp,
-            closes_by_timestamp,
-            strict=True,
-        ):
-            selected_row = rows_by_instrument.get(selected.instrument_id)
-            if selected_row is None:
-                continue
-            selected_bar = self._row_mapper.to_bar(
-                selected_row,
-                symbol_resolver=self._symbol_resolver,
-            )
-            output_instrument_id = self._continuous_instrument_id or selected.instrument_id
-            output_bar = replace(
-                selected_bar,
-                instrument_id=output_instrument_id,
-                session_id=session_id,
-            )
-            self.roll_selections.append(
-                FutureRollSelection(
-                    continuous_instrument_id=output_instrument_id,
-                    root_symbol=selected.root_symbol,
-                    as_of=output_bar.end_time,
-                    concrete_instrument_id=selected.instrument_id,
-                    source_symbol=selected.symbol,
-                    prices_by_instrument=closes_by_instrument,
-                )
-            )
-            self.stats.contracts_excluded += len(rows_by_instrument) - 1
-            self.stats.bars_emitted += 1
-            yield output_bar
+    def _session_id_for(self, timestamp: datetime) -> str | None:
+        """Return the exchange-local session_id for ``timestamp``, if a window is set."""
+        if self._session_window is None:
+            return None
+        return self._session_window.session_id_for_timestamp(timestamp)
 
     def _timestamp_groups(
         self,

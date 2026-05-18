@@ -422,6 +422,7 @@ class ReplayMarketDataSource:
             if exchange_timezone is not None and continuous_id is not None:
                 exchange_timezones.setdefault(continuous_id, exchange_timezone)
             source_timeframe = dataset.source_timeframe or self._config.timeframe
+            session_window = dataset.chain.session_window() if dataset.chain is not None else None
             stream = iter_historical_bars(
                 dataset.csv_path,
                 dataset.symbol_resolver,
@@ -430,6 +431,7 @@ class ReplayMarketDataSource:
                 end=self._config.end,
                 contract_selector=contract_selector,
                 continuous_instrument_id=continuous_id,
+                session_window=session_window,
                 schema=dataset.csv_schema,
             )
             per_root = self._iter_root_bars(

@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, time
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
 from qts.core.ids import InstrumentId
+from qts.data.sessions import RegularSessionWindow
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,6 +40,7 @@ class HistoricalChain:
     multiplier: Decimal
     trading_calendar: str
     contracts: tuple[HistoricalContract, ...]
+    trading_hours: str = ""
     _contracts_by_symbol: dict[str, HistoricalContract] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -51,6 +53,40 @@ class HistoricalChain:
             "_contracts_by_symbol",
             contracts_by_symbol,
         )
+
+    def session_window(self) -> RegularSessionWindow | None:
+        """Derive a recurring exchange-local session window from trading_hours.
+
+        Parses the first segment of the ``trading_hours`` string
+        (``YYYYMMDD:HHMM-YYYYMMDD:HHMM``, semicolon-separated days)
+        and treats its open/close times as the recurring daily rule.
+        Returns ``None`` when the chain has no ``trading_hours`` field.
+
+        Holiday and early-close days are not represented here; the
+        recurring window is enough to distinguish in-session from
+        daily-break timestamps for overnight futures.
+        """
+        if not self.trading_hours.strip():
+            return None
+        first_segment = self.trading_hours.split(";")[0].strip()
+        if "-" not in first_segment:
+            raise ValueError(f"trading_hours segment missing '-' separator: {first_segment!r}")
+        open_part, close_part = first_segment.split("-", 1)
+        return RegularSessionWindow(
+            exchange_timezone=self.timezone,
+            open_time=self._parse_hhmm_suffix(open_part),
+            close_time=self._parse_hhmm_suffix(close_part),
+        )
+
+    @staticmethod
+    def _parse_hhmm_suffix(token: str) -> time:
+        """Parse the ``HHMM`` portion of a ``YYYYMMDD:HHMM`` trading_hours token."""
+        if ":" not in token:
+            raise ValueError(f"trading_hours token missing ':' separator: {token!r}")
+        suffix = token.split(":", 1)[1].strip()
+        if len(suffix) != 4 or not suffix.isdigit():
+            raise ValueError(f"trading_hours HHMM suffix must be 4 digits: {token!r}")
+        return time(hour=int(suffix[:2]), minute=int(suffix[2:]))
 
     def contract_for_symbol(self, symbol: str) -> HistoricalContract:
         """Perform contract_for_symbol."""
@@ -81,6 +117,8 @@ class HistoricalChain:
         tick_size = cls._required_decimal(payload, "tick_size")
         multiplier = cls._required_decimal(payload, "multiplier")
         trading_calendar = cls._required_text(payload, "trading_calendar")
+        raw_trading_hours = payload.get("trading_hours")
+        trading_hours = str(raw_trading_hours) if isinstance(raw_trading_hours, str) else ""
         raw_contracts = payload.get("contracts")
         if not isinstance(raw_contracts, list):
             raise ValueError("contracts must be a list")
@@ -106,6 +144,7 @@ class HistoricalChain:
             multiplier=multiplier,
             trading_calendar=trading_calendar,
             contracts=contracts,
+            trading_hours=trading_hours,
         )
 
     @classmethod

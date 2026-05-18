@@ -227,9 +227,16 @@ def test_iter_historical_bars_can_emit_one_rolling_bar_per_timestamp(
     assert stream.stats.spreads_excluded == 1
 
 
-def test_iter_historical_bars_can_roll_once_per_exchange_session_by_total_volume(
+def test_iter_historical_bars_with_session_window_uses_per_bar_volume_selection(
     tmp_path: Path,
 ) -> None:
+    """Per-bar contract selection inside an active exchange session.
+
+    The session_window is responsible for excluding break-time bars and
+    labeling session_id from the exchange-local close date; it does
+    **not** aggregate volume across the session. Each bar still picks
+    the highest-volume contract for that bar.
+    """
     path = tmp_path / "gc.csv"
     _write_rows(
         path,
@@ -258,8 +265,15 @@ def test_iter_historical_bars_can_roll_once_per_exchange_session_by_total_volume
     )
     bars = tuple(stream)
 
-    assert [bar.close for bar in bars] == [Decimal("110"), Decimal("111")]
-    assert [selection.source_symbol for selection in stream.roll_selections] == ["GCQ0", "GCQ0"]
+    # Minute 30: GCN0 vol=100 > GCQ0 vol=1 → GCN0 wins.
+    # Minute 31: GCQ0 vol=100 > GCN0 vol=1 → GCQ0 wins.
+    assert [bar.close for bar in bars] == [Decimal("100"), Decimal("111")]
+    assert [selection.source_symbol for selection in stream.roll_selections] == ["GCN0", "GCQ0"]
+    # Session_id reflects the exchange-local close date for the GC overnight session.
+    # Fixture timestamps are 2026-01-02T14:xx UTC = ET 09:xx, inside [ET 18:00 prior day,
+    # ET 17:00 same day) → close date = 2026-01-02.
+    session_ids = {bar.session_id for bar in bars}
+    assert session_ids == {"2026-01-02"}
     assert stream.stats.bars_emitted == 2
     assert stream.stats.contracts_excluded == 2
 

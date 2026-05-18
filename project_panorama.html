@@ -1446,7 +1446,7 @@
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>355 files</span>
       <span>626 classes</span>
-      <span>2080 functions</span>
+      <span>2081 functions</span>
       <span>338 backend</span>
       <span>17 frontend</span>
     </div>
@@ -3733,7 +3733,7 @@
         <code>backend/src/qts/data/historical/chains.py</code>
         <span class="inventory-counts">
           <span>2 classes</span>
-          <span>9 functions</span>
+          <span>11 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -3744,8 +3744,8 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>HistoricalContract</code></td><td>chains:16</td><td>One outright contract from a historical chain file.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>HistoricalChain</code></td><td>chains:31</td><td>Parsed historical futures chain.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>HistoricalContract</code></td><td>chains:17</td><td>One outright contract from a historical chain file.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>HistoricalChain</code></td><td>chains:32</td><td>Parsed historical futures chain.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -3754,15 +3754,17 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__post_init__</code></td><td>HistoricalChain:44</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>contract_for_symbol</code></td><td>HistoricalChain:55</td><td>Perform contract_for_symbol.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>is_outright_symbol</code></td><td>HistoricalChain:62</td><td>Perform is_outright_symbol.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>instrument_id_for_symbol</code></td><td>HistoricalChain:66</td><td>Perform instrument_id_for_symbol.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>load</code></td><td>HistoricalChain:73</td><td>Load a historical futures chain JSON file into typed metadata.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_parse_contract</code></td><td>HistoricalChain:112</td><td>Perform _parse_contract.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_required_text</code></td><td>HistoricalChain:143</td><td>Perform _required_text.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_required_decimal</code></td><td>HistoricalChain:151</td><td>Perform _required_decimal.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_exchange_code</code></td><td>HistoricalChain:161</td><td>Perform _exchange_code.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>HistoricalChain:46</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>session_window</code></td><td>HistoricalChain:57</td><td>Derive a recurring exchange-local session window from trading_hours.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_parse_hhmm_suffix</code></td><td>HistoricalChain:82</td><td>Parse the ``HHMM`` portion of a ``YYYYMMDD:HHMM`` trading_hours token.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>contract_for_symbol</code></td><td>HistoricalChain:91</td><td>Perform contract_for_symbol.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>is_outright_symbol</code></td><td>HistoricalChain:98</td><td>Perform is_outright_symbol.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>instrument_id_for_symbol</code></td><td>HistoricalChain:102</td><td>Perform instrument_id_for_symbol.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>load</code></td><td>HistoricalChain:109</td><td>Load a historical futures chain JSON file into typed metadata.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_parse_contract</code></td><td>HistoricalChain:151</td><td>Perform _parse_contract.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_required_text</code></td><td>HistoricalChain:182</td><td>Perform _required_text.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_required_decimal</code></td><td>HistoricalChain:190</td><td>Perform _required_decimal.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_exchange_code</code></td><td>HistoricalChain:200</td><td>Perform _exchange_code.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -3867,7 +3869,7 @@
         <code>backend/src/qts/data/historical/csv_dataset.py</code>
         <span class="inventory-counts">
           <span>3 classes</span>
-          <span>18 functions</span>
+          <span>17 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -3878,9 +3880,9 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>CsvDatasetDescription</code></td><td>csv_dataset:42</td><td>Cheap metadata description for a historical CSV dataset.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>HistoricalBarStream</code></td><td>csv_dataset:55</td><td>Lazy iterable over historical bars with side-channel reader stats.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>RootSymbolResolver</code></td><td>csv_dataset:432</td><td>Protocol for symbol resolvers that provide a root identifier.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>CsvDatasetDescription</code></td><td>csv_dataset:39</td><td>Cheap metadata description for a historical CSV dataset.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>HistoricalBarStream</code></td><td>csv_dataset:52</td><td>Lazy iterable over historical bars with side-channel reader stats.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>RootSymbolResolver</code></td><td>csv_dataset:311</td><td>Protocol for symbol resolvers that provide a root identifier.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
             </tbody>
           </table>
         </div>
@@ -3889,24 +3891,23 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__init__</code></td><td>HistoricalBarStream:58</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__iter__</code></td><td>HistoricalBarStream:85</td><td>实现 HistoricalBarStream 的 iter 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_iter_all_supported_rows</code></td><td>HistoricalBarStream:99</td><td>实现 HistoricalBarStream 的 iter all supported rows 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>HistoricalBarStream:55</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__iter__</code></td><td>HistoricalBarStream:82</td><td>实现 HistoricalBarStream 的 iter 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_iter_all_supported_rows</code></td><td>HistoricalBarStream:94</td><td>实现 HistoricalBarStream 的 iter all supported rows 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>_iter_selected_contract_rows</code></td><td>HistoricalBarStream:122</td><td>实现 HistoricalBarStream 的 iter selected contract rows 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_iter_session_selected_contract_rows</code></td><td>HistoricalBarStream:183</td><td>实现 HistoricalBarStream 的 iter session selected contract rows 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_emit_selected_session_rows</code></td><td>HistoricalBarStream:229</td><td>实现 HistoricalBarStream 的 emit selected session rows 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_timestamp_groups</code></td><td>HistoricalBarStream:316</td><td>实现 HistoricalBarStream 的 timestamp groups 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_count_excluded_symbol</code></td><td>HistoricalBarStream:333</td><td>实现 HistoricalBarStream 的 count excluded symbol 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_resolver_root</code></td><td>HistoricalBarStream:338</td><td>实现 HistoricalBarStream 的 resolver root 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_field</code></td><td>HistoricalBarStream:341</td><td>实现 HistoricalBarStream 的 field 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_timestamp</code></td><td>HistoricalBarStream:344</td><td>实现 HistoricalBarStream 的 timestamp 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>describe_csv_dataset</code></td><td>module:348</td><td>Read historical CSV identity metadata without materializing row data.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>iter_historical_bars</code></td><td>module:377</td><td>Return a lazy stream of outright historical bars.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>validate_historical_sample</code></td><td>module:404</td><td>Validate a bounded sample or full CSV when `sample_rows` is None.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
-              <tr><td><code>_resolver_root</code></td><td>module:422</td><td>提供模块级 resolver root 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>root</code></td><td>RootSymbolResolver:436</td><td>Return the root identifier.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_as_symbol_resolver</code></td><td>module:441</td><td>提供模块级 as symbol resolver 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_spread_symbol</code></td><td>module:449</td><td>提供模块级 is spread symbol 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_session_id_for</code></td><td>HistoricalBarStream:189</td><td>Return the exchange-local session_id for ``timestamp``, if a window is set.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_timestamp_groups</code></td><td>HistoricalBarStream:195</td><td>实现 HistoricalBarStream 的 timestamp groups 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_count_excluded_symbol</code></td><td>HistoricalBarStream:212</td><td>实现 HistoricalBarStream 的 count excluded symbol 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_resolver_root</code></td><td>HistoricalBarStream:217</td><td>实现 HistoricalBarStream 的 resolver root 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_field</code></td><td>HistoricalBarStream:220</td><td>实现 HistoricalBarStream 的 field 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_timestamp</code></td><td>HistoricalBarStream:223</td><td>实现 HistoricalBarStream 的 timestamp 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>describe_csv_dataset</code></td><td>module:227</td><td>Read historical CSV identity metadata without materializing row data.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>iter_historical_bars</code></td><td>module:256</td><td>Return a lazy stream of outright historical bars.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>validate_historical_sample</code></td><td>module:283</td><td>Validate a bounded sample or full CSV when `sample_rows` is None.</td><td>提供模块的显式调用入口，供测试、框架入口或相邻边界复用。</td></tr>
+              <tr><td><code>_resolver_root</code></td><td>module:301</td><td>提供模块级 resolver root 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>root</code></td><td>RootSymbolResolver:315</td><td>Return the root identifier.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_as_symbol_resolver</code></td><td>module:320</td><td>提供模块级 as symbol resolver 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_spread_symbol</code></td><td>module:328</td><td>提供模块级 is spread symbol 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -4406,18 +4407,18 @@
               <tr><td><code>build</code></td><td>ReplayMarketDataSource:359</td><td>Perform build.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>_roll_registry</code></td><td>ReplayMarketDataSource:379</td><td>Perform _roll_registry.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>_stream_configured_bars</code></td><td>ReplayMarketDataSource:385</td><td>Perform _stream_configured_bars.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_with_time_grid_synthesis</code></td><td>ReplayMarketDataSource:453</td><td>Wrap a per-root bar stream so intra-session gaps emit synthetic bars.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_iter_root_bars</code></td><td>ReplayMarketDataSource:464</td><td>Perform _iter_root_bars.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_merge_ordered_bar_streams</code></td><td>ReplayMarketDataSource:504</td><td>Perform _merge_ordered_bar_streams.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_record_exchange_timezone</code></td><td>ReplayMarketDataSource:528</td><td>Perform _record_exchange_timezone.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_exchange_timezone_for</code></td><td>ReplayMarketDataSource:539</td><td>Perform _exchange_timezone_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_instrument_registry_for</code></td><td>ReplayMarketDataSource:547</td><td>Perform _instrument_registry_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_instrument_for</code></td><td>ReplayMarketDataSource:602</td><td>Perform _instrument_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_dataset_metadata</code></td><td>ReplayMarketDataSource:627</td><td>Perform _dataset_metadata.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_file_content_hash</code></td><td>ReplayMarketDataSource:652</td><td>Return a stable content hash for the replay source file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_file_row_count</code></td><td>ReplayMarketDataSource:661</td><td>Return the number of data rows in a replay CSV source file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_dataset_instrument_id</code></td><td>ReplayMarketDataSource:667</td><td>Perform _dataset_instrument_id.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_contract_multipliers_for</code></td><td>ReplayMarketDataSource:673</td><td>Perform _contract_multipliers_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_with_time_grid_synthesis</code></td><td>ReplayMarketDataSource:455</td><td>Wrap a per-root bar stream so intra-session gaps emit synthetic bars.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_iter_root_bars</code></td><td>ReplayMarketDataSource:466</td><td>Perform _iter_root_bars.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_merge_ordered_bar_streams</code></td><td>ReplayMarketDataSource:506</td><td>Perform _merge_ordered_bar_streams.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_record_exchange_timezone</code></td><td>ReplayMarketDataSource:530</td><td>Perform _record_exchange_timezone.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_exchange_timezone_for</code></td><td>ReplayMarketDataSource:541</td><td>Perform _exchange_timezone_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_instrument_registry_for</code></td><td>ReplayMarketDataSource:549</td><td>Perform _instrument_registry_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_instrument_for</code></td><td>ReplayMarketDataSource:604</td><td>Perform _instrument_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_dataset_metadata</code></td><td>ReplayMarketDataSource:629</td><td>Perform _dataset_metadata.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_file_content_hash</code></td><td>ReplayMarketDataSource:654</td><td>Return a stable content hash for the replay source file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_file_row_count</code></td><td>ReplayMarketDataSource:663</td><td>Return the number of data rows in a replay CSV source file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_dataset_instrument_id</code></td><td>ReplayMarketDataSource:669</td><td>Perform _dataset_instrument_id.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_contract_multipliers_for</code></td><td>ReplayMarketDataSource:675</td><td>Perform _contract_multipliers_for.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
