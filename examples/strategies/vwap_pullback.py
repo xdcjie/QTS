@@ -71,6 +71,23 @@ class VwapPullbackConfig:
     trailing_atr_multiple: Decimal = Decimal("1.0")
 
     def __post_init__(self) -> None:
+        # Coerce YAML-deserialized strings into proper Decimals before validation.
+        for decimal_field in (
+            "target_quantity",
+            "max_pullback_atr",
+            "key_level_atr",
+            "min_rsi",
+            "max_rsi",
+            "short_min_rsi",
+            "short_max_rsi",
+            "min_volume_ratio",
+            "stop_atr_multiple",
+            "take_profit_atr_multiple",
+            "trailing_atr_multiple",
+        ):
+            current = getattr(self, decimal_field)
+            if not isinstance(current, Decimal):
+                object.__setattr__(self, decimal_field, Decimal(str(current)))
         positive_ints = {
             "ma_20_window": self.ma_20_window,
             "ma_26_window": self.ma_26_window,
