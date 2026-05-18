@@ -147,6 +147,58 @@ def test_account_actor_forwards_fill_time_to_holdings() -> None:
     assert closed.closed_at == close_time
 
 
+def test_holding_book_resets_opened_at_after_full_close() -> None:
+    """After a position fully closes, re-opening must capture a NEW opened_at.
+
+    Surfaced by the 2.25y VWAP run: ``avg_holding_period_bars`` came out
+    at ~54k bars while ``time_in_market`` was 4% — impossible if each
+    trade's holding window were measured correctly. Root cause: the
+    Holding row retained ``opened_at`` after a full close-out, so the
+    next entry on the same instrument inherited the original opening
+    time across many reopen cycles.
+    """
+    book = HoldingBook()
+    instrument = InstrumentId("FUTURE.CME.GC.GCG4")
+    first_open = datetime(2024, 1, 2, 14, 30, tzinfo=UTC)
+    first_close = first_open + timedelta(minutes=5)
+    second_open = first_open + timedelta(days=10)
+    second_close = second_open + timedelta(minutes=3)
+
+    book.apply_fill(
+        instrument_id=instrument,
+        signed_quantity=Decimal("1"),
+        price=Decimal("2000"),
+        multiplier=Decimal("100"),
+        fill_time=first_open,
+    )
+    first_closes = book.apply_fill(
+        instrument_id=instrument,
+        signed_quantity=Decimal("-1"),
+        price=Decimal("2010"),
+        multiplier=Decimal("100"),
+        fill_time=first_close,
+    )
+    book.apply_fill(
+        instrument_id=instrument,
+        signed_quantity=Decimal("1"),
+        price=Decimal("2020"),
+        multiplier=Decimal("100"),
+        fill_time=second_open,
+    )
+    second_closes = book.apply_fill(
+        instrument_id=instrument,
+        signed_quantity=Decimal("-1"),
+        price=Decimal("2025"),
+        multiplier=Decimal("100"),
+        fill_time=second_close,
+    )
+
+    assert first_closes[0].opened_at == first_open
+    assert second_closes[0].opened_at == second_open, (
+        f"second cycle must report its own opened_at, got {second_closes[0].opened_at}"
+    )
+
+
 @pytest.mark.parametrize(
     ("delta_minutes", "expected_bars"),
     [(1, 1), (5, 5), (60, 60)],

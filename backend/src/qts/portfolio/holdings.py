@@ -169,10 +169,15 @@ class HoldingBook:
         realized_pnl = current.realized_pnl + close_realized
         new_quantity = current.quantity + signed_quantity
         if new_quantity == Decimal("0"):
+            # Reset opened_at so a subsequent re-open on the same instrument
+            # records a fresh opening timestamp, not the original one from
+            # before this flat-out. Without this, avg_holding_period_bars
+            # accumulates across reopen cycles.
             self._holdings[current.instrument_id] = replace(
                 current,
                 quantity=Decimal("0"),
                 realized_pnl=realized_pnl,
+                opened_at=None,
                 last_fill_at=fill_time,
             )
             return (
