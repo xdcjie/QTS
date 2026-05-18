@@ -32,11 +32,12 @@ ranks. At least two scored assets with forward returns are required. If either
 factor ranks or forward-return ranks are constant, rank IC is undefined and
 evaluation raises `ValueError`.
 
-Rank IC is computed under a fixed precision-50 `Decimal` context with
-round-half-even behavior, then canonicalized to at most 10 fractional decimal
-places. Artifact JSON serializes all decimal metrics as canonical strings with
-trailing zeros stripped, so identical inputs produce identical artifact bytes
-and manifest hashes regardless of the caller's ambient decimal context.
+Metric arithmetic and artifact decimal formatting use a fixed precision-50
+`Decimal` context with round-half-even behavior. Decimal metrics are
+canonicalized to at most 10 fractional decimal places, and artifact JSON
+serializes canonical decimal strings with trailing zeros stripped, so identical
+inputs produce identical artifact bytes and manifest hashes regardless of the
+caller's ambient decimal context.
 
 Long-short spread V1 is the top-ranked available forward return minus the
 bottom-ranked available forward return after excluding assets with missing

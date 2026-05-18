@@ -155,6 +155,137 @@ def test_factor_evaluation_canonicalizes_non_perfect_rank_ic_across_decimal_cont
     assert low_precision_artifact == high_precision_artifact
 
 
+def test_factor_evaluation_formats_rank_ic_independent_of_decimal_context(
+    tmp_path: Path,
+) -> None:
+    aaa = Asset("AAA")
+    bbb = Asset("BBB")
+    ccc = Asset("CCC")
+    ddd = Asset("DDD")
+    eee = Asset("EEE")
+    fff = Asset("FFF")
+
+    def evaluate_and_write(precision: int) -> tuple[Decimal, str]:
+        with localcontext() as context:
+            context.prec = precision
+            evaluation = FactorEvaluation.evaluate(
+                FactorEvaluationInput(
+                    as_of=date(2026, 1, 2),
+                    factor_name="reversal",
+                    factor_version="1",
+                    factor_result=_factor_result(
+                        (aaa, "6"),
+                        (bbb, "5"),
+                        (ccc, "4"),
+                        (ddd, "3"),
+                        (eee, "2"),
+                        (fff, "1"),
+                    ),
+                    forward_returns={
+                        aaa.symbol: Decimal("0.06"),
+                        bbb.symbol: Decimal("0.01"),
+                        ccc.symbol: Decimal("0.02"),
+                        ddd.symbol: Decimal("0.03"),
+                        eee.symbol: Decimal("0.04"),
+                        fff.symbol: Decimal("0.05"),
+                    },
+                    bucket_count=6,
+                )
+            )
+            path = FactorEvaluationArtifactWriter(tmp_path / f"rank-{precision}").write(evaluation)
+            return evaluation.metrics.rank_ic, path.read_text(encoding="utf-8")
+
+    low_precision_ic, low_precision_artifact = evaluate_and_write(5)
+    high_precision_ic, high_precision_artifact = evaluate_and_write(50)
+
+    assert low_precision_ic == Decimal("-0.1428571429")
+    assert high_precision_ic == Decimal("-0.1428571429")
+    assert json.loads(low_precision_artifact)["metrics"]["rank_ic"] == "-0.1428571429"
+    assert low_precision_artifact == high_precision_artifact
+
+
+def test_factor_evaluation_computes_coverage_independent_of_decimal_context(
+    tmp_path: Path,
+) -> None:
+    aaa = Asset("AAA")
+    bbb = Asset("BBB")
+    ccc = Asset("CCC")
+
+    def evaluate_and_write(precision: int) -> tuple[Decimal, str]:
+        with localcontext() as context:
+            context.prec = precision
+            evaluation = FactorEvaluation.evaluate(
+                FactorEvaluationInput(
+                    as_of=date(2026, 1, 2),
+                    factor_name="momentum",
+                    factor_version="1",
+                    factor_result=_factor_result((aaa, "3"), (bbb, "2"), (ccc, "1")),
+                    forward_returns={
+                        aaa.symbol: Decimal("0.03"),
+                        bbb.symbol: Decimal("0.02"),
+                    },
+                    bucket_count=3,
+                )
+            )
+            path = FactorEvaluationArtifactWriter(tmp_path / f"coverage-{precision}").write(
+                evaluation
+            )
+            return evaluation.metrics.coverage, path.read_text(encoding="utf-8")
+
+    low_precision_coverage, low_precision_artifact = evaluate_and_write(5)
+    high_precision_coverage, high_precision_artifact = evaluate_and_write(50)
+
+    assert low_precision_coverage == Decimal("0.6666666667")
+    assert high_precision_coverage == Decimal("0.6666666667")
+    assert json.loads(low_precision_artifact)["metrics"]["coverage"] == "0.6666666667"
+    assert low_precision_artifact == high_precision_artifact
+
+
+def test_factor_evaluation_computes_turnover_independent_of_decimal_context(
+    tmp_path: Path,
+) -> None:
+    aaa = Asset("AAA")
+    bbb = Asset("BBB")
+    ccc = Asset("CCC")
+    ddd = Asset("DDD")
+    eee = Asset("EEE")
+    previous = _factor_result((aaa, "5"), (bbb, "4"), (ccc, "3"), (ddd, "2"), (eee, "1"))
+    current = _factor_result((aaa, "5"), (ddd, "4"), (eee, "3"), (bbb, "2"), (ccc, "1"))
+
+    def evaluate_and_write(precision: int) -> tuple[Decimal | None, str]:
+        with localcontext() as context:
+            context.prec = precision
+            evaluation = FactorEvaluation.evaluate(
+                FactorEvaluationInput(
+                    as_of=date(2026, 1, 3),
+                    factor_name="momentum",
+                    factor_version="1",
+                    factor_result=current,
+                    previous_factor_result=previous,
+                    forward_returns={
+                        aaa.symbol: Decimal("0.05"),
+                        bbb.symbol: Decimal("0.02"),
+                        ccc.symbol: Decimal("0.01"),
+                        ddd.symbol: Decimal("0.04"),
+                        eee.symbol: Decimal("0.03"),
+                    },
+                    bucket_count=2,
+                )
+            )
+            path = FactorEvaluationArtifactWriter(tmp_path / f"turnover-{precision}").write(
+                evaluation
+            )
+            return evaluation.metrics.turnover, path.read_text(encoding="utf-8")
+
+    low_precision_turnover, low_precision_artifact = evaluate_and_write(5)
+    high_precision_turnover, high_precision_artifact = evaluate_and_write(50)
+
+    assert low_precision_turnover == Decimal("0.6666666667")
+    assert high_precision_turnover == Decimal("0.6666666667")
+    assert json.loads(low_precision_artifact)["metrics"]["turnover"] == "0.6666666667"
+    assert low_precision_artifact == high_precision_artifact
+
+
 def test_factor_evaluation_handles_non_constant_tied_ranks() -> None:
     aaa = Asset("AAA")
     bbb = Asset("BBB")

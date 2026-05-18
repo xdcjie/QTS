@@ -74,13 +74,13 @@ class FactorEvaluation:
         )
         scored_count = len(evaluation_input.factor_result.ranked)
         return_count = len(scored)
+        coverage = _METRIC_CONTEXT.divide(Decimal(return_count), Decimal(scored_count))
+        coverage = coverage.quantize(_METRIC_QUANTUM, context=_METRIC_CONTEXT)
+        coverage = coverage.normalize(context=_METRIC_CONTEXT)
         metrics = FactorEvaluationMetrics(
-            rank_ic=cls._spearman(
-                [item[0] for item in scored],
-                [item[1] for item in scored],
-            ),
-            long_short_spread=scored[0][1] - scored[-1][1],
-            coverage=Decimal(return_count) / Decimal(scored_count),
+            rank_ic=cls._spearman([item[0] for item in scored], [item[1] for item in scored]),
+            long_short_spread=_METRIC_CONTEXT.subtract(scored[0][1], scored[-1][1]),
+            coverage=coverage,
             turnover=cls._turnover(
                 evaluation_input.factor_result,
                 evaluation_input.previous_factor_result,
@@ -151,10 +151,10 @@ class FactorEvaluation:
             return None
         current_top = cls._top_bucket_symbols(current, bucket_count)
         previous_top = cls._top_bucket_symbols(previous, bucket_count)
-        if not current_top:
-            return None
         retained = len(current_top.intersection(previous_top))
-        return Decimal("1") - (Decimal(retained) / Decimal(len(current_top)))
+        with localcontext(_METRIC_CONTEXT):
+            turnover = Decimal("1") - (Decimal(retained) / Decimal(len(current_top)))
+            return turnover.quantize(_METRIC_QUANTUM).normalize()
 
     @staticmethod
     def _top_bucket_symbols(factor_result: FactorResult, bucket_count: int) -> set[str]:
@@ -201,9 +201,9 @@ class FactorEvaluationArtifactWriter:
         if isinstance(value, Decimal):
             with localcontext(_METRIC_CONTEXT):
                 canonical = value.quantize(_METRIC_QUANTUM)
+                text = format(canonical.normalize(), "f")
             if canonical == 0:
                 return "0"
-            text = format(canonical.normalize(), "f")
             if "." in text:
                 return text.rstrip("0").rstrip(".")
             return text
