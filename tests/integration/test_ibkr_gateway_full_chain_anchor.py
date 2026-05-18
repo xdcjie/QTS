@@ -305,6 +305,7 @@ class _IbkrRuntimeExecutionAdapter:
         strategy_id: StrategyId,
         client_order_id: str,
         correlation_id: CorrelationId,
+        bar_time: object | None = None,
     ) -> Any:
         from qts.execution.broker import BrokerOrderType
 

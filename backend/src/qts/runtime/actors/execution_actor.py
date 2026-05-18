@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Protocol
 
@@ -30,6 +31,7 @@ class ExecutionAdapter(Protocol):
         strategy_id: StrategyId,
         client_order_id: str,
         correlation_id: CorrelationId,
+        bar_time: datetime | None = None,
     ) -> ExecutionReport:
         """Execute a market order."""
         ...
@@ -58,6 +60,7 @@ class OrderExecutionRequest:
     account_id: AccountId
     strategy_id: StrategyId
     route_metadata: OrderRouteMetadata
+    bar_time: datetime | None = None
 
     def __post_init__(self) -> None:
         """Validate execution request identity fields."""
@@ -112,6 +115,7 @@ class ExecutionActor(Actor):
                 strategy_id=message.strategy_id,
                 client_order_id=message.route_metadata.client_order_id,
                 correlation_id=message.route_metadata.correlation_id,
+                bar_time=message.bar_time,
             )
             self._order_manager_ref.tell(report)
             return

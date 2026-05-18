@@ -349,7 +349,6 @@ class BacktestArtifactWriter:
         finalized_at = datetime.now(UTC)
         statistics_payload = self._statistics.finalize(
             trading_bars=trading_bars,
-            bars_per_year=Decimal("252") * Decimal(max(trading_bars, 1)),
         ).to_payload()
         self._artifacts["statistics"].write(statistics_payload)
         for artifact in self._artifacts.values():

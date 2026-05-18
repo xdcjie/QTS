@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 
 from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
@@ -34,6 +35,7 @@ class SubmitOrder:
     account_id: AccountId
     strategy_id: StrategyId
     route_metadata: OrderRouteMetadata
+    bar_time: datetime | None = None
 
     def __post_init__(self) -> None:
         """Validate order submission identity fields."""
@@ -234,6 +236,7 @@ class OrderManagerActor(Actor):
                 account_id=message.account_id,
                 strategy_id=message.strategy_id,
                 route_metadata=message.route_metadata,
+                bar_time=message.bar_time,
             )
         )
 

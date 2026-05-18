@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 from typing import Protocol
 
@@ -84,6 +85,7 @@ class SimulatedExecutionAdapter:
         correlation_id: CorrelationId,
         bar_high: Decimal | None = None,
         bar_low: Decimal | None = None,
+        bar_time: datetime | None = None,
     ) -> ExecutionReport:
         """Execute one order against a single bar's price range.
 
@@ -118,6 +120,7 @@ class SimulatedExecutionAdapter:
                 filled_quantity=Decimal("0"),
                 fill_price=None,
                 fill_id=None,
+                fill_time=bar_time,
             )
 
         base_price = decision.fill_price
@@ -135,6 +138,7 @@ class SimulatedExecutionAdapter:
             fill_id=f"{broker_order_id}-fill-1",
             commission=commission,
             slippage=abs(fill_price - base_price),
+            fill_time=bar_time,
         )
 
     def cancel_order(

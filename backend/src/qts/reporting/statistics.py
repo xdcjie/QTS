@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -60,10 +60,11 @@ class StatisticsBuilder:
         self._total_slippage = Decimal("0")
         self._occupied_bars = 0
         self._holdings_snapshots: list[_HoldingsSnapshot] = []
+        self._dates_seen: set[date] = set()
 
     def on_equity_point(self, *, time: datetime, equity: Decimal) -> None:
         """Ingest one equity observation."""
-        _ = time
+        self._dates_seen.add(time.date())
         if self._first is None:
             if equity == Decimal("0"):
                 raise ValueError("first equity value must not be zero")
@@ -170,7 +171,7 @@ class StatisticsBuilder:
         """
         if self._first is None or self._last is None:
             raise ValueError("equity curve must not be empty")
-        annualization = bars_per_year or Decimal("252")
+        annualization = bars_per_year or self._derive_annualization()
         total_return = (self._last - self._first) / self._first
         std = _stddev(self._returns)
         volatility = std * annualization.sqrt()
@@ -234,6 +235,20 @@ class StatisticsBuilder:
         ):
             return benchmark_series
         return None
+
+    def _derive_annualization(self) -> Decimal:
+        """Return the default annualization factor when none is given.
+
+        Computed as ``252 × bars_per_day`` where ``bars_per_day`` is the
+        ratio of observed equity points to distinct calendar dates in
+        the equity curve. Falls back to ``252`` when only one day was
+        observed (or fewer points than days, which shouldn't happen).
+        """
+        observed_days = max(len(self._dates_seen), 1)
+        if self._points <= 0:
+            return Decimal("252")
+        bars_per_day = Decimal(self._points) / Decimal(observed_days)
+        return Decimal("252") * bars_per_day
 
     def _exposure_metrics(self) -> dict[str, Decimal]:
         # Align snapshot i to equity point i; compute fraction of equity.

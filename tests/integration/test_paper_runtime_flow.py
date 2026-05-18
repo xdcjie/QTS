@@ -132,6 +132,7 @@ class _FillingExecutionAdapter:
         strategy_id: StrategyId,
         client_order_id: str,
         correlation_id: CorrelationId,
+        bar_time: object | None = None,
     ) -> ExecutionReport:
         _ = account_id, strategy_id, client_order_id, correlation_id
         self.seen.append(intent)

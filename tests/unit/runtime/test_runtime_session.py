@@ -206,6 +206,7 @@ class _RecordingExecutionAdapter:
         strategy_id: StrategyId,
         client_order_id: str,
         correlation_id: CorrelationId,
+        bar_time: object | None = None,
     ) -> ExecutionReport:
         _ = market_price, account_id, strategy_id, client_order_id, correlation_id
         self.seen.append(intent)
@@ -247,6 +248,7 @@ class _FilledExecutionAdapter:
         strategy_id: StrategyId,
         client_order_id: str,
         correlation_id: CorrelationId,
+        bar_time: object | None = None,
     ) -> ExecutionReport:
         _ = account_id, strategy_id, client_order_id, correlation_id
         self.seen.append(intent)

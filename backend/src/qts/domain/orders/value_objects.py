@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
 
@@ -101,6 +102,7 @@ class ExecutionReport:
     fill_id: str | None = None
     commission: Decimal = Decimal("0")
     slippage: Decimal = Decimal("0")
+    fill_time: datetime | None = None
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""

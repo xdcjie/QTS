@@ -46,6 +46,7 @@ class _ExecutionAdapter:
         strategy_id: StrategyId,
         client_order_id: str,
         correlation_id: CorrelationId,
+        bar_time: object | None = None,
     ) -> ExecutionReport:
         """Return a synthetic accepted execution report."""
         _ = intent, account_id, strategy_id, client_order_id, correlation_id

@@ -77,6 +77,7 @@ def test_execution_actor_forwards_route_metadata_to_execution_adapter() -> None:
             strategy_id: StrategyId,
             client_order_id: str,
             correlation_id: CorrelationId,
+            bar_time: object | None = None,
         ) -> ExecutionReport:
             self.seen = {
                 "intent": intent,

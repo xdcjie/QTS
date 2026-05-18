@@ -363,6 +363,7 @@ class TargetIntentProcessor:
                 account_id=account_id,
                 strategy_id=strategy_id,
                 route_metadata=route_metadata,
+                bar_time=order_time,
             )
         )
         order_manager_ref.process_all()

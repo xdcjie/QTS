@@ -189,6 +189,7 @@ class _FakeIbkrOrderExecutionTransport:
         strategy_id: StrategyId,
         client_order_id: str,
         correlation_id: CorrelationId,
+        bar_time: object | None = None,
     ) -> ExecutionReport:
         from qts.execution.adapters.ibkr_order_execution import (
             IbkrExecutionReport,

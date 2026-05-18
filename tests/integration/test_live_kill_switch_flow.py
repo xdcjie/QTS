@@ -475,6 +475,7 @@ class _AcceptedThenCancelledExecutionAdapter:
         strategy_id: StrategyId,
         client_order_id: str,
         correlation_id: CorrelationId,
+        bar_time: object | None = None,
     ) -> ExecutionReport:
         _ = market_price, account_id, strategy_id, client_order_id, correlation_id
         self.submitted_order_ids.append(intent.order_id)

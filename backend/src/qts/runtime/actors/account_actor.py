@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 from types import MappingProxyType
 
@@ -22,6 +23,7 @@ class ApplyFill:
     fill: OrderFill
     currency: str
     multiplier: Decimal
+    fill_time: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True, init=False)
@@ -129,7 +131,7 @@ class AccountActor(Actor):
                 signed_quantity=signed_quantity,
                 price=fill.price,
                 multiplier=message.multiplier,
-                fill_time=None,
+                fill_time=message.fill_time,
             )
         )
         cash_delta = (-signed_quantity * fill.price * message.multiplier) - fill.commission

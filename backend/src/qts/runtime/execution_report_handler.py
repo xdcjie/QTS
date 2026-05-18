@@ -55,6 +55,7 @@ class ExecutionReportHandler:
                     fill=fill,
                     currency=self._currency,
                     multiplier=self._multiplier_by_instrument.get(fill.instrument_id, Decimal("1")),
+                    fill_time=report.fill_time,
                 )
             )
         return result.fills

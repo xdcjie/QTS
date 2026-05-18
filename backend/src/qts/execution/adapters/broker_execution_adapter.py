@@ -44,9 +44,10 @@ class BrokerExecutionAdapter:
         strategy_id: StrategyId,
         client_order_id: str,
         correlation_id: CorrelationId | None = None,
+        bar_time: object | None = None,
     ) -> ExecutionReport:
         """Submit a market order and normalize the broker acknowledgement."""
-        _ = market_price, correlation_id
+        _ = market_price, correlation_id, bar_time
         self._assert_live_capital_order_allowed()
         if intent.account_id is not None and intent.account_id != account_id:
             raise ValueError("intent account_id does not match execution route account_id")
