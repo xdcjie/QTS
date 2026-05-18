@@ -46,7 +46,9 @@ ctx.construct_targets(EqualWeightSignalPortfolioConstruction())
 
 Signals are forecasts, not orders. Portfolio construction emits existing
 `TargetIntent` objects, so risk, order management, execution, and account
-mutation keep the same ownership path used by direct target APIs.
+mutation keep the same ownership path used by direct target APIs. Each
+`construct_targets(...)` call consumes the pending signal batch, so strategies
+can safely emit and construct once per bar without re-emitting prior signals.
 
 ## Strategy callbacks
 

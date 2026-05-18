@@ -19,7 +19,7 @@ portfolio state and does not submit an order.
 
 ## Portfolio Construction
 
-`PortfolioConstructionModel` consumes active signals and emits existing
+`PortfolioConstructionModel` consumes the pending signal batch and emits existing
 `TargetIntent` instances. V1 includes `EqualWeightSignalPortfolioConstruction`,
 which maps directional signals to percent targets using equal gross exposure:
 
@@ -51,6 +51,10 @@ ctx.emit_signal(
 )
 ctx.construct_targets(EqualWeightSignalPortfolioConstruction())
 ```
+
+`construct_targets(...)` clears the pending signal batch after emitting targets.
+Strategies that emit and construct on every bar therefore do not reconstruct or
+re-emit prior bar signals.
 
 ## Runtime Ownership
 

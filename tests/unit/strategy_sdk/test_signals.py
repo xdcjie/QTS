@@ -83,3 +83,42 @@ def test_signal_rejects_confidence_outside_unit_interval() -> None:
             source_model="momentum-v1",
             confidence=Decimal("1.01"),
         )
+
+
+@pytest.mark.parametrize(
+    "confidence",
+    [Decimal("NaN"), Decimal("Infinity"), Decimal("-Infinity")],
+)
+def test_signal_rejects_non_finite_confidence(confidence: Decimal) -> None:
+    with pytest.raises(ValueError, match="confidence must be finite"):
+        Signal(
+            asset=_asset("AAPL"),
+            direction=SignalDirection.UP,
+            generated_at=datetime(2026, 1, 2, 14, 30, tzinfo=UTC),
+            horizon=timedelta(days=1),
+            source_model="momentum-v1",
+            confidence=confidence,
+        )
+
+
+@pytest.mark.parametrize("field_name", ["magnitude", "weight"])
+def test_signal_rejects_non_finite_optional_decimal_fields(field_name: str) -> None:
+    with pytest.raises(ValueError, match=f"{field_name} must be finite"):
+        if field_name == "magnitude":
+            Signal(
+                asset=_asset("AAPL"),
+                direction=SignalDirection.UP,
+                generated_at=datetime(2026, 1, 2, 14, 30, tzinfo=UTC),
+                horizon=timedelta(days=1),
+                source_model="momentum-v1",
+                magnitude=Decimal("NaN"),
+            )
+        else:
+            Signal(
+                asset=_asset("AAPL"),
+                direction=SignalDirection.UP,
+                generated_at=datetime(2026, 1, 2, 14, 30, tzinfo=UTC),
+                horizon=timedelta(days=1),
+                source_model="momentum-v1",
+                weight=Decimal("NaN"),
+            )

@@ -27,8 +27,8 @@ class EqualWeightSignalPortfolioConstruction:
     def __post_init__(self) -> None:
         """Validate portfolio construction configuration."""
         object.__setattr__(self, "gross_exposure", Decimal(str(self.gross_exposure)))
-        if self.gross_exposure <= Decimal("0"):
-            raise ValueError("gross_exposure must be positive")
+        if not self.gross_exposure.is_finite() or self.gross_exposure <= Decimal("0"):
+            raise ValueError("gross_exposure must be finite and positive")
 
     def construct(self, signals: tuple[Signal, ...]) -> tuple[TargetIntent, ...]:
         """Convert UP/DOWN/FLAT signals into percent or close target intents."""

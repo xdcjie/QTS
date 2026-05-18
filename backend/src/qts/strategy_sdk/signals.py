@@ -40,11 +40,20 @@ class Signal:
         except ValueError as exc:
             raise ValueError("direction must be one of: up, down, flat") from exc
         object.__setattr__(self, "direction", direction)
-        object.__setattr__(self, "confidence", Decimal(str(self.confidence)))
+        confidence = Decimal(str(self.confidence))
+        if not confidence.is_finite():
+            raise ValueError("confidence must be finite")
+        object.__setattr__(self, "confidence", confidence)
         if self.magnitude is not None:
-            object.__setattr__(self, "magnitude", Decimal(str(self.magnitude)))
+            magnitude = Decimal(str(self.magnitude))
+            if not magnitude.is_finite():
+                raise ValueError("magnitude must be finite")
+            object.__setattr__(self, "magnitude", magnitude)
         if self.weight is not None:
-            object.__setattr__(self, "weight", Decimal(str(self.weight)))
+            weight = Decimal(str(self.weight))
+            if not weight.is_finite():
+                raise ValueError("weight must be finite")
+            object.__setattr__(self, "weight", weight)
 
         require_aware_datetime(self.generated_at, name="generated_at")
         if self.horizon <= timedelta(0):

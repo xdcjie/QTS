@@ -12319,7 +12319,7 @@
             <tbody>
               <tr><td><code>__post_init__</code></td><td>StrategyContext:53</td><td>Initialize internal SDK collaborators.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>intents</code></td><td>StrategyContext:62</td><td>Return target intents emitted by the strategy.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>signals</code></td><td>StrategyContext:67</td><td>Return signals emitted by the strategy.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>signals</code></td><td>StrategyContext:67</td><td>Return pending signals waiting for portfolio construction.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>subscriptions</code></td><td>StrategyContext:72</td><td>Return market data subscriptions requested by the strategy.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>universe</code></td><td>StrategyContext:77</td><td>Return the current strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>symbol</code></td><td>StrategyContext:81</td><td>Resolve a user-facing symbol such as ``AAPL``.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
@@ -12330,17 +12330,17 @@
               <tr><td><code>target_value</code></td><td>StrategyContext:139</td><td>Emit a notional value target for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>close</code></td><td>StrategyContext:156</td><td>Emit a target that closes an asset position.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>emit_signal</code></td><td>StrategyContext:167</td><td>Record a forecast signal for later portfolio construction.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>construct_targets</code></td><td>StrategyContext:172</td><td>Construct and emit target intents from active signals.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>holding</code></td><td>StrategyContext:182</td><td>Return the current holding for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>unrealized_pnl</code></td><td>StrategyContext:188</td><td>Return current unrealized PnL if a portfolio mark is available.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>realized_pnl</code></td><td>StrategyContext:194</td><td>Return cumulative realized PnL for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>avg_cost</code></td><td>StrategyContext:200</td><td>Return average cost for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>rebalance</code></td><td>StrategyContext:206</td><td>Emit one percent target per asset in ``weights``.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>subscribe</code></td><td>StrategyContext:210</td><td>Subscribe to bars for an asset and timeframe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>set_universe</code></td><td>StrategyContext:215</td><td>Replace the strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>set_universe_from_selector</code></td><td>StrategyContext:220</td><td>Replace the strategy-declared universe from a selector result.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>add_to_universe</code></td><td>StrategyContext:224</td><td>Add members to the strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>remove_from_universe</code></td><td>StrategyContext:229</td><td>Remove members from the strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>construct_targets</code></td><td>StrategyContext:172</td><td>Construct and emit target intents from pending signals.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>holding</code></td><td>StrategyContext:184</td><td>Return the current holding for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>unrealized_pnl</code></td><td>StrategyContext:190</td><td>Return current unrealized PnL if a portfolio mark is available.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>realized_pnl</code></td><td>StrategyContext:196</td><td>Return cumulative realized PnL for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>avg_cost</code></td><td>StrategyContext:202</td><td>Return average cost for an asset.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>rebalance</code></td><td>StrategyContext:208</td><td>Emit one percent target per asset in ``weights``.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>subscribe</code></td><td>StrategyContext:212</td><td>Subscribe to bars for an asset and timeframe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>set_universe</code></td><td>StrategyContext:217</td><td>Replace the strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>set_universe_from_selector</code></td><td>StrategyContext:222</td><td>Replace the strategy-declared universe from a selector result.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>add_to_universe</code></td><td>StrategyContext:226</td><td>Add members to the strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>remove_from_universe</code></td><td>StrategyContext:231</td><td>Remove members from the strategy-declared universe.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>

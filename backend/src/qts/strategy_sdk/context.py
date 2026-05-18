@@ -65,7 +65,7 @@ class StrategyContext:
 
     @property
     def signals(self) -> tuple[Signal, ...]:
-        """Return signals emitted by the strategy."""
+        """Return pending signals waiting for portfolio construction."""
         return tuple(self._signals)
 
     @property
@@ -173,10 +173,12 @@ class StrategyContext:
         self,
         model: PortfolioConstructionModel,
     ) -> tuple[TargetIntent, ...]:
-        """Construct and emit target intents from active signals."""
-        targets = model.construct(tuple(self._signals))
+        """Construct and emit target intents from pending signals."""
+        pending = tuple(self._signals)
+        targets = model.construct(pending)
         for target in targets:
             self._intent_emitter.emit(target)
+        self._signals.clear()
         return targets
 
     def holding(self, asset: AssetRef) -> Holding | None:

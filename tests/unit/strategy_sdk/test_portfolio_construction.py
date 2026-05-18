@@ -66,19 +66,65 @@ def test_equal_weight_construction_closes_flat_only_signals() -> None:
 
 
 def test_equal_weight_construction_requires_positive_gross_exposure() -> None:
-    with pytest.raises(ValueError, match="gross_exposure must be positive"):
+    with pytest.raises(ValueError, match="gross_exposure must be finite and positive"):
         EqualWeightSignalPortfolioConstruction(gross_exposure=Decimal("0"))
+
+
+@pytest.mark.parametrize(
+    "gross_exposure",
+    [Decimal("NaN"), Decimal("Infinity"), Decimal("-Infinity")],
+)
+def test_equal_weight_construction_rejects_non_finite_gross_exposure(
+    gross_exposure: Decimal,
+) -> None:
+    with pytest.raises(ValueError, match="gross_exposure must be finite and positive"):
+        EqualWeightSignalPortfolioConstruction(gross_exposure=gross_exposure)
 
 
 def test_strategy_context_constructs_targets_from_active_signals() -> None:
     aapl = _asset("AAPL")
     ctx = StrategyContext()
-    signal = ctx.emit_signal(_signal(aapl, SignalDirection.UP))
+    ctx.emit_signal(_signal(aapl, SignalDirection.UP))
 
     targets = ctx.construct_targets(EqualWeightSignalPortfolioConstruction())
 
-    assert ctx.signals == (signal,)
+    assert ctx.signals == ()
     assert targets == (
         TargetIntent(asset=aapl, intent_type=TargetIntentType.PERCENT, value=Decimal("1")),
     )
     assert ctx.intents == targets
+
+
+def test_strategy_context_construct_targets_consumes_pending_signals_once() -> None:
+    aapl = _asset("AAPL")
+    ctx = StrategyContext()
+    ctx.emit_signal(_signal(aapl, SignalDirection.UP))
+
+    first = ctx.construct_targets(EqualWeightSignalPortfolioConstruction())
+    second = ctx.construct_targets(EqualWeightSignalPortfolioConstruction())
+
+    assert first == (
+        TargetIntent(asset=aapl, intent_type=TargetIntentType.PERCENT, value=Decimal("1")),
+    )
+    assert second == ()
+    assert ctx.intents == first
+    assert ctx.signals == ()
+
+
+def test_strategy_context_does_not_mix_new_opposite_signal_with_stale_signal() -> None:
+    aapl = _asset("AAPL")
+    ctx = StrategyContext()
+    ctx.emit_signal(_signal(aapl, SignalDirection.UP))
+    up_targets = ctx.construct_targets(EqualWeightSignalPortfolioConstruction())
+
+    ctx.emit_signal(_signal(aapl, SignalDirection.DOWN))
+    down_targets = ctx.construct_targets(EqualWeightSignalPortfolioConstruction())
+
+    assert up_targets == (
+        TargetIntent(asset=aapl, intent_type=TargetIntentType.PERCENT, value=Decimal("1")),
+    )
+    assert down_targets == (
+        TargetIntent(asset=aapl, intent_type=TargetIntentType.PERCENT, value=Decimal("-1")),
+    )
+    assert ctx.intents == up_targets + down_targets
+    assert ctx.signals == ()
