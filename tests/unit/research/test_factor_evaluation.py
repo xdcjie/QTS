@@ -144,6 +144,28 @@ def test_factor_evaluation_requires_two_assets_with_forward_returns() -> None:
         )
 
 
+def test_factor_evaluation_rejects_constant_factor_and_return_ranks() -> None:
+    aaa = Asset("AAA")
+    bbb = Asset("BBB")
+    ccc = Asset("CCC")
+
+    with pytest.raises(ValueError, match="rank IC is undefined for constant ranks"):
+        FactorEvaluation.evaluate(
+            FactorEvaluationInput(
+                as_of=date(2026, 1, 2),
+                factor_name="flat_factor",
+                factor_version="1",
+                factor_result=_factor_result((aaa, "1"), (bbb, "1"), (ccc, "1")),
+                forward_returns={
+                    aaa.symbol: Decimal("0.01"),
+                    bbb.symbol: Decimal("0.01"),
+                    ccc.symbol: Decimal("0.01"),
+                },
+                bucket_count=3,
+            )
+        )
+
+
 def test_factor_evaluation_artifact_is_stable_json(tmp_path: Path) -> None:
     writer = FactorEvaluationArtifactWriter(tmp_path)
     result = FactorEvaluationResult(

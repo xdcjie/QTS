@@ -109,18 +109,18 @@ class FactorEvaluation:
     def _spearman(cls, left: list[Decimal], right: list[Decimal]) -> Decimal:
         left_ranks = cls._average_ranks(left)
         right_ranks = cls._average_ranks(right)
-        if left_ranks == right_ranks:
-            return Decimal("1")
         left_mean = sum(left_ranks, Decimal("0")) / Decimal(len(left_ranks))
         right_mean = sum(right_ranks, Decimal("0")) / Decimal(len(right_ranks))
+        left_variance = sum((rank - left_mean) ** 2 for rank in left_ranks)
+        right_variance = sum((rank - right_mean) ** 2 for rank in right_ranks)
+        if left_variance == 0 or right_variance == 0:
+            raise ValueError("rank IC is undefined for constant ranks")
+        if left_ranks == right_ranks:
+            return Decimal("1")
         covariance = sum(
             (left_rank - left_mean) * (right_rank - right_mean)
             for left_rank, right_rank in zip(left_ranks, right_ranks, strict=True)
         )
-        left_variance = sum((rank - left_mean) ** 2 for rank in left_ranks)
-        right_variance = sum((rank - right_mean) ** 2 for rank in right_ranks)
-        if left_variance == 0 or right_variance == 0:
-            raise ValueError("rank IC requires non-constant factor scores and forward returns")
         return covariance / (left_variance.sqrt() * right_variance.sqrt())
 
     @staticmethod

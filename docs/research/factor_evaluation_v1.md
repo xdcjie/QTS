@@ -28,7 +28,9 @@ scores.
 
 Rank IC is Spearman rank correlation between factor score ranks and forward
 return ranks for scored assets that have forward returns. Ties use average
-ranks. At least two scored assets with forward returns are required.
+ranks. At least two scored assets with forward returns are required. If either
+factor ranks or forward-return ranks are constant, rank IC is undefined and
+evaluation raises `ValueError`.
 
 Long-short spread V1 is the top-ranked available forward return minus the
 bottom-ranked available forward return after excluding assets with missing
