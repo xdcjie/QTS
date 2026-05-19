@@ -14,10 +14,12 @@
   - `AssetRef`
   - `DataSubscription`
   - `DataView`
+  - `DirectionalMovementValue`
   - `FactorFactory`
   - `IndicatorFactory`
   - `PortfolioPosition`
   - `PortfolioView`
+  - `SupertrendValue`
   - `TargetIntent`
   - `TargetIntentType`
 - `qts.factors`

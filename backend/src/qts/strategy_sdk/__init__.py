@@ -3,7 +3,12 @@ from qts.strategy_sdk.context import DataSubscription, StrategyContext
 from qts.strategy_sdk.data_view import DataView
 from qts.strategy_sdk.events import Fill, OrderUpdate, TimerEvent
 from qts.strategy_sdk.factors import FactorFactory
-from qts.strategy_sdk.indicators import AssetIndicator, IndicatorFactory
+from qts.strategy_sdk.indicators import (
+    AssetIndicator,
+    DirectionalMovementValue,
+    IndicatorFactory,
+    SupertrendValue,
+)
 from qts.strategy_sdk.portfolio_construction import (
     EqualWeightSignalPortfolioConstruction,
     PortfolioConstructionModel,
@@ -26,6 +31,7 @@ __all__ = [
     "AssetIndicator",
     "DataView",
     "DataSubscription",
+    "DirectionalMovementValue",
     "EqualWeightSignalPortfolioConstruction",
     "FactorFactory",
     "Fill",
@@ -42,6 +48,7 @@ __all__ = [
     "SignalDirection",
     "Strategy",
     "StrategyContext",
+    "SupertrendValue",
     "TargetIntent",
     "TargetIntentType",
     "TimerEvent",

@@ -98,6 +98,9 @@ VWAP = ctx.indicator.session_vwap(asset)
 VOL_20 = ctx.indicator.volume_ratio(asset, window=20)
 ```
 
+Supertrend accepts a Decimal multiplier, for example
+`ST_10_3 = ctx.indicator.supertrend(asset, window=10, multiplier=Decimal("3"))`.
+
 ## Hidden internals
 
 User strategies must not access:

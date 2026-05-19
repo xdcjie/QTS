@@ -142,3 +142,36 @@ def test_indicator_factory_updates_only_matching_asset() -> None:
 
     assert MA_2.ready is False
     assert MA_2.value is None
+
+
+def test_indicator_factory_registers_supertrend_indicator() -> None:
+    from qts.indicators.technical import SupertrendValue
+    from qts.strategy_sdk.indicators import IndicatorFactory
+
+    asset = AssetRef(InstrumentId("EQUITY.US.NASDAQ.AAPL"), "AAPL")
+    indicators = IndicatorFactory()
+    trend = indicators.supertrend(asset, window=3, multiplier=Decimal("2"))
+
+    for index, close in enumerate(("9", "10", "13", "16", "19")):
+        base = _bar(index, close=close)
+        high = Decimal(close) + Decimal("1")
+        low = Decimal(close) - Decimal("1")
+        indicators.update_from_bar(
+            Bar(
+                instrument_id=asset.instrument_id,
+                start_time=base.start_time,
+                end_time=base.end_time,
+                timeframe="1m",
+                session_id="2026-01-02",
+                open=Decimal(close),
+                high=high,
+                low=low,
+                close=Decimal(close),
+                volume=Decimal("10"),
+                is_complete=True,
+            )
+        )
+
+    assert trend.ready is True
+    assert isinstance(trend.value, SupertrendValue)
+    assert trend.value.direction in {-1, 1}

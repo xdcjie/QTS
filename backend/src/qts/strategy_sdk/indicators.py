@@ -34,6 +34,8 @@ from qts.indicators.technical import (
     StandardDeviation,
     StochasticOscillator,
     StochasticOscillatorValue,
+    Supertrend,
+    SupertrendValue,
     VolumeRatio,
     WilliamsR,
 )
@@ -47,6 +49,7 @@ IndicatorValue: TypeAlias = (
     | KeltnerChannelValue
     | MACDValue
     | StochasticOscillatorValue
+    | SupertrendValue
 )
 
 
@@ -101,6 +104,16 @@ class IndicatorFactory:
     def atr(self, asset: AssetRef, window: int) -> AssetIndicator:
         """Create an average true range indicator for OHLC bars."""
         indicator = AverageTrueRange(window=window)
+        return self._bind_bar_indicator(asset, indicator.update_bar, indicator)
+
+    def supertrend(
+        self,
+        asset: AssetRef,
+        window: int,
+        multiplier: Decimal = Decimal("3"),
+    ) -> AssetIndicator:
+        """Create a Supertrend indicator for OHLC bars."""
+        indicator = Supertrend(window=window, multiplier=multiplier)
         return self._bind_bar_indicator(asset, indicator.update_bar, indicator)
 
     def rsi(self, asset: AssetRef, window: int) -> AssetIndicator:
@@ -268,7 +281,8 @@ class IndicatorFactory:
         | OnBalanceVolume
         | MoneyFlowIndex
         | AccumulationDistribution
-        | ChaikinMoneyFlow,
+        | ChaikinMoneyFlow
+        | Supertrend,
     ) -> AssetIndicator:
         """Bind a full-bar indicator to an asset."""
         bound = AssetIndicator(
@@ -299,4 +313,10 @@ class IndicatorFactory:
         return bound
 
 
-__all__ = ["AssetIndicator", "IndicatorFactory", "IndicatorValue"]
+__all__ = [
+    "AssetIndicator",
+    "DirectionalMovementValue",
+    "IndicatorFactory",
+    "IndicatorValue",
+    "SupertrendValue",
+]
