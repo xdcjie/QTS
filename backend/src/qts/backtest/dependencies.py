@@ -16,8 +16,8 @@ from qts.risk.risk_engine import RiskEngine
 from qts.risk.rules.max_notional import MaxNotionalRule
 
 if TYPE_CHECKING:
+    from qts.execution.execution_adapter import ExecutionAdapter
     from qts.reporting.backtest import EquityCurvePoint
-    from qts.runtime.actors.execution_actor import ExecutionAdapter
     from qts.runtime.intent_processing import ProcessedIntent
     from qts.strategy_sdk import PortfolioView
 

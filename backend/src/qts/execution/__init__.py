@@ -8,6 +8,7 @@ from qts.execution.broker import (
     normalize_broker_execution_report,
 )
 from qts.execution.brokerage_model import BrokerageModel
+from qts.execution.execution_adapter import ExecutionAdapter
 from qts.execution.idempotency import FillIdempotencyStore
 from qts.execution.order_manager import (
     ExecutionReport,
@@ -33,6 +34,7 @@ __all__ = [
     "BrokerageModel",
     "BrokerOrderRequest",
     "ExecutionReport",
+    "ExecutionAdapter",
     "ExecutionReportStatus",
     "FillIdempotencyStore",
     "Order",

@@ -701,6 +701,7 @@
           <li><code>qts/execution/adapters/simulated_execution_adapter.py</code> -> <code>SimulatedExecutionCostModel</code> <span class="location">backend/src/qts/execution/adapters/simulated_execution_adapter.py:17</span>, <code>_FillDecision</code> <span class="location">backend/src/qts/execution/adapters/simulated_execution_adapter.py:32</span>, <code>SimulatedExecutionAdapter</code> <span class="location">backend/src/qts/execution/adapters/simulated_execution_adapter.py:53</span></li>
           <li><code>qts/execution/broker.py</code> -> <code>BrokerCapabilities</code> <span class="location">backend/src/qts/execution/broker.py:29</span>, <code>BrokerOrderRequest</code> <span class="location">backend/src/qts/execution/broker.py:152</span>, <code>BrokerExecutionReportStatus</code> <span class="location">backend/src/qts/execution/broker.py:196</span>, <code>BrokerExecutionReport</code> <span class="location">backend/src/qts/execution/broker.py:207</span>, <code>BrokerAdapter</code> <span class="location">backend/src/qts/execution/broker.py:234</span></li>
           <li><code>qts/execution/brokerage_model.py</code> -> <code>BrokerageModel</code> <span class="location">backend/src/qts/execution/brokerage_model.py:13</span></li>
+          <li><code>qts/execution/execution_adapter.py</code> -> <code>ExecutionAdapter</code> <span class="location">backend/src/qts/execution/execution_adapter.py:13</span></li>
           <li><code>qts/execution/idempotency.py</code> -> <code>FillIdempotencyStore</code> <span class="location">backend/src/qts/execution/idempotency.py:6</span></li>
           <li><code>qts/execution/order_manager.py</code> -> <code>OrderManager</code> <span class="location">backend/src/qts/execution/order_manager.py:28</span></li>
           <li><code>qts/execution/order_state_machine.py</code> -> <code>OrderEvent</code> <span class="location">backend/src/qts/execution/order_state_machine.py:11</span>, <code>OrderTransitionError</code> <span class="location">backend/src/qts/execution/order_state_machine.py:24</span>, <code>OrderStateMachine</code> <span class="location">backend/src/qts/execution/order_state_machine.py:81</span></li>
@@ -792,7 +793,7 @@
           <li><code>qts/runtime/actor.py</code> -> <code>Actor</code> <span class="location">backend/src/qts/runtime/actor.py:8</span></li>
           <li><code>qts/runtime/actor_ref.py</code> -> <code>ActorRef</code> <span class="location">backend/src/qts/runtime/actor_ref.py:12</span></li>
           <li><code>qts/runtime/actors/account_actor.py</code> -> <code>ApplyFill</code> <span class="location">backend/src/qts/runtime/actors/account_actor.py:20</span>, <code>AccountSnapshot</code> <span class="location">backend/src/qts/runtime/actors/account_actor.py:30</span>, <code>AccountActor</code> <span class="location">backend/src/qts/runtime/actors/account_actor.py:58</span></li>
-          <li><code>qts/runtime/actors/execution_actor.py</code> -> <code>ExecutionAdapter</code> <span class="location">backend/src/qts/runtime/actors/execution_actor.py:20</span>, <code>OrderExecutionRequest</code> <span class="location">backend/src/qts/runtime/actors/execution_actor.py:53</span>, <code>OrderCancelRequest</code> <span class="location">backend/src/qts/runtime/actors/execution_actor.py:73</span>, <code>ExecutionActor</code> <span class="location">backend/src/qts/runtime/actors/execution_actor.py:90</span></li>
+          <li><code>qts/runtime/actors/execution_actor.py</code> -> <code>OrderExecutionRequest</code> <span class="location">backend/src/qts/runtime/actors/execution_actor.py:22</span>, <code>OrderCancelRequest</code> <span class="location">backend/src/qts/runtime/actors/execution_actor.py:42</span>, <code>ExecutionActor</code> <span class="location">backend/src/qts/runtime/actors/execution_actor.py:59</span></li>
           <li><code>qts/runtime/actors/market_data_actor.py</code> -> <code>MarketDataEvent</code> <span class="location">backend/src/qts/runtime/actors/market_data_actor.py:30</span>, <code>SubscribeMarketData</code> <span class="location">backend/src/qts/runtime/actors/market_data_actor.py:37</span>, <code>MarketDataActor</code> <span class="location">backend/src/qts/runtime/actors/market_data_actor.py:53</span></li>
           <li><code>qts/runtime/actors/order_manager_actor.py</code> -> <code>SubmitOrder</code> <span class="location">backend/src/qts/runtime/actors/order_manager_actor.py:28</span>, <code>CancelOrder</code> <span class="location">backend/src/qts/runtime/actors/order_manager_actor.py:49</span>, <code>ReplaceOrder</code> <span class="location">backend/src/qts/runtime/actors/order_manager_actor.py:66</span>, <code>OrderRouteMetadata</code> <span class="location">backend/src/qts/runtime/actors/order_manager_actor.py:84</span>, <code>OrderManagerActor</code> <span class="location">backend/src/qts/runtime/actors/order_manager_actor.py:150</span></li>
           <li><code>qts/runtime/actors/signal_aggregator_actor.py</code> -> <code>StrategySignalEvent</code> <span class="location">backend/src/qts/runtime/actors/signal_aggregator_actor.py:23</span>, <code>AggregatedSignalBatch</code> <span class="location">backend/src/qts/runtime/actors/signal_aggregator_actor.py:39</span>, <code>SignalAggregatorActor</code> <span class="location">backend/src/qts/runtime/actors/signal_aggregator_actor.py:63</span></li>
@@ -1091,6 +1092,7 @@
           <li><code>BrokerExecutionReport</code> <span class="location">backend/src/qts/execution/broker.py:207</span> -> <code>__post_init__():223</code></li>
           <li><code>BrokerAdapter</code> <span class="location">backend/src/qts/execution/broker.py:234</span> -> <code>capabilities property:238</code>, <code>submit_order():242</code>, <code>cancel_order():246</code></li>
           <li><code>BrokerageModel</code> <span class="location">backend/src/qts/execution/brokerage_model.py:13</span> -> <code>__post_init__():24</code>, <code>custom():43</code>, <code>simulated():57</code>, <code>supported_order_types property:71</code>, <code>commission_for_notional():75</code>, <code>initial_margin_for_notional():85</code>, <code>slippage_for_notional():89</code>, <code>supports():93</code>, <code>to_manifest_payload():106</code></li>
+          <li><code>ExecutionAdapter</code> <span class="location">backend/src/qts/execution/execution_adapter.py:13</span> -> <code>execute_market_order():16</code>, <code>cancel_order():31</code></li>
           <li><code>FillIdempotencyStore</code> <span class="location">backend/src/qts/execution/idempotency.py:6</span> -> <code>__init__():18</code>, <code>mark_seen():23</code>, <code>discard():33</code>, <code>snapshot():39</code>, <code>restore():46</code></li>
           <li><code>OrderManager</code> <span class="location">backend/src/qts/execution/order_manager.py:28</span> -> <code>__init__():31</code>, <code>create_order():41</code>, <code>mark_sent():51</code>, <code>request_cancel():61</code>, <code>request_replace():66</code>, <code>process_report():89</code>, <code>get_order():101</code>, <code>discard_terminal_order():105</code>, <code>snapshot():119</code>, <code>restore():129</code></li>
           <li><code>OrderEvent</code> <span class="location">backend/src/qts/execution/order_state_machine.py:11</span> -> <span class="muted">no public/core methods</span></li>
@@ -1339,10 +1341,9 @@
           <li><code>ApplyFill</code> <span class="location">backend/src/qts/runtime/actors/account_actor.py:20</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>AccountSnapshot</code> <span class="location">backend/src/qts/runtime/actors/account_actor.py:30</span> -> <code>__init__():38</code>, <code>positions property:53</code></li>
           <li><code>AccountActor</code> <span class="location">backend/src/qts/runtime/actors/account_actor.py:58</span> -> <code>__init__():61</code>, <code>handle():74</code>, <code>snapshot():81</code>, <code>restore():91</code>, <code>position_closed_events property:99</code>, <code>drain_position_closed_events():108</code></li>
-          <li><code>ExecutionAdapter</code> <span class="location">backend/src/qts/runtime/actors/execution_actor.py:20</span> -> <code>execute_market_order():23</code>, <code>cancel_order():38</code></li>
-          <li><code>OrderExecutionRequest</code> <span class="location">backend/src/qts/runtime/actors/execution_actor.py:53</span> -> <code>__post_init__():64</code></li>
-          <li><code>OrderCancelRequest</code> <span class="location">backend/src/qts/runtime/actors/execution_actor.py:73</span> -> <code>__post_init__():82</code></li>
-          <li><code>ExecutionActor</code> <span class="location">backend/src/qts/runtime/actors/execution_actor.py:90</span> -> <code>__init__():93</code>, <code>handle():104</code></li>
+          <li><code>OrderExecutionRequest</code> <span class="location">backend/src/qts/runtime/actors/execution_actor.py:22</span> -> <code>__post_init__():33</code></li>
+          <li><code>OrderCancelRequest</code> <span class="location">backend/src/qts/runtime/actors/execution_actor.py:42</span> -> <code>__post_init__():51</code></li>
+          <li><code>ExecutionActor</code> <span class="location">backend/src/qts/runtime/actors/execution_actor.py:59</span> -> <code>__init__():62</code>, <code>handle():73</code></li>
           <li><code>MarketDataEvent</code> <span class="location">backend/src/qts/runtime/actors/market_data_actor.py:30</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>SubscribeMarketData</code> <span class="location">backend/src/qts/runtime/actors/market_data_actor.py:37</span> -> <code>__post_init__():45</code></li>
           <li><code>MarketDataActor</code> <span class="location">backend/src/qts/runtime/actors/market_data_actor.py:53</span> -> <code>__init__():56</code>, <code>handle():80</code>, <code>logical_subscription_count property:103</code>, <code>physical_subscription_count property:108</code></li>
@@ -3189,10 +3190,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>371 files</span>
+      <span>372 files</span>
       <span>655 classes</span>
       <span>2224 functions</span>
-      <span>354 backend</span>
+      <span>355 backend</span>
       <span>17 frontend</span>
     </div>
   </div>
@@ -7811,6 +7812,38 @@
     </details>
     <details class="inventory-file">
       <summary>
+        <code>backend/src/qts/execution/execution_adapter.py</code>
+        <span class="inventory-counts">
+          <span>1 class</span>
+          <span>2 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Actor-facing order execution adapter protocol.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>ExecutionAdapter</code></td><td>execution_adapter:13</td><td>Execution boundary contract used by runtime actors.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>execute_market_order</code></td><td>ExecutionAdapter:16</td><td>Execute a market order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>cancel_order</code></td><td>ExecutionAdapter:31</td><td>Cancel an active order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
         <code>backend/src/qts/execution/idempotency.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
@@ -11941,8 +11974,8 @@
       <summary>
         <code>backend/src/qts/runtime/actors/execution_actor.py</code>
         <span class="inventory-counts">
-          <span>4 classes</span>
-          <span>6 functions</span>
+          <span>3 classes</span>
+          <span>4 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -11953,10 +11986,9 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>ExecutionAdapter</code></td><td>execution_actor:20</td><td>Execution boundary contract used by the actor.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
-              <tr><td><code>OrderExecutionRequest</code></td><td>execution_actor:53</td><td>Message requesting order execution.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
-              <tr><td><code>OrderCancelRequest</code></td><td>execution_actor:73</td><td>Message requesting broker order cancellation.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
-              <tr><td><code>ExecutionActor</code></td><td>execution_actor:90</td><td>Actor wrapper for an order execution adapter or simulator.</td><td>保持 actor-owned state 只在消息边界内变化，避免跨 actor 直接调用业务方法。</td></tr>
+              <tr><td><code>OrderExecutionRequest</code></td><td>execution_actor:22</td><td>Message requesting order execution.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
+              <tr><td><code>OrderCancelRequest</code></td><td>execution_actor:42</td><td>Message requesting broker order cancellation.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
+              <tr><td><code>ExecutionActor</code></td><td>execution_actor:59</td><td>Actor wrapper for an order execution adapter or simulator.</td><td>保持 actor-owned state 只在消息边界内变化，避免跨 actor 直接调用业务方法。</td></tr>
             </tbody>
           </table>
         </div>
@@ -11965,12 +11997,10 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>execute_market_order</code></td><td>ExecutionAdapter:23</td><td>Execute a market order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>cancel_order</code></td><td>ExecutionAdapter:38</td><td>Cancel an active order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>OrderExecutionRequest:64</td><td>Validate execution request identity fields.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>OrderCancelRequest:82</td><td>Validate cancel request identity fields.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>ExecutionActor:93</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>handle</code></td><td>ExecutionActor:104</td><td>Perform handle.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>OrderExecutionRequest:33</td><td>Validate execution request identity fields.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>OrderCancelRequest:51</td><td>Validate cancel request identity fields.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>ExecutionActor:62</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>handle</code></td><td>ExecutionActor:73</td><td>Perform handle.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>

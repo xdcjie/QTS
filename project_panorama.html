@@ -1444,10 +1444,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>371 files</span>
+      <span>372 files</span>
       <span>655 classes</span>
       <span>2224 functions</span>
-      <span>354 backend</span>
+      <span>355 backend</span>
       <span>17 frontend</span>
     </div>
   </div>
@@ -6066,6 +6066,38 @@
     </details>
     <details class="inventory-file">
       <summary>
+        <code>backend/src/qts/execution/execution_adapter.py</code>
+        <span class="inventory-counts">
+          <span>1 class</span>
+          <span>2 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Actor-facing order execution adapter protocol.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>ExecutionAdapter</code></td><td>execution_adapter:13</td><td>Execution boundary contract used by runtime actors.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>execute_market_order</code></td><td>ExecutionAdapter:16</td><td>Execute a market order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>cancel_order</code></td><td>ExecutionAdapter:31</td><td>Cancel an active order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
         <code>backend/src/qts/execution/idempotency.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
@@ -10196,8 +10228,8 @@
       <summary>
         <code>backend/src/qts/runtime/actors/execution_actor.py</code>
         <span class="inventory-counts">
-          <span>4 classes</span>
-          <span>6 functions</span>
+          <span>3 classes</span>
+          <span>4 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -10208,10 +10240,9 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>ExecutionAdapter</code></td><td>execution_actor:20</td><td>Execution boundary contract used by the actor.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
-              <tr><td><code>OrderExecutionRequest</code></td><td>execution_actor:53</td><td>Message requesting order execution.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
-              <tr><td><code>OrderCancelRequest</code></td><td>execution_actor:73</td><td>Message requesting broker order cancellation.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
-              <tr><td><code>ExecutionActor</code></td><td>execution_actor:90</td><td>Actor wrapper for an order execution adapter or simulator.</td><td>保持 actor-owned state 只在消息边界内变化，避免跨 actor 直接调用业务方法。</td></tr>
+              <tr><td><code>OrderExecutionRequest</code></td><td>execution_actor:22</td><td>Message requesting order execution.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
+              <tr><td><code>OrderCancelRequest</code></td><td>execution_actor:42</td><td>Message requesting broker order cancellation.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
+              <tr><td><code>ExecutionActor</code></td><td>execution_actor:59</td><td>Actor wrapper for an order execution adapter or simulator.</td><td>保持 actor-owned state 只在消息边界内变化，避免跨 actor 直接调用业务方法。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10220,12 +10251,10 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>execute_market_order</code></td><td>ExecutionAdapter:23</td><td>Execute a market order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>cancel_order</code></td><td>ExecutionAdapter:38</td><td>Cancel an active order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>OrderExecutionRequest:64</td><td>Validate execution request identity fields.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>OrderCancelRequest:82</td><td>Validate cancel request identity fields.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>ExecutionActor:93</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>handle</code></td><td>ExecutionActor:104</td><td>Perform handle.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>OrderExecutionRequest:33</td><td>Validate execution request identity fields.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>OrderCancelRequest:51</td><td>Validate cancel request identity fields.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>ExecutionActor:62</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>handle</code></td><td>ExecutionActor:73</td><td>Perform handle.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>

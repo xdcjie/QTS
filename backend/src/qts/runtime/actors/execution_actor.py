@@ -5,48 +5,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING
 
-from qts.core.ids import AccountId, CorrelationId, OrderId, StrategyId
-from qts.execution.order_manager import ExecutionReport, OrderIntent
+from qts.core.ids import AccountId, OrderId, StrategyId
+from qts.execution.execution_adapter import ExecutionAdapter
+from qts.execution.order_manager import OrderIntent
 from qts.runtime.actor import Actor
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.live_capital import LiveCapitalOrderDecision
 
 if TYPE_CHECKING:
     from qts.runtime.actors.order_manager_actor import OrderRouteMetadata
-
-
-class ExecutionAdapter(Protocol):
-    """Execution boundary contract used by the actor."""
-
-    def execute_market_order(
-        self,
-        intent: OrderIntent,
-        *,
-        broker_order_id: str,
-        market_price: Decimal,
-        account_id: AccountId,
-        strategy_id: StrategyId,
-        client_order_id: str,
-        correlation_id: CorrelationId,
-        bar_time: datetime | None = None,
-    ) -> ExecutionReport:
-        """Execute a market order."""
-        ...
-
-    def cancel_order(
-        self,
-        order_id: OrderId,
-        *,
-        broker_order_id: str,
-        account_id: AccountId,
-        strategy_id: StrategyId,
-        client_order_id: str,
-        correlation_id: CorrelationId,
-    ) -> ExecutionReport:
-        """Cancel an active order."""
-        ...
 
 
 @dataclass(frozen=True, slots=True)

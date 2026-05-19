@@ -8,7 +8,7 @@ import pytest
 
 if TYPE_CHECKING:
     from qts.core.ids import AccountId, CorrelationId, StrategyId
-    from qts.runtime.actors.execution_actor import ExecutionAdapter
+    from qts.execution import ExecutionAdapter
     from qts.runtime.actors.order_manager_actor import OrderRouteMetadata
 
 

@@ -10,11 +10,11 @@ from typing import TYPE_CHECKING
 
 from qts.core.ids import AccountId, InstrumentId, RuntimeRunId, StrategyId
 from qts.data.sources.streaming_market_data_source import StreamingMarketDataSource
+from qts.execution.execution_adapter import ExecutionAdapter
 from qts.registry.future_roll import FutureRollRegistry
 from qts.registry.instrument_registry import InstrumentRegistry
 from qts.risk.risk_engine import RiskEngine
 from qts.runtime.actors.account_actor import AccountActor, AccountSnapshot
-from qts.runtime.actors.execution_actor import ExecutionAdapter
 from qts.runtime.broker_startup import BrokerRuntimeStartupDecision
 from qts.runtime.intent_processing import InstrumentExecutionContext
 from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
