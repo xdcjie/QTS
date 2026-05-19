@@ -284,11 +284,24 @@ def test_atr_position_sizing_caps_target_percent() -> None:
     ctx = FakeContext()
     strategy = DualSupertrendStrategy()
     strategy.initialize(_ctx(ctx))
-    _set_indicators(ctx, fast_direction=1, slow_direction=1, atr="20")
+    _set_indicators(ctx, fast_direction=1, slow_direction=1, atr="10")
 
     strategy.on_bar(_ctx(ctx), _bar(0, close="2000"))
 
     assert ctx.intents == [("target_percent", ctx.asset, Decimal("0.50"))]
+
+
+def test_atr_position_sizing_scales_base_target_percent() -> None:
+    from examples.strategies.dual_supertrend import DualSupertrendStrategy
+
+    ctx = FakeContext()
+    strategy = DualSupertrendStrategy()
+    strategy.initialize(_ctx(ctx))
+    _set_indicators(ctx, fast_direction=1, slow_direction=1, atr="40")
+
+    strategy.on_bar(_ctx(ctx), _bar(0, close="2000"))
+
+    assert ctx.intents == [("target_percent", ctx.asset, Decimal("0.15"))]
 
 
 def test_trading_hours_filter_uses_half_open_window() -> None:

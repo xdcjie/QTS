@@ -285,7 +285,9 @@ class DualSupertrendStrategy(Strategy):
         target = self._config.base_target_percent
         if self._config.use_atr_position_sizing and atr > Decimal("0") and close > Decimal("0"):
             atr_fraction = atr / close
-            target = self._config.target_atr_fraction / atr_fraction
+            target = self._config.base_target_percent * (
+                self._config.target_atr_fraction / atr_fraction
+            )
         return min(target, self._config.max_target_percent)
 
     def _initial_stop(self, close: Decimal, atr: Decimal, side: int) -> Decimal | None:
