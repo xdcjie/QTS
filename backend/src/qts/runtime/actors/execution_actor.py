@@ -8,8 +8,8 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from qts.core.ids import AccountId, OrderId, StrategyId
+from qts.domain.orders import OrderIntent
 from qts.execution.execution_adapter import ExecutionAdapter
-from qts.execution.order_manager import OrderIntent
 from qts.runtime.actor import Actor
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.live_capital import LiveCapitalOrderDecision

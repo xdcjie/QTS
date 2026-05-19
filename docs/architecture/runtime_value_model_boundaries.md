@@ -21,8 +21,8 @@ reporting payloads exist only when they describe a real boundary.
 
 | Class | Concept | Package | Boundary role | Direction | Decision | Conversion owner | Mirror decision |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `RuntimeOrderResult` | Runtime order submission outcome and permission evidence. | qts.runtime.order_result | runtime result | runtime -> reporting | keep | `RuntimeOrderResult.to_evidence()` centralizes event/report evidence payloads. | Not interchangeable with `OrderManagerResult`; it can represent permission blocks without a domain order transition. |
-| `OrderManagerResult` | Domain order transition output emitted after applying one execution report. | qts.domain.orders.value_objects | domain model | domain -> runtime | keep | `OrderManager.process_report()` owns construction; downstream runtime actors consume the typed result. | Not a runtime submission result; it requires an `Order` and optional validated fills. |
+| `RuntimeOrderResult` | Runtime order submission outcome and permission evidence. | qts.runtime.order_result | runtime result | runtime -> reporting | keep | `RuntimeOrderResult.to_evidence()` centralizes event/report evidence payloads. | Not interchangeable with `OrderProcessingResult`; it can represent permission blocks without a domain order transition. |
+| `OrderProcessingResult` | Domain order transition output emitted after applying one execution report. | qts.domain.orders.value_objects | domain model | domain -> runtime | keep | `OrderManager.process_report()` owns construction; downstream runtime actors consume the typed result. | Not a runtime submission result; it requires an `Order` and optional validated fills. |
 | `ExecutionReport` | Normalized domain execution report accepted by `OrderManager`. | qts.domain.orders.value_objects | domain model | adapter -> domain | keep | Broker adapters and `normalize_broker_execution_report()` convert adapter reports before domain processing. | Canonical internal execution report; broker-specific report classes must translate into it. |
 | `IbkrExecutionReport` | IBKR adapter callback shape after raw callback parsing and before domain normalization. | qts.execution.adapters.ibkr_order_execution | broker adapter payload | adapter -> domain | keep | `IbkrOrderExecutionAdapter.normalize_execution_report()` maps IBKR status and fill fields to `ExecutionReport`. | Boundary-specific because it uses broker status semantics and is quarantined/resolved inside the IBKR adapter. |
 | `RuntimeEventWriteResult` | Shared metadata returned when a runtime event is appended. | qts.runtime.sinks.base | runtime result | runtime internal | keep | Runtime event sinks return this shared value object with sequence/hash metadata. | Canonical write metadata for runtime sinks. |
@@ -42,7 +42,7 @@ No other audited class is interchangeable:
 
 - `RuntimeOrderResult` records runtime permission and direct-submit rejection
   evidence, including cases where no domain order transition exists.
-- `OrderManagerResult` is the domain result of processing a normalized
+- `OrderProcessingResult` is the domain result of processing a normalized
   execution report.
 - `IbkrExecutionReport` is retained only as an adapter-local payload before
   normalization into `ExecutionReport`.

@@ -5,10 +5,10 @@ from __future__ import annotations
 from decimal import Decimal
 
 from qts.core.ids import BrokerId, OrderId
+from qts.domain.orders import ExecutionReportStatus
 from qts.execution.broker import (
     BrokerCapabilities,
     BrokerExecutionReport,
-    BrokerExecutionReportStatus,
     BrokerOrderRequest,
 )
 
@@ -37,7 +37,7 @@ class SimulatedBrokerAdapter:
         return self._report(
             request,
             broker_order_id=broker_order_id,
-            status=BrokerExecutionReportStatus.ACCEPTED,
+            status=ExecutionReportStatus.ACCEPTED,
         )
 
     def cancel_order(self, order_id: OrderId) -> BrokerExecutionReport:
@@ -46,7 +46,7 @@ class SimulatedBrokerAdapter:
         return self._report(
             request,
             broker_order_id=self._broker_order_ids[order_id],
-            status=BrokerExecutionReportStatus.CANCELLED,
+            status=ExecutionReportStatus.CANCELLED,
         )
 
     def order_request(self, order_id: OrderId) -> BrokerOrderRequest:
@@ -70,9 +70,9 @@ class SimulatedBrokerAdapter:
             raise ValueError("fill_id must not be empty")
         request = self.order_request(order_id)
         status = (
-            BrokerExecutionReportStatus.FILLED
+            ExecutionReportStatus.FILLED
             if quantity >= request.quantity
-            else BrokerExecutionReportStatus.PARTIALLY_FILLED
+            else ExecutionReportStatus.PARTIALLY_FILLED
         )
         return self._report(
             request,
@@ -88,7 +88,7 @@ class SimulatedBrokerAdapter:
         request: BrokerOrderRequest,
         *,
         broker_order_id: str,
-        status: BrokerExecutionReportStatus,
+        status: ExecutionReportStatus,
         filled_quantity: Decimal = Decimal("0"),
         fill_price: Decimal | None = None,
         fill_id: str | None = None,

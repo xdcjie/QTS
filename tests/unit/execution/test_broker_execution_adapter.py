@@ -121,11 +121,9 @@ def test_broker_execution_adapter_rejects_intent_account_route_mismatch() -> Non
 
 def test_broker_execution_adapter_rejects_unknown_broker_order_id() -> None:
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId
+    from qts.domain.orders import ExecutionReportStatus
     from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
-    from qts.execution.broker import (
-        BrokerExecutionReport,
-        BrokerExecutionReportStatus,
-    )
+    from qts.execution.broker import BrokerExecutionReport
     from qts.simulation.broker import SimulatedBrokerAdapter
 
     adapter = BrokerExecutionAdapter(
@@ -141,7 +139,7 @@ def test_broker_execution_adapter_rejects_unknown_broker_order_id() -> None:
         account_id=AccountId("acct-a"),
         strategy_id=None,
         instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
-        status=BrokerExecutionReportStatus.FILLED,
+        status=ExecutionReportStatus.FILLED,
         filled_quantity=Decimal("1"),
         fill_price=Decimal("100"),
         fill_id="fill-unknown",
@@ -155,12 +153,10 @@ def test_broker_execution_adapter_rejects_unknown_broker_order_id() -> None:
 
 def test_broker_execution_adapter_can_recover_runtime_broker_order_mapping() -> None:
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId
+    from qts.domain.orders import ExecutionReportStatus
     from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
-    from qts.execution.broker import (
-        BrokerExecutionReport,
-        BrokerExecutionReportStatus,
-    )
-    from qts.execution.order_manager import Order, OrderIntent, OrderManagerSnapshot, OrderSide
+    from qts.execution.broker import BrokerExecutionReport
+    from qts.execution.order_manager import Order, OrderIntent, OrderSide, OrderStateSnapshot
     from qts.execution.order_state_machine import OrderState
     from qts.simulation.broker import SimulatedBrokerAdapter
 
@@ -170,7 +166,7 @@ def test_broker_execution_adapter_can_recover_runtime_broker_order_mapping() -> 
         account_id=AccountId("acct-a"),
     )
     adapter.restore_order_mapping(
-        OrderManagerSnapshot(
+        OrderStateSnapshot(
             orders=(
                 Order(
                     order_id=order_id,
@@ -197,7 +193,7 @@ def test_broker_execution_adapter_can_recover_runtime_broker_order_mapping() -> 
         account_id=AccountId("acct-a"),
         strategy_id=None,
         instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
-        status=BrokerExecutionReportStatus.FILLED,
+        status=ExecutionReportStatus.FILLED,
         filled_quantity=Decimal("1"),
         fill_price=Decimal("100"),
         fill_id="fill-001",

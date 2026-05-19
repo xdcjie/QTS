@@ -6,8 +6,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from qts.core.ids import AccountId, CausationId, CorrelationId, InstrumentId, StrategyId
+from qts.domain.orders import Order, OrderFill
 from qts.domain.risk import RiskDecision
-from qts.execution.order_manager import Order, OrderFill
 from qts.portfolio.holdings import PositionClosed
 from qts.runtime.actors.order_manager_actor import OrderManagerActor
 from qts.runtime.sinks.base import RuntimeEvent

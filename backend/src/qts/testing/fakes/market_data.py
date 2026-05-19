@@ -10,10 +10,10 @@ from qts.data.events import (
     MarketDataSubscribed,
     MarketDataSubscription,
 )
-from qts.data.interfaces import StreamingFeedAdapter
+from qts.data.interfaces import MarketDataAdapter
 
 
-class FakeStreamingMarketDataAdapter(StreamingFeedAdapter):
+class FakeStreamingMarketDataAdapter(MarketDataAdapter):
     """Deterministic streaming market-data fake for unit/integration test composition."""
 
     def __init__(

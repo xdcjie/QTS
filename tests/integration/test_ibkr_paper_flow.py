@@ -191,11 +191,11 @@ class _FakeIbkrOrderExecutionTransport:
         correlation_id: CorrelationId,
         bar_time: object | None = None,
     ) -> ExecutionReport:
+        from qts.domain.orders import ExecutionReportStatus
         from qts.execution.adapters.ibkr_order_execution import (
             IbkrExecutionReport,
             IbkrOrderExecutionAdapter,
         )
-        from qts.execution.broker import BrokerExecutionReportStatus
 
         assert isinstance(self.adapter, IbkrOrderExecutionAdapter)
         _ = account_id, strategy_id, correlation_id
@@ -205,7 +205,7 @@ class _FakeIbkrOrderExecutionTransport:
             IbkrExecutionReport(
                 report_id=f"rpt-{broker_order_id}",
                 broker_order_id=broker_order_id,
-                status=BrokerExecutionReportStatus.FILLED,
+                status=ExecutionReportStatus.FILLED,
                 filled_quantity=intent.quantity,
                 fill_price=market_price,
                 fill_id=f"fill-{broker_order_id}",

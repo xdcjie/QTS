@@ -14,8 +14,10 @@ from qts.domain.orders import (
     OrderIntent,
     OrderManagerResult,
     OrderManagerSnapshot,
+    OrderProcessingResult,
     OrderSide,
     OrderState,
+    OrderStateSnapshot,
     ReplaceIntent,
 )
 from qts.domain.risk import RiskDecision
@@ -86,17 +88,17 @@ class OrderManager:
         self._orders[intent.order_id] = order
         return order
 
-    def process_report(self, report: ExecutionReport) -> OrderManagerResult:
+    def process_report(self, report: ExecutionReport) -> OrderProcessingResult:
         """Perform process_report."""
         order_id = self._broker_to_order[report.broker_order_id]
         if report.report_id in self._seen_report_ids:
-            return OrderManagerResult(order=self._orders[order_id])
+            return OrderProcessingResult(order=self._orders[order_id])
         state = self._machines[order_id].apply(self._event_for_report(report.status))
         order = self._replace_order(order_id, state=state)
         self._seen_report_ids.add(report.report_id)
         self._report_ids_by_order.setdefault(order_id, set()).add(report.report_id)
         fills = self._fills_for_report(order, report)
-        return OrderManagerResult(order=order, fills=fills)
+        return OrderProcessingResult(order=order, fills=fills)
 
     def get_order(self, order_id: OrderId) -> Order:
         """Perform get_order."""
@@ -116,9 +118,9 @@ class OrderManager:
         for report_id in self._report_ids_by_order.pop(order_id, set()):
             self._seen_report_ids.discard(report_id)
 
-    def snapshot(self) -> OrderManagerSnapshot:
+    def snapshot(self) -> OrderStateSnapshot:
         """Perform snapshot."""
-        return OrderManagerSnapshot(
+        return OrderStateSnapshot(
             orders=tuple(self._orders.values()),
             broker_to_order=tuple(self._broker_to_order.items()),
             seen_fill_ids=self._fill_ids.snapshot(),
@@ -126,7 +128,7 @@ class OrderManager:
         )
 
     @classmethod
-    def restore(cls, snapshot: OrderManagerSnapshot) -> OrderManager:
+    def restore(cls, snapshot: OrderStateSnapshot) -> OrderManager:
         """Perform restore."""
         manager = cls()
         manager._orders = {order.order_id: order for order in snapshot.orders}
@@ -205,6 +207,8 @@ __all__ = [
     "OrderManager",
     "OrderManagerResult",
     "OrderManagerSnapshot",
+    "OrderProcessingResult",
     "OrderSide",
+    "OrderStateSnapshot",
     "ReplaceIntent",
 ]

@@ -6,7 +6,8 @@ from collections.abc import Mapping
 from decimal import Decimal
 
 from qts.core.ids import AccountId, InstrumentId
-from qts.execution.order_manager import ExecutionReport, OrderFill, OrderManager
+from qts.domain.orders import ExecutionReport, OrderFill
+from qts.execution.order_manager import OrderManager
 from qts.runtime.actor_ref import ActorRef
 
 

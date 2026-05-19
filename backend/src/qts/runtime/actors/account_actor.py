@@ -9,8 +9,8 @@ from decimal import Decimal
 from types import MappingProxyType
 
 from qts.core.ids import AccountId, InstrumentId
+from qts.domain.orders import OrderFill, OrderSide
 from qts.execution.idempotency import FillIdempotencyStore
-from qts.execution.order_manager import OrderFill, OrderSide
 from qts.portfolio.cash_book import CashBook
 from qts.portfolio.holdings import Holding, HoldingBook, PositionClosed
 from qts.runtime.actor import Actor

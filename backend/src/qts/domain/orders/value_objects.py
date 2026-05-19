@@ -134,15 +134,18 @@ class OrderFill:
 
 
 @dataclass(frozen=True, slots=True)
-class OrderManagerResult:
+class OrderProcessingResult:
     """Events emitted by processing an execution report."""
 
     order: Order
     fills: tuple[OrderFill, ...] = ()
 
 
+OrderManagerResult = OrderProcessingResult
+
+
 @dataclass(frozen=True, slots=True)
-class OrderManagerSnapshot:
+class OrderStateSnapshot:
     """Serializable OrderManager state for reconnect/recovery."""
 
     orders: tuple[Order, ...]
@@ -151,16 +154,21 @@ class OrderManagerSnapshot:
     seen_report_ids: tuple[str, ...] = ()
 
 
+OrderManagerSnapshot = OrderStateSnapshot
+
+
 __all__ = [
     "CancelIntent",
     "ExecutionReport",
     "ExecutionReportStatus",
+    "OrderManagerResult",
+    "OrderManagerSnapshot",
+    "OrderProcessingResult",
     "OrderState",
+    "OrderStateSnapshot",
     "Order",
     "OrderFill",
     "OrderIntent",
-    "OrderManagerResult",
-    "OrderManagerSnapshot",
     "OrderSide",
     "OrderSpec",
     "ReplaceIntent",

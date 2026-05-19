@@ -28,14 +28,13 @@ from decimal import Decimal
 
 import pytest
 from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
-from qts.domain.orders import OrderSide
+from qts.domain.orders import ExecutionReportStatus, OrderSide
 from qts.domain.orders.order_spec import BrokerOrderType, OrderSpec
 from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
 from qts.execution.broker import (
     BrokerAdapter,
     BrokerCapabilities,
     BrokerExecutionReport,
-    BrokerExecutionReportStatus,
     BrokerOrderRequest,
     normalize_broker_execution_report,
 )
@@ -53,7 +52,7 @@ def test_broker_execution_report_can_carry_fill_time() -> None:
         account_id=AccountId("a1"),
         strategy_id=StrategyId("s1"),
         instrument_id=InstrumentId("FUTURE.CME.GC.GCG4"),
-        status=BrokerExecutionReportStatus.FILLED,
+        status=ExecutionReportStatus.FILLED,
         filled_quantity=Decimal("1"),
         fill_price=Decimal("2000"),
         fill_id="f1",
@@ -73,7 +72,7 @@ def test_normalize_broker_execution_report_propagates_fill_time() -> None:
         account_id=AccountId("a1"),
         strategy_id=StrategyId("s1"),
         instrument_id=InstrumentId("FUTURE.CME.GC.GCG4"),
-        status=BrokerExecutionReportStatus.FILLED,
+        status=ExecutionReportStatus.FILLED,
         filled_quantity=Decimal("1"),
         fill_price=Decimal("2000"),
         fill_id="f1",
@@ -93,7 +92,7 @@ def test_normalize_broker_execution_report_passes_through_missing_fill_time() ->
         account_id=AccountId("a1"),
         strategy_id=StrategyId("s1"),
         instrument_id=InstrumentId("FUTURE.CME.GC.GCG4"),
-        status=BrokerExecutionReportStatus.ACCEPTED,
+        status=ExecutionReportStatus.ACCEPTED,
     )
     runtime_report = normalize_broker_execution_report(broker_report)
     assert runtime_report.fill_time is None
@@ -116,7 +115,7 @@ def _make_broker_stub(*, broker_fill_time: datetime | None) -> BrokerAdapter:
                 account_id=request.account_id,
                 strategy_id=request.strategy_id,
                 instrument_id=request.instrument_id,
-                status=BrokerExecutionReportStatus.FILLED,
+                status=ExecutionReportStatus.FILLED,
                 filled_quantity=request.quantity,
                 fill_price=Decimal("2000"),
                 fill_id="f1",

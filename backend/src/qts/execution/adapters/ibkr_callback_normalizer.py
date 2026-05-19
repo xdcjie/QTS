@@ -7,13 +7,10 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 from qts.core.ids import AccountId, OrderId
-from qts.domain.orders import ExecutionReport, OrderSide
+from qts.domain.orders import ExecutionReport, ExecutionReportStatus, OrderSide
 from qts.execution.adapters.broker_callback_quarantine import BrokerCallbackQuarantine
 from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
-from qts.execution.broker import (
-    BrokerExecutionReportStatus,
-    normalize_broker_status,
-)
+from qts.execution.broker import normalize_broker_status
 from qts.execution.transports.ibkr_tws_order_execution_transport import (
     IbkrAccountSummaryPayload,
     IbkrCommissionPayload,
@@ -38,7 +35,7 @@ class IbkrExecutionReport:
 
     report_id: str
     broker_order_id: str
-    status: BrokerExecutionReportStatus
+    status: ExecutionReportStatus
     filled_quantity: Decimal = Decimal("0")
     fill_price: Decimal | None = None
     fill_id: str | None = None
@@ -476,17 +473,17 @@ class IbkrCallbackNormalizer:
         return tuple(resolved_reports)
 
     @staticmethod
-    def _status_from_ibkr(status: str) -> BrokerExecutionReportStatus:
+    def _status_from_ibkr(status: str) -> ExecutionReportStatus:
         normalized = status.strip().lower()
         status_map = {
-            "apicancelled": BrokerExecutionReportStatus.CANCELLED,
-            "cancelled": BrokerExecutionReportStatus.CANCELLED,
-            "filled": BrokerExecutionReportStatus.FILLED,
-            "inactive": BrokerExecutionReportStatus.REJECTED,
-            "pendingcancel": BrokerExecutionReportStatus.ACCEPTED,
-            "pendingsubmit": BrokerExecutionReportStatus.ACCEPTED,
-            "presubmitted": BrokerExecutionReportStatus.ACCEPTED,
-            "submitted": BrokerExecutionReportStatus.ACCEPTED,
+            "apicancelled": ExecutionReportStatus.CANCELLED,
+            "cancelled": ExecutionReportStatus.CANCELLED,
+            "filled": ExecutionReportStatus.FILLED,
+            "inactive": ExecutionReportStatus.REJECTED,
+            "pendingcancel": ExecutionReportStatus.ACCEPTED,
+            "pendingsubmit": ExecutionReportStatus.ACCEPTED,
+            "presubmitted": ExecutionReportStatus.ACCEPTED,
+            "submitted": ExecutionReportStatus.ACCEPTED,
         }
         try:
             return status_map[normalized]
@@ -551,7 +548,7 @@ class IbkrCallbackNormalizer:
             IbkrExecutionReport(
                 report_id=execution.report_id,
                 broker_order_id=execution.broker_order_id,
-                status=BrokerExecutionReportStatus.FILLED,
+                status=ExecutionReportStatus.FILLED,
                 filled_quantity=execution.filled_quantity,
                 fill_price=execution.fill_price,
                 fill_id=execution.execution_id,

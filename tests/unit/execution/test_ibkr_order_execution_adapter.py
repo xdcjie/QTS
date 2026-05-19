@@ -61,12 +61,12 @@ def test_ibkr_order_request_mapper_maps_order_intent_to_ibkr_request() -> None:
 
 def test_ibkr_order_execution_adapter_maps_order_and_report_without_market_data_methods() -> None:
     from qts.core.ids import BrokerId, InstrumentId, OrderId
+    from qts.domain.orders import ExecutionReportStatus
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrExecutionReport,
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.broker import BrokerExecutionReportStatus
     from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
@@ -95,7 +95,7 @@ def test_ibkr_order_execution_adapter_maps_order_and_report_without_market_data_
         IbkrExecutionReport(
             report_id="rpt-001",
             broker_order_id="ibkr-001",
-            status=BrokerExecutionReportStatus.FILLED,
+            status=ExecutionReportStatus.FILLED,
             filled_quantity=Decimal("10"),
             fill_price=Decimal("101.25"),
             fill_id="fill-001",

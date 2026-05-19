@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from qts.core.hashing import stable_json_hash
 from qts.domain.market_data import Bar
-from qts.execution.order_manager import Order, OrderFill
+from qts.domain.orders import Order, OrderFill
 from qts.reporting.backtest import BacktestArtifactWriter, EquityCurvePoint, TradeLedgerEntry
 from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventContext, RuntimeEventSink
 

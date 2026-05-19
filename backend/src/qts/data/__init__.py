@@ -6,7 +6,7 @@ from qts.data.events import (
     MarketDataSubscription,
 )
 from qts.data.historical import HistoricalMarketDataAdapter
-from qts.data.interfaces import MarketDataAdapter, StreamingFeedAdapter
+from qts.data.interfaces import MarketDataAdapter
 from qts.data.live.reconnect import ReconnectPolicy
 from qts.data.permissions import MarketDataPermissionEvent, MarketDataPermissionState
 from qts.data.provenance import DatasetMetadata
@@ -28,7 +28,6 @@ from qts.data.validation_report import (
 
 __all__ = [
     "MarketDataAdapter",
-    "StreamingFeedAdapter",
     "MarketDataPermissionEvent",
     "MarketDataPermissionState",
     "HistoricalMarketDataAdapter",

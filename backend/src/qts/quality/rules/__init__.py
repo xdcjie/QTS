@@ -37,6 +37,7 @@ from qts.quality.rules.oop import (
 )
 from qts.quality.rules.runtime import (
     RuntimeCoordinatorDecisionRule,
+    RuntimeExecutionBoundaryRule,
     RuntimeSessionComplexityRule,
 )
 from qts.quality.rules.stale import (
@@ -71,6 +72,7 @@ __all__ = [
     "ProviderSdkImportRule",
     "RemovedImportNoNewUsageRule",
     "RuntimeCoordinatorDecisionRule",
+    "RuntimeExecutionBoundaryRule",
     "RuntimeSessionComplexityRule",
     "SharedCapabilityRule",
     "SharedRuntimeWordingRule",

@@ -10,9 +10,8 @@ from typing import Protocol
 
 from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
 from qts.domain.market_data import Bar
-from qts.domain.orders import OrderSpec
+from qts.domain.orders import Order, OrderFill, OrderIntent, OrderSide, OrderSpec
 from qts.domain.risk import MarketDataRiskContext, OrderRiskRequest, RiskDecision
-from qts.execution.order_manager import Order, OrderFill, OrderIntent, OrderSide
 from qts.portfolio.holdings import Holding
 from qts.risk.risk_engine import RiskEngine
 from qts.runtime.actor_ref import ActorRef

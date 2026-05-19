@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from qts.core.ids import AccountId
-from qts.execution.order_manager import OrderManagerSnapshot
+from qts.domain.orders import OrderStateSnapshot
 from qts.reconciliation.engine import ReconciliationEngine
 from qts.reconciliation.report import ReconciliationReport
 from qts.reconciliation.snapshots import (
@@ -45,7 +45,7 @@ class BrokerRuntimeReconciliation:
     def internal_snapshot(
         self,
         *,
-        order_manager: OrderManagerSnapshot,
+        order_manager: OrderStateSnapshot,
         account: AccountSnapshot,
     ) -> ReconciliationSnapshot:
         """Build a reconciliation snapshot from actor-owned internal snapshots."""

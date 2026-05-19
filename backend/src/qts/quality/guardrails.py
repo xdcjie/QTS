@@ -25,13 +25,12 @@ SHARED_DATA_LIVE_CONTRACT_CLASSES = frozenset(
         "LiveFeedAdapter",
         "LiveFeedEvent",
         "LiveFeedFailure",
-        "MarketDataAdapter",
         "MarketDataFeedCapabilities",
+        "MarketDataAdapter",
         "MarketDataSourceEvent",
         "MarketDataSourceFailure",
         "MarketDataSubscribed",
         "MarketDataSubscription",
-        "StreamingFeedAdapter",
     }
 )
 REMOVED_IMPORT_MODULES = frozenset(
@@ -332,6 +331,11 @@ GUARDRAIL_REMEDIATIONS = {
     ),
     "RUNTIME_SESSION_COMPLEXITY": (
         "Keep RuntimeSession under facade limits or maintain explicit M5 gate evidence."
+    ),
+    "RUNTIME_EXECUTION_BOUNDARY": (
+        "Import domain types from qts.domain.orders; only execution-specific symbols "
+        "(OrderManager, ExecutionAdapter, FillIdempotencyStore, broker boundary types) "
+        "may come from qts.execution."
     ),
     "SHARED_CAPABILITY_IN_SOURCE_BOUNDARY": (
         "Move shared roll/session/resolution logic to a shared package."

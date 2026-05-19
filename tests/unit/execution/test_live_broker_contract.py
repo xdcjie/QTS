@@ -4,9 +4,9 @@ from decimal import Decimal
 
 import pytest
 from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+from qts.domain.orders import ExecutionReportStatus
 from qts.execution.broker import (
     BrokerCapabilities,
-    BrokerExecutionReportStatus,
     BrokerOrderRequest,
     normalize_broker_execution_report,
 )
@@ -52,8 +52,8 @@ def test_simulated_broker_submit_cancel_and_fill_contract() -> None:
         fill_id="fill-1",
     )
 
-    assert accepted.status is BrokerExecutionReportStatus.ACCEPTED
-    assert cancelled.status is BrokerExecutionReportStatus.CANCELLED
+    assert accepted.status is ExecutionReportStatus.ACCEPTED
+    assert cancelled.status is ExecutionReportStatus.CANCELLED
     assert filled.instrument_id == request.instrument_id
     assert filled.account_id == request.account_id
     assert filled.broker_order_id.startswith("fake-")

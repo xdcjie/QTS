@@ -10,7 +10,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import ROUND_FLOOR, ROUND_HALF_UP, Decimal
-from enum import StrEnum
 from typing import Protocol
 
 from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
@@ -193,14 +192,8 @@ class BrokerOrderRequest:
         )
 
 
-class BrokerExecutionReportStatus(StrEnum):
-    """Broker-boundary execution report status."""
-
-    ACCEPTED = "accepted"
-    PARTIALLY_FILLED = "partially_filled"
-    FILLED = "filled"
-    CANCELLED = "cancelled"
-    REJECTED = "rejected"
+# Alias: broker-boundary status uses the canonical domain enum.
+BrokerExecutionReportStatus = ExecutionReportStatus
 
 
 @dataclass(frozen=True, slots=True)
@@ -214,7 +207,7 @@ class BrokerExecutionReport:
     account_id: AccountId
     strategy_id: StrategyId | None
     instrument_id: InstrumentId
-    status: BrokerExecutionReportStatus
+    status: ExecutionReportStatus
     filled_quantity: Decimal = Decimal("0")
     fill_price: Decimal | None = None
     fill_id: str | None = None
@@ -248,10 +241,13 @@ class BrokerAdapter(Protocol):
         ...
 
 
-def normalize_broker_status(status: BrokerExecutionReportStatus) -> ExecutionReportStatus:
-    """Map broker status to normalized execution status."""
+def normalize_broker_status(status: ExecutionReportStatus) -> ExecutionReportStatus:
+    """Map broker status to normalized execution status.
 
-    return ExecutionReportStatus(status.value)
+    Both types are identical (the former is an alias for ExecutionReportStatus),
+    so this is a pass-through that preserves the explicit boundary.
+    """
+    return status
 
 
 def normalize_broker_execution_report(report: BrokerExecutionReport) -> ExecutionReport:
@@ -272,7 +268,6 @@ __all__ = [
     "BrokerAdapter",
     "BrokerCapabilities",
     "BrokerExecutionReport",
-    "BrokerExecutionReportStatus",
     "BrokerOrderType",
     "BrokerOrderRequest",
     "TimeInForce",

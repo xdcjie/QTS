@@ -2144,7 +2144,7 @@
     "lineno": 11,
     "method_count": 2,
     "module": "qts.data.interfaces",
-    "name": "StreamingFeedAdapter",
+    "name": "MarketDataAdapter",
     "public": true
   },
   {

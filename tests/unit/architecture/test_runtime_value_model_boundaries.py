@@ -12,7 +12,7 @@ AUDITED_CLASSES = {
         "decision": "keep",
         "role": "runtime result",
     },
-    "OrderManagerResult": {
+    "OrderProcessingResult": {
         "module": "qts.domain.orders.value_objects",
         "decision": "keep",
         "role": "domain model",

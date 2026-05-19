@@ -1459,3 +1459,8 @@ exceptions:
     reason: CBO-05 runtime session exposes only the market-data coordinator context surface it owns
     owner: platform
     expiry: 2027-05-17
+  - class_name: RuntimeExecutionBoundaryRule
+    module: qts.quality.rules.runtime
+    reason: Architecture remediation enforces runtime→execution import boundary
+    owner: platform
+    expiry: 2027-05-17

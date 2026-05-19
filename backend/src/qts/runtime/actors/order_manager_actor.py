@@ -8,16 +8,17 @@ from datetime import datetime
 from decimal import Decimal
 
 from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
-from qts.domain.orders import CancelIntent, ReplaceIntent
-from qts.domain.risk import RiskDecision
-from qts.execution.order_manager import (
+from qts.domain.orders import (
+    CancelIntent,
     ExecutionReport,
     Order,
     OrderFill,
     OrderIntent,
-    OrderManager,
-    OrderManagerSnapshot,
+    OrderStateSnapshot,
+    ReplaceIntent,
 )
+from qts.domain.risk import RiskDecision
+from qts.execution.order_manager import OrderManager
 from qts.runtime.actor import Actor
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.execution_actor import OrderCancelRequest, OrderExecutionRequest
@@ -205,7 +206,7 @@ class OrderManagerActor(Actor):
         """Perform fills_since."""
         return tuple(self._fills[index:])
 
-    def snapshot(self) -> OrderManagerSnapshot:
+    def snapshot(self) -> OrderStateSnapshot:
         """Return actor-owned order manager snapshot."""
         return self._manager.snapshot()
 

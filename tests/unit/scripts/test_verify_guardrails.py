@@ -723,7 +723,7 @@ def test_guardrails_reject_shared_contract_classes_in_data_live_package(
     _write(
         root,
         "backend/src/qts/data/live/adapter.py",
-        "class MarketDataAdapter:\n    pass\n\nclass StreamingFeedAdapter:\n    pass\n",
+        "class MarketDataAdapter:\n    pass\n",
     )
     _write(
         root,
@@ -1044,7 +1044,7 @@ def test_default_guardrails_reject_removed_transport_import_usage(
         "IbAsyncOrderExecutionTransport\n",
     )
 
-    assert _codes(root) == {"REMOVED_IMPORT_USAGE"}
+    assert _codes(root) == {"REMOVED_IMPORT_USAGE", "RUNTIME_EXECUTION_BOUNDARY"}
 
 
 def test_default_guardrails_reject_transport_importing_adapter_modules(
@@ -1393,6 +1393,47 @@ def test_guardrails_allow_canonical_architecture_runtime_text(tmp_path: Path) ->
     assert _codes_by_suite(root, guardrails.StaleArchitectureTextRule()) == set()
 
 
+def test_guardrails_reject_runtime_importing_execution_internal_types(tmp_path: Path) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/runtime/session.py",
+        "from qts.execution.order_manager import OrderFill\n",
+    )
+
+    assert _codes_by_suite(root, guardrails.RuntimeExecutionBoundaryRule()) == {
+        "RUNTIME_EXECUTION_BOUNDARY"
+    }
+
+
+def test_guardrails_allow_runtime_importing_whitelisted_execution_types(tmp_path: Path) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/runtime/session.py",
+        "from qts.execution.order_manager import OrderManager\n"
+        "from qts.execution.execution_adapter import ExecutionAdapter\n"
+        "from qts.execution.idempotency import FillIdempotencyStore\n"
+        "from qts.execution.broker import BrokerExecutionReport\n",
+    )
+
+    assert _codes_by_suite(root, guardrails.RuntimeExecutionBoundaryRule()) == set()
+
+
+def test_guardrails_allow_non_runtime_importing_execution_types(tmp_path: Path) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/reporting/consumer.py",
+        "from qts.execution.order_manager import OrderFill\n",
+    )
+
+    assert _codes_by_suite(root, guardrails.RuntimeExecutionBoundaryRule()) == set()
+
+
 def test_guardrails_pass_current_repository() -> None:
     assert run_guardrails(Path(".")) == []
 
@@ -1473,6 +1514,7 @@ def test_guardrail_suite_includes_required_m0_hard_gate_rules() -> None:
         "StrategySdkPublicSurfaceRule",
         "StaleArchitectureTextRule",
         "PlatformFreezeRule",
+        "RuntimeExecutionBoundaryRule",
     } <= rule_names
 
 

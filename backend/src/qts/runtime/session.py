@@ -13,8 +13,7 @@ from qts.data.sources.streaming_market_data_source import (
     StreamingMarketDataSubscriptionEvent,
 )
 from qts.domain.market_data import Bar
-from qts.execution.order_manager import Order, OrderFill
-from qts.execution.order_state_machine import OrderState
+from qts.domain.orders import Order, OrderFill, OrderState
 from qts.risk.kill_switch import RuntimeKillSwitchCommand
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.account_actor import AccountSnapshot

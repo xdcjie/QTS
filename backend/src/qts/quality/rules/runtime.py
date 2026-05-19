@@ -22,6 +22,19 @@ from qts.quality.guardrails import (
     _iter_imports,
 )
 
+RUNTIME_EXECUTION_ALLOWED_IMPORTS: frozenset[tuple[str, str]] = frozenset(
+    {
+        ("qts.execution.order_manager", "OrderManager"),
+        ("qts.execution.idempotency", "FillIdempotencyStore"),
+        ("qts.execution.execution_adapter", "ExecutionAdapter"),
+        ("qts.execution.broker", "BrokerAdapter"),
+        ("qts.execution.broker", "BrokerExecutionReport"),
+        ("qts.execution.broker", "BrokerOrderRequest"),
+        ("qts.execution.broker", "BrokerCapabilities"),
+        ("qts.execution.broker", "normalize_broker_execution_report"),
+    }
+)
+
 
 @dataclass(frozen=True, slots=True)
 class _RuntimeSessionMetrics:
@@ -441,4 +454,50 @@ class RuntimeCoordinatorDecisionRule:
         return violations
 
 
-__all__ = ["RuntimeSessionComplexityRule", "RuntimeCoordinatorDecisionRule"]
+class RuntimeExecutionBoundaryRule:
+    """Prevent runtime from importing execution-internal domain types.
+
+    Runtime may import only explicitly whitelisted execution symbols.
+    Domain types (Order, OrderFill, ExecutionReport, etc.) must be imported
+    from qts.domain.orders instead.
+    """
+
+    code = "RUNTIME_EXECUTION_BOUNDARY"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform check."""
+        if qts_relative_path.parts[:1] != ("runtime",):
+            return []
+        violations: list[GuardrailViolation] = []
+        for imported_module, imported_name, line in _iter_imported_names(tree):
+            if not imported_module.startswith("qts.execution."):
+                continue
+            if (imported_module, imported_name) in RUNTIME_EXECUTION_ALLOWED_IMPORTS:
+                continue
+            violations.append(
+                GuardrailViolation(
+                    code=self.code,
+                    path=str(relative_path),
+                    line=line,
+                    message=(
+                        f"runtime must not import execution-internal type "
+                        f"{imported_module}.{imported_name}; "
+                        f"import domain types from qts.domain.orders instead"
+                    ),
+                    symbol=f"{imported_module}.{imported_name}",
+                )
+            )
+        return violations
+
+
+__all__ = [
+    "RuntimeExecutionBoundaryRule",
+    "RuntimeSessionComplexityRule",
+    "RuntimeCoordinatorDecisionRule",
+]

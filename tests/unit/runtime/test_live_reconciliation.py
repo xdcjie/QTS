@@ -3,7 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from qts.core.ids import AccountId, InstrumentId, OrderId
-from qts.execution.order_manager import Order, OrderIntent, OrderManagerSnapshot, OrderSide
+from qts.execution.order_manager import Order, OrderIntent, OrderSide, OrderStateSnapshot
 from qts.execution.order_state_machine import OrderState
 from qts.runtime.actors.account_actor import AccountSnapshot
 
@@ -18,7 +18,7 @@ def test_live_reconciliation_builds_internal_snapshot_and_blocks_startup_on_drif
     order_id = OrderId("ord-1")
     reconciler = BrokerRuntimeReconciliation(account_id=account_id)
     internal = reconciler.internal_snapshot(
-        order_manager=OrderManagerSnapshot(
+        order_manager=OrderStateSnapshot(
             orders=(
                 Order(
                     order_id=order_id,

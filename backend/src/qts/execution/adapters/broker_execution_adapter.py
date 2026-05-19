@@ -14,7 +14,7 @@ from qts.execution.broker import (
     BrokerOrderRequest,
     normalize_broker_execution_report,
 )
-from qts.execution.order_manager import ExecutionReport, OrderIntent, OrderManagerSnapshot
+from qts.execution.order_manager import ExecutionReport, OrderIntent, OrderStateSnapshot
 
 
 class BrokerExecutionAdapter:
@@ -78,7 +78,7 @@ class BrokerExecutionAdapter:
 
     def restore_order_mapping(
         self,
-        snapshot: OrderManagerSnapshot,
+        snapshot: OrderStateSnapshot,
         *,
         broker_order_ids_by_runtime_id: dict[str, str] | None = None,
     ) -> None:

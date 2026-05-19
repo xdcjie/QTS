@@ -10,10 +10,10 @@ from qts.data.events import (
     MarketDataSubscribed,
     MarketDataSubscription,
 )
-from qts.data.interfaces import StreamingFeedAdapter
+from qts.data.interfaces import MarketDataAdapter
 
 
-class SimulatedStreamingMarketDataAdapter(StreamingFeedAdapter):
+class SimulatedStreamingMarketDataAdapter(MarketDataAdapter):
     """Deterministic simulated market-data adapter for non-test execution paths."""
 
     def __init__(

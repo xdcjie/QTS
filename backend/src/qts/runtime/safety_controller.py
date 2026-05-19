@@ -5,8 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from qts.core.ids import OrderId
-from qts.domain.orders import CancelIntent
-from qts.execution.order_state_machine import OrderState
+from qts.domain.orders import CancelIntent, OrderState
 from qts.risk.kill_switch import RuntimeKillSwitchCommand
 from qts.runtime.actors.order_manager_actor import CancelOrder
 from qts.runtime.broker_runtime_topology import AccountRuntimePartition

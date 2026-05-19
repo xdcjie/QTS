@@ -687,15 +687,12 @@ class BrokerRuntimeConfig:
 
     def _validate_mode_contract(self, mode: RuntimeMode) -> None:
         """Validate mode, account, execution, and port consistency."""
-        from qts.config.ibkr import is_ibkr_live_account, is_ibkr_paper_account
-
-        account_code = self.broker_account_code or ""
-        is_paper_account = is_ibkr_paper_account(account_code)
-        is_live_account = is_ibkr_live_account(account_code)
+        is_paper_account = self.broker_account_kind == "paper"
+        is_live_account = self.broker_account_kind == "live"
         if mode is RuntimeMode.LIVE:
             if is_paper_account:
                 raise ValueError("live mode cannot use a paper account")
-            if account_code and not is_live_account:
+            if self.broker_account_code and not is_live_account:
                 raise ValueError("live mode requires a live account")
             if self.broker_account_kind != AccountEnvironment.LIVE.value:
                 raise ValueError("live mode requires broker_account_kind=live")
@@ -722,7 +719,7 @@ class BrokerRuntimeConfig:
             raise ValueError(f"{mode.value} mode cannot allow live orders")
 
         if mode is RuntimeMode.PAPER_BROKER:
-            if account_code and not is_paper_account:
+            if self.broker_account_code and not is_paper_account:
                 raise ValueError("paper broker mode requires a paper account")
             if self.broker_account_kind != AccountEnvironment.PAPER.value:
                 raise ValueError("paper broker mode requires broker_account_kind=paper")

@@ -400,6 +400,7 @@ def test_live_rejects_paper_account_code() -> None:
             kill_switch_configured=True,
             allow_live_orders=True,
             broker_account_code="DUP1234567",
+            broker_account_kind="paper",
             broker_port=4001,
             operator_signoff_id="ops-approval-1",
         )
@@ -415,6 +416,7 @@ def test_paper_broker_rejects_live_account_code() -> None:
             calendar_configured=True,
             kill_switch_configured=True,
             broker_account_code="DU1234567",
+            broker_account_kind="live",
             broker_port=4002,
         )
 
