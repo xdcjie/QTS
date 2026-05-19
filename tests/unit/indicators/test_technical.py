@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
+import pytest
+
 from qts.core.ids import InstrumentId
 from qts.domain.market_data import Bar
 
@@ -303,3 +305,50 @@ def test_chaikin_money_flow_uses_rolling_money_flow_volume_anchor() -> None:
 
     assert value is not None
     assert value.quantize(Decimal("0.00000001")) == Decimal("0.30434783")
+
+
+def test_supertrend_uses_atr_bands_and_flips_direction_anchor() -> None:
+    from qts.indicators.technical import Supertrend, SupertrendValue
+
+    supertrend = Supertrend(window=3, multiplier=Decimal("2"))
+
+    bars = (
+        _bar(0, high="10", low="8", close="9"),
+        _bar(1, high="11", low="9", close="10"),
+        _bar(2, high="14", low="9", close="13"),
+        _bar(3, high="17", low="13", close="16"),
+        _bar(4, high="20", low="15", close="19"),
+        _bar(5, high="12", low="8", close="9"),
+    )
+    values = [supertrend.update_bar(bar) for bar in bars]
+
+    assert values[0] is None
+    assert values[1] is None
+
+    first = values[2]
+    assert isinstance(first, SupertrendValue)
+    assert first.direction == -1
+    assert first.upper_band == Decimal("17.5")
+    assert first.lower_band == Decimal("5.5")
+    assert first.value == Decimal("17.5")
+
+    bullish = values[4]
+    assert isinstance(bullish, SupertrendValue)
+    assert bullish.direction == 1
+    assert bullish.value.quantize(Decimal("0.00000001")) == Decimal("9.72222222")
+
+    bearish = values[5]
+    assert isinstance(bearish, SupertrendValue)
+    assert bearish.direction == -1
+    assert bearish.value.quantize(Decimal("0.00000001")) == Decimal("22.51851852")
+    assert supertrend.ready is True
+
+
+def test_supertrend_rejects_invalid_configuration() -> None:
+    from qts.indicators.technical import Supertrend
+
+    with pytest.raises(ValueError, match="window must be positive"):
+        Supertrend(window=0)
+
+    with pytest.raises(ValueError, match="multiplier must be non-negative"):
+        Supertrend(window=3, multiplier=Decimal("-1"))
