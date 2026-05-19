@@ -197,32 +197,7 @@ class BacktestEngineConfig:
         return payload
 
 
-@dataclass(frozen=True, slots=True)
-class CostModelConfig:
-    """Explicit backtest cost model settings."""
-
-    fixed_commission_per_contract: Decimal = Decimal("0")
-    slippage_bps: Decimal = Decimal("0")
-
-    def __post_init__(self) -> None:
-        """Perform __post_init__."""
-        object.__setattr__(
-            self,
-            "fixed_commission_per_contract",
-            Decimal(str(self.fixed_commission_per_contract)),
-        )
-        object.__setattr__(self, "slippage_bps", Decimal(str(self.slippage_bps)))
-        if self.fixed_commission_per_contract < Decimal("0"):
-            raise ValueError("fixed_commission_per_contract must be non-negative")
-        if self.slippage_bps < Decimal("0"):
-            raise ValueError("slippage_bps must be non-negative")
-
-    def to_payload(self) -> dict[str, str]:
-        """Perform to_payload."""
-        return {
-            "fixed_commission_per_contract": str(self.fixed_commission_per_contract),
-            "slippage_bps": str(self.slippage_bps),
-        }
+CostModelConfig = BacktestCostModel
 
 
 @dataclass(frozen=True, slots=True)
@@ -398,7 +373,7 @@ class BacktestRuntimeConfig:
     strategy: BacktestStrategyConfig | None = None
     strategy_params: dict[str, Any] = field(default_factory=dict)
     instrument_ids: dict[str, InstrumentId] = field(default_factory=dict)
-    cost_model: CostModelConfig = field(default_factory=CostModelConfig)
+    cost_model: BacktestCostModel = field(default_factory=BacktestCostModel)
     risk_config: BacktestRiskConfig = field(
         default_factory=lambda: BacktestRiskConfig(max_notional=Decimal("1"))
     )

@@ -3,6 +3,13 @@ from __future__ import annotations
 from decimal import Decimal
 
 
+def test_trade_side_is_domain_order_side_compatibility_alias() -> None:
+    from qts.domain.orders import OrderSide
+    from qts.portfolio.accounting.fill_accounting import TradeSide
+
+    assert TradeSide is OrderSide
+
+
 def test_equity_buy_fill_updates_position_and_cash() -> None:
     from qts.core.ids import InstrumentId, OrderId
     from qts.portfolio.accounting.fill_accounting import AccountingFill, FillAccounting, TradeSide

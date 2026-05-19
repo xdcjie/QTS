@@ -4,18 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
-from enum import StrEnum
 
 from qts.core.ids import InstrumentId, OrderId
+from qts.domain.orders import OrderSide
 from qts.portfolio.cash_book import CashBook
 from qts.portfolio.holdings import HoldingBook
 
-
-class TradeSide(StrEnum):
-    """Fill side."""
-
-    BUY = "buy"
-    SELL = "sell"
+TradeSide = OrderSide
 
 
 @dataclass(frozen=True, slots=True)
@@ -24,7 +19,7 @@ class AccountingFill:
 
     fill_id: OrderId
     instrument_id: InstrumentId
-    side: TradeSide
+    side: OrderSide
     quantity: Decimal
     price: Decimal
     currency: str
@@ -53,7 +48,7 @@ class FillAccounting:
         holding_book: HoldingBook,
     ) -> None:
         """Perform apply."""
-        signed_quantity = fill.quantity if fill.side is TradeSide.BUY else -fill.quantity
+        signed_quantity = fill.quantity if fill.side is OrderSide.BUY else -fill.quantity
         cash_delta = -signed_quantity * fill.price * fill.multiplier
         holding_book.apply_fill(
             instrument_id=fill.instrument_id,

@@ -1445,8 +1445,8 @@
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>372 files</span>
-      <span>655 classes</span>
-      <span>2224 functions</span>
+      <span>653 classes</span>
+      <span>2222 functions</span>
       <span>355 backend</span>
       <span>17 frontend</span>
     </div>
@@ -7421,7 +7421,7 @@
       <summary>
         <code>backend/src/qts/portfolio/accounting/fill_accounting.py</code>
         <span class="inventory-counts">
-          <span>3 classes</span>
+          <span>2 classes</span>
           <span>2 functions</span>
         </span>
       </summary>
@@ -7433,9 +7433,8 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>TradeSide</code></td><td>fill_accounting:14</td><td>Fill side.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>AccountingFill</code></td><td>fill_accounting:22</td><td>Executed fill used by accounting.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>FillAccounting</code></td><td>fill_accounting:45</td><td>Fill accounting operations.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>AccountingFill</code></td><td>fill_accounting:17</td><td>Executed fill used by accounting.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>FillAccounting</code></td><td>fill_accounting:40</td><td>Fill accounting operations.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -7444,8 +7443,8 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__post_init__</code></td><td>AccountingFill:33</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>apply</code></td><td>FillAccounting:49</td><td>Perform apply.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>AccountingFill:28</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>apply</code></td><td>FillAccounting:44</td><td>Perform apply.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10717,8 +10716,8 @@
       <summary>
         <code>backend/src/qts/runtime/config/models.py</code>
         <span class="inventory-counts">
-          <span>12 classes</span>
-          <span>34 functions</span>
+          <span>11 classes</span>
+          <span>32 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -10734,13 +10733,12 @@
               <tr><td><code>ConfigMigration</code></td><td>models:52</td><td>Migrate runtime config payloads between explicit schema versions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
               <tr><td><code>BacktestCostModel</code></td><td>models:119</td><td>Backtest execution fee and slippage assumptions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
               <tr><td><code>BacktestEngineConfig</code></td><td>models:159</td><td>Stable run-level inputs for constructing a backtest engine.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
-              <tr><td><code>CostModelConfig</code></td><td>models:201</td><td>Explicit backtest cost model settings.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
-              <tr><td><code>BacktestRiskConfig</code></td><td>models:229</td><td>Backtest risk settings.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
-              <tr><td><code>RollPolicyConfig</code></td><td>models:253</td><td>Continuous futures roll policy for config-driven backtest runs.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
-              <tr><td><code>BacktestMarketDataReference</code></td><td>models:279</td><td>Run-level reference to a configured market data source.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BacktestStrategyConfig</code></td><td>models:319</td><td>Configured strategy instance referenced by a backtest run.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
-              <tr><td><code>BacktestRuntimeConfig</code></td><td>models:382</td><td>Complete identity for one backtest run.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
-              <tr><td><code>BrokerRuntimeConfig</code></td><td>models:550</td><td>Startup and safety configuration for broker-capable runtime modes.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>BacktestRiskConfig</code></td><td>models:204</td><td>Backtest risk settings.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>RollPolicyConfig</code></td><td>models:228</td><td>Continuous futures roll policy for config-driven backtest runs.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>BacktestMarketDataReference</code></td><td>models:254</td><td>Run-level reference to a configured market data source.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestStrategyConfig</code></td><td>models:294</td><td>Configured strategy instance referenced by a backtest run.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>BacktestRuntimeConfig</code></td><td>models:357</td><td>Complete identity for one backtest run.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>BrokerRuntimeConfig</code></td><td>models:525</td><td>Startup and safety configuration for broker-capable runtime modes.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10760,29 +10758,27 @@
               <tr><td><code>commission_model</code></td><td>BacktestCostModel:151</td><td>Describe commission handling for reports.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>__post_init__</code></td><td>BacktestEngineConfig:170</td><td>Normalize and validate constructor inputs.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>to_payload</code></td><td>BacktestEngineConfig:182</td><td>Serialize this engine config for stable hashing.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>CostModelConfig:207</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>to_payload</code></td><td>CostModelConfig:220</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>BacktestRiskConfig:235</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>to_payload</code></td><td>BacktestRiskConfig:244</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>RollPolicyConfig:260</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>to_payload</code></td><td>RollPolicyConfig:269</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>BacktestMarketDataReference:286</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>is_configured</code></td><td>BacktestMarketDataReference:305</td><td>Perform is_configured.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_payload</code></td><td>BacktestMarketDataReference:309</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>BacktestStrategyConfig:329</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>from_yaml</code></td><td>BacktestStrategyConfig:343</td><td>Perform from_yaml.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_payload</code></td><td>BacktestStrategyConfig:350</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_parse_payload</code></td><td>BacktestStrategyConfig:362</td><td>Perform _parse_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>BacktestRuntimeConfig:413</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>from_yaml</code></td><td>BacktestRuntimeConfig:489</td><td>Perform from_yaml.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>config_hash</code></td><td>BacktestRuntimeConfig:496</td><td>Perform config_hash.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_payload</code></td><td>BacktestRuntimeConfig:500</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_normalize_symbol</code></td><td>BacktestRuntimeConfig:541</td><td>Perform _normalize_symbol.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>BrokerRuntimeConfig:589</td><td>Validate the broker runtime mode contract.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>config_hash</code></td><td>BrokerRuntimeConfig:653</td><td>Return the stable identity hash for this broker runtime config.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_payload</code></td><td>BrokerRuntimeConfig:657</td><td>Serialize startup gates and environment identity for evidence artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_normalize_broker_account_kind</code></td><td>BrokerRuntimeConfig:702</td><td>Normalize the broker account classification for manifests.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_validate_mode_contract</code></td><td>BrokerRuntimeConfig:713</td><td>Validate mode, account, execution, and port consistency.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>BacktestRiskConfig:210</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>BacktestRiskConfig:219</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>RollPolicyConfig:235</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>RollPolicyConfig:244</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>BacktestMarketDataReference:261</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>is_configured</code></td><td>BacktestMarketDataReference:280</td><td>Perform is_configured.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>BacktestMarketDataReference:284</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>BacktestStrategyConfig:304</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>from_yaml</code></td><td>BacktestStrategyConfig:318</td><td>Perform from_yaml.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>BacktestStrategyConfig:325</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_parse_payload</code></td><td>BacktestStrategyConfig:337</td><td>Perform _parse_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>BacktestRuntimeConfig:388</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>from_yaml</code></td><td>BacktestRuntimeConfig:464</td><td>Perform from_yaml.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>config_hash</code></td><td>BacktestRuntimeConfig:471</td><td>Perform config_hash.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>BacktestRuntimeConfig:475</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_normalize_symbol</code></td><td>BacktestRuntimeConfig:516</td><td>Perform _normalize_symbol.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>BrokerRuntimeConfig:564</td><td>Validate the broker runtime mode contract.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>config_hash</code></td><td>BrokerRuntimeConfig:628</td><td>Return the stable identity hash for this broker runtime config.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>BrokerRuntimeConfig:632</td><td>Serialize startup gates and environment identity for evidence artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_normalize_broker_account_kind</code></td><td>BrokerRuntimeConfig:677</td><td>Normalize the broker account classification for manifests.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_validate_mode_contract</code></td><td>BrokerRuntimeConfig:688</td><td>Validate mode, account, execution, and port consistency.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>

@@ -1,5 +1,5 @@
 {
-  "production_class_count": 617,
+  "production_class_count": 615,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunSchema",
@@ -311,7 +311,6 @@
     "qts.observability.metrics.RuntimeCounterMetric",
     "qts.observability.metrics.RuntimeLatencyMetric",
     "qts.observability.metrics.MetricsRegistry",
-    "qts.portfolio.accounting.fill_accounting.TradeSide",
     "qts.portfolio.accounting.fill_accounting.AccountingFill",
     "qts.portfolio.accounting.fill_accounting.FillAccounting",
     "qts.portfolio.cash_book.CashBook",
@@ -494,7 +493,6 @@
     "qts.runtime.config.models.ConfigMigration",
     "qts.runtime.config.models.BacktestCostModel",
     "qts.runtime.config.models.BacktestEngineConfig",
-    "qts.runtime.config.models.CostModelConfig",
     "qts.runtime.config.models.BacktestRiskConfig",
     "qts.runtime.config.models.RollPolicyConfig",
     "qts.runtime.config.models.BacktestMarketDataReference",

@@ -572,7 +572,7 @@
       <div class="surface placeholder" aria-label="当前实现清单">
         <h2>当前实现清单（按最终目录规则）</h2>
         <ul>
-          <li><code>qts/runtime/config/models.py</code> -> <code>TradingRuntimeConfig</code>, <code>ConfigMigrationResult</code>, <code>ConfigMigration</code>, <code>BacktestCostModel</code>, <code>BacktestEngineConfig</code>, <code>CostModelConfig</code>, <code>BacktestRiskConfig</code>, <code>RollPolicyConfig</code>, <code>BacktestMarketDataReference</code>, <code>BacktestStrategyConfig</code>, <code>BacktestRuntimeConfig</code>, <code>BrokerRuntimeConfig</code></li>
+          <li><code>qts/runtime/config/models.py</code> -> <code>TradingRuntimeConfig</code>, <code>ConfigMigrationResult</code>, <code>ConfigMigration</code>, <code>BacktestCostModel</code>, <code>BacktestEngineConfig</code>, <code>BacktestRiskConfig</code>, <code>RollPolicyConfig</code>, <code>BacktestMarketDataReference</code>, <code>BacktestStrategyConfig</code>, <code>BacktestRuntimeConfig</code>, <code>BrokerRuntimeConfig</code></li>
           <li><code>qts/runtime/config/paper.py</code> -> <code>PaperSimulatedRuntimeConfig</code></li>
           <li><code>qts/application/commands/start_runtime.py</code> -> <code>StartRuntimeCommand</code>, <code>RuntimeStartResult</code></li>
           <li><code>qts/runtime/session.py</code> -> <code>RuntimeSessionResult</code>, <code>RuntimeRollbackCommand</code>, <code>RuntimeRollbackEvidence</code>, <code>RuntimeSession</code></li>
@@ -607,7 +607,7 @@
       <div class="surface class-inventory" aria-label="生产类全量索引">
         <h2>生产类全量索引（按阶段 / 模块）</h2>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">653 classes</span></summary>
+          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">651 classes</span></summary>
           <ul>
           <li><code>qts/api/auth_backend_factory.py</code> -> <code>_DevDefaultTokenAuthBackend</code> <span class="location">backend/src/qts/api/auth_backend_factory.py:38</span></li>
           <li><code>qts/api/schemas/backtest_schema.py</code> -> <code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span>, <code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span>, <code>BacktestRunResultSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:24</span>, <code>BacktestStrategyOptionSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:38</span></li>
@@ -726,7 +726,7 @@
           <li><code>qts/observability/dashboard.py</code> -> <code>RuntimeSubscriptionSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:10</span>, <code>OpenOrderSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:31</span>, <code>DashboardPositionSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:50</span>, <code>DashboardCashSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:67</span>, <code>RiskStatusSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:84</span>, <code>BrokerConnectionSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:99</span>, <code>OperationalDashboardSnapshot</code> <span class="location">backend/src/qts/observability/dashboard.py:114</span></li>
           <li><code>qts/observability/errors.py</code> -> <code>OperationalErrorCode</code> <span class="location">backend/src/qts/observability/errors.py:10</span>, <code>RuntimeErrorReason</code> <span class="location">backend/src/qts/observability/errors.py:29</span></li>
           <li><code>qts/observability/metrics.py</code> -> <code>RuntimeCounterMetric</code> <span class="location">backend/src/qts/observability/metrics.py:15</span>, <code>RuntimeLatencyMetric</code> <span class="location">backend/src/qts/observability/metrics.py:32</span>, <code>MetricsRegistry</code> <span class="location">backend/src/qts/observability/metrics.py:45</span></li>
-          <li><code>qts/portfolio/accounting/fill_accounting.py</code> -> <code>TradeSide</code> <span class="location">backend/src/qts/portfolio/accounting/fill_accounting.py:14</span>, <code>AccountingFill</code> <span class="location">backend/src/qts/portfolio/accounting/fill_accounting.py:22</span>, <code>FillAccounting</code> <span class="location">backend/src/qts/portfolio/accounting/fill_accounting.py:45</span></li>
+          <li><code>qts/portfolio/accounting/fill_accounting.py</code> -> <code>AccountingFill</code> <span class="location">backend/src/qts/portfolio/accounting/fill_accounting.py:17</span>, <code>FillAccounting</code> <span class="location">backend/src/qts/portfolio/accounting/fill_accounting.py:40</span></li>
           <li><code>qts/portfolio/cash_book.py</code> -> <code>CashBook</code> <span class="location">backend/src/qts/portfolio/cash_book.py:11</span></li>
           <li><code>qts/portfolio/holdings.py</code> -> <code>CostBasisMethod</code> <span class="location">backend/src/qts/portfolio/holdings.py:15</span>, <code>Holding</code> <span class="location">backend/src/qts/portfolio/holdings.py:22</span>, <code>PositionClosed</code> <span class="location">backend/src/qts/portfolio/holdings.py:55</span>, <code>HoldingBook</code> <span class="location">backend/src/qts/portfolio/holdings.py:66</span></li>
           <li><code>qts/portfolio/reservation_book.py</code> -> <code>Reservation</code> <span class="location">backend/src/qts/portfolio/reservation_book.py:12</span>, <code>ReservationBook</code> <span class="location">backend/src/qts/portfolio/reservation_book.py:20</span></li>
@@ -803,7 +803,7 @@
           <li><code>qts/runtime/broker_runtime_topology.py</code> -> <code>StrategyRuntimeBinding</code> <span class="location">backend/src/qts/runtime/broker_runtime_topology.py:26</span>, <code>AccountRuntimePartition</code> <span class="location">backend/src/qts/runtime/broker_runtime_topology.py:42</span>, <code>ResolvedRuntimeTopology</code> <span class="location">backend/src/qts/runtime/broker_runtime_topology.py:57</span>, <code>BrokerRuntimeTopologyResolver</code> <span class="location">backend/src/qts/runtime/broker_runtime_topology.py:67</span></li>
           <li><code>qts/runtime/broker_startup.py</code> -> <code>BrokerRuntimeStartupDecisionStatus</code> <span class="location">backend/src/qts/runtime/broker_startup.py:17</span>, <code>BrokerRuntimeStartupCheck</code> <span class="location">backend/src/qts/runtime/broker_startup.py:27</span>, <code>BrokerRuntimeStartupChecklist</code> <span class="location">backend/src/qts/runtime/broker_startup.py:50</span>, <code>BrokerRuntimeStartupDecision</code> <span class="location">backend/src/qts/runtime/broker_startup.py:383</span></li>
           <li><code>qts/runtime/commands.py</code> -> <code>RuntimeCommandType</code> <span class="location">backend/src/qts/runtime/commands.py:13</span>, <code>RuntimeCommandResultStatus</code> <span class="location">backend/src/qts/runtime/commands.py:28</span>, <code>RuntimeCommandStreamEvent</code> <span class="location">backend/src/qts/runtime/commands.py:37</span>, <code>RuntimeCommand</code> <span class="location">backend/src/qts/runtime/commands.py:52</span>, <code>RuntimeCommandResult</code> <span class="location">backend/src/qts/runtime/commands.py:153</span>, <code>RuntimeCommandBus</code> <span class="location">backend/src/qts/runtime/commands.py:205</span></li>
-          <li><code>qts/runtime/config/models.py</code> -> <code>TradingRuntimeConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:29</span>, <code>ConfigMigrationResult</code> <span class="location">backend/src/qts/runtime/config/models.py:43</span>, <code>ConfigMigration</code> <span class="location">backend/src/qts/runtime/config/models.py:52</span>, <code>BacktestCostModel</code> <span class="location">backend/src/qts/runtime/config/models.py:119</span>, <code>BacktestEngineConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:159</span>, <code>CostModelConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:201</span>, <code>BacktestRiskConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:229</span>, <code>RollPolicyConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:253</span>, <code>BacktestMarketDataReference</code> <span class="location">backend/src/qts/runtime/config/models.py:279</span>, <code>BacktestStrategyConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:319</span>, <code>BacktestRuntimeConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:382</span>, <code>BrokerRuntimeConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:550</span></li>
+          <li><code>qts/runtime/config/models.py</code> -> <code>TradingRuntimeConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:29</span>, <code>ConfigMigrationResult</code> <span class="location">backend/src/qts/runtime/config/models.py:43</span>, <code>ConfigMigration</code> <span class="location">backend/src/qts/runtime/config/models.py:52</span>, <code>BacktestCostModel</code> <span class="location">backend/src/qts/runtime/config/models.py:119</span>, <code>BacktestEngineConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:159</span>, <code>BacktestRiskConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:204</span>, <code>RollPolicyConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:228</span>, <code>BacktestMarketDataReference</code> <span class="location">backend/src/qts/runtime/config/models.py:254</span>, <code>BacktestStrategyConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:294</span>, <code>BacktestRuntimeConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:357</span>, <code>BrokerRuntimeConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:525</span></li>
           <li><code>qts/runtime/config/paper.py</code> -> <code>PaperSimulatedRuntimeConfig</code> <span class="location">backend/src/qts/runtime/config/paper.py:11</span></li>
           <li><code>qts/runtime/config_loader.py</code> -> <code>BacktestConfigLoader</code> <span class="location">backend/src/qts/runtime/config_loader.py:24</span></li>
           <li><code>qts/runtime/dependencies.py</code> -> <code>RuntimeSessionDependencies</code> <span class="location">backend/src/qts/runtime/dependencies.py:37</span></li>
@@ -858,7 +858,7 @@
           </ul>
         </details>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">653 classes</span></summary>
+          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">651 classes</span></summary>
           <ul class="method-index">
           <li><code>_DevDefaultTokenAuthBackend</code> <span class="location">backend/src/qts/api/auth_backend_factory.py:38</span> -> <code>__init__():41</code></li>
           <li><code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span> -> <span class="muted">no public/core methods</span></li>
@@ -1175,9 +1175,8 @@
           <li><code>RuntimeCounterMetric</code> <span class="location">backend/src/qts/observability/metrics.py:15</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>RuntimeLatencyMetric</code> <span class="location">backend/src/qts/observability/metrics.py:32</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>MetricsRegistry</code> <span class="location">backend/src/qts/observability/metrics.py:45</span> -> <code>__init__():48</code>, <code>increment():52</code>, <code>record_latency():63</code>, <code>record_runtime_event():75</code>, <code>gauge():111</code>, <code>observe_queue():117</code>, <code>snapshot():132</code></li>
-          <li><code>TradeSide</code> <span class="location">backend/src/qts/portfolio/accounting/fill_accounting.py:14</span> -> <span class="muted">no public/core methods</span></li>
-          <li><code>AccountingFill</code> <span class="location">backend/src/qts/portfolio/accounting/fill_accounting.py:22</span> -> <code>__post_init__():33</code></li>
-          <li><code>FillAccounting</code> <span class="location">backend/src/qts/portfolio/accounting/fill_accounting.py:45</span> -> <code>apply():49</code></li>
+          <li><code>AccountingFill</code> <span class="location">backend/src/qts/portfolio/accounting/fill_accounting.py:17</span> -> <code>__post_init__():28</code></li>
+          <li><code>FillAccounting</code> <span class="location">backend/src/qts/portfolio/accounting/fill_accounting.py:40</span> -> <code>apply():44</code></li>
           <li><code>CashBook</code> <span class="location">backend/src/qts/portfolio/cash_book.py:11</span> -> <code>__init__():14</code>, <code>apply_delta():18</code>, <code>balance():23</code>, <code>available():27</code></li>
           <li><code>CostBasisMethod</code> <span class="location">backend/src/qts/portfolio/holdings.py:15</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>Holding</code> <span class="location">backend/src/qts/portfolio/holdings.py:22</span> -> <code>market_value():36</code>, <code>unrealized_pnl():40</code>, <code>holding_period():47</code></li>
@@ -1384,13 +1383,12 @@
           <li><code>ConfigMigration</code> <span class="location">backend/src/qts/runtime/config/models.py:52</span> -> <code>migrate():56</code></li>
           <li><code>BacktestCostModel</code> <span class="location">backend/src/qts/runtime/config/models.py:119</span> -> <code>__post_init__():125</code>, <code>to_payload():138</code>, <code>slippage_model property:146</code>, <code>commission_model property:151</code></li>
           <li><code>BacktestEngineConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:159</span> -> <code>__post_init__():170</code>, <code>to_payload():182</code></li>
-          <li><code>CostModelConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:201</span> -> <code>__post_init__():207</code>, <code>to_payload():220</code></li>
-          <li><code>BacktestRiskConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:229</span> -> <code>__post_init__():235</code>, <code>to_payload():244</code></li>
-          <li><code>RollPolicyConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:253</span> -> <code>__post_init__():260</code>, <code>to_payload():269</code></li>
-          <li><code>BacktestMarketDataReference</code> <span class="location">backend/src/qts/runtime/config/models.py:279</span> -> <code>__post_init__():286</code>, <code>is_configured property:305</code>, <code>to_payload():309</code></li>
-          <li><code>BacktestStrategyConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:319</span> -> <code>__post_init__():329</code>, <code>from_yaml():343</code>, <code>to_payload():350</code></li>
-          <li><code>BacktestRuntimeConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:382</span> -> <code>__post_init__():413</code>, <code>from_yaml():489</code>, <code>config_hash property:496</code>, <code>to_payload():500</code></li>
-          <li><code>BrokerRuntimeConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:550</span> -> <code>__post_init__():589</code>, <code>config_hash property:653</code>, <code>to_payload():657</code></li>
+          <li><code>BacktestRiskConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:204</span> -> <code>__post_init__():210</code>, <code>to_payload():219</code></li>
+          <li><code>RollPolicyConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:228</span> -> <code>__post_init__():235</code>, <code>to_payload():244</code></li>
+          <li><code>BacktestMarketDataReference</code> <span class="location">backend/src/qts/runtime/config/models.py:254</span> -> <code>__post_init__():261</code>, <code>is_configured property:280</code>, <code>to_payload():284</code></li>
+          <li><code>BacktestStrategyConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:294</span> -> <code>__post_init__():304</code>, <code>from_yaml():318</code>, <code>to_payload():325</code></li>
+          <li><code>BacktestRuntimeConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:357</span> -> <code>__post_init__():388</code>, <code>from_yaml():464</code>, <code>config_hash property:471</code>, <code>to_payload():475</code></li>
+          <li><code>BrokerRuntimeConfig</code> <span class="location">backend/src/qts/runtime/config/models.py:525</span> -> <code>__post_init__():564</code>, <code>config_hash property:628</code>, <code>to_payload():632</code></li>
           <li><code>PaperSimulatedRuntimeConfig</code> <span class="location">backend/src/qts/runtime/config/paper.py:11</span> -> <code>__post_init__():16</code></li>
           <li><code>BacktestConfigLoader</code> <span class="location">backend/src/qts/runtime/config_loader.py:24</span> -> <code>from_path():28</code>, <code>from_payload():36</code></li>
           <li><code>RuntimeSessionDependencies</code> <span class="location">backend/src/qts/runtime/dependencies.py:37</span> -> <code>__post_init__():72</code>, <code>multipliers property:108</code>, <code>exchange_timezones property:113</code></li>
@@ -3191,8 +3189,8 @@
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>372 files</span>
-      <span>655 classes</span>
-      <span>2224 functions</span>
+      <span>653 classes</span>
+      <span>2222 functions</span>
       <span>355 backend</span>
       <span>17 frontend</span>
     </div>
@@ -9167,7 +9165,7 @@
       <summary>
         <code>backend/src/qts/portfolio/accounting/fill_accounting.py</code>
         <span class="inventory-counts">
-          <span>3 classes</span>
+          <span>2 classes</span>
           <span>2 functions</span>
         </span>
       </summary>
@@ -9179,9 +9177,8 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>TradeSide</code></td><td>fill_accounting:14</td><td>Fill side.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>AccountingFill</code></td><td>fill_accounting:22</td><td>Executed fill used by accounting.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>FillAccounting</code></td><td>fill_accounting:45</td><td>Fill accounting operations.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>AccountingFill</code></td><td>fill_accounting:17</td><td>Executed fill used by accounting.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>FillAccounting</code></td><td>fill_accounting:40</td><td>Fill accounting operations.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -9190,8 +9187,8 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__post_init__</code></td><td>AccountingFill:33</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>apply</code></td><td>FillAccounting:49</td><td>Perform apply.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>AccountingFill:28</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>apply</code></td><td>FillAccounting:44</td><td>Perform apply.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -12463,8 +12460,8 @@
       <summary>
         <code>backend/src/qts/runtime/config/models.py</code>
         <span class="inventory-counts">
-          <span>12 classes</span>
-          <span>34 functions</span>
+          <span>11 classes</span>
+          <span>32 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -12480,13 +12477,12 @@
               <tr><td><code>ConfigMigration</code></td><td>models:52</td><td>Migrate runtime config payloads between explicit schema versions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
               <tr><td><code>BacktestCostModel</code></td><td>models:119</td><td>Backtest execution fee and slippage assumptions.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
               <tr><td><code>BacktestEngineConfig</code></td><td>models:159</td><td>Stable run-level inputs for constructing a backtest engine.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
-              <tr><td><code>CostModelConfig</code></td><td>models:201</td><td>Explicit backtest cost model settings.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
-              <tr><td><code>BacktestRiskConfig</code></td><td>models:229</td><td>Backtest risk settings.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
-              <tr><td><code>RollPolicyConfig</code></td><td>models:253</td><td>Continuous futures roll policy for config-driven backtest runs.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
-              <tr><td><code>BacktestMarketDataReference</code></td><td>models:279</td><td>Run-level reference to a configured market data source.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BacktestStrategyConfig</code></td><td>models:319</td><td>Configured strategy instance referenced by a backtest run.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
-              <tr><td><code>BacktestRuntimeConfig</code></td><td>models:382</td><td>Complete identity for one backtest run.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
-              <tr><td><code>BrokerRuntimeConfig</code></td><td>models:550</td><td>Startup and safety configuration for broker-capable runtime modes.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>BacktestRiskConfig</code></td><td>models:204</td><td>Backtest risk settings.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>RollPolicyConfig</code></td><td>models:228</td><td>Continuous futures roll policy for config-driven backtest runs.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>BacktestMarketDataReference</code></td><td>models:254</td><td>Run-level reference to a configured market data source.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BacktestStrategyConfig</code></td><td>models:294</td><td>Configured strategy instance referenced by a backtest run.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>BacktestRuntimeConfig</code></td><td>models:357</td><td>Complete identity for one backtest run.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>BrokerRuntimeConfig</code></td><td>models:525</td><td>Startup and safety configuration for broker-capable runtime modes.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -12506,29 +12502,27 @@
               <tr><td><code>commission_model</code></td><td>BacktestCostModel:151</td><td>Describe commission handling for reports.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>__post_init__</code></td><td>BacktestEngineConfig:170</td><td>Normalize and validate constructor inputs.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>to_payload</code></td><td>BacktestEngineConfig:182</td><td>Serialize this engine config for stable hashing.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>CostModelConfig:207</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>to_payload</code></td><td>CostModelConfig:220</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>BacktestRiskConfig:235</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>to_payload</code></td><td>BacktestRiskConfig:244</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>RollPolicyConfig:260</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>to_payload</code></td><td>RollPolicyConfig:269</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>BacktestMarketDataReference:286</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>is_configured</code></td><td>BacktestMarketDataReference:305</td><td>Perform is_configured.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_payload</code></td><td>BacktestMarketDataReference:309</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>BacktestStrategyConfig:329</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>from_yaml</code></td><td>BacktestStrategyConfig:343</td><td>Perform from_yaml.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_payload</code></td><td>BacktestStrategyConfig:350</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_parse_payload</code></td><td>BacktestStrategyConfig:362</td><td>Perform _parse_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>BacktestRuntimeConfig:413</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>from_yaml</code></td><td>BacktestRuntimeConfig:489</td><td>Perform from_yaml.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>config_hash</code></td><td>BacktestRuntimeConfig:496</td><td>Perform config_hash.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_payload</code></td><td>BacktestRuntimeConfig:500</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_normalize_symbol</code></td><td>BacktestRuntimeConfig:541</td><td>Perform _normalize_symbol.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>BrokerRuntimeConfig:589</td><td>Validate the broker runtime mode contract.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>config_hash</code></td><td>BrokerRuntimeConfig:653</td><td>Return the stable identity hash for this broker runtime config.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_payload</code></td><td>BrokerRuntimeConfig:657</td><td>Serialize startup gates and environment identity for evidence artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_normalize_broker_account_kind</code></td><td>BrokerRuntimeConfig:702</td><td>Normalize the broker account classification for manifests.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_validate_mode_contract</code></td><td>BrokerRuntimeConfig:713</td><td>Validate mode, account, execution, and port consistency.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>BacktestRiskConfig:210</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>BacktestRiskConfig:219</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>RollPolicyConfig:235</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>RollPolicyConfig:244</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>BacktestMarketDataReference:261</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>is_configured</code></td><td>BacktestMarketDataReference:280</td><td>Perform is_configured.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>BacktestMarketDataReference:284</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>BacktestStrategyConfig:304</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>from_yaml</code></td><td>BacktestStrategyConfig:318</td><td>Perform from_yaml.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>BacktestStrategyConfig:325</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_parse_payload</code></td><td>BacktestStrategyConfig:337</td><td>Perform _parse_payload.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>BacktestRuntimeConfig:388</td><td>Perform __post_init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>from_yaml</code></td><td>BacktestRuntimeConfig:464</td><td>Perform from_yaml.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>config_hash</code></td><td>BacktestRuntimeConfig:471</td><td>Perform config_hash.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>BacktestRuntimeConfig:475</td><td>Perform to_payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_normalize_symbol</code></td><td>BacktestRuntimeConfig:516</td><td>Perform _normalize_symbol.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>BrokerRuntimeConfig:564</td><td>Validate the broker runtime mode contract.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>config_hash</code></td><td>BrokerRuntimeConfig:628</td><td>Return the stable identity hash for this broker runtime config.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>BrokerRuntimeConfig:632</td><td>Serialize startup gates and environment identity for evidence artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_normalize_broker_account_kind</code></td><td>BrokerRuntimeConfig:677</td><td>Normalize the broker account classification for manifests.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_validate_mode_contract</code></td><td>BrokerRuntimeConfig:688</td><td>Validate mode, account, execution, and port consistency.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>

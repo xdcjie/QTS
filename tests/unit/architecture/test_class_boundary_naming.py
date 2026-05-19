@@ -47,7 +47,7 @@ def test_context_explicit_replacement_classes_exist_at_owning_boundaries() -> No
             "backend/src/qts/reconciliation/snapshots.py:39",
         ],
         "AccountingFill": [
-            "backend/src/qts/portfolio/accounting/fill_accounting.py:22",
+            "backend/src/qts/portfolio/accounting/fill_accounting.py:17",
         ],
     }
 
