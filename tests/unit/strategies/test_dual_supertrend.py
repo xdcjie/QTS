@@ -182,9 +182,7 @@ def test_enters_long_when_fast_and_slow_supertrend_align_and_filters_pass() -> N
     )
 
     ctx = FakeContext()
-    strategy = DualSupertrendStrategy(
-        DualSupertrendConfig(use_atr_position_sizing=False)
-    )
+    strategy = DualSupertrendStrategy(DualSupertrendConfig(use_atr_position_sizing=False))
     strategy.initialize(_ctx(ctx))
     _set_indicators(ctx, fast_direction=1, slow_direction=1)
 
@@ -200,9 +198,7 @@ def test_enters_short_when_allowed_and_trends_align() -> None:
     )
 
     ctx = FakeContext()
-    strategy = DualSupertrendStrategy(
-        DualSupertrendConfig(use_atr_position_sizing=False)
-    )
+    strategy = DualSupertrendStrategy(DualSupertrendConfig(use_atr_position_sizing=False))
     strategy.initialize(_ctx(ctx))
     _set_indicators(ctx, fast_direction=-1, slow_direction=-1)
 
@@ -236,9 +232,7 @@ def test_closes_long_on_fast_bearish_flip() -> None:
     )
 
     ctx = FakeContext()
-    strategy = DualSupertrendStrategy(
-        DualSupertrendConfig(use_atr_position_sizing=False)
-    )
+    strategy = DualSupertrendStrategy(DualSupertrendConfig(use_atr_position_sizing=False))
     strategy.initialize(_ctx(ctx))
     _set_indicators(ctx, fast_direction=1, slow_direction=1)
     strategy.on_bar(_ctx(ctx), _bar(0))
