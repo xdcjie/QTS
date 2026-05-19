@@ -15,11 +15,11 @@ from typing import Protocol
 from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
 from qts.domain.orders import (
     BracketLeg,
-    BrokerOrderType,
     ExecutionReport,
     ExecutionReportStatus,
     OrderSide,
     OrderSpec,
+    OrderType,
     TimeInForce,
 )
 
@@ -41,7 +41,7 @@ class BrokerCapabilities:
     min_tick: Decimal | None = None
     max_order_quantity: Decimal | None = None
     supported_asset_classes: frozenset[str] = frozenset()
-    supported_order_types: frozenset[BrokerOrderType] = frozenset()
+    supported_order_types: frozenset[OrderType] = frozenset()
     supported_time_in_force: frozenset[TimeInForce] = frozenset()
 
     def __post_init__(self) -> None:
@@ -62,22 +62,22 @@ class BrokerCapabilities:
             raise ValueError("asset_class must not be empty")
         return not self.supported_asset_classes or asset_class in self.supported_asset_classes
 
-    def supports_order_type(self, order_type: BrokerOrderType) -> bool:
+    def supports_order_type(self, order_type: OrderType) -> bool:
         """Perform supports_order_type."""
         if self.supported_order_types:
             return order_type in self.supported_order_types
         return {
-            BrokerOrderType.MARKET: self.supports_market_orders,
-            BrokerOrderType.LIMIT: self.supports_limit_orders,
-            BrokerOrderType.STOP: self.supports_stop_orders,
-            BrokerOrderType.STOP_LIMIT: self.supports_limit_orders and self.supports_stop_orders,
-            BrokerOrderType.TRAILING_STOP: self.supports_stop_orders,
-            BrokerOrderType.MARKET_ON_OPEN: self.supports_market_orders,
-            BrokerOrderType.MARKET_ON_CLOSE: self.supports_market_orders,
-            BrokerOrderType.BRACKET: self.supports_market_orders
+            OrderType.MARKET: self.supports_market_orders,
+            OrderType.LIMIT: self.supports_limit_orders,
+            OrderType.STOP: self.supports_stop_orders,
+            OrderType.STOP_LIMIT: self.supports_limit_orders and self.supports_stop_orders,
+            OrderType.TRAILING_STOP: self.supports_stop_orders,
+            OrderType.MARKET_ON_OPEN: self.supports_market_orders,
+            OrderType.MARKET_ON_CLOSE: self.supports_market_orders,
+            OrderType.BRACKET: self.supports_market_orders
             or self.supports_limit_orders
             or self.supports_stop_orders,
-            BrokerOrderType.ICEBERG: False,
+            OrderType.ICEBERG: False,
         }[order_type]
 
     def supports_tif(self, time_in_force: TimeInForce) -> bool:
@@ -158,7 +158,7 @@ class BrokerOrderRequest:
     instrument_id: InstrumentId
     side: OrderSide
     quantity: Decimal
-    order_type: BrokerOrderType = BrokerOrderType.MARKET
+    order_type: OrderType = OrderType.MARKET
     time_in_force: TimeInForce = TimeInForce.DAY
     limit_price: Decimal | None = None
     stop_price: Decimal | None = None
@@ -192,10 +192,6 @@ class BrokerOrderRequest:
         )
 
 
-# Alias: broker-boundary status uses the canonical domain enum.
-BrokerExecutionReportStatus = ExecutionReportStatus
-
-
 @dataclass(frozen=True, slots=True)
 class BrokerExecutionReport:
     """Normalized broker callback before it reaches OrderManager."""
@@ -222,6 +218,23 @@ class BrokerExecutionReport:
             raise ValueError("filled_quantity must be non-negative")
         if self.filled_quantity > Decimal("0") and self.fill_price is None:
             raise ValueError("fill_price is required for fills")
+
+
+@dataclass(frozen=True, slots=True)
+class BrokerCommissionReport:
+    """Broker-generic normalized commission callback at the adapter boundary."""
+
+    execution_id: str
+    commission: Decimal
+    currency: str
+
+    def __post_init__(self) -> None:
+        if not self.execution_id.strip():
+            raise ValueError("execution_id must not be empty")
+        if self.commission < Decimal("0"):
+            raise ValueError("commission must be non-negative")
+        if not self.currency.strip():
+            raise ValueError("currency must not be empty")
 
 
 class BrokerAdapter(Protocol):
@@ -267,9 +280,10 @@ def normalize_broker_execution_report(report: BrokerExecutionReport) -> Executio
 __all__ = [
     "BrokerAdapter",
     "BrokerCapabilities",
+    "BrokerCommissionReport",
     "BrokerExecutionReport",
-    "BrokerOrderType",
     "BrokerOrderRequest",
+    "OrderType",
     "TimeInForce",
     "normalize_broker_status",
     "normalize_broker_execution_report",

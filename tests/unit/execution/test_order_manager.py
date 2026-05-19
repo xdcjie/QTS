@@ -9,8 +9,9 @@ import pytest
 
 def test_order_manager_creates_order_from_approved_intent_and_tracks_state() -> None:
     from qts.core.ids import InstrumentId, OrderId
+    from qts.domain.orders import OrderIntent, OrderSide
     from qts.domain.risk import RiskDecision
-    from qts.execution.order_manager import OrderIntent, OrderManager, OrderSide
+    from qts.execution.order_manager import OrderManager
     from qts.execution.order_state_machine import OrderState
 
     manager = OrderManager()
@@ -30,8 +31,9 @@ def test_order_manager_creates_order_from_approved_intent_and_tracks_state() -> 
 
 def test_order_manager_rejects_unapproved_intent() -> None:
     from qts.core.ids import InstrumentId, OrderId
+    from qts.domain.orders import OrderIntent, OrderSide
     from qts.domain.risk import RiskDecision
-    from qts.execution.order_manager import OrderIntent, OrderManager, OrderSide
+    from qts.execution.order_manager import OrderManager
 
     manager = OrderManager()
     intent = OrderIntent(
@@ -50,14 +52,9 @@ def test_order_manager_rejects_unapproved_intent() -> None:
 
 def test_order_manager_processes_normalized_fill_report_once() -> None:
     from qts.core.ids import InstrumentId, OrderId
+    from qts.domain.orders import ExecutionReport, ExecutionReportStatus, OrderIntent, OrderSide
     from qts.domain.risk import RiskDecision
-    from qts.execution.order_manager import (
-        ExecutionReport,
-        ExecutionReportStatus,
-        OrderIntent,
-        OrderManager,
-        OrderSide,
-    )
+    from qts.execution.order_manager import OrderManager
     from qts.execution.order_state_machine import OrderState
 
     manager = OrderManager()
@@ -92,14 +89,9 @@ def test_order_manager_processes_normalized_fill_report_once() -> None:
 
 def test_duplicate_order_status_report_is_idempotent() -> None:
     from qts.core.ids import InstrumentId, OrderId
+    from qts.domain.orders import ExecutionReport, ExecutionReportStatus, OrderIntent, OrderSide
     from qts.domain.risk import RiskDecision
-    from qts.execution.order_manager import (
-        ExecutionReport,
-        ExecutionReportStatus,
-        OrderIntent,
-        OrderManager,
-        OrderSide,
-    )
+    from qts.execution.order_manager import OrderManager
     from qts.execution.order_state_machine import OrderState
 
     manager = OrderManager()
@@ -129,14 +121,9 @@ def test_duplicate_order_status_report_is_idempotent() -> None:
 
 def test_order_manager_can_discard_terminal_order_state_for_streaming_backtests() -> None:
     from qts.core.ids import InstrumentId, OrderId
+    from qts.domain.orders import ExecutionReport, ExecutionReportStatus, OrderIntent, OrderSide
     from qts.domain.risk import RiskDecision
-    from qts.execution.order_manager import (
-        ExecutionReport,
-        ExecutionReportStatus,
-        OrderIntent,
-        OrderManager,
-        OrderSide,
-    )
+    from qts.execution.order_manager import OrderManager
 
     manager = OrderManager()
     order = manager.create_order(
@@ -171,8 +158,9 @@ def test_order_manager_can_discard_terminal_order_state_for_streaming_backtests(
 
 def test_order_manager_rejects_discarding_non_terminal_order_state() -> None:
     from qts.core.ids import InstrumentId, OrderId
+    from qts.domain.orders import OrderIntent, OrderSide
     from qts.domain.risk import RiskDecision
-    from qts.execution.order_manager import OrderIntent, OrderManager, OrderSide
+    from qts.execution.order_manager import OrderManager
 
     manager = OrderManager()
     order = manager.create_order(
@@ -194,16 +182,16 @@ def test_order_manager_rejects_discarding_non_terminal_order_state() -> None:
 
 def test_order_manager_cancel_and_replace_intents_remain_manager_owned() -> None:
     from qts.core.ids import InstrumentId, OrderId
-    from qts.domain.risk import RiskDecision
-    from qts.execution.order_manager import (
+    from qts.domain.orders import (
         CancelIntent,
         ExecutionReport,
         ExecutionReportStatus,
         OrderIntent,
-        OrderManager,
         OrderSide,
         ReplaceIntent,
     )
+    from qts.domain.risk import RiskDecision
+    from qts.execution.order_manager import OrderManager
     from qts.execution.order_state_machine import OrderState
 
     manager = OrderManager()

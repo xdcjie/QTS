@@ -4035,7 +4035,7 @@
     "lineno": 106,
     "method_count": 0,
     "module": "qts.execution.broker",
-    "name": "BrokerOrderType",
+    "name": "OrderType",
     "public": true
   },
   {

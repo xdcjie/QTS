@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from qts.core.ids import AccountId, InstrumentId, OrderId
-from qts.execution.order_manager import OrderSide
+from qts.domain.orders import OrderSide
 
 
 @dataclass(frozen=True, slots=True)

@@ -7,9 +7,14 @@ import pytest
 
 def test_ibkr_order_request_mapper_maps_order_intent_to_ibkr_request() -> None:
     from qts.core.ids import BrokerId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import (
+        OrderIntent,
+        OrderSide,
+        OrderType,
+        TimeInForce,
+    )
     from qts.execution.adapters.ibkr_order_request_mapper import IbkrOrderRequestMapper
-    from qts.execution.broker import BrokerCapabilities, BrokerOrderType, TimeInForce
-    from qts.execution.order_manager import OrderIntent, OrderSide
+    from qts.execution.broker import BrokerCapabilities
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
@@ -35,7 +40,7 @@ def test_ibkr_order_request_mapper_maps_order_intent_to_ibkr_request() -> None:
         ),
         client_order_id="client-001",
         strategy_id=StrategyId("strategy-ibkr"),
-        order_type=BrokerOrderType.LIMIT,
+        order_type=OrderType.LIMIT,
         limit_price=Decimal("101.25"),
         time_in_force=TimeInForce.DAY,
     )
@@ -44,7 +49,7 @@ def test_ibkr_order_request_mapper_maps_order_intent_to_ibkr_request() -> None:
     assert request.broker_symbol == "AAPL"
     assert request.client_order_id == "client-001"
     assert request.strategy_id == StrategyId("strategy-ibkr")
-    assert request.order_type is BrokerOrderType.LIMIT
+    assert request.order_type is OrderType.LIMIT
     assert request.limit_price == Decimal("101.25")
 
     with pytest.raises(ValueError, match="fractional"):
@@ -61,13 +66,16 @@ def test_ibkr_order_request_mapper_maps_order_intent_to_ibkr_request() -> None:
 
 def test_ibkr_order_execution_adapter_maps_order_and_report_without_market_data_methods() -> None:
     from qts.core.ids import BrokerId, InstrumentId, OrderId
-    from qts.domain.orders import ExecutionReportStatus
+    from qts.domain.orders import (
+        ExecutionReportStatus,
+        OrderIntent,
+        OrderSide,
+    )
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrExecutionReport,
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
@@ -123,12 +131,17 @@ def test_broker_callback_quarantine_owns_unresolved_callback_collections() -> No
 
 def test_ibkr_order_execution_adapter_checks_order_capabilities() -> None:
     from qts.core.ids import BrokerId, InstrumentId, OrderId
+    from qts.domain.orders import (
+        OrderIntent,
+        OrderSide,
+        OrderType,
+        TimeInForce,
+    )
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.broker import BrokerCapabilities, BrokerOrderType, TimeInForce
-    from qts.execution.order_manager import OrderIntent, OrderSide
+    from qts.execution.broker import BrokerCapabilities
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
@@ -164,13 +177,13 @@ def test_ibkr_order_execution_adapter_checks_order_capabilities() -> None:
             quantity=Decimal("10"),
         ),
         client_order_id="client-limit",
-        order_type=BrokerOrderType.LIMIT,
+        order_type=OrderType.LIMIT,
         limit_price=Decimal("99.50"),
         time_in_force=TimeInForce.DAY,
         asset_class="equity",
     )
 
-    assert limit_request.order_type is BrokerOrderType.LIMIT
+    assert limit_request.order_type is OrderType.LIMIT
     assert limit_request.limit_price == Decimal("99.50")
     assert limit_request.time_in_force is TimeInForce.DAY
     adapter.validate_cancel_supported()
@@ -252,11 +265,11 @@ def test_ibkr_order_execution_adapter_checks_order_capabilities() -> None:
 
 def test_ibkr_order_execution_adapter_treats_pending_cancel_as_non_terminal_ack() -> None:
     from qts.core.ids import BrokerId, InstrumentId
+    from qts.domain.orders import ExecutionReportStatus
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.order_manager import ExecutionReportStatus
     from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOrderStatusPayload
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
@@ -291,12 +304,12 @@ def test_ibkr_order_execution_adapter_builds_broker_reconciliation_snapshot() ->
     from datetime import UTC, datetime
 
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import OrderSide
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
     from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
-    from qts.execution.order_manager import OrderSide
     from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrAccountSummaryPayload,
         IbkrOpenOrderPayload,
@@ -371,11 +384,11 @@ def test_ibkr_order_execution_adapter_builds_broker_reconciliation_snapshot() ->
 
 def test_ibkr_execution_report_waits_for_commission_before_fill_report() -> None:
     from qts.core.ids import BrokerId, InstrumentId
+    from qts.domain.orders import ExecutionReport
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.order_manager import ExecutionReport
     from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrCommissionPayload,
         IbkrExecutionPayload,
@@ -421,14 +434,14 @@ def test_ibkr_execution_report_waits_for_commission_before_fill_report() -> None
 
 def test_ibkr_duplicate_execution_callback_does_not_emit_second_fill_report() -> None:
     from qts.core.ids import BrokerId, InstrumentId
+    from qts.domain.orders import ExecutionReport
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.order_manager import ExecutionReport
+    from qts.execution.broker import BrokerCommissionReport
     from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrCommissionPayload,
-        IbkrCommissionReport,
         IbkrExecutionPayload,
     )
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
@@ -466,7 +479,7 @@ def test_ibkr_duplicate_execution_callback_does_not_emit_second_fill_report() ->
 
     assert isinstance(first, ExecutionReport)
     assert duplicate_execution is None
-    assert isinstance(duplicate_commission, IbkrCommissionReport)
+    assert isinstance(duplicate_commission, BrokerCommissionReport)
     assert [event.kind for event in adapter.callback_events] == [
         "ibkr_execution_details_received",
         "ibkr_commission_report_received",
@@ -479,14 +492,14 @@ def test_ibkr_duplicate_execution_callback_does_not_emit_second_fill_report() ->
 
 def test_ibkr_late_commission_before_execution_completes_fill_once() -> None:
     from qts.core.ids import BrokerId, InstrumentId
+    from qts.domain.orders import ExecutionReport
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.order_manager import ExecutionReport
+    from qts.execution.broker import BrokerCommissionReport
     from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrCommissionPayload,
-        IbkrCommissionReport,
         IbkrExecutionPayload,
     )
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
@@ -523,21 +536,21 @@ def test_ibkr_late_commission_before_execution_completes_fill_once() -> None:
     )
     duplicate_commission = adapter.on_commission(commission)
 
-    assert isinstance(early_commission, IbkrCommissionReport)
+    assert isinstance(early_commission, BrokerCommissionReport)
     assert isinstance(completed, ExecutionReport)
     assert completed.fill_id == "fill-late-exec"
     assert completed.commission == Decimal("1.23")
-    assert isinstance(duplicate_commission, IbkrCommissionReport)
+    assert isinstance(duplicate_commission, BrokerCommissionReport)
     assert adapter.callback_events[-1].reason == "commission_for_completed_execution"
 
 
 def test_ibkr_partial_fills_emit_once_per_execution_id() -> None:
     from qts.core.ids import BrokerId, InstrumentId
+    from qts.domain.orders import ExecutionReport
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.order_manager import ExecutionReport
     from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrCommissionPayload,
         IbkrExecutionPayload,
@@ -601,11 +614,11 @@ def test_ibkr_partial_fills_emit_once_per_execution_id() -> None:
 
 def test_ibkr_execution_idempotency_uses_account_and_broker_order_identity() -> None:
     from qts.core.ids import BrokerId, InstrumentId
+    from qts.domain.orders import ExecutionReport
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.order_manager import ExecutionReport
     from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrCommissionPayload,
         IbkrExecutionPayload,
@@ -672,12 +685,15 @@ def test_ibkr_order_status_updates_broker_order_map_with_perm_id() -> None:
     from datetime import UTC, datetime
 
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import (
+        OrderIntent,
+        OrderSide,
+    )
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
     from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOrderStatusPayload
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
@@ -736,12 +752,15 @@ def test_ibkr_duplicate_order_status_callback_is_dropped() -> None:
     from datetime import UTC, datetime
 
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import (
+        OrderIntent,
+        OrderSide,
+    )
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
     from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOrderStatusPayload
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
@@ -856,12 +875,15 @@ def test_ibkr_cancel_resolves_ibkr_order_id_through_order_map() -> None:
     from datetime import UTC, datetime
 
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import (
+        OrderIntent,
+        OrderSide,
+    )
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
     from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
@@ -1134,12 +1156,12 @@ def test_ibkr_quarantined_execution_resolves_after_open_order_mapping() -> None:
     from datetime import UTC, datetime
 
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import ExecutionReport
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
     from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
-    from qts.execution.order_manager import ExecutionReport
     from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrCommissionPayload,
         IbkrExecutionPayload,
@@ -1209,12 +1231,15 @@ def test_ibkr_open_order_before_record_submitted_order_resolves_after_route_meta
     from datetime import UTC, datetime
 
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import (
+        OrderIntent,
+        OrderSide,
+    )
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
     from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOpenOrderPayload
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
@@ -1354,12 +1379,15 @@ def test_ibkr_unknown_order_status_callback_is_quarantined() -> None:
 
 def test_ibkr_unresolved_callbacks_block_new_order_requests() -> None:
     from qts.core.ids import BrokerId, InstrumentId, OrderId
+    from qts.domain.orders import (
+        OrderIntent,
+        OrderSide,
+    )
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
     from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrExecutionPayload
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 

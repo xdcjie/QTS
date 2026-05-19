@@ -6,8 +6,8 @@ from collections.abc import Iterable
 from dataclasses import replace
 from typing import Protocol
 
+from qts.domain.orders import OrderType
 from qts.domain.risk import OrderRiskRequest, RiskDecision
-from qts.execution.broker import BrokerOrderType
 from qts.risk.rule import RiskRule
 from qts.risk.rules.market_data_freshness import MarketDataFreshnessRiskRule
 from qts.risk.rules.market_data_permission import MarketDataPermissionRiskRule
@@ -23,7 +23,7 @@ class BrokerageRiskPolicy(Protocol):
         ...
 
     @property
-    def supported_order_types(self) -> frozenset[BrokerOrderType]:
+    def supported_order_types(self) -> frozenset[OrderType]:
         """Return the set of order types the active brokerage accepts."""
         ...
 

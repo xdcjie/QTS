@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import Protocol
 
 from qts.core.ids import AccountId, CorrelationId, OrderId, StrategyId
-from qts.execution.order_manager import ExecutionReport, OrderIntent
+from qts.domain.orders import ExecutionReport, OrderIntent
 
 
 class ExecutionAdapter(Protocol):

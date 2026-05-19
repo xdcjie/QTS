@@ -5,8 +5,12 @@ from decimal import Decimal
 
 def test_simulated_execution_adapter_fills_market_order_from_provided_market_data() -> None:
     from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import (
+        ExecutionReportStatus,
+        OrderIntent,
+        OrderSide,
+    )
     from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
-    from qts.execution.order_manager import ExecutionReportStatus, OrderIntent, OrderSide
     from qts.runtime.config import BacktestCostModel
 
     adapter = SimulatedExecutionAdapter(cost_model=BacktestCostModel())
@@ -37,9 +41,12 @@ def test_simulated_execution_adapter_fills_market_order_from_provided_market_dat
 def test_simulated_execution_adapter_rejects_orders_blocked_by_broker_capabilities() -> None:
     import pytest
     from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import (
+        OrderIntent,
+        OrderSide,
+    )
     from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
     from qts.execution.broker import BrokerCapabilities
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.runtime.config import BacktestCostModel
 
     adapter = SimulatedExecutionAdapter(

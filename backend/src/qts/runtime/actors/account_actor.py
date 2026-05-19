@@ -17,6 +17,30 @@ from qts.runtime.actor import Actor
 
 
 @dataclass(frozen=True, slots=True)
+class GetAccountSnapshot:
+    """Ask the AccountActor for its current snapshot."""
+
+    def validate_response(self, response: object) -> AccountSnapshot:
+        """Return a typed account snapshot response."""
+        if not isinstance(response, AccountSnapshot):
+            raise TypeError("expected AccountSnapshot response")
+        return response
+
+
+@dataclass(frozen=True, slots=True)
+class DrainPositionClosedEvents:
+    """Ask the AccountActor to drain and return buffered PositionClosed events."""
+
+    def validate_response(self, response: object) -> tuple[PositionClosed, ...]:
+        """Return typed position-closed events."""
+        if not isinstance(response, tuple) or not all(
+            isinstance(event, PositionClosed) for event in response
+        ):
+            raise TypeError("expected PositionClosed event tuple response")
+        return response
+
+
+@dataclass(frozen=True, slots=True)
 class ApplyFill:
     """Message instructing AccountActor to apply a validated fill."""
 
@@ -73,13 +97,21 @@ class AccountActor(Actor):
 
     def handle(self, message: object) -> None:
         """Perform handle."""
+        if isinstance(message, tuple) and len(message) == 2:
+            query, response_mailbox = message
+            if isinstance(query, GetAccountSnapshot):
+                response_mailbox.put(self.snapshot())
+                return
+            if isinstance(query, DrainPositionClosedEvents):
+                response_mailbox.put(self.drain_position_closed_events())
+                return
         if isinstance(message, ApplyFill):
             self._apply_fill(message)
             return
         raise TypeError(f"unsupported account message: {type(message).__name__}")
 
     def snapshot(self) -> AccountSnapshot:
-        """Perform snapshot."""
+        """Return current account snapshot."""
         return AccountSnapshot(
             cash=MappingProxyType({"USD": self._cash.balance("USD")}),
             holdings=self._holdings.snapshot(),
@@ -138,4 +170,10 @@ class AccountActor(Actor):
         self._cash.apply_delta(message.currency, cash_delta)
 
 
-__all__ = ["AccountActor", "AccountSnapshot", "ApplyFill"]
+__all__ = [
+    "AccountActor",
+    "AccountSnapshot",
+    "ApplyFill",
+    "DrainPositionClosedEvents",
+    "GetAccountSnapshot",
+]

@@ -14,7 +14,11 @@ from qts.data.sources.streaming_market_data_source import (
 )
 from qts.data.subscriptions import UniverseSubscriptionDelta, UniverseSubscriptionPlanner
 from qts.domain.market_data import Bar
-from qts.runtime.actors.account_actor import AccountSnapshot
+from qts.runtime.actors.account_actor import (
+    AccountSnapshot,
+    DrainPositionClosedEvents,
+    GetAccountSnapshot,
+)
 from qts.runtime.actors.signal_aggregator_actor import SignalContribution
 from qts.runtime.market_data_context import (
     RuntimeMarketDataCoordinatorContext,
@@ -245,9 +249,9 @@ class RuntimeMarketDataCoordinator:
         for binding in bindings_for_bar:
             strategy_result = binding.pipeline.execute_bar(
                 bar,
-                account_snapshot=context.resolve_partition(
-                    binding.account_id
-                ).account_actor.snapshot(),
+                account_snapshot=context.resolve_partition(binding.account_id).account_ref.ask(
+                    GetAccountSnapshot()
+                ),
                 latest_prices=context.latest_prices,
                 aggregate_signals=aggregate_signals,
                 account_id=binding.account_id,
@@ -521,14 +525,14 @@ class RuntimeMarketDataCoordinator:
         )
         self._runtime_event_writer.write_order_events(
             processed.orders,
-            partition.order_manager_actor,
+            partition.order_manager_ref,
             fallback_contributing_strategy_ids=batch.contributing_strategy_ids,
         )
         self._runtime_event_writer.write_fill_events(
             processed.fills,
-            partition.order_manager_actor,
+            partition.order_manager_ref,
         )
-        closed_events = partition.account_actor.drain_position_closed_events()
+        closed_events = partition.account_ref.ask(DrainPositionClosedEvents())
         if closed_events:
             self._runtime_event_writer.write_position_closed_events(
                 closed_events,

@@ -7,8 +7,15 @@ from typing import Any
 from qts.core.ids import OrderId
 from qts.domain.orders import CancelIntent, OrderState
 from qts.risk.kill_switch import RuntimeKillSwitchCommand
-from qts.runtime.actors.order_manager_actor import CancelOrder
+from qts.runtime.actors.account_actor import GetAccountSnapshot
+from qts.runtime.actors.order_manager_actor import (
+    CancelOrder,
+    GetOrder,
+    GetOrderManagerSnapshot,
+    GetRouteMetadata,
+)
 from qts.runtime.broker_runtime_topology import AccountRuntimePartition
+from qts.runtime.order_route_metadata import OrderRouteMetadata
 from qts.runtime.safety import RuntimeKillSwitchDeactivateCommand, RuntimeKillSwitchEvidence
 from qts.runtime.startup_gate import BrokerRuntimeStartupGate
 from qts.runtime.state import RuntimeSessionState
@@ -51,7 +58,8 @@ class RuntimeSafetyController:
         if command.cancel_active_orders:
             active_orders_by_partition: list[tuple[str, AccountRuntimePartition]] = []
             for partition in session._account_partitions.values():
-                for order in partition.order_manager_actor.snapshot().orders:
+                om_snapshot = partition.order_manager_ref.ask(GetOrderManagerSnapshot())
+                for order in om_snapshot.orders:
                     if order.state in {
                         OrderState.FILLED,
                         OrderState.CANCELLED,
@@ -60,7 +68,9 @@ class RuntimeSafetyController:
                         continue
                     active_orders_by_partition.append((order.order_id.value, partition))
             for order_id, partition in active_orders_by_partition:
-                metadata = partition.order_manager_actor.route_metadata(OrderId(order_id))
+                metadata: OrderRouteMetadata = partition.order_manager_ref.ask(
+                    GetRouteMetadata(order_id=OrderId(order_id))
+                )
                 partition.order_manager_ref.tell(
                     CancelOrder(
                         CancelIntent(order_id=OrderId(order_id)),
@@ -75,11 +85,11 @@ class RuntimeSafetyController:
                 partition.order_manager_ref.process_all()
                 partition.account_ref.process_all()
             for order_id, partition in active_orders_by_partition:
-                order = partition.order_manager_actor.get_order(OrderId(order_id))
+                order = partition.order_manager_ref.ask(GetOrder(order_id=OrderId(order_id)))
                 if order.state is OrderState.CANCELLED:
                     cancelled_order_ids.append(order_id)
             active_order_ids = tuple(order_id for order_id, _ in active_orders_by_partition)
-        snapshot = session._primary_partition.account_actor.snapshot()
+        snapshot = session._primary_partition.account_ref.ask(GetAccountSnapshot())
         snapshot_refs = session._record_account_snapshots()
         evidence = RuntimeKillSwitchEvidence(
             run_id=session._dependencies.run_id.value,

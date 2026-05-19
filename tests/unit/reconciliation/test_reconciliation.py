@@ -3,7 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from qts.core.ids import AccountId, InstrumentId, OrderId
-from qts.execution.order_manager import OrderSide
+from qts.domain.orders import OrderSide
 from qts.reconciliation import (
     DriftKind,
     OrderSnapshot,

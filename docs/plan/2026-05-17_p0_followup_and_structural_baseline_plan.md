@@ -371,7 +371,7 @@ runtime state machine (use the existing kill-switch contract).
 
 **Goal**: a documented end-to-end anchor proves that crashing after sequence
 number N and replaying events 1..N + applying the latest snapshot reproduces
-the byte-identical AccountSnapshot / OrderManagerSnapshot the run would have
+the byte-identical AccountSnapshot / OrderStateSnapshot the run would have
 had at the same point.
 
 **Domain fact / invariant**: deterministic replay underpins backtest/live
@@ -394,8 +394,8 @@ structural snapshots; allowing any difference under "rounding".
 **Required gates**:
 - `tests/anchor/test_recovery_byte_identical_state.py` passes for
   `AccountSnapshot.cash`, `AccountSnapshot.holdings`,
-  `OrderManagerSnapshot.orders`, `OrderManagerSnapshot.broker_to_order`,
-  `OrderManagerSnapshot.seen_fill_ids`.
+  `OrderStateSnapshot.orders`, `OrderStateSnapshot.broker_to_order`,
+  `OrderStateSnapshot.seen_fill_ids`.
 
 **ETA**: 1-2 days (depends on what divergence is found).
 

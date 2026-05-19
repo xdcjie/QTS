@@ -9,14 +9,14 @@ from typing import Any
 
 from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, RuntimeRunId, StrategyId
 from qts.domain.market_data import Bar
-from qts.domain.risk import OrderRiskRequest, RiskDecision
-from qts.execution.order_manager import (
+from qts.domain.orders import (
     ExecutionReport,
     ExecutionReportStatus,
     OrderFill,
     OrderIntent,
     OrderSide,
 )
+from qts.domain.risk import OrderRiskRequest, RiskDecision
 from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventSink
 from qts.runtime.topology import (
     AccountRuntimeSpec,

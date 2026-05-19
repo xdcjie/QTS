@@ -3,8 +3,8 @@ from __future__ import annotations
 from decimal import Decimal
 
 from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId
+from qts.domain.orders import OrderSide
 from qts.execution.broker import BrokerOrderRequest
-from qts.execution.order_manager import OrderSide
 from qts.reconciliation import OrderSnapshot, ReconciliationSnapshot, reconcile_snapshots
 from qts.simulation.broker import SimulatedBrokerAdapter
 

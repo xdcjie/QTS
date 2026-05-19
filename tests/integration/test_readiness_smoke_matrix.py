@@ -12,7 +12,7 @@ import pytest
 from qts.core.hashing import stable_json_hash
 from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, RuntimeRunId, StrategyId
 from qts.domain.market_data import Bar
-from qts.execution.order_manager import (
+from qts.domain.orders import (
     ExecutionReport,
     ExecutionReportStatus,
     OrderIntent,

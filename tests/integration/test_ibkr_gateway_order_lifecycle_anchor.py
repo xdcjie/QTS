@@ -32,13 +32,16 @@ def test_ibkr_gateway_order_lifecycle_anchor_requires_paper_and_real_transport(
     require_ibkr_transport_sdk(transport_name)
 
     from qts.core.ids import BrokerId, InstrumentId, OrderId
-    from qts.domain.orders import ExecutionReportStatus
+    from qts.domain.orders import (
+        ExecutionReportStatus,
+        OrderIntent,
+        OrderSide,
+        OrderType,
+    )
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.broker import BrokerOrderType
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOrderContractSpec
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
@@ -85,7 +88,7 @@ def test_ibkr_gateway_order_lifecycle_anchor_requires_paper_and_real_transport(
                 quantity=Decimal("1"),
             ),
             client_order_id="client-ibkr-paper-anchor-aapl-buy-1",
-            order_type=BrokerOrderType.LIMIT,
+            order_type=OrderType.LIMIT,
             limit_price=Decimal("0.01"),
             contract=IbkrOrderContractSpec.stock("AAPL", primary_exchange="ISLAND"),
         )

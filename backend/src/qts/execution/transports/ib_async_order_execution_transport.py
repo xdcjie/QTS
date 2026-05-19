@@ -9,11 +9,10 @@ from decimal import Decimal
 from time import monotonic
 from typing import Any
 
-from qts.domain.orders import ExecutionReport, ExecutionReportStatus
-from qts.execution.broker import BrokerOrderType
+from qts.domain.orders import ExecutionReport, ExecutionReportStatus, OrderType
+from qts.execution.broker import BrokerCommissionReport
 from qts.execution.transports.ibkr_tws_order_execution_transport import (
     IbkrCommissionPayload,
-    IbkrCommissionReport,
     IbkrErrorPayload,
     IbkrExecutionPayload,
     IbkrOrderContractSpec,
@@ -255,7 +254,7 @@ class IbAsyncOrderExecutionTransport:
                 self._reports.put(execution_report)
             if isinstance(commission_result, ExecutionReport):
                 self._reports.put(commission_result)
-            elif isinstance(commission_result, IbkrCommissionReport):
+            elif isinstance(commission_result, BrokerCommissionReport):
                 continue
 
     def _require_connected_ib(self) -> Any:
@@ -288,7 +287,7 @@ def _to_ib_async_order(request: IbkrOrderRequest) -> Any:
     from ib_async import LimitOrder, MarketOrder
 
     order: Any
-    if request.order_type is BrokerOrderType.LIMIT:
+    if request.order_type is OrderType.LIMIT:
         order = LimitOrder(
             request.side.upper(),
             float(request.quantity),

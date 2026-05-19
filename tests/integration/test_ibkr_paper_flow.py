@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from qts.core.ids import AccountId, CorrelationId, OrderId, StrategyId
     from qts.domain.market_data import Tick
+    from qts.domain.orders import ExecutionReport, OrderIntent
     from qts.execution.adapters.ibkr_order_execution import IbkrOrderRequest
-    from qts.execution.order_manager import ExecutionReport, OrderIntent
 
 
 def test_ibkr_paper_market_data_and_order_execution_use_separate_fake_transports() -> None:
@@ -18,12 +18,12 @@ def test_ibkr_paper_market_data_and_order_execution_use_separate_fake_transports
         IbkrMarketDataAdapter,
         IbkrMarketDataConnection,
     )
+    from qts.domain.orders import OrderIntent, OrderSide
     from qts.domain.risk import OrderRiskRequest
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.execution.order_state_machine import OrderState
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
     from qts.risk.risk_engine import RiskEngine
@@ -222,7 +222,7 @@ class _FakeIbkrOrderExecutionTransport:
         client_order_id: str,
         correlation_id: CorrelationId,
     ) -> ExecutionReport:
-        from qts.execution.order_manager import ExecutionReport, ExecutionReportStatus
+        from qts.domain.orders import ExecutionReport, ExecutionReportStatus
 
         _ = order_id, account_id, strategy_id, client_order_id, correlation_id
         return ExecutionReport(

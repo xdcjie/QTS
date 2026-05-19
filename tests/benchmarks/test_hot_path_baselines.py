@@ -14,8 +14,7 @@ from decimal import Decimal
 
 import pytest
 from qts.core.ids import AccountId, InstrumentId, OrderId
-from qts.domain.orders import OrderIntent, OrderSide
-from qts.execution.broker import BrokerOrderType
+from qts.domain.orders import OrderFill, OrderIntent, OrderSide, OrderType
 from qts.portfolio.holdings import HoldingBook
 from qts.risk.risk_engine import RiskEngine
 from qts.risk.rules.max_notional import MaxNotionalRule
@@ -35,8 +34,6 @@ def test_account_actor_apply_fill_baseline(benchmark) -> None:  # type: ignore[n
     counter = {"n": 0}
 
     def setup() -> tuple[tuple[ApplyFill], dict[str, object]]:
-        from qts.execution.order_manager import OrderFill
-
         counter["n"] += 1
         message = ApplyFill(
             fill=OrderFill(
@@ -81,7 +78,7 @@ def test_risk_engine_check_baseline(benchmark) -> None:  # type: ignore[no-untyp
         price=Decimal("100"),
         multiplier=Decimal("1"),
         order_time=datetime(2026, 1, 2, 14, 30, tzinfo=UTC),
-        order_spec=OrderSpec(order_type=BrokerOrderType.MARKET),
+        order_spec=OrderSpec(order_type=OrderType.MARKET),
     )
 
     benchmark(engine.check, request)
@@ -95,7 +92,7 @@ def test_order_intent_construction_baseline(benchmark) -> None:  # type: ignore[
             side=OrderSide.BUY,
             quantity=Decimal("1"),
             account_id=AccountId("acct-1"),
-            order_spec=OrderSpec(order_type=BrokerOrderType.MARKET),
+            order_spec=OrderSpec(order_type=OrderType.MARKET),
         )
 
     benchmark(call)
@@ -104,7 +101,7 @@ def test_order_intent_construction_baseline(benchmark) -> None:  # type: ignore[
 def test_order_spec_validation_baseline(benchmark) -> None:  # type: ignore[no-untyped-def]
     def call() -> OrderSpec:
         return OrderSpec(
-            order_type=BrokerOrderType.LIMIT,
+            order_type=OrderType.LIMIT,
             limit_price=Decimal("100.5"),
         )
 

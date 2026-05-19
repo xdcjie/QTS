@@ -10,7 +10,7 @@ from typing import Any
 
 from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
 from qts.domain.market_data import Bar
-from qts.execution.order_manager import (
+from qts.domain.orders import (
     ExecutionReport,
     ExecutionReportStatus,
     OrderIntent,

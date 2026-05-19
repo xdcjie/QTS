@@ -8,9 +8,15 @@ from decimal import Decimal
 from typing import Protocol
 
 from qts.core.ids import AccountId, BrokerId, CorrelationId, OrderId, StrategyId
-from qts.domain.orders import OrderSide
-from qts.execution.broker import BrokerCapabilities, BrokerOrderType, TimeInForce
-from qts.execution.order_manager import ExecutionReport, ExecutionReportStatus, OrderIntent
+from qts.domain.orders import (
+    ExecutionReport,
+    ExecutionReportStatus,
+    OrderIntent,
+    OrderSide,
+    OrderType,
+    TimeInForce,
+)
+from qts.execution.broker import BrokerCapabilities
 from qts.execution.simulator.fill_model import ImmediateFillModel
 
 
@@ -36,16 +42,16 @@ class _FillDecision:
     fill_price: Decimal
 
 
-_UNSUPPORTED_SIM_ORDER_TYPES: frozenset[BrokerOrderType] = frozenset(
+_UNSUPPORTED_SIM_ORDER_TYPES: frozenset[OrderType] = frozenset(
     {
-        BrokerOrderType.TRAILING_STOP,
-        BrokerOrderType.MARKET_ON_OPEN,
-        BrokerOrderType.MARKET_ON_CLOSE,
-        BrokerOrderType.ICEBERG,
+        OrderType.TRAILING_STOP,
+        OrderType.MARKET_ON_OPEN,
+        OrderType.MARKET_ON_CLOSE,
+        OrderType.ICEBERG,
     }
 )
-_SIM_SUPPORTED_ORDER_TYPES: frozenset[BrokerOrderType] = (
-    frozenset(BrokerOrderType) - _UNSUPPORTED_SIM_ORDER_TYPES
+_SIM_SUPPORTED_ORDER_TYPES: frozenset[OrderType] = (
+    frozenset(OrderType) - _UNSUPPORTED_SIM_ORDER_TYPES
 )
 
 
@@ -191,7 +197,7 @@ class SimulatedExecutionAdapter:
         if capabilities is None:
             raise RuntimeError("simulated execution capabilities are not configured")
         if not capabilities.supports_order_type(intent.order_spec.order_type):
-            if intent.order_spec.order_type is BrokerOrderType.MARKET:
+            if intent.order_spec.order_type is OrderType.MARKET:
                 raise ValueError("market orders are not supported by broker capabilities")
             raise ValueError("order type is not supported by broker capabilities")
         if not capabilities.supports_tif(intent.order_spec.time_in_force):
@@ -230,20 +236,20 @@ class SimulatedExecutionAdapter:
         spec = intent.order_spec
         order_type = spec.order_type
 
-        if order_type is BrokerOrderType.MARKET:
+        if order_type is OrderType.MARKET:
             return _FillDecision(triggered=True, fill_price=market_price)
 
-        if order_type is BrokerOrderType.BRACKET:
+        if order_type is OrderType.BRACKET:
             # Parent leg fills at market; OCO children are owned by OrderManager.
             return _FillDecision(triggered=True, fill_price=market_price)
 
-        if order_type is BrokerOrderType.LIMIT:
+        if order_type is OrderType.LIMIT:
             return self._evaluate_limit(intent, bar_high=bar_high, bar_low=bar_low)
 
-        if order_type is BrokerOrderType.STOP:
+        if order_type is OrderType.STOP:
             return self._evaluate_stop(intent, bar_high=bar_high, bar_low=bar_low)
 
-        if order_type is BrokerOrderType.STOP_LIMIT:
+        if order_type is OrderType.STOP_LIMIT:
             return self._evaluate_stop_limit(intent, bar_high=bar_high, bar_low=bar_low)
 
         raise NotImplementedError(

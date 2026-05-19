@@ -10,17 +10,25 @@ from typing import Protocol
 
 from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
 from qts.domain.market_data import Bar
-from qts.domain.orders import Order, OrderFill, OrderIntent, OrderSide, OrderSpec
+from qts.domain.orders import (
+    Order,
+    OrderFill,
+    OrderIntent,
+    OrderSide,
+    OrderSpec,
+)
 from qts.domain.risk import MarketDataRiskContext, OrderRiskRequest, RiskDecision
 from qts.portfolio.holdings import Holding
 from qts.risk.risk_engine import RiskEngine
 from qts.runtime.actor_ref import ActorRef
-from qts.runtime.actors.account_actor import AccountActor
+from qts.runtime.actors.account_actor import AccountSnapshot, GetAccountSnapshot
 from qts.runtime.actors.order_manager_actor import (
-    OrderManagerActor,
-    OrderRouteMetadata,
+    GetFillCount,
+    GetFillsSince,
+    GetOrder,
     SubmitOrder,
 )
+from qts.runtime.order_route_metadata import OrderRouteMetadata
 from qts.strategy_sdk import TargetIntent
 from qts.strategy_sdk.target import TargetIntentType
 
@@ -215,11 +223,9 @@ class TargetIntentProcessor:
         intent: TargetIntent,
         *,
         bar: Bar,
-        account_actor: AccountActor,
-        order_manager_actor: OrderManagerActor,
+        account_ref: ActorRef,
         order_manager_ref: ActorRef,
         execution_ref: ActorRef,
-        account_ref: ActorRef,
         account_id: AccountId | None,
         strategy_id: StrategyId,
         correlation_id: CorrelationId,
@@ -233,7 +239,7 @@ class TargetIntentProcessor:
         if account_id is None:
             raise ValueError("account_id is required")
 
-        snapshot = account_actor.snapshot()
+        snapshot: AccountSnapshot = account_ref.ask(GetAccountSnapshot())
         order_plans = self._order_plan_builder.build(
             intent,
             account_id=account_id,
@@ -254,7 +260,6 @@ class TargetIntentProcessor:
                 market_price=plan.market_price,
                 order_time=plan.order_time,
                 order_spec=plan.order_spec,
-                order_manager_actor=order_manager_actor,
                 order_manager_ref=order_manager_ref,
                 execution_ref=execution_ref,
                 account_ref=account_ref,
@@ -285,7 +290,6 @@ class TargetIntentProcessor:
         market_price: Decimal,
         order_time: datetime | None,
         order_spec: OrderSpec,
-        order_manager_actor: OrderManagerActor,
         order_manager_ref: ActorRef,
         execution_ref: ActorRef,
         account_ref: ActorRef,
@@ -333,7 +337,7 @@ class TargetIntentProcessor:
         if not risk_decision.approved:
             return ProcessedIntent(orders=(), fills=(), risk_decisions=(risk_decision,))
 
-        before_fill_count = order_manager_actor.fill_count
+        before_fill_count: int = order_manager_ref.ask(GetFillCount())
         order_id = OrderId(f"{self._order_id_prefix}-{order_number:06d}")
         client_order_id = f"{self._order_id_prefix}-client-{order_number:06d}"
         order_intent = OrderIntent(
@@ -370,16 +374,16 @@ class TargetIntentProcessor:
         order_manager_ref.process_all()
         account_ref.process_all()
 
-        fills = order_manager_actor.fills_since(before_fill_count)
+        fills: tuple[OrderFill, ...] = order_manager_ref.ask(GetFillsSince(index=before_fill_count))
         if not fills:
             return ProcessedIntent(
-                orders=(order_manager_actor.get_order(order_id),),
+                orders=(order_manager_ref.ask(GetOrder(order_id=order_id)),),
                 fills=(),
                 risk_decisions=(risk_decision,),
             )
 
         return ProcessedIntent(
-            orders=(order_manager_actor.get_order(order_id),),
+            orders=(order_manager_ref.ask(GetOrder(order_id=order_id)),),
             fills=fills,
             risk_decisions=(risk_decision,),
         )

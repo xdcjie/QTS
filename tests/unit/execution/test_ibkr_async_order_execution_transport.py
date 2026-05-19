@@ -7,12 +7,16 @@ from decimal import Decimal
 
 def test_ib_async_order_execution_transport_normalizes_fill_with_commission() -> None:
     from qts.core.ids import BrokerId, InstrumentId, OrderId
+    from qts.domain.orders import (
+        ExecutionReportStatus,
+        OrderIntent,
+        OrderSide,
+        OrderType,
+    )
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.broker import BrokerOrderType
-    from qts.execution.order_manager import ExecutionReportStatus, OrderIntent, OrderSide
     from qts.execution.transports.ib_async_order_execution_transport import (
         IbAsyncOrderExecutionTransport,
         IbAsyncOrderExecutionTransportConfig,
@@ -52,7 +56,7 @@ def test_ib_async_order_execution_transport_normalizes_fill_with_commission() ->
             quantity=Decimal("1"),
         ),
         client_order_id="client-ord-001",
-        order_type=BrokerOrderType.LIMIT,
+        order_type=OrderType.LIMIT,
         limit_price=Decimal("101.25"),
         outside_regular_trading_hours=True,
         contract=IbkrOrderContractSpec.stock("AAPL", primary_exchange="ISLAND"),
@@ -85,12 +89,15 @@ def test_ib_async_order_execution_transport_normalizes_fill_with_commission() ->
 
 def test_ib_async_order_execution_transport_raises_broker_error() -> None:
     from qts.core.ids import BrokerId, InstrumentId, OrderId
+    from qts.domain.orders import (
+        OrderIntent,
+        OrderSide,
+        OrderType,
+    )
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.broker import BrokerOrderType
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.execution.transports.ib_async_order_execution_transport import (
         IbAsyncOrderExecutionTransport,
         IbAsyncOrderExecutionTransportConfig,
@@ -130,7 +137,7 @@ def test_ib_async_order_execution_transport_raises_broker_error() -> None:
             quantity=Decimal("1"),
         ),
         client_order_id="client-ord-001",
-        order_type=BrokerOrderType.LIMIT,
+        order_type=OrderType.LIMIT,
         limit_price=Decimal("101.25"),
         contract=IbkrOrderContractSpec.stock("AAPL", primary_exchange="ISLAND"),
     )
@@ -146,13 +153,16 @@ def test_ib_async_order_execution_transport_raises_broker_error() -> None:
 
 def test_ib_async_order_execution_transport_records_submitted_order_mapping() -> None:
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import (
+        OrderIntent,
+        OrderSide,
+        OrderType,
+    )
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
     from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
-    from qts.execution.broker import BrokerOrderType
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.execution.transports.ib_async_order_execution_transport import (
         IbAsyncOrderExecutionTransport,
         IbAsyncOrderExecutionTransportConfig,
@@ -196,7 +206,7 @@ def test_ib_async_order_execution_transport_records_submitted_order_mapping() ->
         ),
         client_order_id="client-ord-001",
         strategy_id=StrategyId("strategy-ibkr"),
-        order_type=BrokerOrderType.LIMIT,
+        order_type=OrderType.LIMIT,
         limit_price=Decimal("101.25"),
         contract=IbkrOrderContractSpec.stock("AAPL", primary_exchange="ISLAND"),
     )

@@ -64,8 +64,11 @@ def test_event_router_unknown_route_is_explicit_error() -> None:
 def test_event_router_routes_market_data_and_execution_messages_to_separate_actor_types() -> None:
     from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
     from qts.domain.market_data import Tick
+    from qts.domain.orders import (
+        OrderIntent,
+        OrderSide,
+    )
     from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.execution_actor import ExecutionActor, OrderExecutionRequest
     from qts.runtime.actors.market_data_actor import MarketDataActor, MarketDataEvent

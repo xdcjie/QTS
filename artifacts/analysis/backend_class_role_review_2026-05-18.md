@@ -56,7 +56,7 @@ These are not automatically redundant; they are groups with similar stems where 
 | `BacktestEngine` | `qts.backtest.engine.BacktestEngine`, `qts.runtime.config.models.BacktestEngineConfig` | Configuration family; check whether parsing and domain ownership remain separate. |
 | `BacktestRunResult` | `qts.api.schemas.backtest_schema.BacktestRunResultSchema`, `qts.application.dto.backtest.BacktestRunResultDTO` | Intentional API/application boundary pair; guard against field drift. |
 | `BacktestStrategyOption` | `qts.api.schemas.backtest_schema.BacktestStrategyOptionSchema`, `qts.application.dto.backtest.BacktestStrategyOptionDTO` | Intentional API/application boundary pair; guard against field drift. |
-| `BrokerExecutionReport` | `qts.execution.broker.BrokerExecutionReportStatus`, `qts.execution.broker.BrokerExecutionReport` | Similar stem; review only if behavior overlaps. |
+| `BrokerExecutionReport` | `qts.execution.broker.BrokerExecutionReport` | Similar stem; review only if behavior overlaps. |
 | `BrokerReconnectReconciliation` | `qts.runtime.broker_lifecycle.BrokerReconnectReconciliationResult`, `qts.runtime.broker_lifecycle.BrokerReconnectReconciliation` | Value/event family; verify context-specific names remain explicit. |
 | `BrokerRuntimeReconciliation` | `qts.runtime.broker_runtime_reconciliation.BrokerRuntimeReconciliationResult`, `qts.runtime.broker_runtime_reconciliation.BrokerRuntimeReconciliation` | Value/event family; verify context-specific names remain explicit. |
 | `ConfigMigration` | `qts.runtime.config.models.ConfigMigrationResult`, `qts.runtime.config.models.ConfigMigration` | Value/event family; verify context-specific names remain explicit. |
@@ -73,7 +73,7 @@ These are not automatically redundant; they are groups with similar stems where 
 | `MarketDataPermission` | `qts.data.permissions.MarketDataPermissionState`, `qts.data.permissions.MarketDataPermissionEvent` | Value/event family; verify context-specific names remain explicit. |
 | `MarketDataSubscription` | `qts.data.events.MarketDataSubscription`, `qts.data.subscriptions.MarketDataSubscriptionEvent` | Value/event family; verify context-specific names remain explicit. |
 | `OrderFill` | `qts.application.dto.order_events.OrderFillDTO`, `qts.domain.orders.value_objects.OrderFill` | Similar stem; review only if behavior overlaps. |
-| `OrderManager` | `qts.domain.orders.value_objects.OrderManagerResult`, `qts.domain.orders.value_objects.OrderManagerSnapshot` | Value/event family; verify context-specific names remain explicit. |
+| `OrderManager` | `qts.domain.orders.value_objects.OrderProcessingResult`, `qts.domain.orders.value_objects.OrderStateSnapshot` | Value/event family; verify context-specific names remain explicit. |
 | `OrderPlan` | `qts.runtime.intent_processing.OrderPlan`, `qts.runtime.intent_processing.OrderPlanBuilder` | Similar stem; review only if behavior overlaps. |
 | `PlatformFreeze` | `qts.quality.guardrails.PlatformFreezeConfig`, `qts.quality.rules.inventory.PlatformFreezeRule` | Configuration family; check whether parsing and domain ownership remain separate. |
 | `ReplayMarketDataBundle` | `qts.data.sources.replay_bundle_builder.ReplayMarketDataBundle`, `qts.data.sources.replay_bundle_builder.ReplayMarketDataBundleBuilder` | Similar stem; review only if behavior overlaps. |
@@ -294,8 +294,8 @@ These are not automatically redundant; they are groups with similar stems where 
 | `qts.domain.orders` | `ExecutionReportStatus` | 8 | `backend/src/qts/domain/orders/value_objects.py:83` | Normalized broker report status. | OK | clear responsibility from name/docstring |
 | `qts.domain.orders` | `ExecutionReport` | 25 | `backend/src/qts/domain/orders/value_objects.py:94` | Normalized broker execution report. | OK | clear responsibility from name/docstring |
 | `qts.domain.orders` | `OrderFill` | 12 | `backend/src/qts/domain/orders/value_objects.py:122` | OrderManager-validated fill event. | OK | clear responsibility from name/docstring |
-| `qts.domain.orders` | `OrderManagerResult` | 5 | `backend/src/qts/domain/orders/value_objects.py:137` | Events emitted by processing an execution report. | OK | clear responsibility from name/docstring |
-| `qts.domain.orders` | `OrderManagerSnapshot` | 7 | `backend/src/qts/domain/orders/value_objects.py:145` | Serializable OrderManager state for reconnect/recovery. | OK | clear responsibility from name/docstring |
+| `qts.domain.orders` | `OrderProcessingResult` | 5 | `backend/src/qts/domain/orders/value_objects.py:137` | Events emitted by processing an execution report. | OK | clear responsibility from name/docstring |
+| `qts.domain.orders` | `OrderStateSnapshot` | 7 | `backend/src/qts/domain/orders/value_objects.py:147` | Serializable OrderManager state for reconnect/recovery. | OK | clear responsibility from name/docstring |
 | `qts.domain.risk` | `RiskDecisionStatus` | 6 | `backend/src/qts/domain/risk/decision.py:13` | Risk check outcome. | OK | clear responsibility from name/docstring |
 | `qts.domain.risk` | `RiskDecision` | 78 | `backend/src/qts/domain/risk/decision.py:22` | Explicit result of a risk check. | OK | clear responsibility from name/docstring |
 | `qts.domain.risk` | `MarketDataRiskContext` | 13 | `backend/src/qts/domain/risk/market_data_context.py:10` | Provider permission and freshness state visible to order risk rules. | OK | clear responsibility from name/docstring |
@@ -314,8 +314,7 @@ These are not automatically redundant; they are groups with similar stems where 
 | `qts.execution.adapters` | `SimulatedExecutionAdapter` | 274 | `backend/src/qts/execution/adapters/simulated_execution_adapter.py:53` | Apply deterministic commission and slippage assumptions for backtests. | OK | clear responsibility from name/docstring |
 | `qts.execution.broker` | `BrokerCapabilities` | 120 | `backend/src/qts/execution/broker.py:29` | Broker-supported live execution features. | OK | clear responsibility from name/docstring |
 | `qts.execution.broker` | `BrokerOrderRequest` | 42 | `backend/src/qts/execution/broker.py:152` | Internal order request sent to the broker adapter boundary. | OK | clear responsibility from name/docstring |
-| `qts.execution.broker` | `BrokerExecutionReportStatus` | 8 | `backend/src/qts/execution/broker.py:196` | Broker-boundary execution report status. | OK | clear responsibility from name/docstring |
-| `qts.execution.broker` | `BrokerExecutionReport` | 25 | `backend/src/qts/execution/broker.py:207` | Normalized broker callback before it reaches OrderManager. | OK | clear responsibility from name/docstring |
+| `qts.execution.broker` | `BrokerExecutionReport` | 25 | `backend/src/qts/execution/broker.py:195` | Normalized broker callback before it reaches OrderManager. | OK | clear responsibility from name/docstring |
 | `qts.execution.broker` | `BrokerAdapter` | 15 | `backend/src/qts/execution/broker.py:234` | Stable broker execution boundary. | OK | clear responsibility from name/docstring |
 | `qts.execution.brokerage_model` | `BrokerageModel` | 110 | `backend/src/qts/execution/brokerage_model.py:13` | Fee, margin, slippage, and capability assumptions for execution. | OK | clear responsibility from name/docstring |
 | `qts.execution.idempotency` | `FillIdempotencyStore` | 43 | `backend/src/qts/execution/idempotency.py:6` | Tracks fill IDs that have already been applied. | OK | clear responsibility from name/docstring |
@@ -551,7 +550,7 @@ These are not automatically redundant; they are groups with similar stems where 
 | `qts.runtime.actors` | `SubmitOrder` | 18 | `backend/src/qts/runtime/actors/order_manager_actor.py:28` | Message to submit an approved order to an execution actor. | OK | clear responsibility from name/docstring |
 | `qts.runtime.actors` | `CancelOrder` | 14 | `backend/src/qts/runtime/actors/order_manager_actor.py:49` | Message to cancel an active order through the execution actor. | OK | clear responsibility from name/docstring |
 | `qts.runtime.actors` | `ReplaceOrder` | 15 | `backend/src/qts/runtime/actors/order_manager_actor.py:66` | Message to replace an active order through the execution actor. | OK | clear responsibility from name/docstring |
-| `qts.runtime.actors` | `OrderRouteMetadata` | 64 | `backend/src/qts/runtime/actors/order_manager_actor.py:84` | Route and trace metadata captured when an order is submitted. | OK | clear responsibility from name/docstring |
+| `qts.runtime` | `OrderRouteMetadata` | 64 | `backend/src/qts/runtime/order_route_metadata.py:12` | Route and trace metadata captured when an order is submitted. | OK | clear responsibility from name/docstring |
 | `qts.runtime.actors` | `OrderManagerActor` | 132 | `backend/src/qts/runtime/actors/order_manager_actor.py:150` | Actor-owned OrderManager wrapper. | OK | clear responsibility from name/docstring |
 | `qts.runtime.actors` | `StrategySignalEvent` | 13 | `backend/src/qts/runtime/actors/signal_aggregator_actor.py:23` | Strategy intents emitted for one completed bar. | OK | clear responsibility from name/docstring |
 | `qts.runtime.actors` | `AggregatedSignalBatch` | 22 | `backend/src/qts/runtime/actors/signal_aggregator_actor.py:39` | Aggregated intents ready for portfolio/risk/order flow. | OK | clear responsibility from name/docstring |

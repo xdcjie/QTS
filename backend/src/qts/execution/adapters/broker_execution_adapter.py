@@ -8,13 +8,13 @@ from decimal import Decimal
 from typing import Any, cast
 
 from qts.core.ids import AccountId, CorrelationId, OrderId, StrategyId
+from qts.domain.orders import ExecutionReport, OrderIntent, OrderStateSnapshot
 from qts.execution.broker import (
     BrokerAdapter,
     BrokerExecutionReport,
     BrokerOrderRequest,
     normalize_broker_execution_report,
 )
-from qts.execution.order_manager import ExecutionReport, OrderIntent, OrderStateSnapshot
 
 
 class BrokerExecutionAdapter:

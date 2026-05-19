@@ -5,8 +5,12 @@ from decimal import Decimal
 
 def test_broker_execution_adapter_normalizes_submit_and_callback_reports() -> None:
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import (
+        ExecutionReportStatus,
+        OrderIntent,
+        OrderSide,
+    )
     from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
-    from qts.execution.order_manager import ExecutionReportStatus, OrderIntent, OrderSide
     from qts.simulation.broker import SimulatedBrokerAdapter
 
     broker = SimulatedBrokerAdapter(broker_id=BrokerId("paper"))
@@ -49,8 +53,12 @@ def test_broker_execution_adapter_normalizes_submit_and_callback_reports() -> No
 
 def test_broker_execution_adapter_normalizes_cancel_reports_with_runtime_order_id() -> None:
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import (
+        ExecutionReportStatus,
+        OrderIntent,
+        OrderSide,
+    )
     from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
-    from qts.execution.order_manager import ExecutionReportStatus, OrderIntent, OrderSide
     from qts.simulation.broker import SimulatedBrokerAdapter
 
     broker = SimulatedBrokerAdapter(broker_id=BrokerId("paper"))
@@ -91,8 +99,11 @@ def test_broker_execution_adapter_normalizes_cancel_reports_with_runtime_order_i
 def test_broker_execution_adapter_rejects_intent_account_route_mismatch() -> None:
     import pytest
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import (
+        OrderIntent,
+        OrderSide,
+    )
     from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.simulation.broker import SimulatedBrokerAdapter
 
     adapter = BrokerExecutionAdapter(
@@ -153,10 +164,15 @@ def test_broker_execution_adapter_rejects_unknown_broker_order_id() -> None:
 
 def test_broker_execution_adapter_can_recover_runtime_broker_order_mapping() -> None:
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId
-    from qts.domain.orders import ExecutionReportStatus
+    from qts.domain.orders import (
+        ExecutionReportStatus,
+        Order,
+        OrderIntent,
+        OrderSide,
+        OrderStateSnapshot,
+    )
     from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
     from qts.execution.broker import BrokerExecutionReport
-    from qts.execution.order_manager import Order, OrderIntent, OrderSide, OrderStateSnapshot
     from qts.execution.order_state_machine import OrderState
     from qts.simulation.broker import SimulatedBrokerAdapter
 

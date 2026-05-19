@@ -13,13 +13,13 @@ from qts.data.events import MarketDataSubscription
 from qts.data.historical.adapter import HistoricalMarketDataAdapter
 from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
 from qts.domain.market_data import Bar
-from qts.domain.risk import RiskDecision
-from qts.execution.order_manager import (
+from qts.domain.orders import (
     ExecutionReport,
     ExecutionReportStatus,
     OrderIntent,
     OrderSide,
 )
+from qts.domain.risk import RiskDecision
 from qts.registry.symbol_resolution import StaticSymbolResolver
 from qts.risk.risk_engine import RiskEngine
 from qts.risk.rules.max_notional import MaxNotionalRule

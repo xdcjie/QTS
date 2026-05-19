@@ -444,7 +444,7 @@ order mappings safely after reconnect.
 - [ ] Run reconciliation before enabling paper/live order submission.
 - [ ] Run periodic reconciliation while runtime is active.
 - [ ] Degrade runtime on unclassified drift.
-- [ ] Rebuild broker order ID mapping from `OrderManagerSnapshot` after
+- [ ] Rebuild broker order ID mapping from `OrderStateSnapshot` after
   reconnect.
 - [ ] Verify duplicate post-reconnect callbacks remain idempotent.
 

@@ -9,7 +9,7 @@ import pytest
 if TYPE_CHECKING:
     from qts.core.ids import AccountId, CorrelationId, StrategyId
     from qts.execution import ExecutionAdapter
-    from qts.runtime.actors.order_manager_actor import OrderRouteMetadata
+    from qts.runtime.order_route_metadata import OrderRouteMetadata
 
 
 def test_execution_actor_requires_explicit_execution_adapter() -> None:
@@ -22,7 +22,11 @@ def test_execution_actor_requires_explicit_execution_adapter() -> None:
 
 def test_execution_actor_uses_injected_simulated_adapter_and_emits_execution_report() -> None:
     from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
-    from qts.execution.order_manager import ExecutionReport, OrderIntent, OrderSide
+    from qts.domain.orders import (
+        ExecutionReport,
+        OrderIntent,
+        OrderSide,
+    )
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.execution_actor import ExecutionActor, OrderExecutionRequest
     from qts.runtime.mailbox import Mailbox
@@ -66,7 +70,7 @@ def test_execution_actor_forwards_route_metadata_to_execution_adapter() -> None:
     from typing import Any
 
     from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
-    from qts.execution.order_manager import (
+    from qts.domain.orders import (
         ExecutionReport,
         ExecutionReportStatus,
         OrderIntent,
@@ -164,7 +168,7 @@ def _route_metadata(
     correlation_id: CorrelationId,
 ) -> OrderRouteMetadata:
     from qts.core.ids import BrokerId
-    from qts.runtime.actors.order_manager_actor import OrderRouteMetadata
+    from qts.runtime.order_route_metadata import OrderRouteMetadata
 
     return OrderRouteMetadata(
         broker_id=BrokerId("broker-route"),

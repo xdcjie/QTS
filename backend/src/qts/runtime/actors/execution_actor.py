@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING
 
 from qts.core.ids import AccountId, OrderId, StrategyId
 from qts.domain.orders import OrderIntent
@@ -13,9 +12,7 @@ from qts.execution.execution_adapter import ExecutionAdapter
 from qts.runtime.actor import Actor
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.live_capital import LiveCapitalOrderDecision
-
-if TYPE_CHECKING:
-    from qts.runtime.actors.order_manager_actor import OrderRouteMetadata
+from qts.runtime.order_route_metadata import OrderRouteMetadata
 
 
 @dataclass(frozen=True, slots=True)

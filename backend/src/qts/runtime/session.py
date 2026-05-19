@@ -13,10 +13,14 @@ from qts.data.sources.streaming_market_data_source import (
     StreamingMarketDataSubscriptionEvent,
 )
 from qts.domain.market_data import Bar
-from qts.domain.orders import Order, OrderFill, OrderState
+from qts.domain.orders import Order, OrderFill, OrderState, OrderStateSnapshot
 from qts.risk.kill_switch import RuntimeKillSwitchCommand
 from qts.runtime.actor_ref import ActorRef
-from qts.runtime.actors.account_actor import AccountSnapshot
+from qts.runtime.actors.account_actor import (
+    AccountSnapshot,
+    GetAccountSnapshot,
+)
+from qts.runtime.actors.order_manager_actor import GetOrderManagerSnapshot
 from qts.runtime.actors.signal_aggregator_actor import (
     AggregatedSignalBatch,
     SignalAggregatorActor,
@@ -206,7 +210,7 @@ class RuntimeSession:
     @property
     def account_snapshot(self) -> AccountSnapshot:
         """Return the actor-owned account snapshot."""
-        return self._primary_partition.account_actor.snapshot()
+        return self._primary_partition.account_ref.ask(GetAccountSnapshot())
 
     def start(self) -> RuntimeSessionState:
         """Start the session."""
@@ -312,11 +316,9 @@ class RuntimeSession:
         return intent_processor.process_intent(
             intent,
             bar=bar,
-            account_actor=partition.account_actor,
-            order_manager_actor=partition.order_manager_actor,
+            account_ref=partition.account_ref,
             order_manager_ref=partition.order_manager_ref,
             execution_ref=partition.execution_ref,
-            account_ref=partition.account_ref,
             account_id=account_id,
             strategy_id=strategy_id,
             correlation_id=correlation_id,
@@ -441,7 +443,7 @@ class RuntimeSession:
             if partition.snapshot_store is None:
                 continue
             actor_id = self._account_snapshot_actor_id(account_id)
-            snapshot = partition.account_actor.snapshot()
+            snapshot: AccountSnapshot = partition.account_ref.ask(GetAccountSnapshot())
             partition.snapshot_store.save(
                 StateSnapshot(
                     snapshot_id=actor_id,
@@ -479,7 +481,10 @@ class RuntimeSession:
         terminal = {OrderState.FILLED, OrderState.CANCELLED, OrderState.REJECTED}
         active_order_ids: list[str] = []
         for partition in self._account_partitions.values():
-            for order in partition.order_manager_actor.snapshot().orders:
+            om_snapshot: OrderStateSnapshot = partition.order_manager_ref.ask(
+                GetOrderManagerSnapshot()
+            )
+            for order in om_snapshot.orders:
                 if order.state not in terminal:
                     active_order_ids.append(order.order_id.value)
         return tuple(active_order_ids)

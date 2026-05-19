@@ -8,11 +8,11 @@ from typing import TYPE_CHECKING, Any, cast
 import pytest
 
 if TYPE_CHECKING:
-    from qts.execution.order_manager import ExecutionReport
+    from qts.domain.orders import ExecutionReport
+    from qts.execution.broker import BrokerCommissionReport
     from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrAccountSummaryPayload,
         IbkrCommissionPayload,
-        IbkrCommissionReport,
         IbkrConnectionEvent,
         IbkrConnectionEventPayload,
         IbkrErrorPayload,
@@ -301,11 +301,15 @@ def test_ibkr_tws_reconciliation_client_requests_broker_state(
 
 def test_ibkr_order_execution_transport_dispatches_callbacks_to_adapter() -> None:
     from qts.core.ids import BrokerId, InstrumentId, OrderId
+    from qts.domain.orders import (
+        ExecutionReport,
+        OrderIntent,
+        OrderSide,
+    )
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.order_manager import ExecutionReport, OrderIntent, OrderSide
     from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrCommissionPayload,
         IbkrConnectionEventPayload,
@@ -390,12 +394,15 @@ def test_ibkr_order_execution_transport_dispatches_callbacks_to_adapter() -> Non
 
 def test_ibkr_tws_order_execution_transport_builds_limit_order_and_normalizes_cancel() -> None:
     from qts.core.ids import BrokerId, InstrumentId, OrderId
+    from qts.domain.orders import (
+        OrderIntent,
+        OrderSide,
+        OrderType,
+    )
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.broker import BrokerOrderType
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrOrderContractSpec,
         IbkrOrderStatusPayload,
@@ -433,7 +440,7 @@ def test_ibkr_tws_order_execution_transport_builds_limit_order_and_normalizes_ca
             quantity=Decimal("1"),
         ),
         client_order_id="client-ord-002",
-        order_type=BrokerOrderType.LIMIT,
+        order_type=OrderType.LIMIT,
         limit_price=Decimal("0.01"),
         outside_regular_trading_hours=True,
         contract=IbkrOrderContractSpec.stock("AAPL", primary_exchange="ISLAND"),
@@ -498,7 +505,7 @@ def test_ibkr_order_request_builds_bracket_parent_and_oco_children(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from qts.core.ids import AccountId, OrderId, StrategyId
-    from qts.domain.orders import BracketLeg, BrokerOrderType, OrderSide, TimeInForce
+    from qts.domain.orders import BracketLeg, OrderSide, OrderType, TimeInForce
     from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOrderRequest
 
     class Order:
@@ -517,18 +524,18 @@ def test_ibkr_order_request_builds_bracket_parent_and_oco_children(
         broker_symbol="AAPL",
         side=OrderSide.BUY.value,
         quantity=Decimal("1"),
-        order_type=BrokerOrderType.BRACKET,
+        order_type=OrderType.BRACKET,
         time_in_force=TimeInForce.GTC,
         limit_price=Decimal("0.01"),
         bracket_legs=(
             BracketLeg(
-                order_type=BrokerOrderType.LIMIT,
+                order_type=OrderType.LIMIT,
                 side=OrderSide.SELL.value,
                 quantity=Decimal("1"),
                 limit_price=Decimal("9999"),
             ),
             BracketLeg(
-                order_type=BrokerOrderType.STOP,
+                order_type=OrderType.STOP,
                 side=OrderSide.SELL.value,
                 quantity=Decimal("1"),
                 stop_price=Decimal("0.01"),
@@ -564,7 +571,7 @@ def test_ibkr_order_request_builds_what_if_bracket_with_transmit_enabled(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from qts.core.ids import AccountId, OrderId, StrategyId
-    from qts.domain.orders import BracketLeg, BrokerOrderType, OrderSide
+    from qts.domain.orders import BracketLeg, OrderSide, OrderType
     from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOrderRequest
 
     class Order:
@@ -583,18 +590,18 @@ def test_ibkr_order_request_builds_what_if_bracket_with_transmit_enabled(
         broker_symbol="AAPL",
         side=OrderSide.BUY.value,
         quantity=Decimal("1"),
-        order_type=BrokerOrderType.BRACKET,
+        order_type=OrderType.BRACKET,
         limit_price=Decimal("0.01"),
         what_if=True,
         bracket_legs=(
             BracketLeg(
-                order_type=BrokerOrderType.LIMIT,
+                order_type=OrderType.LIMIT,
                 side=OrderSide.SELL.value,
                 quantity=Decimal("1"),
                 limit_price=Decimal("9999"),
             ),
             BracketLeg(
-                order_type=BrokerOrderType.STOP,
+                order_type=OrderType.STOP,
                 side=OrderSide.SELL.value,
                 quantity=Decimal("1"),
                 stop_price=Decimal("0.01"),
@@ -643,11 +650,11 @@ def test_ibkr_tws_order_client_submits_bracket_as_parent_and_children() -> None:
 
 def test_ibkr_tws_order_execution_transport_handles_older_commission_report() -> None:
     from qts.core.ids import BrokerId, InstrumentId
+    from qts.domain.orders import ExecutionReport
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.order_manager import ExecutionReport
     from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrExecutionPayload,
         IbkrTwsOrderExecutionTransport,
@@ -701,11 +708,11 @@ def test_ibkr_tws_order_execution_transport_handles_older_commission_report() ->
 
 def test_ibkr_tws_order_execution_transport_waits_through_transient_connectivity_status() -> None:
     from qts.core.ids import BrokerId, InstrumentId
+    from qts.domain.orders import ExecutionReportStatus
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.order_manager import ExecutionReportStatus
     from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrErrorPayload,
         IbkrOrderStatusPayload,
@@ -771,12 +778,12 @@ def test_ibkr_tws_order_execution_transport_waits_through_transient_connectivity
 
 def test_ibkr_tws_order_execution_transport_does_not_queue_unknown_status() -> None:
     from qts.core.ids import BrokerId, InstrumentId
+    from qts.domain.orders import ExecutionReportStatus
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
     from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
-    from qts.execution.order_manager import ExecutionReportStatus
     from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrOrderStatusPayload,
         IbkrTwsOrderExecutionTransport,
@@ -1037,12 +1044,10 @@ class _RecordingSink:
     def on_commission(
         self,
         payload: IbkrCommissionPayload,
-    ) -> ExecutionReport | IbkrCommissionReport:
-        from qts.execution.transports.ibkr_tws_order_execution_transport import (
-            IbkrCommissionReport,
-        )
+    ) -> ExecutionReport | BrokerCommissionReport:
+        from qts.execution.broker import BrokerCommissionReport
 
-        return IbkrCommissionReport(
+        return BrokerCommissionReport(
             execution_id=payload.execution_id,
             commission=payload.commission,
             currency=payload.currency,
@@ -1087,9 +1092,9 @@ class _OrderClientApp:
 
 
 class _OrderClientRequest:
-    from qts.execution.broker import BrokerOrderType
+    from qts.domain.orders import OrderType
 
-    order_type = BrokerOrderType.MARKET
+    order_type = OrderType.MARKET
 
     def to_ibapi_contract(self) -> str:
         return "contract"
@@ -1099,9 +1104,9 @@ class _OrderClientRequest:
 
 
 class _BracketOrderClientRequest:
-    from qts.execution.broker import BrokerOrderType
+    from qts.domain.orders import OrderType
 
-    order_type = BrokerOrderType.BRACKET
+    order_type = OrderType.BRACKET
     bracket_legs = ("take_profit", "stop_loss")
 
     def to_ibapi_contract(self) -> str:
@@ -1156,7 +1161,7 @@ class _FakeOrderExecutionTransport:
     def emit_commission(
         self,
         payload: IbkrCommissionPayload,
-    ) -> ExecutionReport | IbkrCommissionReport:
+    ) -> ExecutionReport | BrokerCommissionReport:
         return self.sink.on_commission(payload)
 
     def emit_error(self, payload: IbkrErrorPayload) -> IbkrTransportError:

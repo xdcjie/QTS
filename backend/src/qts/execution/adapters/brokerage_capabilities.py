@@ -5,7 +5,8 @@ from __future__ import annotations
 from decimal import Decimal
 
 from qts.core.ids import BrokerId
-from qts.execution.broker import BrokerCapabilities, BrokerOrderType, TimeInForce
+from qts.domain.orders import OrderType, TimeInForce
+from qts.execution.broker import BrokerCapabilities
 from qts.execution.brokerage_model import BrokerageModel
 
 
@@ -23,7 +24,7 @@ def brokerage_model_for_name(brokerage_model: str) -> BrokerageModel:
             model_id="ibkr-equity-assumption-v1",
             capabilities=BrokerCapabilities(
                 broker_id=BrokerId("ibkr-equity"),
-                supported_order_types=frozenset({BrokerOrderType.MARKET, BrokerOrderType.LIMIT}),
+                supported_order_types=frozenset({OrderType.MARKET, OrderType.LIMIT}),
                 supported_time_in_force=frozenset({TimeInForce.DAY, TimeInForce.GTC}),
                 supports_fractional=False,
                 supports_short=True,
@@ -42,7 +43,7 @@ def brokerage_model_for_name(brokerage_model: str) -> BrokerageModel:
             model_id="ibkr-futures-assumption-v1",
             capabilities=BrokerCapabilities(
                 broker_id=BrokerId("ibkr-futures"),
-                supported_order_types=frozenset({BrokerOrderType.MARKET, BrokerOrderType.LIMIT}),
+                supported_order_types=frozenset({OrderType.MARKET, OrderType.LIMIT}),
                 supported_time_in_force=frozenset({TimeInForce.DAY, TimeInForce.GTC}),
                 supports_fractional=False,
                 supports_short=True,
@@ -59,7 +60,7 @@ def brokerage_model_for_name(brokerage_model: str) -> BrokerageModel:
             model_id="ibkr-options-assumption-v1",
             capabilities=BrokerCapabilities(
                 broker_id=BrokerId("ibkr-options"),
-                supported_order_types=frozenset({BrokerOrderType.MARKET, BrokerOrderType.LIMIT}),
+                supported_order_types=frozenset({OrderType.MARKET, OrderType.LIMIT}),
                 supported_time_in_force=frozenset({TimeInForce.DAY, TimeInForce.GTC}),
                 supports_fractional=False,
                 supports_short=False,

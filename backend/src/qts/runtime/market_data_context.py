@@ -13,7 +13,7 @@ from qts.data.sources.streaming_market_data_source import (
     StreamingMarketDataSubscriptionEvent,
 )
 from qts.domain.market_data import Bar
-from qts.runtime.actors.account_actor import AccountSnapshot
+from qts.runtime.actors.account_actor import AccountSnapshot, GetAccountSnapshot
 from qts.runtime.actors.signal_aggregator_actor import (
     AggregatedSignalBatch,
     SignalContribution,
@@ -170,7 +170,7 @@ class RuntimeMarketDataSessionContext:
 
     def account_snapshots(self) -> tuple[tuple[AccountId | None, AccountSnapshot], ...]:
         return tuple(
-            (account_id, partition.account_actor.snapshot())
+            (account_id, partition.account_ref.ask(GetAccountSnapshot()))
             for account_id, partition in self._runtime_session._account_partitions.items()
         )
 

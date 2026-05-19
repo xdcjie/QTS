@@ -6,7 +6,8 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from qts.core.ids import BrokerId
-from qts.execution.broker import BrokerCapabilities, BrokerOrderType, TimeInForce
+from qts.domain.orders import OrderType, TimeInForce
+from qts.execution.broker import BrokerCapabilities
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,7 +49,7 @@ class BrokerageModel:
                 broker_id=BrokerId("custom"),
                 supports_fractional=True,
                 supports_stop_orders=True,
-                supported_order_types=frozenset(BrokerOrderType),
+                supported_order_types=frozenset(OrderType),
                 supported_time_in_force=frozenset(TimeInForce),
             ),
         )
@@ -62,15 +63,15 @@ class BrokerageModel:
                 broker_id=BrokerId("simulated"),
                 supports_fractional=True,
                 supports_stop_orders=True,
-                supported_order_types=frozenset(BrokerOrderType),
+                supported_order_types=frozenset(OrderType),
                 supported_time_in_force=frozenset(TimeInForce),
             ),
         )
 
     @property
-    def supported_order_types(self) -> frozenset[BrokerOrderType]:
+    def supported_order_types(self) -> frozenset[OrderType]:
         """Return the brokerage-accepted order types for risk-time gating."""
-        return self.capabilities.supported_order_types or frozenset(BrokerOrderType)
+        return self.capabilities.supported_order_types or frozenset(OrderType)
 
     def commission_for_notional(self, notional: Decimal) -> Decimal:
         """Estimate commission from notional under this model."""
@@ -93,7 +94,7 @@ class BrokerageModel:
     def supports(
         self,
         asset_class: str,
-        order_type: BrokerOrderType,
+        order_type: OrderType,
         time_in_force: TimeInForce,
     ) -> bool:
         """Return whether the model supports the requested execution shape."""

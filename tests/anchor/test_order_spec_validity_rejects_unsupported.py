@@ -19,13 +19,13 @@ from decimal import Decimal
 from typing import Any
 
 from qts.core.ids import InstrumentId
+from qts.domain.orders import OrderType, TimeInForce
 from qts.domain.risk import OrderRiskRequest
-from qts.execution.broker import BrokerOrderType, TimeInForce
 from qts.risk.rules.order_spec_validity import OrderSpecValidityRule
 from qts.strategy_sdk.target import OrderSpec
 
 
-def _request(order_type: BrokerOrderType, **spec_kwargs: Any) -> OrderRiskRequest:
+def _request(order_type: OrderType, **spec_kwargs: Any) -> OrderRiskRequest:
     return OrderRiskRequest(
         instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
         quantity=Decimal("1"),
@@ -43,11 +43,11 @@ def _request(order_type: BrokerOrderType, **spec_kwargs: Any) -> OrderRiskReques
 class _SupportedSet:
     """Stand-in for a BrokerageRiskPolicy that only exposes order-type support."""
 
-    def __init__(self, supported: frozenset[BrokerOrderType]) -> None:
+    def __init__(self, supported: frozenset[OrderType]) -> None:
         self._supported = supported
 
     @property
-    def supported_order_types(self) -> frozenset[BrokerOrderType]:
+    def supported_order_types(self) -> frozenset[OrderType]:
         return self._supported
 
     @property
@@ -59,27 +59,27 @@ def test_rule_rejects_order_type_not_in_supported_set() -> None:
     sim_policy = _SupportedSet(
         frozenset(
             {
-                BrokerOrderType.MARKET,
-                BrokerOrderType.LIMIT,
-                BrokerOrderType.STOP,
-                BrokerOrderType.STOP_LIMIT,
-                BrokerOrderType.BRACKET,
+                OrderType.MARKET,
+                OrderType.LIMIT,
+                OrderType.STOP,
+                OrderType.STOP_LIMIT,
+                OrderType.BRACKET,
             }
         )
     )
     rule = OrderSpecValidityRule(brokerage_policy=sim_policy)
 
-    decision = rule.check(_request(BrokerOrderType.TRAILING_STOP, trail_amount=Decimal("1")))
+    decision = rule.check(_request(OrderType.TRAILING_STOP, trail_amount=Decimal("1")))
 
     assert decision.approved is False
     assert decision.reason_code == "UNSUPPORTED_ORDER_TYPE"
 
 
 def test_rule_approves_order_type_in_supported_set() -> None:
-    ibkr_policy = _SupportedSet(frozenset(BrokerOrderType))
+    ibkr_policy = _SupportedSet(frozenset(OrderType))
     rule = OrderSpecValidityRule(brokerage_policy=ibkr_policy)
 
-    decision = rule.check(_request(BrokerOrderType.TRAILING_STOP, trail_amount=Decimal("1")))
+    decision = rule.check(_request(OrderType.TRAILING_STOP, trail_amount=Decimal("1")))
 
     assert decision.approved is True
 
@@ -87,5 +87,5 @@ def test_rule_approves_order_type_in_supported_set() -> None:
 def test_rule_without_brokerage_policy_falls_back_to_shape_check() -> None:
     rule = OrderSpecValidityRule()
 
-    market_request = _request(BrokerOrderType.MARKET)
+    market_request = _request(OrderType.MARKET)
     assert rule.check(market_request).approved is True

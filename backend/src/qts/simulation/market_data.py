@@ -1,4 +1,4 @@
-"""Production-side simulated streaming market-data adapter."""
+"""Production-side simulated market-data adapter."""
 
 from __future__ import annotations
 
@@ -13,8 +13,8 @@ from qts.data.events import (
 from qts.data.interfaces import MarketDataAdapter
 
 
-class SimulatedStreamingMarketDataAdapter(MarketDataAdapter):
-    """Deterministic simulated market-data adapter for non-test execution paths."""
+class SimulatedMarketDataAdapter(MarketDataAdapter):
+    """Manage deterministic simulated market-data subscriptions for non-test execution paths."""
 
     def __init__(
         self,
@@ -60,4 +60,4 @@ class SimulatedStreamingMarketDataAdapter(MarketDataAdapter):
         )
 
 
-__all__ = ["SimulatedStreamingMarketDataAdapter"]
+__all__ = ["SimulatedMarketDataAdapter"]

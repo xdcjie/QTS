@@ -5,8 +5,8 @@ from typing import Any, cast
 
 import pytest
 from qts.core.ids import AccountId, StrategyId
+from qts.domain.orders import OrderIntent
 from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
-from qts.execution.order_manager import OrderIntent
 from qts.runtime.live_capital import LiveCapitalOrderDecision
 
 
@@ -28,11 +28,14 @@ def test_live_order_blocked_when_account_code_is_dup() -> None:
 
 def test_live_order_blocked_when_gateway_port_is_paper() -> None:
     from qts.core.ids import BrokerId, InstrumentId, OrderId
+    from qts.domain.orders import (
+        OrderIntent,
+        OrderSide,
+    )
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
@@ -79,7 +82,10 @@ def _broker_execution_adapter(
 
 def _order_intent() -> OrderIntent:
     from qts.core.ids import InstrumentId, OrderId
-    from qts.execution.order_manager import OrderIntent, OrderSide
+    from qts.domain.orders import (
+        OrderIntent,
+        OrderSide,
+    )
 
     return OrderIntent(
         order_id=OrderId("ord-adapter-gate"),

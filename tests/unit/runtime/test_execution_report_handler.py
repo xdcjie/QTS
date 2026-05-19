@@ -5,14 +5,9 @@ from decimal import Decimal
 
 def test_execution_report_handler_routes_validated_fills_to_account_actor() -> None:
     from qts.core.ids import AccountId, InstrumentId, OrderId
+    from qts.domain.orders import ExecutionReport, ExecutionReportStatus, OrderIntent, OrderSide
     from qts.domain.risk import RiskDecision
-    from qts.execution.order_manager import (
-        ExecutionReport,
-        ExecutionReportStatus,
-        OrderIntent,
-        OrderManager,
-        OrderSide,
-    )
+    from qts.execution.order_manager import OrderManager
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.account_actor import ApplyFill
     from qts.runtime.execution_report_handler import ExecutionReportHandler
@@ -60,14 +55,9 @@ def test_execution_report_handler_routes_validated_fills_to_account_actor() -> N
 
 def test_execution_report_handler_quarantines_unresolved_reports() -> None:
     from qts.core.ids import AccountId, InstrumentId, OrderId
+    from qts.domain.orders import ExecutionReport, ExecutionReportStatus, OrderIntent, OrderSide
     from qts.domain.risk import RiskDecision
-    from qts.execution.order_manager import (
-        ExecutionReport,
-        ExecutionReportStatus,
-        OrderIntent,
-        OrderManager,
-        OrderSide,
-    )
+    from qts.execution.order_manager import OrderManager
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.execution_report_handler import ExecutionReportHandler
     from qts.runtime.mailbox import Mailbox
@@ -106,14 +96,9 @@ def test_execution_report_handler_quarantines_unresolved_reports() -> None:
 
 def test_execution_report_handler_quarantines_cross_account_fills() -> None:
     from qts.core.ids import AccountId, InstrumentId, OrderId
+    from qts.domain.orders import ExecutionReport, ExecutionReportStatus, OrderIntent, OrderSide
     from qts.domain.risk import RiskDecision
-    from qts.execution.order_manager import (
-        ExecutionReport,
-        ExecutionReportStatus,
-        OrderIntent,
-        OrderManager,
-        OrderSide,
-    )
+    from qts.execution.order_manager import OrderManager
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.execution_report_handler import ExecutionReportHandler
     from qts.runtime.mailbox import Mailbox

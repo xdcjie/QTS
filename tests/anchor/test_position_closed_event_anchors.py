@@ -18,8 +18,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from qts.core.ids import AccountId, InstrumentId, OrderId
-from qts.domain.orders import OrderSide
-from qts.execution.order_manager import OrderFill
+from qts.domain.orders import OrderFill, OrderSide
 from qts.runtime.actors.account_actor import AccountActor, ApplyFill
 from qts.runtime.runtime_event_writer import RuntimeEventWriter
 from qts.runtime.sinks.base import RuntimeEvent

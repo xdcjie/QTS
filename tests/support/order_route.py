@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from qts.core.ids import AccountId, BrokerId, CorrelationId, StrategyId
-from qts.runtime.actors.order_manager_actor import OrderRouteMetadata
+from qts.runtime.order_route_metadata import OrderRouteMetadata
 
 
 def order_route_metadata(

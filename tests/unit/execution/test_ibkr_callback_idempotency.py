@@ -10,9 +10,9 @@ if TYPE_CHECKING:
 
 def test_ibkr_callback_normalizer_drops_duplicate_order_status_callbacks() -> None:
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import ExecutionReportStatus
     from qts.execution.adapters.ibkr_callback_normalizer import IbkrCallbackNormalizer
     from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
-    from qts.execution.order_manager import ExecutionReportStatus
     from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOrderStatusPayload
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
@@ -51,7 +51,7 @@ def test_ibkr_callback_normalizer_drops_duplicate_order_status_callbacks() -> No
 
 
 def test_duplicate_order_status_is_idempotent() -> None:
-    from qts.execution.order_manager import ExecutionReportStatus
+    from qts.domain.orders import ExecutionReportStatus
     from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOrderStatusPayload
 
     adapter = _adapter_with_order_map()
@@ -127,10 +127,10 @@ def test_execution_before_open_order_is_quarantined_or_later_resolved() -> None:
 
 
 def test_late_commission_updates_cost_without_duplicate_fill() -> None:
-    from qts.execution.order_manager import ExecutionReport
+    from qts.domain.orders import ExecutionReport
+    from qts.execution.broker import BrokerCommissionReport
     from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrCommissionPayload,
-        IbkrCommissionReport,
         IbkrExecutionPayload,
     )
 
@@ -164,13 +164,13 @@ def test_late_commission_updates_cost_without_duplicate_fill() -> None:
     assert fill is not None
     assert isinstance(fill, ExecutionReport)
     assert fill.fill_id == "exec-001"
-    assert isinstance(late_commission, IbkrCommissionReport)
+    assert isinstance(late_commission, BrokerCommissionReport)
     assert late_commission.commission == Decimal("1.30")
     assert adapter.callback_events[-1].reason == "commission_for_completed_execution"
 
 
 def test_duplicate_exec_id_applied_once() -> None:
-    from qts.execution.order_manager import ExecutionReport
+    from qts.domain.orders import ExecutionReport
     from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrCommissionPayload,
         IbkrExecutionPayload,

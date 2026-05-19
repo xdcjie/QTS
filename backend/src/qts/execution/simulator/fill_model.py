@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from qts.execution.order_manager import ExecutionReport, ExecutionReportStatus, OrderIntent
+from qts.domain.orders import ExecutionReport, ExecutionReportStatus, OrderIntent
 
 
 class ImmediateFillModel:

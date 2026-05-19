@@ -16,15 +16,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
+from qts.domain.orders import OrderType
 from qts.domain.risk import OrderRiskRequest, RiskDecision
-from qts.execution.broker import BrokerOrderType
 
 
 class BrokerageOrderTypePolicy(Protocol):
     """Brokerage-acceptance subset consulted by the validity rule."""
 
     @property
-    def supported_order_types(self) -> frozenset[BrokerOrderType]:
+    def supported_order_types(self) -> frozenset[OrderType]:
         """Return the set of order types the active brokerage accepts."""
         ...
 

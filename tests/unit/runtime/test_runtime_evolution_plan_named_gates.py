@@ -281,7 +281,8 @@ def test_missing_account_route_raises_route_not_found() -> None:
 
 
 def test_unresolved_execution_report_is_quarantined() -> None:
-    from qts.execution.order_manager import ExecutionReport, ExecutionReportStatus, OrderManager
+    from qts.domain.orders import ExecutionReport, ExecutionReportStatus
+    from qts.execution.order_manager import OrderManager
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.execution_report_handler import ExecutionReportHandler
     from qts.runtime.mailbox import Mailbox
@@ -312,14 +313,9 @@ def test_no_default_account_allowed() -> None:
 
 def test_duplicate_order_status_is_idempotent() -> None:
     from qts.core.ids import InstrumentId, OrderId
+    from qts.domain.orders import ExecutionReport, ExecutionReportStatus, OrderIntent, OrderSide
     from qts.domain.risk import RiskDecision
-    from qts.execution.order_manager import (
-        ExecutionReport,
-        ExecutionReportStatus,
-        OrderIntent,
-        OrderManager,
-        OrderSide,
-    )
+    from qts.execution.order_manager import OrderManager
 
     manager = OrderManager()
     intent = OrderIntent(
@@ -344,14 +340,9 @@ def test_duplicate_order_status_is_idempotent() -> None:
 
 def test_partial_fill_applied_once() -> None:
     from qts.core.ids import InstrumentId, OrderId
+    from qts.domain.orders import ExecutionReport, ExecutionReportStatus, OrderIntent, OrderSide
     from qts.domain.risk import RiskDecision
-    from qts.execution.order_manager import (
-        ExecutionReport,
-        ExecutionReportStatus,
-        OrderIntent,
-        OrderManager,
-        OrderSide,
-    )
+    from qts.execution.order_manager import OrderManager
 
     manager = OrderManager()
     intent = OrderIntent(
@@ -379,7 +370,10 @@ def test_partial_fill_applied_once() -> None:
 
 
 def test_commission_report_after_fill_updates_trade_cost() -> None:
-    from qts.execution.order_manager import ExecutionReport, ExecutionReportStatus
+    from qts.domain.orders import (
+        ExecutionReport,
+        ExecutionReportStatus,
+    )
 
     report = ExecutionReport(
         report_id="commissioned-fill",

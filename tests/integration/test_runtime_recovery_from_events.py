@@ -6,7 +6,8 @@ from typing import cast
 
 from qts.core.ids import CorrelationId, EventId, InstrumentId, OrderId
 from qts.domain.events import BaseEvent
-from qts.execution.order_manager import OrderIntent, OrderManager, OrderSide
+from qts.domain.orders import OrderIntent, OrderSide
+from qts.execution.order_manager import OrderManager
 from qts.portfolio.cash_book import CashBook
 from qts.portfolio.holdings import HoldingBook
 from qts.runtime.event_store import InMemoryEventStore
@@ -106,7 +107,7 @@ def test_replayed_events_reconstruct_order_and_position_state() -> None:
             if order_event is OrderEvent.SENT:
                 manager.mark_sent(order_id, broker_order_id="broker-001")
             elif order_event is OrderEvent.FILLED:
-                from qts.execution.order_manager import ExecutionReport, ExecutionReportStatus
+                from qts.domain.orders import ExecutionReport, ExecutionReportStatus
 
                 report = ExecutionReport(
                     report_id="rpt-001",

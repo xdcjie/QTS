@@ -3937,18 +3937,6 @@
   - 说明：OrderManager-validated fill event.
   - 直接调用：无
   - 可解析内部调用：无
-- `qts.domain.orders.value_objects.OrderManagerResult`
-  - 类型：`class`
-  - 位置：`backend/src/qts/domain/orders/value_objects.py:131`
-  - 说明：Events emitted by processing an execution report.
-  - 直接调用：无
-  - 可解析内部调用：无
-- `qts.domain.orders.value_objects.OrderManagerSnapshot`
-  - 类型：`class`
-  - 位置：`backend/src/qts/domain/orders/value_objects.py:139`
-  - 说明：Serializable OrderManager state for reconnect/recovery.
-  - 直接调用：无
-  - 可解析内部调用：无
 
 ### `backend/src/qts/domain/risk/__init__.py`
 
@@ -4123,12 +4111,6 @@
   - 说明：Perform post init.
   - 直接调用：`Decimal`, `ValueError`
   - 可解析内部调用：无
-- `qts.execution.broker.BrokerExecutionReportStatus`
-  - 类型：`class`
-  - 位置：`backend/src/qts/execution/broker.py:95`
-  - 说明：Broker-boundary execution report status.
-  - 直接调用：无
-  - 可解析内部调用：无
 - `qts.execution.broker.BrokerExecutionReport`
   - 类型：`class`
   - 位置：`backend/src/qts/execution/broker.py:106`
@@ -4301,8 +4283,8 @@
   - 类型：`method`
   - 位置：`backend/src/qts/execution/order_manager.py:85`
   - 说明：Perform process_report.
-  - 直接调用：`OrderManagerResult`, `apply`, `self._event_for_report`, `self._fills_for_report`, `self._replace_order`
-  - 可解析内部调用：`qts.domain.orders.value_objects.OrderManagerResult`, `qts.execution.order_manager.OrderManager._event_for_report`, `qts.execution.order_manager.OrderManager._fills_for_report`, `qts.execution.order_manager.OrderManager._replace_order`, `qts.execution.order_state_machine.OrderStateMachine.apply`, `qts.portfolio.accounting.fill_accounting.FillAccounting.apply`, `qts.runtime.live.LiveRuntimeStateMachine.apply`
+  - 直接调用：`OrderProcessingResult`, `apply`, `self._event_for_report`, `self._fills_for_report`, `self._replace_order`
+  - 可解析内部调用：`qts.domain.orders.value_objects.OrderProcessingResult`, `qts.execution.order_manager.OrderManager._event_for_report`, `qts.execution.order_manager.OrderManager._fills_for_report`, `qts.execution.order_manager.OrderManager._replace_order`, `qts.execution.order_state_machine.OrderStateMachine.apply`, `qts.portfolio.accounting.fill_accounting.FillAccounting.apply`, `qts.runtime.live.LiveRuntimeStateMachine.apply`
 - `qts.execution.order_manager.OrderManager.get_order`
   - 类型：`method`
   - 位置：`backend/src/qts/execution/order_manager.py:93`
@@ -4319,8 +4301,8 @@
   - 类型：`method`
   - 位置：`backend/src/qts/execution/order_manager.py:109`
   - 说明：Perform snapshot.
-  - 直接调用：`OrderManagerSnapshot`, `self._broker_to_order.items`, `self._fill_ids.snapshot`, `self._orders.values`, `tuple`
-  - 可解析内部调用：`qts.application.services.interfaces.AccountService.snapshot`, `qts.domain.orders.value_objects.OrderManagerSnapshot`, `qts.execution.idempotency.FillIdempotencyStore.snapshot`, `qts.execution.order_manager.OrderManager.snapshot`, `qts.indicators.rolling.RollingWindow.snapshot`, `qts.observability.metrics.MetricsRegistry.snapshot`, `qts.portfolio.position_book.PositionBook.snapshot`, `qts.runtime.actors.account_actor.AccountActor.snapshot`
+  - 直接调用：`OrderStateSnapshot`, `self._broker_to_order.items`, `self._fill_ids.snapshot`, `self._orders.values`, `tuple`
+  - 可解析内部调用：`qts.application.services.interfaces.AccountService.snapshot`, `qts.domain.orders.value_objects.OrderStateSnapshot`, `qts.execution.idempotency.FillIdempotencyStore.snapshot`, `qts.execution.order_manager.OrderManager.snapshot`, `qts.indicators.rolling.RollingWindow.snapshot`, `qts.observability.metrics.MetricsRegistry.snapshot`, `qts.portfolio.position_book.PositionBook.snapshot`, `qts.runtime.actors.account_actor.AccountActor.snapshot`
 - `qts.execution.order_manager.OrderManager.restore`
   - 类型：`classmethod`
   - 位置：`backend/src/qts/execution/order_manager.py:118`

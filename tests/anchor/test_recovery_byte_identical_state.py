@@ -21,8 +21,7 @@ from typing import Any
 
 from qts.core.ids import AccountId, InstrumentId, OrderId
 from qts.domain.market_data import Bar
-from qts.domain.orders import OrderSide
-from qts.execution.order_manager import OrderFill
+from qts.domain.orders import OrderFill, OrderSide
 from qts.runtime.actors.account_actor import AccountActor, ApplyFill
 
 from tests.support.backtest_streaming import run_engine_streaming

@@ -9,7 +9,9 @@ from qts.core.ids import AccountId, CausationId, CorrelationId, InstrumentId, St
 from qts.domain.orders import Order, OrderFill
 from qts.domain.risk import RiskDecision
 from qts.portfolio.holdings import PositionClosed
-from qts.runtime.actors.order_manager_actor import OrderManagerActor
+from qts.runtime.actor_ref import ActorRef
+from qts.runtime.actors.order_manager_actor import GetOrder, GetRouteMetadata
+from qts.runtime.order_route_metadata import OrderRouteMetadata
 from qts.runtime.sinks.base import RuntimeEvent
 
 
@@ -55,13 +57,15 @@ class RuntimeEventWriter:
     def write_order_events(
         self,
         orders: tuple[Order, ...],
-        order_manager: OrderManagerActor,
+        order_manager_ref: ActorRef,
         *,
         fallback_contributing_strategy_ids: tuple[StrategyId, ...] = (),
     ) -> None:
         """Write submitted/order-state events for emitted orders."""
         for order in orders:
-            metadata = order_manager.route_metadata(order.order_id)
+            metadata: OrderRouteMetadata = order_manager_ref.ask(
+                GetRouteMetadata(order_id=order.order_id)
+            )
             contributing_strategy_ids = (
                 metadata.contributing_strategy_ids or fallback_contributing_strategy_ids
             )
@@ -110,12 +114,14 @@ class RuntimeEventWriter:
     def write_fill_events(
         self,
         fills: tuple[OrderFill, ...],
-        order_manager: OrderManagerActor,
+        order_manager_ref: ActorRef,
     ) -> None:
         """Write fill events with routing metadata and account context."""
         for fill in fills:
-            metadata = order_manager.route_metadata(fill.order_id)
-            order = order_manager.get_order(fill.order_id)
+            metadata: OrderRouteMetadata = order_manager_ref.ask(
+                GetRouteMetadata(order_id=fill.order_id)
+            )
+            order: Order = order_manager_ref.ask(GetOrder(order_id=fill.order_id))
             self.write(
                 RuntimeEvent(
                     kind="runtime.fill_applied",

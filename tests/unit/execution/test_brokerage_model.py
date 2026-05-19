@@ -3,8 +3,8 @@ from __future__ import annotations
 from decimal import Decimal
 
 from qts.core.ids import BrokerId
+from qts.domain.orders import OrderType, TimeInForce
 from qts.execution.adapters.brokerage_capabilities import brokerage_model_for_name
-from qts.execution.broker import BrokerOrderType, TimeInForce
 from qts.execution.brokerage_model import BrokerageModel
 
 
@@ -15,9 +15,9 @@ def test_ibkr_equity_brokerage_model_estimates_costs_and_capabilities() -> None:
     assert model.commission_for_notional(Decimal("10000")) == Decimal("5.0000")
     assert model.initial_margin_for_notional(Decimal("10000")) == Decimal("5000.00")
     assert model.slippage_for_notional(Decimal("10000")) == Decimal("1")
-    assert model.supports("equity", BrokerOrderType.LIMIT, TimeInForce.DAY)
-    assert not model.supports("future", BrokerOrderType.LIMIT, TimeInForce.DAY)
-    assert not model.supports("equity", BrokerOrderType.STOP, TimeInForce.DAY)
+    assert model.supports("equity", OrderType.LIMIT, TimeInForce.DAY)
+    assert not model.supports("future", OrderType.LIMIT, TimeInForce.DAY)
+    assert not model.supports("equity", OrderType.STOP, TimeInForce.DAY)
 
 
 def test_simulated_brokerage_model_has_zero_cost_broad_capability_defaults() -> None:
@@ -26,7 +26,7 @@ def test_simulated_brokerage_model_has_zero_cost_broad_capability_defaults() -> 
     assert model.commission_for_notional(Decimal("10000")) == Decimal("0")
     assert model.initial_margin_for_notional(Decimal("10000")) == Decimal("0")
     assert model.slippage_for_notional(Decimal("10000")) == Decimal("0")
-    assert model.supports("equity", BrokerOrderType.MARKET, TimeInForce.DAY)
+    assert model.supports("equity", OrderType.MARKET, TimeInForce.DAY)
     assert model.capabilities.supports_fractional is True
 
 

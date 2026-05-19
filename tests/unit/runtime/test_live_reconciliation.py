@@ -3,7 +3,12 @@ from __future__ import annotations
 from decimal import Decimal
 
 from qts.core.ids import AccountId, InstrumentId, OrderId
-from qts.execution.order_manager import Order, OrderIntent, OrderSide, OrderStateSnapshot
+from qts.domain.orders import (
+    Order,
+    OrderIntent,
+    OrderSide,
+    OrderStateSnapshot,
+)
 from qts.execution.order_state_machine import OrderState
 from qts.runtime.actors.account_actor import AccountSnapshot
 

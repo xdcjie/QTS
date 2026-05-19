@@ -7,9 +7,9 @@ from tests.support.order_route import order_route_metadata
 
 def test_live_broker_callbacks_reuse_shared_order_and_account_flow() -> None:
     from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import OrderIntent, OrderSide
     from qts.domain.risk import RiskDecision
     from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.execution.order_state_machine import OrderState
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.account_actor import AccountActor
@@ -93,10 +93,9 @@ def test_live_broker_callbacks_reuse_shared_order_and_account_flow() -> None:
 
 def test_live_cancel_flow_uses_order_manager_and_execution_actor_path() -> None:
     from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
-    from qts.domain.orders import CancelIntent
+    from qts.domain.orders import CancelIntent, OrderIntent, OrderSide
     from qts.domain.risk import RiskDecision
     from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.execution.order_state_machine import OrderState
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.account_actor import AccountActor
@@ -183,12 +182,12 @@ def test_live_cancel_flow_uses_order_manager_and_execution_actor_path() -> None:
 
 def test_live_ibkr_fill_waits_for_commission_before_account_mutation() -> None:
     from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import ExecutionReport, OrderIntent, OrderSide
     from qts.domain.risk import RiskDecision
     from qts.execution.adapters.ibkr_order_execution import (
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.order_manager import ExecutionReport, OrderIntent, OrderSide
     from qts.execution.order_state_machine import OrderState
     from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrCommissionPayload,

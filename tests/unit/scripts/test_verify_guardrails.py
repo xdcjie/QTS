@@ -94,17 +94,6 @@ def test_guardrails_reject_strategy_sdk_internal_domain_symbols(tmp_path: Path) 
     assert "STRATEGY_SDK_INTERNAL_LEAK" in _codes(root)
 
 
-def test_guardrails_reject_strategy_sdk_broker_order_type_symbol(tmp_path: Path) -> None:
-    root = tmp_path
-    _write(
-        root,
-        "backend/src/qts/strategy_sdk/bad.py",
-        "from qts.domain.orders import BrokerOrderType\n",
-    )
-
-    assert "STRATEGY_SDK_INTERNAL_LEAK" in _codes(root)
-
-
 def test_strategy_package_cannot_import_runtime_internals(tmp_path: Path) -> None:
     root = tmp_path
     _write(

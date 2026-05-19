@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from qts.runtime.actors.account_actor import GetAccountSnapshot
 from qts.runtime.session import RuntimeRollbackCommand, RuntimeRollbackEvidence
 
 
@@ -18,7 +19,7 @@ class RuntimeRollbackCoordinator:
         session = self._session
         active_order_ids = session._active_order_ids()
         session._kill_switch_active = True
-        snapshot = session._primary_partition.account_actor.snapshot()
+        snapshot = session._primary_partition.account_ref.ask(GetAccountSnapshot())
         snapshot_refs = session._record_account_snapshots()
         evidence = RuntimeRollbackEvidence(
             run_id=session._dependencies.run_id.value,

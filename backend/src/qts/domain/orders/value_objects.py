@@ -141,9 +141,6 @@ class OrderProcessingResult:
     fills: tuple[OrderFill, ...] = ()
 
 
-OrderManagerResult = OrderProcessingResult
-
-
 @dataclass(frozen=True, slots=True)
 class OrderStateSnapshot:
     """Serializable OrderManager state for reconnect/recovery."""
@@ -154,15 +151,10 @@ class OrderStateSnapshot:
     seen_report_ids: tuple[str, ...] = ()
 
 
-OrderManagerSnapshot = OrderStateSnapshot
-
-
 __all__ = [
     "CancelIntent",
     "ExecutionReport",
     "ExecutionReportStatus",
-    "OrderManagerResult",
-    "OrderManagerSnapshot",
     "OrderProcessingResult",
     "OrderState",
     "OrderStateSnapshot",

@@ -5,7 +5,10 @@ from decimal import Decimal
 
 def test_account_actor_owns_portfolio_state_and_applies_fill_once() -> None:
     from qts.core.ids import AccountId, InstrumentId, OrderId
-    from qts.execution.order_manager import OrderFill, OrderSide
+    from qts.domain.orders import (
+        OrderFill,
+        OrderSide,
+    )
     from qts.runtime.actors.account_actor import AccountActor, ApplyFill
 
     account_id = AccountId("acct-a")
@@ -30,7 +33,10 @@ def test_account_actor_owns_portfolio_state_and_applies_fill_once() -> None:
 
 def test_account_actor_restore_preserves_positions_cash_and_fill_idempotency() -> None:
     from qts.core.ids import AccountId, InstrumentId, OrderId
-    from qts.execution.order_manager import OrderFill, OrderSide
+    from qts.domain.orders import (
+        OrderFill,
+        OrderSide,
+    )
     from qts.runtime.actors.account_actor import AccountActor, ApplyFill
 
     account_id = AccountId("acct-a")
@@ -69,7 +75,10 @@ def test_account_actor_restore_preserves_positions_cash_and_fill_idempotency() -
 def test_fill_for_account_a_never_updates_account_b() -> None:
     import pytest
     from qts.core.ids import AccountId, InstrumentId, OrderId
-    from qts.execution.order_manager import OrderFill, OrderSide
+    from qts.domain.orders import (
+        OrderFill,
+        OrderSide,
+    )
     from qts.runtime.actors.account_actor import AccountActor, ApplyFill
 
     account_b = AccountActor(

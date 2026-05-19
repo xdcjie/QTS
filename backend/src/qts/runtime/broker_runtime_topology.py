@@ -8,7 +8,7 @@ from decimal import Decimal
 from qts.core.ids import AccountId, InstrumentId, StrategyId
 from qts.risk.risk_engine import RiskEngine
 from qts.runtime.actor_ref import ActorRef
-from qts.runtime.actors.account_actor import AccountActor
+from qts.runtime.actors.account_actor import AccountActor, GetAccountSnapshot
 from qts.runtime.actors.execution_actor import ExecutionActor
 from qts.runtime.actors.order_manager_actor import OrderManagerActor
 from qts.runtime.dependencies import RuntimeSessionDependencies
@@ -107,7 +107,11 @@ class BrokerRuntimeTopologyResolver:
         if self._resolved_strategy_id is None:
             self._resolved_strategy_id = StrategyId("strategy")
         if self._resolved_account_id is None:
-            self._resolved_account_id = self._dependencies.account_actor.snapshot().account_id
+            account_ref = ActorRef(
+                actor=self._dependencies.account_actor,
+                mailbox=Mailbox(),
+            )
+            self._resolved_account_id = account_ref.ask(GetAccountSnapshot()).account_id
         if self._resolved_account_id is None:
             raise ValueError("account_id is required for runtime execution")
 
@@ -133,7 +137,11 @@ class BrokerRuntimeTopologyResolver:
     def _build_default_account_partitions(self) -> dict[AccountId | None, AccountRuntimePartition]:
         """Build a single partition for non-topology execution mode."""
         if self._resolved_account_id is None:
-            account_id = self._dependencies.account_actor.snapshot().account_id
+            account_ref = ActorRef(
+                actor=self._dependencies.account_actor,
+                mailbox=Mailbox(),
+            )
+            account_id = account_ref.ask(GetAccountSnapshot()).account_id
         else:
             account_id = self._resolved_account_id
         if account_id is None:
@@ -325,7 +333,8 @@ class BrokerRuntimeTopologyResolver:
         account_id: AccountId,
         account_actor: AccountActor,
     ) -> None:
-        actor_account_id = account_actor.snapshot().account_id
+        account_ref = ActorRef(actor=account_actor, mailbox=Mailbox())
+        actor_account_id = account_ref.ask(GetAccountSnapshot()).account_id
         if actor_account_id is not None and actor_account_id != account_id:
             raise ValueError(
                 f"account actor account_id mismatch: expected {account_id}, got {actor_account_id}"

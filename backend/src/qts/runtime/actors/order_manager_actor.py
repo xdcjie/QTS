@@ -6,8 +6,9 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
+from typing import cast
 
-from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
+from qts.core.ids import AccountId, InstrumentId, OrderId, StrategyId
 from qts.domain.orders import (
     CancelIntent,
     ExecutionReport,
@@ -23,6 +24,70 @@ from qts.runtime.actor import Actor
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.execution_actor import OrderCancelRequest, OrderExecutionRequest
 from qts.runtime.execution_report_handler import ExecutionReportHandler
+from qts.runtime.order_route_metadata import OrderRouteMetadata
+
+
+@dataclass(frozen=True, slots=True)
+class GetOrderManagerSnapshot:
+    """Ask the OrderManagerActor for its current order state snapshot."""
+
+    def validate_response(self, response: object) -> OrderStateSnapshot:
+        """Return a typed order manager snapshot."""
+        if not isinstance(response, OrderStateSnapshot):
+            raise TypeError("expected OrderStateSnapshot response")
+        return response
+
+
+@dataclass(frozen=True, slots=True)
+class GetFillCount:
+    """Ask the OrderManagerActor for its current fill count."""
+
+    def validate_response(self, response: object) -> int:
+        """Return a typed fill count."""
+        if not isinstance(response, int):
+            raise TypeError("expected int response")
+        return response
+
+
+@dataclass(frozen=True, slots=True)
+class GetFillsSince:
+    """Ask the OrderManagerActor for fills recorded from a given index."""
+
+    index: int
+
+    def validate_response(self, response: object) -> tuple[OrderFill, ...]:
+        """Return typed fills."""
+        if not isinstance(response, tuple) or not all(
+            isinstance(fill, OrderFill) for fill in response
+        ):
+            raise TypeError("expected OrderFill tuple response")
+        return cast(tuple[OrderFill, ...], response)
+
+
+@dataclass(frozen=True, slots=True)
+class GetOrder:
+    """Ask the OrderManagerActor for a specific order by ID."""
+
+    order_id: OrderId
+
+    def validate_response(self, response: object) -> Order:
+        """Return a typed order."""
+        if not isinstance(response, Order):
+            raise TypeError("expected Order response")
+        return response
+
+
+@dataclass(frozen=True, slots=True)
+class GetRouteMetadata:
+    """Ask the OrderManagerActor for the route metadata of a specific order."""
+
+    order_id: OrderId
+
+    def validate_response(self, response: object) -> OrderRouteMetadata:
+        """Return typed route metadata."""
+        if not isinstance(response, OrderRouteMetadata):
+            raise TypeError("expected OrderRouteMetadata response")
+        return response
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,70 +147,10 @@ class ReplaceOrder:
 
 
 @dataclass(frozen=True, slots=True)
-class OrderRouteMetadata:
-    """Route and trace metadata captured when an order is submitted."""
+class CompactForStreaming:
+    """Command to compact terminal orders and clear fill history."""
 
-    broker_id: BrokerId
-    account_id: AccountId
-    strategy_id: StrategyId
-    client_order_id: str
-    correlation_id: CorrelationId
-    contributing_strategy_ids: tuple[StrategyId, ...] = ()
-    aggregation_decision_id: str | None = None
-
-    def __post_init__(self) -> None:
-        """Validate route and trace metadata."""
-        if not self.client_order_id.strip():
-            raise ValueError("client_order_id must not be empty")
-        if self.aggregation_decision_id is not None and not self.aggregation_decision_id.strip():
-            raise ValueError("aggregation_decision_id must not be empty")
-
-    def to_payload(self) -> dict[str, str]:
-        """Serialize route metadata for recovery snapshots."""
-        payload = {
-            "broker_id": self.broker_id.value,
-            "account_id": self.account_id.value,
-            "strategy_id": self.strategy_id.value,
-            "client_order_id": self.client_order_id,
-            "correlation_id": self.correlation_id.value,
-        }
-        if self.contributing_strategy_ids:
-            payload["contributing_strategy_ids"] = ",".join(
-                strategy_id.value for strategy_id in self.contributing_strategy_ids
-            )
-        if self.aggregation_decision_id is not None:
-            payload["aggregation_decision_id"] = self.aggregation_decision_id
-        return payload
-
-    @classmethod
-    def from_payload(cls, payload: Mapping[str, object]) -> OrderRouteMetadata:
-        """Restore route metadata from a recovery snapshot payload."""
-        raw_contributors = payload.get("contributing_strategy_ids", "")
-        if isinstance(raw_contributors, str):
-            contributing_strategy_ids = tuple(
-                StrategyId(value) for value in raw_contributors.split(",") if value
-            )
-        elif isinstance(raw_contributors, Iterable):
-            contributing_strategy_ids = tuple(StrategyId(str(value)) for value in raw_contributors)
-        else:
-            contributing_strategy_ids = ()
-        return cls(
-            broker_id=BrokerId(str(payload["broker_id"])),
-            account_id=AccountId(str(payload["account_id"])),
-            strategy_id=StrategyId(str(payload["strategy_id"])),
-            client_order_id=str(payload["client_order_id"]),
-            correlation_id=CorrelationId(str(payload["correlation_id"])),
-            contributing_strategy_ids=contributing_strategy_ids,
-            aggregation_decision_id=(
-                str(payload["aggregation_decision_id"])
-                if payload.get("aggregation_decision_id") is not None
-                else None
-            ),
-        )
-
-    def matches_route(self, route_metadata: OrderRouteMetadata) -> bool:
-        """Return whether command route identity matches the submitted order route."""
-        return self == route_metadata
+    order_ids: tuple[OrderId, ...]
 
 
 class OrderManagerActor(Actor):
@@ -169,11 +174,28 @@ class OrderManagerActor(Actor):
             multiplier_by_instrument=multiplier_by_instrument,
             account_id=account_id,
         )
-        self._fills: list[OrderFill] = []
+        self._fills_list: list[OrderFill] = []
         self._route_metadata_by_order_id: dict[OrderId, OrderRouteMetadata] = {}
 
     def handle(self, message: object) -> None:
         """Perform handle."""
+        if isinstance(message, tuple) and len(message) == 2:
+            query, response_mailbox = message
+            if isinstance(query, GetOrderManagerSnapshot):
+                response_mailbox.put(self.snapshot())
+                return
+            if isinstance(query, GetFillCount):
+                response_mailbox.put(self.fill_count)
+                return
+            if isinstance(query, GetFillsSince):
+                response_mailbox.put(self.fills_since(query.index))
+                return
+            if isinstance(query, GetOrder):
+                response_mailbox.put(self.get_order(query.order_id))
+                return
+            if isinstance(query, GetRouteMetadata):
+                response_mailbox.put(self.route_metadata(query.order_id))
+                return
         if isinstance(message, SubmitOrder):
             self._handle_submit(message)
             return
@@ -186,25 +208,28 @@ class OrderManagerActor(Actor):
         if isinstance(message, ExecutionReport):
             self._handle_report(message)
             return
+        if isinstance(message, CompactForStreaming):
+            self._compact_for_streaming(message.order_ids)
+            return
         raise TypeError(f"unsupported order manager message: {type(message).__name__}")
 
     def get_order(self, order_id: OrderId) -> Order:
-        """Perform get_order."""
+        """Return order by ID."""
         return self._manager.get_order(order_id)
 
     @property
     def fills(self) -> tuple[OrderFill, ...]:
-        """Perform fills."""
-        return tuple(self._fills)
+        """Return all recorded fills."""
+        return tuple(self._fills_list)
 
     @property
     def fill_count(self) -> int:
-        """Perform fill_count."""
-        return len(self._fills)
+        """Return count of recorded fills."""
+        return len(self._fills_list)
 
     def fills_since(self, index: int) -> tuple[OrderFill, ...]:
-        """Perform fills_since."""
-        return tuple(self._fills[index:])
+        """Return fills recorded after given index."""
+        return tuple(self._fills_list[index:])
 
     def snapshot(self) -> OrderStateSnapshot:
         """Return actor-owned order manager snapshot."""
@@ -214,11 +239,11 @@ class OrderManagerActor(Actor):
         """Return route metadata captured for an active order."""
         return self._route_metadata_by_order_id[order_id]
 
-    def compact_for_streaming(self, order_ids: Iterable[OrderId]) -> None:
-        """Perform compact_for_streaming."""
+    def _compact_for_streaming(self, order_ids: Iterable[OrderId]) -> None:
+        """Perform _compact_for_streaming."""
         for order_id in order_ids:
             self._manager.discard_terminal_order(order_id)
-        self._fills.clear()
+        self._fills_list.clear()
 
     def _handle_submit(self, message: SubmitOrder) -> None:
         """Perform _handle_submit."""
@@ -279,13 +304,18 @@ class OrderManagerActor(Actor):
 
     def _handle_report(self, message: ExecutionReport) -> None:
         """Perform _handle_report."""
-        self._fills.extend(self._execution_report_handler.handle(message))
+        self._fills_list.extend(self._execution_report_handler.handle(message))
 
 
 __all__ = [
     "CancelOrder",
+    "CompactForStreaming",
+    "GetFillCount",
+    "GetFillsSince",
+    "GetOrder",
+    "GetOrderManagerSnapshot",
+    "GetRouteMetadata",
     "OrderManagerActor",
-    "OrderRouteMetadata",
     "ReplaceOrder",
     "SubmitOrder",
 ]

@@ -15,6 +15,7 @@ htmlcov/
 configs/live.yaml
 configs/live.ibkr.yaml
 configs/paper.ibkr.yaml
+configs/*.local.yaml
 configs/*.ibkr.local.yaml
 broker_credentials.yaml
 

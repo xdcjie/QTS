@@ -51,16 +51,16 @@ def test_live_order_blocked_when_kill_switch_active() -> None:
 
 def test_execution_actor_enforces_live_order_gate_closest_to_adapter() -> None:
     from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import OrderIntent, OrderSide
     from qts.execution import ExecutionAdapter
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.execution_actor import (
         ExecutionActor,
         OrderExecutionRequest,
     )
-    from qts.runtime.actors.order_manager_actor import OrderRouteMetadata
     from qts.runtime.live_capital import LiveCapitalOrderDecision
     from qts.runtime.mailbox import Mailbox
+    from qts.runtime.order_route_metadata import OrderRouteMetadata
 
     actor = ExecutionActor(
         order_manager_ref=ActorRef(mailbox=Mailbox()),

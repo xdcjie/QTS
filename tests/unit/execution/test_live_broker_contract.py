@@ -4,13 +4,12 @@ from decimal import Decimal
 
 import pytest
 from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
-from qts.domain.orders import ExecutionReportStatus
+from qts.domain.orders import ExecutionReportStatus, OrderSide
 from qts.execution.broker import (
     BrokerCapabilities,
     BrokerOrderRequest,
     normalize_broker_execution_report,
 )
-from qts.execution.order_manager import OrderSide
 from qts.simulation.broker import SimulatedBrokerAdapter
 
 

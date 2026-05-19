@@ -9,7 +9,10 @@ from typing import Any
 
 from qts.core.ids import BrokerId
 from qts.domain.market_data import Bar
-from qts.execution.order_manager import Order, OrderFill
+from qts.domain.orders import (
+    Order,
+    OrderFill,
+)
 from qts.reporting.backtest import EquityCurvePoint
 from qts.runtime.actors.account_actor import AccountSnapshot
 from qts.runtime.sinks.base import RuntimeEvent

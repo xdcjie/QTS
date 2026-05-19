@@ -7,18 +7,18 @@ import pytest
 
 if TYPE_CHECKING:
     from qts.core.ids import AccountId, CorrelationId, StrategyId
-    from qts.runtime.actors.order_manager_actor import OrderRouteMetadata
+    from qts.runtime.order_route_metadata import OrderRouteMetadata
 
 
 def test_order_manager_actor_sends_broker_request_and_emits_validated_fill() -> None:
     from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
-    from qts.domain.risk import RiskDecision
-    from qts.execution.order_manager import (
+    from qts.domain.orders import (
         ExecutionReport,
         ExecutionReportStatus,
         OrderIntent,
         OrderSide,
     )
+    from qts.domain.risk import RiskDecision
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.account_actor import ApplyFill
     from qts.runtime.actors.execution_actor import OrderExecutionRequest
@@ -85,8 +85,11 @@ def test_order_manager_actor_sends_broker_request_and_emits_validated_fill() -> 
 
 def test_order_manager_actor_does_not_send_risk_rejected_order_to_execution() -> None:
     from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import (
+        OrderIntent,
+        OrderSide,
+    )
     from qts.domain.risk import RiskDecision
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.order_manager_actor import OrderManagerActor, SubmitOrder
     from qts.runtime.mailbox import Mailbox
@@ -129,8 +132,11 @@ def test_order_manager_actor_does_not_send_risk_rejected_order_to_execution() ->
 
 def test_order_for_account_a_routes_to_account_a_execution_actor() -> None:
     from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import (
+        OrderIntent,
+        OrderSide,
+    )
     from qts.domain.risk import RiskDecision
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.execution_actor import OrderExecutionRequest
     from qts.runtime.actors.order_manager_actor import OrderManagerActor, SubmitOrder
@@ -174,8 +180,11 @@ def test_order_for_account_a_routes_to_account_a_execution_actor() -> None:
 
 def test_order_for_wrong_account_is_rejected() -> None:
     from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import (
+        OrderIntent,
+        OrderSide,
+    )
     from qts.domain.risk import RiskDecision
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.order_manager_actor import OrderManagerActor, SubmitOrder
     from qts.runtime.mailbox import Mailbox
@@ -213,9 +222,12 @@ def test_order_for_wrong_account_is_rejected() -> None:
 
 def test_cancel_for_account_a_cannot_cancel_account_b_order() -> None:
     from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
-    from qts.domain.orders import CancelIntent
+    from qts.domain.orders import (
+        CancelIntent,
+        OrderIntent,
+        OrderSide,
+    )
     from qts.domain.risk import RiskDecision
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.order_manager_actor import CancelOrder, OrderManagerActor, SubmitOrder
     from qts.runtime.mailbox import Mailbox
@@ -272,25 +284,26 @@ def test_cancel_for_account_a_cannot_cancel_account_b_order() -> None:
 
 def test_order_route_metadata_is_preserved_across_submit_cancel_replace_and_fill() -> None:
     from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
-    from qts.domain.orders import CancelIntent, ReplaceIntent
-    from qts.domain.risk import RiskDecision
-    from qts.execution.order_manager import (
+    from qts.domain.orders import (
+        CancelIntent,
         ExecutionReport,
         ExecutionReportStatus,
         OrderIntent,
         OrderSide,
+        ReplaceIntent,
     )
+    from qts.domain.risk import RiskDecision
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.account_actor import ApplyFill
     from qts.runtime.actors.execution_actor import OrderCancelRequest, OrderExecutionRequest
     from qts.runtime.actors.order_manager_actor import (
         CancelOrder,
         OrderManagerActor,
-        OrderRouteMetadata,
         ReplaceOrder,
         SubmitOrder,
     )
     from qts.runtime.mailbox import Mailbox
+    from qts.runtime.order_route_metadata import OrderRouteMetadata
 
     broker_id = BrokerId("broker-route")
     account_a = AccountId("acct-a")
@@ -423,17 +436,20 @@ def test_order_route_metadata_is_preserved_across_submit_cancel_replace_and_fill
 
 def test_cancel_route_metadata_mismatch_fails_fast_before_execution() -> None:
     from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
-    from qts.domain.orders import CancelIntent
+    from qts.domain.orders import (
+        CancelIntent,
+        OrderIntent,
+        OrderSide,
+    )
     from qts.domain.risk import RiskDecision
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.order_manager_actor import (
         CancelOrder,
         OrderManagerActor,
-        OrderRouteMetadata,
         SubmitOrder,
     )
     from qts.runtime.mailbox import Mailbox
+    from qts.runtime.order_route_metadata import OrderRouteMetadata
 
     account_id = AccountId("acct-a")
     strategy_id = StrategyId("strategy-a")
@@ -492,7 +508,7 @@ def test_cancel_route_metadata_mismatch_fails_fast_before_execution() -> None:
 
 def test_order_route_metadata_round_trips_for_recovery() -> None:
     from qts.core.ids import AccountId, BrokerId, CorrelationId, StrategyId
-    from qts.runtime.actors.order_manager_actor import OrderRouteMetadata
+    from qts.runtime.order_route_metadata import OrderRouteMetadata
 
     metadata = OrderRouteMetadata(
         broker_id=BrokerId("broker-route"),
@@ -509,8 +525,11 @@ def test_order_route_metadata_round_trips_for_recovery() -> None:
 
 def test_order_route_metadata_references_signal_aggregation_decision() -> None:
     from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import (
+        OrderIntent,
+        OrderSide,
+    )
     from qts.domain.risk import RiskDecision
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.order_manager_actor import OrderManagerActor, SubmitOrder
     from qts.runtime.mailbox import Mailbox
@@ -572,7 +591,7 @@ def _route_metadata(
     aggregation_decision_id: str | None = None,
 ) -> OrderRouteMetadata:
     from qts.core.ids import BrokerId
-    from qts.runtime.actors.order_manager_actor import OrderRouteMetadata
+    from qts.runtime.order_route_metadata import OrderRouteMetadata
 
     return OrderRouteMetadata(
         broker_id=BrokerId("broker-route"),

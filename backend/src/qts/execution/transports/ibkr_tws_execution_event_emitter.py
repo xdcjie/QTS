@@ -5,8 +5,8 @@ from __future__ import annotations
 import queue
 
 from qts.domain.orders import ExecutionReport
+from qts.execution.broker import BrokerCommissionReport
 from qts.execution.transports.ibkr_tws_order_execution_transport import (
-    IbkrCommissionReport,
     IbkrConnectionEvent,
     IbkrTransportError,
 )
@@ -45,7 +45,7 @@ class IbkrTwsExecutionEventEmitter:
 
     def publish_commission_result(
         self,
-        result: ExecutionReport | IbkrCommissionReport,
+        result: ExecutionReport | BrokerCommissionReport,
     ) -> None:
         """Publish a normalized fill report produced by a commission callback."""
 

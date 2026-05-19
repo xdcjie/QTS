@@ -5,13 +5,13 @@ from __future__ import annotations
 from typing import Any
 
 from qts.domain.orders import ExecutionReport
+from qts.execution.broker import BrokerCommissionReport
 from qts.execution.transports.ibkr_tws_execution_event_emitter import (
     IbkrTwsExecutionEventEmitter,
 )
 from qts.execution.transports.ibkr_tws_order_execution_transport import (
     IbkrAccountSummaryPayload,
     IbkrCommissionPayload,
-    IbkrCommissionReport,
     IbkrConnectionEvent,
     IbkrConnectionEventPayload,
     IbkrErrorPayload,
@@ -72,7 +72,7 @@ class IbkrTwsCallbackDispatcher:
     def dispatch_commission(
         self,
         payload: IbkrCommissionPayload,
-    ) -> ExecutionReport | IbkrCommissionReport:
+    ) -> ExecutionReport | BrokerCommissionReport:
         """Route a normalized commission callback payload."""
 
         result = self._sink.on_commission(payload)

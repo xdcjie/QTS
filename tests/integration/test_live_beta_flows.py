@@ -8,7 +8,7 @@ from qts.api.app import create_app
 from qts.core.ids import AccountId, InstrumentId, OrderId
 from qts.data.events import MarketDataSubscription
 from qts.domain.market_data import Bar
-from qts.execution.order_manager import OrderSide
+from qts.domain.orders import OrderSide
 from qts.reconciliation import OrderSnapshot, ReconciliationSnapshot, reconcile_snapshots
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.market_data_actor import MarketDataActor, MarketDataEvent

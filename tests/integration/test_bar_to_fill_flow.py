@@ -5,9 +5,9 @@ from decimal import Decimal
 
 def test_target_to_fill_updates_account_through_actor_messages() -> None:
     from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import OrderIntent, OrderSide
     from qts.domain.risk import OrderRiskRequest
     from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
-    from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.execution.order_state_machine import OrderState
     from qts.risk.risk_engine import RiskEngine
     from qts.risk.rules.max_notional import MaxNotionalRule

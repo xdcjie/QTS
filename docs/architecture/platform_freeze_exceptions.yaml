@@ -164,6 +164,11 @@ exceptions:
     reason: baseline allowance
     owner: platform
     expiry: 2027-05-17
+  - class_name: ActorQuery
+    module: qts.runtime.actor_ref
+    reason: Actor ask() responses must be validated by typed query messages
+    owner: platform
+    expiry: 2027-05-17
   - class_name: ApplyFill
     module: qts.runtime.actors.account_actor
     reason: baseline allowance
@@ -230,8 +235,8 @@ exceptions:
     owner: platform
     expiry: 2027-05-17
   - class_name: OrderRouteMetadata
-    module: qts.runtime.actors.order_manager_actor
-    reason: baseline allowance
+    module: qts.runtime.order_route_metadata
+    reason: Runtime route metadata carries broker/client/correlation trace fields outside pure domain
     owner: platform
     expiry: 2027-05-17
   - class_name: OrderManagerActor
@@ -989,11 +994,6 @@ exceptions:
     reason: baseline allowance
     owner: platform
     expiry: 2027-05-17
-  - class_name: IbkrCommissionReport
-    module: qts.execution.transports.ibkr_tws_order_execution_transport
-    reason: baseline allowance
-    owner: platform
-    expiry: 2027-05-17
   - class_name: IbkrTransportError
     module: qts.execution.transports.ibkr_tws_order_execution_transport
     reason: baseline allowance
@@ -1420,18 +1420,33 @@ exceptions:
     owner: platform
     expiry: 2027-05-17
   - class_name: IbkrExecutionReport
-    module: qts.execution.adapters.ibkr_callback_normalizer
+    module: qts.execution.adapters.ibkr_callback_types
     reason: CBO-03 IBKR callback normalization returns an explicit execution report value object
     owner: platform
     expiry: 2027-05-17
   - class_name: IbkrOrderCallbackEvent
-    module: qts.execution.adapters.ibkr_callback_normalizer
+    module: qts.execution.adapters.ibkr_callback_types
     reason: CBO-03 IBKR callback normalization owns callback idempotency inputs before internal events
     owner: platform
     expiry: 2027-05-17
   - class_name: IbkrCallbackNormalizer
     module: qts.execution.adapters.ibkr_callback_normalizer
     reason: CBO-03 IBKR adapter delegates broker callback normalization to a focused owner
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: IbkrOrderStatusNormalizer
+    module: qts.execution.adapters.ibkr_order_status_normalizer
+    reason: CBO-03 IBKR callback god-object split extracts order-status deduplication and open-order tracking
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: IbkrFillNormalizer
+    module: qts.execution.adapters.ibkr_fill_normalizer
+    reason: CBO-03 IBKR callback god-object split extracts execution/commission staging and fill assembly
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: IbkrPositionRecorder
+    module: qts.execution.adapters.ibkr_position_recorder
+    reason: CBO-03 IBKR callback god-object split extracts position and cash recording for reconciliation
     owner: platform
     expiry: 2027-05-17
   - class_name: IbkrOrderRequestMapper
@@ -1462,5 +1477,55 @@ exceptions:
   - class_name: RuntimeExecutionBoundaryRule
     module: qts.quality.rules.runtime
     reason: Architecture remediation enforces runtime→execution import boundary
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: BrokerCommissionReport
+    module: qts.execution.broker
+    reason: Architecture remediation replaces IbkrCommissionReport with broker-generic commission type at the adapter boundary
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: MailboxTimeoutError
+    module: qts.runtime.mailbox
+    reason: Actor ask() pattern requires a typed timeout error for blocking mailbox get
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: GetAccountSnapshot
+    module: qts.runtime.actors.account_actor
+    reason: Actor ask() query message enforces actor isolation for account snapshots
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: DrainPositionClosedEvents
+    module: qts.runtime.actors.account_actor
+    reason: Actor ask() query message enforces actor isolation for position-closed event draining
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: GetOrderManagerSnapshot
+    module: qts.runtime.actors.order_manager_actor
+    reason: Actor ask() query message enforces actor isolation for order manager snapshots
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: GetFillCount
+    module: qts.runtime.actors.order_manager_actor
+    reason: Actor ask() query message enforces actor isolation for fill count queries
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: GetFillsSince
+    module: qts.runtime.actors.order_manager_actor
+    reason: Actor ask() query message enforces actor isolation for fill-slice queries
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: GetOrder
+    module: qts.runtime.actors.order_manager_actor
+    reason: Actor ask() query message enforces actor isolation for order lookups
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: GetRouteMetadata
+    module: qts.runtime.actors.order_manager_actor
+    reason: Actor ask() query message enforces actor isolation for route metadata queries
+    owner: platform
+    expiry: 2027-05-17
+  - class_name: CompactForStreaming
+    module: qts.runtime.actors.order_manager_actor
+    reason: Actor tell() command message enforces actor isolation for streaming compaction
     owner: platform
     expiry: 2027-05-17

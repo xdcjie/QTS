@@ -139,7 +139,6 @@ STRATEGY_SDK_FORBIDDEN_IMPORT_PREFIXES = (
 STRATEGY_SDK_FORBIDDEN_SYMBOLS = frozenset(
     {
         "BrokerActor",
-        "BrokerOrderType",
         "OrderManagerActor",
         "ContractSpec",
         "BrokerSymbolMapping",

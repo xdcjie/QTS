@@ -11,16 +11,24 @@ from typing import Any, Protocol, TypeAlias
 from qts.backtest.dependencies import BacktestActorLoopConfig, BacktestActorLoopDependencies
 from qts.core.ids import AccountId, CorrelationId, InstrumentId, StrategyId
 from qts.domain.market_data import Bar
-from qts.execution.order_manager import Order, OrderFill
+from qts.domain.orders import Order, OrderFill
 from qts.reporting.backtest import (
     EquityCurvePoint,
     broker_capability_payload,
     is_broker_capability_reject,
 )
 from qts.runtime.actor_ref import ActorRef
-from qts.runtime.actors.account_actor import AccountActor, AccountSnapshot
+from qts.runtime.actors.account_actor import (
+    AccountActor,
+    AccountSnapshot,
+    DrainPositionClosedEvents,
+    GetAccountSnapshot,
+)
 from qts.runtime.actors.execution_actor import ExecutionActor
-from qts.runtime.actors.order_manager_actor import OrderManagerActor
+from qts.runtime.actors.order_manager_actor import (
+    CompactForStreaming,
+    OrderManagerActor,
+)
 from qts.runtime.intent_processing import ProcessedIntent
 from qts.runtime.mailbox import Mailbox
 from qts.runtime.market_data_flow import MarketDataFlow
@@ -209,9 +217,7 @@ class BacktestActorLoop:
         return BacktestActorLoopState(
             sink=sink,
             compact_orders=compact_orders,
-            account_actor=account_actor,
             account_ref=account_ref,
-            order_manager_actor=order_manager_actor,
             order_manager_ref=order_manager_ref,
             execution_ref=execution_ref,
             event_writer=event_writer,
@@ -274,7 +280,7 @@ class BacktestActorLoop:
         """Finalize the strategy pipeline and return the run summary."""
         _ = state.strategy_pipeline.finalize()
         return BacktestActorLoopResult(
-            final_account=state.account_actor.snapshot(),
+            final_account=state.account_ref.ask(GetAccountSnapshot()),
             warmup_bars=state.warmup_processed,
             trading_bars=state.trading_processed,
             last_bar=state.last_bar,
@@ -318,7 +324,7 @@ class BacktestActorLoop:
         """Execute the strategy pipeline for one bar."""
         return state.strategy_pipeline.execute_bar(
             bar,
-            account_snapshot=state.account_actor.snapshot(),
+            account_snapshot=state.account_ref.ask(GetAccountSnapshot()),
             latest_prices=state.latest_prices,
             aggregate_signals=state.event_index >= self._warmup_bars,
             account_id=self._account_id,
@@ -481,11 +487,9 @@ class BacktestActorLoop:
             processed = self._process_intent(
                 intent,
                 bar=bar,
-                account_actor=state.account_actor,
-                order_manager_actor=state.order_manager_actor,
+                account_ref=state.account_ref,
                 order_manager_ref=state.order_manager_ref,
                 execution_ref=state.execution_ref,
-                account_ref=state.account_ref,
                 account_id=self._account_id,
                 strategy_id=self._strategy_id,
                 correlation_id=correlation_id,
@@ -513,21 +517,22 @@ class BacktestActorLoop:
         state.sink.write_processed(orders=order_payload, fills=fill_payload, bar=bar)
         state.event_writer.write_order_events(
             order_payload,
-            state.order_manager_actor,
+            state.order_manager_ref,
             fallback_contributing_strategy_ids=strategy_result.contributing_strategy_ids,
         )
-        state.event_writer.write_fill_events(fill_payload, state.order_manager_actor)
-        closed_events = state.account_actor.drain_position_closed_events()
+        state.event_writer.write_fill_events(fill_payload, state.order_manager_ref)
+        closed_events = state.account_ref.ask(DrainPositionClosedEvents())
         if closed_events:
+            account_snapshot = state.account_ref.ask(GetAccountSnapshot())
             state.event_writer.write_position_closed_events(
                 closed_events,
-                account_id=getattr(state.account_actor.snapshot(), "account_id", None),
+                account_id=account_snapshot.account_id,
                 strategy_id=None,
                 correlation_id=None,
             )
         if state.compact_orders:
-            state.order_manager_actor.compact_for_streaming(
-                order.order_id for order in order_payload
+            state.order_manager_ref.tell(
+                CompactForStreaming(order_ids=tuple(order.order_id for order in order_payload))
             )
 
     def write_broker_reject_event(
@@ -559,7 +564,7 @@ class BacktestActorLoop:
         bar: Bar,
     ) -> None:
         """Emit end-of-bar equity and account snapshot artifacts."""
-        snapshot = state.account_actor.snapshot()
+        snapshot = state.account_ref.ask(GetAccountSnapshot())
         state.sink.write_equity_point(
             self._equity_point(bar, snapshot, latest_prices=state.latest_prices)
         )

@@ -3,7 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 
-def test_strategy_sdk_exports_neutral_order_type_without_broker_alias() -> None:
+def test_strategy_sdk_exports_order_type() -> None:
     import qts.strategy_sdk.target as target_module
     from qts.strategy_sdk import OrderSpec, OrderType
 
@@ -11,8 +11,6 @@ def test_strategy_sdk_exports_neutral_order_type_without_broker_alias() -> None:
 
     assert spec.order_type is OrderType.LIMIT
     assert "OrderType" in target_module.__all__
-    assert "BrokerOrderType" not in target_module.__all__
-    assert not hasattr(target_module, "BrokerOrderType")
 
 
 def test_target_apis_emit_intents_without_mutating_portfolio() -> None:

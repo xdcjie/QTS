@@ -13,7 +13,7 @@ from typing import Any
 import pytest
 from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
 from qts.domain.market_data import Bar
-from qts.execution.order_manager import ExecutionReportStatus, OrderSide
+from qts.domain.orders import ExecutionReportStatus, OrderSide
 from qts.registry.instrument_registry import InstrumentRegistry
 from qts.strategy_sdk import PortfolioPosition, PortfolioView, Strategy, TargetIntent
 
@@ -307,14 +307,14 @@ class _IbkrRuntimeExecutionAdapter:
         correlation_id: CorrelationId,
         bar_time: object | None = None,
     ) -> Any:
-        from qts.execution.broker import BrokerOrderType
+        from qts.domain.orders import OrderType
 
         _ = account_id, strategy_id, correlation_id
         limit_price = _marketable_limit(intent.side, market_price)
         request = self.request_adapter.to_order_request(
             intent,
             client_order_id=client_order_id,
-            order_type=BrokerOrderType.LIMIT,
+            order_type=OrderType.LIMIT,
             limit_price=limit_price,
             outside_regular_trading_hours=True,
             contract=self.contract,
@@ -484,8 +484,7 @@ def _submit_and_cancel_non_marketable_order(
     generated_at: datetime,
 ) -> bool:
     from qts.core.ids import OrderId
-    from qts.execution.broker import BrokerOrderType
-    from qts.execution.order_manager import ExecutionReportStatus, OrderIntent, OrderSide
+    from qts.domain.orders import ExecutionReportStatus, OrderIntent, OrderSide, OrderType
 
     cancel_intent = OrderIntent(
         order_id=OrderId(f"ibkr-paper-full-chain-cancel-{generated_at:%H%M%S}"),
@@ -496,7 +495,7 @@ def _submit_and_cancel_non_marketable_order(
     cancel_request = request_adapter.to_order_request(
         cancel_intent,
         client_order_id=f"client-{cancel_intent.order_id.value}",
-        order_type=BrokerOrderType.LIMIT,
+        order_type=OrderType.LIMIT,
         limit_price=Decimal("0.01"),
         outside_regular_trading_hours=True,
         contract=contract,

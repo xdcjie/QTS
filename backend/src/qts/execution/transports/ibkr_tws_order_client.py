@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from qts.execution.broker import BrokerOrderType
+from qts.domain.orders import OrderType
 from qts.execution.transports.ibkr_order_ids import IbkrOrderIdAllocator
 from qts.execution.transports.ibkr_tws_order_execution_transport import (
     IbkrOrderExecutionCallbackSink,
@@ -34,7 +34,7 @@ class IbkrTwsOrderClient:
         """Submit an IBKR order request and return the broker order id."""
 
         broker_order_id = str(self._reserve_order_id())
-        if request.order_type is BrokerOrderType.BRACKET:
+        if request.order_type is OrderType.BRACKET:
             child_order_ids = tuple(
                 self._reserve_order_id() for _ in range(len(request.bracket_legs or ()))
             )

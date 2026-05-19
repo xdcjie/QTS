@@ -5,12 +5,11 @@ from decimal import Decimal
 
 def test_strategy_target_order_spec_flows_into_order_intent() -> None:
     from qts.core.ids import AccountId, InstrumentId, OrderId
-    from qts.domain.orders import OrderIntent, OrderSide
-    from qts.execution.broker import BrokerOrderType, TimeInForce
+    from qts.domain.orders import OrderIntent, OrderSide, OrderType, TimeInForce
     from qts.strategy_sdk.target import OrderSpec
 
     spec = OrderSpec(
-        order_type=BrokerOrderType.STOP_LIMIT,
+        order_type=OrderType.STOP_LIMIT,
         time_in_force=TimeInForce.GTD,
         limit_price=Decimal("101"),
         stop_price=Decimal("100"),
@@ -25,4 +24,4 @@ def test_strategy_target_order_spec_flows_into_order_intent() -> None:
     )
 
     assert intent.order_spec == spec
-    assert intent.order_spec.order_type is BrokerOrderType.STOP_LIMIT
+    assert intent.order_spec.order_type is OrderType.STOP_LIMIT

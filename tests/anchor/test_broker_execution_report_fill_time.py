@@ -28,8 +28,8 @@ from decimal import Decimal
 
 import pytest
 from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
-from qts.domain.orders import ExecutionReportStatus, OrderSide
-from qts.domain.orders.order_spec import BrokerOrderType, OrderSpec
+from qts.domain.orders import ExecutionReportStatus, OrderIntent, OrderSide, OrderType
+from qts.domain.orders.order_spec import OrderSpec
 from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
 from qts.execution.broker import (
     BrokerAdapter,
@@ -38,7 +38,6 @@ from qts.execution.broker import (
     BrokerOrderRequest,
     normalize_broker_execution_report,
 )
-from qts.execution.order_manager import OrderIntent
 
 
 def test_broker_execution_report_can_carry_fill_time() -> None:
@@ -166,7 +165,7 @@ def test_broker_execution_adapter_prefers_broker_fill_time_then_bar_time(
             side=OrderSide.BUY,
             quantity=Decimal("1"),
             account_id=account_id,
-            order_spec=OrderSpec(order_type=BrokerOrderType.MARKET),
+            order_spec=OrderSpec(order_type=OrderType.MARKET),
         ),
         broker_order_id="bo1",
         market_price=Decimal("2000"),

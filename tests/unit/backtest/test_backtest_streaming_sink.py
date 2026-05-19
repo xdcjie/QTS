@@ -30,7 +30,7 @@ def _bar(start: datetime, close: str = "100") -> Bar:
 
 def test_backtest_streaming_sink_writes_orders_fills_ledger_and_points(tmp_path: Path) -> None:
     from qts.core.ids import InstrumentId, OrderId
-    from qts.execution.order_manager import (
+    from qts.domain.orders import (
         Order,
         OrderFill,
         OrderIntent,

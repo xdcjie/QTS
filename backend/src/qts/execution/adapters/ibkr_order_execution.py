@@ -8,7 +8,7 @@ from decimal import Decimal
 from typing import Any, cast
 
 from qts.core.ids import AccountId, BrokerId, OrderId, StrategyId
-from qts.domain.orders import ExecutionReport, OrderIntent
+from qts.domain.orders import ExecutionReport, OrderIntent, OrderType, TimeInForce
 from qts.execution.adapters.ibkr_callback_normalizer import (
     IbkrCallbackNormalizer,
     IbkrExecutionReport,
@@ -16,11 +16,10 @@ from qts.execution.adapters.ibkr_callback_normalizer import (
 )
 from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
 from qts.execution.adapters.ibkr_order_request_mapper import IbkrOrderRequestMapper
-from qts.execution.broker import BrokerCapabilities, BrokerOrderType, TimeInForce
+from qts.execution.broker import BrokerCapabilities, BrokerCommissionReport
 from qts.execution.transports.ibkr_tws_order_execution_transport import (
     IbkrAccountSummaryPayload,
     IbkrCommissionPayload,
-    IbkrCommissionReport,
     IbkrConnectionEvent,
     IbkrConnectionEventPayload,
     IbkrErrorPayload,
@@ -136,7 +135,7 @@ class IbkrOrderExecutionAdapter:
         *,
         client_order_id: str,
         strategy_id: StrategyId | None = None,
-        order_type: BrokerOrderType | None = None,
+        order_type: OrderType | None = None,
         time_in_force: TimeInForce | None = None,
         limit_price: Decimal | None = None,
         asset_class: str = "equity",
@@ -255,7 +254,7 @@ class IbkrOrderExecutionAdapter:
     def on_commission(
         self,
         payload: IbkrCommissionPayload,
-    ) -> ExecutionReport | IbkrCommissionReport:
+    ) -> ExecutionReport | BrokerCommissionReport:
         """Normalize a raw IBKR commission callback and complete matching fills."""
 
         return self._callback_normalizer.on_commission(payload)

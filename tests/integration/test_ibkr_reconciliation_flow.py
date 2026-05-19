@@ -5,14 +5,14 @@ from decimal import Decimal
 
 def test_order_manager_snapshot_reconciles_pending_order_after_reconnect() -> None:
     from qts.core.ids import InstrumentId, OrderId
-    from qts.domain.risk import RiskDecision
-    from qts.execution.order_manager import (
+    from qts.domain.orders import (
         ExecutionReport,
         ExecutionReportStatus,
         OrderIntent,
-        OrderManager,
         OrderSide,
     )
+    from qts.domain.risk import RiskDecision
+    from qts.execution.order_manager import OrderManager
     from qts.execution.order_state_machine import OrderState
 
     manager = OrderManager()

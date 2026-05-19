@@ -15,7 +15,7 @@ from typing import Any, Literal, Protocol
 
 from qts.core.ids import AccountId, OrderId, StrategyId
 from qts.domain.orders import BracketLeg, ExecutionReport, ExecutionReportStatus
-from qts.execution.broker import BrokerOrderType, TimeInForce
+from qts.execution.broker import BrokerCommissionReport, OrderType, TimeInForce
 from qts.execution.transports.ibkr_order_ids import IbkrOrderIdAllocator
 
 _IBKR_INFO_ERROR_CODES = frozenset(
@@ -141,7 +141,7 @@ class IbkrOrderRequest:
     broker_symbol: str
     side: str
     quantity: Decimal
-    order_type: BrokerOrderType = BrokerOrderType.MARKET
+    order_type: OrderType = OrderType.MARKET
     time_in_force: TimeInForce = TimeInForce.DAY
     limit_price: Decimal | None = None
     bracket_legs: tuple[BracketLeg, ...] | None = None
@@ -160,9 +160,9 @@ class IbkrOrderRequest:
             raise ValueError("side must not be empty")
         if self.quantity <= Decimal("0"):
             raise ValueError("quantity must be positive")
-        if self.order_type is BrokerOrderType.LIMIT and self.limit_price is None:
+        if self.order_type is OrderType.LIMIT and self.limit_price is None:
             raise ValueError("limit_price is required for limit orders")
-        if self.order_type is BrokerOrderType.BRACKET:
+        if self.order_type is OrderType.BRACKET:
             if self.bracket_legs is None:
                 raise ValueError("bracket_legs are required for bracket orders")
             if len(self.bracket_legs) < 2:
@@ -194,9 +194,9 @@ class IbkrOrderRequest:
         order.transmit = True
         order.outsideRth = self.outside_regular_trading_hours
         order.whatIf = self.what_if
-        if self.order_type is BrokerOrderType.MARKET:
+        if self.order_type is OrderType.MARKET:
             order.orderType = "MKT"
-        elif self.order_type is BrokerOrderType.LIMIT:
+        elif self.order_type is OrderType.LIMIT:
             order.orderType = "LMT"
             order.lmtPrice = float(self.limit_price or Decimal("0"))
         else:
@@ -211,7 +211,7 @@ class IbkrOrderRequest:
     ) -> tuple[Any, ...]:
         """Return parent and OCO child orders for an IBKR bracket request."""
 
-        if self.order_type is not BrokerOrderType.BRACKET:
+        if self.order_type is not OrderType.BRACKET:
             raise ValueError("bracket order conversion requires order_type=BRACKET")
         if self.bracket_legs is None:
             raise ValueError("bracket_legs are required for bracket orders")
@@ -261,19 +261,19 @@ class IbkrOrderRequest:
 
     @staticmethod
     def _apply_bracket_leg_price(order: Any, leg: BracketLeg) -> None:
-        if leg.order_type is BrokerOrderType.LIMIT:
+        if leg.order_type is OrderType.LIMIT:
             if leg.limit_price is None:
                 raise ValueError("limit bracket legs require limit_price")
             order.orderType = "LMT"
             order.lmtPrice = float(leg.limit_price)
             return
-        if leg.order_type is BrokerOrderType.STOP:
+        if leg.order_type is OrderType.STOP:
             if leg.stop_price is None:
                 raise ValueError("stop bracket legs require stop_price")
             order.orderType = "STP"
             order.auxPrice = float(leg.stop_price)
             return
-        if leg.order_type is BrokerOrderType.STOP_LIMIT:
+        if leg.order_type is OrderType.STOP_LIMIT:
             if leg.stop_price is None or leg.limit_price is None:
                 raise ValueError("stop_limit bracket legs require stop_price and limit_price")
             order.orderType = "STP LMT"
@@ -437,15 +437,6 @@ class IbkrConnectionEventPayload:
 
 
 @dataclass(frozen=True, slots=True)
-class IbkrCommissionReport:
-    """Normalized commission callback at the adapter boundary."""
-
-    execution_id: str
-    commission: Decimal
-    currency: str
-
-
-@dataclass(frozen=True, slots=True)
 class IbkrTransportError:
     """Normalized IBKR transport error at the adapter boundary."""
 
@@ -498,7 +489,7 @@ class IbkrOrderExecutionCallbackSink(Protocol):
     def on_commission(
         self,
         payload: IbkrCommissionPayload,
-    ) -> ExecutionReport | IbkrCommissionReport:
+    ) -> ExecutionReport | BrokerCommissionReport:
         """Normalize a raw commission callback, completing a pending fill when possible."""
         ...
 
@@ -550,7 +541,7 @@ class IbkrOrderExecutionTransport(Protocol):
     def emit_commission(
         self,
         payload: IbkrCommissionPayload,
-    ) -> ExecutionReport | IbkrCommissionReport:
+    ) -> ExecutionReport | BrokerCommissionReport:
         """Dispatch a raw commission callback to the adapter sink."""
         ...
 
@@ -854,7 +845,7 @@ class IbkrTwsOrderExecutionTransport:
     def emit_commission(
         self,
         payload: IbkrCommissionPayload,
-    ) -> ExecutionReport | IbkrCommissionReport:
+    ) -> ExecutionReport | BrokerCommissionReport:
         """Dispatch a raw commission callback to the adapter sink."""
 
         return self._callback_dispatcher.dispatch_commission(payload)
@@ -877,7 +868,6 @@ class IbkrTwsOrderExecutionTransport:
 
 __all__ = [
     "IbkrCommissionPayload",
-    "IbkrCommissionReport",
     "IbkrConnectionEvent",
     "IbkrConnectionEventPayload",
     "IbkrErrorPayload",

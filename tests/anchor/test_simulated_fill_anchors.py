@@ -22,10 +22,15 @@ from typing import Any
 
 import pytest
 from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
-from qts.domain.orders import OrderIntent, OrderSide
+from qts.domain.orders import (
+    ExecutionReport,
+    ExecutionReportStatus,
+    OrderIntent,
+    OrderSide,
+    OrderType,
+    TimeInForce,
+)
 from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
-from qts.execution.broker import BrokerOrderType, TimeInForce
-from qts.execution.order_manager import ExecutionReport, ExecutionReportStatus
 from qts.strategy_sdk.target import OrderSpec
 
 
@@ -39,7 +44,7 @@ def _make_adapter() -> SimulatedExecutionAdapter:
     return SimulatedExecutionAdapter(cost_model=_FixedCost())
 
 
-def _intent(side: str, *, order_type: BrokerOrderType, **spec_kwargs: Any) -> OrderIntent:
+def _intent(side: str, *, order_type: OrderType, **spec_kwargs: Any) -> OrderIntent:
     return OrderIntent(
         order_id=OrderId("ord-1"),
         instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
@@ -79,7 +84,7 @@ def _execute(
 
 
 def test_limit_buy_fills_when_bar_traded_at_or_below_limit() -> None:
-    intent = _intent("buy", order_type=BrokerOrderType.LIMIT, limit_price=Decimal("100"))
+    intent = _intent("buy", order_type=OrderType.LIMIT, limit_price=Decimal("100"))
     report = _execute(
         _make_adapter(),
         intent,
@@ -92,7 +97,7 @@ def test_limit_buy_fills_when_bar_traded_at_or_below_limit() -> None:
 
 
 def test_limit_buy_does_not_fill_when_bar_stays_above_limit() -> None:
-    intent = _intent("buy", order_type=BrokerOrderType.LIMIT, limit_price=Decimal("100"))
+    intent = _intent("buy", order_type=OrderType.LIMIT, limit_price=Decimal("100"))
     report = _execute(
         _make_adapter(),
         intent,
@@ -105,7 +110,7 @@ def test_limit_buy_does_not_fill_when_bar_stays_above_limit() -> None:
 
 
 def test_limit_buy_fills_on_gap_down_below_limit() -> None:
-    intent = _intent("buy", order_type=BrokerOrderType.LIMIT, limit_price=Decimal("100"))
+    intent = _intent("buy", order_type=OrderType.LIMIT, limit_price=Decimal("100"))
     report = _execute(
         _make_adapter(),
         intent,
@@ -121,7 +126,7 @@ def test_limit_buy_fills_on_gap_down_below_limit() -> None:
 
 
 def test_limit_sell_fills_when_bar_traded_at_or_above_limit() -> None:
-    intent = _intent("sell", order_type=BrokerOrderType.LIMIT, limit_price=Decimal("100"))
+    intent = _intent("sell", order_type=OrderType.LIMIT, limit_price=Decimal("100"))
     report = _execute(
         _make_adapter(),
         intent,
@@ -134,7 +139,7 @@ def test_limit_sell_fills_when_bar_traded_at_or_above_limit() -> None:
 
 
 def test_limit_sell_does_not_fill_when_bar_stays_below_limit() -> None:
-    intent = _intent("sell", order_type=BrokerOrderType.LIMIT, limit_price=Decimal("100"))
+    intent = _intent("sell", order_type=OrderType.LIMIT, limit_price=Decimal("100"))
     report = _execute(
         _make_adapter(),
         intent,
@@ -150,7 +155,7 @@ def test_limit_sell_does_not_fill_when_bar_stays_below_limit() -> None:
 
 
 def test_stop_buy_triggers_when_bar_high_reaches_stop() -> None:
-    intent = _intent("buy", order_type=BrokerOrderType.STOP, stop_price=Decimal("100"))
+    intent = _intent("buy", order_type=OrderType.STOP, stop_price=Decimal("100"))
     report = _execute(
         _make_adapter(),
         intent,
@@ -163,7 +168,7 @@ def test_stop_buy_triggers_when_bar_high_reaches_stop() -> None:
 
 
 def test_stop_buy_does_not_trigger_when_bar_stays_below_stop() -> None:
-    intent = _intent("buy", order_type=BrokerOrderType.STOP, stop_price=Decimal("100"))
+    intent = _intent("buy", order_type=OrderType.STOP, stop_price=Decimal("100"))
     report = _execute(
         _make_adapter(),
         intent,
@@ -175,7 +180,7 @@ def test_stop_buy_does_not_trigger_when_bar_stays_below_stop() -> None:
 
 
 def test_stop_buy_uses_gap_open_as_fill_price() -> None:
-    intent = _intent("buy", order_type=BrokerOrderType.STOP, stop_price=Decimal("100"))
+    intent = _intent("buy", order_type=OrderType.STOP, stop_price=Decimal("100"))
     report = _execute(
         _make_adapter(),
         intent,
@@ -191,7 +196,7 @@ def test_stop_buy_uses_gap_open_as_fill_price() -> None:
 
 
 def test_stop_sell_triggers_when_bar_low_reaches_stop() -> None:
-    intent = _intent("sell", order_type=BrokerOrderType.STOP, stop_price=Decimal("100"))
+    intent = _intent("sell", order_type=OrderType.STOP, stop_price=Decimal("100"))
     report = _execute(
         _make_adapter(),
         intent,
@@ -204,7 +209,7 @@ def test_stop_sell_triggers_when_bar_low_reaches_stop() -> None:
 
 
 def test_stop_sell_does_not_trigger_when_bar_stays_above_stop() -> None:
-    intent = _intent("sell", order_type=BrokerOrderType.STOP, stop_price=Decimal("100"))
+    intent = _intent("sell", order_type=OrderType.STOP, stop_price=Decimal("100"))
     report = _execute(
         _make_adapter(),
         intent,
@@ -221,7 +226,7 @@ def test_stop_sell_does_not_trigger_when_bar_stays_above_stop() -> None:
 def test_stop_limit_buy_requires_stop_trigger_and_marketable_limit() -> None:
     intent = _intent(
         "buy",
-        order_type=BrokerOrderType.STOP_LIMIT,
+        order_type=OrderType.STOP_LIMIT,
         stop_price=Decimal("100"),
         limit_price=Decimal("100.5"),
     )
@@ -239,7 +244,7 @@ def test_stop_limit_buy_requires_stop_trigger_and_marketable_limit() -> None:
 def test_stop_limit_buy_holds_when_stop_triggered_but_limit_not_marketable() -> None:
     intent = _intent(
         "buy",
-        order_type=BrokerOrderType.STOP_LIMIT,
+        order_type=OrderType.STOP_LIMIT,
         stop_price=Decimal("100"),
         limit_price=Decimal("100.3"),
     )
@@ -263,13 +268,13 @@ def test_simulated_adapter_rejects_unsupported_order_types() -> None:
     # the same intent earlier via OrderSpecValidityRule + brokerage policy;
     # the adapter rejection is defence-in-depth for callers that bypass risk.
     for unsupported in (
-        BrokerOrderType.TRAILING_STOP,
-        BrokerOrderType.MARKET_ON_OPEN,
-        BrokerOrderType.MARKET_ON_CLOSE,
-        BrokerOrderType.ICEBERG,
+        OrderType.TRAILING_STOP,
+        OrderType.MARKET_ON_OPEN,
+        OrderType.MARKET_ON_CLOSE,
+        OrderType.ICEBERG,
     ):
         intent_kwargs: dict[str, Decimal] = {}
-        if unsupported is BrokerOrderType.TRAILING_STOP:
+        if unsupported is OrderType.TRAILING_STOP:
             intent_kwargs["trail_amount"] = Decimal("1")
         intent = _intent("buy", order_type=unsupported, **intent_kwargs)
         with pytest.raises(ValueError, match="order type is not supported by broker capabilities"):

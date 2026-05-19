@@ -24,9 +24,6 @@ class OrderType(StrEnum):
     ICEBERG = "iceberg"
 
 
-BrokerOrderType = OrderType
-
-
 class TimeInForce(StrEnum):
     """Time-in-force values modeled at the execution boundary."""
 
@@ -154,7 +151,6 @@ def _validate_optional_price(value: Decimal | None, name: str) -> None:
 __all__ = [
     "BracketLeg",
     "BracketSpec",
-    "BrokerOrderType",
     "OrderSpec",
     "OrderType",
     "TimeInForce",

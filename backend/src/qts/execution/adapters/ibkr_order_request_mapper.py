@@ -5,8 +5,8 @@ from __future__ import annotations
 from decimal import Decimal
 
 from qts.core.ids import StrategyId
-from qts.domain.orders import OrderIntent
-from qts.execution.broker import BrokerCapabilities, BrokerOrderType, TimeInForce
+from qts.domain.orders import OrderIntent, OrderType, TimeInForce
+from qts.execution.broker import BrokerCapabilities
 from qts.execution.transports.ibkr_tws_order_execution_transport import (
     IbkrOrderContractSpec,
     IbkrOrderRequest,
@@ -36,7 +36,7 @@ class IbkrOrderRequestMapper:
         *,
         client_order_id: str,
         strategy_id: StrategyId | None = None,
-        order_type: BrokerOrderType | None = None,
+        order_type: OrderType | None = None,
         time_in_force: TimeInForce | None = None,
         limit_price: Decimal | None = None,
         asset_class: str = "equity",
@@ -83,7 +83,7 @@ class IbkrOrderRequestMapper:
         self,
         intent: OrderIntent,
         *,
-        order_type: BrokerOrderType,
+        order_type: OrderType,
         time_in_force: TimeInForce,
         limit_price: Decimal | None,
         asset_class: str,
@@ -95,12 +95,9 @@ class IbkrOrderRequestMapper:
             raise ValueError(f"time in force is not supported: {time_in_force.value}")
         if not self._capabilities.supports_asset_class(asset_class):
             raise ValueError(f"asset class is not supported: {asset_class}")
-        if order_type is BrokerOrderType.LIMIT and limit_price is None:
+        if order_type is OrderType.LIMIT and limit_price is None:
             raise ValueError("limit_price is required for limit orders")
-        if (
-            order_type not in {BrokerOrderType.LIMIT, BrokerOrderType.BRACKET}
-            and limit_price is not None
-        ):
+        if order_type not in {OrderType.LIMIT, OrderType.BRACKET} and limit_price is not None:
             raise ValueError("limit_price is only valid for limit orders")
         if (
             not self._capabilities.supports_fractional
