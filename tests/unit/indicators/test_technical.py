@@ -343,6 +343,17 @@ def test_supertrend_uses_atr_bands_and_flips_direction_anchor() -> None:
     assert supertrend.ready is True
 
 
+def test_supertrend_first_ready_value_starts_bearish_without_prior_direction() -> None:
+    from qts.indicators.technical import Supertrend
+
+    supertrend = Supertrend(window=1, multiplier=Decimal("0"))
+
+    value = supertrend.update(high=Decimal("10"), low=Decimal("0"), close=Decimal("9"))
+
+    assert value is not None
+    assert value.direction == -1
+
+
 def test_supertrend_rejects_invalid_configuration() -> None:
     from qts.indicators.technical import Supertrend
 

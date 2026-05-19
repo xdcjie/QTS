@@ -170,7 +170,9 @@ class Supertrend:
         final_lower: Decimal,
     ) -> int:
         """Return next direction using close crosses of the active band."""
-        if self._direction is None or self._direction == -1:
+        if self._direction is None:
+            return -1
+        if self._direction == -1:
             return 1 if close > final_upper else -1
         return -1 if close < final_lower else 1
 
