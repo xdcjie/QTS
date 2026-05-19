@@ -1445,8 +1445,8 @@
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>376 files</span>
-      <span>665 classes</span>
-      <span>2248 functions</span>
+      <span>667 classes</span>
+      <span>2256 functions</span>
       <span>359 backend</span>
       <span>17 frontend</span>
     </div>
@@ -7049,8 +7049,8 @@
       <summary>
         <code>backend/src/qts/indicators/technical.py</code>
         <span class="inventory-counts">
-          <span>25 classes</span>
-          <span>65 functions</span>
+          <span>27 classes</span>
+          <span>72 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -7062,30 +7062,32 @@
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
               <tr><td><code>AverageTrueRange</code></td><td>technical:32</td><td>Wilder average true range over completed bars.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>RSI</code></td><td>technical:74</td><td>Relative strength index using Wilder smoothing.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>SessionVWAP</code></td><td>technical:134</td><td>Session VWAP that resets on `Bar.session_id` changes.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>VolumeRatio</code></td><td>technical:165</td><td>Current volume divided by the rolling average volume.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BollingerBandsValue</code></td><td>technical:196</td><td>Bollinger Bands output for a completed price update.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>BollingerBands</code></td><td>technical:206</td><td>Bollinger Bands using population standard deviation.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>MACDValue</code></td><td>technical:246</td><td>MACD output for a completed price update.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>MACD</code></td><td>technical:255</td><td>Moving Average Convergence Divergence with SMA-seeded EMAs.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>RateOfChange</code></td><td>technical:298</td><td>Rate of change percentage versus the price `window` periods ago.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>DirectionalMovementValue</code></td><td>technical:329</td><td>ADX output for a completed bar update.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ADX</code></td><td>technical:339</td><td>Average Directional Index using Wilder smoothing.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>KeltnerChannelValue</code></td><td>technical:458</td><td>Keltner Channel output for a completed bar update.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>KeltnerChannel</code></td><td>technical:468</td><td>Keltner Channel using EMA middle and ATR width.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>DonchianChannelValue</code></td><td>technical:507</td><td>Donchian Channel output for a completed bar update.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>DonchianChannel</code></td><td>technical:516</td><td>Donchian Channel over rolling high and low values.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>StochasticOscillatorValue</code></td><td>technical:552</td><td>Stochastic oscillator output for a completed bar update.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>StochasticOscillator</code></td><td>technical:560</td><td>Stochastic oscillator with rolling %K and SMA %D.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>CommodityChannelIndex</code></td><td>technical:606</td><td>Commodity Channel Index over rolling typical prices.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>WilliamsR</code></td><td>technical:640</td><td>Williams %R over rolling high and low values.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>StandardDeviation</code></td><td>technical:677</td><td>Rolling population standard deviation of close prices.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>HistoricalVolatility</code></td><td>technical:704</td><td>Annualized rolling volatility of simple close-to-close returns.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>OnBalanceVolume</code></td><td>technical:745</td><td>On-Balance Volume cumulative volume indicator.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>MoneyFlowIndex</code></td><td>technical:777</td><td>Money Flow Index over rolling positive and negative money flow.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>AccumulationDistribution</code></td><td>technical:826</td><td>Accumulation/Distribution Line cumulative money flow volume.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ChaikinMoneyFlow</code></td><td>technical:845</td><td>Chaikin Money Flow over rolling money flow volume.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>SupertrendValue</code></td><td>technical:74</td><td>Supertrend output for a completed bar update.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>Supertrend</code></td><td>technical:84</td><td>ATR-band trend indicator with bullish/bearish direction state.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>RSI</code></td><td>technical:179</td><td>Relative strength index using Wilder smoothing.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>SessionVWAP</code></td><td>technical:239</td><td>Session VWAP that resets on `Bar.session_id` changes.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>VolumeRatio</code></td><td>technical:270</td><td>Current volume divided by the rolling average volume.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BollingerBandsValue</code></td><td>technical:301</td><td>Bollinger Bands output for a completed price update.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>BollingerBands</code></td><td>technical:311</td><td>Bollinger Bands using population standard deviation.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>MACDValue</code></td><td>technical:351</td><td>MACD output for a completed price update.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>MACD</code></td><td>technical:360</td><td>Moving Average Convergence Divergence with SMA-seeded EMAs.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>RateOfChange</code></td><td>technical:403</td><td>Rate of change percentage versus the price `window` periods ago.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>DirectionalMovementValue</code></td><td>technical:434</td><td>ADX output for a completed bar update.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ADX</code></td><td>technical:444</td><td>Average Directional Index using Wilder smoothing.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>KeltnerChannelValue</code></td><td>technical:563</td><td>Keltner Channel output for a completed bar update.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>KeltnerChannel</code></td><td>technical:573</td><td>Keltner Channel using EMA middle and ATR width.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>DonchianChannelValue</code></td><td>technical:612</td><td>Donchian Channel output for a completed bar update.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>DonchianChannel</code></td><td>technical:621</td><td>Donchian Channel over rolling high and low values.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>StochasticOscillatorValue</code></td><td>technical:657</td><td>Stochastic oscillator output for a completed bar update.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>StochasticOscillator</code></td><td>technical:665</td><td>Stochastic oscillator with rolling %K and SMA %D.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>CommodityChannelIndex</code></td><td>technical:711</td><td>Commodity Channel Index over rolling typical prices.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>WilliamsR</code></td><td>technical:745</td><td>Williams %R over rolling high and low values.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>StandardDeviation</code></td><td>technical:782</td><td>Rolling population standard deviation of close prices.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>HistoricalVolatility</code></td><td>technical:809</td><td>Annualized rolling volatility of simple close-to-close returns.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>OnBalanceVolume</code></td><td>technical:850</td><td>On-Balance Volume cumulative volume indicator.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>MoneyFlowIndex</code></td><td>technical:882</td><td>Money Flow Index over rolling positive and negative money flow.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>AccumulationDistribution</code></td><td>technical:931</td><td>Accumulation/Distribution Line cumulative money flow volume.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ChaikinMoneyFlow</code></td><td>technical:950</td><td>Chaikin Money Flow over rolling money flow volume.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -7102,63 +7104,70 @@
               <tr><td><code>update_bar</code></td><td>AverageTrueRange:49</td><td>Update ATR from a completed OHLC bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>update</code></td><td>AverageTrueRange:53</td><td>Update ATR from OHLC values.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>_true_range</code></td><td>AverageTrueRange:66</td><td>Return true range using the previous close when available.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>RSI:85</td><td>Validate and initialize RSI state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>ready</code></td><td>RSI:91</td><td>Return whether RSI has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update</code></td><td>RSI:95</td><td>Update RSI from a close price.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_rsi_from_averages</code></td><td>RSI:123</td><td>Compute RSI from initialized average gain/loss values.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>ready</code></td><td>SessionVWAP:143</td><td>Return whether the current session has a VWAP value.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update_bar</code></td><td>SessionVWAP:147</td><td>Update VWAP from a completed OHLCV bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>VolumeRatio:172</td><td>Validate and initialize rolling volume state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>ready</code></td><td>VolumeRatio:177</td><td>Return whether volume ratio has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update</code></td><td>VolumeRatio:181</td><td>Update the ratio from a volume observation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>BollingerBands:214</td><td>Validate and initialize rolling price state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>ready</code></td><td>BollingerBands:221</td><td>Return whether the bands have warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update</code></td><td>BollingerBands:225</td><td>Update Bollinger Bands from a close price.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>MACD:266</td><td>Validate and initialize MACD EMA state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>ready</code></td><td>MACD:275</td><td>Return whether MACD and signal have warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update</code></td><td>MACD:279</td><td>Update MACD from a close price.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>RateOfChange:305</td><td>Validate and initialize rolling price state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>ready</code></td><td>RateOfChange:310</td><td>Return whether rate of change has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update</code></td><td>RateOfChange:314</td><td>Update rate of change from a close price.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>ADX:354</td><td>Validate and initialize directional movement state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>ready</code></td><td>ADX:361</td><td>Return whether ADX has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update_bar</code></td><td>ADX:365</td><td>Update ADX from a completed OHLC bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_directional_inputs</code></td><td>ADX:412</td><td>实现 ADX 的 directional inputs 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_plus_di</code></td><td>ADX:428</td><td>实现 ADX 的 plus di 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_minus_di</code></td><td>ADX:438</td><td>实现 ADX 的 minus di 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_dx</code></td><td>ADX:448</td><td>实现 ADX 的 dx 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>KeltnerChannel:477</td><td>Validate and initialize Keltner Channel state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>ready</code></td><td>KeltnerChannel:485</td><td>Return whether the channel has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update_bar</code></td><td>KeltnerChannel:489</td><td>Update Keltner Channel from a completed OHLC bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>DonchianChannel:524</td><td>Validate and initialize Donchian Channel state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>ready</code></td><td>DonchianChannel:530</td><td>Return whether the channel has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update_bar</code></td><td>DonchianChannel:534</td><td>Update Donchian Channel from a completed OHLC bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>StochasticOscillator:570</td><td>Validate and initialize stochastic oscillator state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>ready</code></td><td>StochasticOscillator:577</td><td>Return whether the oscillator has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update_bar</code></td><td>StochasticOscillator:581</td><td>Update stochastic oscillator from a completed OHLC bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>CommodityChannelIndex:613</td><td>Validate and initialize CCI state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>ready</code></td><td>CommodityChannelIndex:618</td><td>Return whether CCI has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update_bar</code></td><td>CommodityChannelIndex:622</td><td>Update CCI from a completed OHLC bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>WilliamsR:648</td><td>Validate and initialize Williams %R state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>ready</code></td><td>WilliamsR:654</td><td>Return whether Williams %R has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update_bar</code></td><td>WilliamsR:658</td><td>Update Williams %R from a completed OHLC bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>StandardDeviation:684</td><td>Validate and initialize standard deviation state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>ready</code></td><td>StandardDeviation:689</td><td>Return whether standard deviation has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update</code></td><td>StandardDeviation:693</td><td>Update standard deviation from a close price.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>HistoricalVolatility:713</td><td>Validate and initialize historical volatility state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>ready</code></td><td>HistoricalVolatility:720</td><td>Return whether historical volatility has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update</code></td><td>HistoricalVolatility:724</td><td>Update historical volatility from a close price.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>ready</code></td><td>OnBalanceVolume:752</td><td>Return whether OBV has processed at least one close.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update_bar</code></td><td>OnBalanceVolume:756</td><td>Update OBV from a completed OHLCV bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update</code></td><td>OnBalanceVolume:760</td><td>Update OBV from close and volume values.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>MoneyFlowIndex:786</td><td>Validate and initialize MFI state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>ready</code></td><td>MoneyFlowIndex:792</td><td>Return whether MFI has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update_bar</code></td><td>MoneyFlowIndex:796</td><td>Update MFI from a completed OHLCV bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>ready</code></td><td>AccumulationDistribution:832</td><td>Return whether ADL has processed at least one bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update_bar</code></td><td>AccumulationDistribution:836</td><td>Update ADL from a completed OHLCV bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>ChaikinMoneyFlow:853</td><td>Validate and initialize CMF state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>ready</code></td><td>ChaikinMoneyFlow:859</td><td>Return whether CMF has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update_bar</code></td><td>ChaikinMoneyFlow:863</td><td>Update CMF from a completed OHLCV bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>Supertrend:96</td><td>Validate and initialize Supertrend state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>Supertrend:107</td><td>Return whether Supertrend has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_bar</code></td><td>Supertrend:111</td><td>Update Supertrend from a completed OHLC bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update</code></td><td>Supertrend:115</td><td>Update Supertrend from OHLC values.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_final_upper</code></td><td>Supertrend:144</td><td>Return the carried or reset final upper band.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_final_lower</code></td><td>Supertrend:155</td><td>Return the carried or reset final lower band.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_next_direction</code></td><td>Supertrend:166</td><td>Return next direction using close crosses of the active band.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>RSI:190</td><td>Validate and initialize RSI state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>RSI:196</td><td>Return whether RSI has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update</code></td><td>RSI:200</td><td>Update RSI from a close price.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_rsi_from_averages</code></td><td>RSI:228</td><td>Compute RSI from initialized average gain/loss values.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>SessionVWAP:248</td><td>Return whether the current session has a VWAP value.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_bar</code></td><td>SessionVWAP:252</td><td>Update VWAP from a completed OHLCV bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>VolumeRatio:277</td><td>Validate and initialize rolling volume state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>VolumeRatio:282</td><td>Return whether volume ratio has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update</code></td><td>VolumeRatio:286</td><td>Update the ratio from a volume observation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>BollingerBands:319</td><td>Validate and initialize rolling price state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>BollingerBands:326</td><td>Return whether the bands have warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update</code></td><td>BollingerBands:330</td><td>Update Bollinger Bands from a close price.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>MACD:371</td><td>Validate and initialize MACD EMA state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>MACD:380</td><td>Return whether MACD and signal have warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update</code></td><td>MACD:384</td><td>Update MACD from a close price.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>RateOfChange:410</td><td>Validate and initialize rolling price state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>RateOfChange:415</td><td>Return whether rate of change has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update</code></td><td>RateOfChange:419</td><td>Update rate of change from a close price.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>ADX:459</td><td>Validate and initialize directional movement state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>ADX:466</td><td>Return whether ADX has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_bar</code></td><td>ADX:470</td><td>Update ADX from a completed OHLC bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_directional_inputs</code></td><td>ADX:517</td><td>实现 ADX 的 directional inputs 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_plus_di</code></td><td>ADX:533</td><td>实现 ADX 的 plus di 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_minus_di</code></td><td>ADX:543</td><td>实现 ADX 的 minus di 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_dx</code></td><td>ADX:553</td><td>实现 ADX 的 dx 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>KeltnerChannel:582</td><td>Validate and initialize Keltner Channel state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>KeltnerChannel:590</td><td>Return whether the channel has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_bar</code></td><td>KeltnerChannel:594</td><td>Update Keltner Channel from a completed OHLC bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>DonchianChannel:629</td><td>Validate and initialize Donchian Channel state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>DonchianChannel:635</td><td>Return whether the channel has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_bar</code></td><td>DonchianChannel:639</td><td>Update Donchian Channel from a completed OHLC bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>StochasticOscillator:675</td><td>Validate and initialize stochastic oscillator state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>StochasticOscillator:682</td><td>Return whether the oscillator has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_bar</code></td><td>StochasticOscillator:686</td><td>Update stochastic oscillator from a completed OHLC bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>CommodityChannelIndex:718</td><td>Validate and initialize CCI state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>CommodityChannelIndex:723</td><td>Return whether CCI has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_bar</code></td><td>CommodityChannelIndex:727</td><td>Update CCI from a completed OHLC bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>WilliamsR:753</td><td>Validate and initialize Williams %R state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>WilliamsR:759</td><td>Return whether Williams %R has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_bar</code></td><td>WilliamsR:763</td><td>Update Williams %R from a completed OHLC bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>StandardDeviation:789</td><td>Validate and initialize standard deviation state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>StandardDeviation:794</td><td>Return whether standard deviation has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update</code></td><td>StandardDeviation:798</td><td>Update standard deviation from a close price.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>HistoricalVolatility:818</td><td>Validate and initialize historical volatility state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>HistoricalVolatility:825</td><td>Return whether historical volatility has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update</code></td><td>HistoricalVolatility:829</td><td>Update historical volatility from a close price.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>ready</code></td><td>OnBalanceVolume:857</td><td>Return whether OBV has processed at least one close.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_bar</code></td><td>OnBalanceVolume:861</td><td>Update OBV from a completed OHLCV bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update</code></td><td>OnBalanceVolume:865</td><td>Update OBV from close and volume values.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>MoneyFlowIndex:891</td><td>Validate and initialize MFI state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>MoneyFlowIndex:897</td><td>Return whether MFI has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_bar</code></td><td>MoneyFlowIndex:901</td><td>Update MFI from a completed OHLCV bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>ready</code></td><td>AccumulationDistribution:937</td><td>Return whether ADL has processed at least one bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_bar</code></td><td>AccumulationDistribution:941</td><td>Update ADL from a completed OHLCV bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>ChaikinMoneyFlow:958</td><td>Validate and initialize CMF state.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>ready</code></td><td>ChaikinMoneyFlow:964</td><td>Return whether CMF has warmed up.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_bar</code></td><td>ChaikinMoneyFlow:968</td><td>Update CMF from a completed OHLCV bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -12725,7 +12734,7 @@
         <code>backend/src/qts/strategy_sdk/indicators.py</code>
         <span class="inventory-counts">
           <span>2 classes</span>
-          <span>31 functions</span>
+          <span>32 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -12736,8 +12745,8 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>AssetIndicator</code></td><td>indicators:54</td><td>Indicator bound to a strategy asset reference.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>IndicatorFactory</code></td><td>indicators:88</td><td>Factory for user-created indicators.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>AssetIndicator</code></td><td>indicators:57</td><td>Indicator bound to a strategy asset reference.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>IndicatorFactory</code></td><td>indicators:91</td><td>Factory for user-created indicators.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -12746,37 +12755,38 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>ready</code></td><td>AssetIndicator:67</td><td>Perform ready.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>value</code></td><td>AssetIndicator:72</td><td>Perform value.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update</code></td><td>AssetIndicator:76</td><td>Perform update.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update_from_bar</code></td><td>AssetIndicator:82</td><td>Update the bound indicator from a completed strategy-facing bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>sma</code></td><td>IndicatorFactory:93</td><td>Perform sma.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>ema</code></td><td>IndicatorFactory:97</td><td>Create an exponential moving average indicator for close prices.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>atr</code></td><td>IndicatorFactory:101</td><td>Create an average true range indicator for OHLC bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>rsi</code></td><td>IndicatorFactory:106</td><td>Create a relative strength index indicator for close prices.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>session_vwap</code></td><td>IndicatorFactory:110</td><td>Create a session VWAP indicator that resets on bar session changes.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>volume_ratio</code></td><td>IndicatorFactory:115</td><td>Create a current-volume to rolling-average-volume ratio indicator.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>bollinger_bands</code></td><td>IndicatorFactory:120</td><td>Create Bollinger Bands for close prices.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>macd</code></td><td>IndicatorFactory:129</td><td>Create MACD for close prices.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>rate_of_change</code></td><td>IndicatorFactory:142</td><td>Create rate of change for close prices.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>adx</code></td><td>IndicatorFactory:146</td><td>Create ADX for OHLC bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>keltner_channel</code></td><td>IndicatorFactory:151</td><td>Create Keltner Channel for OHLC bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>donchian_channel</code></td><td>IndicatorFactory:161</td><td>Create Donchian Channel for OHLC bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>stochastic</code></td><td>IndicatorFactory:166</td><td>Create stochastic oscillator for OHLC bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>cci</code></td><td>IndicatorFactory:176</td><td>Create Commodity Channel Index for OHLC bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>williams_r</code></td><td>IndicatorFactory:181</td><td>Create Williams %R for OHLC bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>standard_deviation</code></td><td>IndicatorFactory:186</td><td>Create rolling standard deviation for close prices.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>historical_volatility</code></td><td>IndicatorFactory:190</td><td>Create annualized historical volatility for close prices.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>on_balance_volume</code></td><td>IndicatorFactory:202</td><td>Create On-Balance Volume for OHLCV bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>money_flow_index</code></td><td>IndicatorFactory:207</td><td>Create Money Flow Index for OHLCV bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>accumulation_distribution</code></td><td>IndicatorFactory:212</td><td>Create Accumulation/Distribution Line for OHLCV bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>chaikin_money_flow</code></td><td>IndicatorFactory:217</td><td>Create Chaikin Money Flow for OHLCV bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>update_from_bar</code></td><td>IndicatorFactory:222</td><td>Perform update_from_bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_bind_price_indicator</code></td><td>IndicatorFactory:228</td><td>Bind a close-price indicator to an asset.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>update_from_bar</code></td><td>IndicatorFactory._bind_price_indicator.&lt;locals&gt;:242</td><td>更新受控状态或记录事件。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_bind_bar_indicator</code></td><td>IndicatorFactory:256</td><td>Bind a full-bar indicator to an asset.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_bind_volume_indicator</code></td><td>IndicatorFactory:284</td><td>Bind a volume indicator to an asset.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>update_from_bar</code></td><td>IndicatorFactory._bind_volume_indicator.&lt;locals&gt;:287</td><td>更新受控状态或记录事件。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>ready</code></td><td>AssetIndicator:70</td><td>Perform ready.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>value</code></td><td>AssetIndicator:75</td><td>Perform value.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update</code></td><td>AssetIndicator:79</td><td>Perform update.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_from_bar</code></td><td>AssetIndicator:85</td><td>Update the bound indicator from a completed strategy-facing bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>sma</code></td><td>IndicatorFactory:96</td><td>Perform sma.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>ema</code></td><td>IndicatorFactory:100</td><td>Create an exponential moving average indicator for close prices.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>atr</code></td><td>IndicatorFactory:104</td><td>Create an average true range indicator for OHLC bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>supertrend</code></td><td>IndicatorFactory:109</td><td>Create a Supertrend indicator for OHLC bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>rsi</code></td><td>IndicatorFactory:119</td><td>Create a relative strength index indicator for close prices.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>session_vwap</code></td><td>IndicatorFactory:123</td><td>Create a session VWAP indicator that resets on bar session changes.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>volume_ratio</code></td><td>IndicatorFactory:128</td><td>Create a current-volume to rolling-average-volume ratio indicator.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>bollinger_bands</code></td><td>IndicatorFactory:133</td><td>Create Bollinger Bands for close prices.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>macd</code></td><td>IndicatorFactory:142</td><td>Create MACD for close prices.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>rate_of_change</code></td><td>IndicatorFactory:155</td><td>Create rate of change for close prices.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>adx</code></td><td>IndicatorFactory:159</td><td>Create ADX for OHLC bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>keltner_channel</code></td><td>IndicatorFactory:164</td><td>Create Keltner Channel for OHLC bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>donchian_channel</code></td><td>IndicatorFactory:174</td><td>Create Donchian Channel for OHLC bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>stochastic</code></td><td>IndicatorFactory:179</td><td>Create stochastic oscillator for OHLC bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>cci</code></td><td>IndicatorFactory:189</td><td>Create Commodity Channel Index for OHLC bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>williams_r</code></td><td>IndicatorFactory:194</td><td>Create Williams %R for OHLC bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>standard_deviation</code></td><td>IndicatorFactory:199</td><td>Create rolling standard deviation for close prices.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>historical_volatility</code></td><td>IndicatorFactory:203</td><td>Create annualized historical volatility for close prices.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>on_balance_volume</code></td><td>IndicatorFactory:215</td><td>Create On-Balance Volume for OHLCV bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>money_flow_index</code></td><td>IndicatorFactory:220</td><td>Create Money Flow Index for OHLCV bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>accumulation_distribution</code></td><td>IndicatorFactory:225</td><td>Create Accumulation/Distribution Line for OHLCV bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>chaikin_money_flow</code></td><td>IndicatorFactory:230</td><td>Create Chaikin Money Flow for OHLCV bars.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>update_from_bar</code></td><td>IndicatorFactory:235</td><td>Perform update_from_bar.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_bind_price_indicator</code></td><td>IndicatorFactory:241</td><td>Bind a close-price indicator to an asset.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>update_from_bar</code></td><td>IndicatorFactory._bind_price_indicator.&lt;locals&gt;:255</td><td>更新受控状态或记录事件。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_bind_bar_indicator</code></td><td>IndicatorFactory:269</td><td>Bind a full-bar indicator to an asset.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_bind_volume_indicator</code></td><td>IndicatorFactory:298</td><td>Bind a volume indicator to an asset.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>update_from_bar</code></td><td>IndicatorFactory._bind_volume_indicator.&lt;locals&gt;:301</td><td>更新受控状态或记录事件。</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>

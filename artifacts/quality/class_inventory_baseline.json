@@ -1,5 +1,5 @@
 {
-  "production_class_count": 648,
+  "production_class_count": 650,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -292,6 +292,8 @@
     "qts.indicators.technical.StandardDeviation",
     "qts.indicators.technical.StochasticOscillator",
     "qts.indicators.technical.StochasticOscillatorValue",
+    "qts.indicators.technical.Supertrend",
+    "qts.indicators.technical.SupertrendValue",
     "qts.indicators.technical.VolumeRatio",
     "qts.indicators.technical.WilliamsR",
     "qts.load.synthetic_market_data.SyntheticMarketDataConfig",
