@@ -104,9 +104,10 @@ class DualSupertrendConfig:
             raise ValueError("use_atr_position_sizing must be a bool")
         if not isinstance(self.use_trading_hours_filter, bool):
             raise ValueError("use_trading_hours_filter must be a bool")
-        self._parse_time(self.trading_hours_start, "trading_hours_start")
-        self._parse_time(self.trading_hours_end, "trading_hours_end")
-        ZoneInfo(self.trading_hours_timezone)
+        if self.use_trading_hours_filter:
+            self._parse_time(self.trading_hours_start, "trading_hours_start")
+            self._parse_time(self.trading_hours_end, "trading_hours_end")
+            ZoneInfo(self.trading_hours_timezone)
 
     @staticmethod
     def _parse_time(value: str, name: str) -> time:
@@ -162,14 +163,17 @@ class DualSupertrendStrategy(Strategy):
         self._config = config or DualSupertrendConfig()
         self._asset: AssetRef | None = None
         self._indicators: DualSupertrendIndicators | None = None
-        self._previous_fast_direction: int | None = None
         self._position_side: int = 0
         self._entry_price: Decimal | None = None
         self._stop_price: Decimal | None = None
         self._trailing_stop: Decimal | None = None
-        self._tz = ZoneInfo(self._config.trading_hours_timezone)
-        self._trading_start = self._config.trading_start_time
-        self._trading_end = self._config.trading_end_time
+        self._tz: ZoneInfo | None = None
+        self._trading_start: time | None = None
+        self._trading_end: time | None = None
+        if self._config.use_trading_hours_filter:
+            self._tz = ZoneInfo(self._config.trading_hours_timezone)
+            self._trading_start = self._config.trading_start_time
+            self._trading_end = self._config.trading_end_time
 
     def initialize(self, ctx: StrategyContext) -> None:
         """Initialize subscriptions and indicators."""
@@ -220,8 +224,6 @@ class DualSupertrendStrategy(Strategy):
         if fast is None or slow is None or atr is None:
             return
 
-        self._previous_fast_direction = fast.direction
-
         if self._close_on_software_risk(ctx, bar, atr):
             return
         if self._close_on_trend_flip(ctx, fast.direction):
@@ -242,6 +244,8 @@ class DualSupertrendStrategy(Strategy):
         """Return whether a bar is inside the configured half-open time window."""
         if not self._config.use_trading_hours_filter:
             return True
+        if self._tz is None or self._trading_start is None or self._trading_end is None:
+            raise RuntimeError("trading hours filter was not initialized")
         local_time = bar.start_time.astimezone(self._tz).time()
         if self._trading_start <= self._trading_end:
             return self._trading_start <= local_time < self._trading_end
@@ -309,7 +313,6 @@ class DualSupertrendStrategy(Strategy):
     def _close_on_software_risk(self, ctx: StrategyContext, bar: Bar, atr: Decimal) -> bool:
         if self._position_side == 0:
             return False
-        self._update_trailing_stop(bar, atr)
         if self._position_side > 0:
             stop = self._max_stop(self._stop_price, self._trailing_stop)
             if stop is not None and bar.low <= stop:
@@ -320,6 +323,7 @@ class DualSupertrendStrategy(Strategy):
             if stop is not None and bar.high >= stop:
                 self._close(ctx)
                 return True
+        self._update_trailing_stop(bar, atr)
         return False
 
     def _update_trailing_stop(self, bar: Bar, atr: Decimal) -> None:

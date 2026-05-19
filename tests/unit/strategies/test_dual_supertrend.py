@@ -81,7 +81,14 @@ def _ctx(ctx: FakeContext) -> StrategyContext:
     return cast(StrategyContext, ctx)
 
 
-def _bar(index: int, *, close: str = "2000", start_hour: int = 14) -> Bar:
+def _bar(
+    index: int,
+    *,
+    close: str = "2000",
+    start_hour: int = 14,
+    high: str | None = None,
+    low: str | None = None,
+) -> Bar:
     start = datetime(2026, 1, 2, start_hour, 30, tzinfo=UTC) + timedelta(minutes=index)
     close_value = Decimal(close)
     return Bar(
@@ -91,8 +98,8 @@ def _bar(index: int, *, close: str = "2000", start_hour: int = 14) -> Bar:
         timeframe="1m",
         session_id="2026-01-02",
         open=close_value,
-        high=close_value + Decimal("5"),
-        low=close_value - Decimal("5"),
+        high=Decimal(high) if high is not None else close_value + Decimal("5"),
+        low=Decimal(low) if low is not None else close_value - Decimal("5"),
         close=close_value,
         volume=Decimal("100"),
         is_complete=True,
@@ -243,6 +250,100 @@ def test_closes_long_on_fast_bearish_flip() -> None:
     assert ctx.intents[-1] == ("close", ctx.asset, None)
 
 
+def test_closes_short_on_fast_bullish_flip() -> None:
+    from examples.strategies.dual_supertrend import (
+        DualSupertrendConfig,
+        DualSupertrendStrategy,
+    )
+
+    ctx = FakeContext()
+    strategy = DualSupertrendStrategy(DualSupertrendConfig(use_atr_position_sizing=False))
+    strategy.initialize(_ctx(ctx))
+    _set_indicators(ctx, fast_direction=-1, slow_direction=-1)
+    strategy.on_bar(_ctx(ctx), _bar(0))
+    _set_indicators(ctx, fast_direction=1, slow_direction=-1)
+
+    strategy.on_bar(_ctx(ctx), _bar(1))
+
+    assert ctx.intents[-1] == ("close", ctx.asset, None)
+
+
+def test_long_fixed_stop_closes_position() -> None:
+    from examples.strategies.dual_supertrend import (
+        DualSupertrendConfig,
+        DualSupertrendStrategy,
+    )
+
+    ctx = FakeContext()
+    strategy = DualSupertrendStrategy(
+        DualSupertrendConfig(
+            stop_atr_multiple=Decimal("1"),
+            use_atr_position_sizing=False,
+        )
+    )
+    strategy.initialize(_ctx(ctx))
+    _set_indicators(ctx, fast_direction=1, slow_direction=1, atr="20")
+    strategy.on_bar(_ctx(ctx), _bar(0, close="2000"))
+
+    strategy.on_bar(_ctx(ctx), _bar(1, close="1990", low="1979"))
+
+    assert ctx.intents[-1] == ("close", ctx.asset, None)
+
+
+def test_long_trailing_stop_updates_after_current_bar_stop_check() -> None:
+    from examples.strategies.dual_supertrend import (
+        DualSupertrendConfig,
+        DualSupertrendStrategy,
+    )
+
+    ctx = FakeContext()
+    strategy = DualSupertrendStrategy(
+        DualSupertrendConfig(
+            trail_atr_multiple=Decimal("1"),
+            use_atr_position_sizing=False,
+        )
+    )
+    strategy.initialize(_ctx(ctx))
+    _set_indicators(ctx, fast_direction=1, slow_direction=1, atr="20")
+    strategy.on_bar(_ctx(ctx), _bar(0, close="2000"))
+
+    strategy.on_bar(_ctx(ctx), _bar(1, close="2020", low="1995"))
+    strategy.on_bar(_ctx(ctx), _bar(2, close="2040", low="2005"))
+
+    assert ctx.intents == [("target_percent", ctx.asset, Decimal("0.30"))]
+
+    strategy.on_bar(_ctx(ctx), _bar(3, close="2040", low="2019"))
+
+    assert ctx.intents[-1] == ("close", ctx.asset, None)
+
+
+def test_short_trailing_stop_updates_after_current_bar_stop_check() -> None:
+    from examples.strategies.dual_supertrend import (
+        DualSupertrendConfig,
+        DualSupertrendStrategy,
+    )
+
+    ctx = FakeContext()
+    strategy = DualSupertrendStrategy(
+        DualSupertrendConfig(
+            trail_atr_multiple=Decimal("1"),
+            use_atr_position_sizing=False,
+        )
+    )
+    strategy.initialize(_ctx(ctx))
+    _set_indicators(ctx, fast_direction=-1, slow_direction=-1, atr="20")
+    strategy.on_bar(_ctx(ctx), _bar(0, close="2000"))
+
+    strategy.on_bar(_ctx(ctx), _bar(1, close="1980", high="2005"))
+    strategy.on_bar(_ctx(ctx), _bar(2, close="1960", high="1995"))
+
+    assert ctx.intents == [("target_percent", ctx.asset, Decimal("-0.30"))]
+
+    strategy.on_bar(_ctx(ctx), _bar(3, close="1960", high="1981"))
+
+    assert ctx.intents[-1] == ("close", ctx.asset, None)
+
+
 @pytest.mark.parametrize(
     ("adx", "volume_ratio"),
     [
@@ -320,6 +421,23 @@ def test_trading_hours_filter_uses_half_open_window() -> None:
 
     assert strategy.in_trading_hours(_bar(0, start_hour=14))
     assert not strategy.in_trading_hours(_bar(0, start_hour=15))
+
+
+def test_disabled_trading_hours_filter_ignores_invalid_window_config() -> None:
+    from examples.strategies.dual_supertrend import (
+        DualSupertrendConfig,
+        DualSupertrendStrategy,
+    )
+
+    config = DualSupertrendConfig(
+        use_trading_hours_filter=False,
+        trading_hours_timezone="Not/AZone",
+        trading_hours_start="bad",
+        trading_hours_end="also-bad",
+    )
+    strategy = DualSupertrendStrategy(config)
+
+    assert strategy.in_trading_hours(_bar(0))
 
 
 def test_strategy_imports_only_strategy_sdk_and_domain_bar_boundary() -> None:
