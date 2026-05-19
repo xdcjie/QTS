@@ -6,6 +6,7 @@ from decimal import Decimal
 def test_target_to_fill_updates_account_through_actor_messages() -> None:
     from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
     from qts.domain.risk import OrderRiskRequest
+    from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
     from qts.execution.order_manager import OrderIntent, OrderSide
     from qts.execution.order_state_machine import OrderState
     from qts.risk.risk_engine import RiskEngine
@@ -14,6 +15,7 @@ def test_target_to_fill_updates_account_through_actor_messages() -> None:
     from qts.runtime.actors.account_actor import AccountActor
     from qts.runtime.actors.execution_actor import ExecutionActor
     from qts.runtime.actors.order_manager_actor import OrderManagerActor, SubmitOrder
+    from qts.runtime.config import BacktestCostModel
     from qts.runtime.mailbox import Mailbox
 
     from tests.support.order_route import order_route_metadata
@@ -33,7 +35,10 @@ def test_target_to_fill_updates_account_through_actor_messages() -> None:
         account_id=account_id,
     )
     order_manager_ref = ActorRef(actor=order_manager_actor, mailbox=order_manager_mailbox)
-    execution_actor = ExecutionActor(order_manager_ref=order_manager_ref)
+    execution_actor = ExecutionActor(
+        order_manager_ref=order_manager_ref,
+        execution_adapter=SimulatedExecutionAdapter(cost_model=BacktestCostModel()),
+    )
     execution_ref = ActorRef(actor=execution_actor, mailbox=execution_mailbox)
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")

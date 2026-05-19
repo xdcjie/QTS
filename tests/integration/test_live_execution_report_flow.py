@@ -16,9 +16,9 @@ def test_live_broker_callbacks_reuse_shared_order_and_account_flow() -> None:
     from qts.runtime.actors.execution_actor import ExecutionActor
     from qts.runtime.actors.order_manager_actor import OrderManagerActor, SubmitOrder
     from qts.runtime.mailbox import Mailbox
-    from qts.testing.fakes.broker import FakeBrokerAdapter
+    from qts.simulation.broker import SimulatedBrokerAdapter
 
-    broker = FakeBrokerAdapter(broker_id=BrokerId("paper"))
+    broker = SimulatedBrokerAdapter(broker_id=BrokerId("paper"))
     execution_adapter = BrokerExecutionAdapter(
         broker=broker,
         account_id=AccountId("acct-a"),
@@ -103,9 +103,9 @@ def test_live_cancel_flow_uses_order_manager_and_execution_actor_path() -> None:
     from qts.runtime.actors.execution_actor import ExecutionActor
     from qts.runtime.actors.order_manager_actor import CancelOrder, OrderManagerActor, SubmitOrder
     from qts.runtime.mailbox import Mailbox
-    from qts.testing.fakes.broker import FakeBrokerAdapter
+    from qts.simulation.broker import SimulatedBrokerAdapter
 
-    broker = FakeBrokerAdapter(broker_id=BrokerId("paper"))
+    broker = SimulatedBrokerAdapter(broker_id=BrokerId("paper"))
     execution_adapter = BrokerExecutionAdapter(
         broker=broker,
         account_id=AccountId("acct-a"),

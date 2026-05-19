@@ -68,7 +68,7 @@ Backtest 使用 `ReplayMarketDataSource + SimulatedExecutionAdapter`，paper/liv
 | `LiveFeedFailure` | `MarketDataSourceFailure` | `qts/data/events.py` | 改名/迁移 | replay/streaming failure 使用同一语义。 |
 | `FakeLiveFeedAdapter` | `FakeStreamingMarketDataAdapter` | `qts/testing/fakes/market_data.py` | 改名/迁移 | fake 只能在 testing 中出现。 |
 | `FakeMarketDataAdapter` | `FakeMarketDataAdapter` | `qts/testing/fakes/market_data.py` | 迁移 | 保留名称但移出 production data package。 |
-| `FakeBrokerAdapter` | `FakeBrokerAdapter` 或 `SimulatedBrokerAdapter` | `qts/testing/fakes/broker.py` 或 `qts/simulation/broker.py` | 按用途迁移 | 测试 fake 与生产 simulation 要分开。 |
+| `FakeBrokerAdapter` | `SimulatedBrokerAdapter` | `qts/simulation/broker.py` | 已收敛 | broker fake 与 production-adjacent simulation 不再重复。 |
 | `IbkrTwsOrderExecutionTransport` | 拆成 5 个类 | `qts/execution/transports/` | 拆分 | 当前类职责过重。 |
 | `IbkrTwsMarketDataTransport` | 保持名称但移动 | `qts/data/transports/` | 迁移 | Transport 不应放在 adapters 目录。 |
 | `IbAsyncMarketDataTransport` | 保持名称但移动 | `qts/data/transports/` | 迁移 | 同上。 |
@@ -161,7 +161,7 @@ Backtest 使用 `ReplayMarketDataSource + SimulatedExecutionAdapter`，paper/liv
 ```text
 FakeLiveFeedAdapter
 FakeMarketDataAdapter
-FakeBrokerAdapter
+SimulatedBrokerAdapter
 LiveRuntime docstring 中的 fake / beta wording
 ReportWriter placeholder wording
 RuntimeArtifactWriter placeholder wording
@@ -485,7 +485,6 @@ qts/data/live/ibkr_specific.py   # 如确实有 provider-specific 内容
 
 ```text
 qts/testing/fakes/market_data.py
-qts/testing/fakes/broker.py
 qts/simulation/market_data.py
 qts/simulation/broker.py
 ```
@@ -493,12 +492,12 @@ qts/simulation/broker.py
 2. 按用途迁移：
 
 ```text
-测试替身：FakeStreamingMarketDataAdapter, FakeMarketDataAdapter, FakeBrokerAdapter
+测试替身：FakeStreamingMarketDataAdapter, FakeMarketDataAdapter
 生产模拟：SimulatedStreamingMarketDataAdapter, SimulatedBrokerAdapter
 ```
 
 3. `PAPER_SIMULATED` 只能使用 simulation class，不能使用 testing fake。
-4. 单元测试可以使用 testing fake，但必须从 `qts.testing.fakes` import。
+4. 单元测试的 broker 边界使用 `qts.simulation.broker.SimulatedBrokerAdapter`；market-data fake 仍从 `qts.testing.fakes` import。
 5. guardrail：
    - production path 禁止 `Fake*`。
    - production config 禁止引用 `qts.testing`。

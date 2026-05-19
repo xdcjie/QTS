@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Protocol
 
 from qts.core.ids import AccountId, CorrelationId, OrderId, StrategyId
 from qts.execution.order_manager import ExecutionReport, OrderIntent
-from qts.execution.simulator.simulated_broker import SimulatedBroker
 from qts.runtime.actor import Actor
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.live_capital import LiveCapitalOrderDecision
@@ -95,11 +94,11 @@ class ExecutionActor(Actor):
         self,
         *,
         order_manager_ref: ActorRef,
-        execution_adapter: ExecutionAdapter | None = None,
+        execution_adapter: ExecutionAdapter,
         live_capital_decision: LiveCapitalOrderDecision | None = None,
     ) -> None:
         self._order_manager_ref = order_manager_ref
-        self._execution_adapter = execution_adapter or SimulatedBroker()
+        self._execution_adapter = execution_adapter
         self._live_capital_decision = live_capital_decision
 
     def handle(self, message: object) -> None:

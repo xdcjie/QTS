@@ -118,8 +118,9 @@ qts.backtest
 
 qts.execution.simulator
   fill_model.py
-  simulated_broker.py
-  backtest_execution_adapter.py   # preferred if shared with simulation semantics
+
+qts.execution.adapters
+  simulated_execution_adapter.py  # shared execution adapter for simulation semantics
 
 qts.strategy_sdk
   context.py                 # user-facing facade

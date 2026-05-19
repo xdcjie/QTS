@@ -808,6 +808,60 @@ def test_guardrails_reject_removed_import_usage(
     }
 
 
+def test_guardrails_reject_removed_simulated_broker_import_usage(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/runtime/execution_consumer.py",
+        "from qts.execution.simulator.simulated_broker import SimulatedBroker\n",
+    )
+    _write(
+        root,
+        "backend/src/qts/runtime/execution_package_consumer.py",
+        "from qts.execution.simulator import SimulatedBroker\n",
+    )
+
+    violations = guardrails.GuardrailSuite(rules=(guardrails.RemovedImportNoNewUsageRule(),)).check(
+        root
+    )
+
+    assert {violation.code for violation in violations} == {"REMOVED_IMPORT_USAGE"}
+    assert {violation.symbol for violation in violations} == {
+        "qts.execution.simulator.simulated_broker.SimulatedBroker",
+        "qts.execution.simulator.SimulatedBroker",
+    }
+
+
+def test_guardrails_reject_removed_fake_broker_adapter_import_usage(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/testing/consumer.py",
+        "from qts.testing.fakes.broker import FakeBrokerAdapter\n",
+    )
+    _write(
+        root,
+        "backend/src/qts/testing/package_consumer.py",
+        "from qts.testing import FakeBrokerAdapter\n",
+    )
+
+    violations = guardrails.GuardrailSuite(rules=(guardrails.RemovedImportNoNewUsageRule(),)).check(
+        root
+    )
+
+    assert {violation.code for violation in violations} == {"REMOVED_IMPORT_USAGE"}
+    assert {violation.symbol for violation in violations} == {
+        "qts.testing.fakes.broker.FakeBrokerAdapter",
+        "qts.testing.FakeBrokerAdapter",
+    }
+
+
 def test_guardrails_reject_removed_runtime_live_import_usage(
     tmp_path: Path,
 ) -> None:
@@ -1006,12 +1060,12 @@ def test_guardrails_reject_production_imports_from_qts_testing(tmp_path: Path) -
     _write(
         root,
         "backend/src/qts/runtime/bad.py",
-        "from qts.testing.fakes.broker import FakeBrokerAdapter\n",
+        "from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter\n",
     )
     _write(
         root,
         "backend/src/qts/testing/consumer.py",
-        "from qts.testing.fakes.broker import FakeBrokerAdapter\n",
+        "from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter\n",
     )
 
     assert _codes_by_suite(root, guardrails.ProductionNoTestingImportRule()) == {
@@ -1026,7 +1080,7 @@ def test_default_guardrails_reject_production_imports_from_qts_testing(
     _write(
         root,
         "backend/src/qts/runtime/bad.py",
-        "from qts.testing.fakes.broker import FakeBrokerAdapter\n",
+        "from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter\n",
     )
 
     assert _codes(root) == {"PRODUCTION_TESTING_IMPORT"}

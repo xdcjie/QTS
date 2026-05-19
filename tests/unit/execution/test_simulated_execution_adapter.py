@@ -3,12 +3,13 @@ from __future__ import annotations
 from decimal import Decimal
 
 
-def test_simulated_broker_fills_market_order_from_provided_market_data() -> None:
+def test_simulated_execution_adapter_fills_market_order_from_provided_market_data() -> None:
     from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
+    from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
     from qts.execution.order_manager import ExecutionReportStatus, OrderIntent, OrderSide
-    from qts.execution.simulator.simulated_broker import SimulatedBroker
+    from qts.runtime.config import BacktestCostModel
 
-    broker = SimulatedBroker()
+    adapter = SimulatedExecutionAdapter(cost_model=BacktestCostModel())
     intent = OrderIntent(
         order_id=OrderId("ord-001"),
         instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
@@ -16,7 +17,7 @@ def test_simulated_broker_fills_market_order_from_provided_market_data() -> None
         quantity=Decimal("10"),
     )
 
-    report = broker.execute_market_order(
+    report = adapter.execute_market_order(
         intent,
         broker_order_id="sim-001",
         market_price=Decimal("101.25"),

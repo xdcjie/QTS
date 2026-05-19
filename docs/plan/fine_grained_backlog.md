@@ -1127,13 +1127,13 @@ States:
 
 ---
 
-## P8-T04 — Implement Simulated Broker
+## P8-T04 — Implement Simulated Execution Adapter
 
 ### Scope
 
-- `backend/src/qts/execution/simulator/simulated_broker.py`
+- `backend/src/qts/execution/adapters/simulated_execution_adapter.py`
 - `backend/src/qts/execution/simulator/fill_model.py`
-- `tests/unit/execution/test_simulated_broker.py`
+- `tests/unit/execution/test_simulated_execution_adapter.py`
 
 ### Requirements
 
@@ -1273,7 +1273,7 @@ Bar
 → Risk
 → OrderManagerActor
 → ExecutionActor
-→ SimulatedBroker
+→ SimulatedExecutionAdapter
 → Fill
 → AccountActor
 → Portfolio snapshot

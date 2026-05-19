@@ -96,6 +96,7 @@ class BacktestActorLoopDependencies:
     """Runtime collaborators and policy objects used by ``BacktestActorLoop``."""
 
     instrument_registry: InstrumentRegistry
+    execution_adapter: ExecutionAdapter
     process_intent: ProcessIntentHandler
     portfolio_view: PortfolioViewBuilder
     equity_point: EquityPointBuilder
@@ -106,7 +107,6 @@ class BacktestActorLoopDependencies:
         default_factory=dict
     )
     future_roll_registry: FutureRollRegistry | None = None
-    execution_adapter: ExecutionAdapter | None = None
 
 
 __all__ = [

@@ -67,10 +67,10 @@ def _broker_execution_adapter(
     live_capital_decision: object,
 ) -> BrokerExecutionAdapter:
     from qts.core.ids import BrokerId
-    from qts.testing.fakes.broker import FakeBrokerAdapter
+    from qts.simulation.broker import SimulatedBrokerAdapter
 
     return BrokerExecutionAdapter(
-        broker=FakeBrokerAdapter(broker_id=BrokerId("IBKR")),
+        broker=SimulatedBrokerAdapter(broker_id=BrokerId("IBKR")),
         account_id=_account_id(),
         strategy_id=_strategy_id(),
         live_capital_decision=live_capital_decision,

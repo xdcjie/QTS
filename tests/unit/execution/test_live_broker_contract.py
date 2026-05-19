@@ -11,7 +11,7 @@ from qts.execution.broker import (
     normalize_broker_execution_report,
 )
 from qts.execution.order_manager import OrderSide
-from qts.testing.fakes.broker import FakeBrokerAdapter
+from qts.simulation.broker import SimulatedBrokerAdapter
 
 
 def test_broker_capabilities_are_typed_and_validate_limits() -> None:
@@ -31,8 +31,8 @@ def test_broker_capabilities_are_typed_and_validate_limits() -> None:
         BrokerCapabilities(broker_id=BrokerId("paper"), max_order_quantity=Decimal("0"))
 
 
-def test_fake_broker_submit_cancel_and_fill_contract() -> None:
-    adapter = FakeBrokerAdapter(broker_id=BrokerId("fake"))
+def test_simulated_broker_submit_cancel_and_fill_contract() -> None:
+    adapter = SimulatedBrokerAdapter(broker_id=BrokerId("fake"))
     request = BrokerOrderRequest(
         order_id=OrderId("order-1"),
         client_order_id="client-order-1",
@@ -59,8 +59,31 @@ def test_fake_broker_submit_cancel_and_fill_contract() -> None:
     assert filled.broker_order_id.startswith("fake-")
 
 
+def test_simulated_broker_rejects_empty_fill_id() -> None:
+    adapter = SimulatedBrokerAdapter(broker_id=BrokerId("fake"))
+    request = BrokerOrderRequest(
+        order_id=OrderId("order-1"),
+        client_order_id="client-order-1",
+        account_id=AccountId("acct-a"),
+        strategy_id=StrategyId("strat-a"),
+        instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+        side=OrderSide.BUY,
+        quantity=Decimal("10"),
+    )
+
+    adapter.submit_order(request)
+
+    with pytest.raises(ValueError, match="fill_id"):
+        adapter.emit_fill(
+            order_id=request.order_id,
+            quantity=Decimal("4"),
+            price=Decimal("190.25"),
+            fill_id="",
+        )
+
+
 def test_broker_report_normalization_does_not_leak_vendor_object() -> None:
-    adapter = FakeBrokerAdapter(broker_id=BrokerId("fake"))
+    adapter = SimulatedBrokerAdapter(broker_id=BrokerId("fake"))
     request = BrokerOrderRequest(
         order_id=OrderId("order-1"),
         client_order_id="client-order-1",

@@ -1444,10 +1444,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>373 files</span>
-      <span>657 classes</span>
-      <span>2234 functions</span>
-      <span>356 backend</span>
+      <span>371 files</span>
+      <span>655 classes</span>
+      <span>2224 functions</span>
+      <span>354 backend</span>
       <span>17 frontend</span>
     </div>
   </div>
@@ -6222,39 +6222,6 @@
     </details>
     <details class="inventory-file">
       <summary>
-        <code>backend/src/qts/execution/simulator/simulated_broker.py</code>
-        <span class="inventory-counts">
-          <span>1 class</span>
-          <span>3 functions</span>
-        </span>
-      </summary>
-      <div class="inventory-body">
-        <p><strong>文件作用：</strong>Deterministic simulated broker.</p>
-        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
-        <div class="inventory-subsection">
-          <h3>类</h3>
-          <table class="inventory-table">
-            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
-            <tbody>
-              <tr><td><code>SimulatedBroker</code></td><td>simulated_broker:12</td><td>Broker simulator with no external dependency.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="inventory-subsection">
-          <h3>函数 / 方法</h3>
-          <table class="inventory-table">
-            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
-            <tbody>
-              <tr><td><code>__init__</code></td><td>SimulatedBroker:15</td><td>Perform __init__.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>execute_market_order</code></td><td>SimulatedBroker:19</td><td>Perform execute_market_order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>cancel_order</code></td><td>SimulatedBroker:39</td><td>Return a deterministic cancellation report.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </details>
-    <details class="inventory-file">
-      <summary>
         <code>backend/src/qts/execution/transports/__init__.py</code>
         <span class="inventory-counts">
           <span>0 classes</span>
@@ -7635,13 +7602,13 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>GuardrailViolation</code></td><td>guardrails:352</td><td>One architecture or domain-boundary guardrail violation.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>_ClassInventoryBaseline</code></td><td>guardrails:385</td><td>定义 class inventory baseline 概念及其相关状态或行为。</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>_ProductionClassEntry</code></td><td>guardrails:393</td><td>定义 production class entry 概念及其相关状态或行为。</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>PlatformFreezeException</code></td><td>guardrails:403</td><td>Structured allowlisted class exception for the platform freeze rule.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>PlatformFreezeConfig</code></td><td>guardrails:435</td><td>Runtime configuration for `PlatformFreezeRule`.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
-              <tr><td><code>Rule</code></td><td>guardrails:539</td><td>Pluggable guardrail rule interface.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
-              <tr><td><code>RepositoryRule</code></td><td>guardrails:559</td><td>Optional guardrail rule interface for repository-wide checks.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>GuardrailViolation</code></td><td>guardrails:359</td><td>One architecture or domain-boundary guardrail violation.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>_ClassInventoryBaseline</code></td><td>guardrails:392</td><td>定义 class inventory baseline 概念及其相关状态或行为。</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>_ProductionClassEntry</code></td><td>guardrails:400</td><td>定义 production class entry 概念及其相关状态或行为。</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>PlatformFreezeException</code></td><td>guardrails:410</td><td>Structured allowlisted class exception for the platform freeze rule.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>PlatformFreezeConfig</code></td><td>guardrails:442</td><td>Runtime configuration for `PlatformFreezeRule`.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>Rule</code></td><td>guardrails:546</td><td>Pluggable guardrail rule interface.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>RepositoryRule</code></td><td>guardrails:566</td><td>Optional guardrail rule interface for repository-wide checks.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
             </tbody>
           </table>
         </div>
@@ -7650,49 +7617,49 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__post_init__</code></td><td>GuardrailViolation:362</td><td>Attach a default remediation for report consumers.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>format</code></td><td>GuardrailViolation:375</td><td>Perform format.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>from_raw</code></td><td>PlatformFreezeException:413</td><td>Return an exception object or a parse violation message.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_is_platform_freeze_module</code></td><td>module:443</td><td>Return whether module lives under a frozen package.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_load_platform_freeze_config</code></td><td>module:451</td><td>Load platform freeze exceptions from docs file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_iter_top_level_classes</code></td><td>module:528</td><td>Return top-level class definitions from module body.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_public_class</code></td><td>module:534</td><td>Return whether class definition is production-public.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>check</code></td><td>Rule:544</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>check_repository</code></td><td>RepositoryRule:562</td><td>Perform repository-wide check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_check_import</code></td><td>module:567</td><td>提供模块级 check import 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_forbidden_dependency</code></td><td>module:633</td><td>提供模块级 is forbidden dependency 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_forbidden_broker_adapter_dependency</code></td><td>module:661</td><td>提供模块级 is forbidden broker adapter dependency 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_forbidden_adapter_dependency</code></td><td>module:673</td><td>提供模块级 is forbidden adapter dependency 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_transport_actor_import</code></td><td>module:684</td><td>提供模块级 is transport actor import 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_pipeline_actor_import</code></td><td>module:690</td><td>提供模块级 is pipeline actor import 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_runtime_actor_module</code></td><td>module:698</td><td>提供模块级 is runtime actor module 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_provider_sdk_module</code></td><td>module:709</td><td>提供模块级 is provider sdk module 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_product_specific_code</code></td><td>module:716</td><td>提供模块级 check product specific code 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_broker_specific_code</code></td><td>module:732</td><td>提供模块级 check broker specific code 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_test_support_code</code></td><td>module:748</td><td>提供模块级 check test support code 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_shared_capability_placement</code></td><td>module:779</td><td>提供模块级 check shared capability placement 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_backtest_runner_cohesion</code></td><td>module:801</td><td>提供模块级 check backtest runner cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_backtest_input_cohesion</code></td><td>module:857</td><td>提供模块级 check backtest input cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_backtest_engine_cohesion</code></td><td>module:913</td><td>提供模块级 check backtest engine cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_backtest_actor_loop_cohesion</code></td><td>module:953</td><td>提供模块级 check backtest actor loop cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_strategy_sdk_internal_leak</code></td><td>module:1029</td><td>提供模块级 check strategy sdk internal leak 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_check_forbidden_tokens</code></td><td>module:1092</td><td>提供模块级 check forbidden tokens 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_node_identifier_name</code></td><td>module:1125</td><td>提供模块级 node identifier name 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_contains_forbidden_token</code></td><td>module:1135</td><td>提供模块级 contains forbidden token 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_identifier_tokens</code></td><td>module:1139</td><td>提供模块级 identifier tokens 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_iter_imports</code></td><td>module:1151</td><td>提供模块级 iter imports 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_iter_imported_names</code></td><td>module:1161</td><td>提供模块级 iter imported names 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_iter_docstrings</code></td><td>module:1169</td><td>提供模块级 iter docstrings 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_iter_architecture_text_paths</code></td><td>module:1183</td><td>提供模块级 iter architecture text paths 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_line_number_containing</code></td><td>module:1196</td><td>提供模块级 line number containing 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_has_allowed_prefix</code></td><td>module:1207</td><td>提供模块级 has allowed prefix 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_class_inventory_baseline_optional</code></td><td>module:1211</td><td>提供模块级 class inventory baseline optional 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_load_class_inventory_baseline</code></td><td>module:1218</td><td>提供模块级 load class inventory baseline 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_class_inventory_parse_violations</code></td><td>module:1277</td><td>提供模块级 class inventory parse violations 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_scan_production_classes</code></td><td>module:1291</td><td>提供模块级 scan production classes 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_class_field_count</code></td><td>module:1322</td><td>提供模块级 class field count 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_class_var_annotation</code></td><td>module:1337</td><td>提供模块级 is class var annotation 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_is_dto_or_value_object_name</code></td><td>module:1347</td><td>提供模块级 is dto or value object name 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>GuardrailViolation:369</td><td>Attach a default remediation for report consumers.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>format</code></td><td>GuardrailViolation:382</td><td>Perform format.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>from_raw</code></td><td>PlatformFreezeException:420</td><td>Return an exception object or a parse violation message.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_is_platform_freeze_module</code></td><td>module:450</td><td>Return whether module lives under a frozen package.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_load_platform_freeze_config</code></td><td>module:458</td><td>Load platform freeze exceptions from docs file.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_iter_top_level_classes</code></td><td>module:535</td><td>Return top-level class definitions from module body.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_public_class</code></td><td>module:541</td><td>Return whether class definition is production-public.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>check</code></td><td>Rule:551</td><td>Perform check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>check_repository</code></td><td>RepositoryRule:569</td><td>Perform repository-wide check.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_check_import</code></td><td>module:574</td><td>提供模块级 check import 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_forbidden_dependency</code></td><td>module:640</td><td>提供模块级 is forbidden dependency 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_forbidden_broker_adapter_dependency</code></td><td>module:668</td><td>提供模块级 is forbidden broker adapter dependency 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_forbidden_adapter_dependency</code></td><td>module:680</td><td>提供模块级 is forbidden adapter dependency 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_transport_actor_import</code></td><td>module:691</td><td>提供模块级 is transport actor import 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_pipeline_actor_import</code></td><td>module:697</td><td>提供模块级 is pipeline actor import 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_runtime_actor_module</code></td><td>module:705</td><td>提供模块级 is runtime actor module 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_provider_sdk_module</code></td><td>module:716</td><td>提供模块级 is provider sdk module 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_product_specific_code</code></td><td>module:723</td><td>提供模块级 check product specific code 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_broker_specific_code</code></td><td>module:739</td><td>提供模块级 check broker specific code 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_test_support_code</code></td><td>module:755</td><td>提供模块级 check test support code 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_shared_capability_placement</code></td><td>module:786</td><td>提供模块级 check shared capability placement 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_backtest_runner_cohesion</code></td><td>module:808</td><td>提供模块级 check backtest runner cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_backtest_input_cohesion</code></td><td>module:864</td><td>提供模块级 check backtest input cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_backtest_engine_cohesion</code></td><td>module:920</td><td>提供模块级 check backtest engine cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_backtest_actor_loop_cohesion</code></td><td>module:960</td><td>提供模块级 check backtest actor loop cohesion 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_strategy_sdk_internal_leak</code></td><td>module:1036</td><td>提供模块级 check strategy sdk internal leak 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_check_forbidden_tokens</code></td><td>module:1099</td><td>提供模块级 check forbidden tokens 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_node_identifier_name</code></td><td>module:1132</td><td>提供模块级 node identifier name 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_contains_forbidden_token</code></td><td>module:1142</td><td>提供模块级 contains forbidden token 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_identifier_tokens</code></td><td>module:1146</td><td>提供模块级 identifier tokens 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_iter_imports</code></td><td>module:1158</td><td>提供模块级 iter imports 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_iter_imported_names</code></td><td>module:1168</td><td>提供模块级 iter imported names 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_iter_docstrings</code></td><td>module:1176</td><td>提供模块级 iter docstrings 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_iter_architecture_text_paths</code></td><td>module:1190</td><td>提供模块级 iter architecture text paths 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_line_number_containing</code></td><td>module:1203</td><td>提供模块级 line number containing 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_has_allowed_prefix</code></td><td>module:1214</td><td>提供模块级 has allowed prefix 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_class_inventory_baseline_optional</code></td><td>module:1218</td><td>提供模块级 class inventory baseline optional 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_load_class_inventory_baseline</code></td><td>module:1225</td><td>提供模块级 load class inventory baseline 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_class_inventory_parse_violations</code></td><td>module:1284</td><td>提供模块级 class inventory parse violations 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_scan_production_classes</code></td><td>module:1298</td><td>提供模块级 scan production classes 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_class_field_count</code></td><td>module:1329</td><td>提供模块级 class field count 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_class_var_annotation</code></td><td>module:1344</td><td>提供模块级 is class var annotation 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_is_dto_or_value_object_name</code></td><td>module:1354</td><td>提供模块级 is dto or value object name 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10241,10 +10208,10 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>ExecutionAdapter</code></td><td>execution_actor:21</td><td>Execution boundary contract used by the actor.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
-              <tr><td><code>OrderExecutionRequest</code></td><td>execution_actor:54</td><td>Message requesting order execution.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
-              <tr><td><code>OrderCancelRequest</code></td><td>execution_actor:74</td><td>Message requesting broker order cancellation.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
-              <tr><td><code>ExecutionActor</code></td><td>execution_actor:91</td><td>Actor wrapper for an order execution adapter or simulator.</td><td>保持 actor-owned state 只在消息边界内变化，避免跨 actor 直接调用业务方法。</td></tr>
+              <tr><td><code>ExecutionAdapter</code></td><td>execution_actor:20</td><td>Execution boundary contract used by the actor.</td><td>隔离具体实现，支持 backtest、paper、live 或测试替身替换。</td></tr>
+              <tr><td><code>OrderExecutionRequest</code></td><td>execution_actor:53</td><td>Message requesting order execution.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
+              <tr><td><code>OrderCancelRequest</code></td><td>execution_actor:73</td><td>Message requesting broker order cancellation.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
+              <tr><td><code>ExecutionActor</code></td><td>execution_actor:90</td><td>Actor wrapper for an order execution adapter or simulator.</td><td>保持 actor-owned state 只在消息边界内变化，避免跨 actor 直接调用业务方法。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10253,12 +10220,12 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>execute_market_order</code></td><td>ExecutionAdapter:24</td><td>Execute a market order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>cancel_order</code></td><td>ExecutionAdapter:39</td><td>Cancel an active order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>OrderExecutionRequest:65</td><td>Validate execution request identity fields.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>OrderCancelRequest:83</td><td>Validate cancel request identity fields.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>ExecutionActor:94</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>handle</code></td><td>ExecutionActor:105</td><td>Perform handle.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>execute_market_order</code></td><td>ExecutionAdapter:23</td><td>Execute a market order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>cancel_order</code></td><td>ExecutionAdapter:38</td><td>Cancel an active order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>OrderExecutionRequest:64</td><td>Validate execution request identity fields.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>OrderCancelRequest:82</td><td>Validate cancel request identity fields.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>ExecutionActor:93</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>handle</code></td><td>ExecutionActor:104</td><td>Perform handle.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -12259,7 +12226,7 @@
               <tr><td><code>cancel_order</code></td><td>SimulatedBrokerAdapter:43</td><td>Cancel a previously accepted order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>order_request</code></td><td>SimulatedBrokerAdapter:52</td><td>Return a previously submitted order request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>emit_fill</code></td><td>SimulatedBrokerAdapter:56</td><td>Emit a deterministic fill for an existing order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_report</code></td><td>SimulatedBrokerAdapter:84</td><td>Build a normalized broker execution report.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_report</code></td><td>SimulatedBrokerAdapter:86</td><td>Build a normalized broker execution report.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -12935,43 +12902,6 @@
       <div class="inventory-body">
         <p><strong>文件作用：</strong>Deterministic doubles for test-only flows.</p>
         <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
-      </div>
-    </details>
-    <details class="inventory-file">
-      <summary>
-        <code>backend/src/qts/testing/fakes/broker.py</code>
-        <span class="inventory-counts">
-          <span>1 class</span>
-          <span>7 functions</span>
-        </span>
-      </summary>
-      <div class="inventory-body">
-        <p><strong>文件作用：</strong>Deterministic broker doubles for tests.</p>
-        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
-        <div class="inventory-subsection">
-          <h3>类</h3>
-          <table class="inventory-table">
-            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
-            <tbody>
-              <tr><td><code>FakeBrokerAdapter</code></td><td>broker:19</td><td>Deterministic in-memory broker adapter for test environments.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="inventory-subsection">
-          <h3>函数 / 方法</h3>
-          <table class="inventory-table">
-            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
-            <tbody>
-              <tr><td><code>__init__</code></td><td>FakeBrokerAdapter:22</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>capabilities</code></td><td>FakeBrokerAdapter:29</td><td>Return deterministic broker capabilities.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>submit_order</code></td><td>FakeBrokerAdapter:35</td><td>Submit and accept an order.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>cancel_order</code></td><td>FakeBrokerAdapter:49</td><td>Cancel an order by deterministic order ID.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>order_request</code></td><td>FakeBrokerAdapter:60</td><td>Return previously submitted order request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>emit_fill</code></td><td>FakeBrokerAdapter:64</td><td>Emit a fake execution report.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_report</code></td><td>FakeBrokerAdapter:96</td><td>Build a broker execution report for the request.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-            </tbody>
-          </table>
-        </div>
       </div>
     </details>
     <details class="inventory-file">

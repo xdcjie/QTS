@@ -66,6 +66,8 @@ class SimulatedBrokerAdapter:
             raise ValueError("quantity must be positive")
         if price < Decimal("0"):
             raise ValueError("price must be non-negative")
+        if not fill_id.strip():
+            raise ValueError("fill_id must not be empty")
         request = self.order_request(order_id)
         status = (
             BrokerExecutionReportStatus.FILLED

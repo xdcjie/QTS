@@ -124,7 +124,7 @@ PaperBrokerRuntimeConfig
 ```text
 1. 主 runtime 已经从 LiveRuntimeSession 语义迁移到 RuntimeSession。
 2. paper 语义拆成 PaperBrokerRuntimeConfig 与 PaperSimulatedRuntimeConfig。
-3. FakeBrokerAdapter / FakeStreamingMarketDataAdapter 已经进入 qts.testing.fakes，不再停留在 production data/live package。
+3. Broker 测试替身已收敛到 production-adjacent 的 SimulatedBrokerAdapter；FakeStreamingMarketDataAdapter 仍位于 qts.testing.fakes。
 4. IBKR order transport 已拆出 connection、order client、callback dispatcher、event emitter、order id allocator。
 5. RuntimeEventContext 已经负责 run-scoped defaults 和 monotonic sequence number。
 6. MarketDataFreshnessRiskRule / MarketDataPermissionRiskRule 已经出现，说明 market-data 状态开始进入 risk gate。
@@ -566,7 +566,7 @@ risk_config_hash
 
 ```text
 1. 使用 FakeStreamingMarketDataAdapter from qts.testing.fakes。
-2. 使用 SimulatedExecutionAdapter 或 SimulatedBroker。
+2. 显式注入 SimulatedExecutionAdapter。
 3. 构造 RuntimeSession + RuntimeMarketDataCoordinator。
 4. 注入一条 market data event。
 5. 策略 emit TargetIntent。

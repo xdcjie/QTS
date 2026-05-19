@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
@@ -7,10 +8,19 @@ import pytest
 
 if TYPE_CHECKING:
     from qts.core.ids import AccountId, CorrelationId, StrategyId
+    from qts.runtime.actors.execution_actor import ExecutionAdapter
     from qts.runtime.actors.order_manager_actor import OrderRouteMetadata
 
 
-def test_execution_actor_wraps_simulator_and_emits_execution_report() -> None:
+def test_execution_actor_requires_explicit_execution_adapter() -> None:
+    from qts.runtime.actors.execution_actor import ExecutionActor
+
+    signature = inspect.signature(ExecutionActor)
+
+    assert signature.parameters["execution_adapter"].default is inspect.Signature.empty
+
+
+def test_execution_actor_uses_injected_simulated_adapter_and_emits_execution_report() -> None:
     from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
     from qts.execution.order_manager import ExecutionReport, OrderIntent, OrderSide
     from qts.runtime.actor_ref import ActorRef
@@ -18,7 +28,10 @@ def test_execution_actor_wraps_simulator_and_emits_execution_report() -> None:
     from qts.runtime.mailbox import Mailbox
 
     out = Mailbox()
-    actor = ExecutionActor(order_manager_ref=ActorRef(mailbox=out))
+    actor = ExecutionActor(
+        order_manager_ref=ActorRef(mailbox=out),
+        execution_adapter=_simulated_execution_adapter(),
+    )
     intent = OrderIntent(
         order_id=OrderId("ord-001"),
         instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
@@ -162,6 +175,13 @@ def _route_metadata(
     )
 
 
+def _simulated_execution_adapter() -> ExecutionAdapter:
+    from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
+    from qts.runtime.config import BacktestCostModel
+
+    return SimulatedExecutionAdapter(cost_model=BacktestCostModel())
+
+
 def test_execution_actor_rejects_market_data_messages() -> None:
     from datetime import UTC, datetime
 
@@ -171,7 +191,10 @@ def test_execution_actor_rejects_market_data_messages() -> None:
     from qts.runtime.actors.execution_actor import ExecutionActor
     from qts.runtime.mailbox import Mailbox
 
-    actor = ExecutionActor(order_manager_ref=ActorRef(mailbox=Mailbox()))
+    actor = ExecutionActor(
+        order_manager_ref=ActorRef(mailbox=Mailbox()),
+        execution_adapter=_simulated_execution_adapter(),
+    )
 
     with pytest.raises(TypeError, match="unsupported execution message"):
         actor.handle(

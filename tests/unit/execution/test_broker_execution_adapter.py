@@ -7,9 +7,9 @@ def test_broker_execution_adapter_normalizes_submit_and_callback_reports() -> No
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
     from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
     from qts.execution.order_manager import ExecutionReportStatus, OrderIntent, OrderSide
-    from qts.testing.fakes.broker import FakeBrokerAdapter
+    from qts.simulation.broker import SimulatedBrokerAdapter
 
-    broker = FakeBrokerAdapter(broker_id=BrokerId("paper"))
+    broker = SimulatedBrokerAdapter(broker_id=BrokerId("paper"))
     adapter = BrokerExecutionAdapter(
         broker=broker,
         account_id=AccountId("acct-a"),
@@ -51,9 +51,9 @@ def test_broker_execution_adapter_normalizes_cancel_reports_with_runtime_order_i
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
     from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
     from qts.execution.order_manager import ExecutionReportStatus, OrderIntent, OrderSide
-    from qts.testing.fakes.broker import FakeBrokerAdapter
+    from qts.simulation.broker import SimulatedBrokerAdapter
 
-    broker = FakeBrokerAdapter(broker_id=BrokerId("paper"))
+    broker = SimulatedBrokerAdapter(broker_id=BrokerId("paper"))
     adapter = BrokerExecutionAdapter(
         broker=broker,
         account_id=AccountId("acct-a"),
@@ -93,10 +93,10 @@ def test_broker_execution_adapter_rejects_intent_account_route_mismatch() -> Non
     from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
     from qts.execution.adapters.broker_execution_adapter import BrokerExecutionAdapter
     from qts.execution.order_manager import OrderIntent, OrderSide
-    from qts.testing.fakes.broker import FakeBrokerAdapter
+    from qts.simulation.broker import SimulatedBrokerAdapter
 
     adapter = BrokerExecutionAdapter(
-        broker=FakeBrokerAdapter(broker_id=BrokerId("paper")),
+        broker=SimulatedBrokerAdapter(broker_id=BrokerId("paper")),
         account_id=AccountId("acct-a"),
     )
     intent = OrderIntent(
@@ -126,10 +126,10 @@ def test_broker_execution_adapter_rejects_unknown_broker_order_id() -> None:
         BrokerExecutionReport,
         BrokerExecutionReportStatus,
     )
-    from qts.testing.fakes.broker import FakeBrokerAdapter
+    from qts.simulation.broker import SimulatedBrokerAdapter
 
     adapter = BrokerExecutionAdapter(
-        broker=FakeBrokerAdapter(broker_id=BrokerId("paper")),
+        broker=SimulatedBrokerAdapter(broker_id=BrokerId("paper")),
         account_id=AccountId("acct-a"),
     )
 
@@ -162,11 +162,11 @@ def test_broker_execution_adapter_can_recover_runtime_broker_order_mapping() -> 
     )
     from qts.execution.order_manager import Order, OrderIntent, OrderManagerSnapshot, OrderSide
     from qts.execution.order_state_machine import OrderState
-    from qts.testing.fakes.broker import FakeBrokerAdapter
+    from qts.simulation.broker import SimulatedBrokerAdapter
 
     order_id = OrderId("ord-001")
     adapter = BrokerExecutionAdapter(
-        broker=FakeBrokerAdapter(broker_id=BrokerId("paper")),
+        broker=SimulatedBrokerAdapter(broker_id=BrokerId("paper")),
         account_id=AccountId("acct-a"),
     )
     adapter.restore_order_mapping(

@@ -6,11 +6,11 @@ from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId
 from qts.execution.broker import BrokerOrderRequest
 from qts.execution.order_manager import OrderSide
 from qts.reconciliation import OrderSnapshot, ReconciliationSnapshot, reconcile_snapshots
-from qts.testing.fakes.broker import FakeBrokerAdapter
+from qts.simulation.broker import SimulatedBrokerAdapter
 
 
 def test_live_broker_boundary_preserves_internal_identifiers() -> None:
-    adapter = FakeBrokerAdapter(broker_id=BrokerId("fake"))
+    adapter = SimulatedBrokerAdapter(broker_id=BrokerId("fake"))
     request = BrokerOrderRequest(
         order_id=OrderId("internal-order"),
         client_order_id="client-internal-order",

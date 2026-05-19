@@ -3,7 +3,8 @@
 ## Broker Execution
 
 `qts.execution.broker` defines `BrokerCapabilities`, `BrokerAdapter`, `BrokerOrderRequest`,
-`BrokerExecutionReport`, and `FakeBrokerAdapter`.
+and `BrokerExecutionReport`. Local paper-like broker simulation uses
+`qts.simulation.broker.SimulatedBrokerAdapter`.
 
 Broker and vendor identifiers stay at the adapter boundary. Internal flows keep using
 `InstrumentId`, `AccountId`, `StrategyId`, and `OrderId`. Broker reports are normalized before they
