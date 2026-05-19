@@ -4,7 +4,6 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
-
 from qts.core.ids import InstrumentId
 from qts.domain.market_data import Bar
 

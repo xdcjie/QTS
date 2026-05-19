@@ -18,6 +18,8 @@ from qts.indicators.technical import (
     SessionVWAP,
     StandardDeviation,
     StochasticOscillator,
+    Supertrend,
+    SupertrendValue,
     VolumeRatio,
     WilliamsR,
 )
@@ -43,6 +45,8 @@ __all__ = [
     "SessionVWAP",
     "StandardDeviation",
     "StochasticOscillator",
+    "Supertrend",
+    "SupertrendValue",
     "VolumeRatio",
     "WilliamsR",
 ]

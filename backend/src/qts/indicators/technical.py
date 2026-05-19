@@ -70,6 +70,111 @@ class AverageTrueRange:
         return max(high - low, abs(high - self._previous_close), abs(low - self._previous_close))
 
 
+@dataclass(frozen=True, slots=True)
+class SupertrendValue:
+    """Supertrend output for a completed bar update."""
+
+    value: Decimal
+    direction: int
+    upper_band: Decimal
+    lower_band: Decimal
+
+
+@dataclass(slots=True)
+class Supertrend:
+    """ATR-band trend indicator with bullish/bearish direction state."""
+
+    window: int
+    multiplier: Decimal = Decimal("3")
+    _atr: AverageTrueRange = field(init=False, repr=False)
+    _previous_close: Decimal | None = field(default=None, init=False, repr=False)
+    _final_upper_band: Decimal | None = field(default=None, init=False, repr=False)
+    _final_lower_band: Decimal | None = field(default=None, init=False, repr=False)
+    _direction: int | None = field(default=None, init=False, repr=False)
+    value: SupertrendValue | None = None
+
+    def __post_init__(self) -> None:
+        """Validate and initialize Supertrend state."""
+        if self.window <= 0:
+            raise ValueError("window must be positive")
+        if not isinstance(self.multiplier, Decimal):
+            self.multiplier = Decimal(str(self.multiplier))
+        if self.multiplier < Decimal("0"):
+            raise ValueError("multiplier must be non-negative")
+        self._atr = AverageTrueRange(window=self.window)
+
+    @property
+    def ready(self) -> bool:
+        """Return whether Supertrend has warmed up."""
+        return self.value is not None
+
+    def update_bar(self, bar: Bar) -> SupertrendValue | None:
+        """Update Supertrend from a completed OHLC bar."""
+        return self.update(high=bar.high, low=bar.low, close=bar.close)
+
+    def update(self, *, high: Decimal, low: Decimal, close: Decimal) -> SupertrendValue | None:
+        """Update Supertrend from OHLC values."""
+        previous_close = self._previous_close
+        atr = self._atr.update(high=high, low=low, close=close)
+        if atr is None:
+            self._previous_close = close
+            self.value = None
+            return None
+
+        midpoint = (high + low) / Decimal("2")
+        basic_upper = midpoint + self.multiplier * atr
+        basic_lower = midpoint - self.multiplier * atr
+        final_upper = self._final_upper(basic_upper, previous_close)
+        final_lower = self._final_lower(basic_lower, previous_close)
+        direction = self._next_direction(close, final_upper, final_lower)
+        active_value = final_lower if direction == 1 else final_upper
+
+        self._final_upper_band = final_upper
+        self._final_lower_band = final_lower
+        self._direction = direction
+        self._previous_close = close
+        self.value = SupertrendValue(
+            value=active_value,
+            direction=direction,
+            upper_band=final_upper,
+            lower_band=final_lower,
+        )
+        return self.value
+
+    def _final_upper(self, basic_upper: Decimal, previous_close: Decimal | None) -> Decimal:
+        """Return the carried or reset final upper band."""
+        current = self._final_upper_band
+        if current is None:
+            return basic_upper
+        if basic_upper < current:
+            return basic_upper
+        if previous_close is not None and previous_close > current:
+            return basic_upper
+        return current
+
+    def _final_lower(self, basic_lower: Decimal, previous_close: Decimal | None) -> Decimal:
+        """Return the carried or reset final lower band."""
+        current = self._final_lower_band
+        if current is None:
+            return basic_lower
+        if basic_lower > current:
+            return basic_lower
+        if previous_close is not None and previous_close < current:
+            return basic_lower
+        return current
+
+    def _next_direction(
+        self,
+        close: Decimal,
+        final_upper: Decimal,
+        final_lower: Decimal,
+    ) -> int:
+        """Return next direction using close crosses of the active band."""
+        if self._direction is None or self._direction == -1:
+            return 1 if close > final_upper else -1
+        return -1 if close < final_lower else 1
+
+
 @dataclass(slots=True)
 class RSI:
     """Relative strength index using Wilder smoothing."""
@@ -899,6 +1004,8 @@ __all__ = [
     "StandardDeviation",
     "StochasticOscillator",
     "StochasticOscillatorValue",
+    "Supertrend",
+    "SupertrendValue",
     "VolumeRatio",
     "WilliamsR",
 ]
