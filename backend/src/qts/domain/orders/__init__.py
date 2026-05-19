@@ -3,6 +3,7 @@ from qts.domain.orders.order_spec import (
     BracketSpec,
     BrokerOrderType,
     OrderSpec,
+    OrderType,
     TimeInForce,
 )
 from qts.domain.orders.value_objects import (
@@ -34,6 +35,7 @@ __all__ = [
     "OrderManagerSnapshot",
     "OrderSide",
     "OrderSpec",
+    "OrderType",
     "ReplaceIntent",
     "TimeInForce",
 ]

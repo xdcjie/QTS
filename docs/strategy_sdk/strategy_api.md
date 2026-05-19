@@ -12,6 +12,8 @@ User strategies should focus on research and trading intent.
 - `IndicatorFactory`
 - `FactorFactory`
 - `Universe`
+- `OrderSpec`
+- `OrderType`
 - target APIs
 
 ## Preferred methods
@@ -25,6 +27,20 @@ ctx.close(asset)
 ```
 
 These methods emit intents. They do not mutate portfolio state directly.
+
+## Advanced order specs
+
+Strategies that need a non-market order may pass an `OrderSpec` with the
+neutral domain `OrderType`. Broker-specific support remains an execution and
+risk boundary concern.
+
+```python
+ctx.target_quantity(
+    asset,
+    100,
+    spec=OrderSpec(order_type=OrderType.LIMIT, limit_price=Decimal("101.25")),
+)
+```
 
 ## Optional signal path
 

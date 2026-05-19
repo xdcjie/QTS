@@ -148,7 +148,6 @@
 | `backend/src/qts/domain/market_data/bar.py` | `qts.domain.market_data.bar` | 9 |
 | `backend/src/qts/domain/orders/__init__.py` | `qts.domain.orders` | 0 |
 | `backend/src/qts/domain/orders/value_objects.py` | `qts.domain.orders.value_objects` | 14 |
-| `backend/src/qts/domain/portfolio/__init__.py` | `qts.domain.portfolio` | 0 |
 | `backend/src/qts/domain/risk/__init__.py` | `qts.domain.risk` | 0 |
 | `backend/src/qts/domain/risk/decision.py` | `qts.domain.risk.decision` | 6 |
 | `backend/src/qts/domain/risk/request.py` | `qts.domain.risk.request` | 3 |
@@ -3951,10 +3950,6 @@
   - 直接调用：无
   - 可解析内部调用：无
 
-### `backend/src/qts/domain/portfolio/__init__.py`
-
-- 无类/函数/方法符号。
-
 ### `backend/src/qts/domain/risk/__init__.py`
 
 - 无类/函数/方法符号。
@@ -4108,12 +4103,6 @@
   - 类型：`method`
   - 位置：`backend/src/qts/execution/broker.py:58`
   - 说明：Perform supports_tif.
-  - 直接调用：无
-  - 可解析内部调用：无
-- `qts.execution.broker.BrokerOrderType`
-  - 类型：`class`
-  - 位置：`backend/src/qts/execution/broker.py:63`
-  - 说明：Order types modeled before broker submission.
   - 直接调用：无
   - 可解析内部调用：无
 - `qts.execution.broker.TimeInForce`
@@ -7589,4 +7578,3 @@
 ### `scripts/verify_guardrails.py`
 
 - 无类/函数/方法符号。
-

@@ -140,6 +140,7 @@ STRATEGY_SDK_FORBIDDEN_IMPORT_PREFIXES = (
 STRATEGY_SDK_FORBIDDEN_SYMBOLS = frozenset(
     {
         "BrokerActor",
+        "BrokerOrderType",
         "OrderManagerActor",
         "ContractSpec",
         "BrokerSymbolMapping",
@@ -1071,7 +1072,7 @@ def _check_strategy_sdk_internal_leak(
                     line=line,
                     message=(
                         "Strategy SDK, factor, and research public modules must not reference "
-                        f"internal actor/risk symbol {imported_name}"
+                        f"internal actor/broker/risk symbol {imported_name}"
                     ),
                 )
             )
@@ -1089,7 +1090,7 @@ def _check_strategy_sdk_internal_leak(
                     line=getattr(node, "lineno", 1),
                     message=(
                         "Strategy SDK, factor, and research public modules must not reference "
-                        f"internal actor/risk symbol {node.id}"
+                        f"internal actor/broker/risk symbol {node.id}"
                     ),
                 )
             )

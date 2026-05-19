@@ -79,7 +79,7 @@ exceptions:
     reason: OPT-29 API authentication authorization and rate limit middleware
     owner: platform
     expiry: 2027-05-17
-  - class_name: BrokerOrderType
+  - class_name: OrderType
     module: qts.domain.orders.order_spec
     reason: OPT-27 order type domain enum
     owner: platform

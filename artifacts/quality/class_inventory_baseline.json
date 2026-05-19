@@ -189,7 +189,7 @@
     "qts.domain.market_data.bar.Bar",
     "qts.domain.market_data.bar.Quote",
     "qts.domain.market_data.bar.Tick",
-    "qts.domain.orders.order_spec.BrokerOrderType",
+    "qts.domain.orders.order_spec.OrderType",
     "qts.domain.orders.order_spec.TimeInForce",
     "qts.domain.orders.order_spec.BracketLeg",
     "qts.domain.orders.order_spec.BracketSpec",

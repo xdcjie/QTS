@@ -11,7 +11,7 @@ from qts.strategy_sdk.portfolio_construction import (
 from qts.strategy_sdk.portfolio_view import PortfolioPosition, PortfolioView
 from qts.strategy_sdk.signals import Signal, SignalDirection
 from qts.strategy_sdk.strategy import Strategy
-from qts.strategy_sdk.target import OrderSpec, TargetIntent, TargetIntentType
+from qts.strategy_sdk.target import OrderSpec, OrderType, TargetIntent, TargetIntentType
 from qts.strategy_sdk.universe import (
     FundamentalTopNSelector,
     FundamentalUniverseRow,
@@ -34,6 +34,7 @@ __all__ = [
     "IndicatorFactory",
     "OrderUpdate",
     "OrderSpec",
+    "OrderType",
     "PortfolioPosition",
     "PortfolioView",
     "PortfolioConstructionModel",

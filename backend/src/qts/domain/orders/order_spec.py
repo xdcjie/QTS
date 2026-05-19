@@ -10,8 +10,8 @@ from enum import StrEnum
 from qts.core.time import require_aware_datetime
 
 
-class BrokerOrderType(StrEnum):
-    """Order types modeled before broker submission."""
+class OrderType(StrEnum):
+    """Order types modeled by the domain order specification."""
 
     MARKET = "market"
     LIMIT = "limit"
@@ -22,6 +22,9 @@ class BrokerOrderType(StrEnum):
     MARKET_ON_CLOSE = "market_on_close"
     BRACKET = "bracket"
     ICEBERG = "iceberg"
+
+
+BrokerOrderType = OrderType
 
 
 class TimeInForce(StrEnum):
@@ -40,7 +43,7 @@ class TimeInForce(StrEnum):
 class BracketLeg:
     """One child leg of a bracket order."""
 
-    order_type: BrokerOrderType
+    order_type: OrderType
     side: str
     quantity: Decimal
     limit_price: Decimal | None = None
@@ -70,7 +73,7 @@ class BracketSpec:
 class OrderSpec:
     """Typed execution shape carried from strategy intent to broker request."""
 
-    order_type: BrokerOrderType = BrokerOrderType.MARKET
+    order_type: OrderType = OrderType.MARKET
     time_in_force: TimeInForce = TimeInForce.DAY
     limit_price: Decimal | None = None
     stop_price: Decimal | None = None
@@ -116,7 +119,7 @@ class OrderSpec:
         return payload
 
     def _validate_shape(self) -> None:
-        if self.order_type is BrokerOrderType.MARKET and any(
+        if self.order_type is OrderType.MARKET and any(
             value is not None
             for value in (
                 self.limit_price,
@@ -127,19 +130,19 @@ class OrderSpec:
             )
         ):
             raise ValueError("market orders cannot carry price, trailing, or bracket fields")
-        if self.order_type is BrokerOrderType.LIMIT and self.limit_price is None:
+        if self.order_type is OrderType.LIMIT and self.limit_price is None:
             raise ValueError("limit_price is required for limit orders")
-        if self.order_type is BrokerOrderType.STOP and self.stop_price is None:
+        if self.order_type is OrderType.STOP and self.stop_price is None:
             raise ValueError("stop_price is required for stop orders")
-        if self.order_type is BrokerOrderType.STOP_LIMIT and (
+        if self.order_type is OrderType.STOP_LIMIT and (
             self.stop_price is None or self.limit_price is None
         ):
             raise ValueError("stop_limit orders require stop_price and limit_price")
-        if self.order_type is BrokerOrderType.TRAILING_STOP and (
+        if self.order_type is OrderType.TRAILING_STOP and (
             self.trail_amount is None and self.trail_percent is None
         ):
             raise ValueError("trailing_stop orders require trail_amount or trail_percent")
-        if self.order_type is BrokerOrderType.BRACKET and self.bracket is None:
+        if self.order_type is OrderType.BRACKET and self.bracket is None:
             raise ValueError("bracket orders require bracket legs")
 
 
@@ -153,5 +156,6 @@ __all__ = [
     "BracketSpec",
     "BrokerOrderType",
     "OrderSpec",
+    "OrderType",
     "TimeInForce",
 ]
