@@ -138,6 +138,21 @@ def test_research_package_has_no_runtime_dependency(tmp_path: Path) -> None:
     assert "STRATEGY_SDK_INTERNAL_LEAK" in _codes(root)
 
 
+def test_research_package_has_no_runtime_execution_risk_or_portfolio_imports(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/research/bad.py",
+        "from qts.execution.order_manager import OrderManager\n"
+        "from qts.risk.standard_rules import StandardRiskRules\n"
+        "from qts.portfolio.holdings import Holding\n",
+    )
+
+    assert "STRATEGY_SDK_INTERNAL_LEAK" in _codes(root)
+
+
 def test_factor_package_has_no_runtime_execution_broker_imports(tmp_path: Path) -> None:
     root = tmp_path
     _write(

@@ -15,6 +15,8 @@ It may:
 - record review decisions for persisted factor specs;
 - record notebook/script experiments through manifest-backed
   `ResearchExperimentRecorder`;
+- aggregate existing factor-evaluation artifacts into a deterministic
+  research tearsheet and record it through `ExperimentStore`;
 - run one backtest by merging notebook-supplied `strategy_params` into the base
   backtest config;
 - run a parameter grid through `BacktestPipelineRunner`;
@@ -29,6 +31,8 @@ It must not:
 - turn factor candidates or accepted review decisions into executable factors
   or strategy behavior;
 - turn persisted `FactorSpec` drafts into executable factors or strategy
+  behavior;
+- turn a factor-evaluation tearsheet into executable factors or strategy
   behavior;
 - simulate fills, mutate account state, or compute portfolio state itself;
 - create orders or target intents from research code;
@@ -67,6 +71,7 @@ paths are always resolved from the research config directory.
 
 ```python
 from datetime import UTC, datetime
+from pathlib import Path
 
 from qts.research import HistoryRequest, ResearchSession
 
@@ -122,6 +127,16 @@ with session.start_experiment(
     recorder.log_metric("rank_ic", "0.08")
     recorder.log_factor_version("momentum", "1")
     recorder.log_dataset_id("research-bars-v1")
+
+record = session.record_factor_tearsheet(
+    [
+        Path("runs/research/evaluations/2026-01-02-momentum-1.json"),
+        Path("runs/research/evaluations/2026-01-03-momentum-1.json"),
+    ],
+    experiment_id="momentum-v1-tearsheet",
+    dataset_ids=("research-bars-v1",),
+)
+ranked = session.compare_frame("mean_rank_ic")
 ```
 
 `run_backtest(...)` delegates to:
@@ -144,12 +159,53 @@ ParameterGrid
 Therefore the user-facing facade stays aligned with the same backtest path used
 by normal CLI and API workflows.
 
+## CLI
+
+`scripts/run_research.py` is a thin CLI over `ResearchSession`.
+
+```bash
+uv run python scripts/run_research.py \
+  --config configs/research/quickstart.yaml \
+  factor-tearsheet \
+  runs/research/evaluations/2026-01-02-momentum-1.json \
+  runs/research/evaluations/2026-01-03-momentum-1.json \
+  --experiment-id momentum-v1-tearsheet \
+  --dataset-id research-bars-v1
+
+uv run python scripts/run_research.py \
+  --config configs/research/quickstart.yaml \
+  runs --sort-by mean_rank_ic
+```
+
+The `factor-tearsheet` command only consumes existing factor-evaluation JSON
+artifacts. It writes:
+
+```text
+<output root>/experiments/<experiment id>/artifacts/<factor>-<version>-tearsheet.json
+<output root>/experiments/<experiment id>/manifest.json
+<research store>/experiments.jsonl
+```
+
+It does not compute factors, read historical CSV files, run a backtest, create
+target intents, or touch runtime/account/order state.
+
 ## Compare
 
 `record_manifest(...)`, `list_runs(...)`, `compare_runs(metric)`, and
 `compare_frame(metric)` operate on `ExperimentStore` records. They compare
 published research evidence only; they do not inspect runtime internals or
 derive trading state.
+
+## Factor Tearsheets
+
+`factor_tearsheet(...)` and `factor_tearsheet_frame(...)` aggregate existing
+`FactorEvaluationArtifactWriter` JSON files into deterministic per-snapshot rows.
+`record_factor_tearsheet(...)` writes a tearsheet artifact, writes an experiment
+manifest, and records that manifest in `ExperimentStore`.
+
+Tearsheets are evidence summaries. They can support human review and experiment
+comparison, but they are not a promotion mechanism. Paper/live can only use
+reviewed factor code through strategies that execute on the normal shared path.
 
 ## Factor Specs
 

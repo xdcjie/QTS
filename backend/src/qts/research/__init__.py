@@ -43,6 +43,11 @@ from qts.research.research_book import (
     ResearchHistoryFrame,
 )
 from qts.research.session import ResearchSession, ResearchSessionConfig
+from qts.research.tearsheet import (
+    FactorEvaluationTearsheet,
+    FactorEvaluationTearsheetArtifactWriter,
+    FactorEvaluationTearsheetMetrics,
+)
 
 __all__ = [
     "ExperimentManifestConfig",
@@ -70,6 +75,9 @@ __all__ = [
     "FactorEvaluationInput",
     "FactorEvaluationMetrics",
     "FactorEvaluationResult",
+    "FactorEvaluationTearsheet",
+    "FactorEvaluationTearsheetArtifactWriter",
+    "FactorEvaluationTearsheetMetrics",
     "FactorSpec",
     "FactorSpecDrafter",
     "FactorSpecSourceRef",

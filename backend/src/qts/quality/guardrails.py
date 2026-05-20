@@ -136,6 +136,13 @@ STRATEGY_SDK_FORBIDDEN_IMPORT_PREFIXES = (
     "qts.reconciliation",
     "qts.portfolio.account_actor",
 )
+RESEARCH_FORBIDDEN_IMPORT_PREFIXES = (
+    "qts.runtime",
+    "qts.execution",
+    "qts.risk",
+    "qts.reconciliation",
+    "qts.portfolio",
+)
 STRATEGY_SDK_FORBIDDEN_SYMBOLS = frozenset(
     {
         "BrokerActor",
@@ -1046,7 +1053,7 @@ def _check_strategy_sdk_internal_leak(
         return []
     violations: list[GuardrailViolation] = []
     for imported_module, line in _iter_imports(tree):
-        if imported_module.startswith(STRATEGY_SDK_FORBIDDEN_IMPORT_PREFIXES):
+        if _is_forbidden_strategy_surface_import(qts_relative_path, imported_module):
             violations.append(
                 GuardrailViolation(
                     code="STRATEGY_SDK_INTERNAL_LEAK",
@@ -1061,10 +1068,10 @@ def _check_strategy_sdk_internal_leak(
             )
     for imported_module, imported_name, line in _iter_imported_names(tree):
         if (
-            imported_module.startswith(STRATEGY_SDK_FORBIDDEN_IMPORT_PREFIXES)
+            _is_forbidden_strategy_surface_import(qts_relative_path, imported_module)
             or imported_name in STRATEGY_SDK_FORBIDDEN_SYMBOLS
         ):
-            if imported_module.startswith(STRATEGY_SDK_FORBIDDEN_IMPORT_PREFIXES):
+            if _is_forbidden_strategy_surface_import(qts_relative_path, imported_module):
                 continue
             if imported_name not in STRATEGY_SDK_FORBIDDEN_SYMBOLS:
                 continue
@@ -1098,6 +1105,15 @@ def _check_strategy_sdk_internal_leak(
                 )
             )
     return violations
+
+
+def _is_forbidden_strategy_surface_import(
+    qts_relative_path: Path,
+    imported_module: str,
+) -> bool:
+    if qts_relative_path.parts[:1] == ("research",):
+        return imported_module.startswith(RESEARCH_FORBIDDEN_IMPORT_PREFIXES)
+    return imported_module.startswith(STRATEGY_SDK_FORBIDDEN_IMPORT_PREFIXES)
 
 
 def _check_forbidden_tokens(

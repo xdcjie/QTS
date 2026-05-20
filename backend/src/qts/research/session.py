@@ -15,6 +15,7 @@ import yaml  # type: ignore[import-untyped]
 from qts.backtest.engine import BacktestStreamResult
 from qts.backtest.pipeline import BacktestPipeline
 from qts.core.ids import InstrumentId
+from qts.research.experiment_manifest import ExperimentManifestConfig, ExperimentManifestWriter
 from qts.research.experiment_recorder import (
     ResearchExperimentRecorder,
     ResearchExperimentRecorderConfig,
@@ -38,6 +39,10 @@ from qts.research.research_book import (
     ResearchBook,
     ResearchBookConfig,
     ResearchHistoryFrame,
+)
+from qts.research.tearsheet import (
+    FactorEvaluationTearsheet,
+    FactorEvaluationTearsheetArtifactWriter,
 )
 
 
@@ -529,6 +534,62 @@ class ResearchSession:
             ]
         )
 
+    def factor_tearsheet(
+        self,
+        artifact_paths: Sequence[Path],
+    ) -> FactorEvaluationTearsheet:
+        """Build a factor-evaluation tearsheet from existing research artifacts."""
+
+        return FactorEvaluationTearsheet.from_artifact_paths(tuple(artifact_paths))
+
+    def factor_tearsheet_frame(self, artifact_paths: Sequence[Path]) -> Any:
+        """Return a factor-evaluation tearsheet as a pandas DataFrame."""
+
+        return self.factor_tearsheet(artifact_paths).to_pandas()
+
+    def record_factor_tearsheet(
+        self,
+        artifact_paths: Sequence[Path],
+        *,
+        experiment_id: str,
+        strategy_name: str = "factor-tearsheet",
+        strategy_version: str = "1",
+        dataset_ids: Sequence[str] = (),
+        recorded_at: datetime | None = None,
+    ) -> ExperimentStoreRecord:
+        """Write and index a deterministic factor-evaluation tearsheet artifact."""
+
+        self._require_filename_safe_token(experiment_id, "experiment_id")
+        tearsheet = self.factor_tearsheet(artifact_paths)
+        experiment_root = self._config.output_root / "experiments" / experiment_id
+        tearsheet_path = FactorEvaluationTearsheetArtifactWriter(
+            experiment_root / "artifacts"
+        ).write(tearsheet)
+        manifest = ExperimentManifestWriter(
+            self._config.output_root / "experiments"
+        ).write_manifest(
+            ExperimentManifestConfig(
+                experiment_id=experiment_id,
+                strategy_name=strategy_name,
+                strategy_version=strategy_version,
+                factor_versions={tearsheet.factor_name: tearsheet.factor_version},
+                dataset_ids=dataset_ids,
+                config={
+                    "factor_name": tearsheet.factor_name,
+                    "factor_version": tearsheet.factor_version,
+                    "source_artifacts": sorted(str(path) for path in artifact_paths),
+                },
+                artifact_paths=(tearsheet_path,),
+                metrics=tearsheet.manifest_metrics(),
+            )
+        )
+        return self._store.record_manifest(manifest.manifest_path, recorded_at=recorded_at)
+
+    @staticmethod
+    def _require_filename_safe_token(value: str, name: str) -> None:
+        if not value or any(character not in _FILENAME_SAFE_CHARS for character in value):
+            raise ValueError(f"{name} must be filename-safe")
+
     def start_experiment(
         self,
         experiment_id: str,
@@ -550,3 +611,7 @@ class ResearchSession:
 
 
 __all__ = ["ResearchSession", "ResearchSessionConfig"]
+
+_FILENAME_SAFE_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
+)

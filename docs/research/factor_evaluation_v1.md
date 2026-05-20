@@ -84,3 +84,21 @@ values instead of creating nested artifact paths.
 The resulting artifact path can be passed to `ExperimentManifestWriter` through
 `ExperimentManifestConfig.artifact_paths`, where manifest hashing remains owned
 by `qts.research.experiment_manifest`.
+
+## Tearsheets
+
+`qts.research.tearsheet` aggregates existing `FactorEvaluationResult` snapshots
+or JSON artifacts produced by `FactorEvaluationArtifactWriter`. It owns
+deterministic summary evidence only:
+
+- snapshot count and date range;
+- mean Rank IC and positive Rank IC rate;
+- mean long-short spread;
+- mean and minimum coverage;
+- mean turnover when turnover observations exist;
+- unique missing symbols.
+
+`FactorEvaluationTearsheetArtifactWriter` writes deterministic JSON that can be
+included in `ExperimentManifestWriter`. A tearsheet must not compute factor
+scores, use forward returns to build factors, run backtests, create target
+intents or orders, or promote artifacts into paper/live behavior.
