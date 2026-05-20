@@ -5,6 +5,10 @@ from qts.research.experiment_manifest import (
     ExperimentManifestResult,
     ExperimentManifestWriter,
 )
+from qts.research.experiment_recorder import (
+    ResearchExperimentRecorder,
+    ResearchExperimentRecorderConfig,
+)
 from qts.research.experiment_store import ExperimentStore, ExperimentStoreRecord
 from qts.research.factor_discovery import (
     ArxivFactorIdeaSource,
@@ -26,6 +30,7 @@ from qts.research.factor_evaluation import (
     FactorEvaluationResult,
 )
 from qts.research.factor_spec import FactorSpec, FactorSpecDrafter, FactorSpecSourceRef
+from qts.research.factor_spec_store import FactorSpecStore
 from qts.research.research_book import (
     HistoryRequest,
     ResearchBook,
@@ -38,6 +43,8 @@ __all__ = [
     "ExperimentManifestConfig",
     "ExperimentManifestResult",
     "ExperimentManifestWriter",
+    "ResearchExperimentRecorder",
+    "ResearchExperimentRecorderConfig",
     "ExperimentStore",
     "ExperimentStoreRecord",
     "ArxivFactorIdeaSource",
@@ -58,6 +65,7 @@ __all__ = [
     "FactorSpec",
     "FactorSpecDrafter",
     "FactorSpecSourceRef",
+    "FactorSpecStore",
     "HistoryRequest",
     "ResearchBook",
     "ResearchBookConfig",

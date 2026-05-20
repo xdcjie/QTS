@@ -9,9 +9,11 @@ import pytest
 from qts.research import (
     ExperimentManifestConfig,
     ExperimentManifestWriter,
+    FactorSpecDrafter,
     ResearchSession,
     ResearchSessionConfig,
 )
+from qts.research.factor_discovery import FactorIdea
 
 
 def _write_research_config(tmp_path: Path, body: str) -> Path:
@@ -193,3 +195,56 @@ def test_research_session_compare_frame_returns_metric_table(tmp_path: Path) -> 
 
     assert list(frame["experiment_id"]) == ["exp-001"]
     assert list(frame["metric_value"]) == [Decimal("0.10")]
+
+
+def _factor_idea() -> FactorIdea:
+    return FactorIdea(
+        idea_id="openalex:W123",
+        source="openalex",
+        external_id="W123",
+        title="Momentum Carry in Futures",
+        abstract="A carry and momentum factor.",
+        url="https://openalex.org/W123",
+        year=2026,
+        authors=("Researcher",),
+        citation_count=10,
+    )
+
+
+def test_research_session_saves_lists_and_loads_factor_specs(tmp_path: Path) -> None:
+    config_path = _write_research_config(tmp_path, _minimal_research_yaml(tmp_path))
+    session = ResearchSession.from_yaml(config_path)
+    spec = FactorSpecDrafter().draft(_factor_idea())
+
+    path = session.save_factor_spec(spec)
+    loaded = session.load_factor_spec(spec.name)
+
+    assert path == tmp_path / "research-store" / "factor-specs" / f"{spec.name}.json"
+    assert session.list_factor_specs() == (spec,)
+    assert loaded == spec
+
+
+def test_research_session_start_experiment_records_manifest(tmp_path: Path) -> None:
+    config_path = _write_research_config(tmp_path, _minimal_research_yaml(tmp_path))
+    session = ResearchSession.from_yaml(config_path)
+    artifact_path = tmp_path / "metrics.json"
+    artifact_path.write_text(json.dumps({"sharpe_ratio": "1.2"}), encoding="utf-8")
+
+    with session.start_experiment(
+        "exp-001",
+        strategy_name="research_strategy",
+        strategy_version="2",
+    ) as recorder:
+        recorder.log_params({"lookback": 20})
+        recorder.log_metric("sharpe_ratio", "1.2")
+        recorder.log_factor_version("momentum", "1")
+        recorder.log_dataset_id("fixture-bars")
+        recorder.log_artifact(artifact_path)
+
+    records = session.list_runs()
+    assert [record.experiment_id for record in records] == ["exp-001"]
+    assert records[0].strategy_name == "research_strategy"
+    assert records[0].strategy_version == "2"
+    assert records[0].factor_versions == {"momentum": "1"}
+    assert records[0].dataset_ids == ("fixture-bars",)
+    assert records[0].metrics == {"sharpe_ratio": "1.2"}

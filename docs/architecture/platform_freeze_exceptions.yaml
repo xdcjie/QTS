@@ -1,4 +1,19 @@
 exceptions:
+  - class_name: FactorSpecStore
+    module: qts.research.factor_spec_store
+    reason: research workbench deterministic factor spec persistence owner
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: ResearchExperimentRecorderConfig
+    module: qts.research.experiment_recorder
+    reason: research workbench experiment recorder configuration owner
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: ResearchExperimentRecorder
+    module: qts.research.experiment_recorder
+    reason: research workbench manifest-backed experiment recording owner
+    owner: platform
+    expiry: 2027-05-20
   - class_name: FactorSpecSourceRef
     module: qts.research.factor_spec
     reason: research factor spec source reference value object

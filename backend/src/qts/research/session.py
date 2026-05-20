@@ -15,6 +15,10 @@ import yaml  # type: ignore[import-untyped]
 from qts.backtest.engine import BacktestStreamResult
 from qts.backtest.pipeline import BacktestPipeline
 from qts.core.ids import InstrumentId
+from qts.research.experiment_recorder import (
+    ResearchExperimentRecorder,
+    ResearchExperimentRecorderConfig,
+)
 from qts.research.experiment_store import ExperimentStore, ExperimentStoreRecord
 from qts.research.factor_discovery import (
     DEFAULT_FACTOR_DISCOVERY_SOURCES,
@@ -24,6 +28,7 @@ from qts.research.factor_discovery import (
     FactorIdeaStore,
 )
 from qts.research.factor_spec import FactorSpec, FactorSpecDrafter
+from qts.research.factor_spec_store import FactorSpecStore
 from qts.research.optimizer.parameter_space import ParameterGrid, ParameterSpace
 from qts.research.optimizer.pipeline import BacktestPipelineJob, BacktestPipelineRunner
 from qts.research.optimizer.result import OptimizationResult
@@ -185,11 +190,13 @@ class ResearchSession:
         book: ResearchBook | None = None,
         store: ExperimentStore | None = None,
         discovery: FactorDiscovery | None = None,
+        factor_specs: FactorSpecStore | None = None,
     ) -> None:
         self._config = config
         self._book = book
         self._store = store if store is not None else ExperimentStore(config.store_root)
         self._discovery = discovery
+        self._factor_specs = factor_specs
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> ResearchSession:
@@ -226,6 +233,14 @@ class ResearchSession:
                 FactorIdeaStore(self._config.store_root)
             )
         return self._discovery
+
+    @property
+    def factor_specs(self) -> FactorSpecStore:
+        """Return the factor spec persistence facade."""
+
+        if self._factor_specs is None:
+            self._factor_specs = FactorSpecStore(self._config.store_root)
+        return self._factor_specs
 
     def history(self, request: HistoryRequest) -> ResearchHistoryFrame:
         """Return historical bars through ``ResearchBook``."""
@@ -391,6 +406,45 @@ class ResearchSession:
         source_ideas = ideas.ideas if isinstance(ideas, FactorDiscoveryResult) else ideas
         drafter = FactorSpecDrafter()
         return tuple(drafter.draft(idea) for idea in source_ideas)
+
+    def save_factor_spec(self, spec: FactorSpec) -> Path:
+        """Persist one non-executable factor hypothesis draft."""
+
+        return self.factor_specs.save(spec)
+
+    def save_factor_specs(self, specs: Sequence[FactorSpec]) -> tuple[Path, ...]:
+        """Persist multiple non-executable factor hypothesis drafts."""
+
+        return tuple(self.factor_specs.save(spec) for spec in specs)
+
+    def list_factor_specs(self) -> tuple[FactorSpec, ...]:
+        """Return persisted factor hypothesis drafts sorted by name."""
+
+        return self.factor_specs.list_specs()
+
+    def load_factor_spec(self, name: str) -> FactorSpec:
+        """Load one persisted factor hypothesis draft by name."""
+
+        return self.factor_specs.load(name)
+
+    def start_experiment(
+        self,
+        experiment_id: str,
+        *,
+        strategy_name: str,
+        strategy_version: str = "1",
+    ) -> ResearchExperimentRecorder:
+        """Start a manifest-backed research experiment recorder."""
+
+        return ResearchExperimentRecorder(
+            ResearchExperimentRecorderConfig(
+                experiment_id=experiment_id,
+                strategy_name=strategy_name,
+                strategy_version=strategy_version,
+                manifest_root=self._config.output_root / "experiments",
+                store=self._store,
+            )
+        )
 
 
 __all__ = ["ResearchSession", "ResearchSessionConfig"]

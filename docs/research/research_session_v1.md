@@ -10,6 +10,9 @@ It may:
   a research store, and a default optimizer objective;
 - expose `ResearchBook` history as bars or pandas `DataFrame` objects;
 - discover source-backed factor ideas through `FactorDiscovery`;
+- persist and reload human-reviewable `FactorSpec` drafts;
+- record notebook/script experiments through manifest-backed
+  `ResearchExperimentRecorder`;
 - run one backtest by merging notebook-supplied `strategy_params` into the base
   backtest config;
 - run a parameter grid through `BacktestPipelineRunner`;
@@ -21,6 +24,8 @@ It must not:
 - parse historical CSV rows directly;
 - synthesize bars outside `ResearchBook` / `BarAggregationPipeline`;
 - turn web search results into executable factors or strategy behavior;
+- turn persisted `FactorSpec` drafts into executable factors or strategy
+  behavior;
 - simulate fills, mutate account state, or compute portfolio state itself;
 - create orders or target intents from research code;
 - bypass `BacktestPipeline`, `RiskEngine`, `OrderManagerActor`,
@@ -87,6 +92,18 @@ ideas = session.discover_factors(
 )
 
 spec = session.draft_factor_spec(ideas.ideas[0])
+session.save_factor_spec(spec)
+saved_specs = session.list_factor_specs()
+
+with session.start_experiment(
+    "manual-factor-review",
+    strategy_name="manual-review",
+    strategy_version="1",
+) as recorder:
+    recorder.log_params({"lookback": 63})
+    recorder.log_metric("rank_ic", "0.08")
+    recorder.log_factor_version("momentum", "1")
+    recorder.log_dataset_id("research-bars-v1")
 ```
 
 `run_backtest(...)` delegates to:
@@ -115,6 +132,33 @@ by normal CLI and API workflows.
 `compare_frame(metric)` operate on `ExperimentStore` records. They compare
 published research evidence only; they do not inspect runtime internals or
 derive trading state.
+
+## Factor Specs
+
+`save_factor_spec(...)`, `save_factor_specs(...)`, `list_factor_specs(...)`,
+and `load_factor_spec(...)` operate through `FactorSpecStore` under the research
+store:
+
+```text
+<research store>/factor-specs/<spec name>.json
+```
+
+These files are review artifacts. They do not generate Python factor code and
+they are not read by paper/live runtime paths.
+
+## Experiment Recorder
+
+`start_experiment(...)` returns `ResearchExperimentRecorder`, a context manager
+for logging manual or notebook research evidence. On successful exit it writes
+an `ExperimentManifest` under:
+
+```text
+<output root>/experiments/<experiment id>/manifest.json
+```
+
+and indexes the manifest in `ExperimentStore`. If the context exits with an
+exception, no manifest is recorded. This mirrors Qlib-style recorder ergonomics
+while keeping QTS evidence tied to existing manifest/store boundaries.
 
 ## Discovery
 

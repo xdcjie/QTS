@@ -1,6 +1,6 @@
 # Research Workbench Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Make research workflows easier by adding persistent factor-spec management and a notebook-friendly experiment recorder while preserving the shared backtest/paper/live architecture.
 
@@ -57,22 +57,22 @@ Out of scope for this branch:
 
 Record exact outputs before completion:
 
-- [ ] `uv run pytest tests/unit/research/test_factor_spec_store.py -q`
-- [ ] `uv run pytest tests/unit/research/test_experiment_recorder.py -q`
-- [ ] `uv run pytest tests/unit/research/test_research_session.py tests/unit/research/test_factor_spec.py -q`
-- [ ] `uv run pytest tests/integration/test_research_session_facade.py -q`
-- [ ] `uv run pytest tests/unit/test_backtest_live_parallel_sequence_html.py tests/unit/test_project_panorama_html.py -q`
-- [ ] `make format`
-- [ ] `make lint`
-- [ ] `make guardrails`
-- [ ] `make typecheck`
-- [ ] `make test-unit`
-- [ ] `make test-integration`
-- [ ] `make test-anchor`
-- [ ] `git diff --check`
-- [ ] code-review-graph `build_or_update_graph_tool`
-- [ ] code-review-graph `detect_changes_tool`
-- [ ] code-review-graph `get_affected_flows_tool`
+- [x] `uv run pytest tests/unit/research/test_factor_spec_store.py -q`
+- [x] `uv run pytest tests/unit/research/test_experiment_recorder.py -q`
+- [x] `uv run pytest tests/unit/research/test_research_session.py tests/unit/research/test_factor_spec.py -q`
+- [x] `uv run pytest tests/integration/test_research_session_facade.py -q`
+- [x] `uv run pytest tests/unit/test_backtest_live_parallel_sequence_html.py tests/unit/test_project_panorama_html.py -q`
+- [x] `make format`
+- [x] `make lint`
+- [x] `make guardrails`
+- [x] `make typecheck`
+- [x] `make test-unit`
+- [x] `make test-integration`
+- [x] `make test-anchor`
+- [x] `git diff --check`
+- [x] code-review-graph `build_or_update_graph_tool`
+- [x] code-review-graph `detect_changes_tool`
+- [x] code-review-graph `get_affected_flows_tool`
 
 ## File Structure
 
@@ -108,7 +108,7 @@ Record exact outputs before completion:
 - Modify: `backend/src/qts/research/__init__.py`
 - Modify: `docs/architecture/platform_freeze_exceptions.yaml`
 
-- [ ] **Step 1: Write failing store tests**
+- [x] **Step 1: Write failing store tests**
 
 Add tests for:
 
@@ -132,7 +132,7 @@ Expected red:
 ModuleNotFoundError: No module named 'qts.research.factor_spec_store'
 ```
 
-- [ ] **Step 2: Implement `FactorSpecStore`**
+- [x] **Step 2: Implement `FactorSpecStore`**
 
 Behavior:
 
@@ -142,11 +142,11 @@ Behavior:
 - `load(name: str) -> FactorSpec` reads the deterministic JSON and calls `FactorSpec.from_payload(...)`.
 - `list_specs() -> tuple[FactorSpec, ...]` loads `*.json` sorted lexicographically by filename.
 
-- [ ] **Step 3: Export and register**
+- [x] **Step 3: Export and register**
 
 Export `FactorSpecStore` from `qts.research` and register it in `docs/architecture/platform_freeze_exceptions.yaml` with owner `platform` and expiry `2027-05-20`.
 
-- [ ] **Step 4: Verify Task 1**
+- [x] **Step 4: Verify Task 1**
 
 Run:
 
@@ -171,7 +171,7 @@ Architecture guardrails passed.
 - Modify: `backend/src/qts/research/__init__.py`
 - Modify: `docs/architecture/platform_freeze_exceptions.yaml`
 
-- [ ] **Step 1: Write failing recorder tests**
+- [x] **Step 1: Write failing recorder tests**
 
 Add tests for:
 
@@ -195,7 +195,7 @@ Expected red:
 ModuleNotFoundError: No module named 'qts.research.experiment_recorder'
 ```
 
-- [ ] **Step 2: Implement recorder config and recorder**
+- [x] **Step 2: Implement recorder config and recorder**
 
 `ResearchExperimentRecorderConfig` fields:
 
@@ -218,11 +218,11 @@ ModuleNotFoundError: No module named 'qts.research.experiment_recorder'
 - `__enter__` returns self.
 - `__exit__` finalizes only when `exc_type is None`; failed contexts are not recorded.
 
-- [ ] **Step 3: Export and register**
+- [x] **Step 3: Export and register**
 
 Export `ResearchExperimentRecorder` and `ResearchExperimentRecorderConfig`; register both classes in `docs/architecture/platform_freeze_exceptions.yaml`.
 
-- [ ] **Step 4: Verify Task 2**
+- [x] **Step 4: Verify Task 2**
 
 Run:
 
@@ -246,7 +246,7 @@ Architecture guardrails passed.
 - Modify: `tests/unit/research/test_research_session.py`
 - Modify: `tests/integration/test_research_session_facade.py`
 
-- [ ] **Step 1: Write failing session tests**
+- [x] **Step 1: Write failing session tests**
 
 Add unit tests:
 
@@ -269,7 +269,7 @@ Expected red:
 AttributeError: 'ResearchSession' object has no attribute 'save_factor_spec'
 ```
 
-- [ ] **Step 2: Implement session methods**
+- [x] **Step 2: Implement session methods**
 
 Add:
 
@@ -282,7 +282,7 @@ Add:
 
 The recorder manifest root must be `self._config.output_root / "experiments"`, and the recorder must use `self._store`.
 
-- [ ] **Step 3: Verify Task 3**
+- [x] **Step 3: Verify Task 3**
 
 Run:
 
@@ -301,7 +301,7 @@ Expected green.
 - Modify: `project_panorama.html`
 - Modify: `docs/architecture/backtest_live_parallel_sequence.html`
 
-- [ ] **Step 1: Update docs**
+- [x] **Step 1: Update docs**
 
 Document:
 
@@ -310,7 +310,7 @@ Document:
 - explicit statement that persisted specs and recorder manifests do not create executable behavior;
 - official promotion path remains `FactorSpec -> qts.factors -> FactorEvaluation -> ExperimentManifest -> shared backtest path`.
 
-- [ ] **Step 2: Regenerate source inventory**
+- [x] **Step 2: Regenerate source inventory**
 
 Run:
 
@@ -319,7 +319,7 @@ uv run python scripts/update_project_panorama_source_index.py --html project_pan
 uv run python scripts/update_project_panorama_source_index.py --html docs/architecture/backtest_live_parallel_sequence.html
 ```
 
-- [ ] **Step 3: Verify docs and focused research suite**
+- [x] **Step 3: Verify docs and focused research suite**
 
 Run:
 
@@ -332,7 +332,7 @@ Expected green.
 
 ## Task 5: Final Verification and Evidence
 
-- [ ] **Step 1: Run normal checks**
+- [x] **Step 1: Run normal checks**
 
 Run:
 
@@ -349,7 +349,7 @@ git diff --check
 
 Expected green, or exact blocker recorded in this plan.
 
-- [ ] **Step 2: Refresh and review code graph**
+- [x] **Step 2: Refresh and review code graph**
 
 Run:
 
@@ -365,7 +365,7 @@ Expected:
 - Affected flows remain research/backtest facade related.
 - No new paper/live/runtime actor path is introduced.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 Commit message:
 

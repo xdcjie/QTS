@@ -10,6 +10,7 @@ It may:
 - preserve source references;
 - infer draft inputs and data requirements from candidate tags;
 - produce deterministic JSON-ready payloads for review and storage.
+- persist and reload reviewed draft payloads through `FactorSpecStore`.
 
 It must not:
 
@@ -46,7 +47,23 @@ ideas = session.discover_factors("commodity futures momentum carry", max_results
 
 spec = session.draft_factor_spec(ideas.ideas[0])
 specs = session.draft_factor_specs(ideas)
+
+session.save_factor_spec(spec)
+persisted_specs = session.list_factor_specs()
+loaded = session.load_factor_spec(spec.name)
 ```
+
+## Persistence
+
+`FactorSpecStore` writes deterministic JSON under:
+
+```text
+<research store>/factor-specs/<spec name>.json
+```
+
+The store is a research artifact boundary. It preserves source-backed drafts for
+review and follow-up implementation, but it does not promote the draft, generate
+factor code, or make the factor available to strategy runtime paths.
 
 ## Promotion Path
 

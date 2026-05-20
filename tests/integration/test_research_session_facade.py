@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -75,3 +76,26 @@ def test_research_session_optimize_uses_backtest_pipeline_runner(tmp_path: Path)
         result.manifest_path.parent.parent == tmp_path / "research-runs" / "optimizer"
         for result in results
     )
+
+
+def test_research_session_experiment_recorder_keeps_backtest_path_unchanged(
+    tmp_path: Path,
+) -> None:
+    session = ResearchSession.from_yaml(_write_research_session_config(tmp_path))
+    artifact_path = tmp_path / "evidence.json"
+    artifact_path.write_text(json.dumps({"total_return": "0.10"}), encoding="utf-8")
+
+    with session.start_experiment(
+        "manual-research",
+        strategy_name="manual",
+        strategy_version="1",
+    ) as recorder:
+        recorder.log_metric("total_return", "0.10")
+        recorder.log_dataset_id("fixture-bars")
+        recorder.log_artifact(artifact_path)
+
+    result = session.run_backtest(strategy_params={"quantity": "2"})
+
+    assert [record.experiment_id for record in session.list_runs()] == ["manual-research"]
+    assert result.manifest_path.exists()
+    assert result.manifest_path.parent == tmp_path / "research-runs" / "single-run"
