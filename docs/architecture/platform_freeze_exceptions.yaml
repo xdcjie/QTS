@@ -1,4 +1,24 @@
 exceptions:
+  - class_name: FactorCandidate
+    module: qts.research.factor_candidate
+    reason: research candidate workflow source idea plus persisted spec evidence value object
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: FactorCandidateBatch
+    module: qts.research.factor_candidate
+    reason: research candidate workflow notebook-friendly candidate batch owner
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: FactorCandidateWorkflow
+    module: qts.research.factor_candidate
+    reason: research candidate workflow discovery draft and persistence coordinator
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: FactorSpecReview
+    module: qts.research.factor_spec_store
+    reason: research factor spec human review evidence value object
+    owner: platform
+    expiry: 2027-05-20
   - class_name: FactorSpecStore
     module: qts.research.factor_spec_store
     reason: research workbench deterministic factor spec persistence owner

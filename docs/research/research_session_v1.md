@@ -10,7 +10,9 @@ It may:
   a research store, and a default optimizer objective;
 - expose `ResearchBook` history as bars or pandas `DataFrame` objects;
 - discover source-backed factor ideas through `FactorDiscovery`;
+- turn a discovery query into persisted, reviewable factor candidates;
 - persist and reload human-reviewable `FactorSpec` drafts;
+- record review decisions for persisted factor specs;
 - record notebook/script experiments through manifest-backed
   `ResearchExperimentRecorder`;
 - run one backtest by merging notebook-supplied `strategy_params` into the base
@@ -24,6 +26,8 @@ It must not:
 - parse historical CSV rows directly;
 - synthesize bars outside `ResearchBook` / `BarAggregationPipeline`;
 - turn web search results into executable factors or strategy behavior;
+- turn factor candidates or accepted review decisions into executable factors
+  or strategy behavior;
 - turn persisted `FactorSpec` drafts into executable factors or strategy
   behavior;
 - simulate fills, mutate account state, or compute portfolio state itself;
@@ -95,6 +99,20 @@ spec = session.draft_factor_spec(ideas.ideas[0])
 session.save_factor_spec(spec)
 saved_specs = session.list_factor_specs()
 
+candidates = session.find_factor_candidates(
+    "commodity futures momentum carry volatility",
+    from_year=2015,
+)
+candidate_frame = candidates.to_pandas()
+
+session.review_factor_spec(
+    candidates.specs[0].name,
+    decision="accepted",
+    reviewer="researcher@example.com",
+    notes=("source reviewed",),
+)
+review_queue = session.review_queue_frame()
+
 with session.start_experiment(
     "manual-factor-review",
     strategy_name="manual-review",
@@ -145,6 +163,42 @@ store:
 
 These files are review artifacts. They do not generate Python factor code and
 they are not read by paper/live runtime paths.
+
+## Candidate Review Workflow
+
+`find_factor_candidates(...)` composes existing owners:
+
+```text
+FactorDiscovery.search(...)
+  -> FactorSpecDrafter.draft(...)
+  -> FactorSpecStore.save(...)
+  -> FactorCandidateBatch
+```
+
+The returned batch preserves query metadata, idea metadata, drafted specs,
+spec paths, and review status for notebook triage. `find_factor_candidates_frame(...)`
+returns the same rows as a pandas `DataFrame`.
+
+`review_factor_spec(...)` records review evidence in `FactorSpecStore` and
+updates the persisted spec `review_status`. `list_factor_reviews(...)`,
+`list_factor_specs_by_status(...)`, and `review_queue_frame(...)` help users
+work through candidates without needing to inspect JSON files.
+
+The allowed promotion path remains:
+
+```text
+web-backed FactorIdea
+  -> persisted FactorCandidateBatch
+  -> FactorSpec review decision
+  -> human implementation as versioned qts.factors code
+  -> FactorEvaluation / ExperimentManifest evidence
+  -> shared BacktestPipeline
+  -> paper/live only after reviewed code is used by strategies
+```
+
+An `accepted` review decision is not runtime promotion. It does not generate
+factor code, does not create target intents or orders, and is not consumed by
+paper/live adapters.
 
 ## Experiment Recorder
 

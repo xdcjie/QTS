@@ -20,6 +20,7 @@ from qts.research.experiment_recorder import (
     ResearchExperimentRecorderConfig,
 )
 from qts.research.experiment_store import ExperimentStore, ExperimentStoreRecord
+from qts.research.factor_candidate import FactorCandidateBatch, FactorCandidateWorkflow
 from qts.research.factor_discovery import (
     DEFAULT_FACTOR_DISCOVERY_SOURCES,
     FactorDiscovery,
@@ -28,7 +29,7 @@ from qts.research.factor_discovery import (
     FactorIdeaStore,
 )
 from qts.research.factor_spec import FactorSpec, FactorSpecDrafter
-from qts.research.factor_spec_store import FactorSpecStore
+from qts.research.factor_spec_store import FactorSpecReview, FactorSpecStore
 from qts.research.optimizer.parameter_space import ParameterGrid, ParameterSpace
 from qts.research.optimizer.pipeline import BacktestPipelineJob, BacktestPipelineRunner
 from qts.research.optimizer.result import OptimizationResult
@@ -426,6 +427,107 @@ class ResearchSession:
         """Load one persisted factor hypothesis draft by name."""
 
         return self.factor_specs.load(name)
+
+    def find_factor_candidates(
+        self,
+        query: str,
+        *,
+        sources: Sequence[str] | None = None,
+        max_results: int | None = None,
+        from_year: int | None = None,
+        to_year: int | None = None,
+        refresh: bool = False,
+    ) -> FactorCandidateBatch:
+        """Discover, draft, and persist non-executable factor candidates."""
+
+        return FactorCandidateWorkflow(
+            discovery=self.discovery,
+            spec_store=self.factor_specs,
+        ).find(
+            query,
+            sources=self._config.discovery_sources if sources is None else sources,
+            max_results=(
+                self._config.discovery_max_results if max_results is None else max_results
+            ),
+            from_year=from_year,
+            to_year=to_year,
+            refresh=refresh,
+        )
+
+    def find_factor_candidates_frame(
+        self,
+        query: str,
+        *,
+        sources: Sequence[str] | None = None,
+        max_results: int | None = None,
+        from_year: int | None = None,
+        to_year: int | None = None,
+        refresh: bool = False,
+    ) -> Any:
+        """Return discovered factor candidates as a pandas DataFrame."""
+
+        return self.find_factor_candidates(
+            query,
+            sources=sources,
+            max_results=max_results,
+            from_year=from_year,
+            to_year=to_year,
+            refresh=refresh,
+        ).to_pandas()
+
+    def review_factor_spec(
+        self,
+        name: str,
+        *,
+        decision: str,
+        reviewer: str,
+        notes: Sequence[str] = (),
+        reviewed_at: datetime | None = None,
+    ) -> FactorSpecReview:
+        """Record a research review decision for a persisted factor spec."""
+
+        return self.factor_specs.record_review(
+            name,
+            decision=decision,
+            reviewer=reviewer,
+            notes=notes,
+            reviewed_at=reviewed_at,
+        )
+
+    def list_factor_reviews(
+        self,
+        *,
+        decision: str | None = None,
+    ) -> tuple[FactorSpecReview, ...]:
+        """Return persisted factor spec review decisions."""
+
+        return self.factor_specs.list_reviews(decision=decision)
+
+    def list_factor_specs_by_status(self, status: str) -> tuple[FactorSpec, ...]:
+        """Return persisted factor specs filtered by review status."""
+
+        return self.factor_specs.list_specs_by_status(status)
+
+    def review_queue_frame(self, *, status: str = "draft") -> Any:
+        """Return factor specs awaiting review as a pandas DataFrame."""
+
+        pandas_module: Any = importlib.import_module("pandas")
+        return pandas_module.DataFrame(
+            [
+                {
+                    "candidate_tags": ", ".join(spec.candidate_tags),
+                    "hypothesis": spec.hypothesis,
+                    "promotion_gate": spec.promotion_gate,
+                    "review_status": spec.review_status,
+                    "source_refs": ", ".join(
+                        f"{source_ref.source}:{source_ref.external_id}"
+                        for source_ref in spec.source_refs
+                    ),
+                    "spec_name": spec.name,
+                }
+                for spec in self.list_factor_specs_by_status(status)
+            ]
+        )
 
     def start_experiment(
         self,

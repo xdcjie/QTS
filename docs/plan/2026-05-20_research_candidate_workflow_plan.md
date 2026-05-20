@@ -60,23 +60,23 @@ Out of scope for this branch:
 
 Record exact outputs before completion:
 
-- [ ] `uv run pytest tests/unit/research/test_factor_candidate.py -q`
-- [ ] `uv run pytest tests/unit/research/test_factor_spec_store.py -q`
-- [ ] `uv run pytest tests/unit/research/test_research_session.py -q`
-- [ ] `uv run pytest tests/integration/test_research_session_factor_discovery.py tests/integration/test_research_session_facade.py -q`
-- [ ] `uv run pytest tests/unit/test_backtest_live_parallel_sequence_html.py tests/unit/test_project_panorama_html.py -q`
-- [ ] `make format`
-- [ ] `make lint`
-- [ ] `make guardrails`
-- [ ] `make typecheck`
-- [ ] `make test-unit`
-- [ ] `make test-integration`
-- [ ] `make test-anchor`
-- [ ] `git diff --check`
-- [ ] code-review-graph `build_or_update_graph_tool`
-- [ ] code-review-graph `detect_changes_tool`
-- [ ] code-review-graph `get_affected_flows_tool`
-- [ ] independent read-only code review
+- [x] `uv run pytest tests/unit/research/test_factor_candidate.py -q`
+- [x] `uv run pytest tests/unit/research/test_factor_spec_store.py -q`
+- [x] `uv run pytest tests/unit/research/test_research_session.py -q`
+- [x] `uv run pytest tests/integration/test_research_session_factor_discovery.py tests/integration/test_research_session_facade.py -q`
+- [x] `uv run pytest tests/unit/test_backtest_live_parallel_sequence_html.py tests/unit/test_project_panorama_html.py -q`
+- [x] `make format`
+- [x] `make lint`
+- [x] `make guardrails`
+- [x] `make typecheck`
+- [x] `make test-unit`
+- [x] `make test-integration`
+- [x] `make test-anchor`
+- [x] `git diff --check`
+- [x] code-review-graph `build_or_update_graph_tool`
+- [x] code-review-graph `detect_changes_tool`
+- [x] code-review-graph `get_affected_flows_tool`
+- [x] independent read-only code review
 
 ## File Structure
 
@@ -119,7 +119,7 @@ Record exact outputs before completion:
 - Create: `backend/src/qts/research/factor_candidate.py`
 - Test: `tests/unit/research/test_factor_candidate.py`
 
-- [ ] **Step 1: Write failing candidate workflow tests**
+- [x] **Step 1: Write failing candidate workflow tests**
 
 Add tests for:
 
@@ -141,7 +141,7 @@ Expected red:
 ModuleNotFoundError: No module named 'qts.research.factor_candidate'
 ```
 
-- [ ] **Step 2: Implement candidate types**
+- [x] **Step 2: Implement candidate types**
 
 Implement:
 
@@ -170,7 +170,7 @@ query_id, query_text, idea_id, source, external_id, title, url, year,
 candidate_tags, spec_name, spec_path, review_status
 ```
 
-- [ ] **Step 3: Implement workflow owner**
+- [x] **Step 3: Implement workflow owner**
 
 Implement:
 
@@ -192,7 +192,7 @@ class FactorCandidateWorkflow:
 
 `find(...)` must call `discovery.search(...)`, draft each idea with `FactorSpecDrafter`, save each spec with `spec_store.save(...)`, and return a batch preserving discovery order.
 
-- [ ] **Step 4: Verify Task 1**
+- [x] **Step 4: Verify Task 1**
 
 Run:
 
@@ -213,7 +213,7 @@ Expected green:
 - Modify: `backend/src/qts/research/factor_spec_store.py`
 - Test: `tests/unit/research/test_factor_spec_store.py`
 
-- [ ] **Step 1: Write failing review tests**
+- [x] **Step 1: Write failing review tests**
 
 Add tests for:
 
@@ -236,7 +236,7 @@ Expected red:
 AttributeError: 'FactorSpecStore' object has no attribute 'record_review'
 ```
 
-- [ ] **Step 2: Implement `FactorSpecReview`**
+- [x] **Step 2: Implement `FactorSpecReview`**
 
 Implement a frozen dataclass with fields:
 
@@ -256,7 +256,7 @@ Allowed decisions:
 
 The review must require non-empty `spec_name`, `decision`, and `reviewer`, require timezone-aware `reviewed_at`, normalize notes, and support deterministic `to_payload()` / `from_payload(...)`.
 
-- [ ] **Step 3: Add review methods to `FactorSpecStore`**
+- [x] **Step 3: Add review methods to `FactorSpecStore`**
 
 Implement:
 
@@ -277,7 +277,7 @@ def list_specs_by_status(self, status: str) -> tuple[FactorSpec, ...]: ...
 
 `record_review(...)` must load the existing spec, write it back with `review_status=decision`, append review evidence to `<research store>/factor-spec-reviews.jsonl`, and return the review. `list_reviews(...)` must return newest-first records sorted by `reviewed_at` descending, then `spec_name`.
 
-- [ ] **Step 4: Verify Task 2**
+- [x] **Step 4: Verify Task 2**
 
 Run:
 
@@ -301,7 +301,7 @@ Expected green:
 - Test: `tests/integration/test_research_session_factor_discovery.py`
 - Test: `tests/integration/test_research_session_facade.py`
 
-- [ ] **Step 1: Write failing facade tests**
+- [x] **Step 1: Write failing facade tests**
 
 Add unit tests for:
 
@@ -329,7 +329,7 @@ Expected red:
 AttributeError: 'ResearchSession' object has no attribute 'find_factor_candidates'
 ```
 
-- [ ] **Step 2: Add facade methods**
+- [x] **Step 2: Add facade methods**
 
 Add to `ResearchSession`:
 
@@ -344,11 +344,11 @@ def review_queue_frame(...) -> Any: ...
 
 Use configured discovery defaults when call-site values are omitted. Do not modify `run_backtest(...)` or `optimize(...)`.
 
-- [ ] **Step 3: Export public classes**
+- [x] **Step 3: Export public classes**
 
 Export `FactorCandidate`, `FactorCandidateBatch`, `FactorCandidateWorkflow`, and `FactorSpecReview` from `qts.research`.
 
-- [ ] **Step 4: Verify Task 3**
+- [x] **Step 4: Verify Task 3**
 
 Run:
 
@@ -369,7 +369,7 @@ Expected green.
 - Modify: `project_panorama.html`
 - Modify: `docs/architecture/backtest_live_parallel_sequence.html`
 
-- [ ] **Step 1: Register new public classes**
+- [x] **Step 1: Register new public classes**
 
 Add platform-freeze exceptions for:
 
@@ -382,7 +382,7 @@ FactorSpecReview
 
 Use owner `platform` and expiry `2027-05-20`.
 
-- [ ] **Step 2: Update research docs**
+- [x] **Step 2: Update research docs**
 
 Document the allowed path:
 
@@ -398,11 +398,11 @@ web-backed FactorIdea
 
 State explicitly that `accepted` review status is not runtime promotion.
 
-- [ ] **Step 3: Regenerate inventory docs**
+- [x] **Step 3: Regenerate inventory docs**
 
 Run the existing inventory generation command used by this repo for `project_panorama.html` and `docs/architecture/backtest_live_parallel_sequence.html`. If no single command exists, update them with the existing test-supported generation path.
 
-- [ ] **Step 4: Verify docs and guardrails**
+- [x] **Step 4: Verify docs and guardrails**
 
 Run:
 
@@ -419,7 +419,7 @@ Expected green.
 
 - All changed files.
 
-- [ ] **Step 1: Run focused tests**
+- [x] **Step 1: Run focused tests**
 
 Run:
 
@@ -430,7 +430,7 @@ uv run pytest tests/unit/research/test_research_session.py -q
 uv run pytest tests/integration/test_research_session_factor_discovery.py tests/integration/test_research_session_facade.py -q
 ```
 
-- [ ] **Step 2: Run full required checks**
+- [x] **Step 2: Run full required checks**
 
 Run:
 
@@ -445,7 +445,7 @@ make test-anchor
 git diff --check
 ```
 
-- [ ] **Step 3: Refresh and review graph**
+- [x] **Step 3: Refresh and review graph**
 
 Run code-review-graph:
 
@@ -457,7 +457,7 @@ get_affected_flows_tool(base="research-workbench")
 
 Review any affected flows touching `ResearchSession`, `run_backtest`, or `optimize`.
 
-- [ ] **Step 4: Independent read-only review**
+- [x] **Step 4: Independent read-only review**
 
 Request read-only review of the diff against `research-workbench`, focused on:
 

@@ -40,6 +40,23 @@ frame = ideas.to_pandas()
 `ResearchSession.discover_factors_frame(...)` is a convenience wrapper around
 `discover_factors(...).to_pandas()`.
 
+`ResearchSession.find_factor_candidates(...)` is the one-call workflow for
+turning a discovery query into persisted review artifacts:
+
+```python
+batch = session.find_factor_candidates(
+    "commodity futures momentum carry volatility",
+    from_year=2015,
+)
+
+candidate_frame = batch.to_pandas()
+```
+
+This delegates to `FactorDiscovery`, drafts each idea through
+`FactorSpecDrafter`, and persists each draft through `FactorSpecStore`.
+The returned `FactorCandidateBatch` is a research queue, not executable factor
+logic.
+
 ## Cache
 
 `FactorIdeaStore` writes deterministic JSON cache files under:
@@ -65,6 +82,28 @@ Each `FactorIdea` contains:
   `seasonality`, or `macro`.
 
 Candidate tags are hints for triage only. They do not define a factor contract.
+
+## Candidate Workflow
+
+The candidate workflow preserves the source query, idea metadata, drafted spec,
+spec path, and review status in notebook-friendly rows. It is intended to make
+paper-backed research triage fast while keeping promotion explicit.
+
+The allowed path is:
+
+```text
+web-backed FactorIdea
+  -> persisted FactorCandidateBatch
+  -> FactorSpec review decision
+  -> human implementation as versioned qts.factors code
+  -> FactorEvaluation / ExperimentManifest evidence
+  -> shared BacktestPipeline
+  -> paper/live only after reviewed code is used by strategies
+```
+
+An `accepted` review decision means the hypothesis is worth implementation or
+further testing. It is not runtime promotion, does not generate Python factor
+code, and is not read by paper/live execution paths.
 
 ## Promotion Path
 

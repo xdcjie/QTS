@@ -101,3 +101,22 @@ def test_research_session_discover_factors_frame_returns_dataframe(tmp_path: Pat
 
     assert list(frame["idea_id"]) == ["fixture:momentum-carry"]
     assert list(frame["candidate_tags"]) == ["momentum, carry"]
+
+
+def test_research_session_find_factor_candidates_persists_specs(
+    tmp_path: Path,
+) -> None:
+    discovery = FactorDiscovery(
+        store=FactorIdeaStore(tmp_path / "research-store"),
+        sources={"fixture": _CountingSource((_idea(),))},
+    )
+    session = ResearchSession.from_yaml(_write_research_session_config(tmp_path))
+    session = ResearchSession(session.config, discovery=discovery)
+
+    batch = session.find_factor_candidates("commodity futures alpha")
+
+    assert [spec.name for spec in batch.specs] == ["momentum-carry-signals-in-commodity-futures"]
+    assert (
+        session.load_factor_spec("momentum-carry-signals-in-commodity-futures").review_status
+        == "draft"
+    )

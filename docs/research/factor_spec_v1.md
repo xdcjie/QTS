@@ -51,6 +51,13 @@ specs = session.draft_factor_specs(ideas)
 session.save_factor_spec(spec)
 persisted_specs = session.list_factor_specs()
 loaded = session.load_factor_spec(spec.name)
+
+review = session.review_factor_spec(
+    spec.name,
+    decision="accepted",
+    reviewer="researcher@example.com",
+    notes=("source and data requirements reviewed",),
+)
 ```
 
 ## Persistence
@@ -64,6 +71,38 @@ loaded = session.load_factor_spec(spec.name)
 The store is a research artifact boundary. It preserves source-backed drafts for
 review and follow-up implementation, but it does not promote the draft, generate
 factor code, or make the factor available to strategy runtime paths.
+
+## Review Decisions
+
+`FactorSpecStore` records human review evidence under:
+
+```text
+<research store>/factor-spec-reviews.jsonl
+```
+
+Allowed decisions are:
+
+- `draft`
+- `accepted`
+- `rejected`
+- `needs_work`
+
+Recording a decision updates the persisted spec `review_status` and appends a
+review evidence row with reviewer, notes, and timestamp. `accepted` means the
+hypothesis has passed research triage. It is still not executable behavior, not
+a factor implementation, and not visible to paper/live runtimes.
+
+The one-call candidate path is:
+
+```text
+web-backed FactorIdea
+  -> persisted FactorCandidateBatch
+  -> FactorSpec review decision
+  -> human implementation as versioned qts.factors code
+  -> FactorEvaluation / ExperimentManifest evidence
+  -> shared BacktestPipeline
+  -> paper/live only after reviewed code is used by strategies
+```
 
 ## Promotion Path
 

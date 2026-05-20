@@ -13,7 +13,24 @@ from qts.research import (
     ResearchSession,
     ResearchSessionConfig,
 )
-from qts.research.factor_discovery import FactorIdea
+from qts.research.factor_discovery import (
+    FactorDiscovery,
+    FactorDiscoveryQuery,
+    FactorIdea,
+    FactorIdeaStore,
+)
+
+
+class _CountingSource:
+    name = "fixture"
+
+    def __init__(self, ideas: tuple[FactorIdea, ...]) -> None:
+        self.calls = 0
+        self._ideas = ideas
+
+    def search(self, query: FactorDiscoveryQuery) -> tuple[FactorIdea, ...]:
+        self.calls += 1
+        return self._ideas
 
 
 def _write_research_config(tmp_path: Path, body: str) -> Path:
@@ -248,3 +265,95 @@ def test_research_session_start_experiment_records_manifest(tmp_path: Path) -> N
     assert records[0].factor_versions == {"momentum": "1"}
     assert records[0].dataset_ids == ("fixture-bars",)
     assert records[0].metrics == {"sharpe_ratio": "1.2"}
+
+
+def test_research_session_find_factor_candidates_saves_specs(tmp_path: Path) -> None:
+    config_path = _write_research_config(
+        tmp_path,
+        _minimal_research_yaml(tmp_path)
+        + """
+discovery:
+  sources: [fixture]
+  max_results: 1
+""",
+    )
+    source = _CountingSource((_factor_idea(),))
+    discovery = FactorDiscovery(
+        store=FactorIdeaStore(tmp_path / "research-store"),
+        sources={"fixture": source},
+    )
+    base_session = ResearchSession.from_yaml(config_path)
+    session = ResearchSession(base_session.config, discovery=discovery)
+
+    batch = session.find_factor_candidates("commodity futures alpha")
+
+    assert source.calls == 1
+    assert [spec.name for spec in batch.specs] == ["momentum-carry-in-futures"]
+    assert session.load_factor_spec("momentum-carry-in-futures").review_status == "draft"
+    assert list(batch.to_pandas()["spec_name"]) == ["momentum-carry-in-futures"]
+
+
+def test_research_session_review_factor_spec_records_decision(tmp_path: Path) -> None:
+    config_path = _write_research_config(tmp_path, _minimal_research_yaml(tmp_path))
+    session = ResearchSession.from_yaml(config_path)
+    spec = FactorSpecDrafter().draft(_factor_idea())
+    session.save_factor_spec(spec)
+
+    review = session.review_factor_spec(
+        spec.name,
+        decision="accepted",
+        reviewer="researcher@example.com",
+        notes=("source reviewed",),
+        reviewed_at=datetime(2026, 5, 20, 13, 0, tzinfo=UTC),
+    )
+
+    assert review.spec_name == spec.name
+    assert review.decision == "accepted"
+    assert session.load_factor_spec(spec.name).review_status == "accepted"
+    assert session.list_factor_reviews(decision="accepted") == (review,)
+    assert session.list_factor_specs_by_status("accepted")[0].name == spec.name
+
+
+def test_research_session_review_queue_frame_filters_drafts(tmp_path: Path) -> None:
+    config_path = _write_research_config(tmp_path, _minimal_research_yaml(tmp_path))
+    session = ResearchSession.from_yaml(config_path)
+    draft = FactorSpecDrafter().draft(_factor_idea())
+    accepted = FactorSpecDrafter().draft(
+        FactorIdea(
+            idea_id="openalex:W456",
+            source="openalex",
+            external_id="W456",
+            title="Volatility Timing in Futures",
+            abstract="A volatility factor.",
+            url="https://openalex.org/W456",
+            year=2026,
+            authors=("Researcher",),
+            citation_count=10,
+        )
+    )
+    session.save_factor_specs((draft, accepted))
+    session.review_factor_spec(
+        accepted.name,
+        decision="accepted",
+        reviewer="researcher@example.com",
+        reviewed_at=datetime(2026, 5, 20, 13, 0, tzinfo=UTC),
+    )
+
+    frame = session.review_queue_frame()
+
+    assert list(frame["spec_name"]) == [draft.name]
+    assert list(frame["review_status"]) == ["draft"]
+
+
+def test_research_session_candidate_public_exports_are_available() -> None:
+    from qts.research import (
+        FactorCandidate,
+        FactorCandidateBatch,
+        FactorCandidateWorkflow,
+        FactorSpecReview,
+    )
+
+    assert FactorCandidate.__name__ == "FactorCandidate"
+    assert FactorCandidateBatch.__name__ == "FactorCandidateBatch"
+    assert FactorCandidateWorkflow.__name__ == "FactorCandidateWorkflow"
+    assert FactorSpecReview.__name__ == "FactorSpecReview"

@@ -7,8 +7,24 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from qts.research import HistoryRequest, ResearchSession
+from qts.research.factor_discovery import (
+    FactorDiscovery,
+    FactorDiscoveryQuery,
+    FactorIdea,
+    FactorIdeaStore,
+)
 
 from tests.integration.test_optimizer_consumes_backtest_config import _write_fixtures
+
+
+class _CountingSource:
+    name = "fixture"
+
+    def __init__(self, ideas: tuple[FactorIdea, ...]) -> None:
+        self._ideas = ideas
+
+    def search(self, query: FactorDiscoveryQuery) -> tuple[FactorIdea, ...]:
+        return self._ideas
 
 
 def _write_research_session_config(tmp_path: Path) -> Path:
@@ -97,5 +113,48 @@ def test_research_session_experiment_recorder_keeps_backtest_path_unchanged(
     result = session.run_backtest(strategy_params={"quantity": "2"})
 
     assert [record.experiment_id for record in session.list_runs()] == ["manual-research"]
+    assert result.manifest_path.exists()
+    assert result.manifest_path.parent == tmp_path / "research-runs" / "single-run"
+
+
+def test_research_session_candidate_workflow_keeps_backtest_path_unchanged(
+    tmp_path: Path,
+) -> None:
+    base_session = ResearchSession.from_yaml(_write_research_session_config(tmp_path))
+    discovery = FactorDiscovery(
+        store=FactorIdeaStore(tmp_path / "research-store"),
+        sources={
+            "fixture": _CountingSource(
+                (
+                    FactorIdea(
+                        idea_id="fixture:momentum",
+                        source="fixture",
+                        external_id="momentum",
+                        title="Momentum factor in equity bars",
+                        abstract="A momentum signal for research review.",
+                        url="https://example.test/momentum",
+                        year=2026,
+                        authors=("Researcher",),
+                        citation_count=10,
+                    ),
+                )
+            )
+        },
+    )
+    session = ResearchSession(base_session.config, discovery=discovery)
+
+    batch = session.find_factor_candidates(
+        "equity momentum",
+        sources=("fixture",),
+        max_results=1,
+    )
+    session.review_factor_spec(
+        batch.specs[0].name,
+        decision="needs_work",
+        reviewer="researcher@example.com",
+    )
+    result = session.run_backtest(strategy_params={"quantity": "2"})
+
+    assert session.load_factor_spec(batch.specs[0].name).review_status == "needs_work"
     assert result.manifest_path.exists()
     assert result.manifest_path.parent == tmp_path / "research-runs" / "single-run"
