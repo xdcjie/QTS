@@ -54,6 +54,23 @@ def test_research_session_config_loads_paths_relative_to_config_file(tmp_path: P
     assert config.objective_metric == "total_return"
 
 
+def test_research_session_config_loads_discovery_defaults(tmp_path: Path) -> None:
+    config_path = _write_research_config(
+        tmp_path,
+        _minimal_research_yaml(tmp_path)
+        + """
+discovery:
+  sources: [openalex, crossref]
+  max_results: 7
+""",
+    )
+
+    config = ResearchSessionConfig.from_yaml(config_path)
+
+    assert config.discovery_sources == ("openalex", "crossref")
+    assert config.discovery_max_results == 7
+
+
 def test_research_session_config_rejects_empty_roots(tmp_path: Path) -> None:
     data_config = tmp_path / "historical.local.yaml"
     data_config.write_text("historical_data: {}\n", encoding="utf-8")

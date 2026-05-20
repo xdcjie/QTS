@@ -1,4 +1,69 @@
 exceptions:
+  - class_name: FactorDiscoveryQuery
+    module: qts.research.factor_discovery
+    reason: research factor discovery validated scholarly query value object
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: FactorIdea
+    module: qts.research.factor_discovery
+    reason: research factor discovery source-backed idea card value object
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: FactorDiscoveryError
+    module: qts.research.factor_discovery
+    reason: research factor discovery non-fatal source error evidence value object
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: FactorDiscoveryResult
+    module: qts.research.factor_discovery
+    reason: research factor discovery cached query result value object
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: FactorIdeaSource
+    module: qts.research.factor_discovery
+    reason: research factor discovery scholarly source adapter protocol
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: FactorDiscoveryHttpClient
+    module: qts.research.factor_discovery
+    reason: research factor discovery HTTP boundary protocol
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: UrllibFactorDiscoveryHttpClient
+    module: qts.research.factor_discovery
+    reason: research factor discovery stdlib HTTP adapter owner
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: SemanticScholarFactorIdeaSource
+    module: qts.research.factor_discovery
+    reason: research factor discovery Semantic Scholar metadata source adapter
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: OpenAlexFactorIdeaSource
+    module: qts.research.factor_discovery
+    reason: research factor discovery OpenAlex metadata source adapter
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: CrossrefFactorIdeaSource
+    module: qts.research.factor_discovery
+    reason: research factor discovery Crossref metadata source adapter
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: ArxivFactorIdeaSource
+    module: qts.research.factor_discovery
+    reason: research factor discovery arXiv metadata source adapter
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: FactorIdeaStore
+    module: qts.research.factor_discovery
+    reason: research factor discovery deterministic local cache owner
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: FactorDiscovery
+    module: qts.research.factor_discovery
+    reason: research factor discovery source orchestration facade
+    owner: platform
+    expiry: 2027-05-20
   - class_name: ExperimentStoreRecord
     module: qts.research.experiment_store
     reason: research workflow priority experiment registry record for deterministic manifest indexing

@@ -12,3 +12,6 @@ backtest_config: ../backtest.gc_si.example.yaml
 store: ../../runs/research/quickstart
 output_root: ../../runs/research/quickstart/backtests
 objective_metric: sharpe_ratio
+discovery:
+  sources: [semantic_scholar, openalex, crossref, arxiv]
+  max_results: 10

@@ -6,6 +6,18 @@ from qts.research.experiment_manifest import (
     ExperimentManifestWriter,
 )
 from qts.research.experiment_store import ExperimentStore, ExperimentStoreRecord
+from qts.research.factor_discovery import (
+    ArxivFactorIdeaSource,
+    CrossrefFactorIdeaSource,
+    FactorDiscovery,
+    FactorDiscoveryError,
+    FactorDiscoveryQuery,
+    FactorDiscoveryResult,
+    FactorIdea,
+    FactorIdeaStore,
+    OpenAlexFactorIdeaSource,
+    SemanticScholarFactorIdeaSource,
+)
 from qts.research.factor_evaluation import (
     FactorEvaluation,
     FactorEvaluationArtifactWriter,
@@ -27,6 +39,16 @@ __all__ = [
     "ExperimentManifestWriter",
     "ExperimentStore",
     "ExperimentStoreRecord",
+    "ArxivFactorIdeaSource",
+    "CrossrefFactorIdeaSource",
+    "FactorDiscovery",
+    "FactorDiscoveryError",
+    "FactorDiscoveryQuery",
+    "FactorDiscoveryResult",
+    "FactorIdea",
+    "FactorIdeaStore",
+    "OpenAlexFactorIdeaSource",
+    "SemanticScholarFactorIdeaSource",
     "FactorEvaluation",
     "FactorEvaluationArtifactWriter",
     "FactorEvaluationInput",

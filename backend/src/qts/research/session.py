@@ -16,6 +16,12 @@ from qts.backtest.engine import BacktestStreamResult
 from qts.backtest.pipeline import BacktestPipeline
 from qts.core.ids import InstrumentId
 from qts.research.experiment_store import ExperimentStore, ExperimentStoreRecord
+from qts.research.factor_discovery import (
+    DEFAULT_FACTOR_DISCOVERY_SOURCES,
+    FactorDiscovery,
+    FactorDiscoveryResult,
+    FactorIdeaStore,
+)
 from qts.research.optimizer.parameter_space import ParameterGrid, ParameterSpace
 from qts.research.optimizer.pipeline import BacktestPipelineJob, BacktestPipelineRunner
 from qts.research.optimizer.result import OptimizationResult
@@ -41,6 +47,8 @@ class ResearchSessionConfig:
     store_root: Path
     output_root: Path
     objective_metric: str = "sharpe_ratio"
+    discovery_sources: tuple[str, ...] = DEFAULT_FACTOR_DISCOVERY_SOURCES
+    discovery_max_results: int = 10
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> ResearchSessionConfig:
@@ -53,6 +61,7 @@ class ResearchSessionConfig:
         if not isinstance(raw, dict):
             raise ValueError("research config must be a YAML mapping")
         data = cls._required_mapping(raw, "data")
+        discovery = cls._optional_mapping(raw, "discovery")
         roots = cls._string_tuple(data.get("roots"), "data.roots")
         data_config_path = cls._resolve_path(path, cls._required_text(data, "config"))
         backtest_config_path = cls._resolve_path(path, cls._required_text(raw, "backtest_config"))
@@ -72,6 +81,14 @@ class ResearchSessionConfig:
                 str(raw.get("output_root", "runs/research/backtests")),
             ),
             objective_metric=str(raw.get("objective_metric", "sharpe_ratio")),
+            discovery_sources=cls._source_tuple(
+                discovery.get("sources", list(DEFAULT_FACTOR_DISCOVERY_SOURCES)),
+                "discovery.sources",
+            ),
+            discovery_max_results=cls._positive_int(
+                discovery.get("max_results", 10),
+                "discovery.max_results",
+            ),
         )
 
     def research_book_config(self) -> ResearchBookConfig:
@@ -93,6 +110,13 @@ class ResearchSessionConfig:
         return value
 
     @staticmethod
+    def _optional_mapping(payload: Mapping[str, Any], field_name: str) -> dict[str, Any]:
+        value = payload.get(field_name, {})
+        if not isinstance(value, dict):
+            raise ValueError(f"{field_name} must be a mapping")
+        return value
+
+    @staticmethod
     def _required_text(payload: Mapping[str, Any], field_name: str) -> str:
         value = payload.get(field_name)
         if not isinstance(value, str) or not value.strip():
@@ -105,7 +129,20 @@ class ResearchSessionConfig:
             raise ValueError(f"{field_name} must not be empty")
         if not all(isinstance(item, str) and item.strip() for item in value):
             raise ValueError(f"{field_name} must contain non-empty strings")
-        return tuple(value)
+        return tuple(item.strip() for item in value)
+
+    @staticmethod
+    def _source_tuple(value: Any, field_name: str) -> tuple[str, ...]:
+        return tuple(
+            item.lower() for item in ResearchSessionConfig._string_tuple(value, field_name)
+        )
+
+    @staticmethod
+    def _positive_int(value: Any, field_name: str) -> int:
+        parsed = int(value)
+        if parsed <= 0:
+            raise ValueError(f"{field_name} must be positive")
+        return parsed
 
     @staticmethod
     def _instrument_ids(value: Any) -> dict[str, InstrumentId]:
@@ -145,10 +182,12 @@ class ResearchSession:
         *,
         book: ResearchBook | None = None,
         store: ExperimentStore | None = None,
+        discovery: FactorDiscovery | None = None,
     ) -> None:
         self._config = config
         self._book = book
         self._store = store if store is not None else ExperimentStore(config.store_root)
+        self._discovery = discovery
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> ResearchSession:
@@ -175,6 +214,16 @@ class ResearchSession:
         """Return the experiment store facade."""
 
         return self._store
+
+    @property
+    def discovery(self) -> FactorDiscovery:
+        """Return the factor idea discovery facade."""
+
+        if self._discovery is None:
+            self._discovery = FactorDiscovery.with_default_sources(
+                FactorIdeaStore(self._config.store_root)
+            )
+        return self._discovery
 
     def history(self, request: HistoryRequest) -> ResearchHistoryFrame:
         """Return historical bars through ``ResearchBook``."""
@@ -281,6 +330,50 @@ class ResearchSession:
                 for record in self.compare_runs(metric)
             ]
         )
+
+    def discover_factors(
+        self,
+        query: str,
+        *,
+        sources: Sequence[str] | None = None,
+        max_results: int | None = None,
+        from_year: int | None = None,
+        to_year: int | None = None,
+        refresh: bool = False,
+    ) -> FactorDiscoveryResult:
+        """Discover source-backed factor ideas without creating executable behavior."""
+
+        return self.discovery.search(
+            query,
+            sources=self._config.discovery_sources if sources is None else sources,
+            max_results=(
+                self._config.discovery_max_results if max_results is None else max_results
+            ),
+            from_year=from_year,
+            to_year=to_year,
+            refresh=refresh,
+        )
+
+    def discover_factors_frame(
+        self,
+        query: str,
+        *,
+        sources: Sequence[str] | None = None,
+        max_results: int | None = None,
+        from_year: int | None = None,
+        to_year: int | None = None,
+        refresh: bool = False,
+    ) -> Any:
+        """Return discovered factor ideas as a pandas DataFrame."""
+
+        return self.discover_factors(
+            query,
+            sources=sources,
+            max_results=max_results,
+            from_year=from_year,
+            to_year=to_year,
+            refresh=refresh,
+        ).to_pandas()
 
 
 __all__ = ["ResearchSession", "ResearchSessionConfig"]
