@@ -9,6 +9,8 @@ import sys
 from pathlib import Path
 from textwrap import dedent
 
+from qts.research import ExperimentStore
+
 
 def test_optimizer_cli_writes_validation_summary_artifact(tmp_path: Path) -> None:
     config_path = Path("configs/optimizer/quickstart.yaml")
@@ -123,3 +125,52 @@ def test_optimizer_cli_applies_configured_validation_constraints(tmp_path: Path)
         for rejection in payload["rejections"]
         for reason in rejection["reasons"]
     )
+
+
+def test_optimizer_cli_publishes_validation_summary_to_experiment_store(
+    tmp_path: Path,
+) -> None:
+    config_path = Path("configs/optimizer/quickstart.yaml")
+    validation_output = tmp_path / "validation-summary.json"
+    store_root = tmp_path / "research-store"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_optimizer.py",
+            str(config_path),
+            "--output-root",
+            str(tmp_path / "optimizer-runs"),
+            "--validation-output",
+            str(validation_output),
+            "--experiment-store",
+            str(store_root),
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        env={
+            "PYTHONPATH": "backend/src",
+            "QTS_API_DEV_TOKENS": "1",
+            "PATH": os.environ.get("PATH", ""),
+        },
+    )
+
+    assert result.returncode == 0, (
+        f"CLI failed (returncode={result.returncode}):\n"
+        f"stdout:\n{result.stdout}\n"
+        f"stderr:\n{result.stderr}"
+    )
+    records = ExperimentStore(store_root).list_runs()
+
+    assert len(records) == 1
+    record = records[0]
+    assert record.strategy_name == "optimizer"
+    assert record.strategy_version == "1"
+    assert record.dataset_ids == ("strategy_module:examples.strategies.quickstart_optimizer",)
+    assert record.metrics == {
+        "accepted_count": 4,
+        "rejected_count": 0,
+        "run_count": 4,
+    }
+    assert record.artifact_hashes.keys() == {"validation-summary.json"}

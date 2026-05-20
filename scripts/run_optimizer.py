@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from qts.research import ExperimentManifestConfig, ExperimentManifestWriter, ExperimentStore
 from qts.research.optimizer import (
     BacktestPipelineJob,
     BacktestPipelineRunner,
@@ -172,6 +173,39 @@ def _format_ranked_table(results: Sequence[OptimizationResult], objective_metric
     return "\n".join(lines)
 
 
+def _optimizer_dataset_ids(config: dict[str, Any]) -> tuple[str, ...]:
+    if "backtest_config" in config:
+        return (f"backtest_config:{config['backtest_config']}",)
+    return (f"strategy_module:{config['strategy_module']}",)
+
+
+def _publish_optimizer_experiment(
+    *,
+    config_path: Path,
+    config: dict[str, Any],
+    validation_output: Path,
+    summary: OptimizerValidationSummary,
+    store_root: Path,
+) -> None:
+    manifest = ExperimentManifestWriter(store_root / "manifests").write_manifest(
+        ExperimentManifestConfig(
+            experiment_id=f"optimizer-{config_path.stem}",
+            strategy_name="optimizer",
+            strategy_version="1",
+            factor_versions={},
+            dataset_ids=_optimizer_dataset_ids(config),
+            config=config,
+            artifact_paths=(validation_output,),
+            metrics={
+                "accepted_count": summary.accepted_count,
+                "rejected_count": summary.rejected_count,
+                "run_count": summary.run_count,
+            },
+        )
+    )
+    ExperimentStore(store_root).record_manifest(manifest.manifest_path)
+
+
 def _run_factory_path(
     config: dict[str, Any], *, output_root: Path
 ) -> tuple[Sequence[OptimizationResult], str]:
@@ -226,7 +260,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=None,
         help="Optional path for optimizer validation summary JSON",
     )
+    parser.add_argument(
+        "--experiment-store",
+        type=Path,
+        default=None,
+        help="Optional research experiment store root for indexing validation evidence",
+    )
     args = parser.parse_args(argv)
+    if args.experiment_store is not None and args.validation_output is None:
+        parser.error("--experiment-store requires --validation-output")
 
     config = _load_config(args.config)
     if "backtest_config" in config:
@@ -244,6 +286,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             walk_forward_plan=_walk_forward_plan(config),
         )
         OptimizerValidationSummaryWriter().write(args.validation_output, summary)
+        if args.experiment_store is not None:
+            _publish_optimizer_experiment(
+                config_path=args.config,
+                config=config,
+                validation_output=args.validation_output,
+                summary=summary,
+                store_root=args.experiment_store,
+            )
     print(_format_ranked_table(results, objective_metric))
     return 0
 

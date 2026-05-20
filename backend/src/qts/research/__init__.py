@@ -5,6 +5,7 @@ from qts.research.experiment_manifest import (
     ExperimentManifestResult,
     ExperimentManifestWriter,
 )
+from qts.research.experiment_store import ExperimentStore, ExperimentStoreRecord
 from qts.research.factor_evaluation import (
     FactorEvaluation,
     FactorEvaluationArtifactWriter,
@@ -18,11 +19,14 @@ from qts.research.research_book import (
     ResearchBookConfig,
     ResearchHistoryFrame,
 )
+from qts.research.session import ResearchSession, ResearchSessionConfig
 
 __all__ = [
     "ExperimentManifestConfig",
     "ExperimentManifestResult",
     "ExperimentManifestWriter",
+    "ExperimentStore",
+    "ExperimentStoreRecord",
     "FactorEvaluation",
     "FactorEvaluationArtifactWriter",
     "FactorEvaluationInput",
@@ -32,4 +36,6 @@ __all__ = [
     "ResearchBook",
     "ResearchBookConfig",
     "ResearchHistoryFrame",
+    "ResearchSession",
+    "ResearchSessionConfig",
 ]

@@ -1,4 +1,24 @@
 exceptions:
+  - class_name: ExperimentStoreRecord
+    module: qts.research.experiment_store
+    reason: research workflow priority experiment registry record for deterministic manifest indexing
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: ExperimentStore
+    module: qts.research.experiment_store
+    reason: research workflow priority deterministic experiment manifest index owner
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: ResearchSessionConfig
+    module: qts.research.session
+    reason: research session facade configuration owner for notebook-friendly workflows
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: ResearchSession
+    module: qts.research.session
+    reason: research session facade orchestrating existing book pipeline optimizer and store boundaries
+    owner: platform
+    expiry: 2027-05-20
   - class_name: ConstraintDecision
     module: qts.research.optimizer.constraints
     reason: OPTV-1 optimizer constraint decision evidence value object

@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import importlib
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
+from qts.core.ids import InstrumentId
 from qts.core.time import TimeInterval, require_aware_datetime
 from qts.data.bars.pipeline import BarAggregationPipeline
 from qts.data.historical.catalog import (
@@ -26,6 +29,7 @@ class ResearchBookConfig:
     catalog_name: str
     roots: tuple[str, ...]
     timeframe: str
+    instrument_ids: dict[str, InstrumentId] | None = None
 
     def __post_init__(self) -> None:
         """Validate and normalize config inputs."""
@@ -37,6 +41,18 @@ class ResearchBookConfig:
         if not self.timeframe.strip():
             raise ValueError("timeframe is required")
         object.__setattr__(self, "data_config_path", Path(self.data_config_path))
+        object.__setattr__(
+            self,
+            "instrument_ids",
+            {
+                str(symbol).strip().upper(): (
+                    instrument_id
+                    if isinstance(instrument_id, InstrumentId)
+                    else InstrumentId(str(instrument_id))
+                )
+                for symbol, instrument_id in (self.instrument_ids or {}).items()
+            },
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,6 +96,38 @@ class ResearchHistoryFrame:
 
         return len(self.bars)
 
+    def rows(self) -> tuple[dict[str, object], ...]:
+        """Return deterministic notebook-friendly bar rows."""
+
+        return tuple(self._row_for(bar) for bar in self.bars)
+
+    def to_pandas(self) -> Any:
+        """Return the frame as a pandas DataFrame for notebook workflows."""
+
+        pandas_module: Any = importlib.import_module("pandas")
+        return pandas_module.DataFrame(self.rows())
+
+    @staticmethod
+    def _row_for(bar: Bar) -> dict[str, object]:
+        return {
+            "close": bar.close,
+            "end_time": bar.end_time,
+            "high": bar.high,
+            "instrument_id": str(bar.instrument_id),
+            "is_complete": bar.is_complete,
+            "is_partial": bar.is_partial,
+            "is_synthetic": bar.is_synthetic,
+            "low": bar.low,
+            "open": bar.open,
+            "open_interest": bar.open_interest,
+            "session_id": bar.session_id,
+            "start_time": bar.start_time,
+            "timeframe": bar.timeframe,
+            "trade_count": bar.trade_count,
+            "volume": bar.volume,
+            "vwap": bar.vwap,
+        }
+
 
 class ResearchBook:
     """Read-only research facade over configured historical data."""
@@ -97,6 +145,7 @@ class ResearchBook:
                 config.data_config_path,
                 catalog=config.catalog_name,
                 roots=config.roots,
+                instrument_ids=config.instrument_ids,
                 requested_timeframe=config.timeframe,
             )
         )
@@ -136,6 +185,16 @@ class ResearchBook:
                 target_timeframe=request.timeframe,
             )
         )
+
+    def history_rows(self, request: HistoryRequest) -> tuple[dict[str, object], ...]:
+        """Return historical bars as deterministic notebook-friendly rows."""
+
+        return self.history(request).rows()
+
+    def history_frame(self, request: HistoryRequest) -> Any:
+        """Return historical bars as a pandas DataFrame for notebooks."""
+
+        return self.history(request).to_pandas()
 
     @classmethod
     def _aggregate_stream(

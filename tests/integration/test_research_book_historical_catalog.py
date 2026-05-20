@@ -79,3 +79,67 @@ def test_research_book_config_can_be_assembled_from_backtest_market_data_referen
     )
 
     assert len(frame) > 0
+
+
+def test_research_book_history_rows_uses_existing_history_path() -> None:
+    book = ResearchBook.from_config(
+        ResearchBookConfig(
+            data_config_path=Path("configs/data/historical.local.yaml"),
+            catalog_name="research_futures",
+            roots=("GC",),
+            timeframe="1m",
+        )
+    )
+
+    rows = book.history_rows(
+        HistoryRequest(
+            root="GC",
+            start=datetime(2010, 6, 6, 22, 0, tzinfo=UTC),
+            end=datetime(2010, 6, 6, 22, 5, tzinfo=UTC),
+            timeframe="1m",
+        )
+    )
+
+    assert len(rows) > 0
+    assert rows[0]["timeframe"] == "1m"
+    assert str(rows[0]["instrument_id"]).startswith("FUTURE.CME.GC.")
+
+
+def test_research_book_history_frame_returns_pandas_dataframe() -> None:
+    book = ResearchBook.from_config(
+        ResearchBookConfig(
+            data_config_path=Path("configs/data/historical.local.yaml"),
+            catalog_name="research_futures",
+            roots=("GC",),
+            timeframe="1m",
+        )
+    )
+
+    data_frame = book.history_frame(
+        HistoryRequest(
+            root="GC",
+            start=datetime(2010, 6, 6, 22, 0, tzinfo=UTC),
+            end=datetime(2010, 6, 6, 22, 5, tzinfo=UTC),
+            timeframe="1m",
+        )
+    )
+
+    assert list(data_frame.columns) == [
+        "close",
+        "end_time",
+        "high",
+        "instrument_id",
+        "is_complete",
+        "is_partial",
+        "is_synthetic",
+        "low",
+        "open",
+        "open_interest",
+        "session_id",
+        "start_time",
+        "timeframe",
+        "trade_count",
+        "volume",
+        "vwap",
+    ]
+    assert len(data_frame) > 0

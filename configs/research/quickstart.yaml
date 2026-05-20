@@ -1,0 +1,14 @@
+# Quickstart research session config consumed by qts.research.ResearchSession.
+#
+# The facade makes notebooks/scripts easier to use, but executable evidence
+# still goes through the shared BacktestPipeline and BacktestPipelineRunner.
+
+data:
+  config: ../data/historical.local.yaml
+  catalog: research_futures
+  roots: [GC]
+  timeframe: 1m
+backtest_config: ../backtest.gc_si.example.yaml
+store: ../../runs/research/quickstart
+output_root: ../../runs/research/quickstart/backtests
+objective_metric: sharpe_ratio

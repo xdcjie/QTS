@@ -607,7 +607,7 @@
       <div class="surface class-inventory" aria-label="生产类全量索引">
         <h2>生产类全量索引（按阶段 / 模块）</h2>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">665 classes</span></summary>
+          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">669 classes</span></summary>
           <ul>
           <li><code>qts/api/auth_backend_factory.py</code> -> <code>_DevDefaultTokenAuthBackend</code> <span class="location">backend/src/qts/api/auth_backend_factory.py:38</span></li>
           <li><code>qts/api/schemas/backtest_schema.py</code> -> <code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span>, <code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span>, <code>BacktestRunResultSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:24</span>, <code>BacktestStrategyOptionSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:38</span></li>
@@ -768,6 +768,7 @@
           <li><code>qts/reporting/broker_runtime.py</code> -> <code>BrokerRuntimeReportManifest</code> <span class="location">backend/src/qts/reporting/broker_runtime.py:31</span>, <code>BrokerRuntimeReportWriter</code> <span class="location">backend/src/qts/reporting/broker_runtime.py:39</span>, <code>BrokerRuntimeEventReporter</code> <span class="location">backend/src/qts/reporting/broker_runtime.py:240</span></li>
           <li><code>qts/reporting/statistics.py</code> -> <code>StatisticsPayload</code> <span class="location">backend/src/qts/reporting/statistics.py:23</span>, <code>_HoldingsSnapshot</code> <span class="location">backend/src/qts/reporting/statistics.py:34</span>, <code>StatisticsBuilder</code> <span class="location">backend/src/qts/reporting/statistics.py:41</span></li>
           <li><code>qts/research/experiment_manifest.py</code> -> <code>ExperimentManifestConfig</code> <span class="location">backend/src/qts/research/experiment_manifest.py:17</span>, <code>ExperimentManifestResult</code> <span class="location">backend/src/qts/research/experiment_manifest.py:55</span>, <code>ExperimentManifestWriter</code> <span class="location">backend/src/qts/research/experiment_manifest.py:62</span></li>
+          <li><code>qts/research/experiment_store.py</code> -> <code>ExperimentStoreRecord</code> <span class="location">backend/src/qts/research/experiment_store.py:16</span>, <code>ExperimentStore</code> <span class="location">backend/src/qts/research/experiment_store.py:129</span></li>
           <li><code>qts/research/factor_evaluation.py</code> -> <code>FactorEvaluationInput</code> <span class="location">backend/src/qts/research/factor_evaluation.py:16</span>, <code>FactorEvaluationMetrics</code> <span class="location">backend/src/qts/research/factor_evaluation.py:39</span>, <code>FactorEvaluationResult</code> <span class="location">backend/src/qts/research/factor_evaluation.py:52</span>, <code>FactorEvaluation</code> <span class="location">backend/src/qts/research/factor_evaluation.py:61</span>, <code>FactorEvaluationArtifactWriter</code> <span class="location">backend/src/qts/research/factor_evaluation.py:188</span></li>
           <li><code>qts/research/optimizer/constraints.py</code> -> <code>ConstraintDecision</code> <span class="location">backend/src/qts/research/optimizer/constraints.py:16</span>, <code>OptimizationConstraint</code> <span class="location">backend/src/qts/research/optimizer/constraints.py:23</span>, <code>MetricConstraint</code> <span class="location">backend/src/qts/research/optimizer/constraints.py:31</span></li>
           <li><code>qts/research/optimizer/job.py</code> -> <code>OptimizationJob</code> <span class="location">backend/src/qts/research/optimizer/job.py:20</span></li>
@@ -777,7 +778,8 @@
           <li><code>qts/research/optimizer/runner.py</code> -> <code>OptimizationRunner</code> <span class="location">backend/src/qts/research/optimizer/runner.py:44</span></li>
           <li><code>qts/research/optimizer/validation.py</code> -> <code>OptimizerValidationSummary</code> <span class="location">backend/src/qts/research/optimizer/validation.py:19</span>, <code>OptimizerValidationSummaryWriter</code> <span class="location">backend/src/qts/research/optimizer/validation.py:111</span></li>
           <li><code>qts/research/optimizer/walk_forward.py</code> -> <code>WalkForwardSplit</code> <span class="location">backend/src/qts/research/optimizer/walk_forward.py:10</span>, <code>WalkForwardPlan</code> <span class="location">backend/src/qts/research/optimizer/walk_forward.py:41</span></li>
-          <li><code>qts/research/research_book.py</code> -> <code>ResearchBookConfig</code> <span class="location">backend/src/qts/research/research_book.py:22</span>, <code>HistoryRequest</code> <span class="location">backend/src/qts/research/research_book.py:43</span>, <code>ResearchHistoryFrame</code> <span class="location">backend/src/qts/research/research_book.py:68</span>, <code>ResearchBook</code> <span class="location">backend/src/qts/research/research_book.py:84</span></li>
+          <li><code>qts/research/research_book.py</code> -> <code>ResearchBookConfig</code> <span class="location">backend/src/qts/research/research_book.py:25</span>, <code>HistoryRequest</code> <span class="location">backend/src/qts/research/research_book.py:59</span>, <code>ResearchHistoryFrame</code> <span class="location">backend/src/qts/research/research_book.py:84</span>, <code>ResearchBook</code> <span class="location">backend/src/qts/research/research_book.py:132</span></li>
+          <li><code>qts/research/session.py</code> -> <code>ResearchSessionConfig</code> <span class="location">backend/src/qts/research/session.py:31</span>, <code>ResearchSession</code> <span class="location">backend/src/qts/research/session.py:139</span></li>
           <li><code>qts/risk/config.py</code> -> <code>RiskRuleConfig</code> <span class="location">backend/src/qts/risk/config.py:15</span>, <code>RiskConfig</code> <span class="location">backend/src/qts/risk/config.py:43</span></li>
           <li><code>qts/risk/kill_switch.py</code> -> <code>KillSwitchScopeType</code> <span class="location">backend/src/qts/risk/kill_switch.py:12</span>, <code>KillSwitchScope</code> <span class="location">backend/src/qts/risk/kill_switch.py:22</span>, <code>KillSwitchState</code> <span class="location">backend/src/qts/risk/kill_switch.py:54</span>, <code>RuntimeKillSwitchCommand</code> <span class="location">backend/src/qts/risk/kill_switch.py:63</span>, <code>KillSwitchRegistry</code> <span class="location">backend/src/qts/risk/kill_switch.py:78</span></li>
           <li><code>qts/risk/risk_engine.py</code> -> <code>BrokerageRiskPolicy</code> <span class="location">backend/src/qts/risk/risk_engine.py:17</span>, <code>RiskEngine</code> <span class="location">backend/src/qts/risk/risk_engine.py:31</span></li>
@@ -863,7 +865,7 @@
           </ul>
         </details>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">665 classes</span></summary>
+          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">669 classes</span></summary>
           <ul class="method-index">
           <li><code>_DevDefaultTokenAuthBackend</code> <span class="location">backend/src/qts/api/auth_backend_factory.py:38</span> -> <code>__init__():41</code></li>
           <li><code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span> -> <span class="muted">no public/core methods</span></li>
@@ -1298,6 +1300,8 @@
           <li><code>ExperimentManifestConfig</code> <span class="location">backend/src/qts/research/experiment_manifest.py:17</span> -> <code>__post_init__():29</code>, <code>config_hash property:35</code></li>
           <li><code>ExperimentManifestResult</code> <span class="location">backend/src/qts/research/experiment_manifest.py:55</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>ExperimentManifestWriter</code> <span class="location">backend/src/qts/research/experiment_manifest.py:62</span> -> <code>__init__():65</code>, <code>write_manifest():68</code></li>
+          <li><code>ExperimentStoreRecord</code> <span class="location">backend/src/qts/research/experiment_store.py:16</span> -> <code>from_manifest():32</code>, <code>from_payload():61</code>, <code>to_payload():80</code></li>
+          <li><code>ExperimentStore</code> <span class="location">backend/src/qts/research/experiment_store.py:129</span> -> <code>__init__():132</code>, <code>index_path property:136</code>, <code>record_manifest():141</code>, <code>list_runs():158</code></li>
           <li><code>FactorEvaluationInput</code> <span class="location">backend/src/qts/research/factor_evaluation.py:16</span> -> <code>__post_init__():27</code></li>
           <li><code>FactorEvaluationMetrics</code> <span class="location">backend/src/qts/research/factor_evaluation.py:39</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>FactorEvaluationResult</code> <span class="location">backend/src/qts/research/factor_evaluation.py:52</span> -> <span class="muted">no public/core methods</span></li>
@@ -1317,10 +1321,12 @@
           <li><code>OptimizerValidationSummaryWriter</code> <span class="location">backend/src/qts/research/optimizer/validation.py:111</span> -> <code>write():114</code></li>
           <li><code>WalkForwardSplit</code> <span class="location">backend/src/qts/research/optimizer/walk_forward.py:10</span> -> <code>__post_init__():19</code>, <code>to_metadata():29</code></li>
           <li><code>WalkForwardPlan</code> <span class="location">backend/src/qts/research/optimizer/walk_forward.py:41</span> -> <code>__post_init__():46</code>, <code>to_metadata():56</code></li>
-          <li><code>ResearchBookConfig</code> <span class="location">backend/src/qts/research/research_book.py:22</span> -> <code>__post_init__():30</code></li>
-          <li><code>HistoryRequest</code> <span class="location">backend/src/qts/research/research_book.py:43</span> -> <code>__post_init__():51</code>, <code>includes():60</code></li>
-          <li><code>ResearchHistoryFrame</code> <span class="location">backend/src/qts/research/research_book.py:68</span> -> <code>__iter__():73</code>, <code>__len__():78</code></li>
-          <li><code>ResearchBook</code> <span class="location">backend/src/qts/research/research_book.py:84</span> -> <code>__init__():87</code>, <code>from_config():92</code>, <code>dataset_ids property:106</code>, <code>history():114</code></li>
+          <li><code>ResearchBookConfig</code> <span class="location">backend/src/qts/research/research_book.py:25</span> -> <code>__post_init__():34</code></li>
+          <li><code>HistoryRequest</code> <span class="location">backend/src/qts/research/research_book.py:59</span> -> <code>__post_init__():67</code>, <code>includes():76</code></li>
+          <li><code>ResearchHistoryFrame</code> <span class="location">backend/src/qts/research/research_book.py:84</span> -> <code>__iter__():89</code>, <code>__len__():94</code>, <code>rows():99</code>, <code>to_pandas():104</code></li>
+          <li><code>ResearchBook</code> <span class="location">backend/src/qts/research/research_book.py:132</span> -> <code>__init__():135</code>, <code>from_config():140</code>, <code>dataset_ids property:155</code>, <code>history():163</code>, <code>history_rows():189</code>, <code>history_frame():194</code></li>
+          <li><code>ResearchSessionConfig</code> <span class="location">backend/src/qts/research/session.py:31</span> -> <code>from_yaml():46</code>, <code>research_book_config():77</code></li>
+          <li><code>ResearchSession</code> <span class="location">backend/src/qts/research/session.py:139</span> -> <code>__init__():142</code>, <code>from_yaml():154</code>, <code>config property:160</code>, <code>book property:166</code>, <code>store property:174</code>, <code>history():179</code>, <code>history_frame():184</code>, <code>parameter_grid():189</code>, <code>run_backtest():200</code>, <code>optimize():217</code>, <code>record_manifest():235</code>, <code>list_runs():245</code>, <code>compare_runs():250</code>, <code>compare_frame():266</code></li>
           <li><code>RiskRuleConfig</code> <span class="location">backend/src/qts/risk/config.py:15</span> -> <code>__post_init__():22</code>, <code>from_mapping():30</code></li>
           <li><code>RiskConfig</code> <span class="location">backend/src/qts/risk/config.py:43</span> -> <code>__post_init__():52</code>, <code>from_yaml():62</code></li>
           <li><code>KillSwitchScopeType</code> <span class="location">backend/src/qts/risk/kill_switch.py:12</span> -> <span class="muted">no public/core methods</span></li>
@@ -3197,10 +3203,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>376 files</span>
-      <span>667 classes</span>
-      <span>2256 functions</span>
-      <span>359 backend</span>
+      <span>378 files</span>
+      <span>671 classes</span>
+      <span>2296 functions</span>
+      <span>361 backend</span>
       <span>17 frontend</span>
     </div>
   </div>
@@ -11013,6 +11019,50 @@
     </details>
     <details class="inventory-file">
       <summary>
+        <code>backend/src/qts/research/experiment_store.py</code>
+        <span class="inventory-counts">
+          <span>2 classes</span>
+          <span>13 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Deterministic research experiment index.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>ExperimentStoreRecord</code></td><td>experiment_store:16</td><td>One indexed research experiment manifest.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ExperimentStore</code></td><td>experiment_store:129</td><td>Owns a deterministic JSONL index of research experiment manifests.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>from_manifest</code></td><td>ExperimentStoreRecord:32</td><td>Create a store record from a deterministic experiment manifest.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>from_payload</code></td><td>ExperimentStoreRecord:61</td><td>Rehydrate one record from the store index payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>ExperimentStoreRecord:80</td><td>Return a deterministic JSON-ready record payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_required_text</code></td><td>ExperimentStoreRecord:98</td><td>实现 ExperimentStoreRecord 的 required text 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_mapping</code></td><td>ExperimentStoreRecord:105</td><td>实现 ExperimentStoreRecord 的 mapping 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_string_mapping</code></td><td>ExperimentStoreRecord:112</td><td>实现 ExperimentStoreRecord 的 string mapping 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_string_tuple</code></td><td>ExperimentStoreRecord:122</td><td>实现 ExperimentStoreRecord 的 string tuple 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>ExperimentStore:132</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>index_path</code></td><td>ExperimentStore:136</td><td>Return the JSONL index path used by this store.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>record_manifest</code></td><td>ExperimentStore:141</td><td>Index an experiment manifest and return the stored record.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>list_runs</code></td><td>ExperimentStore:158</td><td>Return indexed experiment records, newest first.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_write_records</code></td><td>ExperimentStore:178</td><td>实现 ExperimentStore 的 write records 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_sort_records</code></td><td>ExperimentStore:187</td><td>实现 ExperimentStore 的 sort records 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
         <code>backend/src/qts/research/factor_evaluation.py</code>
         <span class="inventory-counts">
           <span>5 classes</span>
@@ -11338,7 +11388,7 @@
         <code>backend/src/qts/research/research_book.py</code>
         <span class="inventory-counts">
           <span>4 classes</span>
-          <span>11 functions</span>
+          <span>16 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -11349,10 +11399,10 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>ResearchBookConfig</code></td><td>research_book:22</td><td>Construction inputs for a configured research history facade.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
-              <tr><td><code>HistoryRequest</code></td><td>research_book:43</td><td>One bounded historical bar request using `[start, end)` semantics.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
-              <tr><td><code>ResearchHistoryFrame</code></td><td>research_book:68</td><td>Deterministic row-like collection of historical bars.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ResearchBook</code></td><td>research_book:84</td><td>Read-only research facade over configured historical data.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ResearchBookConfig</code></td><td>research_book:25</td><td>Construction inputs for a configured research history facade.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>HistoryRequest</code></td><td>research_book:59</td><td>One bounded historical bar request using `[start, end)` semantics.</td><td>提供稳定边界对象，避免 API、runtime 或 adapter 直接共享内部结构。</td></tr>
+              <tr><td><code>ResearchHistoryFrame</code></td><td>research_book:84</td><td>Deterministic row-like collection of historical bars.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ResearchBook</code></td><td>research_book:132</td><td>Read-only research facade over configured historical data.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -11361,17 +11411,75 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>__post_init__</code></td><td>ResearchBookConfig:30</td><td>Validate and normalize config inputs.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__post_init__</code></td><td>HistoryRequest:51</td><td>Validate request identity and interval bounds.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>includes</code></td><td>HistoryRequest:60</td><td>Return whether ``timestamp`` belongs to this half-open request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__iter__</code></td><td>ResearchHistoryFrame:73</td><td>Iterate over frame bars in source order.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__len__</code></td><td>ResearchHistoryFrame:78</td><td>Return the number of bars in the frame.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>ResearchBook:87</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>from_config</code></td><td>ResearchBook:92</td><td>Load a configured historical catalog for research queries.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>dataset_ids</code></td><td>ResearchBook:106</td><td>Return deterministic dataset identifiers for experiment manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>history</code></td><td>ResearchBook:114</td><td>Return bars from the configured catalog within ``request`` bounds.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_aggregate_stream</code></td><td>ResearchBook:141</td><td>实现 ResearchBook 的 aggregate stream 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_exchange_timezone_for</code></td><td>ResearchBook:165</td><td>实现 ResearchBook 的 exchange timezone for 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>ResearchBookConfig:34</td><td>Validate and normalize config inputs.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__post_init__</code></td><td>HistoryRequest:67</td><td>Validate request identity and interval bounds.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>includes</code></td><td>HistoryRequest:76</td><td>Return whether ``timestamp`` belongs to this half-open request.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__iter__</code></td><td>ResearchHistoryFrame:89</td><td>Iterate over frame bars in source order.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__len__</code></td><td>ResearchHistoryFrame:94</td><td>Return the number of bars in the frame.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>rows</code></td><td>ResearchHistoryFrame:99</td><td>Return deterministic notebook-friendly bar rows.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_pandas</code></td><td>ResearchHistoryFrame:104</td><td>Return the frame as a pandas DataFrame for notebook workflows.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_row_for</code></td><td>ResearchHistoryFrame:111</td><td>实现 ResearchHistoryFrame 的 row for 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>ResearchBook:135</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>from_config</code></td><td>ResearchBook:140</td><td>Load a configured historical catalog for research queries.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>dataset_ids</code></td><td>ResearchBook:155</td><td>Return deterministic dataset identifiers for experiment manifests.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>history</code></td><td>ResearchBook:163</td><td>Return bars from the configured catalog within ``request`` bounds.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>history_rows</code></td><td>ResearchBook:189</td><td>Return historical bars as deterministic notebook-friendly rows.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>history_frame</code></td><td>ResearchBook:194</td><td>Return historical bars as a pandas DataFrame for notebooks.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_aggregate_stream</code></td><td>ResearchBook:200</td><td>实现 ResearchBook 的 aggregate stream 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_exchange_timezone_for</code></td><td>ResearchBook:224</td><td>实现 ResearchBook 的 exchange timezone for 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
+        <code>backend/src/qts/research/session.py</code>
+        <span class="inventory-counts">
+          <span>2 classes</span>
+          <span>22 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Notebook-friendly research session facade over existing QTS boundaries.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>ResearchSessionConfig</code></td><td>session:31</td><td>Owns configuration for a notebook-friendly research session.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>ResearchSession</code></td><td>session:139</td><td>Orchestrates user-friendly research actions through QTS boundaries.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>from_yaml</code></td><td>ResearchSessionConfig:46</td><td>Load and validate a research session YAML config.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>research_book_config</code></td><td>ResearchSessionConfig:77</td><td>Return the read-only history facade config.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_required_mapping</code></td><td>ResearchSessionConfig:89</td><td>实现 ResearchSessionConfig 的 required mapping 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_required_text</code></td><td>ResearchSessionConfig:96</td><td>实现 ResearchSessionConfig 的 required text 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_string_tuple</code></td><td>ResearchSessionConfig:103</td><td>实现 ResearchSessionConfig 的 string tuple 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_instrument_ids</code></td><td>ResearchSessionConfig:111</td><td>实现 ResearchSessionConfig 的 instrument ids 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_resolve_path</code></td><td>ResearchSessionConfig:122</td><td>实现 ResearchSessionConfig 的 resolve path 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_resolve_output_path</code></td><td>ResearchSessionConfig:132</td><td>实现 ResearchSessionConfig 的 resolve output path 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>ResearchSession:142</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>from_yaml</code></td><td>ResearchSession:154</td><td>Load a research session from YAML.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>config</code></td><td>ResearchSession:160</td><td>Return the validated research session config.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>book</code></td><td>ResearchSession:166</td><td>Return the read-only research history facade.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>store</code></td><td>ResearchSession:174</td><td>Return the experiment store facade.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>history</code></td><td>ResearchSession:179</td><td>Return historical bars through ``ResearchBook``.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>history_frame</code></td><td>ResearchSession:184</td><td>Return historical bars as a pandas DataFrame.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>parameter_grid</code></td><td>ResearchSession:189</td><td>Return a stable optimizer parameter grid from notebook inputs.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>run_backtest</code></td><td>ResearchSession:200</td><td>Run one backtest through the shared ``BacktestPipeline``.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>optimize</code></td><td>ResearchSession:217</td><td>Run a parameter sweep through ``BacktestPipelineRunner``.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>record_manifest</code></td><td>ResearchSession:235</td><td>Record a completed experiment manifest in the session store.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>list_runs</code></td><td>ResearchSession:245</td><td>Return indexed experiment records, newest first.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>compare_runs</code></td><td>ResearchSession:250</td><td>Return records sorted descending by a Decimal-parseable metric.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>compare_frame</code></td><td>ResearchSession:266</td><td>Return a pandas DataFrame comparing stored experiment runs.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
