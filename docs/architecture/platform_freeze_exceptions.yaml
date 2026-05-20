@@ -1,4 +1,29 @@
 exceptions:
+  - class_name: ResearchWorkflowStepConfig
+    module: qts.research.workflow
+    reason: research workflow validated step declaration value object
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: ResearchWorkflowConfig
+    module: qts.research.workflow
+    reason: research workflow YAML configuration owner
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: ResearchWorkflowStepResult
+    module: qts.research.workflow
+    reason: research workflow deterministic step result evidence value object
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: ResearchWorkflowResult
+    module: qts.research.workflow
+    reason: research workflow deterministic run result evidence value object
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: ResearchWorkflowRunner
+    module: qts.research.workflow
+    reason: research workflow gate-based orchestration over ResearchSession public APIs
+    owner: platform
+    expiry: 2027-05-20
   - class_name: FactorEvaluationTearsheetMetrics
     module: qts.research.tearsheet
     reason: research tearsheet aggregate metric evidence value object

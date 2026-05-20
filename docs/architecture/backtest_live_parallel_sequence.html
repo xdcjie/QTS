@@ -607,7 +607,7 @@
       <div class="surface class-inventory" aria-label="生产类全量索引">
         <h2>生产类全量索引（按阶段 / 模块）</h2>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">695 classes</span></summary>
+          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">700 classes</span></summary>
           <ul>
           <li><code>qts/api/auth_backend_factory.py</code> -> <code>_DevDefaultTokenAuthBackend</code> <span class="location">backend/src/qts/api/auth_backend_factory.py:38</span></li>
           <li><code>qts/api/schemas/backtest_schema.py</code> -> <code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span>, <code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span>, <code>BacktestRunResultSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:24</span>, <code>BacktestStrategyOptionSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:38</span></li>
@@ -786,6 +786,7 @@
           <li><code>qts/research/research_book.py</code> -> <code>ResearchBookConfig</code> <span class="location">backend/src/qts/research/research_book.py:25</span>, <code>HistoryRequest</code> <span class="location">backend/src/qts/research/research_book.py:59</span>, <code>ResearchHistoryFrame</code> <span class="location">backend/src/qts/research/research_book.py:84</span>, <code>ResearchBook</code> <span class="location">backend/src/qts/research/research_book.py:132</span></li>
           <li><code>qts/research/session.py</code> -> <code>ResearchSessionConfig</code> <span class="location">backend/src/qts/research/session.py:50</span>, <code>ResearchSession</code> <span class="location">backend/src/qts/research/session.py:189</span></li>
           <li><code>qts/research/tearsheet.py</code> -> <code>FactorEvaluationTearsheetMetrics</code> <span class="location">backend/src/qts/research/tearsheet.py:21</span>, <code>FactorEvaluationTearsheet</code> <span class="location">backend/src/qts/research/tearsheet.py:38</span>, <code>FactorEvaluationTearsheetArtifactWriter</code> <span class="location">backend/src/qts/research/tearsheet.py:264</span></li>
+          <li><code>qts/research/workflow.py</code> -> <code>ResearchWorkflowStepConfig</code> <span class="location">backend/src/qts/research/workflow.py:16</span>, <code>ResearchWorkflowConfig</code> <span class="location">backend/src/qts/research/workflow.py:25</span>, <code>ResearchWorkflowStepResult</code> <span class="location">backend/src/qts/research/workflow.py:142</span>, <code>ResearchWorkflowResult</code> <span class="location">backend/src/qts/research/workflow.py:164</span>, <code>ResearchWorkflowRunner</code> <span class="location">backend/src/qts/research/workflow.py:187</span></li>
           <li><code>qts/risk/config.py</code> -> <code>RiskRuleConfig</code> <span class="location">backend/src/qts/risk/config.py:15</span>, <code>RiskConfig</code> <span class="location">backend/src/qts/risk/config.py:43</span></li>
           <li><code>qts/risk/kill_switch.py</code> -> <code>KillSwitchScopeType</code> <span class="location">backend/src/qts/risk/kill_switch.py:12</span>, <code>KillSwitchScope</code> <span class="location">backend/src/qts/risk/kill_switch.py:22</span>, <code>KillSwitchState</code> <span class="location">backend/src/qts/risk/kill_switch.py:54</span>, <code>RuntimeKillSwitchCommand</code> <span class="location">backend/src/qts/risk/kill_switch.py:63</span>, <code>KillSwitchRegistry</code> <span class="location">backend/src/qts/risk/kill_switch.py:78</span></li>
           <li><code>qts/risk/risk_engine.py</code> -> <code>BrokerageRiskPolicy</code> <span class="location">backend/src/qts/risk/risk_engine.py:17</span>, <code>RiskEngine</code> <span class="location">backend/src/qts/risk/risk_engine.py:31</span></li>
@@ -871,7 +872,7 @@
           </ul>
         </details>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">695 classes</span></summary>
+          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">700 classes</span></summary>
           <ul class="method-index">
           <li><code>_DevDefaultTokenAuthBackend</code> <span class="location">backend/src/qts/api/auth_backend_factory.py:38</span> -> <code>__init__():41</code></li>
           <li><code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span> -> <span class="muted">no public/core methods</span></li>
@@ -1359,6 +1360,11 @@
           <li><code>FactorEvaluationTearsheetMetrics</code> <span class="location">backend/src/qts/research/tearsheet.py:21</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>FactorEvaluationTearsheet</code> <span class="location">backend/src/qts/research/tearsheet.py:38</span> -> <code>from_evaluations():47</code>, <code>from_artifact_paths():72</code>, <code>rows():82</code>, <code>to_pandas():99</code>, <code>manifest_metrics():105</code>, <code>to_payload():119</code></li>
           <li><code>FactorEvaluationTearsheetArtifactWriter</code> <span class="location">backend/src/qts/research/tearsheet.py:264</span> -> <code>__init__():267</code>, <code>write():270</code></li>
+          <li><code>ResearchWorkflowStepConfig</code> <span class="location">backend/src/qts/research/workflow.py:16</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>ResearchWorkflowConfig</code> <span class="location">backend/src/qts/research/workflow.py:25</span> -> <code>from_yaml():33</code>, <code>resolve_path():76</code></li>
+          <li><code>ResearchWorkflowStepResult</code> <span class="location">backend/src/qts/research/workflow.py:142</span> -> <code>to_payload():151</code></li>
+          <li><code>ResearchWorkflowResult</code> <span class="location">backend/src/qts/research/workflow.py:164</span> -> <code>succeeded property:172</code>, <code>to_payload():177</code></li>
+          <li><code>ResearchWorkflowRunner</code> <span class="location">backend/src/qts/research/workflow.py:187</span> -> <code>run():190</code></li>
           <li><code>RiskRuleConfig</code> <span class="location">backend/src/qts/risk/config.py:15</span> -> <code>__post_init__():22</code>, <code>from_mapping():30</code></li>
           <li><code>RiskConfig</code> <span class="location">backend/src/qts/risk/config.py:43</span> -> <code>__post_init__():52</code>, <code>from_yaml():62</code></li>
           <li><code>KillSwitchScopeType</code> <span class="location">backend/src/qts/risk/kill_switch.py:12</span> -> <span class="muted">no public/core methods</span></li>
@@ -3235,10 +3241,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>384 files</span>
-      <span>697 classes</span>
-      <span>2447 functions</span>
-      <span>367 backend</span>
+      <span>385 files</span>
+      <span>702 classes</span>
+      <span>2476 functions</span>
+      <span>368 backend</span>
       <span>17 frontend</span>
     </div>
   </div>
@@ -11863,6 +11869,69 @@
               <tr><td><code>__init__</code></td><td>FactorEvaluationTearsheetArtifactWriter:267</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>write</code></td><td>FactorEvaluationTearsheetArtifactWriter:270</td><td>Write a deterministic factor-evaluation tearsheet JSON artifact.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
               <tr><td><code>_require_filename_safe_token</code></td><td>FactorEvaluationTearsheetArtifactWriter:284</td><td>实现 FactorEvaluationTearsheetArtifactWriter 的 require filename safe token 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
+        <code>backend/src/qts/research/workflow.py</code>
+        <span class="inventory-counts">
+          <span>5 classes</span>
+          <span>29 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Gate-based research workflow orchestration.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>ResearchWorkflowStepConfig</code></td><td>workflow:16</td><td>One validated workflow step declaration.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>ResearchWorkflowConfig</code></td><td>workflow:25</td><td>Owns validated gate-based research workflow configuration.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>ResearchWorkflowStepResult</code></td><td>workflow:142</td><td>One deterministic workflow step execution result.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ResearchWorkflowResult</code></td><td>workflow:164</td><td>Deterministic workflow execution result.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ResearchWorkflowRunner</code></td><td>workflow:187</td><td>Runs research workflow steps through ``ResearchSession`` public APIs.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>from_yaml</code></td><td>ResearchWorkflowConfig:33</td><td>Load and validate a research workflow YAML file.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_step_from_payload</code></td><td>ResearchWorkflowConfig:57</td><td>实现 ResearchWorkflowConfig 的 step from payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>resolve_path</code></td><td>ResearchWorkflowConfig:76</td><td>Resolve workflow-local paths relative to the workflow config file.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_required_safe_token</code></td><td>ResearchWorkflowConfig:85</td><td>实现 ResearchWorkflowConfig 的 required safe token 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_reject_forbidden_keys</code></td><td>ResearchWorkflowConfig:92</td><td>实现 ResearchWorkflowConfig 的 reject forbidden keys 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_validate_implementation_gate_payload</code></td><td>ResearchWorkflowConfig:104</td><td>实现 ResearchWorkflowConfig 的 validate implementation gate payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_string_sequence</code></td><td>ResearchWorkflowConfig:116</td><td>实现 ResearchWorkflowConfig 的 string sequence 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_strategy_module_name</code></td><td>ResearchWorkflowConfig:124</td><td>实现 ResearchWorkflowConfig 的 strategy module name 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_reject_internal_implementation_import</code></td><td>ResearchWorkflowConfig:130</td><td>实现 ResearchWorkflowConfig 的 reject internal implementation import 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>ResearchWorkflowStepResult:151</td><td>Return a JSON-ready step result payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>succeeded</code></td><td>ResearchWorkflowResult:172</td><td>Return whether all executed workflow steps passed.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>ResearchWorkflowResult:177</td><td>Return a JSON-ready workflow result payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>run</code></td><td>ResearchWorkflowRunner:190</td><td>Run a workflow until completion or a blocking gate.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_run_step</code></td><td>ResearchWorkflowRunner:212</td><td>实现 ResearchWorkflowRunner 的 run step 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_factor_candidates</code></td><td>ResearchWorkflowRunner:241</td><td>实现 ResearchWorkflowRunner 的 factor candidates 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_factor_review_gate</code></td><td>ResearchWorkflowRunner:270</td><td>实现 ResearchWorkflowRunner 的 factor review gate 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_implementation_gate</code></td><td>ResearchWorkflowRunner:295</td><td>实现 ResearchWorkflowRunner 的 implementation gate 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_factor_tearsheet</code></td><td>ResearchWorkflowRunner:320</td><td>实现 ResearchWorkflowRunner 的 factor tearsheet 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_backtest</code></td><td>ResearchWorkflowRunner:364</td><td>实现 ResearchWorkflowRunner 的 backtest 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_optimize</code></td><td>ResearchWorkflowRunner:388</td><td>实现 ResearchWorkflowRunner 的 optimize 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_required_mapping</code></td><td>ResearchWorkflowRunner:425</td><td>实现 ResearchWorkflowRunner 的 required mapping 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_optional_mapping</code></td><td>ResearchWorkflowRunner:432</td><td>实现 ResearchWorkflowRunner 的 optional mapping 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_optional_int</code></td><td>ResearchWorkflowRunner:440</td><td>实现 ResearchWorkflowRunner 的 optional int 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_string_tuple</code></td><td>ResearchWorkflowRunner:446</td><td>实现 ResearchWorkflowRunner 的 string tuple 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_optional_string_tuple</code></td><td>ResearchWorkflowRunner:454</td><td>实现 ResearchWorkflowRunner 的 optional string tuple 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_can_import</code></td><td>ResearchWorkflowRunner:460</td><td>实现 ResearchWorkflowRunner 的 can import 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_can_resolve_attribute</code></td><td>ResearchWorkflowRunner:468</td><td>实现 ResearchWorkflowRunner 的 can resolve attribute 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_required_text</code></td><td>module:479</td><td>提供模块级 required text 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_json_ready</code></td><td>module:486</td><td>提供模块级 json ready 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>

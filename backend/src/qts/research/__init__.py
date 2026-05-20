@@ -48,6 +48,13 @@ from qts.research.tearsheet import (
     FactorEvaluationTearsheetArtifactWriter,
     FactorEvaluationTearsheetMetrics,
 )
+from qts.research.workflow import (
+    ResearchWorkflowConfig,
+    ResearchWorkflowResult,
+    ResearchWorkflowRunner,
+    ResearchWorkflowStepConfig,
+    ResearchWorkflowStepResult,
+)
 
 __all__ = [
     "ExperimentManifestConfig",
@@ -78,6 +85,11 @@ __all__ = [
     "FactorEvaluationTearsheet",
     "FactorEvaluationTearsheetArtifactWriter",
     "FactorEvaluationTearsheetMetrics",
+    "ResearchWorkflowConfig",
+    "ResearchWorkflowResult",
+    "ResearchWorkflowRunner",
+    "ResearchWorkflowStepConfig",
+    "ResearchWorkflowStepResult",
     "FactorSpec",
     "FactorSpecDrafter",
     "FactorSpecSourceRef",

@@ -161,10 +161,12 @@ by normal CLI and API workflows.
 
 ## CLI
 
-`scripts/run_research.py` is a thin CLI over `ResearchSession`.
+`scripts/run_research.py` is a thin CLI over `ResearchSession`. From a source
+checkout, prefix commands with `PYTHONPATH=backend/src` unless the package is
+installed in the active environment.
 
 ```bash
-uv run python scripts/run_research.py \
+PYTHONPATH=backend/src uv run python scripts/run_research.py \
   --config configs/research/quickstart.yaml \
   factor-tearsheet \
   runs/research/evaluations/2026-01-02-momentum-1.json \
@@ -172,9 +174,13 @@ uv run python scripts/run_research.py \
   --experiment-id momentum-v1-tearsheet \
   --dataset-id research-bars-v1
 
-uv run python scripts/run_research.py \
+PYTHONPATH=backend/src uv run python scripts/run_research.py \
   --config configs/research/quickstart.yaml \
   runs --sort-by mean_rank_ic
+
+PYTHONPATH=backend/src uv run python scripts/run_research.py \
+  --config configs/research/quickstart.yaml \
+  workflow configs/research/workflows/quickstart.yaml
 ```
 
 The `factor-tearsheet` command only consumes existing factor-evaluation JSON
@@ -188,6 +194,37 @@ artifacts. It writes:
 
 It does not compute factors, read historical CSV files, run a backtest, create
 target intents, or touch runtime/account/order state.
+
+The `workflow` command runs a gate-based workflow YAML through
+`ResearchWorkflowRunner`. It writes no executable factor or strategy code and it
+does not start paper/live runtime. The command returns JSON by default and exits
+with:
+
+```text
+0 when every executed step passes
+1 when a gate blocks or a step fails
+```
+
+Supported workflow step kinds are:
+
+- `factor_candidates` — call `find_factor_candidates(...)` and persist
+  non-executable `FactorSpec` drafts;
+- `factor_review_gate` — require a minimum number of specs with a review status
+  such as `accepted`;
+- `implementation_gate` — verify required Python modules or `module:Class`
+  strategy symbols exist, without generating code or importing runtime/backtest
+  internals;
+- `factor_tearsheet` — summarize existing factor-evaluation artifacts and
+  optionally record them in `ExperimentStore`;
+- `backtest` — call `ResearchSession.run_backtest(...)`;
+- `optimize` — call `ResearchSession.optimize(...)`.
+
+Workflow configs reject promotion/trading keys such as `generate_code`,
+`promote`, `paper`, `live`, `broker`, `orders`, `runtime`, and `trade`.
+`implementation_gate` may validate user strategy modules plus research-facing
+`qts.factors.*` and `qts.indicators.*` implementations, but it rejects other
+internal `qts.*` modules so YAML cannot pull backtest, runtime, broker, risk, or
+order internals into the research workflow.
 
 ## Compare
 

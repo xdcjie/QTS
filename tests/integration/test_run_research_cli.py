@@ -10,7 +10,8 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
-from qts.research import ExperimentStore
+from qts.research import ExperimentStore, FactorSpecDrafter, ResearchSession
+from qts.research.factor_discovery import FactorIdea
 from qts.research.factor_evaluation import (
     FactorEvaluationArtifactWriter,
     FactorEvaluationMetrics,
@@ -57,6 +58,35 @@ def _run_cli(*args: str) -> subprocess.CompletedProcess[str]:
             "QTS_API_DEV_TOKENS": "1",
             "PATH": os.environ.get("PATH", ""),
         },
+    )
+
+
+def _write_workflow(tmp_path: Path, body: str) -> Path:
+    path = tmp_path / "workflow.yaml"
+    path.write_text(body, encoding="utf-8")
+    return path
+
+
+def _accept_factor_spec(config_path: Path) -> None:
+    session = ResearchSession.from_yaml(config_path)
+    spec = FactorSpecDrafter().draft(
+        FactorIdea(
+            idea_id="fixture:momentum",
+            source="fixture",
+            external_id="momentum",
+            title="Momentum factor in equity bars",
+            abstract="A momentum signal for research review.",
+            url="https://example.test/momentum",
+            year=2026,
+            authors=("Researcher",),
+            citation_count=10,
+        )
+    )
+    session.save_factor_spec(spec)
+    session.review_factor_spec(
+        spec.name,
+        decision="accepted",
+        reviewer="researcher@example.com",
     )
 
 
@@ -137,3 +167,83 @@ def test_research_cli_runs_command_lists_unsorted_store_records(tmp_path: Path) 
 
     assert listed.returncode == 0, listed.stderr
     assert "single-snapshot" in listed.stdout
+
+
+def test_research_cli_workflow_blocks_when_review_gate_fails(tmp_path: Path) -> None:
+    config_path = _write_research_session_config(tmp_path)
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: blocked-review
+steps:
+  - id: review
+    kind: factor_review_gate
+    status: accepted
+    min_count: 1
+  - id: backtest
+    kind: backtest
+    strategy_params:
+      quantity: "2"
+""",
+    )
+
+    result = _run_cli("--config", str(config_path), "workflow", str(workflow_path))
+
+    assert result.returncode == 1, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "blocked"
+    assert payload["steps"][0]["status"] == "blocked"
+    assert not (tmp_path / "research-runs" / "single-run").exists()
+
+
+def test_research_cli_workflow_runs_backtest_and_optimize_after_gates_pass(
+    tmp_path: Path,
+) -> None:
+    config_path = _write_research_session_config(tmp_path)
+    _accept_factor_spec(config_path)
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: passing-review
+steps:
+  - id: review
+    kind: factor_review_gate
+    status: accepted
+    min_count: 1
+  - id: implementation
+    kind: implementation_gate
+    required_modules:
+      - examples.strategies.gc_si_momentum
+    required_strategy: examples.strategies.gc_si_momentum:GcSiMomentumStrategy
+  - id: backtest
+    kind: backtest
+    strategy_params:
+      quantity: "2"
+      entry_bar: 1
+  - id: optimize
+    kind: optimize
+    objective_metric: total_return
+    parameters:
+      entry_bar: [1, 2]
+      quantity: ["1", "2"]
+""",
+    )
+
+    result = _run_cli("--config", str(config_path), "workflow", str(workflow_path))
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "completed"
+    assert [step["status"] for step in payload["steps"]] == [
+        "passed",
+        "passed",
+        "passed",
+        "passed",
+    ]
+    backtest_outputs = payload["steps"][2]["outputs"]
+    optimize_outputs = payload["steps"][3]["outputs"]
+    assert Path(backtest_outputs["manifest_path"]).exists()
+    assert optimize_outputs["run_count"] == 4
+    assert Path(optimize_outputs["ranked_results"][0]["manifest_path"]).exists()

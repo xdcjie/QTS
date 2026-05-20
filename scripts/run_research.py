@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
 from qts.research import ResearchSession
+from qts.research.workflow import ResearchWorkflowConfig, ResearchWorkflowRunner
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _add_factor_tearsheet_parser(subparsers: Any) -> None:
@@ -40,6 +44,17 @@ def _add_runs_parser(subparsers: Any) -> None:
     parser.add_argument("--limit", type=int, default=None, help="Maximum rows to print")
 
 
+def _add_workflow_parser(subparsers: Any) -> None:
+    parser = subparsers.add_parser("workflow", help="Run a gate-based research workflow")
+    parser.add_argument("workflow_config", type=Path, help="Research workflow YAML config")
+    parser.add_argument(
+        "--format",
+        choices=("json", "text"),
+        default="json",
+        help="Workflow result output format",
+    )
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -51,6 +66,7 @@ def _build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
     _add_factor_tearsheet_parser(subparsers)
     _add_runs_parser(subparsers)
+    _add_workflow_parser(subparsers)
     return parser
 
 
@@ -110,6 +126,28 @@ def _list_runs(args: argparse.Namespace, session: ResearchSession) -> int:
     return 0
 
 
+def _run_workflow(args: argparse.Namespace, session: ResearchSession) -> int:
+    _ensure_repo_root_on_path()
+    result = ResearchWorkflowRunner().run(
+        session,
+        ResearchWorkflowConfig.from_yaml(args.workflow_config),
+    )
+    if args.format == "json":
+        print(json.dumps(result.to_payload(), sort_keys=True, indent=2))
+    else:
+        print(f"workflow_id={result.workflow_id}")
+        print(f"status={result.status}")
+        for step in result.steps:
+            print(f"{step.step_id}={step.status}")
+    return 0 if result.succeeded else 1
+
+
+def _ensure_repo_root_on_path() -> None:
+    repo_root = str(_REPO_ROOT)
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Perform main."""
 
@@ -120,6 +158,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _record_factor_tearsheet(args, session)
     if args.command == "runs":
         return _list_runs(args, session)
+    if args.command == "workflow":
+        return _run_workflow(args, session)
     parser.error(f"unsupported command: {args.command}")
     return 2
 
