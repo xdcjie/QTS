@@ -25,6 +25,7 @@ from qts.research.factor_evaluation import (
     FactorEvaluationMetrics,
     FactorEvaluationResult,
 )
+from qts.research.factor_spec import FactorSpec, FactorSpecDrafter, FactorSpecSourceRef
 from qts.research.research_book import (
     HistoryRequest,
     ResearchBook,
@@ -54,6 +55,9 @@ __all__ = [
     "FactorEvaluationInput",
     "FactorEvaluationMetrics",
     "FactorEvaluationResult",
+    "FactorSpec",
+    "FactorSpecDrafter",
+    "FactorSpecSourceRef",
     "HistoryRequest",
     "ResearchBook",
     "ResearchBookConfig",

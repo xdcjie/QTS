@@ -1,4 +1,19 @@
 exceptions:
+  - class_name: FactorSpecSourceRef
+    module: qts.research.factor_spec
+    reason: research factor spec source reference value object
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: FactorSpec
+    module: qts.research.factor_spec
+    reason: research factor spec human-reviewable hypothesis draft owner
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: FactorSpecDrafter
+    module: qts.research.factor_spec
+    reason: research factor spec deterministic drafting policy owner
+    owner: platform
+    expiry: 2027-05-20
   - class_name: FactorDiscoveryQuery
     module: qts.research.factor_discovery
     reason: research factor discovery validated scholarly query value object

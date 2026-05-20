@@ -20,8 +20,10 @@ from qts.research.factor_discovery import (
     DEFAULT_FACTOR_DISCOVERY_SOURCES,
     FactorDiscovery,
     FactorDiscoveryResult,
+    FactorIdea,
     FactorIdeaStore,
 )
+from qts.research.factor_spec import FactorSpec, FactorSpecDrafter
 from qts.research.optimizer.parameter_space import ParameterGrid, ParameterSpace
 from qts.research.optimizer.pipeline import BacktestPipelineJob, BacktestPipelineRunner
 from qts.research.optimizer.result import OptimizationResult
@@ -374,6 +376,21 @@ class ResearchSession:
             to_year=to_year,
             refresh=refresh,
         ).to_pandas()
+
+    def draft_factor_spec(self, idea: FactorIdea) -> FactorSpec:
+        """Draft a non-executable factor hypothesis from one discovered idea."""
+
+        return FactorSpecDrafter().draft(idea)
+
+    def draft_factor_specs(
+        self,
+        ideas: FactorDiscoveryResult | Sequence[FactorIdea],
+    ) -> tuple[FactorSpec, ...]:
+        """Draft non-executable factor hypotheses from discovered ideas."""
+
+        source_ideas = ideas.ideas if isinstance(ideas, FactorDiscoveryResult) else ideas
+        drafter = FactorSpecDrafter()
+        return tuple(drafter.draft(idea) for idea in source_ideas)
 
 
 __all__ = ["ResearchSession", "ResearchSessionConfig"]

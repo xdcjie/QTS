@@ -72,7 +72,8 @@ The allowed promotion path is:
 
 ```text
 FactorIdea
-  -> human-reviewed FactorSpec / implementation plan
+  -> FactorSpec draft
+  -> human review
   -> versioned qts.factors implementation
   -> FactorEvaluation artifact
   -> ExperimentManifest / ExperimentStore

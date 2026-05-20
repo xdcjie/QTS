@@ -81,10 +81,12 @@ results = session.optimize(
     }
 )
 
-ideas = session.discover_factors_frame(
+ideas = session.discover_factors(
     "commodity futures momentum carry volatility",
     from_year=2015,
 )
+
+spec = session.draft_factor_spec(ideas.ideas[0])
 ```
 
 `run_backtest(...)` delegates to:
@@ -119,5 +121,5 @@ derive trading state.
 `discover_factors(...)` delegates to `qts.research.factor_discovery`. It returns
 source-backed idea cards and uses the research store for deterministic query
 caching. Discovery results are not executable. A candidate must be promoted into
-versioned `qts.factors` code and evaluated through the normal research/backtest
-path before paper or live use.
+human-reviewed `FactorSpec`, then versioned `qts.factors` code, and evaluated
+through the normal research/backtest path before paper or live use.
