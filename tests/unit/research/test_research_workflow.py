@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
@@ -329,6 +330,131 @@ steps:
     assert outputs["walk_forward_validation_output"] == str(summary_output)
     assert summary_output.exists()
     assert "robustness" in summary_output.read_text(encoding="utf-8")
+
+
+def test_runner_runs_failure_window_veto_for_top_optimizer_candidates(
+    tmp_path: Path,
+) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: failure-veto-evidence
+steps:
+  - id: optimize
+    kind: optimize
+    objective_metric: sharpe_ratio
+    parameters:
+      alpha: ["1", "2"]
+    validation:
+      failure_window_veto:
+        top_n: 2
+        output_root: failure-veto-output
+        summary_output: failure-veto-summary.json
+        constraints:
+          - metric: pnl_usd
+            operator: ">"
+            threshold: "0"
+        windows:
+          - name: crash-2024
+            start: 2024-01-01
+            end: 2024-03-01
+        report_only_windows:
+          - name: thaw-2024
+            start: 2024-03-01
+            end: 2024-04-01
+""",
+    )
+    session = _FakeSession(accepted_specs=())
+
+    result = ResearchWorkflowRunner().run(
+        session,
+        ResearchWorkflowConfig.from_yaml(workflow_path),
+    )
+
+    assert result.status == "completed"
+    assert session.failure_veto_calls == [
+        {
+            "candidate_parameters": (
+                {"entry_bar": 1, "quantity": "2"},
+                {"entry_bar": 2, "quantity": "3"},
+            ),
+            "capital_metric_config": None,
+            "constraint_count": 1,
+            "objective_metric": "sharpe_ratio",
+            "output_root": tmp_path / "failure-veto-output",
+            "report_only_windows": (
+                {
+                    "end": "2024-04-01",
+                    "name": "thaw-2024",
+                    "report_only": True,
+                    "start": "2024-03-01",
+                },
+            ),
+            "windows": (
+                {
+                    "end": "2024-03-01",
+                    "name": "crash-2024",
+                    "report_only": False,
+                    "start": "2024-01-01",
+                },
+            ),
+        }
+    ]
+    outputs = result.steps[0].outputs
+    assert outputs["failure_window_veto"]["decision"] == {
+        "accepted": True,
+        "reasons": (),
+    }
+    summary_output = tmp_path / "failure-veto-summary.json"
+    assert outputs["failure_window_veto_output"] == str(summary_output)
+    assert json.loads(summary_output.read_text(encoding="utf-8"))["decision"] == {
+        "accepted": True,
+        "reasons": [],
+    }
+
+
+def test_failure_window_veto_blocks_workflow_when_required_candidate_is_missing(
+    tmp_path: Path,
+) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: failure-veto-block
+steps:
+  - id: optimize
+    kind: optimize
+    objective_metric: sharpe_ratio
+    parameters:
+      alpha: ["1", "2"]
+    validation:
+      failure_window_veto:
+        require_passing_candidate: true
+        windows:
+          - name: crash-2024
+            start: 2024-01-01
+            end: 2024-03-01
+  - id: report
+    kind: research_report
+    output_root: reports
+    output_path: blocked.md
+""",
+    )
+    session = _FakeSession(accepted_specs=())
+    session.failure_veto_accepted = False
+
+    result = ResearchWorkflowRunner().run(
+        session,
+        ResearchWorkflowConfig.from_yaml(workflow_path),
+    )
+
+    assert result.status == "blocked"
+    assert [(step.step_id, step.status, step.message) for step in result.steps] == [
+        ("optimize", "blocked", "failure-window veto blocked workflow")
+    ]
+    assert session.failure_veto_calls
+    assert not (tmp_path / "reports" / "blocked.md").exists()
 
 
 def test_vwap_workflow_uses_multi_window_top_n_walk_forward_validation() -> None:
@@ -730,6 +856,8 @@ class _FakeSession:
         self.backtest_calls: list[dict[str, object]] = []
         self.optimize_calls: list[dict[str, object]] = []
         self.walk_forward_calls: list[dict[str, object]] = []
+        self.failure_veto_calls: list[dict[str, object]] = []
+        self.failure_veto_accepted = True
         self.evaluate_factor_calls: list[dict[str, object]] = []
         self._evaluation_output_dir: Path = (
             evaluation_output_dir
@@ -770,6 +898,12 @@ class _FakeSession:
                 manifest_path=Path("runs/optimizer/run-0000/manifest.json"),
                 manifest_hash="abc123",
                 objective_value=Decimal("1.2"),
+            ),
+            SimpleNamespace(
+                parameters={"entry_bar": 2, "quantity": "3"},
+                manifest_path=Path("runs/optimizer/run-0001/manifest.json"),
+                manifest_hash="def456",
+                objective_value=Decimal("0.9"),
             ),
         )
 
@@ -819,6 +953,70 @@ class _FakeSession:
                 "windows": windows,
             },
         )
+
+    def validate_optimizer_failure_window_veto(
+        self,
+        *,
+        candidate_parameters: tuple[dict[str, object], ...],
+        windows: tuple[Any, ...],
+        report_only_windows: tuple[Any, ...] = (),
+        constraints: tuple[Any, ...] = (),
+        capital_metric_config: dict[str, object] | None = None,
+        objective_metric: str | None = None,
+        output_root: Path | None = None,
+    ) -> object:
+        window_metadata = tuple(window.to_metadata() for window in windows)
+        report_only_metadata = tuple(window.to_metadata() for window in report_only_windows)
+        self.failure_veto_calls.append(
+            {
+                "candidate_parameters": candidate_parameters,
+                "capital_metric_config": capital_metric_config,
+                "constraint_count": len(constraints),
+                "objective_metric": objective_metric,
+                "output_root": output_root,
+                "windows": window_metadata,
+                "report_only_windows": report_only_metadata,
+            }
+        )
+        accepted_candidates = (
+            (
+                {
+                    "candidate_index": 0,
+                    "parameters": dict(candidate_parameters[0]),
+                    "windows": window_metadata,
+                },
+            )
+            if self.failure_veto_accepted
+            else ()
+        )
+        rejected_candidates = (
+            ()
+            if self.failure_veto_accepted
+            else (
+                {
+                    "candidate_index": 0,
+                    "failed_veto_windows": tuple(window["name"] for window in window_metadata),
+                    "parameters": dict(candidate_parameters[0]),
+                    "windows": window_metadata,
+                },
+            )
+        )
+        payload = {
+            "accepted_candidates": accepted_candidates,
+            "candidate_count": len(candidate_parameters),
+            "decision": {
+                "accepted": self.failure_veto_accepted,
+                "reasons": (
+                    ()
+                    if self.failure_veto_accepted
+                    else ("no selected candidate survived failure-window veto",)
+                ),
+            },
+            "rejected_candidates": rejected_candidates,
+            "report_only_windows": report_only_metadata,
+            "veto_windows": window_metadata,
+        }
+        return SimpleNamespace(to_payload=lambda: payload)
 
     def evaluate_factor(
         self,

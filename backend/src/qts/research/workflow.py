@@ -14,6 +14,7 @@ from typing import Any
 import yaml  # type: ignore[import-untyped]
 
 from qts.research.optimizer import (
+    FailureWindow,
     MetricConstraint,
     OptimizerValidationSummary,
     OptimizerValidationSummaryWriter,
@@ -526,6 +527,10 @@ class ResearchWorkflowRunner:
         walk_forward_summary_payload: dict[str, Any] | None = None
         walk_forward_robustness_payload: dict[str, Any] | None = None
         walk_forward_output_path: Path | None = None
+        failure_veto_payload = self._failure_window_veto_payload(step.payload.get("validation"))
+        failure_veto_summary_payload: dict[str, Any] | None = None
+        failure_veto_output_path: Path | None = None
+        failure_veto_blocked = False
         if walk_forward_payload is not None:
             plan = self._walk_forward_plan(walk_forward_payload)
             top_n = int(walk_forward_payload.get("top_n", 1))
@@ -568,6 +573,52 @@ class ResearchWorkflowRunner:
                     + "\n",
                     encoding="utf-8",
                 )
+        if failure_veto_payload is not None:
+            top_n = int(failure_veto_payload.get("top_n", 1))
+            if top_n <= 0:
+                raise ValueError("validation.failure_window_veto.top_n must be positive")
+            failure_veto_output_root = failure_veto_payload.get("output_root")
+            failure_veto_summary = session.validate_optimizer_failure_window_veto(
+                candidate_parameters=tuple(dict(result.parameters) for result in results[:top_n]),
+                constraints=self._failure_veto_constraints(failure_veto_payload),
+                capital_metric_config=capital_metric_config,
+                objective_metric=(None if objective_metric is None else str(objective_metric)),
+                output_root=(
+                    None
+                    if failure_veto_output_root is None
+                    else config.resolve_path(str(failure_veto_output_root))
+                ),
+                windows=self._failure_windows(
+                    failure_veto_payload,
+                    field_name="windows",
+                    report_only=False,
+                ),
+                report_only_windows=self._failure_windows(
+                    failure_veto_payload,
+                    field_name="report_only_windows",
+                    report_only=True,
+                ),
+            )
+            failure_veto_summary_payload = failure_veto_summary.to_payload()
+            raw_failure_veto_output = failure_veto_payload.get("summary_output")
+            if raw_failure_veto_output is not None:
+                failure_veto_output_path = config.resolve_path(str(raw_failure_veto_output))
+                failure_veto_output_path.parent.mkdir(parents=True, exist_ok=True)
+                failure_veto_output_path.write_text(
+                    json.dumps(
+                        _json_ready(failure_veto_summary_payload),
+                        sort_keys=True,
+                        indent=2,
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+            decision = failure_veto_summary_payload.get("decision", {})
+            failure_veto_blocked = (
+                bool(failure_veto_payload.get("require_passing_candidate", False))
+                and isinstance(decision, Mapping)
+                and decision.get("accepted") is False
+            )
         ranked_results = []
         for result in results:
             ranked_result = {
@@ -597,11 +648,20 @@ class ResearchWorkflowRunner:
             )
             if walk_forward_robustness_payload is not None:
                 outputs["walk_forward_robustness"] = walk_forward_robustness_payload
+        if failure_veto_summary_payload is not None:
+            outputs["failure_window_veto"] = failure_veto_summary_payload
+            outputs["failure_window_veto_output"] = (
+                None if failure_veto_output_path is None else str(failure_veto_output_path)
+            )
         return ResearchWorkflowStepResult(
             step_id=step.step_id,
             kind=step.kind,
-            status="passed",
-            message="optimization completed",
+            status="blocked" if failure_veto_blocked else "passed",
+            message=(
+                "failure-window veto blocked workflow"
+                if failure_veto_blocked
+                else "optimization completed"
+            ),
             outputs=outputs,
         )
 
@@ -612,12 +672,23 @@ class ResearchWorkflowRunner:
         raw_constraints = validation.get("constraints")
         if raw_constraints is None:
             return ()
-        if not isinstance(raw_constraints, list):
-            raise ValueError("validation.constraints must be a list")
+        return self._metric_constraints_from_sequence(
+            raw_constraints,
+            field_name="validation.constraints",
+        )
+
+    def _metric_constraints_from_sequence(
+        self,
+        value: Any,
+        *,
+        field_name: str,
+    ) -> tuple[MetricConstraint, ...]:
+        if not isinstance(value, list):
+            raise ValueError(f"{field_name} must be a list")
         constraints: list[MetricConstraint] = []
-        for index, raw_constraint in enumerate(raw_constraints):
+        for index, raw_constraint in enumerate(value):
             if not isinstance(raw_constraint, Mapping):
-                raise ValueError(f"validation.constraints[{index}] must be a mapping")
+                raise ValueError(f"{field_name}[{index}] must be a mapping")
             constraint = dict(raw_constraint)
             constraints.append(
                 MetricConstraint(
@@ -638,6 +709,62 @@ class ResearchWorkflowRunner:
         if not isinstance(raw_walk_forward, Mapping):
             raise ValueError("validation.walk_forward must be a mapping")
         return dict(raw_walk_forward)
+
+    def _failure_window_veto_payload(self, value: Any) -> dict[str, Any] | None:
+        validation = self._optional_mapping(value)
+        if validation is None:
+            return None
+        raw_veto = validation.get("failure_window_veto")
+        if raw_veto is None:
+            return None
+        if not isinstance(raw_veto, Mapping):
+            raise ValueError("validation.failure_window_veto must be a mapping")
+        return dict(raw_veto)
+
+    def _failure_veto_constraints(
+        self,
+        value: Mapping[str, Any],
+    ) -> tuple[MetricConstraint, ...]:
+        raw_constraints = value.get("constraints")
+        if raw_constraints is None:
+            return ()
+        return self._metric_constraints_from_sequence(
+            raw_constraints,
+            field_name="validation.failure_window_veto.constraints",
+        )
+
+    def _failure_windows(
+        self,
+        value: Mapping[str, Any],
+        *,
+        field_name: str,
+        report_only: bool,
+    ) -> tuple[FailureWindow, ...]:
+        raw_windows = value.get(field_name)
+        if raw_windows is None:
+            if field_name == "windows":
+                raise ValueError("validation.failure_window_veto.windows must be a non-empty list")
+            return ()
+        if field_name == "windows" and (not isinstance(raw_windows, list) or not raw_windows):
+            raise ValueError("validation.failure_window_veto.windows must be a non-empty list")
+        if not isinstance(raw_windows, list):
+            raise ValueError(f"validation.failure_window_veto.{field_name} must be a list")
+        windows: list[FailureWindow] = []
+        for index, raw_window in enumerate(raw_windows):
+            if not isinstance(raw_window, Mapping):
+                raise ValueError(
+                    f"validation.failure_window_veto.{field_name}[{index}] must be a mapping"
+                )
+            window = dict(raw_window)
+            windows.append(
+                FailureWindow(
+                    name=str(window["name"]),
+                    start=self._iso_date(window["start"], "start"),
+                    end=self._iso_date(window["end"], "end"),
+                    report_only=report_only,
+                )
+            )
+        return tuple(windows)
 
     def _walk_forward_plan(self, value: Mapping[str, Any]) -> WalkForwardPlan:
         raw_splits = value.get("splits")
