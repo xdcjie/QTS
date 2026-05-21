@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from qts.research.optimizer import WalkForwardPlan, WalkForwardSplit
 from qts.research.workflow import (
     ResearchWorkflowConfig,
     ResearchWorkflowRunner,
@@ -289,6 +290,35 @@ steps:
     summary_output = tmp_path / "walk-forward-summary.json"
     assert outputs["walk_forward_validation_output"] == str(summary_output)
     assert summary_output.exists()
+
+
+def test_vwap_workflow_uses_multi_window_top_n_walk_forward_validation() -> None:
+    config = ResearchWorkflowConfig.from_yaml(
+        Path("configs/research/workflows/vwap_factor_search.yaml")
+    )
+    risk_reward = next(step for step in config.steps if step.step_id == "risk-reward")
+
+    walk_forward = risk_reward.payload["validation"]["walk_forward"]
+
+    assert walk_forward["top_n"] == 3
+    assert [split["name"] for split in walk_forward["splits"]] == [
+        "regime-2024-summer-to-q4",
+        "regime-2025-q1-to-summer",
+        "regime-2025-late-summer-to-winter",
+    ]
+    plan = WalkForwardPlan(
+        tuple(
+            WalkForwardSplit(
+                name=str(split["name"]),
+                train_start=split["train_start"],
+                train_end=split["train_end"],
+                test_start=split["test_start"],
+                test_end=split["test_end"],
+            )
+            for split in walk_forward["splits"]
+        )
+    )
+    assert len(plan.splits) == 3
 
 
 def test_workflow_runs_factor_evaluation_step(tmp_path: Path) -> None:

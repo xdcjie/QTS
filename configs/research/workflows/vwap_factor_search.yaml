@@ -108,15 +108,25 @@ steps:
           operator: ">="
           threshold: "0"
       walk_forward:
-        top_n: 1
+        top_n: 3
         output_root: ../../../runs/research/vwap/walk-forward/risk-reward
         summary_output: ../../../runs/research/vwap/validation/risk-reward-walk-forward.json
         splits:
+          - name: regime-2024-summer-to-q4
+            train_start: 2024-07-01
+            train_end: 2024-09-01
+            test_start: 2024-10-01
+            test_end: 2024-12-01
           - name: regime-2025-q1-to-summer
             train_start: 2025-01-01
             train_end: 2025-03-01
             test_start: 2025-06-01
             test_end: 2025-08-01
+          - name: regime-2025-late-summer-to-winter
+            train_start: 2025-08-01
+            train_end: 2025-10-01
+            test_start: 2025-11-01
+            test_end: 2026-01-01
     parameters:
       time_window: [evening_18_22]
       factor_filters:
