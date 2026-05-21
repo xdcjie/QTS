@@ -607,7 +607,7 @@
       <div class="surface class-inventory" aria-label="生产类全量索引">
         <h2>生产类全量索引（按阶段 / 模块）</h2>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">712 classes</span></summary>
+          <summary><span>自动同步补充 · current class locations</span><span class="badge shared">717 classes</span></summary>
           <ul>
           <li><code>qts/api/auth_backend_factory.py</code> -> <code>_DevDefaultTokenAuthBackend</code> <span class="location">backend/src/qts/api/auth_backend_factory.py:38</span></li>
           <li><code>qts/api/schemas/backtest_schema.py</code> -> <code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span>, <code>BacktestRunSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:14</span>, <code>BacktestRunResultSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:24</span>, <code>BacktestStrategyOptionSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:38</span></li>
@@ -776,6 +776,7 @@
           <li><code>qts/research/factor_spec.py</code> -> <code>FactorSpecSourceRef</code> <span class="location">backend/src/qts/research/factor_spec.py:40</span>, <code>FactorSpec</code> <span class="location">backend/src/qts/research/factor_spec.py:86</span>, <code>FactorSpecDrafter</code> <span class="location">backend/src/qts/research/factor_spec.py:208</span></li>
           <li><code>qts/research/factor_spec_store.py</code> -> <code>FactorSpecReview</code> <span class="location">backend/src/qts/research/factor_spec_store.py:18</span>, <code>FactorSpecStore</code> <span class="location">backend/src/qts/research/factor_spec_store.py:86</span></li>
           <li><code>qts/research/optimizer/constraints.py</code> -> <code>ConstraintDecision</code> <span class="location">backend/src/qts/research/optimizer/constraints.py:16</span>, <code>OptimizationConstraint</code> <span class="location">backend/src/qts/research/optimizer/constraints.py:23</span>, <code>MetricConstraint</code> <span class="location">backend/src/qts/research/optimizer/constraints.py:35</span></li>
+          <li><code>qts/research/optimizer/failure_veto.py</code> -> <code>FailureWindow</code> <span class="location">backend/src/qts/research/optimizer/failure_veto.py:23</span>, <code>FailureWindowVetoJob</code> <span class="location">backend/src/qts/research/optimizer/failure_veto.py:48</span>, <code>FailureWindowVetoResult</code> <span class="location">backend/src/qts/research/optimizer/failure_veto.py:110</span>, <code>FailureWindowVetoRunner</code> <span class="location">backend/src/qts/research/optimizer/failure_veto.py:122</span>, <code>FailureWindowVetoSummary</code> <span class="location">backend/src/qts/research/optimizer/failure_veto.py:167</span></li>
           <li><code>qts/research/optimizer/job.py</code> -> <code>OptimizationJob</code> <span class="location">backend/src/qts/research/optimizer/job.py:20</span></li>
           <li><code>qts/research/optimizer/parameter_space.py</code> -> <code>ParameterSpace</code> <span class="location">backend/src/qts/research/optimizer/parameter_space.py:12</span>, <code>ParameterGrid</code> <span class="location">backend/src/qts/research/optimizer/parameter_space.py:25</span></li>
           <li><code>qts/research/optimizer/pipeline.py</code> -> <code>BacktestPipelineJob</code> <span class="location">backend/src/qts/research/optimizer/pipeline.py:23</span>, <code>BacktestPipelineRunner</code> <span class="location">backend/src/qts/research/optimizer/pipeline.py:43</span></li>
@@ -785,9 +786,9 @@
           <li><code>qts/research/optimizer/walk_forward.py</code> -> <code>WalkForwardSplit</code> <span class="location">backend/src/qts/research/optimizer/walk_forward.py:19</span>, <code>WalkForwardPlan</code> <span class="location">backend/src/qts/research/optimizer/walk_forward.py:50</span>, <code>BacktestWalkForwardValidationJob</code> <span class="location">backend/src/qts/research/optimizer/walk_forward.py:71</span>, <code>WalkForwardValidationResult</code> <span class="location">backend/src/qts/research/optimizer/walk_forward.py:102</span>, <code>BacktestWalkForwardValidationRunner</code> <span class="location">backend/src/qts/research/optimizer/walk_forward.py:112</span>, <code>WalkForwardValidationSummary</code> <span class="location">backend/src/qts/research/optimizer/walk_forward.py:161</span>, <code>WalkForwardRobustnessDecision</code> <span class="location">backend/src/qts/research/optimizer/walk_forward.py:225</span>, <code>WalkForwardRobustnessPolicy</code> <span class="location">backend/src/qts/research/optimizer/walk_forward.py:245</span></li>
           <li><code>qts/research/report.py</code> -> <code>_WorkflowStepResult</code> <span class="location">backend/src/qts/research/report.py:12</span>, <code>_WorkflowResult</code> <span class="location">backend/src/qts/research/report.py:31</span>, <code>ResearchWorkflowReport</code> <span class="location">backend/src/qts/research/report.py:45</span>, <code>ResearchWorkflowReportWriter</code> <span class="location">backend/src/qts/research/report.py:137</span></li>
           <li><code>qts/research/research_book.py</code> -> <code>ResearchBookConfig</code> <span class="location">backend/src/qts/research/research_book.py:25</span>, <code>HistoryRequest</code> <span class="location">backend/src/qts/research/research_book.py:59</span>, <code>ResearchHistoryFrame</code> <span class="location">backend/src/qts/research/research_book.py:84</span>, <code>ResearchBook</code> <span class="location">backend/src/qts/research/research_book.py:132</span></li>
-          <li><code>qts/research/session.py</code> -> <code>_EvaluatedFactorSnapshot</code> <span class="location">backend/src/qts/research/session.py:65</span>, <code>_FactorScoreAsset</code> <span class="location">backend/src/qts/research/session.py:73</span>, <code>ResearchSessionConfig</code> <span class="location">backend/src/qts/research/session.py:80</span>, <code>ResearchSession</code> <span class="location">backend/src/qts/research/session.py:219</span></li>
+          <li><code>qts/research/session.py</code> -> <code>_EvaluatedFactorSnapshot</code> <span class="location">backend/src/qts/research/session.py:71</span>, <code>_FactorScoreAsset</code> <span class="location">backend/src/qts/research/session.py:79</span>, <code>ResearchSessionConfig</code> <span class="location">backend/src/qts/research/session.py:86</span>, <code>ResearchSession</code> <span class="location">backend/src/qts/research/session.py:225</span></li>
           <li><code>qts/research/tearsheet.py</code> -> <code>FactorEvaluationTearsheetMetrics</code> <span class="location">backend/src/qts/research/tearsheet.py:21</span>, <code>FactorEvaluationTearsheet</code> <span class="location">backend/src/qts/research/tearsheet.py:38</span>, <code>FactorEvaluationTearsheetArtifactWriter</code> <span class="location">backend/src/qts/research/tearsheet.py:264</span></li>
-          <li><code>qts/research/workflow.py</code> -> <code>ResearchWorkflowStepConfig</code> <span class="location">backend/src/qts/research/workflow.py:29</span>, <code>ResearchWorkflowConfig</code> <span class="location">backend/src/qts/research/workflow.py:38</span>, <code>ResearchWorkflowStepResult</code> <span class="location">backend/src/qts/research/workflow.py:155</span>, <code>ResearchWorkflowResult</code> <span class="location">backend/src/qts/research/workflow.py:177</span>, <code>ResearchWorkflowRunner</code> <span class="location">backend/src/qts/research/workflow.py:200</span></li>
+          <li><code>qts/research/workflow.py</code> -> <code>ResearchWorkflowStepConfig</code> <span class="location">backend/src/qts/research/workflow.py:30</span>, <code>ResearchWorkflowConfig</code> <span class="location">backend/src/qts/research/workflow.py:39</span>, <code>ResearchWorkflowStepResult</code> <span class="location">backend/src/qts/research/workflow.py:156</span>, <code>ResearchWorkflowResult</code> <span class="location">backend/src/qts/research/workflow.py:178</span>, <code>ResearchWorkflowRunner</code> <span class="location">backend/src/qts/research/workflow.py:201</span></li>
           <li><code>qts/risk/config.py</code> -> <code>RiskRuleConfig</code> <span class="location">backend/src/qts/risk/config.py:15</span>, <code>RiskConfig</code> <span class="location">backend/src/qts/risk/config.py:43</span></li>
           <li><code>qts/risk/kill_switch.py</code> -> <code>KillSwitchScopeType</code> <span class="location">backend/src/qts/risk/kill_switch.py:12</span>, <code>KillSwitchScope</code> <span class="location">backend/src/qts/risk/kill_switch.py:22</span>, <code>KillSwitchState</code> <span class="location">backend/src/qts/risk/kill_switch.py:54</span>, <code>RuntimeKillSwitchCommand</code> <span class="location">backend/src/qts/risk/kill_switch.py:63</span>, <code>KillSwitchRegistry</code> <span class="location">backend/src/qts/risk/kill_switch.py:78</span></li>
           <li><code>qts/risk/risk_engine.py</code> -> <code>BrokerageRiskPolicy</code> <span class="location">backend/src/qts/risk/risk_engine.py:17</span>, <code>RiskEngine</code> <span class="location">backend/src/qts/risk/risk_engine.py:31</span></li>
@@ -873,7 +874,7 @@
           </ul>
         </details>
         <details class="inventory-group">
-          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">712 classes</span></summary>
+          <summary><span>自动同步补充 · core class methods</span><span class="badge shared">717 classes</span></summary>
           <ul class="method-index">
           <li><code>_DevDefaultTokenAuthBackend</code> <span class="location">backend/src/qts/api/auth_backend_factory.py:38</span> -> <code>__init__():41</code></li>
           <li><code>BacktestRequestSchema</code> <span class="location">backend/src/qts/api/schemas/backtest_schema.py:8</span> -> <span class="muted">no public/core methods</span></li>
@@ -1341,6 +1342,11 @@
           <li><code>ConstraintDecision</code> <span class="location">backend/src/qts/research/optimizer/constraints.py:16</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>OptimizationConstraint</code> <span class="location">backend/src/qts/research/optimizer/constraints.py:23</span> -> <code>evaluate():26</code></li>
           <li><code>MetricConstraint</code> <span class="location">backend/src/qts/research/optimizer/constraints.py:35</span> -> <code>__post_init__():51</code>, <code>evaluate():61</code></li>
+          <li><code>FailureWindow</code> <span class="location">backend/src/qts/research/optimizer/failure_veto.py:23</span> -> <code>__post_init__():31</code>, <code>to_metadata():37</code></li>
+          <li><code>FailureWindowVetoJob</code> <span class="location">backend/src/qts/research/optimizer/failure_veto.py:48</span> -> <code>__init__():58</code></li>
+          <li><code>FailureWindowVetoResult</code> <span class="location">backend/src/qts/research/optimizer/failure_veto.py:110</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>FailureWindowVetoRunner</code> <span class="location">backend/src/qts/research/optimizer/failure_veto.py:122</span> -> <code>run():125</code></li>
+          <li><code>FailureWindowVetoSummary</code> <span class="location">backend/src/qts/research/optimizer/failure_veto.py:167</span> -> <code>from_results():176</code>, <code>candidate_count property:251</code>, <code>decision property:256</code>, <code>to_payload():264</code></li>
           <li><code>OptimizationJob</code> <span class="location">backend/src/qts/research/optimizer/job.py:20</span> -> <code>__post_init__():35</code></li>
           <li><code>ParameterSpace</code> <span class="location">backend/src/qts/research/optimizer/parameter_space.py:12</span> -> <code>__post_init__():18</code></li>
           <li><code>ParameterGrid</code> <span class="location">backend/src/qts/research/optimizer/parameter_space.py:25</span> -> <code>__init__():33</code>, <code>__iter__():41</code>, <code>size():47</code></li>
@@ -1366,18 +1372,18 @@
           <li><code>HistoryRequest</code> <span class="location">backend/src/qts/research/research_book.py:59</span> -> <code>__post_init__():67</code>, <code>includes():76</code></li>
           <li><code>ResearchHistoryFrame</code> <span class="location">backend/src/qts/research/research_book.py:84</span> -> <code>__iter__():89</code>, <code>__len__():94</code>, <code>rows():99</code>, <code>to_pandas():104</code></li>
           <li><code>ResearchBook</code> <span class="location">backend/src/qts/research/research_book.py:132</span> -> <code>__init__():135</code>, <code>from_config():140</code>, <code>dataset_ids property:155</code>, <code>history():163</code>, <code>history_rows():189</code>, <code>history_frame():194</code></li>
-          <li><code>_EvaluatedFactorSnapshot</code> <span class="location">backend/src/qts/research/session.py:65</span> -> <span class="muted">no public/core methods</span></li>
-          <li><code>_FactorScoreAsset</code> <span class="location">backend/src/qts/research/session.py:73</span> -> <span class="muted">no public/core methods</span></li>
-          <li><code>ResearchSessionConfig</code> <span class="location">backend/src/qts/research/session.py:80</span> -> <code>from_yaml():97</code>, <code>research_book_config():137</code></li>
-          <li><code>ResearchSession</code> <span class="location">backend/src/qts/research/session.py:219</span> -> <code>__init__():222</code>, <code>from_yaml():238</code>, <code>config property:244</code>, <code>book property:250</code>, <code>store property:258</code>, <code>discovery property:264</code>, <code>factor_specs property:274</code>, <code>history():281</code>, <code>history_frame():286</code>, <code>parameter_grid():291</code>, <code>run_backtest():302</code>, <code>optimize():319</code>, <code>validate_optimizer_walk_forward():337</code>, <code>record_manifest():365</code>, <code>list_runs():375</code>, <code>compare_runs():380</code>, <code>compare_frame():396</code>, <code>discover_factors():415</code>, <code>discover_factors_frame():438</code>, <code>draft_factor_spec():459</code>, <code>draft_factor_specs():464</code>, <code>save_factor_spec():474</code>, <code>save_factor_specs():479</code>, <code>list_factor_specs():484</code>, <code>load_factor_spec():489</code>, <code>find_factor_candidates():494</code>, <code>find_factor_candidates_frame():520</code>, <code>review_factor_spec():541</code>, <code>list_factor_reviews():560</code>, <code>list_factor_specs_by_status():569</code>, <code>review_queue_frame():574</code>, <code>evaluate_factor():595</code>, <code>factor_tearsheet():652</code>, <code>factor_tearsheet_frame():660</code>, <code>record_factor_tearsheet():665</code>, <code>start_experiment():825</code></li>
+          <li><code>_EvaluatedFactorSnapshot</code> <span class="location">backend/src/qts/research/session.py:71</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>_FactorScoreAsset</code> <span class="location">backend/src/qts/research/session.py:79</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>ResearchSessionConfig</code> <span class="location">backend/src/qts/research/session.py:86</span> -> <code>from_yaml():103</code>, <code>research_book_config():143</code></li>
+          <li><code>ResearchSession</code> <span class="location">backend/src/qts/research/session.py:225</span> -> <code>__init__():228</code>, <code>from_yaml():244</code>, <code>config property:250</code>, <code>book property:256</code>, <code>store property:264</code>, <code>discovery property:270</code>, <code>factor_specs property:280</code>, <code>history():287</code>, <code>history_frame():292</code>, <code>parameter_grid():297</code>, <code>run_backtest():308</code>, <code>optimize():325</code>, <code>validate_optimizer_walk_forward():343</code>, <code>validate_optimizer_failure_window_veto():371</code>, <code>record_manifest():401</code>, <code>list_runs():411</code>, <code>compare_runs():416</code>, <code>compare_frame():432</code>, <code>discover_factors():451</code>, <code>discover_factors_frame():474</code>, <code>draft_factor_spec():495</code>, <code>draft_factor_specs():500</code>, <code>save_factor_spec():510</code>, <code>save_factor_specs():515</code>, <code>list_factor_specs():520</code>, <code>load_factor_spec():525</code>, <code>find_factor_candidates():530</code>, <code>find_factor_candidates_frame():556</code>, <code>review_factor_spec():577</code>, <code>list_factor_reviews():596</code>, <code>list_factor_specs_by_status():605</code>, <code>review_queue_frame():610</code>, <code>evaluate_factor():631</code>, <code>factor_tearsheet():688</code>, <code>factor_tearsheet_frame():696</code>, <code>record_factor_tearsheet():701</code>, <code>start_experiment():861</code></li>
           <li><code>FactorEvaluationTearsheetMetrics</code> <span class="location">backend/src/qts/research/tearsheet.py:21</span> -> <span class="muted">no public/core methods</span></li>
           <li><code>FactorEvaluationTearsheet</code> <span class="location">backend/src/qts/research/tearsheet.py:38</span> -> <code>from_evaluations():47</code>, <code>from_artifact_paths():72</code>, <code>rows():82</code>, <code>to_pandas():99</code>, <code>manifest_metrics():105</code>, <code>to_payload():119</code></li>
           <li><code>FactorEvaluationTearsheetArtifactWriter</code> <span class="location">backend/src/qts/research/tearsheet.py:264</span> -> <code>__init__():267</code>, <code>write():270</code></li>
-          <li><code>ResearchWorkflowStepConfig</code> <span class="location">backend/src/qts/research/workflow.py:29</span> -> <span class="muted">no public/core methods</span></li>
-          <li><code>ResearchWorkflowConfig</code> <span class="location">backend/src/qts/research/workflow.py:38</span> -> <code>from_yaml():46</code>, <code>resolve_path():89</code></li>
-          <li><code>ResearchWorkflowStepResult</code> <span class="location">backend/src/qts/research/workflow.py:155</span> -> <code>to_payload():164</code></li>
-          <li><code>ResearchWorkflowResult</code> <span class="location">backend/src/qts/research/workflow.py:177</span> -> <code>succeeded property:185</code>, <code>to_payload():190</code></li>
-          <li><code>ResearchWorkflowRunner</code> <span class="location">backend/src/qts/research/workflow.py:200</span> -> <code>run():203</code></li>
+          <li><code>ResearchWorkflowStepConfig</code> <span class="location">backend/src/qts/research/workflow.py:30</span> -> <span class="muted">no public/core methods</span></li>
+          <li><code>ResearchWorkflowConfig</code> <span class="location">backend/src/qts/research/workflow.py:39</span> -> <code>from_yaml():47</code>, <code>resolve_path():90</code></li>
+          <li><code>ResearchWorkflowStepResult</code> <span class="location">backend/src/qts/research/workflow.py:156</span> -> <code>to_payload():165</code></li>
+          <li><code>ResearchWorkflowResult</code> <span class="location">backend/src/qts/research/workflow.py:178</span> -> <code>succeeded property:186</code>, <code>to_payload():191</code></li>
+          <li><code>ResearchWorkflowRunner</code> <span class="location">backend/src/qts/research/workflow.py:201</span> -> <code>run():204</code></li>
           <li><code>RiskRuleConfig</code> <span class="location">backend/src/qts/risk/config.py:15</span> -> <code>__post_init__():22</code>, <code>from_mapping():30</code></li>
           <li><code>RiskConfig</code> <span class="location">backend/src/qts/risk/config.py:43</span> -> <code>__post_init__():52</code>, <code>from_yaml():62</code></li>
           <li><code>KillSwitchScopeType</code> <span class="location">backend/src/qts/risk/kill_switch.py:12</span> -> <span class="muted">no public/core methods</span></li>
@@ -3254,10 +3260,10 @@
       </p>
     </div>
     <div class="inventory-stats" aria-label="source inventory summary">
-      <span>386 files</span>
-      <span>714 classes</span>
-      <span>2550 functions</span>
-      <span>369 backend</span>
+      <span>387 files</span>
+      <span>719 classes</span>
+      <span>2568 functions</span>
+      <span>370 backend</span>
       <span>17 frontend</span>
     </div>
   </div>
@@ -11492,6 +11498,53 @@
     </details>
     <details class="inventory-file">
       <summary>
+        <code>backend/src/qts/research/optimizer/failure_veto.py</code>
+        <span class="inventory-counts">
+          <span>5 classes</span>
+          <span>13 functions</span>
+        </span>
+      </summary>
+      <div class="inventory-body">
+        <p><strong>文件作用：</strong>Failure-window veto validation for selected optimizer candidates.</p>
+        <p><strong>必要性：</strong>作为该路径所属边界的源码或说明入口，让实现、评审和测试可以定位到唯一责任单元。</p>
+        <div class="inventory-subsection">
+          <h3>类</h3>
+          <table class="inventory-table">
+            <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>FailureWindow</code></td><td>failure_veto:23</td><td>One adverse optimizer validation window.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>FailureWindowVetoJob</code></td><td>failure_veto:48</td><td>Backtest-pipeline failure-window veto validation job.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>FailureWindowVetoResult</code></td><td>failure_veto:110</td><td>One selected candidate result for one failure-window rerun.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>FailureWindowVetoRunner</code></td><td>failure_veto:122</td><td>Rerun selected optimizer candidates across veto and report-only windows.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>FailureWindowVetoSummary</code></td><td>failure_veto:167</td><td>Candidate-level promotion decision from failure-window evidence.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="inventory-subsection">
+          <h3>函数 / 方法</h3>
+          <table class="inventory-table">
+            <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
+            <tbody>
+              <tr><td><code>__post_init__</code></td><td>FailureWindow:31</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>to_metadata</code></td><td>FailureWindow:37</td><td>Return a deterministic JSON-ready representation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>FailureWindowVetoJob:58</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>run</code></td><td>FailureWindowVetoRunner:125</td><td>Run selected candidates on every configured failure window.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>from_results</code></td><td>FailureWindowVetoSummary:176</td><td>Build candidate-level veto evidence from failure-window reruns.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>candidate_count</code></td><td>FailureWindowVetoSummary:251</td><td>Return the number of selected candidates represented in evidence.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>decision</code></td><td>FailureWindowVetoSummary:256</td><td>Return the promotion decision payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>FailureWindowVetoSummary:264</td><td>Return a deterministic JSON-ready payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_date_boundary</code></td><td>module:276</td><td>提供模块级 date boundary 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_read_manifest</code></td><td>module:280</td><td>提供模块级 read manifest 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_candidate_id</code></td><td>module:287</td><td>提供模块级 candidate id 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_json_safe_parameters</code></td><td>module:294</td><td>提供模块级 json safe parameters 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_json_safe_parameter_value</code></td><td>module:301</td><td>提供模块级 json safe parameter value 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </details>
+    <details class="inventory-file">
+      <summary>
         <code>backend/src/qts/research/optimizer/job.py</code>
         <span class="inventory-counts">
           <span>1 class</span>
@@ -11857,7 +11910,7 @@
         <code>backend/src/qts/research/session.py</code>
         <span class="inventory-counts">
           <span>4 classes</span>
-          <span>56 functions</span>
+          <span>57 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -11868,10 +11921,10 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>_EvaluatedFactorSnapshot</code></td><td>session:65</td><td>Owns one evaluated factor snapshot artifact and its evaluation result.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>_FactorScoreAsset</code></td><td>session:73</td><td>Tiny symbol adapter for factor-result rank rows.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ResearchSessionConfig</code></td><td>session:80</td><td>Owns configuration for a notebook-friendly research session.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
-              <tr><td><code>ResearchSession</code></td><td>session:219</td><td>Orchestrates user-friendly research actions through QTS boundaries.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>_EvaluatedFactorSnapshot</code></td><td>session:71</td><td>Owns one evaluated factor snapshot artifact and its evaluation result.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>_FactorScoreAsset</code></td><td>session:79</td><td>Tiny symbol adapter for factor-result rank rows.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ResearchSessionConfig</code></td><td>session:86</td><td>Owns configuration for a notebook-friendly research session.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>ResearchSession</code></td><td>session:225</td><td>Orchestrates user-friendly research actions through QTS boundaries.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -11880,62 +11933,63 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>from_yaml</code></td><td>ResearchSessionConfig:97</td><td>Load and validate a research session YAML config.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>research_book_config</code></td><td>ResearchSessionConfig:137</td><td>Return the read-only history facade config.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_required_mapping</code></td><td>ResearchSessionConfig:149</td><td>实现 ResearchSessionConfig 的 required mapping 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_optional_mapping</code></td><td>ResearchSessionConfig:156</td><td>实现 ResearchSessionConfig 的 optional mapping 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_required_text</code></td><td>ResearchSessionConfig:163</td><td>实现 ResearchSessionConfig 的 required text 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_string_tuple</code></td><td>ResearchSessionConfig:170</td><td>实现 ResearchSessionConfig 的 string tuple 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_source_tuple</code></td><td>ResearchSessionConfig:178</td><td>实现 ResearchSessionConfig 的 source tuple 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_positive_int</code></td><td>ResearchSessionConfig:184</td><td>实现 ResearchSessionConfig 的 positive int 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_instrument_ids</code></td><td>ResearchSessionConfig:191</td><td>实现 ResearchSessionConfig 的 instrument ids 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_resolve_path</code></td><td>ResearchSessionConfig:202</td><td>实现 ResearchSessionConfig 的 resolve path 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_resolve_output_path</code></td><td>ResearchSessionConfig:212</td><td>实现 ResearchSessionConfig 的 resolve output path 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>ResearchSession:222</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>from_yaml</code></td><td>ResearchSession:238</td><td>Load a research session from YAML.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>config</code></td><td>ResearchSession:244</td><td>Return the validated research session config.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>book</code></td><td>ResearchSession:250</td><td>Return the read-only research history facade.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>store</code></td><td>ResearchSession:258</td><td>Return the experiment store facade.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>discovery</code></td><td>ResearchSession:264</td><td>Return the factor idea discovery facade.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>factor_specs</code></td><td>ResearchSession:274</td><td>Return the factor spec persistence facade.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>history</code></td><td>ResearchSession:281</td><td>Return historical bars through ``ResearchBook``.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>history_frame</code></td><td>ResearchSession:286</td><td>Return historical bars as a pandas DataFrame.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>parameter_grid</code></td><td>ResearchSession:291</td><td>Return a stable optimizer parameter grid from notebook inputs.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>run_backtest</code></td><td>ResearchSession:302</td><td>Run one backtest through the shared ``BacktestPipeline``.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>optimize</code></td><td>ResearchSession:319</td><td>Run a parameter sweep through ``BacktestPipelineRunner``.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>validate_optimizer_walk_forward</code></td><td>ResearchSession:337</td><td>Rerun selected optimizer candidates across walk-forward windows.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>record_manifest</code></td><td>ResearchSession:365</td><td>Record a completed experiment manifest in the session store.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>list_runs</code></td><td>ResearchSession:375</td><td>Return indexed experiment records, newest first.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>compare_runs</code></td><td>ResearchSession:380</td><td>Return records sorted descending by a Decimal-parseable metric.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>compare_frame</code></td><td>ResearchSession:396</td><td>Return a pandas DataFrame comparing stored experiment runs.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>discover_factors</code></td><td>ResearchSession:415</td><td>Discover source-backed factor ideas without creating executable behavior.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>discover_factors_frame</code></td><td>ResearchSession:438</td><td>Return discovered factor ideas as a pandas DataFrame.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>draft_factor_spec</code></td><td>ResearchSession:459</td><td>Draft a non-executable factor hypothesis from one discovered idea.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>draft_factor_specs</code></td><td>ResearchSession:464</td><td>Draft non-executable factor hypotheses from discovered ideas.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>save_factor_spec</code></td><td>ResearchSession:474</td><td>Persist one non-executable factor hypothesis draft.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>save_factor_specs</code></td><td>ResearchSession:479</td><td>Persist multiple non-executable factor hypothesis drafts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>list_factor_specs</code></td><td>ResearchSession:484</td><td>Return persisted factor hypothesis drafts sorted by name.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>load_factor_spec</code></td><td>ResearchSession:489</td><td>Load one persisted factor hypothesis draft by name.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>find_factor_candidates</code></td><td>ResearchSession:494</td><td>Discover, draft, and persist non-executable factor candidates.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>find_factor_candidates_frame</code></td><td>ResearchSession:520</td><td>Return discovered factor candidates as a pandas DataFrame.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>review_factor_spec</code></td><td>ResearchSession:541</td><td>Record a research review decision for a persisted factor spec.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>list_factor_reviews</code></td><td>ResearchSession:560</td><td>Return persisted factor spec review decisions.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>list_factor_specs_by_status</code></td><td>ResearchSession:569</td><td>Return persisted factor specs filtered by review status.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>review_queue_frame</code></td><td>ResearchSession:574</td><td>Return factor specs awaiting review as a pandas DataFrame.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>evaluate_factor</code></td><td>ResearchSession:595</td><td>Evaluate deterministic factor snapshot inputs and write artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>factor_tearsheet</code></td><td>ResearchSession:652</td><td>Build a factor-evaluation tearsheet from existing research artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>factor_tearsheet_frame</code></td><td>ResearchSession:660</td><td>Return a factor-evaluation tearsheet as a pandas DataFrame.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>record_factor_tearsheet</code></td><td>ResearchSession:665</td><td>Write and index a deterministic factor-evaluation tearsheet artifact.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_require_filename_safe_token</code></td><td>ResearchSession:704</td><td>实现 ResearchSession 的 require filename safe token 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_resolve_input_path</code></td><td>ResearchSession:708</td><td>实现 ResearchSession 的 resolve input path 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_as_of</code></td><td>ResearchSession:714</td><td>实现 ResearchSession 的 as of 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_load_symbol_decimal_map</code></td><td>ResearchSession:725</td><td>实现 ResearchSession 的 load symbol decimal map 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_load_json_map</code></td><td>ResearchSession:733</td><td>实现 ResearchSession 的 load json map 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_load_csv_map</code></td><td>ResearchSession:751</td><td>实现 ResearchSession 的 load csv map 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_factor_result</code></td><td>ResearchSession:778</td><td>实现 ResearchSession 的 factor result 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_normalize_symbol</code></td><td>ResearchSession:802</td><td>实现 ResearchSession 的 normalize symbol 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_load_decimal</code></td><td>ResearchSession:808</td><td>实现 ResearchSession 的 load decimal 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>start_experiment</code></td><td>ResearchSession:825</td><td>Start a manifest-backed research experiment recorder.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>from_yaml</code></td><td>ResearchSessionConfig:103</td><td>Load and validate a research session YAML config.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>research_book_config</code></td><td>ResearchSessionConfig:143</td><td>Return the read-only history facade config.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_required_mapping</code></td><td>ResearchSessionConfig:155</td><td>实现 ResearchSessionConfig 的 required mapping 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_optional_mapping</code></td><td>ResearchSessionConfig:162</td><td>实现 ResearchSessionConfig 的 optional mapping 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_required_text</code></td><td>ResearchSessionConfig:169</td><td>实现 ResearchSessionConfig 的 required text 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_string_tuple</code></td><td>ResearchSessionConfig:176</td><td>实现 ResearchSessionConfig 的 string tuple 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_source_tuple</code></td><td>ResearchSessionConfig:184</td><td>实现 ResearchSessionConfig 的 source tuple 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_positive_int</code></td><td>ResearchSessionConfig:190</td><td>实现 ResearchSessionConfig 的 positive int 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_instrument_ids</code></td><td>ResearchSessionConfig:197</td><td>实现 ResearchSessionConfig 的 instrument ids 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_resolve_path</code></td><td>ResearchSessionConfig:208</td><td>实现 ResearchSessionConfig 的 resolve path 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_resolve_output_path</code></td><td>ResearchSessionConfig:218</td><td>实现 ResearchSessionConfig 的 resolve output path 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>ResearchSession:228</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>from_yaml</code></td><td>ResearchSession:244</td><td>Load a research session from YAML.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>config</code></td><td>ResearchSession:250</td><td>Return the validated research session config.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>book</code></td><td>ResearchSession:256</td><td>Return the read-only research history facade.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>store</code></td><td>ResearchSession:264</td><td>Return the experiment store facade.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>discovery</code></td><td>ResearchSession:270</td><td>Return the factor idea discovery facade.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>factor_specs</code></td><td>ResearchSession:280</td><td>Return the factor spec persistence facade.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>history</code></td><td>ResearchSession:287</td><td>Return historical bars through ``ResearchBook``.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>history_frame</code></td><td>ResearchSession:292</td><td>Return historical bars as a pandas DataFrame.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>parameter_grid</code></td><td>ResearchSession:297</td><td>Return a stable optimizer parameter grid from notebook inputs.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>run_backtest</code></td><td>ResearchSession:308</td><td>Run one backtest through the shared ``BacktestPipeline``.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>optimize</code></td><td>ResearchSession:325</td><td>Run a parameter sweep through ``BacktestPipelineRunner``.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>validate_optimizer_walk_forward</code></td><td>ResearchSession:343</td><td>Rerun selected optimizer candidates across walk-forward windows.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>validate_optimizer_failure_window_veto</code></td><td>ResearchSession:371</td><td>Rerun selected optimizer candidates across failure-veto windows.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>record_manifest</code></td><td>ResearchSession:401</td><td>Record a completed experiment manifest in the session store.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>list_runs</code></td><td>ResearchSession:411</td><td>Return indexed experiment records, newest first.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>compare_runs</code></td><td>ResearchSession:416</td><td>Return records sorted descending by a Decimal-parseable metric.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>compare_frame</code></td><td>ResearchSession:432</td><td>Return a pandas DataFrame comparing stored experiment runs.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>discover_factors</code></td><td>ResearchSession:451</td><td>Discover source-backed factor ideas without creating executable behavior.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>discover_factors_frame</code></td><td>ResearchSession:474</td><td>Return discovered factor ideas as a pandas DataFrame.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>draft_factor_spec</code></td><td>ResearchSession:495</td><td>Draft a non-executable factor hypothesis from one discovered idea.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>draft_factor_specs</code></td><td>ResearchSession:500</td><td>Draft non-executable factor hypotheses from discovered ideas.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>save_factor_spec</code></td><td>ResearchSession:510</td><td>Persist one non-executable factor hypothesis draft.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>save_factor_specs</code></td><td>ResearchSession:515</td><td>Persist multiple non-executable factor hypothesis drafts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>list_factor_specs</code></td><td>ResearchSession:520</td><td>Return persisted factor hypothesis drafts sorted by name.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>load_factor_spec</code></td><td>ResearchSession:525</td><td>Load one persisted factor hypothesis draft by name.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>find_factor_candidates</code></td><td>ResearchSession:530</td><td>Discover, draft, and persist non-executable factor candidates.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>find_factor_candidates_frame</code></td><td>ResearchSession:556</td><td>Return discovered factor candidates as a pandas DataFrame.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>review_factor_spec</code></td><td>ResearchSession:577</td><td>Record a research review decision for a persisted factor spec.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>list_factor_reviews</code></td><td>ResearchSession:596</td><td>Return persisted factor spec review decisions.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>list_factor_specs_by_status</code></td><td>ResearchSession:605</td><td>Return persisted factor specs filtered by review status.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>review_queue_frame</code></td><td>ResearchSession:610</td><td>Return factor specs awaiting review as a pandas DataFrame.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>evaluate_factor</code></td><td>ResearchSession:631</td><td>Evaluate deterministic factor snapshot inputs and write artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>factor_tearsheet</code></td><td>ResearchSession:688</td><td>Build a factor-evaluation tearsheet from existing research artifacts.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>factor_tearsheet_frame</code></td><td>ResearchSession:696</td><td>Return a factor-evaluation tearsheet as a pandas DataFrame.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>record_factor_tearsheet</code></td><td>ResearchSession:701</td><td>Write and index a deterministic factor-evaluation tearsheet artifact.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_require_filename_safe_token</code></td><td>ResearchSession:740</td><td>实现 ResearchSession 的 require filename safe token 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_resolve_input_path</code></td><td>ResearchSession:744</td><td>实现 ResearchSession 的 resolve input path 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_as_of</code></td><td>ResearchSession:750</td><td>实现 ResearchSession 的 as of 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_load_symbol_decimal_map</code></td><td>ResearchSession:761</td><td>实现 ResearchSession 的 load symbol decimal map 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_load_json_map</code></td><td>ResearchSession:769</td><td>实现 ResearchSession 的 load json map 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_load_csv_map</code></td><td>ResearchSession:787</td><td>实现 ResearchSession 的 load csv map 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_factor_result</code></td><td>ResearchSession:814</td><td>实现 ResearchSession 的 factor result 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_normalize_symbol</code></td><td>ResearchSession:838</td><td>实现 ResearchSession 的 normalize symbol 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_load_decimal</code></td><td>ResearchSession:844</td><td>实现 ResearchSession 的 load decimal 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>start_experiment</code></td><td>ResearchSession:861</td><td>Start a manifest-backed research experiment recorder.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -11998,7 +12052,7 @@
         <code>backend/src/qts/research/workflow.py</code>
         <span class="inventory-counts">
           <span>5 classes</span>
-          <span>37 functions</span>
+          <span>41 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -12009,11 +12063,11 @@
           <table class="inventory-table">
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>ResearchWorkflowStepConfig</code></td><td>workflow:29</td><td>One validated workflow step declaration.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
-              <tr><td><code>ResearchWorkflowConfig</code></td><td>workflow:38</td><td>Owns validated gate-based research workflow configuration.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
-              <tr><td><code>ResearchWorkflowStepResult</code></td><td>workflow:155</td><td>One deterministic workflow step execution result.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ResearchWorkflowResult</code></td><td>workflow:177</td><td>Deterministic workflow execution result.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>ResearchWorkflowRunner</code></td><td>workflow:200</td><td>Runs research workflow steps through ``ResearchSession`` public APIs.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ResearchWorkflowStepConfig</code></td><td>workflow:30</td><td>One validated workflow step declaration.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>ResearchWorkflowConfig</code></td><td>workflow:39</td><td>Owns validated gate-based research workflow configuration.</td><td>把配置解析和校验收口到拥有者，避免调用方复制装配规则。</td></tr>
+              <tr><td><code>ResearchWorkflowStepResult</code></td><td>workflow:156</td><td>One deterministic workflow step execution result.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ResearchWorkflowResult</code></td><td>workflow:178</td><td>Deterministic workflow execution result.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>ResearchWorkflowRunner</code></td><td>workflow:201</td><td>Runs research workflow steps through ``ResearchSession`` public APIs.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -12022,43 +12076,47 @@
           <table class="inventory-table">
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
-              <tr><td><code>from_yaml</code></td><td>ResearchWorkflowConfig:46</td><td>Load and validate a research workflow YAML file.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_step_from_payload</code></td><td>ResearchWorkflowConfig:70</td><td>实现 ResearchWorkflowConfig 的 step from payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>resolve_path</code></td><td>ResearchWorkflowConfig:89</td><td>Resolve workflow-local paths relative to the workflow config file.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_required_safe_token</code></td><td>ResearchWorkflowConfig:98</td><td>实现 ResearchWorkflowConfig 的 required safe token 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_reject_forbidden_keys</code></td><td>ResearchWorkflowConfig:105</td><td>实现 ResearchWorkflowConfig 的 reject forbidden keys 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_validate_implementation_gate_payload</code></td><td>ResearchWorkflowConfig:117</td><td>实现 ResearchWorkflowConfig 的 validate implementation gate payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_string_sequence</code></td><td>ResearchWorkflowConfig:129</td><td>实现 ResearchWorkflowConfig 的 string sequence 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_strategy_module_name</code></td><td>ResearchWorkflowConfig:137</td><td>实现 ResearchWorkflowConfig 的 strategy module name 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_reject_internal_implementation_import</code></td><td>ResearchWorkflowConfig:143</td><td>实现 ResearchWorkflowConfig 的 reject internal implementation import 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>to_payload</code></td><td>ResearchWorkflowStepResult:164</td><td>Return a JSON-ready step result payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>succeeded</code></td><td>ResearchWorkflowResult:185</td><td>Return whether all executed workflow steps passed.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_payload</code></td><td>ResearchWorkflowResult:190</td><td>Return a JSON-ready workflow result payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>run</code></td><td>ResearchWorkflowRunner:203</td><td>Run a workflow until completion or a blocking gate.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_run_step</code></td><td>ResearchWorkflowRunner:225</td><td>实现 ResearchWorkflowRunner 的 run step 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_factor_candidates</code></td><td>ResearchWorkflowRunner:260</td><td>实现 ResearchWorkflowRunner 的 factor candidates 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_factor_review_gate</code></td><td>ResearchWorkflowRunner:289</td><td>实现 ResearchWorkflowRunner 的 factor review gate 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_implementation_gate</code></td><td>ResearchWorkflowRunner:314</td><td>实现 ResearchWorkflowRunner 的 implementation gate 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_factor_evaluation</code></td><td>ResearchWorkflowRunner:339</td><td>实现 ResearchWorkflowRunner 的 factor evaluation 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_research_report</code></td><td>ResearchWorkflowRunner:397</td><td>实现 ResearchWorkflowRunner 的 research report 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_factor_tearsheet</code></td><td>ResearchWorkflowRunner:428</td><td>实现 ResearchWorkflowRunner 的 factor tearsheet 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_backtest</code></td><td>ResearchWorkflowRunner:472</td><td>实现 ResearchWorkflowRunner 的 backtest 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_optimize</code></td><td>ResearchWorkflowRunner:496</td><td>实现 ResearchWorkflowRunner 的 optimize 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_validation_constraints</code></td><td>ResearchWorkflowRunner:608</td><td>实现 ResearchWorkflowRunner 的 validation constraints 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_walk_forward_payload</code></td><td>ResearchWorkflowRunner:631</td><td>实现 ResearchWorkflowRunner 的 walk forward payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_walk_forward_plan</code></td><td>ResearchWorkflowRunner:642</td><td>实现 ResearchWorkflowRunner 的 walk forward plan 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_walk_forward_robustness_policy</code></td><td>ResearchWorkflowRunner:662</td><td>实现 ResearchWorkflowRunner 的 walk forward robustness policy 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_iso_date</code></td><td>ResearchWorkflowRunner:682</td><td>实现 ResearchWorkflowRunner 的 iso date 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_required_mapping</code></td><td>ResearchWorkflowRunner:691</td><td>实现 ResearchWorkflowRunner 的 required mapping 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_optional_mapping</code></td><td>ResearchWorkflowRunner:698</td><td>实现 ResearchWorkflowRunner 的 optional mapping 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_optional_int</code></td><td>ResearchWorkflowRunner:706</td><td>实现 ResearchWorkflowRunner 的 optional int 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_optional_decimal</code></td><td>ResearchWorkflowRunner:712</td><td>实现 ResearchWorkflowRunner 的 optional decimal 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_string_tuple</code></td><td>ResearchWorkflowRunner:718</td><td>实现 ResearchWorkflowRunner 的 string tuple 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_optional_string_tuple</code></td><td>ResearchWorkflowRunner:726</td><td>实现 ResearchWorkflowRunner 的 optional string tuple 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_can_import</code></td><td>ResearchWorkflowRunner:732</td><td>实现 ResearchWorkflowRunner 的 can import 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_can_resolve_attribute</code></td><td>ResearchWorkflowRunner:740</td><td>实现 ResearchWorkflowRunner 的 can resolve attribute 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_required_text</code></td><td>module:751</td><td>提供模块级 required text 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_json_ready</code></td><td>module:758</td><td>提供模块级 json ready 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>from_yaml</code></td><td>ResearchWorkflowConfig:47</td><td>Load and validate a research workflow YAML file.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_step_from_payload</code></td><td>ResearchWorkflowConfig:71</td><td>实现 ResearchWorkflowConfig 的 step from payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>resolve_path</code></td><td>ResearchWorkflowConfig:90</td><td>Resolve workflow-local paths relative to the workflow config file.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_required_safe_token</code></td><td>ResearchWorkflowConfig:99</td><td>实现 ResearchWorkflowConfig 的 required safe token 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_reject_forbidden_keys</code></td><td>ResearchWorkflowConfig:106</td><td>实现 ResearchWorkflowConfig 的 reject forbidden keys 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_validate_implementation_gate_payload</code></td><td>ResearchWorkflowConfig:118</td><td>实现 ResearchWorkflowConfig 的 validate implementation gate payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_string_sequence</code></td><td>ResearchWorkflowConfig:130</td><td>实现 ResearchWorkflowConfig 的 string sequence 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_strategy_module_name</code></td><td>ResearchWorkflowConfig:138</td><td>实现 ResearchWorkflowConfig 的 strategy module name 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_reject_internal_implementation_import</code></td><td>ResearchWorkflowConfig:144</td><td>实现 ResearchWorkflowConfig 的 reject internal implementation import 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>ResearchWorkflowStepResult:165</td><td>Return a JSON-ready step result payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>succeeded</code></td><td>ResearchWorkflowResult:186</td><td>Return whether all executed workflow steps passed.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>ResearchWorkflowResult:191</td><td>Return a JSON-ready workflow result payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>run</code></td><td>ResearchWorkflowRunner:204</td><td>Run a workflow until completion or a blocking gate.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_run_step</code></td><td>ResearchWorkflowRunner:226</td><td>实现 ResearchWorkflowRunner 的 run step 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_factor_candidates</code></td><td>ResearchWorkflowRunner:261</td><td>实现 ResearchWorkflowRunner 的 factor candidates 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_factor_review_gate</code></td><td>ResearchWorkflowRunner:290</td><td>实现 ResearchWorkflowRunner 的 factor review gate 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_implementation_gate</code></td><td>ResearchWorkflowRunner:315</td><td>实现 ResearchWorkflowRunner 的 implementation gate 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_factor_evaluation</code></td><td>ResearchWorkflowRunner:340</td><td>实现 ResearchWorkflowRunner 的 factor evaluation 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_research_report</code></td><td>ResearchWorkflowRunner:398</td><td>实现 ResearchWorkflowRunner 的 research report 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_factor_tearsheet</code></td><td>ResearchWorkflowRunner:429</td><td>实现 ResearchWorkflowRunner 的 factor tearsheet 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_backtest</code></td><td>ResearchWorkflowRunner:473</td><td>实现 ResearchWorkflowRunner 的 backtest 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_optimize</code></td><td>ResearchWorkflowRunner:497</td><td>实现 ResearchWorkflowRunner 的 optimize 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_validation_constraints</code></td><td>ResearchWorkflowRunner:668</td><td>实现 ResearchWorkflowRunner 的 validation constraints 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_metric_constraints_from_sequence</code></td><td>ResearchWorkflowRunner:680</td><td>实现 ResearchWorkflowRunner 的 metric constraints from sequence 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_walk_forward_payload</code></td><td>ResearchWorkflowRunner:702</td><td>实现 ResearchWorkflowRunner 的 walk forward payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_failure_window_veto_payload</code></td><td>ResearchWorkflowRunner:713</td><td>实现 ResearchWorkflowRunner 的 failure window veto payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_failure_veto_constraints</code></td><td>ResearchWorkflowRunner:724</td><td>实现 ResearchWorkflowRunner 的 failure veto constraints 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_failure_windows</code></td><td>ResearchWorkflowRunner:736</td><td>实现 ResearchWorkflowRunner 的 failure windows 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_walk_forward_plan</code></td><td>ResearchWorkflowRunner:769</td><td>实现 ResearchWorkflowRunner 的 walk forward plan 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_walk_forward_robustness_policy</code></td><td>ResearchWorkflowRunner:789</td><td>实现 ResearchWorkflowRunner 的 walk forward robustness policy 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_iso_date</code></td><td>ResearchWorkflowRunner:809</td><td>实现 ResearchWorkflowRunner 的 iso date 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_required_mapping</code></td><td>ResearchWorkflowRunner:818</td><td>实现 ResearchWorkflowRunner 的 required mapping 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_optional_mapping</code></td><td>ResearchWorkflowRunner:825</td><td>实现 ResearchWorkflowRunner 的 optional mapping 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_optional_int</code></td><td>ResearchWorkflowRunner:833</td><td>实现 ResearchWorkflowRunner 的 optional int 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_optional_decimal</code></td><td>ResearchWorkflowRunner:839</td><td>实现 ResearchWorkflowRunner 的 optional decimal 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_string_tuple</code></td><td>ResearchWorkflowRunner:845</td><td>实现 ResearchWorkflowRunner 的 string tuple 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_optional_string_tuple</code></td><td>ResearchWorkflowRunner:853</td><td>实现 ResearchWorkflowRunner 的 optional string tuple 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_can_import</code></td><td>ResearchWorkflowRunner:859</td><td>实现 ResearchWorkflowRunner 的 can import 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_can_resolve_attribute</code></td><td>ResearchWorkflowRunner:867</td><td>实现 ResearchWorkflowRunner 的 can resolve attribute 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_required_text</code></td><td>module:878</td><td>提供模块级 required text 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_json_ready</code></td><td>module:885</td><td>提供模块级 json ready 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
