@@ -38,6 +38,50 @@ def test_failure_window_rejects_empty_names_and_inverted_dates() -> None:
     }
 
 
+def test_failure_window_veto_job_rejects_duplicate_window_names(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="duplicate window names"):
+        FailureWindowVetoJob(
+            base_config_path=tmp_path / "backtest.yaml",
+            candidate_parameters=({"alpha": "1"},),
+            objective_metric="sharpe_ratio",
+            output_root=tmp_path / "failure-veto",
+            windows=(
+                FailureWindow(
+                    name="crash",
+                    start=date(2026, 1, 1),
+                    end=date(2026, 1, 31),
+                ),
+                FailureWindow(
+                    name="crash",
+                    start=date(2026, 2, 1),
+                    end=date(2026, 2, 28),
+                ),
+            ),
+        )
+
+    with pytest.raises(ValueError, match="duplicate window names"):
+        FailureWindowVetoJob(
+            base_config_path=tmp_path / "backtest.yaml",
+            candidate_parameters=({"alpha": "1"},),
+            objective_metric="sharpe_ratio",
+            output_root=tmp_path / "failure-veto",
+            windows=(
+                FailureWindow(
+                    name="crash",
+                    start=date(2026, 1, 1),
+                    end=date(2026, 1, 31),
+                ),
+            ),
+            report_only_windows=(
+                FailureWindow(
+                    name="crash",
+                    start=date(2026, 2, 1),
+                    end=date(2026, 2, 28),
+                ),
+            ),
+        )
+
+
 def test_failure_window_veto_runner_reruns_candidates_for_veto_and_report_only_windows(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -202,6 +246,7 @@ def test_failure_window_veto_summary_rejects_candidate_when_any_veto_window_fail
         "reasons": ("no selected candidate survived failure-window veto",),
     }
     assert payload["rejected_candidates"][0]["candidate_id"] == candidate_id
+    assert payload["rejected_candidates"][0]["parameters"] == {"alpha": "1"}
     assert payload["rejected_candidates"][0]["failed_veto_windows"] == ("stress-b",)
     assert [window["window_name"] for window in payload["veto_windows"]] == [
         "stress-a",
@@ -241,6 +286,34 @@ def test_report_only_windows_are_evidence_but_do_not_rescue_rejected_candidates(
     assert payload["report_only_windows"][0]["rejected_count"] == 0
 
 
+def test_failure_window_veto_summary_includes_accepted_candidate_parameters(
+    tmp_path: Path,
+) -> None:
+    candidate_id = "candidate-0000-deadbeef0000"
+    result = _veto_result(
+        tmp_path / "passing-veto",
+        candidate_id=candidate_id,
+        window_name="crash",
+        total_return="0.01",
+        report_only=False,
+        parameters={"alpha": Decimal("1.25"), "lags": (1, 2), "enabled": True},
+    )
+
+    summary = FailureWindowVetoSummary.from_results(
+        (result,),
+        constraints=(MetricConstraint("pnl_usd", ">=", Decimal("0")),),
+    )
+
+    payload = summary.to_payload()
+    assert payload["rejected_candidates"] == ()
+    assert payload["accepted_candidates"][0]["candidate_id"] == candidate_id
+    assert payload["accepted_candidates"][0]["parameters"] == {
+        "alpha": "1.25",
+        "enabled": True,
+        "lags": [1, 2],
+    }
+
+
 def _veto_result(
     path: Path,
     *,
@@ -248,6 +321,7 @@ def _veto_result(
     window_name: str,
     total_return: str,
     report_only: bool,
+    parameters: dict[str, Any] | None = None,
 ) -> FailureWindowVetoResult:
     path.mkdir(parents=True)
     manifest_path = path / "manifest.json"
@@ -277,7 +351,7 @@ def _veto_result(
         end=date(2026, 1, 31),
         report_only=report_only,
         result=OptimizationResult(
-            parameters={"alpha": "1"},
+            parameters={"alpha": "1"} if parameters is None else parameters,
             manifest_path=manifest_path,
             manifest_hash=f"{window_name}-{total_return}",
             objective_value=Decimal(total_return),

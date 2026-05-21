@@ -90,6 +90,14 @@ class FailureWindowVetoJob:
             )
             for window in report_only_windows
         )
+        window_names = [window.name for window in (*veto_windows, *report_windows)]
+        duplicate_names = tuple(
+            sorted({name for name in window_names if window_names.count(name) > 1})
+        )
+        if duplicate_names:
+            raise ValueError(
+                "duplicate window names are not allowed: " + ", ".join(duplicate_names)
+            )
         object.__setattr__(self, "base_config_path", Path(base_config_path))
         object.__setattr__(self, "candidate_parameters", candidates)
         object.__setattr__(self, "objective_metric", objective_metric)
@@ -176,6 +184,7 @@ class FailureWindowVetoSummary:
         materialized_constraints = tuple(constraints)
         candidate_windows: dict[str, list[dict[str, Any]]] = {}
         candidate_indexes: dict[str, int] = {}
+        candidate_parameters: dict[str, dict[str, Any]] = {}
         veto_windows: list[dict[str, Any]] = []
         report_only_windows: list[dict[str, Any]] = []
 
@@ -200,6 +209,10 @@ class FailureWindowVetoSummary:
                 "window_name": item.window_name,
             }
             candidate_indexes.setdefault(item.candidate_id, item.candidate_index)
+            candidate_parameters.setdefault(
+                item.candidate_id,
+                _json_safe_parameters(item.result.parameters),
+            )
             candidate_windows.setdefault(item.candidate_id, []).append(evidence)
             if item.report_only:
                 report_only_windows.append(evidence)
@@ -217,6 +230,7 @@ class FailureWindowVetoSummary:
             candidate_evidence: dict[str, Any] = {
                 "candidate_id": candidate_id,
                 "candidate_index": candidate_indexes[candidate_id],
+                "parameters": candidate_parameters[candidate_id],
                 "windows": tuple(windows),
             }
             if failed_veto_windows:
