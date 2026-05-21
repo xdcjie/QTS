@@ -1,0 +1,77 @@
+# Long-sample GC 15m VWAP research workflow.
+#
+# Parameter selection runs on 2010-06-06..2023-01-01 from the session's
+# backtest config. The 2023-01-01..2026-04-10 split is held out for OOS
+# walk-forward evidence.
+
+version: 1
+workflow_id: vwap-factor-gc-15m-long-search
+steps:
+  - id: implementation
+    kind: implementation_gate
+    required_strategy: examples.strategies.vwap_factor_research:VwapFactorResearchStrategy
+
+  - id: baseline-is
+    kind: backtest
+    output_dir: ../../../runs/research/vwap/gc-15m-long/baseline-is
+
+  - id: long-is-search
+    kind: optimize
+    objective_metric: sharpe_ratio
+    output_root: ../../../runs/research/vwap/gc-15m-long/long-is-search
+    validation_output: ../../../runs/research/vwap/gc-15m-long/validation/long-is-search.json
+    capital_metrics:
+      margin_proxy: "12000"
+    validation:
+      constraints:
+        - metric: total_trades
+          operator: ">="
+          threshold: "20"
+        - metric: pnl_usd
+          operator: ">"
+          threshold: "0"
+        - metric: max_drawdown
+          operator: "<="
+          threshold: "0.05"
+        - metric: sharpe_ratio
+          operator: ">="
+          threshold: "0"
+        - metric: profit_factor
+          operator: ">="
+          threshold: "1.00"
+      walk_forward:
+        top_n: 3
+        output_root: ../../../runs/research/vwap/gc-15m-long/walk-forward/primary-oos
+        summary_output: ../../../runs/research/vwap/gc-15m-long/validation/primary-oos.json
+        robustness:
+          phases: [test]
+          min_windows: 1
+          max_losing_windows: 0
+          min_window_pnl_usd: "0"
+          min_window_best_objective: "0"
+          min_total_pnl_usd: "1"
+        splits:
+          - name: primary-oos-2023-2026
+            train_start: 2010-06-06
+            train_end: 2023-01-01
+            test_start: 2023-01-01
+            test_end: 2026-04-10
+    parameters:
+      time_window: [evening_18_22, asia_20_02]
+      factor_filters:
+        - [session_sigma_range, mom120_aligned]
+        - [session_sigma_range, mom120_aligned, volume_curve_range]
+        - [session_sigma_range, mom240_aligned]
+        - [trend_regime_aligned, session_sigma_range]
+        - [technical_score_min, volume_curve_range]
+      min_session_open_minutes: [0, 30]
+      min_volume_ratio: ["1.2"]
+      pullback_touch_atr_below: ["0.15"]
+      max_pullback_break_atr: ["1.0"]
+      stop_atr_multiple: ["0.8", "1.0"]
+      target_r_multiple: ["1.5", "2.0"]
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/gc-15m-long/reports
+    output_path: vwap-factor-gc-15m-long-search-report.md

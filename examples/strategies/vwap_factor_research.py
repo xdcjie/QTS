@@ -7,6 +7,7 @@ and backtest runner without changing the production VWAP v2 strategy.
 
 from __future__ import annotations
 
+import json
 from collections import deque
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -263,6 +264,92 @@ class VwapFactorResearchConfig:
         if self.volume_curve_ratio_min > self.volume_curve_ratio_max:
             raise ValueError("volume_curve_ratio_min must be <= volume_curve_ratio_max")
 
+    @property
+    def required_warmup_bars(self) -> int:
+        """Return the minimum contiguous bars needed before this candidate should trade."""
+        required = [
+            self.atr_window,
+            self.volume_ratio_window,
+            self.vwap_slope_lookback,
+        ]
+        for filter_name in self.factor_filters:
+            required.extend(self._warmup_windows_for_filter(filter_name))
+        return max(required)
+
+    def _warmup_windows_for_filter(self, filter_name: str) -> tuple[int, ...]:
+        if filter_name in {
+            "distance_mid",
+            "volume_range",
+            "volume_le",
+            "vwap_slope_strength",
+            "atr_pct_range",
+            "session_sigma_range",
+            "rth_drive_min_atr",
+            "rth_drive_non_positive",
+            "rth_drive_positive",
+            "volume_curve_range",
+        }:
+            return ()
+        if filter_name == "trend_regime_aligned":
+            return (
+                self.vwap_slope_lookback,
+                self.ts_momentum_120_window + 1,
+                self.sma_slow_window,
+            )
+        if filter_name == "rsi_mid":
+            return (self.rsi_window + 1,)
+        if filter_name == "macd_aligned":
+            return (self.macd_slow_window + self.macd_signal_window - 1,)
+        if filter_name == "adx_aligned":
+            return (self.adx_window,)
+        if filter_name in {"cmf_positive", "cmf_aligned"}:
+            return (self.cmf_window,)
+        if filter_name == "mfi_mid":
+            return (self.mfi_window + 1,)
+        if filter_name == "roc_aligned":
+            return (self.roc_window + 1,)
+        if filter_name == "mom60_aligned":
+            return (self.ts_momentum_60_window + 1,)
+        if filter_name in {"mom120_aligned", "mom120_min"}:
+            return (self.ts_momentum_120_window + 1,)
+        if filter_name == "mom240_aligned":
+            return (self.ts_momentum_240_window + 1,)
+        if filter_name == "ma20_80_aligned":
+            return (self.sma_slow_window,)
+        if filter_name == "ma50_200_aligned":
+            return (self.sma_long_slow_window,)
+        if filter_name == "technical_score_min":
+            return (
+                self.macd_slow_window + self.macd_signal_window - 1,
+                self.adx_window,
+                self.roc_window + 1,
+                self.ts_momentum_60_window + 1,
+                self.sma_slow_window,
+                self.donchian_long_window,
+                self.rsi_window + 1,
+                self.mfi_window + 1,
+            )
+        if filter_name == "oscillator_score_min":
+            return (
+                self.rsi_window + 1,
+                self.mfi_window + 1,
+                self.stochastic_window + 2,
+                self.williams_window,
+            )
+        if filter_name == "cci_reversal":
+            return (self.cci_window,)
+        if filter_name == "stochastic_mid":
+            return (self.stochastic_window + 2,)
+        if filter_name == "williams_mid":
+            return (self.williams_window,)
+        if filter_name == "bollinger_inside":
+            return (self.bollinger_window,)
+        if filter_name == "donchian_half_aligned":
+            return (self.donchian_window,)
+        if filter_name == "keltner_inside":
+            return (self.keltner_window,)
+        raise ValueError(f"unknown research factor filter: {filter_name}")
+
 
 @dataclass(slots=True)
 class _SessionState:
@@ -325,6 +412,12 @@ class VwapFactorResearchStrategy(Strategy):
         self._session = _SessionState()
         self._et_tz = ZoneInfo("US/Eastern")
         self._volume_curve_history: dict[int, deque[Decimal]] = {}
+        self._factor_diagnostics: tuple[dict[str, object], ...] = ()
+
+    @property
+    def factor_diagnostics(self) -> tuple[dict[str, object], ...]:
+        """Return factor pass/fail observations from the most recent entry check."""
+        return self._factor_diagnostics
 
     def initialize(self, ctx: StrategyContext) -> None:
         asset = ctx.symbol(self._config.symbol)
@@ -475,22 +568,143 @@ class VwapFactorResearchStrategy(Strategy):
         self._entry_price = bar.close
         stop_distance = atr * self._config.stop_atr_multiple
         target_distance = stop_distance * self._config.target_r_multiple
+        metadata = self._entry_metadata()
         if self._direction is _Direction.LONG:
             self._stop_price = self._entry_price - stop_distance
             self._target_2 = self._entry_price + target_distance
-            ctx.target_quantity(self._asset, self._config.target_quantity)
+            ctx.target_quantity(self._asset, self._config.target_quantity, metadata=metadata)
         else:
             self._stop_price = self._entry_price + stop_distance
             self._target_2 = self._entry_price - target_distance
-            ctx.target_quantity(self._asset, -self._config.target_quantity)
+            ctx.target_quantity(self._asset, -self._config.target_quantity, metadata=metadata)
         self._state = _State.ENTERED
         self._bars_in_wait = 0
 
+    def _entry_metadata(self) -> dict[str, str] | None:
+        if not self._factor_diagnostics:
+            return None
+        return {
+            "factor_diagnostics": json.dumps(
+                list(self._factor_diagnostics),
+                separators=(",", ":"),
+                sort_keys=True,
+            )
+        }
+
     def _factor_filters_pass(self, bar: Bar, vwap: Decimal, atr: Decimal) -> bool:
+        diagnostics: list[dict[str, object]] = []
         for filter_name in self._config.factor_filters:
-            if not self._factor_filter_passes(filter_name, bar, vwap, atr):
+            passed = self._factor_filter_passes(filter_name, bar, vwap, atr)
+            diagnostics.append(
+                {
+                    "filter": filter_name,
+                    "passed": passed,
+                    "value": self._factor_diagnostic_value(filter_name, bar, vwap, atr),
+                }
+            )
+            self._factor_diagnostics = tuple(diagnostics)
+            if not passed:
                 return False
+        self._factor_diagnostics = tuple(diagnostics)
         return True
+
+    def _factor_diagnostic_value(
+        self,
+        filter_name: str,
+        bar: Bar,
+        vwap: Decimal,
+        atr: Decimal,
+    ) -> str | None:
+        indicators = self._require_indicators()
+        if filter_name == "distance_mid":
+            return self._format_decimal(abs(bar.close - vwap) / atr)
+        if filter_name in {"volume_range", "volume_le"}:
+            return self._format_decimal(self._decimal(indicators.volume_ratio))
+        if filter_name == "vwap_slope_strength":
+            return self._format_decimal(self._vwap_slope_strength_atr(atr))
+        if filter_name == "atr_pct_range":
+            return self._format_decimal(self._atr_pct(bar, atr))
+        if filter_name == "session_sigma_range":
+            return self._format_decimal(self._session_sigma_atr(atr))
+        if filter_name == "rth_drive_min_atr":
+            return self._format_decimal(self._rth_drive_atr(atr))
+        if filter_name in {"rth_drive_non_positive", "rth_drive_positive"}:
+            return self._format_decimal(self._session.rth_drive)
+        if filter_name == "trend_regime_aligned":
+            strength = self._format_decimal(self._vwap_slope_strength_atr(atr))
+            momentum = self._format_decimal(self._decimal(indicators.roc_120))
+            ma_spread = self._sma_spread(indicators.sma_fast, indicators.sma_slow)
+            return f"vwap_slope_atr={strength},roc120={momentum},ma20_80={ma_spread}"
+        if filter_name == "rsi_mid":
+            return self._format_decimal(self._decimal(indicators.rsi))
+        if filter_name == "macd_aligned":
+            macd_value = self._macd()
+            return None if macd_value is None else self._format_decimal(macd_value.histogram)
+        if filter_name == "adx_aligned":
+            adx_value = self._adx()
+            if adx_value is None:
+                return None
+            return (
+                f"adx={self._format_decimal(adx_value.adx)},"
+                f"di_delta={self._format_decimal(adx_value.plus_di - adx_value.minus_di)}"
+            )
+        if filter_name in {"cmf_positive", "cmf_aligned"}:
+            return self._format_decimal(self._decimal(indicators.cmf))
+        if filter_name == "mfi_mid":
+            return self._format_decimal(self._decimal(indicators.mfi))
+        if filter_name == "roc_aligned":
+            return self._format_decimal(self._decimal(indicators.roc))
+        if filter_name == "mom60_aligned":
+            return self._format_decimal(self._decimal(indicators.roc_60))
+        if filter_name in {"mom120_aligned", "mom120_min"}:
+            return self._format_decimal(self._decimal(indicators.roc_120))
+        if filter_name == "mom240_aligned":
+            return self._format_decimal(self._decimal(indicators.roc_240))
+        if filter_name == "ma20_80_aligned":
+            return self._sma_spread(indicators.sma_fast, indicators.sma_slow)
+        if filter_name == "ma50_200_aligned":
+            return self._sma_spread(indicators.sma_long_fast, indicators.sma_long_slow)
+        if filter_name == "technical_score_min":
+            return str(self._technical_score(bar))
+        if filter_name == "oscillator_score_min":
+            return str(self._oscillator_score())
+        if filter_name == "volume_curve_range":
+            return self._format_decimal(self._volume_curve_ratio(bar))
+        if filter_name == "cci_reversal":
+            return self._format_decimal(self._decimal(indicators.cci))
+        if filter_name == "stochastic_mid":
+            stochastic_value = self._stochastic()
+            return (
+                None
+                if stochastic_value is None
+                else self._format_decimal(stochastic_value.percent_k)
+            )
+        if filter_name == "williams_mid":
+            return self._format_decimal(self._decimal(indicators.williams_r))
+        if filter_name == "bollinger_inside":
+            bollinger_value = self._bollinger()
+            if bollinger_value is None or bollinger_value.standard_deviation == Decimal("0"):
+                return None
+            return self._format_decimal(
+                (bar.close - bollinger_value.middle) / bollinger_value.standard_deviation
+            )
+        if filter_name == "donchian_half_aligned":
+            donchian_value = self._donchian()
+            return (
+                None
+                if donchian_value is None
+                else self._format_decimal(bar.close - donchian_value.middle)
+            )
+        if filter_name == "keltner_inside":
+            keltner_value = self._keltner()
+            if keltner_value is None:
+                return None
+            return (
+                f"lower={self._format_decimal(keltner_value.lower)},"
+                f"close={self._format_decimal(bar.close)},"
+                f"upper={self._format_decimal(keltner_value.upper)}"
+            )
+        return None
 
     def _factor_filter_passes(
         self,
@@ -792,6 +1006,13 @@ class VwapFactorResearchStrategy(Strategy):
             and self._direction_sign() * (fast_value - slow_value) > Decimal("0")
         )
 
+    def _sma_spread(self, fast: AssetIndicator, slow: AssetIndicator) -> str | None:
+        fast_value = self._decimal(fast)
+        slow_value = self._decimal(slow)
+        if fast_value is None or slow_value is None:
+            return None
+        return self._format_decimal(fast_value - slow_value)
+
     def _vwap_slope_strength_atr(self, atr: Decimal) -> Decimal | None:
         if atr <= Decimal("0"):
             return None
@@ -894,6 +1115,12 @@ class VwapFactorResearchStrategy(Strategy):
     def _decimal(indicator: AssetIndicator) -> Decimal | None:
         value = indicator.value
         return value if isinstance(value, Decimal) else None
+
+    @staticmethod
+    def _format_decimal(value: Decimal | None) -> str | None:
+        if value is None:
+            return None
+        return str(value.normalize())
 
     def _adx(self) -> DirectionalMovementValue | None:
         value = self._require_indicators().adx.value

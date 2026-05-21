@@ -457,6 +457,95 @@ historical_data:
     ) == InstrumentId("FUTURE.CME.GC.GCQ0")
 
 
+def test_replay_bundle_synthesizes_source_grid_before_coarser_target_aggregation(
+    tmp_path: Path,
+) -> None:
+    from qts.data.historical.catalog import HistoricalCatalog, HistoricalCatalogLoadConfig
+    from qts.data.sources.replay_bundle_builder import ReplayMarketDataBundleBuilder
+    from qts.runtime.config import (
+        BacktestMarketDataReference,
+        BacktestRiskConfig,
+        BacktestRuntimeConfig,
+        RollPolicyConfig,
+    )
+
+    historical_root = tmp_path / "historical"
+    (historical_root / "data").mkdir(parents=True)
+    (historical_root / "chains").mkdir()
+    shutil.copyfile(Path("historical/chains/GC.json"), historical_root / "chains" / "GC.json")
+    csv_path = historical_root / "data" / "gc.csv"
+    _write_future_rows(
+        csv_path,
+        [
+            ("2010-06-06T22:00:00.000000000Z", "GCQ0", "1200.0"),
+            ("2010-06-06T22:02:00.000000000Z", "GCQ0", "1201.0"),
+        ],
+    )
+    data_config_path = tmp_path / "historical.local.yaml"
+    data_config_path.write_text(
+        f"""
+historical_data:
+  stores:
+    local_csv:
+      type: local_csv
+      root_dir: {historical_root}
+      bars_dir: data
+      chains_dir: chains
+      defaults:
+        exchange_timezone: US/Eastern
+        timezone_policy: source_utc_exchange_sessions
+        normalization: raw
+  catalogs:
+    research_futures:
+      store: local_csv
+      datasets:
+        GC:
+          asset_class: future
+          exchange: CME
+          chain_file: GC.json
+          bars:
+            - file: gc.csv
+              timeframe: 1m
+""",
+        encoding="utf-8",
+    )
+    config = BacktestRuntimeConfig(
+        market_data=BacktestMarketDataReference(
+            config_path=data_config_path,
+            catalog="research_futures",
+        ),
+        roots=("GC",),
+        symbols=("GC",),
+        start=datetime(2010, 6, 6, 22, 0, tzinfo=UTC),
+        end=datetime(2010, 6, 6, 22, 3, tzinfo=UTC),
+        timeframe="15m",
+        initial_cash=Decimal("1000000"),
+        strategy_class="tests.integration.test_backtest_gc_si:RollingGcStrategy",
+        roll_policy=RollPolicyConfig(enabled=True),
+        risk_config=BacktestRiskConfig(max_notional=Decimal("100000000")),
+    )
+    catalog = HistoricalCatalog.load(
+        HistoricalCatalogLoadConfig.from_historical_market_data_config(
+            data_config_path,
+            catalog="research_futures",
+            roots=config.roots,
+            instrument_ids=config.instrument_ids,
+            requested_timeframe=config.timeframe,
+        )
+    )
+
+    bundle = ReplayMarketDataBundleBuilder(config=config, catalog=catalog).build()
+    bars = tuple(bundle.bars)
+
+    assert [bar.timeframe for bar in bars] == ["1m", "1m", "1m"]
+    assert [bar.end_time for bar in bars] == [
+        datetime(2010, 6, 6, 22, 1, tzinfo=UTC),
+        datetime(2010, 6, 6, 22, 2, tzinfo=UTC),
+        datetime(2010, 6, 6, 22, 3, tzinfo=UTC),
+    ]
+    assert bars[1].is_synthetic is True
+
+
 def _bar(instrument_id: InstrumentId, start: str, end: str) -> Bar:
     return Bar(
         instrument_id=instrument_id,

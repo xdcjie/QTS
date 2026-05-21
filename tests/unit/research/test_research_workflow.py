@@ -6,11 +6,15 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from qts.research import ResearchSessionConfig
 from qts.research.optimizer import WalkForwardPlan, WalkForwardSplit
 from qts.research.workflow import (
     ResearchWorkflowConfig,
     ResearchWorkflowRunner,
 )
+from qts.runtime.config import BacktestRuntimeConfig
+
+from examples.strategies.vwap_factor_research import VwapFactorResearchConfig
 
 
 def _write_workflow(tmp_path: Path, body: str) -> Path:
@@ -375,6 +379,219 @@ def test_vwap_risk_reward_sweep_covers_open_cooloff_and_volume_curve_regime() ->
     assert ["session_sigma_range", "mom120_aligned", "volume_curve_range"] in parameters[
         "factor_filters"
     ]
+
+
+def test_vwap_research_backtest_warmup_covers_workflow_factor_filters() -> None:
+    runtime_config = BacktestRuntimeConfig.from_yaml(
+        Path("configs/backtest.vwap_factor_research.yaml")
+    )
+    workflow_config = ResearchWorkflowConfig.from_yaml(
+        Path("configs/research/workflows/vwap_factor_search.yaml")
+    )
+    required_warmup = 0
+
+    for step in workflow_config.steps:
+        if step.kind != "optimize":
+            continue
+        parameters = step.payload["parameters"]
+        for factor_filters in parameters.get("factor_filters", ()):
+            strategy_params = {
+                **runtime_config.strategy_params,
+                **{
+                    name: values[0]
+                    for name, values in parameters.items()
+                    if name != "factor_filters" and isinstance(values, list) and values
+                },
+                "factor_filters": tuple(factor_filters),
+            }
+            required_warmup = max(
+                required_warmup,
+                VwapFactorResearchConfig(**strategy_params).required_warmup_bars,
+            )
+
+    assert runtime_config.warmup_bars >= required_warmup
+
+
+@pytest.mark.parametrize(
+    (
+        "symbol",
+        "timeframe",
+        "session_path",
+        "backtest_path",
+        "workflow_path",
+        "output_fragment",
+    ),
+    [
+        (
+            "GC",
+            "1m",
+            Path("configs/research/vwap_gc_long.yaml"),
+            Path("configs/backtest.vwap_factor_research_gc_long_is.yaml"),
+            Path("configs/research/workflows/vwap_factor_gc_long_search.yaml"),
+            "gc-long",
+        ),
+        (
+            "SI",
+            "1m",
+            Path("configs/research/vwap_si_long.yaml"),
+            Path("configs/backtest.vwap_factor_research_si_long_is.yaml"),
+            Path("configs/research/workflows/vwap_factor_si_long_search.yaml"),
+            "si-long",
+        ),
+        (
+            "GC",
+            "5m",
+            Path("configs/research/vwap_gc_5m_long.yaml"),
+            Path("configs/backtest.vwap_factor_research_gc_5m_long_is.yaml"),
+            Path("configs/research/workflows/vwap_factor_gc_5m_long_search.yaml"),
+            "gc-5m-long",
+        ),
+        (
+            "SI",
+            "5m",
+            Path("configs/research/vwap_si_5m_long.yaml"),
+            Path("configs/backtest.vwap_factor_research_si_5m_long_is.yaml"),
+            Path("configs/research/workflows/vwap_factor_si_5m_long_search.yaml"),
+            "si-5m-long",
+        ),
+        (
+            "GC",
+            "15m",
+            Path("configs/research/vwap_gc_15m_long.yaml"),
+            Path("configs/backtest.vwap_factor_research_gc_15m_long_is.yaml"),
+            Path("configs/research/workflows/vwap_factor_gc_15m_long_search.yaml"),
+            "gc-15m-long",
+        ),
+        (
+            "SI",
+            "15m",
+            Path("configs/research/vwap_si_15m_long.yaml"),
+            Path("configs/backtest.vwap_factor_research_si_15m_long_is.yaml"),
+            Path("configs/research/workflows/vwap_factor_si_15m_long_search.yaml"),
+            "si-15m-long",
+        ),
+    ],
+)
+def test_vwap_long_research_configs_are_symbol_isolated_and_hold_out_oos(
+    symbol: str,
+    timeframe: str,
+    session_path: Path,
+    backtest_path: Path,
+    workflow_path: Path,
+    output_fragment: str,
+) -> None:
+    session_config = ResearchSessionConfig.from_yaml(session_path)
+    runtime_config = BacktestRuntimeConfig.from_yaml(backtest_path)
+    workflow_config = ResearchWorkflowConfig.from_yaml(workflow_path)
+
+    assert session_config.roots == (symbol,)
+    assert session_config.timeframe == timeframe
+    assert session_config.backtest_config_path.resolve() == backtest_path.resolve()
+    assert output_fragment in str(session_config.output_root)
+    assert runtime_config.roots == (symbol,)
+    assert runtime_config.symbols == (symbol,)
+    assert runtime_config.timeframe == timeframe
+    assert runtime_config.strategy_params["symbol"] == symbol
+    assert runtime_config.start.isoformat() == "2010-06-06T00:00:00+00:00"
+    assert runtime_config.end.isoformat() == "2023-01-01T00:00:00+00:00"
+
+    output_paths = {
+        str(step.payload.get("output_root") or step.payload.get("output_dir"))
+        for step in workflow_config.steps
+        if step.kind in {"backtest", "optimize"}
+    }
+    assert output_paths
+    assert all(output_fragment in output_path for output_path in output_paths)
+
+    walk_forward_splits = [
+        {
+            "name": str(split["name"]),
+            "train_start": split["train_start"].isoformat(),
+            "train_end": split["train_end"].isoformat(),
+            "test_start": split["test_start"].isoformat(),
+            "test_end": split["test_end"].isoformat(),
+        }
+        for step in workflow_config.steps
+        if step.kind == "optimize" and "walk_forward" in step.payload.get("validation", {})
+        for split in step.payload["validation"]["walk_forward"]["splits"]
+    ]
+    assert walk_forward_splits == [
+        {
+            "name": "primary-oos-2023-2026",
+            "train_start": "2010-06-06",
+            "train_end": "2023-01-01",
+            "test_start": "2023-01-01",
+            "test_end": "2026-04-10",
+        },
+    ]
+
+
+@pytest.mark.parametrize(
+    ("backtest_path", "workflow_path"),
+    [
+        (
+            Path("configs/backtest.vwap_factor_research_gc_long_is.yaml"),
+            Path("configs/research/workflows/vwap_factor_gc_long_search.yaml"),
+        ),
+        (
+            Path("configs/backtest.vwap_factor_research_si_long_is.yaml"),
+            Path("configs/research/workflows/vwap_factor_si_long_search.yaml"),
+        ),
+        (
+            Path("configs/backtest.vwap_factor_research_gc_5m_long_is.yaml"),
+            Path("configs/research/workflows/vwap_factor_gc_5m_long_search.yaml"),
+        ),
+        (
+            Path("configs/backtest.vwap_factor_research_si_5m_long_is.yaml"),
+            Path("configs/research/workflows/vwap_factor_si_5m_long_search.yaml"),
+        ),
+        (
+            Path("configs/backtest.vwap_factor_research_gc_15m_long_is.yaml"),
+            Path("configs/research/workflows/vwap_factor_gc_15m_long_search.yaml"),
+        ),
+        (
+            Path("configs/backtest.vwap_factor_research_si_15m_long_is.yaml"),
+            Path("configs/research/workflows/vwap_factor_si_15m_long_search.yaml"),
+        ),
+    ],
+)
+def test_vwap_long_research_backtest_warmup_covers_workflow_factor_filters(
+    backtest_path: Path,
+    workflow_path: Path,
+) -> None:
+    runtime_config = BacktestRuntimeConfig.from_yaml(backtest_path)
+    workflow_config = ResearchWorkflowConfig.from_yaml(workflow_path)
+
+    assert runtime_config.warmup_bars >= _required_warmup_for_workflow(
+        runtime_config,
+        workflow_config,
+    )
+
+
+def _required_warmup_for_workflow(
+    runtime_config: BacktestRuntimeConfig,
+    workflow_config: ResearchWorkflowConfig,
+) -> int:
+    required_warmup = 0
+    for step in workflow_config.steps:
+        if step.kind != "optimize":
+            continue
+        parameters = step.payload["parameters"]
+        for factor_filters in parameters.get("factor_filters", ()):
+            strategy_params = {
+                **runtime_config.strategy_params,
+                **{
+                    name: values[0]
+                    for name, values in parameters.items()
+                    if name != "factor_filters" and isinstance(values, list) and values
+                },
+                "factor_filters": tuple(factor_filters),
+            }
+            required_warmup = max(
+                required_warmup,
+                VwapFactorResearchConfig(**strategy_params).required_warmup_bars,
+            )
+    return required_warmup
 
 
 def test_workflow_runs_factor_evaluation_step(tmp_path: Path) -> None:

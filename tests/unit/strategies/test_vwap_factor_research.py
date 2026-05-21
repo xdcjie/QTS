@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -116,8 +118,16 @@ class FakeContext:
     def symbol(self, symbol: str) -> FakeAsset:
         return FakeAsset(symbol=symbol)
 
-    def target_quantity(self, asset: FakeAsset, quantity: Decimal) -> None:
-        self.intents.append(("target_quantity", asset, quantity, None))
+    def target_quantity(
+        self,
+        asset: FakeAsset,
+        quantity: Decimal,
+        *,
+        metadata: Mapping[str, str] | None = None,
+    ) -> None:
+        self.intents.append(
+            ("target_quantity", asset, quantity, None if metadata is None else dict(metadata))
+        )
 
     def close(self, asset: FakeAsset, *, metadata: dict[str, str] | None = None) -> None:
         self.intents.append(("close", asset, None, metadata))
@@ -272,6 +282,70 @@ def test_trend_regime_filter_combines_slope_momentum_and_moving_average_alignmen
     assert not strategy._factor_filter_passes(  # noqa: SLF001
         "trend_regime_aligned", _bar(), Decimal("100"), Decimal("2")
     )
+
+
+def test_required_warmup_bars_covers_enabled_factor_filters() -> None:
+    config = VwapFactorResearchConfig(
+        factor_filters=(
+            "session_sigma_range",
+            "mom120_aligned",
+            "technical_score_min",
+            "volume_curve_range",
+        )
+    )
+
+    assert config.required_warmup_bars == 121
+
+
+def test_factor_diagnostics_record_values_and_failed_filter() -> None:
+    strategy, ctx = initialized_strategy(
+        VwapFactorResearchConfig(
+            factor_filters=("session_sigma_range", "mom120_aligned"),
+            session_sigma_min_atr=Decimal("0.1"),
+            session_sigma_max_atr=Decimal("0.2"),
+        )
+    )
+    strategy._session.sum_var_x_vol = Decimal("9")  # noqa: SLF001
+    strategy._session.sum_vol = Decimal("1")  # noqa: SLF001
+    ctx.indicator.created[("roc", 120)].value = Decimal("0.5")
+
+    assert not strategy._factor_filters_pass(_bar(), Decimal("100"), Decimal("2"))  # noqa: SLF001
+
+    assert strategy.factor_diagnostics == (
+        {
+            "filter": "session_sigma_range",
+            "passed": False,
+            "value": "1.5",
+        },
+    )
+
+
+def test_entry_intent_metadata_carries_factor_diagnostics_for_artifacts() -> None:
+    strategy, ctx = initialized_strategy(
+        VwapFactorResearchConfig(
+            factor_filters=("session_sigma_range", "mom120_aligned"),
+            session_sigma_min_atr=Decimal("0.05"),
+            session_sigma_max_atr=Decimal("0.20"),
+        )
+    )
+    strategy._session.sum_var_x_vol = Decimal("0.04")  # noqa: SLF001
+    strategy._session.sum_vol = Decimal("1")  # noqa: SLF001
+    ctx.indicator.created[("roc", 120)].value = Decimal("0.5")
+    ctx.indicator.created[("volume_ratio", 20)].value = Decimal("2")
+
+    strategy._step_wait_rejection(  # noqa: SLF001
+        cast(StrategyContext, ctx),
+        _bar(open=Decimal("100"), close=Decimal("101")),
+        Decimal("100"),
+        Decimal("2"),
+    )
+
+    metadata = ctx.intents[-1][3]
+    assert metadata is not None
+    assert json.loads(metadata["factor_diagnostics"]) == [
+        {"filter": "session_sigma_range", "passed": True, "value": "0.1"},
+        {"filter": "mom120_aligned", "passed": True, "value": "0.5"},
+    ]
 
 
 def test_overnight_research_time_windows_are_half_open_in_exchange_time() -> None:

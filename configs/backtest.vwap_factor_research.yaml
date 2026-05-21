@@ -20,4 +20,4 @@ roll_policy:
   enabled: true
   method: first_notice_date
   roll_sessions_before_first_notice: 3
-warmup_bars: 32
+warmup_bars: 121

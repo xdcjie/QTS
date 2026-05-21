@@ -1,0 +1,17 @@
+# Long-sample GC 5m VWAP research session.
+#
+# Optimizer selection uses the IS range in the referenced backtest config.
+# OOS evidence is declared in the workflow walk-forward split.
+
+data:
+  config: ../data/historical.local.yaml
+  catalog: research_futures
+  roots: [GC]
+  timeframe: 5m
+backtest_config: ../backtest.vwap_factor_research_gc_5m_long_is.yaml
+store: ../../runs/research/vwap/gc-5m-long
+output_root: ../../runs/research/vwap/gc-5m-long/backtests
+objective_metric: sharpe_ratio
+discovery:
+  sources: [semantic_scholar, openalex, crossref, arxiv]
+  max_results: 10

@@ -16,6 +16,7 @@ def _bar(
     low: str = "10",
     close: str = "10",
     volume: str = "1",
+    vwap: str | None = None,
     session_id: str = "2026-01-02",
 ) -> Bar:
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC) + timedelta(minutes=index)
@@ -31,6 +32,7 @@ def _bar(
         low=Decimal(low),
         close=Decimal(close),
         volume=Decimal(volume),
+        vwap=None if vwap is None else Decimal(vwap),
         is_complete=True,
     )
 
@@ -75,6 +77,33 @@ def test_session_vwap_resets_when_session_id_changes() -> None:
     assert vwap.update_bar(
         _bar(2, high="20", low="16", close="18", volume="4", session_id="2026-01-03")
     ) == Decimal("18")
+
+
+def test_session_vwap_uses_bar_typical_price_and_ignores_provider_vwap() -> None:
+    from qts.indicators.technical import SessionVWAP
+
+    vwap = SessionVWAP()
+
+    assert vwap.update_bar(_bar(0, high="12", low="9", close="9", volume="2", vwap="99")) == (
+        Decimal("10")
+    )
+    assert vwap.ready is True
+
+
+def test_session_vwap_zero_volume_new_session_is_not_ready() -> None:
+    from qts.indicators.technical import SessionVWAP
+
+    vwap = SessionVWAP()
+
+    assert vwap.update_bar(_bar(0, high="10", low="8", close="9", volume="2")) == Decimal("9")
+    assert (
+        vwap.update_bar(
+            _bar(1, high="20", low="18", close="19", volume="0", session_id="2026-01-03")
+        )
+        is None
+    )
+    assert vwap.ready is False
+    assert vwap.value is None
 
 
 def test_volume_ratio_compares_current_volume_with_rolling_average() -> None:

@@ -1,0 +1,44 @@
+market_data:
+  source: local_historical
+  config: configs/data/historical.local.yaml
+  catalog: research_futures
+roots:
+  - SI
+symbols:
+  - SI
+start: "2010-06-06T00:00:00Z"
+end: "2023-01-01T00:00:00Z"
+timeframe: 1m
+initial_cash: "1000000"
+strategy_class: examples.strategies.vwap_factor_research:VwapFactorResearchStrategy
+strategy_params:
+  symbol: SI
+  target_quantity: "1"
+  vwap_slope_lookback: 5
+  max_bars_in_wait_state: 5
+  pullback_touch_atr_below: "0.15"
+  pullback_touch_atr_above: "0.1"
+  max_pullback_break_atr: "1.0"
+  min_volume_ratio: "1.2"
+  stop_atr_multiple: "1.0"
+  target_r_multiple: "2.0"
+  exit_on_vwap_cross: false
+  vwap_slope_min_atr: "0.10"
+  atr_pct_min: "0.00020"
+  atr_pct_max: "0.00200"
+  session_sigma_min_atr: "0.05"
+  session_sigma_max_atr: "2.00"
+  rth_drive_min_atr: "0.50"
+  min_session_open_minutes: 0
+  time_window: evening_18_22
+  factor_filters: []
+cost_model:
+  fixed_commission_per_contract: "0"
+  slippage_bps: "0"
+risk_config:
+  max_notional: "100000000"
+roll_policy:
+  enabled: true
+  method: first_notice_date
+  roll_sessions_before_first_notice: 3
+warmup_bars: 241

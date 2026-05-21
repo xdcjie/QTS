@@ -178,18 +178,18 @@ class ReplayMarketDataBundleBuilder:
             streams.append(
                 (
                     root_index,
-                    self._with_time_grid_synthesis(per_root),
+                    self._with_time_grid_synthesis(per_root, timeframe=source_timeframe),
                 )
             )
         return self._merge_ordered_bar_streams(streams), stats, exchange_timezones
 
-    def _with_time_grid_synthesis(self, stream: Iterator[Bar]) -> Iterator[Bar]:
+    def _with_time_grid_synthesis(self, stream: Iterator[Bar], *, timeframe: str) -> Iterator[Bar]:
         """Wrap a per-root bar stream so intra-session gaps emit synthetic bars."""
 
-        timeframe = Timeframe.parse(self._config.timeframe)
-        if timeframe.alignment is not AlignmentMode.CLOCK:
+        parsed = Timeframe.parse(timeframe)
+        if parsed.alignment is not AlignmentMode.CLOCK:
             return stream
-        return BarTimeGridSynthesizer(timeframe=self._config.timeframe).synthesize(stream)
+        return BarTimeGridSynthesizer(timeframe=timeframe).synthesize(stream)
 
     def _iter_root_bars(
         self,
