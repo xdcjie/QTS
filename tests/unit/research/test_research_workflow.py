@@ -247,6 +247,12 @@ steps:
         top_n: 1
         output_root: walk-forward-output
         summary_output: walk-forward-summary.json
+        robustness:
+          phases: [test]
+          min_windows: 1
+          max_losing_windows: 0
+          min_window_pnl_usd: "0"
+          min_total_pnl_usd: "10"
         splits:
           - name: split-001
             train_start: 2026-01-01
@@ -285,11 +291,40 @@ steps:
     assert outputs["walk_forward_validation"] == {
         "run_count": 2,
         "window_count": 2,
-        "windows": [],
+        "windows": [
+            {
+                "accepted_count": 1,
+                "accepted_runs": (
+                    {
+                        "capital_metrics": {"pnl_usd": "25"},
+                        "objective_value": "1.2",
+                    },
+                ),
+                "end": "2026-05-01",
+                "phase": "test",
+                "rejected_count": 0,
+                "rejections": (),
+                "run_count": 1,
+                "split_name": "split-001",
+                "start": "2026-04-01",
+            }
+        ],
+    }
+    assert outputs["walk_forward_robustness"] == {
+        "accepted": True,
+        "metrics": {
+            "losing_window_count": 0,
+            "min_window_best_objective": "1.2",
+            "min_window_pnl_usd": "25",
+            "total_pnl_usd": "25",
+            "window_count": 1,
+        },
+        "reasons": (),
     }
     summary_output = tmp_path / "walk-forward-summary.json"
     assert outputs["walk_forward_validation_output"] == str(summary_output)
     assert summary_output.exists()
+    assert "robustness" in summary_output.read_text(encoding="utf-8")
 
 
 def test_vwap_workflow_uses_multi_window_top_n_walk_forward_validation() -> None:
@@ -306,6 +341,14 @@ def test_vwap_workflow_uses_multi_window_top_n_walk_forward_validation() -> None
         "regime-2025-q1-to-summer",
         "regime-2025-late-summer-to-winter",
     ]
+    assert walk_forward["robustness"] == {
+        "phases": ["test"],
+        "min_windows": 3,
+        "max_losing_windows": 0,
+        "min_window_pnl_usd": "0",
+        "min_window_best_objective": "0",
+        "min_total_pnl_usd": "1",
+    }
     plan = WalkForwardPlan(
         tuple(
             WalkForwardSplit(
@@ -520,12 +563,31 @@ class _FakeSession:
                 "splits": plan.to_metadata(),
             }
         )
+        windows = [
+            {
+                "accepted_count": 1,
+                "accepted_runs": (
+                    {
+                        "capital_metrics": {"pnl_usd": "25"},
+                        "objective_value": "1.2",
+                    },
+                ),
+                "end": "2026-05-01",
+                "phase": "test",
+                "rejected_count": 0,
+                "rejections": (),
+                "run_count": 1,
+                "split_name": "split-001",
+                "start": "2026-04-01",
+            }
+        ]
         return SimpleNamespace(
+            windows=tuple(windows),
             to_payload=lambda: {
                 "run_count": 2,
                 "window_count": 2,
-                "windows": [],
-            }
+                "windows": windows,
+            },
         )
 
     def evaluate_factor(

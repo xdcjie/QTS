@@ -16,6 +16,7 @@ from qts.research.optimizer import (
     MetricConstraint,
     OptimizationResult,
     WalkForwardPlan,
+    WalkForwardRobustnessPolicy,
     WalkForwardSplit,
     WalkForwardValidationResult,
     WalkForwardValidationSummary,
@@ -318,4 +319,84 @@ def test_walk_forward_validation_summary_groups_window_constraint_evidence(
                 "start": "2026-04-01",
             }
         ],
+    }
+
+
+def test_walk_forward_robustness_policy_rejects_losing_oos_windows() -> None:
+    summary = WalkForwardValidationSummary(
+        windows=(
+            {
+                "accepted_count": 1,
+                "accepted_runs": (
+                    {
+                        "capital_metrics": {"pnl_usd": "200"},
+                        "objective_value": "1.5",
+                    },
+                ),
+                "end": "2026-02-01",
+                "phase": "test",
+                "rejected_count": 0,
+                "rejections": (),
+                "run_count": 1,
+                "split_name": "split-001",
+                "start": "2026-01-01",
+            },
+            {
+                "accepted_count": 1,
+                "accepted_runs": (
+                    {
+                        "capital_metrics": {"pnl_usd": "-50"},
+                        "objective_value": "0.4",
+                    },
+                ),
+                "end": "2026-04-01",
+                "phase": "test",
+                "rejected_count": 0,
+                "rejections": (),
+                "run_count": 1,
+                "split_name": "split-002",
+                "start": "2026-03-01",
+            },
+            {
+                "accepted_count": 1,
+                "accepted_runs": (
+                    {
+                        "capital_metrics": {"pnl_usd": "-100"},
+                        "objective_value": "-1.0",
+                    },
+                ),
+                "end": "2026-06-01",
+                "phase": "train",
+                "rejected_count": 0,
+                "rejections": (),
+                "run_count": 1,
+                "split_name": "split-003",
+                "start": "2026-05-01",
+            },
+        )
+    )
+
+    decision = WalkForwardRobustnessPolicy(
+        phases=("test",),
+        min_windows=2,
+        max_losing_windows=0,
+        min_window_pnl_usd=Decimal("0"),
+        min_total_pnl_usd=Decimal("200"),
+    ).evaluate(summary)
+
+    assert decision.accepted is False
+    assert decision.to_payload() == {
+        "accepted": False,
+        "metrics": {
+            "losing_window_count": 1,
+            "min_window_best_objective": "0.4",
+            "min_window_pnl_usd": "-50",
+            "total_pnl_usd": "150",
+            "window_count": 2,
+        },
+        "reasons": (
+            "losing_window_count=1 failed <= 0",
+            "min_window_pnl_usd=-50 failed >= 0",
+            "total_pnl_usd=150 failed >= 200",
+        ),
     }

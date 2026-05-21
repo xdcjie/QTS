@@ -18,6 +18,7 @@ from qts.research.optimizer import (
     OptimizerValidationSummary,
     OptimizerValidationSummaryWriter,
     WalkForwardPlan,
+    WalkForwardRobustnessPolicy,
     WalkForwardSplit,
     derive_capital_metrics,
 )
@@ -523,6 +524,7 @@ class ResearchWorkflowRunner:
             OptimizerValidationSummaryWriter().write(validation_output_path, validation_summary)
         walk_forward_payload = self._walk_forward_payload(step.payload.get("validation"))
         walk_forward_summary_payload: dict[str, Any] | None = None
+        walk_forward_robustness_payload: dict[str, Any] | None = None
         walk_forward_output_path: Path | None = None
         if walk_forward_payload is not None:
             plan = self._walk_forward_plan(walk_forward_payload)
@@ -543,13 +545,23 @@ class ResearchWorkflowRunner:
                 plan=plan,
             )
             walk_forward_summary_payload = walk_forward_summary.to_payload()
+            robustness_policy = self._walk_forward_robustness_policy(
+                walk_forward_payload.get("robustness")
+            )
+            if robustness_policy is not None:
+                walk_forward_robustness_payload = robustness_policy.evaluate(
+                    walk_forward_summary
+                ).to_payload()
             raw_walk_forward_output = walk_forward_payload.get("summary_output")
             if raw_walk_forward_output is not None:
                 walk_forward_output_path = config.resolve_path(str(raw_walk_forward_output))
+                output_payload = dict(walk_forward_summary_payload)
+                if walk_forward_robustness_payload is not None:
+                    output_payload["robustness"] = walk_forward_robustness_payload
                 walk_forward_output_path.parent.mkdir(parents=True, exist_ok=True)
                 walk_forward_output_path.write_text(
                     json.dumps(
-                        _json_ready(walk_forward_summary_payload),
+                        _json_ready(output_payload),
                         sort_keys=True,
                         indent=2,
                     )
@@ -583,6 +595,8 @@ class ResearchWorkflowRunner:
             outputs["walk_forward_validation_output"] = (
                 None if walk_forward_output_path is None else str(walk_forward_output_path)
             )
+            if walk_forward_robustness_payload is not None:
+                outputs["walk_forward_robustness"] = walk_forward_robustness_payload
         return ResearchWorkflowStepResult(
             step_id=step.step_id,
             kind=step.kind,
@@ -645,6 +659,25 @@ class ResearchWorkflowRunner:
             )
         return WalkForwardPlan(tuple(splits))
 
+    def _walk_forward_robustness_policy(
+        self,
+        value: Any,
+    ) -> WalkForwardRobustnessPolicy | None:
+        payload = self._optional_mapping(value)
+        if payload is None:
+            return None
+        phases = self._string_tuple(payload.get("phases", ["test"]))
+        return WalkForwardRobustnessPolicy(
+            phases=phases,
+            min_windows=self._optional_int(payload.get("min_windows")),
+            max_losing_windows=self._optional_int(payload.get("max_losing_windows")),
+            min_window_pnl_usd=self._optional_decimal(payload.get("min_window_pnl_usd")),
+            min_window_best_objective=self._optional_decimal(
+                payload.get("min_window_best_objective")
+            ),
+            min_total_pnl_usd=self._optional_decimal(payload.get("min_total_pnl_usd")),
+        )
+
     @staticmethod
     def _iso_date(value: Any, field_name: str) -> date:
         if isinstance(value, date):
@@ -674,6 +707,12 @@ class ResearchWorkflowRunner:
         if value is None:
             return None
         return int(value)
+
+    @staticmethod
+    def _optional_decimal(value: Any) -> Decimal | None:
+        if value is None:
+            return None
+        return Decimal(str(value))
 
     @staticmethod
     def _string_tuple(value: Any) -> tuple[str, ...]:

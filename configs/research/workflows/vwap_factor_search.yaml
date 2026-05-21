@@ -111,6 +111,13 @@ steps:
         top_n: 3
         output_root: ../../../runs/research/vwap/walk-forward/risk-reward
         summary_output: ../../../runs/research/vwap/validation/risk-reward-walk-forward.json
+        robustness:
+          phases: [test]
+          min_windows: 3
+          max_losing_windows: 0
+          min_window_pnl_usd: "0"
+          min_window_best_objective: "0"
+          min_total_pnl_usd: "1"
         splits:
           - name: regime-2024-summer-to-q4
             train_start: 2024-07-01

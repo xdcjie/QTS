@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -220,6 +221,139 @@ class WalkForwardValidationSummary:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class WalkForwardRobustnessDecision:
+    """Aggregate walk-forward robustness decision."""
+
+    accepted: bool
+    metrics: dict[str, Any]
+    reasons: tuple[str, ...]
+
+    def to_payload(self) -> dict[str, Any]:
+        """Return deterministic JSON-ready robustness evidence."""
+        return {
+            "accepted": self.accepted,
+            "metrics": {
+                name: _json_metric(value)
+                for name, value in sorted(self.metrics.items(), key=lambda item: item[0])
+            },
+            "reasons": self.reasons,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class WalkForwardRobustnessPolicy:
+    """Validate aggregate walk-forward evidence across selected phases."""
+
+    phases: tuple[str, ...] = ("test",)
+    min_windows: int | None = None
+    max_losing_windows: int | None = None
+    min_window_pnl_usd: Decimal | None = None
+    min_window_best_objective: Decimal | None = None
+    min_total_pnl_usd: Decimal | None = None
+
+    def __post_init__(self) -> None:
+        phases = tuple(str(phase).strip() for phase in self.phases)
+        if not phases or any(not phase for phase in phases):
+            raise ValueError("walk-forward robustness phases must not be empty")
+        object.__setattr__(self, "phases", phases)
+        for name in ("min_windows", "max_losing_windows"):
+            value = getattr(self, name)
+            if value is not None and value < 0:
+                raise ValueError(f"{name} must be non-negative")
+        for name in (
+            "min_window_pnl_usd",
+            "min_window_best_objective",
+            "min_total_pnl_usd",
+        ):
+            value = getattr(self, name)
+            if value is not None:
+                parsed = Decimal(str(value))
+                if not parsed.is_finite():
+                    raise ValueError(f"{name} must be finite")
+                object.__setattr__(self, name, parsed)
+
+    def evaluate(self, summary: WalkForwardValidationSummary) -> WalkForwardRobustnessDecision:
+        """Return an aggregate robustness decision for selected windows."""
+        selected = tuple(window for window in summary.windows if window.get("phase") in self.phases)
+        window_pnls = tuple(self._window_pnl(window) for window in selected)
+        window_objectives = tuple(self._window_best_objective(window) for window in selected)
+        losing_window_count = sum(1 for pnl in window_pnls if pnl is not None and pnl < 0)
+        total_pnl = sum((pnl for pnl in window_pnls if pnl is not None), Decimal("0"))
+        metrics: dict[str, Any] = {
+            "losing_window_count": losing_window_count,
+            "total_pnl_usd": total_pnl,
+            "window_count": len(selected),
+        }
+        if window_pnls:
+            metrics["min_window_pnl_usd"] = min(
+                pnl if pnl is not None else Decimal("0") for pnl in window_pnls
+            )
+        if window_objectives:
+            metrics["min_window_best_objective"] = min(
+                objective if objective is not None else Decimal("0")
+                for objective in window_objectives
+            )
+
+        reasons: list[str] = []
+        if self.min_windows is not None and len(selected) < self.min_windows:
+            reasons.append(f"window_count={len(selected)} failed >= {self.min_windows}")
+        if self.max_losing_windows is not None and losing_window_count > self.max_losing_windows:
+            reasons.append(
+                f"losing_window_count={losing_window_count} failed <= {self.max_losing_windows}"
+            )
+        if self.min_window_pnl_usd is not None:
+            min_pnl = metrics.get("min_window_pnl_usd")
+            if not isinstance(min_pnl, Decimal) or min_pnl < self.min_window_pnl_usd:
+                reasons.append(
+                    f"min_window_pnl_usd={min_pnl or 0} failed >= {self.min_window_pnl_usd}"
+                )
+        if self.min_window_best_objective is not None:
+            min_objective = metrics.get("min_window_best_objective")
+            if (
+                not isinstance(min_objective, Decimal)
+                or min_objective < self.min_window_best_objective
+            ):
+                reasons.append(
+                    "min_window_best_objective="
+                    f"{min_objective or 0} failed >= {self.min_window_best_objective}"
+                )
+        if self.min_total_pnl_usd is not None and total_pnl < self.min_total_pnl_usd:
+            reasons.append(f"total_pnl_usd={total_pnl} failed >= {self.min_total_pnl_usd}")
+        return WalkForwardRobustnessDecision(
+            accepted=not reasons,
+            metrics=metrics,
+            reasons=tuple(reasons),
+        )
+
+    @staticmethod
+    def _window_pnl(window: dict[str, Any]) -> Decimal | None:
+        values: list[Decimal] = []
+        for run in _accepted_runs(window):
+            capital_metrics = run.get("capital_metrics")
+            if not isinstance(capital_metrics, dict):
+                continue
+            value = _optional_decimal(capital_metrics.get("pnl_usd"))
+            if value is not None:
+                values.append(value)
+        if not values:
+            return None
+        return sum(values, Decimal("0"))
+
+    @staticmethod
+    def _window_best_objective(window: dict[str, Any]) -> Decimal | None:
+        values = tuple(
+            value
+            for value in (
+                _optional_decimal(run.get("objective_value")) for run in _accepted_runs(window)
+            )
+            if value is not None
+        )
+        if not values:
+            return None
+        return max(values)
+
+
 def _date_boundary(value: date) -> datetime:
     return datetime.combine(value, time.min, tzinfo=UTC)
 
@@ -233,9 +367,36 @@ def _read_manifest(path: Path) -> dict[str, Any]:
     return payload
 
 
+def _accepted_runs(window: dict[str, Any]) -> tuple[dict[str, Any], ...]:
+    raw_runs = window.get("accepted_runs")
+    if not isinstance(raw_runs, Sequence):
+        return ()
+    return tuple(run for run in raw_runs if isinstance(run, dict))
+
+
+def _optional_decimal(value: Any) -> Decimal | None:
+    if value is None:
+        return None
+    try:
+        parsed = Decimal(str(value))
+    except (InvalidOperation, ValueError):
+        return None
+    if not parsed.is_finite():
+        return None
+    return parsed
+
+
+def _json_metric(value: Any) -> Any:
+    if isinstance(value, Decimal):
+        return str(value)
+    return value
+
+
 __all__ = [
     "BacktestWalkForwardValidationJob",
     "BacktestWalkForwardValidationRunner",
+    "WalkForwardRobustnessDecision",
+    "WalkForwardRobustnessPolicy",
     "WalkForwardPlan",
     "WalkForwardSplit",
     "WalkForwardValidationResult",

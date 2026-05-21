@@ -229,6 +229,16 @@ exceptions:
     reason: VWAP research grouped walk-forward validation evidence artifact
     owner: platform
     expiry: 2027-05-21
+  - class_name: WalkForwardRobustnessDecision
+    module: qts.research.optimizer.walk_forward
+    reason: VWAP research aggregate walk-forward robustness decision artifact
+    owner: platform
+    expiry: 2027-05-21
+  - class_name: WalkForwardRobustnessPolicy
+    module: qts.research.optimizer.walk_forward
+    reason: VWAP research aggregate OOS robustness threshold owner
+    owner: platform
+    expiry: 2027-05-21
   - class_name: OptimizerValidationSummary
     module: qts.research.optimizer.validation
     reason: OPTV-1 accepted/rejected optimizer run summary artifact
