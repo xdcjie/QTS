@@ -40,6 +40,12 @@ from qts.research.factor_evaluation import (
 from qts.research.factor_spec import FactorSpec, FactorSpecDrafter
 from qts.research.factor_spec_store import FactorSpecReview, FactorSpecStore
 from qts.research.optimizer.constraints import OptimizationConstraint
+from qts.research.optimizer.failure_veto import (
+    FailureWindow,
+    FailureWindowVetoJob,
+    FailureWindowVetoRunner,
+    FailureWindowVetoSummary,
+)
 from qts.research.optimizer.parameter_space import ParameterGrid, ParameterSpace
 from qts.research.optimizer.pipeline import BacktestPipelineJob, BacktestPipelineRunner
 from qts.research.optimizer.result import OptimizationResult
@@ -355,6 +361,36 @@ class ResearchSession:
             )
         )
         return WalkForwardValidationSummary.from_results(
+            results,
+            constraints=constraints,
+            capital_metric_config=(
+                None if capital_metric_config is None else dict(capital_metric_config)
+            ),
+        )
+
+    def validate_optimizer_failure_window_veto(
+        self,
+        *,
+        candidate_parameters: Sequence[Mapping[str, Any]],
+        windows: Sequence[FailureWindow],
+        report_only_windows: Sequence[FailureWindow] = (),
+        constraints: Iterable[OptimizationConstraint] = (),
+        capital_metric_config: Mapping[str, Any] | None = None,
+        objective_metric: str | None = None,
+        output_root: Path | None = None,
+    ) -> FailureWindowVetoSummary:
+        """Rerun selected optimizer candidates across failure-veto windows."""
+        results = FailureWindowVetoRunner().run(
+            FailureWindowVetoJob(
+                base_config_path=self._config.backtest_config_path,
+                candidate_parameters=tuple(dict(parameters) for parameters in candidate_parameters),
+                objective_metric=objective_metric or self._config.objective_metric,
+                output_root=output_root or self._config.output_root / "failure-veto",
+                windows=tuple(windows),
+                report_only_windows=tuple(report_only_windows),
+            )
+        )
+        return FailureWindowVetoSummary.from_results(
             results,
             constraints=constraints,
             capital_metric_config=(

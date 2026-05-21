@@ -232,6 +232,90 @@ def test_research_session_delegates_walk_forward_validation_to_backtest_runner(
     assert summary.to_payload()["run_count"] == 1
 
 
+def test_research_session_delegates_failure_window_veto_to_backtest_runner(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from qts.research.optimizer import FailureWindow, MetricConstraint
+
+    config_path = _write_research_config(tmp_path, _minimal_research_yaml(tmp_path))
+    session = ResearchSession.from_yaml(config_path)
+    calls: list[dict[str, Any]] = []
+
+    class FakeRunner:
+        def run(self, job: Any) -> tuple[object, ...]:
+            calls.append(
+                {
+                    "base_config_path": job.base_config_path,
+                    "candidate_parameters": job.candidate_parameters,
+                    "objective_metric": job.objective_metric,
+                    "output_root": job.output_root,
+                    "report_only_windows": job.report_only_windows,
+                    "windows": job.windows,
+                }
+            )
+            return ()
+
+    class FakeSummary:
+        @classmethod
+        def from_results(
+            cls,
+            results: object,
+            *,
+            constraints: object,
+            capital_metric_config: object = None,
+        ) -> object:
+            calls.append(
+                {
+                    "capital_metric_config": capital_metric_config,
+                    "constraints": constraints,
+                    "results": results,
+                }
+            )
+            return cls()
+
+        def to_payload(self) -> dict[str, object]:
+            return {"decision": {"accepted": True, "reasons": ()}}
+
+    monkeypatch.setattr("qts.research.session.FailureWindowVetoRunner", FakeRunner)
+    monkeypatch.setattr("qts.research.session.FailureWindowVetoSummary", FakeSummary)
+    window = FailureWindow("failure-2024", date(2024, 1, 1), date(2025, 1, 1))
+    report_window = FailureWindow(
+        "report-2025-2026",
+        date(2025, 1, 1),
+        date(2026, 4, 10),
+        report_only=True,
+    )
+    constraint = MetricConstraint("pnl_usd", ">", Decimal("0"))
+
+    summary = session.validate_optimizer_failure_window_veto(
+        candidate_parameters=({"alpha": "1"},),
+        windows=(window,),
+        report_only_windows=(report_window,),
+        constraints=(constraint,),
+        capital_metric_config={"margin_proxy": "12000"},
+        objective_metric="sharpe_ratio",
+        output_root=tmp_path / "failure-veto",
+    )
+
+    assert summary.to_payload()["decision"]["accepted"] is True
+    assert calls == [
+        {
+            "base_config_path": tmp_path / "backtest.yaml",
+            "candidate_parameters": ({"alpha": "1"},),
+            "objective_metric": "sharpe_ratio",
+            "output_root": tmp_path / "failure-veto",
+            "report_only_windows": (report_window,),
+            "windows": (window,),
+        },
+        {
+            "capital_metric_config": {"margin_proxy": "12000"},
+            "constraints": (constraint,),
+            "results": (),
+        },
+    ]
+
+
 def _write_manifest(
     tmp_path: Path,
     *,
