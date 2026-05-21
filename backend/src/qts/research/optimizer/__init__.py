@@ -5,6 +5,13 @@ from qts.research.optimizer.constraints import (
     MetricConstraint,
     OptimizationConstraint,
 )
+from qts.research.optimizer.failure_veto import (
+    FailureWindow,
+    FailureWindowVetoJob,
+    FailureWindowVetoResult,
+    FailureWindowVetoRunner,
+    FailureWindowVetoSummary,
+)
 from qts.research.optimizer.job import BarsFactory, OptimizationJob, StrategyFactory
 from qts.research.optimizer.parameter_space import ParameterGrid, ParameterSpace
 from qts.research.optimizer.pipeline import BacktestPipelineJob, BacktestPipelineRunner
@@ -33,6 +40,11 @@ __all__ = [
     "BacktestPipelineRunner",
     "BarsFactory",
     "ConstraintDecision",
+    "FailureWindow",
+    "FailureWindowVetoJob",
+    "FailureWindowVetoResult",
+    "FailureWindowVetoRunner",
+    "FailureWindowVetoSummary",
     "MetricConstraint",
     "OptimizationJob",
     "OptimizationConstraint",
