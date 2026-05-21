@@ -653,18 +653,31 @@ def test_vwap_long_research_configs_are_symbol_isolated_and_hold_out_oos(
 
 
 @pytest.mark.parametrize(
-    "workflow_path",
+    ("workflow_path", "fragment"),
     [
-        Path("configs/research/workflows/vwap_factor_gc_long_search.yaml"),
-        Path("configs/research/workflows/vwap_factor_si_long_search.yaml"),
-        Path("configs/research/workflows/vwap_factor_gc_5m_long_search.yaml"),
-        Path("configs/research/workflows/vwap_factor_si_5m_long_search.yaml"),
-        Path("configs/research/workflows/vwap_factor_gc_15m_long_search.yaml"),
-        Path("configs/research/workflows/vwap_factor_si_15m_long_search.yaml"),
+        (Path("configs/research/workflows/vwap_factor_gc_long_search.yaml"), "gc-long"),
+        (Path("configs/research/workflows/vwap_factor_si_long_search.yaml"), "si-long"),
+        (
+            Path("configs/research/workflows/vwap_factor_gc_5m_long_search.yaml"),
+            "gc-5m-long",
+        ),
+        (
+            Path("configs/research/workflows/vwap_factor_si_5m_long_search.yaml"),
+            "si-5m-long",
+        ),
+        (
+            Path("configs/research/workflows/vwap_factor_gc_15m_long_search.yaml"),
+            "gc-15m-long",
+        ),
+        (
+            Path("configs/research/workflows/vwap_factor_si_15m_long_search.yaml"),
+            "si-15m-long",
+        ),
     ],
 )
 def test_vwap_long_research_workflows_include_2022_2024_failure_veto(
     workflow_path: Path,
+    fragment: str,
 ) -> None:
     workflow_config = ResearchWorkflowConfig.from_yaml(workflow_path)
     optimize_steps = [step for step in workflow_config.steps if step.kind == "optimize"]
@@ -674,6 +687,11 @@ def test_vwap_long_research_workflows_include_2022_2024_failure_veto(
         veto = step.payload["validation"]["failure_window_veto"]
         assert veto["top_n"] == 3
         assert veto["require_passing_candidate"] is True
+        assert veto["output_root"] == f"../../../runs/research/vwap/{fragment}/failure-veto/primary"
+        assert (
+            veto["summary_output"]
+            == f"../../../runs/research/vwap/{fragment}/validation/failure-veto.json"
+        )
         assert [
             {
                 "name": str(window["name"]),
