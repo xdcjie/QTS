@@ -41,6 +41,8 @@ uv.lock
 *.db
 evidence/
 runs/
+artifacts/analysis/**
+!artifacts/analysis/backend_class_role_review_2026-05-18.md
 
 # Frontend
 node_modules/
