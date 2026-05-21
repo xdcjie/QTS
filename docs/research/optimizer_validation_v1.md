@@ -11,6 +11,7 @@ It may:
 - record accepted and rejected optimizer runs with reasons;
 - describe deterministic walk-forward train/test windows;
 - rerun selected backtest-pipeline candidates across those train/test windows;
+- apply predeclared failure-window veto gates to selected candidates;
 - derive research-only capital metrics from completed backtest manifests;
 - write deterministic JSON validation summaries.
 
@@ -61,6 +62,89 @@ from the same backtest pipeline as normal optimizer runs.
 `WalkForwardValidationSummary` groups the rerun evidence by split and phase,
 then applies the same validation constraints and optional capital metrics used
 by `OptimizerValidationSummary`.
+
+## Failure-Window Veto
+
+Failure-window veto validation is a research-only gate for rejecting optimizer
+candidates that fail in predeclared adverse market environments. It is designed
+for cases where a later favorable period would otherwise offset an earlier
+common-failure period in aggregate OOS evidence.
+
+The domain invariant is:
+
+```text
+A candidate that fails any predeclared veto window is rejected for promotion.
+Later report-only windows must not compensate for, override, or tune away that
+failure decision.
+```
+
+The correct owner is `qts.research.optimizer` validation. The gate reruns
+completed optimizer candidate parameters through the normal `BacktestPipeline`
+date-range override path, applies validation constraints to each veto window,
+and writes deterministic evidence. It must not change strategy behavior, add
+strategy factor filters, create orders or target intents, bypass the normal
+backtest pipeline, or alter runtime/risk/execution/account semantics.
+
+The first VWAP research use case treats `[2022-01-01, 2025-01-01)` as the
+failure-veto period and `[2025-01-01, 2026-04-10)` as report-only evidence.
+This keeps all of calendar year 2024 inside veto evidence and prevents
+2025-2026 performance from rescuing candidates that fail in 2022-2024.
+
+Workflow validation may declare:
+
+```yaml
+validation:
+  failure_window_veto:
+    top_n: 3
+    require_passing_candidate: true
+    output_root: ../../../runs/research/vwap/gc-long/failure-veto
+    summary_output: ../../../runs/research/vwap/gc-long/validation/failure-veto.json
+    windows:
+      - name: failure-2022
+        start: 2022-01-01
+        end: 2023-01-01
+      - name: failure-2023
+        start: 2023-01-01
+        end: 2024-01-01
+      - name: failure-2024
+        start: 2024-01-01
+        end: 2025-01-01
+    constraints:
+      - metric: pnl_usd
+        operator: ">"
+        threshold: "0"
+      - metric: max_drawdown
+        operator: "<="
+        threshold: "0.05"
+    report_only_windows:
+      - name: report-2025-2026
+        start: 2025-01-01
+        end: 2026-04-10
+```
+
+`windows` are hard veto windows. Each selected candidate is evaluated
+independently against every veto window. Any failed veto-window constraint
+rejects that candidate. Veto-window PnL, objective value, and drawdown are not
+aggregated across windows for the accept/reject decision.
+
+`report_only_windows` are optional evidence windows. They may be rerun and
+written to the summary for context, but they are excluded from the veto decision
+and must be marked as report-only in the output artifact.
+
+The summary artifact records:
+
+- deterministic candidate identity;
+- candidate parameters;
+- per-window manifest path and hash;
+- per-window accepted/rejected status and reasons;
+- accepted and rejected candidate lists;
+- aggregate decision status and reasons;
+- explicit separation between veto windows and report-only windows.
+
+When `require_passing_candidate` is true and every selected candidate is
+rejected by the veto gate, the workflow `optimize` step is blocked. Otherwise
+the gate writes evidence without changing optimizer ranking or strategy
+behavior.
 
 ## Validation Summary
 
@@ -127,12 +211,26 @@ validation:
         train_end: "2026-01-15"
         test_start: "2026-01-15"
         test_end: "2026-01-31"
+  failure_window_veto:
+    top_n: 3
+    require_passing_candidate: true
+    windows:
+      - name: failure-2024
+        start: "2024-01-01"
+        end: "2025-01-01"
+    constraints:
+      - metric: pnl_usd
+        operator: ">"
+        threshold: "0"
 ```
 
 When present, the CLI applies constraints to the validation summary and records
 walk-forward split metadata. The research workflow runner additionally uses
 `validation.walk_forward` to rerun the selected top candidates and can write a
-separate walk-forward summary artifact. When `capital_metrics.margin_proxy` or
+separate walk-forward summary artifact. The research workflow runner also uses
+`validation.failure_window_veto` to rerun selected top candidates on
+predeclared veto windows and can block the workflow when no selected candidate
+survives. When `capital_metrics.margin_proxy` or
 `capital_metrics.margin_proxy_usd` is present, the summary also records
 `return_on_margin_proxy`. Without `validation`, the summary remains
 unconstrained and accepts every completed optimizer result.
