@@ -6,8 +6,11 @@ parameters:
   - name: factor_filters
     values:
       - [session_sigma_range, mom120_aligned]
+      - [session_sigma_range, mom120_aligned, volume_curve_range]
   - name: time_window
     values: [evening_18_22]
+  - name: min_session_open_minutes
+    values: [0, 30]
   - name: min_volume_ratio
     values: ["1.1", "1.2"]
   - name: pullback_touch_atr_below

@@ -21,5 +21,6 @@ params:
   session_sigma_min_atr: "0.05"
   session_sigma_max_atr: "2.00"
   rth_drive_min_atr: "0.50"
+  min_session_open_minutes: 0
   time_window: evening_18_22
   factor_filters: []

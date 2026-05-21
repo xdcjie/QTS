@@ -288,6 +288,25 @@ def test_overnight_research_time_windows_are_half_open_in_exchange_time() -> Non
     assert not extended._time_allowed(_bar_at_et(17, 30))  # noqa: SLF001
 
 
+def test_session_open_cooloff_blocks_new_session_opening_noise() -> None:
+    strategy = VwapFactorResearchStrategy(
+        VwapFactorResearchConfig(
+            time_window="evening_18_22",
+            min_session_open_minutes=30,
+        )
+    )
+
+    assert not strategy._time_allowed(_bar_at_et(18, 29))  # noqa: SLF001
+    assert strategy._time_allowed(_bar_at_et(18, 30))  # noqa: SLF001
+    assert strategy._time_allowed(_bar_at_et(21, 59))  # noqa: SLF001
+
+
+def test_default_session_open_cooloff_preserves_opening_hour_behavior() -> None:
+    strategy = VwapFactorResearchStrategy(VwapFactorResearchConfig(time_window="evening_18_22"))
+
+    assert strategy._time_allowed(_bar_at_et(18, 0))  # noqa: SLF001
+
+
 def test_long_exit_levels_use_entry_price_atr_and_r_multiple() -> None:
     strategy, ctx = initialized_strategy(
         VwapFactorResearchConfig(

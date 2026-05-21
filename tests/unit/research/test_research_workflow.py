@@ -364,6 +364,19 @@ def test_vwap_workflow_uses_multi_window_top_n_walk_forward_validation() -> None
     assert len(plan.splits) == 3
 
 
+def test_vwap_risk_reward_sweep_covers_open_cooloff_and_volume_curve_regime() -> None:
+    config = ResearchWorkflowConfig.from_yaml(
+        Path("configs/research/workflows/vwap_factor_search.yaml")
+    )
+    risk_reward = next(step for step in config.steps if step.step_id == "risk-reward")
+    parameters = risk_reward.payload["parameters"]
+
+    assert parameters["min_session_open_minutes"] == [0, 30]
+    assert ["session_sigma_range", "mom120_aligned", "volume_curve_range"] in parameters[
+        "factor_filters"
+    ]
+
+
 def test_workflow_runs_factor_evaluation_step(tmp_path: Path) -> None:
     workflow_path = _write_workflow(
         tmp_path,

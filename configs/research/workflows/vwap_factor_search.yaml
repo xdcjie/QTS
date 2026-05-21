@@ -138,6 +138,8 @@ steps:
       time_window: [evening_18_22]
       factor_filters:
         - [session_sigma_range, mom120_aligned]
+        - [session_sigma_range, mom120_aligned, volume_curve_range]
+      min_session_open_minutes: [0, 30]
       min_volume_ratio: ["1.1", "1.2"]
       pullback_touch_atr_below: ["0.1", "0.15", "0.2"]
       max_pullback_break_atr: ["1.0"]

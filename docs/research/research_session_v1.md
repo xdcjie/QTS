@@ -284,10 +284,12 @@ The standard factor-search workflow also includes regime-oriented filters for
 VWAP slope strength, ATR/price range, session VWAP dispersion, RTH opening
 drive, and a combined trend regime gate. These filters are strategy candidate
 gates only; optimizer runs still execute through `BacktestPipeline`.
-For the current VWAP research workflow, the risk/reward sweep uses
-`session_sigma_range + mom120_aligned` as the candidate regime gate, with
-`session_sigma_min_atr=0.05` and `session_sigma_max_atr=2.00` supplied by the
-strategy research config.
+For the current VWAP research workflow, the risk/reward sweep compares
+`session_sigma_range + mom120_aligned` against the same gate with
+`volume_curve_range`, and also sweeps `min_session_open_minutes` between `0`
+and `30`. The session dispersion defaults
+`session_sigma_min_atr=0.05` and `session_sigma_max_atr=2.00` are supplied by
+the strategy research config.
 
 Workflow configs reject promotion/trading keys such as `generate_code`,
 `promote`, `paper`, `live`, `broker`, `orders`, `runtime`, and `trade`.

@@ -125,6 +125,9 @@ class VwapFactorResearchConfig:
     ts_momentum_min_abs: Decimal = Decimal("0")
     volume_curve_ratio_min: Decimal = Decimal("0.6")
     volume_curve_ratio_max: Decimal = Decimal("1.8")
+    min_session_open_minutes: int = 0
+    session_open_et_hour: int = 18
+    session_open_et_minute: int = 0
     minutes_before_close_flat: int = 30
     session_close_et_hour: int = 17
     session_close_et_minute: int = 0
@@ -165,6 +168,18 @@ class VwapFactorResearchConfig:
         for name, value in positive_ints.items():
             if value <= 0:
                 raise ValueError(f"{name} must be positive")
+        if self.min_session_open_minutes < 0:
+            raise ValueError("min_session_open_minutes must be non-negative")
+        if self.min_session_open_minutes >= 24 * 60:
+            raise ValueError("min_session_open_minutes must be less than one day")
+        for name in ("session_open_et_hour", "session_close_et_hour"):
+            value = getattr(self, name)
+            if not 0 <= value <= 23:
+                raise ValueError(f"{name} must be between 0 and 23")
+        for name in ("session_open_et_minute", "session_close_et_minute"):
+            value = getattr(self, name)
+            if not 0 <= value <= 59:
+                raise ValueError(f"{name} must be between 0 and 59")
         decimal_fields = (
             "target_quantity",
             "pullback_touch_atr_below",
@@ -632,20 +647,32 @@ class VwapFactorResearchStrategy(Strategy):
             "bucket_08_16_full_anchor": ((8 * 60, 16 * 60),),
         }
         if window == "full_session":
-            return not (17 * 60 <= minute < 18 * 60)
-        if window == "avoid_06_08_14_17":
-            return not (6 * 60 <= minute < 8 * 60 or 14 * 60 <= minute < 17 * 60)
-        if window in intervals:
-            return any(
+            allowed = not (17 * 60 <= minute < 18 * 60)
+        elif window == "avoid_06_08_14_17":
+            allowed = not (6 * 60 <= minute < 8 * 60 or 14 * 60 <= minute < 17 * 60)
+        elif window in intervals:
+            allowed = any(
                 self._minute_in_interval(minute, start, end) for start, end in intervals[window]
             )
-        raise ValueError(f"unknown time_window: {window}")
+        else:
+            raise ValueError(f"unknown time_window: {window}")
+        return allowed and self._session_open_cooloff_elapsed(bar)
 
     @staticmethod
     def _minute_in_interval(minute: int, start: int, end: int) -> bool:
         if start < end:
             return start <= minute < end
         return minute >= start or minute < end
+
+    def _session_open_cooloff_elapsed(self, bar: Bar) -> bool:
+        return self._minutes_since_session_open(bar) >= self._config.min_session_open_minutes
+
+    def _minutes_since_session_open(self, bar: Bar) -> int:
+        minute = self._et_minute(bar)
+        open_minute = self._config.session_open_et_hour * 60 + self._config.session_open_et_minute
+        if minute >= open_minute:
+            return minute - open_minute
+        return minute + 24 * 60 - open_minute
 
     def _update_session_state(self, bar: Bar) -> None:
         if bar.session_id != self._session.session_id:
