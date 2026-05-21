@@ -1446,7 +1446,7 @@
     <div class="inventory-stats" aria-label="source inventory summary">
       <span>387 files</span>
       <span>719 classes</span>
-      <span>2568 functions</span>
+      <span>2569 functions</span>
       <span>370 backend</span>
       <span>17 frontend</span>
     </div>
@@ -9697,10 +9697,10 @@
             <thead><tr><th>类</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
               <tr><td><code>FailureWindow</code></td><td>failure_veto:23</td><td>One adverse optimizer validation window.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>FailureWindowVetoJob</code></td><td>failure_veto:48</td><td>Backtest-pipeline failure-window veto validation job.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>FailureWindowVetoResult</code></td><td>failure_veto:110</td><td>One selected candidate result for one failure-window rerun.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>FailureWindowVetoRunner</code></td><td>failure_veto:122</td><td>Rerun selected optimizer candidates across veto and report-only windows.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
-              <tr><td><code>FailureWindowVetoSummary</code></td><td>failure_veto:167</td><td>Candidate-level promotion decision from failure-window evidence.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>FailureWindowVetoJob</code></td><td>failure_veto:51</td><td>Backtest-pipeline failure-window veto validation job.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>FailureWindowVetoResult</code></td><td>failure_veto:113</td><td>One selected candidate result for one failure-window rerun.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>FailureWindowVetoRunner</code></td><td>failure_veto:125</td><td>Rerun selected optimizer candidates across veto and report-only windows.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
+              <tr><td><code>FailureWindowVetoSummary</code></td><td>failure_veto:170</td><td>Candidate-level promotion decision from failure-window evidence.</td><td>用显式类型封装该概念的责任，减少字典、散落参数和跨模块隐式约定。</td></tr>
             </tbody>
           </table>
         </div>
@@ -9710,18 +9710,18 @@
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
               <tr><td><code>__post_init__</code></td><td>FailureWindow:31</td><td>完成 dataclass 构造后的派生字段、归一化或不变量校验。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>to_metadata</code></td><td>FailureWindow:37</td><td>Return a deterministic JSON-ready representation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>FailureWindowVetoJob:58</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>run</code></td><td>FailureWindowVetoRunner:125</td><td>Run selected candidates on every configured failure window.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>from_results</code></td><td>FailureWindowVetoSummary:176</td><td>Build candidate-level veto evidence from failure-window reruns.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>candidate_count</code></td><td>FailureWindowVetoSummary:251</td><td>Return the number of selected candidates represented in evidence.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>decision</code></td><td>FailureWindowVetoSummary:256</td><td>Return the promotion decision payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>to_payload</code></td><td>FailureWindowVetoSummary:264</td><td>Return a deterministic JSON-ready payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_date_boundary</code></td><td>module:276</td><td>提供模块级 date boundary 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_read_manifest</code></td><td>module:280</td><td>提供模块级 read manifest 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_candidate_id</code></td><td>module:287</td><td>提供模块级 candidate id 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_json_safe_parameters</code></td><td>module:294</td><td>提供模块级 json safe parameters 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_json_safe_parameter_value</code></td><td>module:301</td><td>提供模块级 json safe parameter value 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>to_metadata</code></td><td>FailureWindow:40</td><td>Return a deterministic JSON-ready representation.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>FailureWindowVetoJob:61</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>run</code></td><td>FailureWindowVetoRunner:128</td><td>Run selected candidates on every configured failure window.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>from_results</code></td><td>FailureWindowVetoSummary:179</td><td>Build candidate-level veto evidence from failure-window reruns.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>candidate_count</code></td><td>FailureWindowVetoSummary:254</td><td>Return the number of selected candidates represented in evidence.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>decision</code></td><td>FailureWindowVetoSummary:259</td><td>Return the promotion decision payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>to_payload</code></td><td>FailureWindowVetoSummary:267</td><td>Return a deterministic JSON-ready payload.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_date_boundary</code></td><td>module:279</td><td>提供模块级 date boundary 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_read_manifest</code></td><td>module:283</td><td>提供模块级 read manifest 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_candidate_id</code></td><td>module:290</td><td>提供模块级 candidate id 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_json_safe_parameters</code></td><td>module:297</td><td>提供模块级 json safe parameters 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_json_safe_parameter_value</code></td><td>module:304</td><td>提供模块级 json safe parameter value 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
@@ -10236,7 +10236,7 @@
         <code>backend/src/qts/research/workflow.py</code>
         <span class="inventory-counts">
           <span>5 classes</span>
-          <span>41 functions</span>
+          <span>42 functions</span>
         </span>
       </summary>
       <div class="inventory-body">
@@ -10282,25 +10282,26 @@
               <tr><td><code>_factor_tearsheet</code></td><td>ResearchWorkflowRunner:429</td><td>实现 ResearchWorkflowRunner 的 factor tearsheet 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>_backtest</code></td><td>ResearchWorkflowRunner:473</td><td>实现 ResearchWorkflowRunner 的 backtest 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
               <tr><td><code>_optimize</code></td><td>ResearchWorkflowRunner:497</td><td>实现 ResearchWorkflowRunner 的 optimize 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_validation_constraints</code></td><td>ResearchWorkflowRunner:668</td><td>实现 ResearchWorkflowRunner 的 validation constraints 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_metric_constraints_from_sequence</code></td><td>ResearchWorkflowRunner:680</td><td>实现 ResearchWorkflowRunner 的 metric constraints from sequence 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_walk_forward_payload</code></td><td>ResearchWorkflowRunner:702</td><td>实现 ResearchWorkflowRunner 的 walk forward payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_failure_window_veto_payload</code></td><td>ResearchWorkflowRunner:713</td><td>实现 ResearchWorkflowRunner 的 failure window veto payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_failure_veto_constraints</code></td><td>ResearchWorkflowRunner:724</td><td>实现 ResearchWorkflowRunner 的 failure veto constraints 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_failure_windows</code></td><td>ResearchWorkflowRunner:736</td><td>实现 ResearchWorkflowRunner 的 failure windows 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_walk_forward_plan</code></td><td>ResearchWorkflowRunner:769</td><td>实现 ResearchWorkflowRunner 的 walk forward plan 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_walk_forward_robustness_policy</code></td><td>ResearchWorkflowRunner:789</td><td>实现 ResearchWorkflowRunner 的 walk forward robustness policy 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_iso_date</code></td><td>ResearchWorkflowRunner:809</td><td>实现 ResearchWorkflowRunner 的 iso date 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_required_mapping</code></td><td>ResearchWorkflowRunner:818</td><td>实现 ResearchWorkflowRunner 的 required mapping 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_optional_mapping</code></td><td>ResearchWorkflowRunner:825</td><td>实现 ResearchWorkflowRunner 的 optional mapping 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_optional_int</code></td><td>ResearchWorkflowRunner:833</td><td>实现 ResearchWorkflowRunner 的 optional int 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_optional_decimal</code></td><td>ResearchWorkflowRunner:839</td><td>实现 ResearchWorkflowRunner 的 optional decimal 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_string_tuple</code></td><td>ResearchWorkflowRunner:845</td><td>实现 ResearchWorkflowRunner 的 string tuple 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_optional_string_tuple</code></td><td>ResearchWorkflowRunner:853</td><td>实现 ResearchWorkflowRunner 的 optional string tuple 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_can_import</code></td><td>ResearchWorkflowRunner:859</td><td>实现 ResearchWorkflowRunner 的 can import 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_can_resolve_attribute</code></td><td>ResearchWorkflowRunner:867</td><td>实现 ResearchWorkflowRunner 的 can resolve attribute 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_required_text</code></td><td>module:878</td><td>提供模块级 required text 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_json_ready</code></td><td>module:885</td><td>提供模块级 json ready 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_validation_constraints</code></td><td>ResearchWorkflowRunner:671</td><td>实现 ResearchWorkflowRunner 的 validation constraints 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_metric_constraints_from_sequence</code></td><td>ResearchWorkflowRunner:683</td><td>实现 ResearchWorkflowRunner 的 metric constraints from sequence 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_walk_forward_payload</code></td><td>ResearchWorkflowRunner:705</td><td>实现 ResearchWorkflowRunner 的 walk forward payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_failure_window_veto_payload</code></td><td>ResearchWorkflowRunner:716</td><td>实现 ResearchWorkflowRunner 的 failure window veto payload 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_failure_veto_constraints</code></td><td>ResearchWorkflowRunner:727</td><td>实现 ResearchWorkflowRunner 的 failure veto constraints 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_failure_veto_require_passing_candidate</code></td><td>ResearchWorkflowRunner:740</td><td>实现 ResearchWorkflowRunner 的 failure veto require passing candidate 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_failure_windows</code></td><td>ResearchWorkflowRunner:748</td><td>实现 ResearchWorkflowRunner 的 failure windows 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_walk_forward_plan</code></td><td>ResearchWorkflowRunner:781</td><td>实现 ResearchWorkflowRunner 的 walk forward plan 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_walk_forward_robustness_policy</code></td><td>ResearchWorkflowRunner:801</td><td>实现 ResearchWorkflowRunner 的 walk forward robustness policy 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_iso_date</code></td><td>ResearchWorkflowRunner:821</td><td>实现 ResearchWorkflowRunner 的 iso date 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_required_mapping</code></td><td>ResearchWorkflowRunner:830</td><td>实现 ResearchWorkflowRunner 的 required mapping 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_optional_mapping</code></td><td>ResearchWorkflowRunner:837</td><td>实现 ResearchWorkflowRunner 的 optional mapping 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_optional_int</code></td><td>ResearchWorkflowRunner:845</td><td>实现 ResearchWorkflowRunner 的 optional int 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_optional_decimal</code></td><td>ResearchWorkflowRunner:851</td><td>实现 ResearchWorkflowRunner 的 optional decimal 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_string_tuple</code></td><td>ResearchWorkflowRunner:857</td><td>实现 ResearchWorkflowRunner 的 string tuple 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_optional_string_tuple</code></td><td>ResearchWorkflowRunner:865</td><td>实现 ResearchWorkflowRunner 的 optional string tuple 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_can_import</code></td><td>ResearchWorkflowRunner:871</td><td>实现 ResearchWorkflowRunner 的 can import 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_can_resolve_attribute</code></td><td>ResearchWorkflowRunner:879</td><td>实现 ResearchWorkflowRunner 的 can resolve attribute 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_required_text</code></td><td>module:890</td><td>提供模块级 required text 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_json_ready</code></td><td>module:897</td><td>提供模块级 json ready 操作。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>
