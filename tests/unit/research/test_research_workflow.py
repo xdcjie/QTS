@@ -653,6 +653,54 @@ def test_vwap_long_research_configs_are_symbol_isolated_and_hold_out_oos(
 
 
 @pytest.mark.parametrize(
+    "workflow_path",
+    [
+        Path("configs/research/workflows/vwap_factor_gc_long_search.yaml"),
+        Path("configs/research/workflows/vwap_factor_si_long_search.yaml"),
+        Path("configs/research/workflows/vwap_factor_gc_5m_long_search.yaml"),
+        Path("configs/research/workflows/vwap_factor_si_5m_long_search.yaml"),
+        Path("configs/research/workflows/vwap_factor_gc_15m_long_search.yaml"),
+        Path("configs/research/workflows/vwap_factor_si_15m_long_search.yaml"),
+    ],
+)
+def test_vwap_long_research_workflows_include_2022_2024_failure_veto(
+    workflow_path: Path,
+) -> None:
+    workflow_config = ResearchWorkflowConfig.from_yaml(workflow_path)
+    optimize_steps = [step for step in workflow_config.steps if step.kind == "optimize"]
+
+    assert optimize_steps
+    for step in optimize_steps:
+        veto = step.payload["validation"]["failure_window_veto"]
+        assert veto["top_n"] == 3
+        assert veto["require_passing_candidate"] is True
+        assert [
+            {
+                "name": str(window["name"]),
+                "start": window["start"].isoformat(),
+                "end": window["end"].isoformat(),
+            }
+            for window in veto["windows"]
+        ] == [
+            {"name": "failure-2022", "start": "2022-01-01", "end": "2023-01-01"},
+            {"name": "failure-2023", "start": "2023-01-01", "end": "2024-01-01"},
+            {"name": "failure-2024", "start": "2024-01-01", "end": "2025-01-01"},
+        ]
+        assert [
+            {
+                "name": str(window["name"]),
+                "start": window["start"].isoformat(),
+                "end": window["end"].isoformat(),
+            }
+            for window in veto["report_only_windows"]
+        ] == [{"name": "report-2025-2026", "start": "2025-01-01", "end": "2026-04-10"}]
+        assert veto["constraints"] == [
+            {"metric": "pnl_usd", "operator": ">", "threshold": "0"},
+            {"metric": "max_drawdown", "operator": "<=", "threshold": "0.05"},
+        ]
+
+
+@pytest.mark.parametrize(
     ("backtest_path", "workflow_path"),
     [
         (

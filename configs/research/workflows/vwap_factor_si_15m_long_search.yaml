@@ -39,6 +39,32 @@ steps:
         - metric: profit_factor
           operator: ">="
           threshold: "1.00"
+      failure_window_veto:
+        top_n: 3
+        require_passing_candidate: true
+        output_root: ../../../runs/research/vwap/si-15m-long/failure-veto/primary
+        summary_output: ../../../runs/research/vwap/si-15m-long/validation/failure-veto.json
+        windows:
+          - name: failure-2022
+            start: 2022-01-01
+            end: 2023-01-01
+          - name: failure-2023
+            start: 2023-01-01
+            end: 2024-01-01
+          - name: failure-2024
+            start: 2024-01-01
+            end: 2025-01-01
+        constraints:
+          - metric: pnl_usd
+            operator: ">"
+            threshold: "0"
+          - metric: max_drawdown
+            operator: "<="
+            threshold: "0.05"
+        report_only_windows:
+          - name: report-2025-2026
+            start: 2025-01-01
+            end: 2026-04-10
       walk_forward:
         top_n: 3
         output_root: ../../../runs/research/vwap/si-15m-long/walk-forward/primary-oos
