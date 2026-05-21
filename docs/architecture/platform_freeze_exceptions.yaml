@@ -239,6 +239,31 @@ exceptions:
     reason: VWAP research aggregate OOS robustness threshold owner
     owner: platform
     expiry: 2027-05-21
+  - class_name: FailureWindow
+    module: qts.research.optimizer.failure_veto
+    reason: research-only failure-window veto metadata value object for adverse optimizer windows
+    owner: research
+    expiry: 2027-05-21
+  - class_name: FailureWindowVetoJob
+    module: qts.research.optimizer.failure_veto
+    reason: research-only failure-window veto rerun job owner for selected optimizer candidates
+    owner: research
+    expiry: 2027-05-21
+  - class_name: FailureWindowVetoResult
+    module: qts.research.optimizer.failure_veto
+    reason: research-only failure-window veto per-window candidate evidence value object
+    owner: research
+    expiry: 2027-05-21
+  - class_name: FailureWindowVetoRunner
+    module: qts.research.optimizer.failure_veto
+    reason: research-only failure-window veto BacktestPipeline rerun coordinator
+    owner: research
+    expiry: 2027-05-21
+  - class_name: FailureWindowVetoSummary
+    module: qts.research.optimizer.failure_veto
+    reason: research-only failure-window veto promotion decision evidence owner
+    owner: research
+    expiry: 2027-05-21
   - class_name: OptimizerValidationSummary
     module: qts.research.optimizer.validation
     reason: OPTV-1 accepted/rejected optimizer run summary artifact
