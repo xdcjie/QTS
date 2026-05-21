@@ -68,10 +68,10 @@ Priority: P0 (next sprint) > P1 (next quarter) > P2 (when capacity) > P3 (watch)
 #### OPT-01 — Strongly-type the Strategy SDK callbacks
 - Status: DONE
 - Review status matrix: `docs/plan/qts_vs_lean_p0_review_status_matrix.md`
-- Files: `backend/src/qts/strategy_sdk/strategy.py:9-31`, `examples/strategies/vwap_pullback.py` (uses `Any`)
+- Files: `backend/src/qts/strategy_sdk/strategy.py:9-31`, `examples/strategies/vwap_pullback_v2.py`
 - Problem: `Strategy.initialize/on_bar/on_tick/on_timer/on_order_update/on_fill/finalize` declare every parameter as `object`. Strategy authors lose IDE completion and mypy coverage. The example strategy works around this with `Any`.
 - Proposal: switch to typed signatures using `StrategyContext`, `Bar`, `Tick`, `Timer`, `OrderUpdate`, `Fill`. Consider a `Protocol` to keep the SDK open for testing fakes. Bump example strategies to drop `Any`.
-- Acceptance: `examples/strategies/vwap_pullback.py` mypy-clean without `Any`; `strategy_api.md` updated.
+- Acceptance: `examples/strategies/vwap_pullback_v2.py` mypy-clean without `Any`; `strategy_api.md` updated.
 - ETA: 1 week
 - Depends on: nothing
 - Risk: low

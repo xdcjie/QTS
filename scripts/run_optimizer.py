@@ -29,7 +29,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 from qts.research import ExperimentManifestConfig, ExperimentManifestWriter, ExperimentStore
 from qts.research.optimizer import (
     BacktestPipelineJob,
@@ -283,6 +283,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         summary = OptimizerValidationSummary.from_results(
             results,
             _validation_constraints(config),
+            capital_metric_config=_capital_metric_config(config),
             walk_forward_plan=_walk_forward_plan(config),
         )
         OptimizerValidationSummaryWriter().write(args.validation_output, summary)
@@ -296,6 +297,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
     print(_format_ranked_table(results, objective_metric))
     return 0
+
+
+def _capital_metric_config(config: dict[str, Any]) -> dict[str, Any] | None:
+    value = config.get("capital_metrics")
+    if value is None:
+        return None
+    return _require_mapping(value, "capital_metrics")
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -23,7 +23,11 @@ class ConstraintDecision:
 class OptimizationConstraint(Protocol):
     """Contract for constraints that mark optimizer results accepted or rejected."""
 
-    def evaluate(self, result: OptimizationResult) -> ConstraintDecision:
+    def evaluate(
+        self,
+        result: OptimizationResult,
+        metric_overrides: Mapping[str, Any] | None = None,
+    ) -> ConstraintDecision:
         """Return the validation decision for one optimization result."""
 
 
@@ -54,9 +58,13 @@ class MetricConstraint:
             raise ValueError("constraint threshold must be finite")
         object.__setattr__(self, "threshold", threshold)
 
-    def evaluate(self, result: OptimizationResult) -> ConstraintDecision:
+    def evaluate(
+        self,
+        result: OptimizationResult,
+        metric_overrides: Mapping[str, Any] | None = None,
+    ) -> ConstraintDecision:
         """Evaluate this constraint against metrics in the result manifest."""
-        raw_metric = self._read_manifest_metric_value(result.manifest_path)
+        raw_metric = self._read_metric_value(result.manifest_path, metric_overrides)
         if raw_metric is self._MISSING:
             return ConstraintDecision(
                 accepted=False,
@@ -88,7 +96,13 @@ class MetricConstraint:
             reason=f"{self.metric_name}={metric} failed {comparison}",
         )
 
-    def _read_manifest_metric_value(self, manifest_path: Path) -> Any:
+    def _read_metric_value(
+        self,
+        manifest_path: Path,
+        metric_overrides: Mapping[str, Any] | None,
+    ) -> Any:
+        if metric_overrides is not None and self.metric_name in metric_overrides:
+            return metric_overrides[self.metric_name]
         payload = json.loads(manifest_path.read_text(encoding="utf-8"))
         for section in ("statistics", "metrics"):
             block = payload.get(section)

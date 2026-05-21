@@ -3,13 +3,25 @@
 from __future__ import annotations
 
 import importlib
+import json
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
 import yaml  # type: ignore[import-untyped]
+
+from qts.research.optimizer import (
+    MetricConstraint,
+    OptimizerValidationSummary,
+    OptimizerValidationSummaryWriter,
+    WalkForwardPlan,
+    WalkForwardSplit,
+    derive_capital_metrics,
+)
+from qts.research.report import ResearchWorkflowReport, ResearchWorkflowReportWriter
 
 
 @dataclass(frozen=True, slots=True)
@@ -193,7 +205,7 @@ class ResearchWorkflowRunner:
         results: list[ResearchWorkflowStepResult] = []
         overall_status = "completed"
         for step in config.steps:
-            result = self._run_step(session, config, step)
+            result = self._run_step(session, config, step, steps=tuple(results))
             results.append(result)
             if result.status != "passed":
                 overall_status = "failed" if result.status == "failed" else "blocked"
@@ -214,6 +226,8 @@ class ResearchWorkflowRunner:
         session: Any,
         config: ResearchWorkflowConfig,
         step: ResearchWorkflowStepConfig,
+        *,
+        steps: tuple[ResearchWorkflowStepResult, ...],
     ) -> ResearchWorkflowStepResult:
         try:
             if step.kind == "factor_candidates":
@@ -222,12 +236,16 @@ class ResearchWorkflowRunner:
                 return self._factor_review_gate(session, step)
             if step.kind == "implementation_gate":
                 return self._implementation_gate(step)
+            if step.kind == "factor_evaluation":
+                return self._factor_evaluation(session, config, step)
             if step.kind == "factor_tearsheet":
                 return self._factor_tearsheet(session, config, step)
             if step.kind == "backtest":
                 return self._backtest(session, config, step)
             if step.kind == "optimize":
                 return self._optimize(session, config, step)
+            if step.kind == "research_report":
+                return self._research_report(config, steps, step)
         except Exception as exc:  # pragma: no cover - exercised by CLI integration.
             return ResearchWorkflowStepResult(
                 step_id=step.step_id,
@@ -317,6 +335,95 @@ class ResearchWorkflowRunner:
             outputs=outputs,
         )
 
+    def _factor_evaluation(
+        self,
+        session: Any,
+        config: ResearchWorkflowConfig,
+        step: ResearchWorkflowStepConfig,
+    ) -> ResearchWorkflowStepResult:
+        factor_name = _required_text(step.payload, "factor_name")
+        factor_version = _required_text(step.payload, "factor_version")
+        bucket_count = int(step.payload.get("bucket_count", 5))
+        raw_snapshots = step.payload.get("snapshots")
+        if not isinstance(raw_snapshots, list | tuple) or not raw_snapshots:
+            raise ValueError("factor_evaluation requires non-empty snapshots")
+        output_dir = step.payload.get("output_dir")
+        resolved_snapshots: list[dict[str, object]] = []
+        for snapshot in raw_snapshots:
+            if not isinstance(snapshot, Mapping):
+                raise ValueError("factor_evaluation snapshots must be mappings")
+            factor_scores = snapshot.get("factor_scores")
+            if not isinstance(factor_scores, str | Path):
+                raise ValueError("factor_evaluation snapshot.factor_scores must be a path")
+            forward_returns = snapshot.get("forward_returns")
+            if not isinstance(forward_returns, str | Path):
+                raise ValueError("factor_evaluation snapshot.forward_returns must be a path")
+            resolved_snapshots.append(
+                {
+                    "as_of": snapshot.get("as_of"),
+                    "factor_scores": str(config.resolve_path(factor_scores)),
+                    "forward_returns": str(config.resolve_path(forward_returns)),
+                }
+            )
+        evaluated = session.evaluate_factor(
+            factor_name=factor_name,
+            factor_version=factor_version,
+            snapshots=resolved_snapshots,
+            bucket_count=bucket_count,
+            output_dir=config.resolve_path(str(output_dir)) if output_dir is not None else None,
+        )
+        latest_result = evaluated[-1].result.metrics
+        outputs = {
+            "factor_name": factor_name,
+            "factor_version": factor_version,
+            "artifact_paths": [str(item.artifact_path) for item in evaluated],
+            "snapshot_count": len(evaluated),
+            "rank_ic": str(latest_result.rank_ic),
+            "long_short_spread": str(latest_result.long_short_spread),
+            "coverage": str(latest_result.coverage),
+            "return_count": latest_result.return_count,
+            "scored_count": latest_result.scored_count,
+            "turnover": None if latest_result.turnover is None else str(latest_result.turnover),
+        }
+        return ResearchWorkflowStepResult(
+            step_id=step.step_id,
+            kind=step.kind,
+            status="passed",
+            message="factor evaluation completed",
+            outputs=outputs,
+        )
+
+    def _research_report(
+        self,
+        config: ResearchWorkflowConfig,
+        steps: tuple[ResearchWorkflowStepResult, ...],
+        step: ResearchWorkflowStepConfig,
+    ) -> ResearchWorkflowStepResult:
+        writer_root = (
+            config.resolve_path(_required_text(step.payload, "output_root"))
+            if "output_root" in step.payload
+            else None
+        )
+        if writer_root is None:
+            writer_root = config.workflow_config_path.parent / "research-workflow-reports"
+        writer = ResearchWorkflowReportWriter(writer_root)
+        report_output_path = str(step.payload.get("output_path", "workflow-report.md"))
+        report = ResearchWorkflowReport.from_result(
+            ResearchWorkflowResult(
+                workflow_id=config.workflow_id,
+                status="completed",
+                steps=steps,
+            )
+        )
+        report_path = writer.write(report, output_path=report_output_path)
+        return ResearchWorkflowStepResult(
+            step_id=step.step_id,
+            kind=step.kind,
+            status="passed",
+            message="research report written",
+            outputs={"report_path": str(report_path)},
+        )
+
     def _factor_tearsheet(
         self,
         session: Any,
@@ -402,24 +509,150 @@ class ResearchWorkflowRunner:
         if output_root is not None:
             kwargs["output_root"] = config.resolve_path(str(output_root))
         results = session.optimize(**kwargs)
+        capital_metric_config = self._optional_mapping(step.payload.get("capital_metrics"))
+        constraints = self._validation_constraints(step.payload.get("validation"))
+        validation_summary = OptimizerValidationSummary.from_results(
+            results,
+            constraints,
+            capital_metric_config=capital_metric_config,
+        )
+        validation_output = step.payload.get("validation_output")
+        validation_output_path: Path | None = None
+        if validation_output is not None:
+            validation_output_path = config.resolve_path(str(validation_output))
+            OptimizerValidationSummaryWriter().write(validation_output_path, validation_summary)
+        walk_forward_payload = self._walk_forward_payload(step.payload.get("validation"))
+        walk_forward_summary_payload: dict[str, Any] | None = None
+        walk_forward_output_path: Path | None = None
+        if walk_forward_payload is not None:
+            plan = self._walk_forward_plan(walk_forward_payload)
+            top_n = int(walk_forward_payload.get("top_n", 1))
+            if top_n <= 0:
+                raise ValueError("validation.walk_forward.top_n must be positive")
+            walk_forward_output_root = walk_forward_payload.get("output_root")
+            walk_forward_summary = session.validate_optimizer_walk_forward(
+                candidate_parameters=tuple(dict(result.parameters) for result in results[:top_n]),
+                constraints=constraints,
+                capital_metric_config=capital_metric_config,
+                objective_metric=(None if objective_metric is None else str(objective_metric)),
+                output_root=(
+                    None
+                    if walk_forward_output_root is None
+                    else config.resolve_path(str(walk_forward_output_root))
+                ),
+                plan=plan,
+            )
+            walk_forward_summary_payload = walk_forward_summary.to_payload()
+            raw_walk_forward_output = walk_forward_payload.get("summary_output")
+            if raw_walk_forward_output is not None:
+                walk_forward_output_path = config.resolve_path(str(raw_walk_forward_output))
+                walk_forward_output_path.parent.mkdir(parents=True, exist_ok=True)
+                walk_forward_output_path.write_text(
+                    json.dumps(
+                        _json_ready(walk_forward_summary_payload),
+                        sort_keys=True,
+                        indent=2,
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+        ranked_results = []
+        for result in results:
+            ranked_result = {
+                "manifest_hash": result.manifest_hash,
+                "manifest_path": str(result.manifest_path),
+                "objective_value": str(result.objective_value),
+                "parameters": dict(result.parameters),
+            }
+            if capital_metric_config is not None:
+                ranked_result["capital_metrics"] = derive_capital_metrics(
+                    result,
+                    capital_metric_config,
+                )
+            ranked_results.append(ranked_result)
+        outputs: dict[str, Any] = {
+            "ranked_results": ranked_results,
+            "run_count": len(results),
+            "validation_output": (
+                None if validation_output_path is None else str(validation_output_path)
+            ),
+            "validation_summary": validation_summary.to_payload(),
+        }
+        if walk_forward_summary_payload is not None:
+            outputs["walk_forward_validation"] = walk_forward_summary_payload
+            outputs["walk_forward_validation_output"] = (
+                None if walk_forward_output_path is None else str(walk_forward_output_path)
+            )
         return ResearchWorkflowStepResult(
             step_id=step.step_id,
             kind=step.kind,
             status="passed",
             message="optimization completed",
-            outputs={
-                "ranked_results": [
-                    {
-                        "manifest_hash": result.manifest_hash,
-                        "manifest_path": str(result.manifest_path),
-                        "objective_value": str(result.objective_value),
-                        "parameters": dict(result.parameters),
-                    }
-                    for result in results
-                ],
-                "run_count": len(results),
-            },
+            outputs=outputs,
         )
+
+    def _validation_constraints(self, value: Any) -> tuple[MetricConstraint, ...]:
+        validation = self._optional_mapping(value)
+        if validation is None:
+            return ()
+        raw_constraints = validation.get("constraints")
+        if raw_constraints is None:
+            return ()
+        if not isinstance(raw_constraints, list):
+            raise ValueError("validation.constraints must be a list")
+        constraints: list[MetricConstraint] = []
+        for index, raw_constraint in enumerate(raw_constraints):
+            if not isinstance(raw_constraint, Mapping):
+                raise ValueError(f"validation.constraints[{index}] must be a mapping")
+            constraint = dict(raw_constraint)
+            constraints.append(
+                MetricConstraint(
+                    metric_name=str(constraint["metric"]),
+                    operator=str(constraint["operator"]),
+                    threshold=Decimal(str(constraint["threshold"])),
+                )
+            )
+        return tuple(constraints)
+
+    def _walk_forward_payload(self, value: Any) -> dict[str, Any] | None:
+        validation = self._optional_mapping(value)
+        if validation is None:
+            return None
+        raw_walk_forward = validation.get("walk_forward")
+        if raw_walk_forward is None:
+            return None
+        if not isinstance(raw_walk_forward, Mapping):
+            raise ValueError("validation.walk_forward must be a mapping")
+        return dict(raw_walk_forward)
+
+    def _walk_forward_plan(self, value: Mapping[str, Any]) -> WalkForwardPlan:
+        raw_splits = value.get("splits")
+        if not isinstance(raw_splits, list) or not raw_splits:
+            raise ValueError("validation.walk_forward.splits must be a non-empty list")
+        splits: list[WalkForwardSplit] = []
+        for index, raw_split in enumerate(raw_splits):
+            if not isinstance(raw_split, Mapping):
+                raise ValueError(f"validation.walk_forward.splits[{index}] must be a mapping")
+            split = dict(raw_split)
+            splits.append(
+                WalkForwardSplit(
+                    name=str(split["name"]),
+                    train_start=self._iso_date(split["train_start"], "train_start"),
+                    train_end=self._iso_date(split["train_end"], "train_end"),
+                    test_start=self._iso_date(split["test_start"], "test_start"),
+                    test_end=self._iso_date(split["test_end"], "test_end"),
+                )
+            )
+        return WalkForwardPlan(tuple(splits))
+
+    @staticmethod
+    def _iso_date(value: Any, field_name: str) -> date:
+        if isinstance(value, date):
+            return value
+        try:
+            return date.fromisoformat(str(value))
+        except ValueError as exc:
+            raise ValueError(f"{field_name} must be an ISO date") from exc
 
     @staticmethod
     def _required_mapping(payload: Mapping[str, Any], field_name: str) -> dict[str, Any]:
@@ -508,9 +741,11 @@ _ALLOWED_STEP_KINDS = frozenset(
         "backtest",
         "factor_candidates",
         "factor_review_gate",
+        "factor_evaluation",
         "factor_tearsheet",
         "implementation_gate",
         "optimize",
+        "research_report",
     }
 )
 _HARD_STOP_STEP_KINDS = frozenset({"factor_review_gate", "implementation_gate"})

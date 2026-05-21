@@ -90,7 +90,10 @@ class ReplayMarketDataBundleBuilder:
     def _roll_registry(self) -> FutureRollRegistry | None:
         if not self._config.roll_policy.enabled:
             return None
-        return FutureRollRegistry(retain_history=len(self._config.roots) > 1)
+        timeframe = Timeframe.parse(self._config.timeframe)
+        return FutureRollRegistry(
+            retain_history=len(self._config.roots) > 1 or timeframe.alignment is AlignmentMode.CLOCK
+        )
 
     def _stream_configured_bars(
         self,

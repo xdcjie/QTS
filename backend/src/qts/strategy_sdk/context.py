@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
@@ -108,6 +108,7 @@ class StrategyContext:
         weight: Decimal,
         *,
         spec: OrderSpec | None = None,
+        metadata: Mapping[str, str] | None = None,
     ) -> TargetIntent:
         """Emit a portfolio-weight target for an asset."""
         return self._intent_emitter.emit(
@@ -116,6 +117,7 @@ class StrategyContext:
                 intent_type=TargetIntentType.PERCENT,
                 value=weight,
                 order_spec=spec or OrderSpec(),
+                metadata=metadata or {},
             )
         )
 
@@ -125,6 +127,7 @@ class StrategyContext:
         quantity: Decimal,
         *,
         spec: OrderSpec | None = None,
+        metadata: Mapping[str, str] | None = None,
     ) -> TargetIntent:
         """Emit a quantity target for an asset."""
         return self._intent_emitter.emit(
@@ -133,6 +136,7 @@ class StrategyContext:
                 intent_type=TargetIntentType.QUANTITY,
                 value=quantity,
                 order_spec=spec or OrderSpec(),
+                metadata=metadata or {},
             )
         )
 
@@ -142,6 +146,7 @@ class StrategyContext:
         value: Decimal,
         *,
         spec: OrderSpec | None = None,
+        metadata: Mapping[str, str] | None = None,
     ) -> TargetIntent:
         """Emit a notional value target for an asset."""
         return self._intent_emitter.emit(
@@ -150,10 +155,17 @@ class StrategyContext:
                 intent_type=TargetIntentType.VALUE,
                 value=value,
                 order_spec=spec or OrderSpec(),
+                metadata=metadata or {},
             )
         )
 
-    def close(self, asset: AssetRef, *, spec: OrderSpec | None = None) -> TargetIntent:
+    def close(
+        self,
+        asset: AssetRef,
+        *,
+        spec: OrderSpec | None = None,
+        metadata: Mapping[str, str] | None = None,
+    ) -> TargetIntent:
         """Emit a target that closes an asset position."""
         return self._intent_emitter.emit(
             TargetIntent(
@@ -161,6 +173,7 @@ class StrategyContext:
                 intent_type=TargetIntentType.CLOSE,
                 value=None,
                 order_spec=spec or OrderSpec(),
+                metadata=metadata or {},
             )
         )
 

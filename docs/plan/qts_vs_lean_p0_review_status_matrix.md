@@ -26,7 +26,7 @@ evidence in this repository:
 
 | Invariant | Correct owner or boundary | Forbidden shortcut | Required gate |
 | --- | --- | --- | --- |
-| Strategy authors see typed SDK data, while strategy code still emits intents only. | `qts.strategy_sdk.Strategy`, `StrategyContext`, domain market-data and order-event types. | Leaving callbacks as `object`, adding `Any`, or adding a compatibility protocol that hides current SDK types. | SDK signature tests, mypy over `examples/strategies/vwap_pullback.py`, and strategy API docs check. |
+| Strategy authors see typed SDK data, while strategy code still emits intents only. | `qts.strategy_sdk.Strategy`, `StrategyContext`, domain market-data and order-event types. | Leaving callbacks as `object`, adding `Any`, or adding a compatibility protocol that hides current SDK types. | SDK signature tests, mypy over `examples/strategies/vwap_pullback_v2.py`, and strategy API docs check. |
 | Market-data dispatch preserves the current shared runtime chain and event ordering. | `RuntimeMarketDataCoordinator` stage methods and runtime event sink. | Creating a backtest-only dispatch path, a direct strategy call bypass, or a legacy monolith wrapper that remains the real owner. | Focused coordinator stage tests plus existing replay/paper integration gates. |
 | Backtest loop decomposition preserves warmup, trading, risk/order/account/reporting behavior. | `BacktestActorLoop` phase methods and existing actor/runtime boundaries. | Moving business decisions into a helper outside the owning loop or bypassing RiskEngine/OrderManager/Execution/Account actors. | Backtest phase tests plus anchor/integration tests that cover shared runtime parity. |
 | P0 status is reviewable from durable evidence, not verbal progress. | This matrix and source backlog item links. | Marking an item complete without a first red gate, verification log, or backlog status update. | `tests/unit/docs/test_qts_vs_lean_p0_review_status_matrix.py`. |
@@ -55,7 +55,7 @@ Run red gates before each production edit, then focused green checks:
 ```bash
 uv run pytest tests/unit/docs/test_qts_vs_lean_p0_review_status_matrix.py -q
 uv run pytest tests/unit/strategy_sdk tests/unit/strategies/test_vwap_pullback.py -q
-uv run mypy examples/strategies/vwap_pullback.py
+uv run mypy examples/strategies/vwap_pullback_v2.py
 uv run pytest tests/unit/runtime/test_market_data_flow.py tests/unit/runtime/test_runtime_market_data_coordinator.py tests/integration/test_paper_runtime_full_chain.py -q
 uv run pytest tests/unit/backtest/test_backtest_actor_loop.py tests/integration/test_backtest_engine_flow.py tests/integration/test_backtest_live_parity_flow.py tests/integration/test_bar_to_fill_flow.py tests/anchor -q
 make guardrails
@@ -97,7 +97,7 @@ OPT-01 focused gates on 2026-05-17:
 PYTHONPATH=backend/src uv run pytest tests/unit/strategy_sdk/test_strategy_base.py tests/unit/strategy_sdk/test_strategy_events.py tests/unit/strategies/test_vwap_pullback.py -q
 # 14 passed
 
-PYTHONPATH=backend/src uv run mypy examples/strategies/vwap_pullback.py
+PYTHONPATH=backend/src uv run mypy examples/strategies/vwap_pullback_v2.py
 # Success: no issues found in 1 source file
 
 PYTHONPATH=backend/src uv run pytest tests/unit/strategy_sdk/test_strategy_base.py tests/unit/strategy_sdk/test_strategy_events.py tests/unit/strategies/test_vwap_pullback.py tests/unit/docs/test_qts_vs_lean_p0_review_status_matrix.py -q

@@ -19,6 +19,7 @@ import dataclasses
 import importlib
 import importlib.util
 from collections.abc import Mapping
+from datetime import datetime
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -88,7 +89,22 @@ class BacktestPipeline:
         sweeps that vary only ``strategy_params`` across runs.
         """
         merged = {**self._config.strategy_params, **params}
-        sibling = BacktestPipeline(dataclasses.replace(self._config, strategy_params=merged))
+        strategy = self._config.strategy
+        if strategy is not None:
+            strategy = dataclasses.replace(strategy, params=merged)
+        sibling = BacktestPipeline(
+            dataclasses.replace(
+                self._config,
+                strategy=strategy,
+                strategy_params=merged,
+            )
+        )
+        sibling._catalog = self._catalog
+        return sibling
+
+    def with_date_range(self, *, start: datetime, end: datetime) -> BacktestPipeline:
+        """Return a sibling pipeline with a different backtest date range."""
+        sibling = BacktestPipeline(dataclasses.replace(self._config, start=start, end=end))
         sibling._catalog = self._catalog
         return sibling
 

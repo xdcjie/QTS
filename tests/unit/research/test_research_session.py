@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
 
 import pytest
 from qts.research import (
@@ -19,6 +21,7 @@ from qts.research.factor_discovery import (
     FactorIdea,
     FactorIdeaStore,
 )
+from qts.research.optimizer import WalkForwardPlan, WalkForwardSplit
 
 
 class _CountingSource:
@@ -151,6 +154,82 @@ def test_research_session_parameter_grid_rejects_empty_values(tmp_path: Path) ->
 
     with pytest.raises(ValueError, match="parameter values must not be empty"):
         session.parameter_grid({"lookback": []})
+
+
+def test_research_session_delegates_walk_forward_validation_to_backtest_runner(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_research_config(tmp_path, _minimal_research_yaml(tmp_path))
+    session = ResearchSession.from_yaml(config_path)
+    calls: list[dict[str, Any]] = []
+
+    class FakeRunner:
+        def run(self, job: Any) -> tuple[object, ...]:
+            calls.append(
+                {
+                    "base_config_path": job.base_config_path,
+                    "candidate_parameters": job.candidate_parameters,
+                    "objective_metric": job.objective_metric,
+                    "output_root": job.output_root,
+                    "plan": job.plan,
+                }
+            )
+            manifest_path = tmp_path / "wf-manifest.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "manifest_hash": "wf",
+                        "metrics": {"sharpe_ratio": "1", "total_trades": "3"},
+                    }
+                ),
+                encoding="utf-8",
+            )
+            return (
+                SimpleNamespace(
+                    split_name="split-001",
+                    phase="test",
+                    start=date(2026, 4, 1),
+                    end=date(2026, 5, 1),
+                    result=SimpleNamespace(
+                        parameters={"alpha": "1"},
+                        manifest_path=manifest_path,
+                        manifest_hash="wf",
+                        objective_value=Decimal("1"),
+                    ),
+                ),
+            )
+
+    monkeypatch.setattr("qts.research.session.BacktestWalkForwardValidationRunner", FakeRunner)
+    plan = WalkForwardPlan(
+        (
+            WalkForwardSplit(
+                name="split-001",
+                train_start=date(2026, 1, 1),
+                train_end=date(2026, 3, 1),
+                test_start=date(2026, 4, 1),
+                test_end=date(2026, 5, 1),
+            ),
+        )
+    )
+
+    summary = session.validate_optimizer_walk_forward(
+        candidate_parameters=({"alpha": "1"},),
+        objective_metric="sharpe_ratio",
+        output_root=tmp_path / "wf-output",
+        plan=plan,
+    )
+
+    assert calls == [
+        {
+            "base_config_path": tmp_path / "backtest.yaml",
+            "candidate_parameters": ({"alpha": "1"},),
+            "objective_metric": "sharpe_ratio",
+            "output_root": tmp_path / "wf-output",
+            "plan": plan,
+        }
+    ]
+    assert summary.to_payload()["run_count"] == 1
 
 
 def _write_manifest(
@@ -357,3 +436,80 @@ def test_research_session_candidate_public_exports_are_available() -> None:
     assert FactorCandidateBatch.__name__ == "FactorCandidateBatch"
     assert FactorCandidateWorkflow.__name__ == "FactorCandidateWorkflow"
     assert FactorSpecReview.__name__ == "FactorSpecReview"
+
+
+def test_research_session_evaluate_factor_generates_artifacts_from_mixed_input_types(
+    tmp_path: Path,
+) -> None:
+    config_path = _write_research_config(tmp_path, _minimal_research_yaml(tmp_path))
+    session = ResearchSession.from_yaml(config_path)
+    score_day_1 = tmp_path / "scores_2026_01_02.csv"
+    score_day_1.write_text(
+        "\n".join(
+            [
+                "symbol,value",
+                "AAPL,0.9",
+                "MSFT,0.7",
+                "NFLX,0.1",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    returns_day_1 = tmp_path / "returns_2026_01_02.csv"
+    returns_day_1.write_text(
+        "\n".join(
+            [
+                "symbol,forward_return",
+                "AAPL,0.04",
+                "MSFT,0.01",
+                "NFLX,0.00",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    score_day_2 = tmp_path / "scores_2026_01_03.json"
+    score_day_2.write_text(
+        json.dumps({"AAPL": 0.4, "MSFT": 0.9, "NFLX": 0.6}, sort_keys=True),
+        encoding="utf-8",
+    )
+    returns_day_2 = tmp_path / "returns_2026_01_03.json"
+    returns_day_2.write_text(
+        json.dumps({"AAPL": 0.01, "MSFT": -0.03, "NFLX": 0.05}, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    snapshots = (
+        {
+            "as_of": "2026-01-02",
+            "factor_scores": score_day_1,
+            "forward_returns": returns_day_1,
+        },
+        {
+            "as_of": date(2026, 1, 3),
+            "factor_scores": score_day_2,
+            "forward_returns": returns_day_2,
+        },
+    )
+
+    results = session.evaluate_factor(
+        factor_name="momentum",
+        factor_version="1",
+        snapshots=snapshots,
+        bucket_count=2,
+        output_dir=tmp_path / "factor-evaluations",
+    )
+
+    assert len(results) == 2
+    for snapshot in results:
+        assert snapshot.artifact_path.exists()
+
+    assert results[0].artifact_path.name == "2026-01-02-momentum-1.json"
+    assert results[1].artifact_path.name == "2026-01-03-momentum-1.json"
+    assert results[0].result.metrics.turnover is None
+    assert results[1].result.metrics.turnover == Decimal("0.5")
+    payload = json.loads(results[1].artifact_path.read_text(encoding="utf-8"))
+    assert payload["as_of"] == "2026-01-03"
+    assert payload["metrics"]["scored_count"] == 3
+    assert payload["metrics"]["return_count"] == 3

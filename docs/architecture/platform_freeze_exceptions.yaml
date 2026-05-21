@@ -24,6 +24,16 @@ exceptions:
     reason: research workflow gate-based orchestration over ResearchSession public APIs
     owner: platform
     expiry: 2027-05-20
+  - class_name: ResearchWorkflowReport
+    module: qts.research.report
+    reason: research workflow deterministic Markdown report evidence owner
+    owner: platform
+    expiry: 2027-05-20
+  - class_name: ResearchWorkflowReportWriter
+    module: qts.research.report
+    reason: research workflow deterministic report artifact writer owner
+    owner: platform
+    expiry: 2027-05-20
   - class_name: FactorEvaluationTearsheetMetrics
     module: qts.research.tearsheet
     reason: research tearsheet aggregate metric evidence value object
@@ -199,6 +209,26 @@ exceptions:
     reason: OPTV-1 optimizer walk-forward validation metadata plan
     owner: platform
     expiry: 2027-05-17
+  - class_name: BacktestWalkForwardValidationJob
+    module: qts.research.optimizer.walk_forward
+    reason: VWAP research selected-candidate walk-forward backtest job owner
+    owner: platform
+    expiry: 2027-05-21
+  - class_name: WalkForwardValidationResult
+    module: qts.research.optimizer.walk_forward
+    reason: VWAP research per-window optimizer rerun evidence value object
+    owner: platform
+    expiry: 2027-05-21
+  - class_name: BacktestWalkForwardValidationRunner
+    module: qts.research.optimizer.walk_forward
+    reason: VWAP research backtest-pipeline walk-forward rerun coordinator
+    owner: platform
+    expiry: 2027-05-21
+  - class_name: WalkForwardValidationSummary
+    module: qts.research.optimizer.walk_forward
+    reason: VWAP research grouped walk-forward validation evidence artifact
+    owner: platform
+    expiry: 2027-05-21
   - class_name: OptimizerValidationSummary
     module: qts.research.optimizer.validation
     reason: OPTV-1 accepted/rejected optimizer run summary artifact

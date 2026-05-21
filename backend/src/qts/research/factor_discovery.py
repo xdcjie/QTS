@@ -31,10 +31,101 @@ _FACTOR_TAG_TERMS: dict[str, tuple[str, ...]] = {
     "value": ("value", "valuation", "book-to-market"),
     "quality": ("quality", "profitability", "earnings quality"),
     "sentiment": ("sentiment", "news", "tone", "attention"),
-    "liquidity": ("liquidity", "turnover", "bid-ask", "spread"),
+    "liquidity": ("liquidity", "turnover", "bid-ask", "spread", "imbalance"),
+    "volume": ("volume", "volume curve", "volume profile", "participation"),
+    "order_flow": ("order flow", "order-flow", "flow imbalance", "order imbalance"),
+    "regime": (
+        "regime",
+        "market state",
+        "state-dependent",
+        "state dependent",
+        "volatility timing",
+    ),
     "seasonality": ("seasonality", "calendar", "month-of-year", "day-of-week"),
     "macro": ("macro", "inflation", "interest rate", "yield curve"),
 }
+
+_DISCOVERY_STOPWORDS = frozenset(
+    {
+        "a",
+        "an",
+        "and",
+        "for",
+        "from",
+        "in",
+        "of",
+        "on",
+        "or",
+        "the",
+        "to",
+        "with",
+    }
+)
+
+_MARKET_QUERY_TERMS = frozenset(
+    {
+        "alpha",
+        "commodity",
+        "commodities",
+        "execution",
+        "factor",
+        "future",
+        "futures",
+        "gold",
+        "imbalance",
+        "intraday",
+        "liquidity",
+        "market",
+        "markets",
+        "microstructure",
+        "order",
+        "return",
+        "returns",
+        "spread",
+        "trade",
+        "trading",
+        "vwap",
+    }
+)
+
+_MARKET_CONTEXT_TERMS = _MARKET_QUERY_TERMS | frozenset(
+    {
+        "ask",
+        "basis",
+        "bid",
+        "curve",
+        "flow",
+        "momentum",
+        "price",
+        "prices",
+        "regime",
+        "reversal",
+        "seasonality",
+        "signal",
+        "signals",
+        "spread",
+        "state",
+        "strategy",
+        "trend",
+        "turnover",
+        "volatility",
+        "volume",
+    }
+)
+
+_REQUIRED_MARKET_CONTEXT_TERMS = _MARKET_QUERY_TERMS | frozenset(
+    {
+        "asset",
+        "assets",
+        "equities",
+        "equity",
+        "option",
+        "options",
+        "portfolio",
+        "stock",
+        "stocks",
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -637,10 +728,75 @@ class FactorDiscovery:
                 ideas.append(idea)
                 seen.add(idea.idea_id)
 
-        result = FactorDiscoveryResult(query=query, ideas=tuple(ideas), errors=tuple(errors))
+        ranked_ideas = _rank_factor_ideas(query, ideas)
+        result = FactorDiscoveryResult(query=query, ideas=ranked_ideas, errors=tuple(errors))
         if result.ideas:
             return self._store.save_search(result)
         return result
+
+
+def _rank_factor_ideas(
+    query: FactorDiscoveryQuery,
+    ideas: Sequence[FactorIdea],
+) -> tuple[FactorIdea, ...]:
+    query_terms = _search_terms(query.text)
+    scored: list[tuple[int, int, int, FactorIdea]] = []
+    market_query = bool(query_terms & _MARKET_QUERY_TERMS)
+    for index, idea in enumerate(ideas):
+        score = _factor_idea_relevance_score(query_terms, idea)
+        if market_query and score <= 0:
+            continue
+        citation_count = idea.citation_count if idea.citation_count is not None else 0
+        scored.append((score, citation_count, -index, idea))
+    return tuple(
+        idea
+        for _score, _citation_count, _index, idea in sorted(
+            scored,
+            key=lambda item: (item[0], item[1], item[2]),
+            reverse=True,
+        )[: query.max_results]
+    )
+
+
+def _factor_idea_relevance_score(query_terms: set[str], idea: FactorIdea) -> int:
+    if _is_retracted_idea(idea):
+        return 0
+    title_terms = _search_terms(idea.title)
+    abstract_terms = _search_terms(idea.abstract)
+    all_terms = title_terms | abstract_terms
+    if query_terms & _MARKET_QUERY_TERMS and not (all_terms & _REQUIRED_MARKET_CONTEXT_TERMS):
+        return 0
+    market_overlap = len(all_terms & _MARKET_CONTEXT_TERMS)
+    if market_overlap == 0:
+        return 0
+    query_overlap = len(query_terms & all_terms)
+    title_overlap = len(query_terms & title_terms)
+    score = market_overlap + (query_overlap * 4) + (title_overlap * 3)
+    if "vwap" in query_terms and ({"volume", "execution", "order", "flow"} & all_terms):
+        score += 6
+    if {"order", "flow"} <= query_terms and {"order", "flow"} <= all_terms:
+        score += 4
+    return score
+
+
+def _search_terms(value: str) -> set[str]:
+    return {
+        _normalize_search_token(match.group(0))
+        for match in re.finditer(r"[A-Za-z][A-Za-z0-9-]*", value.lower())
+        if _normalize_search_token(match.group(0)) not in _DISCOVERY_STOPWORDS
+    }
+
+
+def _normalize_search_token(value: str) -> str:
+    token = value.replace("-", " ").split()[0]
+    if len(token) > 3 and token.endswith("s"):
+        return token[:-1]
+    return token
+
+
+def _is_retracted_idea(idea: FactorIdea) -> bool:
+    title = idea.title.strip().lower()
+    return title.startswith("retracted:") or title.startswith("retraction:")
 
 
 def _infer_candidate_tags(text: str) -> tuple[str, ...]:

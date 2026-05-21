@@ -201,6 +201,64 @@ def test_does_not_trade_outside_trading_hours() -> None:
     assert ctx.intents == ()
 
 
+def test_default_trading_hours_filter_is_half_open_et_window() -> None:
+    """Default strategy filter includes ET [08:00, 16:00) and excludes 16:00."""
+    strategy = VwapPullbackV2Strategy()
+
+    assert strategy._in_trading_hours(
+        _bar(start=datetime(2025, 1, 2, 13, 0, tzinfo=UTC), open_="1", high="1", low="1", close="1")
+    )
+    assert strategy._in_trading_hours(
+        _bar(
+            start=datetime(2025, 1, 2, 20, 59, tzinfo=UTC),
+            open_="1",
+            high="1",
+            low="1",
+            close="1",
+        )
+    )
+    assert not strategy._in_trading_hours(
+        _bar(start=datetime(2025, 1, 2, 21, 0, tzinfo=UTC), open_="1", high="1", low="1", close="1")
+    )
+    assert not strategy._in_trading_hours(
+        _bar(start=datetime(2025, 1, 2, 3, 0, tzinfo=UTC), open_="1", high="1", low="1", close="1")
+    )
+
+
+def test_disabled_trading_hours_filter_allows_full_session_bars() -> None:
+    """Disabling the strategy filter lets session-managed overnight bars through."""
+    strategy = VwapPullbackV2Strategy(
+        VwapPullbackV2Config(
+            use_trading_hours_filter=False,
+            trading_hours_et_start=18,
+            trading_hours_et_end=17,
+        )
+    )
+
+    assert strategy._in_trading_hours(
+        _bar(start=datetime(2025, 1, 2, 3, 0, tzinfo=UTC), open_="1", high="1", low="1", close="1")
+    )
+
+
+def test_disabled_trading_hours_filter_allows_overnight_setup_progression() -> None:
+    """A 22:00 ET trend setup can pass the strategy time gate when disabled."""
+    bars = _ramp_up_then_pullback_then_reject(et_start_hour=3)[:12]
+    strategy = VwapPullbackV2Strategy(
+        VwapPullbackV2Config(
+            use_trading_hours_filter=False,
+            atr_window=3,
+            volume_ratio_window=3,
+            vwap_slope_lookback=3,
+            min_volume_ratio=Decimal("0"),
+        )
+    )
+
+    ctx = _drive(strategy, bars)
+
+    assert strategy.state == _State.WAIT_PULLBACK
+    assert ctx.intents == ()
+
+
 def test_does_not_trade_when_session_chop() -> None:
     """First-hour VWAP crossings > 3 → strategy must skip the session."""
     base = datetime(2025, 1, 2, 14, 0, tzinfo=UTC)
@@ -262,6 +320,7 @@ def test_state_machine_progresses_through_pullback_phases() -> None:
         {"atr_window": 0},
         {"min_volume_ratio": Decimal("-1")},
         {"trading_hours_et_start": 10, "trading_hours_et_end": 5},
+        {"trading_hours_et_start": 8, "trading_hours_et_end": 8},
     ],
 )
 def test_config_rejects_invalid_values(constructor_kwargs: dict[str, Any]) -> None:

@@ -1,0 +1,23 @@
+market_data:
+  source: local_historical
+  config: configs/data/historical.local.yaml
+  catalog: research_futures
+roots:
+  - GC
+symbols:
+  - GC
+start: "2025-06-01T00:00:00Z"
+end: "2025-06-08T00:00:00Z"
+timeframe: 1m
+initial_cash: "1000000"
+strategy_config: configs/strategies/vwap_factor_research.yaml
+cost_model:
+  fixed_commission_per_contract: "0"
+  slippage_bps: "0"
+risk_config:
+  max_notional: "100000000"
+roll_policy:
+  enabled: true
+  method: first_notice_date
+  roll_sessions_before_first_notice: 3
+warmup_bars: 32

@@ -90,6 +90,48 @@ def _accept_factor_spec(config_path: Path) -> None:
     )
 
 
+def _write_factor_snapshot_inputs(
+    tmp_path: Path,
+) -> tuple[Path, Path, Path, Path]:
+    scores_day1 = tmp_path / "scores_2026_01_02.csv"
+    scores_day1.write_text(
+        "\n".join(
+            [
+                "symbol,value",
+                "AAPL,0.9",
+                "MSFT,0.7",
+                "NFLX,0.1",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    returns_day1 = tmp_path / "returns_2026_01_02.csv"
+    returns_day1.write_text(
+        "\n".join(
+            [
+                "symbol,forward_return",
+                "AAPL,0.04",
+                "MSFT,0.01",
+                "NFLX,0.00",
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    scores_day2 = tmp_path / "scores_2026_01_03.json"
+    scores_day2.write_text(
+        json.dumps({"AAPL": 0.4, "MSFT": 0.9, "NFLX": 0.6}, sort_keys=True),
+        encoding="utf-8",
+    )
+    returns_day2 = tmp_path / "returns_2026_01_03.json"
+    returns_day2.write_text(
+        json.dumps({"AAPL": 0.01, "MSFT": -0.03, "NFLX": 0.05}, sort_keys=True),
+        encoding="utf-8",
+    )
+    return scores_day1, returns_day1, scores_day2, returns_day2
+
+
 def test_research_cli_records_factor_tearsheet_and_lists_runs(tmp_path: Path) -> None:
     config_path = _write_research_session_config(tmp_path)
     writer = FactorEvaluationArtifactWriter(tmp_path / "factor-evaluations")
@@ -225,6 +267,13 @@ steps:
   - id: optimize
     kind: optimize
     objective_metric: total_return
+    capital_metrics:
+      margin_proxy: "1000"
+    validation:
+      constraints:
+        - metric: pnl_usd
+          operator: ">="
+          threshold: "1"
     parameters:
       entry_bar: [1, 2]
       quantity: ["1", "2"]
@@ -247,3 +296,141 @@ steps:
     assert Path(backtest_outputs["manifest_path"]).exists()
     assert optimize_outputs["run_count"] == 4
     assert Path(optimize_outputs["ranked_results"][0]["manifest_path"]).exists()
+    assert optimize_outputs["ranked_results"][0]["capital_metrics"]["pnl_usd"] != "0"
+    assert optimize_outputs["validation_summary"]["accepted_count"] >= 1
+    assert (
+        optimize_outputs["validation_summary"]["accepted_runs"][0]["capital_metrics"][
+            "return_on_margin_proxy"
+        ]
+        != "0"
+    )
+
+
+def test_research_cli_workflow_runs_full_evidence_pipeline(
+    tmp_path: Path,
+) -> None:
+    config_path = _write_research_session_config(tmp_path)
+    _accept_factor_spec(config_path)
+    scores_1, returns_1, scores_2, returns_2 = _write_factor_snapshot_inputs(tmp_path)
+    evaluation_root = tmp_path / "factor-evaluations"
+    report_root = tmp_path / "workflow-reports"
+    workflow_path = _write_workflow(
+        tmp_path,
+        f"""
+version: 1
+workflow_id: full-evidence
+steps:
+  - id: review
+    kind: factor_review_gate
+    status: accepted
+    min_count: 1
+  - id: implementation
+    kind: implementation_gate
+    required_modules:
+      - examples.strategies.gc_si_momentum
+    required_strategy: examples.strategies.gc_si_momentum:GcSiMomentumStrategy
+  - id: evaluate
+    kind: factor_evaluation
+    factor_name: momentum
+    factor_version: "1"
+    output_dir: {evaluation_root}
+    snapshots:
+      - as_of: 2026-01-02
+        factor_scores: {scores_1}
+        forward_returns: {returns_1}
+      - as_of: 2026-01-03
+        factor_scores: {scores_2}
+        forward_returns: {returns_2}
+  - id: tearsheet
+    kind: factor_tearsheet
+    experiment_id: momentum-full
+    artifact_paths:
+      - {evaluation_root}/2026-01-02-momentum-1.json
+      - {evaluation_root}/2026-01-03-momentum-1.json
+  - id: backtest
+    kind: backtest
+    strategy_params:
+      quantity: "2"
+      entry_bar: 1
+  - id: optimize
+    kind: optimize
+    objective_metric: total_return
+    parameters:
+      entry_bar: [1, 2]
+      quantity: ["1", "2"]
+  - id: report
+    kind: research_report
+    output_root: {report_root}
+    output_path: workflow-report.md
+""",
+    )
+
+    result = _run_cli("--config", str(config_path), "workflow", str(workflow_path))
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "completed"
+    assert [step["status"] for step in payload["steps"]] == [
+        "passed",
+        "passed",
+        "passed",
+        "passed",
+        "passed",
+        "passed",
+        "passed",
+    ]
+    factor_eval_outputs = payload["steps"][2]["outputs"]
+    assert factor_eval_outputs["snapshot_count"] == 2
+    assert len(factor_eval_outputs["artifact_paths"]) == 2
+    report_path = payload["steps"][-1]["outputs"]["report_path"]
+    report_text = Path(report_path).read_text(encoding="utf-8")
+    assert "Research Workflow Report" in report_text
+    assert "factor_evaluation" in report_text
+    assert "factor_tearsheet" in report_text
+
+
+def test_research_cli_workflow_blocks_evidence_steps_after_failed_implementation_gate(
+    tmp_path: Path,
+) -> None:
+    config_path = _write_research_session_config(tmp_path)
+    _accept_factor_spec(config_path)
+    scores_1, returns_1, scores_2, returns_2 = _write_factor_snapshot_inputs(tmp_path)
+    workflow_path = _write_workflow(
+        tmp_path,
+        f"""
+version: 1
+workflow_id: blocked-after-implementation
+steps:
+  - id: review
+    kind: factor_review_gate
+    status: accepted
+    min_count: 1
+  - id: implementation
+    kind: implementation_gate
+    required_modules:
+      - qts.factors.not_a_real_factor_module
+  - id: evaluate
+    kind: factor_evaluation
+    factor_name: momentum
+    factor_version: "1"
+    snapshots:
+      - as_of: 2026-01-02
+        factor_scores: {scores_1}
+        forward_returns: {returns_1}
+      - as_of: 2026-01-03
+        factor_scores: {scores_2}
+        forward_returns: {returns_2}
+  - id: report
+    kind: research_report
+    output_path: blocked-report.md
+""",
+    )
+
+    result = _run_cli("--config", str(config_path), "workflow", str(workflow_path))
+
+    assert result.returncode == 1, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "blocked"
+    assert payload["steps"][1]["kind"] == "implementation_gate"
+    assert payload["steps"][1]["status"] == "blocked"
+    assert len(payload["steps"]) == 2

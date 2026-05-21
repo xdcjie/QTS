@@ -1,0 +1,133 @@
+# Standard VWAP research workflow.
+#
+# The discovery step records source-backed ideas only. Executable evidence still
+# uses the implemented VWAP strategy through ResearchSession and BacktestPipeline.
+
+version: 1
+workflow_id: vwap-factor-search
+steps:
+  - id: discover
+    kind: factor_candidates
+    query: "VWAP trading strategy intraday futures regime filter trend strength volatility timing ATR VWAP slope order flow imbalance opening drive volume curve liquidity returns commodity futures gold"
+    sources: [semantic_scholar, openalex, crossref, arxiv]
+    max_results: 12
+    from_year: 2015
+    refresh: true
+
+  - id: implementation
+    kind: implementation_gate
+    required_strategy: examples.strategies.vwap_factor_research:VwapFactorResearchStrategy
+
+  - id: baseline
+    kind: backtest
+    output_dir: ../../../runs/research/vwap/baseline
+
+  - id: factor-search
+    kind: optimize
+    objective_metric: sharpe_ratio
+    output_root: ../../../runs/research/vwap/factor-search
+    validation_output: ../../../runs/research/vwap/validation/factor-search.json
+    capital_metrics:
+      margin_proxy: "12000"
+    validation:
+      constraints:
+        - metric: total_trades
+          operator: ">="
+          threshold: "3"
+        - metric: pnl_usd
+          operator: ">"
+          threshold: "0"
+        - metric: max_drawdown
+          operator: "<="
+          threshold: "0.05"
+        - metric: sharpe_ratio
+          operator: ">="
+          threshold: "0"
+    parameters:
+      time_window: [evening_18_22]
+      min_volume_ratio: ["1.2"]
+      pullback_touch_atr_below: ["0.15"]
+      max_pullback_break_atr: ["1.0"]
+      stop_atr_multiple: ["1.0"]
+      target_r_multiple: ["2.0"]
+      factor_filters:
+        - []
+        - [distance_mid]
+        - [vwap_slope_strength]
+        - [atr_pct_range]
+        - [session_sigma_range]
+        - [rth_drive_min_atr]
+        - [trend_regime_aligned]
+        - [rsi_mid]
+        - [mfi_mid]
+        - [volume_curve_range]
+        - [adx_aligned]
+        - [macd_aligned]
+        - [roc_aligned]
+        - [mom60_aligned]
+        - [mom120_aligned]
+        - [ma20_80_aligned]
+        - [technical_score_min]
+        - [bollinger_inside]
+        - [donchian_half_aligned]
+        - [keltner_inside]
+        - [cmf_aligned]
+        - [volume_curve_range, adx_aligned]
+        - [volume_curve_range, macd_aligned]
+        - [volume_curve_range, rsi_mid]
+        - [volume_curve_range, cmf_aligned]
+        - [adx_aligned, mom120_aligned]
+        - [mom120_min, volume_curve_range]
+        - [vwap_slope_strength, mom120_aligned]
+        - [vwap_slope_strength, volume_curve_range]
+        - [atr_pct_range, mom120_aligned]
+        - [session_sigma_range, mom120_aligned]
+        - [rth_drive_min_atr, mom120_aligned]
+        - [trend_regime_aligned, atr_pct_range]
+        - [trend_regime_aligned, session_sigma_range]
+
+  - id: risk-reward
+    kind: optimize
+    objective_metric: sharpe_ratio
+    output_root: ../../../runs/research/vwap/risk-reward
+    validation_output: ../../../runs/research/vwap/validation/risk-reward.json
+    capital_metrics:
+      margin_proxy: "12000"
+    validation:
+      constraints:
+        - metric: total_trades
+          operator: ">="
+          threshold: "3"
+        - metric: pnl_usd
+          operator: ">"
+          threshold: "0"
+        - metric: max_drawdown
+          operator: "<="
+          threshold: "0.05"
+        - metric: sharpe_ratio
+          operator: ">="
+          threshold: "0"
+      walk_forward:
+        top_n: 1
+        output_root: ../../../runs/research/vwap/walk-forward/risk-reward
+        summary_output: ../../../runs/research/vwap/validation/risk-reward-walk-forward.json
+        splits:
+          - name: regime-2025-q1-to-summer
+            train_start: 2025-01-01
+            train_end: 2025-03-01
+            test_start: 2025-06-01
+            test_end: 2025-08-01
+    parameters:
+      time_window: [evening_18_22]
+      factor_filters:
+        - [session_sigma_range, mom120_aligned]
+      min_volume_ratio: ["1.1", "1.2"]
+      pullback_touch_atr_below: ["0.1", "0.15", "0.2"]
+      max_pullback_break_atr: ["1.0"]
+      stop_atr_multiple: ["0.8", "1.0", "1.2"]
+      target_r_multiple: ["1.5", "2.0"]
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/reports
+    output_path: vwap-factor-search-report.md

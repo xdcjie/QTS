@@ -1,0 +1,417 @@
+"""Deterministic markdown research workflow report artifacts."""
+
+from __future__ import annotations
+
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
+from decimal import Decimal
+from pathlib import Path
+from typing import Any, Protocol
+
+
+class _WorkflowStepResult(Protocol):
+    """Protocol for workflow step result read access."""
+
+    @property
+    def step_id(self) -> str: ...
+
+    @property
+    def kind(self) -> str: ...
+
+    @property
+    def status(self) -> str: ...
+
+    @property
+    def message(self) -> str: ...
+
+    @property
+    def outputs(self) -> Mapping[str, Any]: ...
+
+
+class _WorkflowResult(Protocol):
+    """Protocol for workflow result read access."""
+
+    @property
+    def workflow_id(self) -> str: ...
+
+    @property
+    def status(self) -> str: ...
+
+    @property
+    def steps(self) -> Sequence[_WorkflowStepResult]: ...
+
+
+@dataclass(frozen=True, slots=True)
+class ResearchWorkflowReport:
+    """Deterministic report payload derived from workflow outputs."""
+
+    workflow_id: str
+    workflow_status: str
+    steps: tuple[dict[str, Any], ...]
+
+    @classmethod
+    def from_result(cls, result: _WorkflowResult) -> ResearchWorkflowReport:
+        """Build a deterministic report from a workflow execution result."""
+
+        return cls(
+            workflow_id=_required_text(result, "workflow_id"),
+            workflow_status=_required_text(result, "status"),
+            steps=tuple(_normalize_step(step) for step in result.steps),
+        )
+
+    def to_markdown(self) -> str:
+        """Render a markdown report that is stable for the same workflow output."""
+
+        return (
+            f"{self._header()}\n\n"
+            f"{self._summary()}\n\n"
+            f"{self._step_section()}\n\n"
+            f"{self._evidence_section()}\n\n"
+            f"{self._footer()}"
+        ).strip()
+
+    def _evidence_section(self) -> str:
+        """Build the evidence section from recognized step outputs."""
+
+        lines: list[str] = ["## Evidence Summary"]
+        evidence = _collect_evidence(self.steps)
+        for heading, content in evidence:
+            lines.append(f"### {heading}")
+            if not content:
+                lines.append("- no data")
+                continue
+            for entry in content:
+                lines.append(f"- {entry}")
+        return "\n".join(lines)
+
+    def _header(self) -> str:
+        """Render report title and workflow metadata."""
+
+        return (
+            "# Research Workflow Report\n\n"
+            f"workflow_id: {self.workflow_id}\n"
+            f"workflow_status: {self.workflow_status}"
+        )
+
+    def _summary(self) -> str:
+        """Render a compact count-style summary."""
+
+        statuses = (step.get("status", "unknown") for step in self.steps)
+        step_counts = {
+            "passed": sum(1 for status in statuses if status == "passed"),
+            "failed": sum(1 for status in statuses if status == "failed"),
+            "blocked": sum(1 for status in statuses if status == "blocked"),
+        }
+        return (
+            "## Execution Summary\n"
+            f"- step_count: {len(self.steps)}\n"
+            f"- passed: {step_counts['passed']}\n"
+            f"- blocked: {step_counts['blocked']}\n"
+            f"- failed: {step_counts['failed']}"
+        )
+
+    def _step_section(self) -> str:
+        """Render per-step details."""
+
+        lines = ["## Step Results"]
+        for index, step in enumerate(self.steps, start=1):
+            lines.append(f"### {index}. {step['step_id']} ({step['kind']})")
+            lines.append(f"- status: {step['status']}")
+            lines.append(f"- message: {step['message']}")
+            outputs = _dump_outputs(step.get("outputs", {}))
+            if outputs:
+                lines.append("- outputs:")
+                lines.extend(f"  - {line}" for line in outputs.splitlines())
+        return "\n".join(lines)
+
+    def _footer(self) -> str:
+        """Render boundary statement and non-promotion note."""
+
+        return (
+            "## Non-Promotion Boundary\n"
+            "This workflow report is research evidence only. "
+            "It does not promote strategy code into paper/live execution."
+        )
+
+
+class ResearchWorkflowReportWriter:
+    """Owns deterministic report markdown file serialization."""
+
+    def __init__(self, output_root: Path) -> None:
+        self._output_root = output_root
+
+    def write(
+        self,
+        report: ResearchWorkflowReport,
+        *,
+        output_path: str | Path = "workflow-report.md",
+    ) -> Path:
+        """Write a deterministic markdown report under the configured output root."""
+
+        output_path = Path(output_path)
+        if output_path.is_absolute():
+            raise ValueError("output_path must be relative to report output root")
+        if any(part == ".." for part in output_path.parts):
+            raise ValueError("output_path must not use parent traversal")
+        if output_path.as_posix() in {"", "."}:
+            raise ValueError("output_path must include a filename")
+
+        target = (self._output_root / output_path).resolve()
+        root = self._output_root.resolve()
+        if not target.is_relative_to(root):
+            raise ValueError("output_path must remain inside report output root")
+
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(report.to_markdown() + "\n", encoding="utf-8")
+        return target
+
+
+def _collect_evidence(steps: Sequence[Mapping[str, Any]]) -> list[tuple[str, list[str]]]:
+    """Collect user-facing evidence from well-known step kinds."""
+
+    evidence: list[tuple[str, list[str]]] = []
+    candidate_steps = [step for step in steps if step.get("kind") == "factor_candidates"]
+    review_steps = [step for step in steps if step.get("kind") == "factor_review_gate"]
+    impl_steps = [step for step in steps if step.get("kind") == "implementation_gate"]
+    eval_steps = [step for step in steps if step.get("kind") == "factor_evaluation"]
+    tearsheet_steps = [step for step in steps if step.get("kind") == "factor_tearsheet"]
+    backtest_steps = [step for step in steps if step.get("kind") == "backtest"]
+    optimize_steps = [step for step in steps if step.get("kind") == "optimize"]
+    report_steps = [step for step in steps if step.get("kind") == "research_report"]
+    if candidate_steps:
+        evidence.append(
+            (
+                "Factor Candidates",
+                [
+                    f"candidate_count: {latest_step_output(candidate_steps, 'candidate_count')}",
+                    f"last_query_id: {latest_step_output(candidate_steps, 'query_id', '<none>')}",
+                    f"last_spec_names: {latest_step_output(candidate_steps, 'spec_names', [])}",
+                ],
+            )
+        )
+    if review_steps:
+        evidence.append(
+            (
+                "Review Gates",
+                [
+                    f"status: {latest_step_output(review_steps, 'status', 'accepted')}",
+                    f"matched_count: {latest_step_output(review_steps, 'matched_count', 0)}",
+                    f"min_count: {latest_step_output(review_steps, 'min_count', 0)}",
+                ],
+            )
+        )
+    if impl_steps:
+        evidence.append(
+            (
+                "Implementation Gate",
+                [
+                    f"required_modules: {latest_step_output(impl_steps, 'required_modules', [])}",
+                    (
+                        "required_strategy: "
+                        + str(latest_step_output(impl_steps, "required_strategy", "<none>"))
+                    ),
+                    f"missing_modules: {latest_step_output(impl_steps, 'missing_modules', [])}",
+                    (
+                        "missing_strategies: "
+                        f"{latest_step_output(impl_steps, 'missing_strategies', [])}"
+                    ),
+                ],
+            )
+        )
+    for index, snapshot_step in enumerate(eval_steps):
+        outputs = snapshot_step.get("outputs", {})
+        evidence.append(
+            (
+                f"Factor Evaluation #{index + 1}",
+                [
+                    f"factor_name: {outputs.get('factor_name')}",
+                    f"factor_version: {outputs.get('factor_version')}",
+                    f"snapshot_count: {outputs.get('snapshot_count')}",
+                    f"artifact_paths: {outputs.get('artifact_paths', [])}",
+                ],
+            )
+        )
+    for index, tearsheet in enumerate(tearsheet_steps):
+        outputs = tearsheet.get("outputs", {})
+        factor_name = outputs.get("factor_name")
+        experiment_id = outputs.get("experiment_id", "<not recorded>")
+        manifest_path = outputs.get("manifest_path", "<not recorded>")
+        evidence.append(
+            (
+                f"Factor Teardown #{index + 1}",
+                [
+                    f"factor_name: {factor_name}",
+                    (f"experiment_id: {experiment_id}"),
+                    (f"manifest_path: {manifest_path}"),
+                ],
+            )
+        )
+    if backtest_steps:
+        evidence.append(
+            (
+                "Backtest",
+                [
+                    f"manifest_path: {latest_step_output(backtest_steps, 'manifest_path')}",
+                    f"processed_bars: {latest_step_output(backtest_steps, 'processed_bars', 0)}",
+                    f"trading_bars: {latest_step_output(backtest_steps, 'trading_bars', 0)}",
+                ],
+            )
+        )
+    if optimize_steps:
+        validation_summary = latest_step_output(optimize_steps, "validation_summary", {})
+        validation_mapping = validation_summary if isinstance(validation_summary, Mapping) else {}
+        evidence.append(
+            (
+                "Optimize",
+                [
+                    f"run_count: {latest_step_output(optimize_steps, 'run_count', 0)}",
+                    f"accepted_count: {validation_mapping.get('accepted_count', '<none>')}",
+                    f"rejected_count: {validation_mapping.get('rejected_count', '<none>')}",
+                    (
+                        "top_objective: "
+                        f"{first_ranked_result_value(optimize_steps, 'objective_value')}"
+                    ),
+                    (f"top_pnl_usd: {first_ranked_capital_metric(optimize_steps, 'pnl_usd')}"),
+                    (
+                        "top_return_on_margin_proxy: "
+                        f"{first_ranked_capital_metric(optimize_steps, 'return_on_margin_proxy')}"
+                    ),
+                ],
+            )
+        )
+    if report_steps:
+        evidence.append(
+            (
+                "Research Report",
+                [
+                    f"report_path: {latest_step_output(report_steps, 'report_path', '<none>')}",
+                ],
+            )
+        )
+    return evidence
+
+
+def first_ranked_result_value(steps: Sequence[Mapping[str, Any]], key: str) -> Any:
+    """Return first ranked result value for optimize output, if present."""
+
+    for step in steps:
+        ranked_results = step.get("outputs", {}).get("ranked_results", ())
+        if not isinstance(ranked_results, Sequence) or not ranked_results:
+            continue
+        first = ranked_results[0]
+        if isinstance(first, Mapping):
+            value = first.get(key)
+            if value is not None:
+                return value
+    return "<none>"
+
+
+def first_ranked_capital_metric(steps: Sequence[Mapping[str, Any]], key: str) -> Any:
+    """Return first ranked capital metric value for optimize output, if present."""
+
+    for step in steps:
+        ranked_results = step.get("outputs", {}).get("ranked_results", ())
+        if not isinstance(ranked_results, Sequence) or not ranked_results:
+            continue
+        first = ranked_results[0]
+        if not isinstance(first, Mapping):
+            continue
+        capital_metrics = first.get("capital_metrics")
+        if not isinstance(capital_metrics, Mapping):
+            continue
+        value = capital_metrics.get(key)
+        if value is not None:
+            return value
+    return "<none>"
+
+
+def latest_step_output(
+    steps: Sequence[Mapping[str, Any]],
+    key: str,
+    default: Any = "",
+) -> Any:
+    """Return the output field value from the most recent step."""
+
+    if not steps:
+        return default
+    outputs = _as_mapping(steps[-1].get("outputs"))
+    return outputs.get(key, default)
+
+
+def _dump_outputs(outputs: Mapping[str, Any]) -> str:
+    """Render mapping outputs as deterministic key-value lines."""
+
+    lines: list[str] = []
+    for key in sorted(outputs):
+        lines.append(f"{key}: {_json_ready(outputs[key])}")
+    return "\n".join(lines)
+
+
+def _required_text_from_mapping(payload: Mapping[str, Any], field_name: str) -> str:
+    """Return a required string value from mapping-like payload."""
+
+    value = payload.get(field_name)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} is required")
+    return value.strip()
+
+
+def _json_ready(value: Any) -> Any:
+    """Convert common values to JSON-safe equivalents for report rendering."""
+
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, Decimal):
+        return format(value, "f")
+    if isinstance(value, Mapping):
+        return {str(key): _json_ready(item) for key, item in value.items()}
+    if isinstance(value, tuple):
+        return [_json_ready(item) for item in value]
+    if isinstance(value, list):
+        return [_json_ready(item) for item in value]
+    return value
+
+
+def _normalize_step(step: _WorkflowStepResult) -> dict[str, Any]:
+    """Map a typed workflow step result into JSON-ready dict form."""
+
+    if isinstance(step, Mapping):
+        step_map: Mapping[str, Any] = step
+    else:
+        step_map = {
+            "kind": getattr(step, "kind", None),
+            "status": getattr(step, "status", None),
+            "step_id": getattr(step, "step_id", None),
+            "message": getattr(step, "message", None),
+            "outputs": getattr(step, "outputs", None),
+        }
+    return {
+        "kind": _required_text_from_mapping(step_map, "kind"),
+        "status": _required_text_from_mapping(step_map, "status"),
+        "step_id": _required_text_from_mapping(step_map, "step_id"),
+        "message": _required_text_from_mapping(step_map, "message"),
+        "outputs": _json_ready(_as_mapping(step_map.get("outputs", {}))),
+    }
+
+
+def _required_text(payload: _WorkflowResult, field_name: str) -> str:
+    """Return a required string value from a protocol payload."""
+
+    value = getattr(payload, field_name, None)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} is required")
+    return value.strip()
+
+
+def _as_mapping(value: Any) -> Mapping[str, Any]:
+    """Cast and validate mapping-like values."""
+
+    if not isinstance(value, Mapping):
+        raise ValueError("expected mapping payload")
+    return value
+
+
+__all__ = [
+    "ResearchWorkflowReport",
+    "ResearchWorkflowReportWriter",
+]

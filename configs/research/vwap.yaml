@@ -1,0 +1,17 @@
+# VWAP research session config.
+#
+# ResearchSession is only the facade/orchestrator. Executable evidence still
+# goes through the shared BacktestPipeline and BacktestPipelineRunner.
+
+data:
+  config: ../data/historical.local.yaml
+  catalog: research_futures
+  roots: [GC]
+  timeframe: 1m
+backtest_config: ../backtest.vwap_factor_research.yaml
+store: ../../runs/research/vwap
+output_root: ../../runs/research/vwap/backtests
+objective_metric: sharpe_ratio
+discovery:
+  sources: [semantic_scholar, openalex, crossref, arxiv]
+  max_results: 10

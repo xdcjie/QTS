@@ -36,6 +36,7 @@ from qts.research.factor_evaluation import (
 )
 from qts.research.factor_spec import FactorSpec, FactorSpecDrafter, FactorSpecSourceRef
 from qts.research.factor_spec_store import FactorSpecReview, FactorSpecStore
+from qts.research.report import ResearchWorkflowReport, ResearchWorkflowReportWriter
 from qts.research.research_book import (
     HistoryRequest,
     ResearchBook,
@@ -90,6 +91,8 @@ __all__ = [
     "ResearchWorkflowRunner",
     "ResearchWorkflowStepConfig",
     "ResearchWorkflowStepResult",
+    "ResearchWorkflowReport",
+    "ResearchWorkflowReportWriter",
     "FactorSpec",
     "FactorSpecDrafter",
     "FactorSpecSourceRef",

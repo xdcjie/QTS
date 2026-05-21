@@ -275,17 +275,26 @@ class RuntimeMarketDataCoordinator:
         """Emit raw strategy signal and intent events."""
         context = self._context
         for intent in strategy_result.raw_intents:
+            signal_payload = {
+                "instrument_id": intent.asset.instrument_id.value,
+                "intent_type": intent.intent_type.value,
+                "value": str(intent.value) if intent.value is not None else None,
+                "aggregation_policy": binding.signal_aggregation_policy.value,
+                "signal_weight": str(binding.signal_weight),
+                "signal_priority": binding.signal_priority,
+                "conflict_group": binding.conflict_group,
+            }
+            intent_payload = {
+                "instrument_id": intent.asset.instrument_id.value,
+                "intent_type": intent.intent_type.value,
+                "value": str(intent.value) if intent.value is not None else None,
+            }
+            if intent.metadata:
+                signal_payload["metadata"] = dict(intent.metadata)
+                intent_payload["metadata"] = dict(intent.metadata)
             context.write_event(
                 "runtime.signal_received",
-                {
-                    "instrument_id": intent.asset.instrument_id.value,
-                    "intent_type": intent.intent_type.value,
-                    "value": str(intent.value) if intent.value is not None else None,
-                    "aggregation_policy": binding.signal_aggregation_policy.value,
-                    "signal_weight": str(binding.signal_weight),
-                    "signal_priority": binding.signal_priority,
-                    "conflict_group": binding.conflict_group,
-                },
+                signal_payload,
                 correlation_id=correlation_id,
                 instrument_id=intent.asset.instrument_id,
                 strategy_id=binding.strategy_id,
@@ -293,11 +302,7 @@ class RuntimeMarketDataCoordinator:
             )
             context.write_event(
                 "runtime.strategy_intent",
-                {
-                    "instrument_id": intent.asset.instrument_id.value,
-                    "intent_type": intent.intent_type.value,
-                    "value": str(intent.value) if intent.value is not None else None,
-                },
+                intent_payload,
                 correlation_id=correlation_id,
                 instrument_id=intent.asset.instrument_id,
                 strategy_id=binding.strategy_id,

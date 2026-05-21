@@ -159,7 +159,7 @@ def test_live_topology_sections_match_full_builder_payload() -> None:
     run_id = RuntimeRunId("run-live-section-builder")
     account_id = "acct-paper"
     strategy_id = "pullback-strategy"
-    strategy_class = "examples.strategies.vwap_pullback:VwapPullbackStrategy"
+    strategy_class = "examples.strategies.vwap_pullback_v2:VwapPullbackV2Strategy"
     subscriptions = (InstrumentId("EQUITY.US.NASDAQ.AAPL"),)
 
     account = RuntimeTopologyBuilder.live_account_from_config(

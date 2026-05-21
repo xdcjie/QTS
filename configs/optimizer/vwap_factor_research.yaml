@@ -1,0 +1,35 @@
+backtest_config: configs/backtest.vwap_factor_research.yaml
+objective_metric: sharpe_ratio
+capital_metrics:
+  margin_proxy: "12000"
+parameters:
+  - name: time_window
+    values: [current_08_16, evening_18_22]
+  - name: factor_filters
+    values:
+      - []
+      - [distance_mid]
+      - [vwap_slope_strength]
+      - [atr_pct_range]
+      - [session_sigma_range]
+      - [rth_drive_min_atr]
+      - [trend_regime_aligned]
+  - name: min_volume_ratio
+    values: ["1.0", "1.2"]
+validation:
+  constraints:
+    - metric: total_trades
+      operator: ">="
+      threshold: "1"
+    - metric: total_return
+      operator: ">"
+      threshold: "-0.001"
+    - metric: pnl_usd
+      operator: ">"
+      threshold: "0"
+    - metric: max_drawdown
+      operator: "<="
+      threshold: "0.05"
+    - metric: sharpe_ratio
+      operator: ">="
+      threshold: "0"

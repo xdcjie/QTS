@@ -17,6 +17,7 @@ It may:
   `ResearchExperimentRecorder`;
 - aggregate existing factor-evaluation artifacts into a deterministic
   research tearsheet and record it through `ExperimentStore`;
+- derive research-only capital evaluation metrics for optimizer evidence;
 - run one backtest by merging notebook-supplied `strategy_params` into the base
   backtest config;
 - run a parameter grid through `BacktestPipelineRunner`;
@@ -214,10 +215,79 @@ Supported workflow step kinds are:
 - `implementation_gate` — verify required Python modules or `module:Class`
   strategy symbols exist, without generating code or importing runtime/backtest
   internals;
+- `factor_evaluation` — evaluate one or more dated factor snapshots from
+  deterministic CSV/JSON symbol-score and symbol-forward-return files and write
+  factor-evaluation artifacts;
 - `factor_tearsheet` — summarize existing factor-evaluation artifacts and
   optionally record them in `ExperimentStore`;
+- `research_report` — build a deterministic Markdown research report from previous
+  workflow step outputs;
 - `backtest` — call `ResearchSession.run_backtest(...)`;
 - `optimize` — call `ResearchSession.optimize(...)`.
+
+`optimize` workflow steps may also declare validation evidence:
+
+```yaml
+- id: optimize
+  kind: optimize
+  objective_metric: sharpe_ratio
+  output_root: ../../../runs/research/vwap/factor-search
+  validation_output: ../../../runs/research/vwap/validation/factor-search.json
+  capital_metrics:
+    margin_proxy: "12000"
+  validation:
+    constraints:
+      - metric: pnl_usd
+        operator: ">"
+        threshold: "0"
+    walk_forward:
+      top_n: 1
+      output_root: ../../../runs/research/vwap/walk-forward/risk-reward
+      summary_output: ../../../runs/research/vwap/validation/risk-reward-walk-forward.json
+      splits:
+        - name: regime-2025-q1-to-summer
+          train_start: 2025-01-01
+          train_end: 2025-03-01
+          test_start: 2025-06-01
+          test_end: 2025-08-01
+  parameters:
+    time_window: [evening_18_22]
+    min_volume_ratio: ["1.2"]
+```
+
+The capital metrics are derived from completed backtest manifests for research
+ranking and validation only. They do not affect backtest account state or create
+a separate research execution path.
+When `validation.walk_forward` is present, the workflow reruns the top ranked
+candidate parameters across the declared train/test windows through
+`ResearchSession.validate_optimizer_walk_forward(...)`, which delegates to the
+same `BacktestPipeline` boundary used by normal optimizer runs.
+
+The standard VWAP research workflow is:
+
+```bash
+PYTHONPATH=backend/src uv run python scripts/run_research.py \
+  --config configs/research/vwap.yaml \
+  workflow configs/research/workflows/vwap_factor_search.yaml
+```
+
+It runs source-backed factor discovery, verifies the implemented VWAP strategy,
+runs a baseline backtest, runs factor-filter and risk/reward optimizer sweeps,
+writes optimizer validation summaries, and emits a Markdown research report.
+The VWAP research strategy uses entry-price anchored ATR/R exits:
+`stop_atr_multiple` defines the stop distance from entry and
+`target_r_multiple` defines the profit target as a multiple of that risk.
+When the strategy emits a close intent, the runtime events artifact carries
+`metadata.exit_reason` plus the entry, stop, and target prices so trade exits
+can be reviewed without replaying strategy internals.
+The standard factor-search workflow also includes regime-oriented filters for
+VWAP slope strength, ATR/price range, session VWAP dispersion, RTH opening
+drive, and a combined trend regime gate. These filters are strategy candidate
+gates only; optimizer runs still execute through `BacktestPipeline`.
+For the current VWAP research workflow, the risk/reward sweep uses
+`session_sigma_range + mom120_aligned` as the candidate regime gate, with
+`session_sigma_min_atr=0.05` and `session_sigma_max_atr=2.00` supplied by the
+strategy research config.
 
 Workflow configs reject promotion/trading keys such as `generate_code`,
 `promote`, `paper`, `live`, `broker`, `orders`, `runtime`, and `trade`.

@@ -1,0 +1,67 @@
+backtest_config: configs/backtest.vwap_factor_research.yaml
+objective_metric: sharpe_ratio
+capital_metrics:
+  margin_proxy: "12000"
+parameters:
+  - name: time_window
+    values: [evening_18_22]
+  - name: min_volume_ratio
+    values: ["1.2"]
+  - name: pullback_touch_atr_below
+    values: ["0.15"]
+  - name: max_pullback_break_atr
+    values: ["1.0"]
+  - name: stop_atr_multiple
+    values: ["1.0"]
+  - name: target_r_multiple
+    values: ["2.0"]
+  - name: factor_filters
+    values:
+      - []
+      - [distance_mid]
+      - [vwap_slope_strength]
+      - [atr_pct_range]
+      - [session_sigma_range]
+      - [rth_drive_min_atr]
+      - [trend_regime_aligned]
+      - [rsi_mid]
+      - [mfi_mid]
+      - [volume_curve_range]
+      - [adx_aligned]
+      - [macd_aligned]
+      - [roc_aligned]
+      - [mom60_aligned]
+      - [mom120_aligned]
+      - [ma20_80_aligned]
+      - [technical_score_min]
+      - [bollinger_inside]
+      - [donchian_half_aligned]
+      - [keltner_inside]
+      - [cmf_aligned]
+      - [volume_curve_range, adx_aligned]
+      - [volume_curve_range, macd_aligned]
+      - [volume_curve_range, rsi_mid]
+      - [volume_curve_range, cmf_aligned]
+      - [adx_aligned, mom120_aligned]
+      - [mom120_min, volume_curve_range]
+      - [vwap_slope_strength, mom120_aligned]
+      - [vwap_slope_strength, volume_curve_range]
+      - [atr_pct_range, mom120_aligned]
+      - [session_sigma_range, mom120_aligned]
+      - [rth_drive_min_atr, mom120_aligned]
+      - [trend_regime_aligned, atr_pct_range]
+      - [trend_regime_aligned, session_sigma_range]
+validation:
+  constraints:
+    - metric: total_trades
+      operator: ">="
+      threshold: "3"
+    - metric: pnl_usd
+      operator: ">"
+      threshold: "0"
+    - metric: max_drawdown
+      operator: "<="
+      threshold: "0.05"
+    - metric: sharpe_ratio
+      operator: ">="
+      threshold: "0"

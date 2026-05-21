@@ -339,15 +339,25 @@ class BacktestActorLoop:
     ) -> None:
         """Emit raw strategy signal and intent events."""
         for intent in strategy_result.raw_intents:
+            signal_payload = {
+                "instrument_id": intent.asset.instrument_id.value,
+                "intent_type": intent.intent_type.value,
+                "value": str(intent.value) if intent.value is not None else None,
+                "order_spec": intent.order_spec.to_payload(),
+            }
+            intent_payload = {
+                "instrument_id": intent.asset.instrument_id.value,
+                "intent_type": intent.intent_type.value,
+                "value": str(intent.value) if intent.value is not None else None,
+                "order_spec": intent.order_spec.to_payload(),
+            }
+            if intent.metadata:
+                signal_payload["metadata"] = dict(intent.metadata)
+                intent_payload["metadata"] = dict(intent.metadata)
             state.sink.write(
                 RuntimeEvent(
                     kind="runtime.signal_received",
-                    payload={
-                        "instrument_id": intent.asset.instrument_id.value,
-                        "intent_type": intent.intent_type.value,
-                        "value": str(intent.value) if intent.value is not None else None,
-                        "order_spec": intent.order_spec.to_payload(),
-                    },
+                    payload=signal_payload,
                     correlation_id=correlation_id,
                     instrument_id=intent.asset.instrument_id,
                     account_id=self._account_id,
@@ -357,12 +367,7 @@ class BacktestActorLoop:
             state.sink.write(
                 RuntimeEvent(
                     kind="runtime.strategy_intent",
-                    payload={
-                        "instrument_id": intent.asset.instrument_id.value,
-                        "intent_type": intent.intent_type.value,
-                        "value": str(intent.value) if intent.value is not None else None,
-                        "order_spec": intent.order_spec.to_payload(),
-                    },
+                    payload=intent_payload,
                     correlation_id=correlation_id,
                     instrument_id=intent.asset.instrument_id,
                     account_id=self._account_id,

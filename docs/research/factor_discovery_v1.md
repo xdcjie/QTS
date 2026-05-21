@@ -10,6 +10,8 @@ It may:
 - cache query results under the research store for reproducibility;
 - return idea cards with title, abstract, year, authors, citations, source URL,
   and heuristic candidate tags;
+- rank and cap source results by market-research relevance before drafting
+  candidates;
 - expose notebook-friendly pandas `DataFrame` output.
 
 It must not:
@@ -69,6 +71,21 @@ The query hash includes query text, source list, max result count, and optional
 year bounds. Repeating the same query returns the cached result unless
 `refresh=True` is passed.
 
+## Relevance Ranking
+
+Discovery combines results from the configured sources, deduplicates by
+`idea_id`, and then applies a deterministic market-research relevance score.
+For queries that include trading terms such as `VWAP`, `futures`, `market
+microstructure`, `order flow`, `returns`, or `commodity`, the result set keeps
+ideas with finance/trading context and drops obvious off-topic metadata matches
+such as medical or generic NLP papers that only matched a broad word like
+`volume`.
+
+The final result is capped after relevance ranking by `max_results`. This keeps
+notebook review queues small and makes workflow output deterministic. Ranking is
+for triage only; it does not imply that an idea is implemented, reviewed, or
+promoted.
+
 ## Idea Cards
 
 Each `FactorIdea` contains:
@@ -79,7 +96,7 @@ Each `FactorIdea` contains:
 - `title`, `abstract`, `url`, `year`, `authors`, `citation_count`;
 - `candidate_tags`: heuristic tags such as `momentum`, `reversal`,
   `volatility`, `carry`, `value`, `quality`, `sentiment`, `liquidity`,
-  `seasonality`, or `macro`.
+  `volume`, `order_flow`, `regime`, `seasonality`, or `macro`.
 
 Candidate tags are hints for triage only. They do not define a factor contract.
 

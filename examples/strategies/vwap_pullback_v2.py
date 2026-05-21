@@ -73,7 +73,9 @@ class VwapPullbackV2Config:
     # Stops & targets
     stop_buffer_atr: Decimal = Decimal("0.2")
 
-    # Time-of-day filter (US/Eastern hours, half-open [start, end))
+    # Time-of-day filter (US/Eastern hours, half-open [start, end)).
+    # Disable this to rely on exchange session bars, e.g. GC [ET 18:00, ET 17:00).
+    use_trading_hours_filter: bool = True
     trading_hours_et_start: int = 8
     trading_hours_et_end: int = 16
 
@@ -120,11 +122,16 @@ class VwapPullbackV2Config:
         for name in non_negative_decimals:
             if getattr(self, name) < Decimal("0"):
                 raise ValueError(f"{name} must be non-negative")
+        if not isinstance(self.use_trading_hours_filter, bool):
+            raise ValueError("use_trading_hours_filter must be a bool")
         if not (0 <= self.trading_hours_et_start < 24):
             raise ValueError("trading_hours_et_start must be 0..23")
         if not (0 < self.trading_hours_et_end <= 24):
             raise ValueError("trading_hours_et_end must be 1..24")
-        if self.trading_hours_et_start >= self.trading_hours_et_end:
+        if (
+            self.use_trading_hours_filter
+            and self.trading_hours_et_start >= self.trading_hours_et_end
+        ):
             raise ValueError("trading_hours_et_start must be < trading_hours_et_end")
 
 
@@ -423,6 +430,8 @@ class VwapPullbackV2Strategy(Strategy):
         return self._session.first_hour_crossings > self._config.max_first_hour_vwap_crossings
 
     def _in_trading_hours(self, bar: Bar) -> bool:
+        if not self._config.use_trading_hours_filter:
+            return True
         # Compare in minutes-of-day so end=24 (end of day) is expressible.
         et_dt = bar.start_time.astimezone(self._et_tz)
         bar_minutes = et_dt.hour * 60 + et_dt.minute

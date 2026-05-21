@@ -33,13 +33,14 @@ def _idea(
     idea_id: str = "fixture:momentum",
     source: str = "fixture",
     title: str = "Momentum and reversal effects in futures",
+    abstract: str = "A momentum signal with volatility controls and reversal filters.",
 ) -> FactorIdea:
     return FactorIdea(
         idea_id=idea_id,
         source=source,
         external_id=idea_id,
         title=title,
-        abstract="A momentum signal with volatility controls and reversal filters.",
+        abstract=abstract,
         url="https://example.test/paper",
         year=2026,
         authors=("A. Researcher",),
@@ -80,6 +81,21 @@ def test_factor_idea_infers_candidate_tags_from_title_and_abstract() -> None:
     idea = _idea()
 
     assert idea.candidate_tags == ("momentum", "reversal", "volatility")
+
+
+def test_factor_idea_infers_regime_volume_and_order_flow_tags() -> None:
+    idea = _idea(
+        title="Regime switching VWAP strategy from order flow imbalance",
+        abstract="A volume curve filter separates high volatility market states.",
+    )
+
+    assert idea.candidate_tags == (
+        "volatility",
+        "liquidity",
+        "volume",
+        "order_flow",
+        "regime",
+    )
 
 
 def test_factor_idea_store_round_trips_cached_search(tmp_path: Path) -> None:
@@ -127,6 +143,81 @@ def test_factor_discovery_deduplicates_ideas_across_sources(tmp_path: Path) -> N
 
     assert [idea.idea_id for idea in result.ideas] == ["shared:paper", "source_b:unique"]
     assert result.cached is False
+
+
+def test_factor_discovery_filters_non_trading_results_for_market_queries(
+    tmp_path: Path,
+) -> None:
+    relevant = _idea(
+        idea_id="fixture:vwap",
+        title="VWAP execution with order flow imbalance in futures markets",
+    )
+    irrelevant = _idea(
+        idea_id="fixture:lung-screening",
+        title="Reduced lung cancer mortality with volume CT screening",
+    )
+    discovery = FactorDiscovery(
+        store=FactorIdeaStore(tmp_path / "research-store"),
+        sources={"fixture": _CountingSource((irrelevant, relevant))},
+    )
+
+    result = discovery.search(
+        "VWAP intraday futures market microstructure order flow",
+        sources=("fixture",),
+        max_results=5,
+    )
+
+    assert [idea.idea_id for idea in result.ideas] == ["fixture:vwap"]
+
+
+def test_factor_discovery_caps_results_after_relevance_ranking(tmp_path: Path) -> None:
+    precise = _idea(
+        idea_id="fixture:vwap",
+        title="VWAP intraday futures alpha from order flow imbalance",
+    )
+    broad = _idea(
+        idea_id="fixture:volume",
+        title="Volume curve seasonality in commodity futures",
+    )
+    weak = _idea(
+        idea_id="fixture:momentum",
+        title="Momentum and volatility timing in futures",
+    )
+    discovery = FactorDiscovery(
+        store=FactorIdeaStore(tmp_path / "research-store"),
+        sources={"fixture": _CountingSource((weak, broad, precise))},
+    )
+
+    result = discovery.search(
+        "VWAP intraday futures order flow",
+        sources=("fixture",),
+        max_results=2,
+    )
+
+    assert [idea.idea_id for idea in result.ideas] == ["fixture:vwap", "fixture:volume"]
+
+
+def test_factor_discovery_excludes_retracted_market_papers(tmp_path: Path) -> None:
+    retracted = _idea(
+        idea_id="fixture:retracted",
+        title="RETRACTED: Trading volume and predictability in commodity futures",
+    )
+    active = _idea(
+        idea_id="fixture:active",
+        title="Order flow imbalance and intraday futures returns",
+    )
+    discovery = FactorDiscovery(
+        store=FactorIdeaStore(tmp_path / "research-store"),
+        sources={"fixture": _CountingSource((retracted, active))},
+    )
+
+    result = discovery.search(
+        "VWAP intraday futures order flow",
+        sources=("fixture",),
+        max_results=5,
+    )
+
+    assert [idea.idea_id for idea in result.ideas] == ["fixture:active"]
 
 
 class _FakeHttpClient:

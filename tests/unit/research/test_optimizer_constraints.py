@@ -24,6 +24,14 @@ def _result_with_manifest(tmp_path: Path, metrics: dict[str, str]) -> Optimizati
                 "run_id": "run-0001",
                 "manifest_hash": "abcdef123456",
                 "metrics": metrics,
+                "runtime_topology": {
+                    "accounts": [
+                        {
+                            "account_id": "acct-backtest",
+                            "initial_cash": "100000",
+                        }
+                    ]
+                },
             },
             sort_keys=True,
         ),
@@ -150,3 +158,40 @@ def test_validation_summary_rejects_unsupported_parameter_values(tmp_path: Path)
 
     with pytest.raises(ValueError, match="unsupported optimizer parameter value"):
         OptimizerValidationSummary.from_results((result,))
+
+
+def test_validation_summary_includes_capital_metrics_and_constraints(
+    tmp_path: Path,
+) -> None:
+    accepted = _result_with_manifest(
+        tmp_path / "accepted",
+        {
+            "avg_gross_exposure": "0.5",
+            "total_return": "0.02",
+            "total_trades": "4",
+        },
+    )
+    rejected = _result_with_manifest(
+        tmp_path / "rejected",
+        {
+            "avg_gross_exposure": "0.5",
+            "total_return": "0.001",
+            "total_trades": "2",
+        },
+    )
+
+    summary = OptimizerValidationSummary.from_results(
+        (accepted, rejected),
+        (MetricConstraint("pnl_usd", ">=", Decimal("1000")),),
+        capital_metric_config={"margin_proxy": "1000"},
+    )
+
+    assert summary.accepted_count == 1
+    assert summary.rejected_count == 1
+    accepted_metrics = summary.accepted_runs[0]["capital_metrics"]
+    assert accepted_metrics["initial_cash"] == "100000"
+    assert accepted_metrics["pnl_usd"] == "2000.00"
+    assert accepted_metrics["pnl_per_trade"] == "500.00"
+    assert accepted_metrics["return_on_margin_proxy"] == "2.00"
+    assert accepted_metrics["return_on_avg_gross_exposure"] == "0.04"
+    assert "pnl_usd=100.000" in summary.rejections[0]["reasons"][0]

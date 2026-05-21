@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import StrEnum
+from types import MappingProxyType
 
 from qts.domain.orders import OrderSpec, OrderType
 from qts.strategy_sdk.asset_ref import AssetRef
@@ -27,6 +29,14 @@ class TargetIntent:
     intent_type: TargetIntentType
     value: Decimal | None
     order_spec: OrderSpec = OrderSpec()
+    metadata: Mapping[str, str] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "metadata",
+            MappingProxyType({str(key): str(value) for key, value in self.metadata.items()}),
+        )
 
     @property
     def spec(self) -> OrderSpec:

@@ -514,7 +514,7 @@ Out:
    every supported `(BrokerOrderType, TimeInForce)` → `ib.Order(...)` mapping.
    Snapshot diffed in CI.
 
-6. **End-to-end SDK** — `examples/strategies/vwap_pullback.py` updated to use
+6. **End-to-end SDK** — `examples/strategies/vwap_pullback_v2.py` updated to use
    one bracket entry on long signals; mypy clean; integration test
    `tests/integration/test_backtest_engine_flow.py` produces bracket fill
    stream.

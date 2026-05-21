@@ -18,12 +18,14 @@ loader other than the one ``run_backtest`` uses.
 from __future__ import annotations
 
 import csv
+import json
 import os
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
+from qts.backtest.pipeline import BacktestPipeline
 from qts.data.historical.csv_format import EXPECTED_HISTORICAL_COLUMNS
 from qts.strategy_sdk import Strategy
 
@@ -141,14 +143,22 @@ def test_optimizer_cli_consumes_backtest_config_and_sweeps_strategy_params(
         f"""
 backtest_config: {backtest_config}
 objective_metric: total_return
+capital_metrics:
+  margin_proxy: "1000"
 parameters:
   - name: entry_bar
     values: [1, 2]
   - name: quantity
     values: ["1", "2"]
+validation:
+  constraints:
+    - metric: pnl_usd
+      operator: ">"
+      threshold: "0"
 """,
         encoding="utf-8",
     )
+    validation_output = tmp_path / "validation-summary.json"
 
     result = subprocess.run(
         [
@@ -157,6 +167,8 @@ parameters:
             str(optimizer_config),
             "--output-root",
             str(tmp_path / "optimizer-runs"),
+            "--validation-output",
+            str(validation_output),
         ],
         capture_output=True,
         text=True,
@@ -181,3 +193,70 @@ parameters:
     assert len(rank_lines) >= 4, f"expected at least 4 ranked rows, got:\n{output}"
     manifest_hash_column_present = "manifest_hash" in output
     assert manifest_hash_column_present, f"manifest_hash column missing in output:\n{output}"
+    validation_payload = json.loads(validation_output.read_text(encoding="utf-8"))
+    assert validation_payload["accepted_count"] >= 1
+    assert (
+        validation_payload["accepted_runs"][0]["capital_metrics"]["return_on_margin_proxy"] != "0"
+    )
+
+
+def test_pipeline_sweeps_params_loaded_from_strategy_config(tmp_path: Path) -> None:
+    """Regression: optimizer overrides must survive strategy_config normalization."""
+
+    data_config_path = tmp_path / "historical.local.yaml"
+    data_config_path.write_text(
+        """
+historical_data:
+  stores:
+    local_csv:
+      type: local_csv
+      root_dir: /tmp
+      bars_dir: data
+  catalogs:
+    research:
+      store: local_csv
+      datasets: {}
+""",
+        encoding="utf-8",
+    )
+    strategy_config_path = tmp_path / "strategy.yaml"
+    strategy_config_path.write_text(
+        """
+strategy_id: parameterized-buy
+class_path: tests.integration.test_optimizer_consumes_backtest_config:ParametrizedBuyStrategy
+params:
+  quantity: "1"
+  entry_bar: 1
+""",
+        encoding="utf-8",
+    )
+    backtest_config_path = tmp_path / "backtest.yaml"
+    backtest_config_path.write_text(
+        f"""
+market_data:
+  source: local_historical
+  config: {data_config_path}
+  catalog: research
+roots: [EQUITY]
+symbols: [AAPL]
+instrument_ids:
+  AAPL: EQUITY.US.NASDAQ.AAPL
+start: "2010-06-06T22:00:00Z"
+end: "2010-06-06T22:05:00Z"
+timeframe: 1m
+initial_cash: "100000"
+strategy_config: {strategy_config_path}
+risk_config:
+  max_notional: "100000000"
+""",
+        encoding="utf-8",
+    )
+
+    pipeline = BacktestPipeline.from_yaml(backtest_config_path)
+    swept_pipeline = pipeline.with_strategy_params({"quantity": "3", "entry_bar": 2})
+
+    assert swept_pipeline.config.strategy_params["quantity"] == "3"
+    assert swept_pipeline.config.strategy_params["entry_bar"] == 2
+    assert swept_pipeline.config.strategy is not None
+    assert swept_pipeline.config.strategy.params["quantity"] == "3"
+    assert swept_pipeline.config.strategy.params["entry_bar"] == 2

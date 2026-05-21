@@ -10,6 +10,8 @@ It may:
 - apply metric constraints to `OptimizationResult` manifests;
 - record accepted and rejected optimizer runs with reasons;
 - describe deterministic walk-forward train/test windows;
+- rerun selected backtest-pipeline candidates across those train/test windows;
+- derive research-only capital metrics from completed backtest manifests;
 - write deterministic JSON validation summaries.
 
 It must not:
@@ -23,8 +25,9 @@ It must not:
 ## Constraints
 
 `MetricConstraint(metric_name, operator, threshold)` reads the named metric from
-the run manifest `statistics` or `metrics` block and compares it with a
-`Decimal` threshold. Supported operators are `>`, `>=`, `<`, `<=`, and `==`.
+derived capital metrics first, then from the run manifest `statistics` or
+`metrics` block, and compares it with a `Decimal` threshold. Supported
+operators are `>`, `>=`, `<`, `<=`, and `==`.
 
 Each evaluation returns a `ConstraintDecision` containing:
 
@@ -37,7 +40,7 @@ constraint inputs, even when a comparison such as `>=` would otherwise accept
 the value. The rejected `OptimizationResult` remains part of the validation
 summary.
 
-## Walk-Forward Metadata
+## Walk-Forward Validation
 
 `WalkForwardSplit` records one ordered, non-overlapping train/test window:
 
@@ -47,9 +50,17 @@ train_start < train_end <= test_start < test_end
 
 `WalkForwardPlan` requires at least one split, unique split names, and an
 ordered non-overlapping sequence across splits. A later split must not start
-before the prior split's `test_end`. V1 does not alter the optimizer execution
-path from split metadata; it provides deterministic validation evidence for
-workflows that separate in-sample and out-of-sample evaluation.
+before the prior split's `test_end`.
+
+`BacktestWalkForwardValidationRunner` takes selected optimizer candidate
+parameters and reruns them through `BacktestPipeline` for each split phase. It
+changes only the backtest date range and strategy parameters; market data,
+instrument resolution, risk, execution, account state, and reporting still come
+from the same backtest pipeline as normal optimizer runs.
+
+`WalkForwardValidationSummary` groups the rerun evidence by split and phase,
+then applies the same validation constraints and optional capital metrics used
+by `OptimizerValidationSummary`.
 
 ## Validation Summary
 
@@ -64,6 +75,21 @@ workflows that separate in-sample and out-of-sample evaluation.
 
 Without constraints, V1 records every result as accepted. With constraints, any
 failed constraint rejects the run and stores every rejection reason.
+
+When `capital_metric_config` is supplied, the summary may include research-only
+capital metrics derived from completed manifests:
+
+- `initial_cash`
+- `pnl_usd`
+- `net_pnl_usd`
+- `gross_pnl_before_recorded_cost`
+- `pnl_per_trade`
+- `return_on_avg_gross_exposure`
+- `return_on_margin_proxy`
+
+These metrics are evidence and validation helpers only. They do not change
+backtest account state, fill simulation, risk checks, order handling, or
+portfolio accounting.
 
 `OptimizerValidationSummaryWriter` writes JSON with:
 
@@ -87,11 +113,13 @@ generation, result ranking, or the human-readable ranked table.
 Configs may include optional validation evidence:
 
 ```yaml
+capital_metrics:
+  margin_proxy: "12000"
 validation:
   constraints:
-    - metric: total_return
-      operator: ">="
-      threshold: "0.05"
+    - metric: pnl_usd
+      operator: ">"
+      threshold: "0"
   walk_forward:
     splits:
       - name: split-1
@@ -102,5 +130,9 @@ validation:
 ```
 
 When present, the CLI applies constraints to the validation summary and records
-walk-forward split metadata. Without `validation`, the summary remains
+walk-forward split metadata. The research workflow runner additionally uses
+`validation.walk_forward` to rerun the selected top candidates and can write a
+separate walk-forward summary artifact. When `capital_metrics.margin_proxy` or
+`capital_metrics.margin_proxy_usd` is present, the summary also records
+`return_on_margin_proxy`. Without `validation`, the summary remains
 unconstrained and accepts every completed optimizer result.

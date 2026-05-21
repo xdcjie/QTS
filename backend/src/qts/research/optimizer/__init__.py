@@ -13,10 +13,20 @@ from qts.research.optimizer.runner import OptimizationRunner, extract_objective_
 from qts.research.optimizer.validation import (
     OptimizerValidationSummary,
     OptimizerValidationSummaryWriter,
+    derive_capital_metrics,
 )
-from qts.research.optimizer.walk_forward import WalkForwardPlan, WalkForwardSplit
+from qts.research.optimizer.walk_forward import (
+    BacktestWalkForwardValidationJob,
+    BacktestWalkForwardValidationRunner,
+    WalkForwardPlan,
+    WalkForwardSplit,
+    WalkForwardValidationResult,
+    WalkForwardValidationSummary,
+)
 
 __all__ = [
+    "BacktestWalkForwardValidationJob",
+    "BacktestWalkForwardValidationRunner",
     "BacktestPipelineJob",
     "BacktestPipelineRunner",
     "BarsFactory",
@@ -33,5 +43,8 @@ __all__ = [
     "StrategyFactory",
     "WalkForwardPlan",
     "WalkForwardSplit",
+    "WalkForwardValidationResult",
+    "WalkForwardValidationSummary",
+    "derive_capital_metrics",
     "extract_objective_from_manifest",
 ]
