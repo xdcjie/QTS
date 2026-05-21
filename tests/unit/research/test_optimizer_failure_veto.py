@@ -38,6 +38,12 @@ def test_failure_window_rejects_empty_names_and_inverted_dates() -> None:
     }
 
 
+@pytest.mark.parametrize("name", ("../escape", "crash/2024", "crash\\2024", ".", ".."))
+def test_failure_window_rejects_unsafe_path_segment_names(name: str) -> None:
+    with pytest.raises(ValueError, match="failure window name must be a safe path segment"):
+        FailureWindow(name=name, start=date(2026, 1, 1), end=date(2026, 1, 2))
+
+
 def test_failure_window_veto_job_rejects_duplicate_window_names(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="duplicate window names"):
         FailureWindowVetoJob(

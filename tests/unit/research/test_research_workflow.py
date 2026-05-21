@@ -431,6 +431,10 @@ steps:
     validation:
       failure_window_veto:
         require_passing_candidate: true
+        constraints:
+          - metric: pnl_usd
+            operator: ">"
+            threshold: "0"
         windows:
           - name: crash-2024
             start: 2024-01-01
@@ -455,6 +459,91 @@ steps:
     ]
     assert session.failure_veto_calls
     assert not (tmp_path / "reports" / "blocked.md").exists()
+
+
+@pytest.mark.parametrize("constraints", ("", "        constraints: []\n"))
+def test_failure_window_veto_requires_non_empty_constraints(
+    tmp_path: Path,
+    constraints: str,
+) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        f"""
+version: 1
+workflow_id: failure-veto-constraints
+steps:
+  - id: optimize
+    kind: optimize
+    objective_metric: sharpe_ratio
+    parameters:
+      alpha: ["1"]
+    validation:
+      failure_window_veto:
+{constraints}        windows:
+          - name: crash-2024
+            start: 2024-01-01
+            end: 2024-03-01
+""",
+    )
+
+    session = _FakeSession(accepted_specs=())
+
+    result = ResearchWorkflowRunner().run(
+        session,
+        ResearchWorkflowConfig.from_yaml(workflow_path),
+    )
+
+    assert result.status == "failed"
+    assert result.steps[0].status == "failed"
+    assert (
+        result.steps[0].message
+        == "validation.failure_window_veto.constraints must be a non-empty list"
+    )
+    assert session.failure_veto_calls == []
+
+
+def test_failure_window_veto_rejects_non_boolean_require_passing_candidate(
+    tmp_path: Path,
+) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: failure-veto-boolean
+steps:
+  - id: optimize
+    kind: optimize
+    objective_metric: sharpe_ratio
+    parameters:
+      alpha: ["1"]
+    validation:
+      failure_window_veto:
+        require_passing_candidate: "false"
+        constraints:
+          - metric: pnl_usd
+            operator: ">"
+            threshold: "0"
+        windows:
+          - name: crash-2024
+            start: 2024-01-01
+            end: 2024-03-01
+""",
+    )
+
+    session = _FakeSession(accepted_specs=())
+
+    result = ResearchWorkflowRunner().run(
+        session,
+        ResearchWorkflowConfig.from_yaml(workflow_path),
+    )
+
+    assert result.status == "failed"
+    assert result.steps[0].status == "failed"
+    assert (
+        result.steps[0].message
+        == "validation.failure_window_veto.require_passing_candidate must be a boolean"
+    )
+    assert session.failure_veto_calls == []
 
 
 def test_vwap_workflow_uses_multi_window_top_n_walk_forward_validation() -> None:

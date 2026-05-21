@@ -29,8 +29,11 @@ class FailureWindow:
     report_only: bool = False
 
     def __post_init__(self) -> None:
-        if not self.name.strip():
+        name = self.name.strip()
+        if not name:
             raise ValueError("failure window name must not be empty")
+        if name != self.name or name in {".", ".."} or "/" in name or "\\" in name:
+            raise ValueError("failure window name must be a safe path segment")
         if self.start >= self.end:
             raise ValueError("failure window start must be before end")
 

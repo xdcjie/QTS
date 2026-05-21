@@ -577,6 +577,9 @@ class ResearchWorkflowRunner:
             top_n = int(failure_veto_payload.get("top_n", 1))
             if top_n <= 0:
                 raise ValueError("validation.failure_window_veto.top_n must be positive")
+            require_passing_candidate = self._failure_veto_require_passing_candidate(
+                failure_veto_payload
+            )
             failure_veto_output_root = failure_veto_payload.get("output_root")
             failure_veto_summary = session.validate_optimizer_failure_window_veto(
                 candidate_parameters=tuple(dict(result.parameters) for result in results[:top_n]),
@@ -615,7 +618,7 @@ class ResearchWorkflowRunner:
                 )
             decision = failure_veto_summary_payload.get("decision", {})
             failure_veto_blocked = (
-                bool(failure_veto_payload.get("require_passing_candidate", False))
+                require_passing_candidate
                 and isinstance(decision, Mapping)
                 and decision.get("accepted") is False
             )
@@ -726,12 +729,21 @@ class ResearchWorkflowRunner:
         value: Mapping[str, Any],
     ) -> tuple[MetricConstraint, ...]:
         raw_constraints = value.get("constraints")
-        if raw_constraints is None:
-            return ()
+        if raw_constraints is None or not isinstance(raw_constraints, list) or not raw_constraints:
+            raise ValueError("validation.failure_window_veto.constraints must be a non-empty list")
         return self._metric_constraints_from_sequence(
             raw_constraints,
             field_name="validation.failure_window_veto.constraints",
         )
+
+    @staticmethod
+    def _failure_veto_require_passing_candidate(value: Mapping[str, Any]) -> bool:
+        raw_value = value.get("require_passing_candidate", False)
+        if not isinstance(raw_value, bool):
+            raise ValueError(
+                "validation.failure_window_veto.require_passing_candidate must be a boolean"
+            )
+        return raw_value
 
     def _failure_windows(
         self,
