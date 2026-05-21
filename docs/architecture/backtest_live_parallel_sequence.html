@@ -1013,7 +1013,7 @@
           <li><code>CalendarSessionLookup</code> <span class="location">backend/src/qts/data/sessions/calendar_lookup.py:11</span> -> <code>session_for():14</code></li>
           <li><code>RegularSessionWindow</code> <span class="location">backend/src/qts/data/sessions/window.py:12</span> -> <code>__post_init__():23</code>, <code>session_id_for_timestamp():30</code>, <code>session_date_for_timestamp():36</code>, <code>to_payload():51</code></li>
           <li><code>ReplayMarketDataBundle</code> <span class="location">backend/src/qts/data/sources/replay_bundle_builder.py:34</span> -> <code>provenance_payload_for():45</code></li>
-          <li><code>ReplayMarketDataBundleBuilder</code> <span class="location">backend/src/qts/data/sources/replay_bundle_builder.py:62</span> -> <code>__init__():65</code>, <code>build():69</code>, <code>file_content_hash():399</code>, <code>file_row_count():405</code></li>
+          <li><code>ReplayMarketDataBundleBuilder</code> <span class="location">backend/src/qts/data/sources/replay_bundle_builder.py:62</span> -> <code>__init__():67</code>, <code>build():71</code>, <code>file_content_hash():415</code>, <code>file_row_count():421</code></li>
           <li><code>ReplayClock</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:34</span> -> <code>advance_to_next_event():39</code></li>
           <li><code>ReplaySequencedEvent</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:49</span> -> <code>visible_at property:57</code></li>
           <li><code>ReplayEventSequencer</code> <span class="location">backend/src/qts/data/sources/replay_market_data_source.py:62</span> -> <code>__init__():65</code>, <code>sequence():72</code>, <code>drain_diagnostic_events():125</code></li>
@@ -6404,23 +6404,23 @@
             <thead><tr><th>函数</th><th>位置</th><th>作用</th><th>必要性</th></tr></thead>
             <tbody>
               <tr><td><code>provenance_payload_for</code></td><td>ReplayMarketDataBundle:45</td><td>Return dataset provenance payload for a replayed market-data event.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>__init__</code></td><td>ReplayMarketDataBundleBuilder:65</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>build</code></td><td>ReplayMarketDataBundleBuilder:69</td><td>Build replay inputs from the configured historical catalog.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_roll_registry</code></td><td>ReplayMarketDataBundleBuilder:90</td><td>实现 ReplayMarketDataBundleBuilder 的 roll registry 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_stream_configured_bars</code></td><td>ReplayMarketDataBundleBuilder:98</td><td>实现 ReplayMarketDataBundleBuilder 的 stream configured bars 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_with_time_grid_synthesis</code></td><td>ReplayMarketDataBundleBuilder:184</td><td>Wrap a per-root bar stream so intra-session gaps emit synthetic bars.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_iter_root_bars</code></td><td>ReplayMarketDataBundleBuilder:192</td><td>实现 ReplayMarketDataBundleBuilder 的 iter root bars 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_merge_ordered_bar_streams</code></td><td>ReplayMarketDataBundleBuilder:231</td><td>实现 ReplayMarketDataBundleBuilder 的 merge ordered bar streams 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_record_exchange_timezone</code></td><td>ReplayMarketDataBundleBuilder:254</td><td>实现 ReplayMarketDataBundleBuilder 的 record exchange timezone 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_exchange_timezone_for</code></td><td>ReplayMarketDataBundleBuilder:264</td><td>实现 ReplayMarketDataBundleBuilder 的 exchange timezone for 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_instrument_registry_for</code></td><td>ReplayMarketDataBundleBuilder:271</td><td>实现 ReplayMarketDataBundleBuilder 的 instrument registry for 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_instrument_for</code></td><td>ReplayMarketDataBundleBuilder:325</td><td>实现 ReplayMarketDataBundleBuilder 的 instrument for 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_dataset_metadata</code></td><td>ReplayMarketDataBundleBuilder:349</td><td>实现 ReplayMarketDataBundleBuilder 的 dataset metadata 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_file_content_hash_and_row_count</code></td><td>ReplayMarketDataBundleBuilder:377</td><td>Return SHA-256 content hash and CSV data-row count in one pass.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>file_content_hash</code></td><td>ReplayMarketDataBundleBuilder:399</td><td>Return a stable content hash for the replay source file.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>file_row_count</code></td><td>ReplayMarketDataBundleBuilder:405</td><td>Return the number of data rows in a replay CSV source file.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
-              <tr><td><code>_dataset_instrument_id</code></td><td>ReplayMarketDataBundleBuilder:411</td><td>实现 ReplayMarketDataBundleBuilder 的 dataset instrument id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
-              <tr><td><code>_contract_multipliers_for</code></td><td>ReplayMarketDataBundleBuilder:416</td><td>实现 ReplayMarketDataBundleBuilder 的 contract multipliers for 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>__init__</code></td><td>ReplayMarketDataBundleBuilder:67</td><td>初始化对象依赖、配置和内部状态。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>build</code></td><td>ReplayMarketDataBundleBuilder:71</td><td>Build replay inputs from the configured historical catalog.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_roll_registry</code></td><td>ReplayMarketDataBundleBuilder:92</td><td>实现 ReplayMarketDataBundleBuilder 的 roll registry 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_stream_configured_bars</code></td><td>ReplayMarketDataBundleBuilder:100</td><td>实现 ReplayMarketDataBundleBuilder 的 stream configured bars 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_with_time_grid_synthesis</code></td><td>ReplayMarketDataBundleBuilder:186</td><td>Wrap a per-root bar stream so intra-session gaps emit synthetic bars.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_iter_root_bars</code></td><td>ReplayMarketDataBundleBuilder:194</td><td>实现 ReplayMarketDataBundleBuilder 的 iter root bars 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_merge_ordered_bar_streams</code></td><td>ReplayMarketDataBundleBuilder:233</td><td>实现 ReplayMarketDataBundleBuilder 的 merge ordered bar streams 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_record_exchange_timezone</code></td><td>ReplayMarketDataBundleBuilder:256</td><td>实现 ReplayMarketDataBundleBuilder 的 record exchange timezone 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_exchange_timezone_for</code></td><td>ReplayMarketDataBundleBuilder:266</td><td>实现 ReplayMarketDataBundleBuilder 的 exchange timezone for 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_instrument_registry_for</code></td><td>ReplayMarketDataBundleBuilder:273</td><td>实现 ReplayMarketDataBundleBuilder 的 instrument registry for 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_instrument_for</code></td><td>ReplayMarketDataBundleBuilder:327</td><td>实现 ReplayMarketDataBundleBuilder 的 instrument for 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_dataset_metadata</code></td><td>ReplayMarketDataBundleBuilder:351</td><td>实现 ReplayMarketDataBundleBuilder 的 dataset metadata 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_file_content_hash_and_row_count</code></td><td>ReplayMarketDataBundleBuilder:379</td><td>Return SHA-256 content hash and CSV data-row count in one pass.</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>file_content_hash</code></td><td>ReplayMarketDataBundleBuilder:415</td><td>Return a stable content hash for the replay source file.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>file_row_count</code></td><td>ReplayMarketDataBundleBuilder:421</td><td>Return the number of data rows in a replay CSV source file.</td><td>把行为放在拥有该状态或契约的类上，符合项目 OOP ownership 规则。</td></tr>
+              <tr><td><code>_dataset_instrument_id</code></td><td>ReplayMarketDataBundleBuilder:427</td><td>实现 ReplayMarketDataBundleBuilder 的 dataset instrument id 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
+              <tr><td><code>_contract_multipliers_for</code></td><td>ReplayMarketDataBundleBuilder:432</td><td>实现 ReplayMarketDataBundleBuilder 的 contract multipliers for 行为。</td><td>封装局部实现步骤，降低公共流程复杂度；保留时需符合项目私有 helper 边界规则。</td></tr>
             </tbody>
           </table>
         </div>

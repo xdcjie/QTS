@@ -8,7 +8,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from qts.core.ids import InstrumentId
 from qts.data.bars.time_grid_synthesizer import BarTimeGridSynthesizer
@@ -61,6 +61,8 @@ class ReplayMarketDataBundle:
 
 class ReplayMarketDataBundleBuilder:
     """Assemble replay-ready market data, registry, and provenance inputs."""
+
+    _FILE_METADATA_CACHE: ClassVar[dict[tuple[str, int, int, int, int], tuple[str, int]]] = {}
 
     def __init__(self, *, config: BacktestRuntimeConfig, catalog: HistoricalCatalog) -> None:
         self._config = config
@@ -373,9 +375,21 @@ class ReplayMarketDataBundleBuilder:
             )
         return tuple(metadata_entries)
 
-    @staticmethod
-    def _file_content_hash_and_row_count(path: Path) -> tuple[str, int]:
+    @classmethod
+    def _file_content_hash_and_row_count(cls, path: Path) -> tuple[str, int]:
         """Return SHA-256 content hash and CSV data-row count in one pass."""
+
+        stat = path.stat()
+        cache_key = (
+            str(path.resolve()),
+            stat.st_dev,
+            stat.st_ino,
+            stat.st_size,
+            stat.st_mtime_ns,
+        )
+        cached = cls._FILE_METADATA_CACHE.get(cache_key)
+        if cached is not None:
+            return cached
 
         hasher = hashlib.sha256()
         newline_count = 0
@@ -393,7 +407,9 @@ class ReplayMarketDataBundleBuilder:
                         len(chunk) - last_newline - 1 if last_newline >= 0 else 1
                     )
         total_lines = newline_count + (1 if trailing_bytes_after_newline > 0 else 0)
-        return f"sha256:{hasher.hexdigest()}", max(total_lines - 1, 0)
+        result = f"sha256:{hasher.hexdigest()}", max(total_lines - 1, 0)
+        cls._FILE_METADATA_CACHE[cache_key] = result
+        return result
 
     @classmethod
     def file_content_hash(cls, path: Path) -> str:

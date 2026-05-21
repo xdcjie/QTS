@@ -5,7 +5,9 @@ import shutil
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
+import pytest
 from qts.core.ids import InstrumentId
 from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
 from qts.domain.market_data import Bar
@@ -334,6 +336,34 @@ historical_data:
     assert bundle.dataset_metadata[0].timezone_policy == "custom_exchange_policy"
     assert bundle.dataset_metadata[0].adjustment_policy == "vendor_adjusted"
     assert bundle.future_roll_registry is None
+
+
+def test_replay_file_metadata_cache_reuses_same_file_scan(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from qts.data.sources.replay_bundle_builder import ReplayMarketDataBundleBuilder
+
+    csv_path = tmp_path / "equity.csv"
+    _write_fixture_csv(csv_path)
+    open_count = 0
+    original_open = Path.open
+
+    def counting_open(self: Path, *args: Any, **kwargs: Any) -> Any:
+        nonlocal open_count
+        mode = str(args[0]) if args else str(kwargs.get("mode", "r"))
+        if self == csv_path and "b" in mode:
+            open_count += 1
+        return original_open(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "open", counting_open)
+
+    content_hash = ReplayMarketDataBundleBuilder.file_content_hash(csv_path)
+    row_count = ReplayMarketDataBundleBuilder.file_row_count(csv_path)
+
+    assert content_hash.startswith("sha256:")
+    assert row_count == 1
+    assert open_count == 1
 
 
 def test_replay_bundle_roll_registry_resolves_synthetic_bar_contracts(
