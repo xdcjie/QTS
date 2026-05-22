@@ -5,6 +5,8 @@ capital_metrics:
 parameters:
   - name: time_window
     values: [current_08_16, evening_18_22]
+  - name: target_quantity
+    values: ["3", "4"]
   - name: factor_filters
     values:
       - []
@@ -15,7 +17,7 @@ parameters:
       - [rth_drive_min_atr]
       - [trend_regime_aligned]
   - name: min_volume_ratio
-    values: ["1.0", "1.2"]
+    values: ["1.0", "1.2", "1.3"]
 validation:
   constraints:
     - metric: total_trades

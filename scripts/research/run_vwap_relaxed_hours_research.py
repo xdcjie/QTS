@@ -1,9 +1,13 @@
-"""VWAP factor research with relaxed trading-hour windows.
+"""Historical VWAP factor research with relaxed trading-hour windows.
 
 This research-only runner takes the strongest literature-inspired filters and
 tests them across broader ET windows, including overnight half-open intervals.
 It keeps production VWAP v2 untouched and uses short framework smoke checks for
 the top proxy-ranked candidates.
+
+New VWAP research should use ``scripts/run_research.py workflow`` with a
+checked-in config under ``configs/research/workflows``. Keep this script only
+for reproducing the historical relaxed-hours artifact set.
 """
 
 from __future__ import annotations
@@ -332,7 +336,7 @@ start: "{SMOKE_START.isoformat().replace("+00:00", "Z")}"
 end: "{SMOKE_END.isoformat().replace("+00:00", "Z")}"
 timeframe: 1m
 initial_cash: "1000000"
-strategy_class: examples.strategies.vwap_factor_research:VwapFactorResearchStrategy
+strategy_class: strategies.research.vwap_factor_research:VwapFactorResearchStrategy
 strategy_params:
 {yaml_mapping(params, indent=2)}
 cost_model:

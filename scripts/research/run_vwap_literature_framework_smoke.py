@@ -1,4 +1,9 @@
-"""Run framework smoke checks for literature-inspired VWAP candidates."""
+"""Historical smoke runner for literature-inspired VWAP candidates.
+
+New VWAP research should use ``scripts/run_research.py workflow`` with a
+checked-in config under ``configs/research/workflows``. Keep this script only
+for reproducing the historical literature smoke artifacts.
+"""
 
 from __future__ import annotations
 
@@ -66,7 +71,7 @@ start: "{SMOKE_START.isoformat().replace("+00:00", "Z")}"
 end: "{SMOKE_END.isoformat().replace("+00:00", "Z")}"
 timeframe: 1m
 initial_cash: "1000000"
-strategy_class: examples.strategies.vwap_factor_research:VwapFactorResearchStrategy
+strategy_class: strategies.research.vwap_factor_research:VwapFactorResearchStrategy
 strategy_params:
 {yaml_mapping(params, indent=2)}
 cost_model:

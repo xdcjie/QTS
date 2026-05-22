@@ -10,6 +10,7 @@ from enum import StrEnum
 from types import MappingProxyType
 
 from qts.core.ids import InstrumentId
+from qts.domain.positions import PositionSide
 
 
 class CostBasisMethod(StrEnum):
@@ -39,10 +40,10 @@ class Holding:
 
     def unrealized_pnl(self, mark_price: Decimal, multiplier: Decimal) -> Decimal:
         """Return unrealized PnL at the supplied mark."""
-        if self.quantity == Decimal("0"):
+        side = PositionSide.from_quantity(self.quantity)
+        if side is None:
             return Decimal("0")
-        sign = Decimal("1") if self.quantity > Decimal("0") else Decimal("-1")
-        return abs(self.quantity) * (mark_price - self.average_cost) * sign * multiplier
+        return abs(self.quantity) * (mark_price - self.average_cost) * side.sign * multiplier
 
     def holding_period(self, now: datetime) -> timedelta:
         """Return elapsed time since the holding opened."""
@@ -103,7 +104,10 @@ class HoldingBook:
             raise ValueError("multiplier must be positive")
         current = self.holding(instrument_id)
         fill_time = fill_time or current.last_fill_at
-        if current.quantity == Decimal("0") or _same_direction(current.quantity, signed_quantity):
+        if current.quantity == Decimal("0") or PositionSide.same_for_quantities(
+            current.quantity,
+            signed_quantity,
+        ):
             self._holdings[instrument_id] = self._increase(
                 current,
                 signed_quantity=signed_quantity,
@@ -190,7 +194,7 @@ class HoldingBook:
                     closed_at=self._close_time(fill_time),
                 ),
             )
-        if _same_direction(current.quantity, new_quantity):
+        if PositionSide.same_for_quantities(current.quantity, new_quantity):
             self._holdings[current.instrument_id] = replace(
                 current,
                 quantity=new_quantity,
@@ -220,12 +224,6 @@ class HoldingBook:
     @staticmethod
     def _close_time(fill_time: datetime | None) -> datetime:
         return fill_time or datetime(1970, 1, 1, tzinfo=UTC)
-
-
-def _same_direction(left: Decimal, right: Decimal) -> bool:
-    return (left > Decimal("0") and right > Decimal("0")) or (
-        left < Decimal("0") and right < Decimal("0")
-    )
 
 
 __all__ = ["CostBasisMethod", "Holding", "HoldingBook", "PositionClosed"]

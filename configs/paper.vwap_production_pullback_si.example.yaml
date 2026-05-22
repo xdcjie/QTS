@@ -1,0 +1,31 @@
+# Paper trading example for the formal SI VWAP production pullback strategy.
+# Copy to configs/paper.vwap_production_pullback_si.local.yaml and set account_id
+# before running against an IBKR paper account.
+
+mode: paper
+provider: ibkr
+observe_only: true
+
+connections:
+  market_data:
+    host: 127.0.0.1
+    port: 4002
+    client_id: 102
+    source_id: ibkr-paper-md
+  order_execution:
+    host: 127.0.0.1
+    port: 4002
+    client_id: 202
+    broker_id: IBKR
+
+order_execution:
+  account_id: DUP1234567
+  risk_profile: paper-default
+
+secrets:
+  username_env: IBKR_PAPER_USERNAME
+  password_env: IBKR_PAPER_PASSWORD
+
+strategy:
+  class_path: strategies.production.vwap_production_pullback:SiVwapProductionPullbackStrategy
+  params: {}

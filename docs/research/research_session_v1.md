@@ -274,6 +274,9 @@ PYTHONPATH=backend/src uv run python scripts/run_research.py \
 It runs source-backed factor discovery, verifies the implemented VWAP strategy,
 runs a baseline backtest, runs factor-filter and risk/reward optimizer sweeps,
 writes optimizer validation summaries, and emits a Markdown research report.
+This is the canonical VWAP research entrypoint. Historical scripts under
+`scripts/research/run_vwap_*.py` are retained only to reproduce earlier
+artifact sets and should not be extended for new VWAP research directions.
 The VWAP research strategy uses entry-price anchored ATR/R exits:
 `stop_atr_multiple` defines the stop distance from entry and
 `target_r_multiple` defines the profit target as a multiple of that risk.

@@ -1376,7 +1376,7 @@ def test_guardrails_reject_stale_architecture_html_runtime_text(tmp_path: Path) 
     guardrails = _load_guardrails_module()
     _write(
         root,
-        "docs/architecture/backtest_live_parallel_sequence.html",
+        "docs/architecture/runtime_architecture.html",
         "<section>LiveRuntimeSession</section>\n",
     )
 

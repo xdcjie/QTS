@@ -31,9 +31,11 @@ from examples.strategies.vwap_pullback_v2 import (
     VwapPullbackV2Config,
     VwapPullbackV2Strategy,
     _State,
+    _TrailingRegimeGate,
 )
 
 _INSTRUMENT = InstrumentId("FUTURE.CME.GC.GCG6")
+_SI_INSTRUMENT = InstrumentId("FUTURE.CME.SI.SIH6")
 
 
 def _bar(
@@ -46,10 +48,11 @@ def _bar(
     volume: str = "100",
     session: str = "2025-01-02",
     timeframe: str = "5m",
+    instrument_id: InstrumentId = _INSTRUMENT,
 ) -> Bar:
     duration = timedelta(minutes=5 if timeframe == "5m" else 1)
     return Bar(
-        instrument_id=_INSTRUMENT,
+        instrument_id=instrument_id,
         start_time=start,
         end_time=start + duration,
         timeframe=timeframe,
@@ -64,31 +67,96 @@ def _bar(
 
 
 class _StubSymbolResolver:
-    """Minimal SymbolResolver mapping every user_symbol to _INSTRUMENT."""
+    """Minimal SymbolResolver mapping user symbols to test instruments."""
+
+    def __init__(self, mapping: dict[str, InstrumentId] | None = None) -> None:
+        self._mapping = mapping or {"GC": _INSTRUMENT, "SI": _SI_INSTRUMENT}
 
     def resolve(self, user_symbol: str) -> InstrumentId:  # noqa: D401
-        _ = user_symbol
-        return _INSTRUMENT
+        return self._mapping.get(user_symbol, _INSTRUMENT)
 
 
 def _drive(
     strategy: VwapPullbackV2Strategy,
     bars: Iterable[Bar],
+    *,
+    resolver: _StubSymbolResolver | None = None,
 ) -> StrategyContext:
-    ctx = StrategyContext(instrument_registry=_StubSymbolResolver())
+    ctx = StrategyContext(instrument_registry=resolver or _StubSymbolResolver())
     strategy.initialize(ctx)
     for bar in bars:
         # Indicators are runtime-managed when the strategy runs through
         # BacktestEngine; in this isolated anchor we feed bar OHLC+volume
         # directly to the bound indicators so the strategy sees fresh values.
-        if strategy._vwap is not None:
-            strategy._vwap.update_from_bar(bar)
-        if strategy._atr is not None:
-            strategy._atr.update_from_bar(bar)
-        if strategy._volume_ratio is not None:
-            strategy._volume_ratio.update_from_bar(bar)
+        ctx.indicator.update_from_bar(bar)
         strategy.on_bar(ctx, bar)
     return ctx
+
+
+def _feed(
+    strategy: VwapPullbackV2Strategy,
+    ctx: StrategyContext,
+    bars: Iterable[Bar],
+) -> None:
+    for bar in bars:
+        ctx.indicator.update_from_bar(bar)
+        strategy.on_bar(ctx, bar)
+
+
+def _regime_bar(
+    symbol: str,
+    *,
+    session: str,
+    open_: str,
+    high: str,
+    low: str,
+    close: str,
+    start_hour_utc: int = 14,
+    volume: str = "1000",
+) -> Bar:
+    session_date = datetime.fromisoformat(session).date()
+    instrument_id = _INSTRUMENT if symbol == "GC" else _SI_INSTRUMENT
+    return _bar(
+        start=datetime(
+            session_date.year,
+            session_date.month,
+            session_date.day,
+            start_hour_utc,
+            0,
+            tzinfo=UTC,
+        ),
+        open_=open_,
+        high=high,
+        low=low,
+        close=close,
+        volume=volume,
+        session=session,
+        timeframe="15m",
+        instrument_id=instrument_id,
+    )
+
+
+def _update_regime_session(
+    gate: _TrailingRegimeGate,
+    symbol: str,
+    *,
+    session: str,
+    open_: str,
+    high: str,
+    low: str,
+    close: str,
+) -> None:
+    gate.update_bar(
+        symbol,
+        _regime_bar(
+            symbol,
+            session=session,
+            open_=open_,
+            high=high,
+            low=low,
+            close=close,
+        ),
+    )
 
 
 def _ramp_up_then_pullback_then_reject(
@@ -173,6 +241,182 @@ def test_strategy_only_imports_strategy_sdk_and_stdlib() -> None:
                 if alias.name.startswith("qts.") and alias.name not in allowed_qts_modules:
                     bad.append(alias.name)
     assert bad == [], f"v2 imports forbidden qts modules: {bad}"
+
+
+def test_trailing_regime_gate_uses_completed_sessions_only() -> None:
+    """Regime gate must not use the current in-flight session as evidence."""
+    gate = _TrailingRegimeGate(
+        VwapPullbackV2Config(
+            regime_gate_rule="hard_churn225",
+            regime_symbols=("GC", "SI"),
+            regime_lookback_sessions=1,
+            regime_min_history_sessions=1,
+        )
+    )
+
+    for symbol in ("GC", "SI"):
+        _update_regime_session(
+            gate,
+            symbol,
+            session="2025-01-01",
+            open_="100",
+            high="103",
+            low="100",
+            close="100.5",
+        )
+        _update_regime_session(
+            gate,
+            symbol,
+            session="2025-01-02",
+            open_="100.5",
+            high="103.5",
+            low="100.5",
+            close="101.0",
+        )
+
+    assert gate.allows_new_entries()
+
+    for symbol in ("GC", "SI"):
+        _update_regime_session(
+            gate,
+            symbol,
+            session="2025-01-03",
+            open_="101.0",
+            high="101.2",
+            low="101.0",
+            close="101.1",
+        )
+
+    assert not gate.allows_new_entries()
+
+
+def test_hard14_ccvol17_requires_low_completed_realized_volatility() -> None:
+    """The SI gate keeps the hard14 bad-regime shape but exempts high-volatility regimes."""
+    hard14 = _TrailingRegimeGate(
+        VwapPullbackV2Config(
+            regime_gate_rule="hard14",
+            regime_symbols=("GC", "SI"),
+            regime_lookback_sessions=2,
+            regime_min_history_sessions=2,
+        )
+    )
+    high_vol = _TrailingRegimeGate(
+        VwapPullbackV2Config(
+            regime_gate_rule="hard14_ccvol17",
+            regime_symbols=("GC", "SI"),
+            regime_lookback_sessions=2,
+            regime_min_history_sessions=2,
+        )
+    )
+    low_vol = _TrailingRegimeGate(
+        VwapPullbackV2Config(
+            regime_gate_rule="hard14_ccvol17",
+            regime_symbols=("GC", "SI"),
+            regime_lookback_sessions=2,
+            regime_min_history_sessions=2,
+        )
+    )
+
+    for gate, closes in (
+        (hard14, ("100", "103", "100")),
+        (high_vol, ("100", "103", "100")),
+        (low_vol, ("100", "100.5", "101.0")),
+    ):
+        for symbol in ("GC", "SI"):
+            _update_regime_session(
+                gate,
+                symbol,
+                session="2025-01-01",
+                open_="100",
+                high="103",
+                low="100",
+                close=closes[0],
+            )
+            _update_regime_session(
+                gate,
+                symbol,
+                session="2025-01-02",
+                open_=closes[0],
+                high=str(Decimal(closes[0]) * Decimal("1.03")),
+                low=closes[0],
+                close=closes[1],
+            )
+            _update_regime_session(
+                gate,
+                symbol,
+                session="2025-01-03",
+                open_=closes[1],
+                high=str(max(Decimal(closes[1]), Decimal(closes[2])) * Decimal("1.03")),
+                low=str(min(Decimal(closes[1]), Decimal(closes[2]))),
+                close=closes[2],
+            )
+            _update_regime_session(
+                gate,
+                symbol,
+                session="2025-01-04",
+                open_=closes[2],
+                high=closes[2],
+                low=closes[2],
+                close=closes[2],
+            )
+
+    assert not hard14.allows_new_entries()
+    assert high_vol.allows_new_entries()
+    assert not low_vol.allows_new_entries()
+
+
+def test_strategy_regime_gate_blocks_new_entries_on_bad_completed_session() -> None:
+    """A blocked session can still receive bars, but no fresh VWAP entry is emitted."""
+    config = VwapPullbackV2Config(
+        atr_window=3,
+        volume_ratio_window=3,
+        vwap_slope_lookback=3,
+        min_volume_ratio=Decimal("0"),
+        regime_gate_rule="hard_churn225",
+        regime_symbols=("GC", "SI"),
+        regime_lookback_sessions=1,
+        regime_min_history_sessions=1,
+    )
+    strategy = VwapPullbackV2Strategy(config)
+    ctx = StrategyContext(instrument_registry=_StubSymbolResolver())
+    strategy.initialize(ctx)
+
+    for symbol in ("GC", "SI"):
+        _feed(
+            strategy,
+            ctx,
+            (
+                _regime_bar(
+                    symbol,
+                    session="2025-01-01",
+                    open_="100",
+                    high="103",
+                    low="100",
+                    close="100.5",
+                ),
+                _regime_bar(
+                    symbol,
+                    session="2025-01-02",
+                    open_="100.5",
+                    high="103.5",
+                    low="100.5",
+                    close="101.0",
+                ),
+                _regime_bar(
+                    symbol,
+                    session="2025-01-03",
+                    open_="101.0",
+                    high="101.2",
+                    low="101.0",
+                    close="101.1",
+                ),
+            ),
+        )
+
+    _feed(strategy, ctx, _ramp_up_then_pullback_then_reject(session="2025-01-03"))
+
+    assert ctx.intents == ()
+    assert strategy.state == _State.IDLE
 
 
 def test_initial_state_is_idle() -> None:

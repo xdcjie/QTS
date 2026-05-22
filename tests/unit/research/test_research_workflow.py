@@ -7,6 +7,7 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
+import yaml  # type: ignore[import-untyped]
 from qts.research import ResearchSessionConfig
 from qts.research.optimizer import WalkForwardPlan, WalkForwardSplit
 from qts.research.workflow import (
@@ -15,13 +16,24 @@ from qts.research.workflow import (
 )
 from qts.runtime.config import BacktestRuntimeConfig
 
-from examples.strategies.vwap_factor_research import VwapFactorResearchConfig
+from strategies.research.vwap_factor_research import VwapFactorResearchConfig
 
 
 def _write_workflow(tmp_path: Path, body: str) -> Path:
     path = tmp_path / "workflow.yaml"
     path.write_text(body, encoding="utf-8")
     return path
+
+
+def _assert_margin_sized_quantities(
+    *,
+    quantities: tuple[str, ...],
+    initial_cash: Decimal,
+    margin_proxy: Decimal,
+) -> None:
+    for quantity in quantities:
+        margin_ratio = Decimal(quantity) * margin_proxy / initial_cash
+        assert Decimal("0.30") <= margin_ratio <= Decimal("0.50")
 
 
 def test_workflow_config_loads_steps_and_rejects_trading_promotion_keys(
@@ -629,6 +641,144 @@ def test_vwap_research_backtest_warmup_covers_workflow_factor_filters() -> None:
 
 @pytest.mark.parametrize(
     (
+        "backtest_path",
+        "symbol",
+        "margin_proxy",
+        "baseline_quantity",
+    ),
+    [
+        (
+            Path("configs/backtest.vwap_factor_research.yaml"),
+            "GC",
+            Decimal("12000"),
+            "3",
+        ),
+        (
+            Path("configs/backtest.vwap_factor_research_gc_long_is.yaml"),
+            "GC",
+            Decimal("12000"),
+            "3",
+        ),
+        (
+            Path("configs/backtest.vwap_factor_research_si_long_is.yaml"),
+            "SI",
+            Decimal("15000"),
+            "2",
+        ),
+        (
+            Path("configs/backtest.vwap_factor_research_gc_5m_long_is.yaml"),
+            "GC",
+            Decimal("12000"),
+            "3",
+        ),
+        (
+            Path("configs/backtest.vwap_factor_research_si_5m_long_is.yaml"),
+            "SI",
+            Decimal("15000"),
+            "2",
+        ),
+        (
+            Path("configs/backtest.vwap_factor_research_gc_15m_long_is.yaml"),
+            "GC",
+            Decimal("12000"),
+            "3",
+        ),
+        (
+            Path("configs/backtest.vwap_factor_research_si_15m_long_is.yaml"),
+            "SI",
+            Decimal("15000"),
+            "2",
+        ),
+    ],
+)
+def test_vwap_research_backtests_use_costed_100k_margin_sized_capital(
+    backtest_path: Path,
+    symbol: str,
+    margin_proxy: Decimal,
+    baseline_quantity: str,
+) -> None:
+    runtime_config = BacktestRuntimeConfig.from_yaml(backtest_path)
+
+    assert runtime_config.initial_cash == Decimal("100000")
+    assert runtime_config.cost_model.fixed_commission_per_contract == Decimal("2.50")
+    assert runtime_config.cost_model.slippage_bps == Decimal("0.25")
+    assert runtime_config.strategy_params["symbol"] == symbol
+    assert runtime_config.strategy_params["target_quantity"] == baseline_quantity
+    _assert_margin_sized_quantities(
+        quantities=(baseline_quantity,),
+        initial_cash=runtime_config.initial_cash,
+        margin_proxy=margin_proxy,
+    )
+
+
+@pytest.mark.parametrize(
+    ("workflow_path", "expected_quantities"),
+    [
+        (
+            Path("configs/research/workflows/vwap_factor_search.yaml"),
+            ("3", "4"),
+        ),
+        (
+            Path("configs/research/workflows/vwap_factor_gc_long_search.yaml"),
+            ("3", "4"),
+        ),
+        (
+            Path("configs/research/workflows/vwap_factor_si_long_search.yaml"),
+            ("2", "3"),
+        ),
+        (
+            Path("configs/research/workflows/vwap_factor_gc_5m_long_search.yaml"),
+            ("3", "4"),
+        ),
+        (
+            Path("configs/research/workflows/vwap_factor_si_5m_long_search.yaml"),
+            ("2", "3"),
+        ),
+        (
+            Path("configs/research/workflows/vwap_factor_gc_15m_long_search.yaml"),
+            ("3", "4"),
+        ),
+        (
+            Path("configs/research/workflows/vwap_factor_si_15m_long_search.yaml"),
+            ("2", "3"),
+        ),
+    ],
+)
+def test_vwap_research_workflows_search_margin_sized_quantities(
+    workflow_path: Path,
+    expected_quantities: tuple[str, ...],
+) -> None:
+    workflow_config = ResearchWorkflowConfig.from_yaml(workflow_path)
+
+    optimize_steps = [step for step in workflow_config.steps if step.kind == "optimize"]
+
+    assert optimize_steps
+    for step in optimize_steps:
+        assert step.payload["parameters"]["target_quantity"] == list(expected_quantities)
+
+
+@pytest.mark.parametrize(
+    "optimizer_path",
+    [
+        Path("configs/optimizer/vwap_factor_research.yaml"),
+        Path("configs/optimizer/vwap_factor_research_risk_reward.yaml"),
+        Path("configs/optimizer/vwap_factor_search.yaml"),
+    ],
+)
+def test_vwap_optimizer_configs_search_margin_sized_gc_quantities(
+    optimizer_path: Path,
+) -> None:
+    payload = yaml.safe_load(optimizer_path.read_text(encoding="utf-8"))
+    parameter_values = {
+        str(parameter["name"]): parameter["values"] for parameter in payload["parameters"]
+    }
+
+    assert payload["backtest_config"] == "configs/backtest.vwap_factor_research.yaml"
+    assert parameter_values["target_quantity"] == ["3", "4"]
+
+
+@pytest.mark.parametrize(
+    (
         "symbol",
         "timeframe",
         "session_path",
@@ -847,6 +997,123 @@ def test_vwap_long_research_backtest_warmup_covers_workflow_factor_filters(
         runtime_config,
         workflow_config,
     )
+
+
+@pytest.mark.parametrize(
+    "workflow_path",
+    [
+        Path("configs/research/workflows/vwap_factor_gc_long_search.yaml"),
+        Path("configs/research/workflows/vwap_factor_si_long_search.yaml"),
+        Path("configs/research/workflows/vwap_factor_gc_5m_long_search.yaml"),
+        Path("configs/research/workflows/vwap_factor_si_5m_long_search.yaml"),
+        Path("configs/research/workflows/vwap_factor_gc_15m_long_search.yaml"),
+        Path("configs/research/workflows/vwap_factor_si_15m_long_search.yaml"),
+    ],
+)
+def test_vwap_long_research_includes_unfiltered_asia_candidate(
+    workflow_path: Path,
+) -> None:
+    workflow_config = ResearchWorkflowConfig.from_yaml(workflow_path)
+    optimize_step = next(step for step in workflow_config.steps if step.kind == "optimize")
+    parameters = optimize_step.payload["parameters"]
+
+    assert "asia_20_02" in parameters["time_window"]
+    assert [] in parameters["factor_filters"]
+    assert "1.2" in parameters["min_volume_ratio"]
+
+
+@pytest.mark.parametrize(
+    ("workflow_path", "expected_volume_ratio"),
+    [
+        (
+            Path("configs/research/workflows/vwap_factor_gc_long_search.yaml"),
+            "1.3",
+        ),
+        (
+            Path("configs/research/workflows/vwap_factor_gc_5m_long_search.yaml"),
+            "1.3",
+        ),
+        (
+            Path("configs/research/workflows/vwap_factor_gc_15m_long_search.yaml"),
+            "1.3",
+        ),
+        (
+            Path("configs/research/workflows/vwap_factor_si_long_search.yaml"),
+            "1.5",
+        ),
+        (
+            Path("configs/research/workflows/vwap_factor_si_5m_long_search.yaml"),
+            "1.5",
+        ),
+        (
+            Path("configs/research/workflows/vwap_factor_si_15m_long_search.yaml"),
+            "1.5",
+        ),
+    ],
+)
+def test_vwap_long_research_includes_costed_oos_volume_candidates(
+    workflow_path: Path,
+    expected_volume_ratio: str,
+) -> None:
+    workflow_config = ResearchWorkflowConfig.from_yaml(workflow_path)
+    optimize_step = next(step for step in workflow_config.steps if step.kind == "optimize")
+    parameters = optimize_step.payload["parameters"]
+
+    assert expected_volume_ratio in parameters["min_volume_ratio"]
+
+
+def test_vwap_gc_research_workflow_and_optimizer_include_volume_13_candidate() -> None:
+    workflow_config = ResearchWorkflowConfig.from_yaml(
+        Path("configs/research/workflows/vwap_factor_search.yaml")
+    )
+    for step in workflow_config.steps:
+        if step.kind == "optimize":
+            assert "1.3" in step.payload["parameters"]["min_volume_ratio"]
+
+    for optimizer_path in (
+        Path("configs/optimizer/vwap_factor_research.yaml"),
+        Path("configs/optimizer/vwap_factor_research_risk_reward.yaml"),
+        Path("configs/optimizer/vwap_factor_search.yaml"),
+    ):
+        payload = yaml.safe_load(optimizer_path.read_text(encoding="utf-8"))
+        parameter_values = {
+            str(parameter["name"]): parameter["values"] for parameter in payload["parameters"]
+        }
+        assert "1.3" in parameter_values["min_volume_ratio"]
+
+
+@pytest.mark.parametrize(
+    ("workflow_step_id", "optimizer_path"),
+    [
+        ("factor-search", Path("configs/optimizer/vwap_factor_search.yaml")),
+        ("risk-reward", Path("configs/optimizer/vwap_factor_research_risk_reward.yaml")),
+    ],
+)
+def test_vwap_workflow_optimizer_steps_match_legacy_optimizer_configs(
+    workflow_step_id: str,
+    optimizer_path: Path,
+) -> None:
+    session_config = ResearchSessionConfig.from_yaml(Path("configs/research/vwap.yaml"))
+    workflow_config = ResearchWorkflowConfig.from_yaml(
+        Path("configs/research/workflows/vwap_factor_search.yaml")
+    )
+    workflow_step = next(step for step in workflow_config.steps if step.step_id == workflow_step_id)
+    optimizer_payload = yaml.safe_load(optimizer_path.read_text(encoding="utf-8"))
+
+    optimizer_parameters = {
+        str(parameter["name"]): parameter["values"] for parameter in optimizer_payload["parameters"]
+    }
+
+    assert Path(str(optimizer_payload["backtest_config"])).resolve() == (
+        session_config.backtest_config_path.resolve()
+    )
+    assert optimizer_payload["objective_metric"] == workflow_step.payload["objective_metric"]
+    assert optimizer_payload["capital_metrics"] == workflow_step.payload["capital_metrics"]
+    assert (
+        optimizer_payload["validation"]["constraints"]
+        == workflow_step.payload["validation"]["constraints"]
+    )
+    assert optimizer_parameters == workflow_step.payload["parameters"]
 
 
 def _required_warmup_for_workflow(

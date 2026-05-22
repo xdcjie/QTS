@@ -306,6 +306,68 @@ steps:
     )
 
 
+def test_research_cli_workflow_optimize_matches_direct_research_session_results(
+    tmp_path: Path,
+) -> None:
+    config_path = _write_research_session_config(tmp_path)
+    workflow_path = _write_workflow(
+        tmp_path,
+        f"""
+version: 1
+workflow_id: optimize-consistency
+steps:
+  - id: optimize
+    kind: optimize
+    objective_metric: total_return
+    output_root: {tmp_path / "workflow-optimizer"}
+    parameters:
+      entry_bar: [1, 2]
+      quantity: ["1", "2"]
+""",
+    )
+
+    result = _run_cli("--config", str(config_path), "workflow", str(workflow_path))
+    direct_results = ResearchSession.from_yaml(config_path).optimize(
+        parameters={
+            "entry_bar": [1, 2],
+            "quantity": ["1", "2"],
+        },
+        objective_metric="total_return",
+        output_root=tmp_path / "direct-optimizer",
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    workflow_ranked = payload["steps"][0]["outputs"]["ranked_results"]
+
+    assert [
+        (
+            item["parameters"],
+            item["objective_value"],
+            _research_result_metrics(Path(item["manifest_path"])),
+        )
+        for item in workflow_ranked
+    ] == [
+        (
+            dict(item.parameters),
+            str(item.objective_value),
+            _research_result_metrics(item.manifest_path),
+        )
+        for item in direct_results
+    ]
+
+
+def _research_result_metrics(manifest_path: Path) -> dict[str, str]:
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    metrics = payload["metrics"]
+    return {
+        "max_drawdown": str(metrics["max_drawdown"]),
+        "sharpe_ratio": str(metrics["sharpe_ratio"]),
+        "total_return": str(metrics["total_return"]),
+        "total_trades": str(metrics["total_trades"]),
+    }
+
+
 def test_research_cli_workflow_runs_full_evidence_pipeline(
     tmp_path: Path,
 ) -> None:

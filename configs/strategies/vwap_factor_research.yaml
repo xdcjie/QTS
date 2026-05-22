@@ -1,11 +1,11 @@
 strategy_id: vwap-factor-research
-class_path: examples.strategies.vwap_factor_research:VwapFactorResearchStrategy
+class_path: strategies.research.vwap_factor_research:VwapFactorResearchStrategy
 account_id: backtest-account
 allocation: "1.0"
 enabled: true
 params:
   symbol: GC
-  target_quantity: "1"
+  target_quantity: "3"
   vwap_slope_lookback: 5
   max_bars_in_wait_state: 5
   pullback_touch_atr_below: "0.15"

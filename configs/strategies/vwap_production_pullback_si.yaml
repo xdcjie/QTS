@@ -1,0 +1,6 @@
+strategy_id: vwap-production-pullback-si
+class_path: strategies.production.vwap_production_pullback:SiVwapProductionPullbackStrategy
+account_id: backtest-account
+allocation: "1.0"
+enabled: true
+params: {}

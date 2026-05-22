@@ -10,12 +10,14 @@ from __future__ import annotations
 import json
 from collections import deque
 from dataclasses import dataclass, field
+from datetime import date
 from decimal import Decimal
 from enum import StrEnum
 from typing import Any
 from zoneinfo import ZoneInfo
 
 from qts.domain.market_data import Bar
+from qts.domain.positions import PositionSide
 from qts.indicators.technical import (
     BollingerBandsValue,
     DirectionalMovementValue,
@@ -32,11 +34,6 @@ class _State(StrEnum):
     WAIT_PULLBACK = "wait_pullback"
     WAIT_REJECTION = "wait_rejection"
     ENTERED = "entered"
-
-
-class _Direction(StrEnum):
-    LONG = "long"
-    SHORT = "short"
 
 
 class _ExitReason(StrEnum):
@@ -72,6 +69,7 @@ class VwapFactorResearchConfig:
 
     time_window: str = "current_08_16"
     factor_filters: tuple[str, ...] = ()
+    blocked_entry_sessions: tuple[str, ...] = ()
 
     distance_min_atr: Decimal = Decimal("0")
     distance_max_atr: Decimal = Decimal("99")
@@ -235,6 +233,31 @@ class VwapFactorResearchConfig:
                 "factor_filters",
                 tuple(str(item) for item in self.factor_filters),
             )
+        if isinstance(self.blocked_entry_sessions, str):
+            object.__setattr__(
+                self,
+                "blocked_entry_sessions",
+                (self.blocked_entry_sessions.strip(),),
+            )
+        elif not isinstance(self.blocked_entry_sessions, tuple):
+            object.__setattr__(
+                self,
+                "blocked_entry_sessions",
+                tuple(str(item).strip() for item in self.blocked_entry_sessions),
+            )
+        normalized_blocked_sessions = tuple(sorted(set(self.blocked_entry_sessions)))
+        for session_id in normalized_blocked_sessions:
+            if not session_id:
+                raise ValueError("blocked_entry_sessions must not contain empty session ids")
+            try:
+                date.fromisoformat(session_id)
+            except ValueError as exc:
+                raise ValueError("blocked_entry_sessions must contain ISO session dates") from exc
+        object.__setattr__(
+            self,
+            "blocked_entry_sessions",
+            normalized_blocked_sessions,
+        )
         if not self.symbol.strip():
             raise ValueError("symbol is required")
         if self.target_quantity <= Decimal("0"):
@@ -402,7 +425,7 @@ class VwapFactorResearchStrategy(Strategy):
         self._asset: AssetRef | None = None
         self._indicators: _Indicators | None = None
         self._state: _State = _State.IDLE
-        self._direction: _Direction | None = None
+        self._direction: PositionSide | None = None
         self._pullback_low: Decimal | None = None
         self._pullback_high: Decimal | None = None
         self._bars_in_wait = 0
@@ -413,6 +436,7 @@ class VwapFactorResearchStrategy(Strategy):
         self._et_tz = ZoneInfo("US/Eastern")
         self._volume_curve_history: dict[int, deque[Decimal]] = {}
         self._factor_diagnostics: tuple[dict[str, object], ...] = ()
+        self._blocked_entry_sessions = frozenset(self._config.blocked_entry_sessions)
 
     @property
     def factor_diagnostics(self) -> tuple[dict[str, object], ...]:
@@ -465,6 +489,9 @@ class VwapFactorResearchStrategy(Strategy):
         if self._state == _State.ENTERED and self._near_session_close(bar):
             self._exit(ctx, _ExitReason.SESSION_CLOSE_FLAT)
             return
+        if self._state is not _State.ENTERED and self._entry_session_blocked(bar):
+            self._reset()
+            return
         if self._state == _State.IDLE:
             self._step_idle(bar, vwap)
         elif self._state == _State.WAIT_PULLBACK:
@@ -479,9 +506,9 @@ class VwapFactorResearchStrategy(Strategy):
             return
         slope_up = self._vwap_slope_positive()
         if slope_up is True and bar.close > vwap:
-            self._enter_state(_State.WAIT_PULLBACK, _Direction.LONG)
+            self._enter_state(_State.WAIT_PULLBACK, PositionSide.LONG)
         elif slope_up is False and bar.close < vwap:
-            self._enter_state(_State.WAIT_PULLBACK, _Direction.SHORT)
+            self._enter_state(_State.WAIT_PULLBACK, PositionSide.SHORT)
 
     def _step_wait_pullback(self, bar: Bar, vwap: Decimal, atr: Decimal) -> None:
         self._bars_in_wait += 1
@@ -491,7 +518,7 @@ class VwapFactorResearchStrategy(Strategy):
         if not self._time_allowed(bar):
             self._reset()
             return
-        if self._direction is _Direction.LONG:
+        if self._direction is PositionSide.LONG:
             if bar.close < vwap - atr * self._config.max_pullback_break_atr:
                 self._reset()
                 return
@@ -501,7 +528,7 @@ class VwapFactorResearchStrategy(Strategy):
                 <= vwap + atr * self._config.pullback_touch_atr_above
             ):
                 self._pullback_low = bar.low
-                self._enter_state(_State.WAIT_REJECTION, _Direction.LONG)
+                self._enter_state(_State.WAIT_REJECTION, PositionSide.LONG)
         else:
             if bar.close > vwap + atr * self._config.max_pullback_break_atr:
                 self._reset()
@@ -512,7 +539,7 @@ class VwapFactorResearchStrategy(Strategy):
                 <= vwap + atr * self._config.pullback_touch_atr_below
             ):
                 self._pullback_high = bar.high
-                self._enter_state(_State.WAIT_REJECTION, _Direction.SHORT)
+                self._enter_state(_State.WAIT_REJECTION, PositionSide.SHORT)
 
     def _step_wait_rejection(
         self,
@@ -525,7 +552,7 @@ class VwapFactorResearchStrategy(Strategy):
         if self._bars_in_wait > self._config.max_bars_in_wait_state:
             self._reset()
             return
-        if self._direction is _Direction.LONG:
+        if self._direction is PositionSide.LONG:
             self._pullback_low = min(self._pullback_low or bar.low, bar.low)
             if bar.close < vwap - atr * self._config.max_pullback_break_atr:
                 self._reset()
@@ -541,7 +568,7 @@ class VwapFactorResearchStrategy(Strategy):
                 self._enter_position(ctx, bar, vwap, atr)
 
     def _step_entered(self, ctx: StrategyContext, bar: Bar, vwap: Decimal) -> None:
-        if self._direction is _Direction.LONG:
+        if self._direction is PositionSide.LONG:
             if self._config.exit_on_vwap_cross and bar.close < vwap:
                 self._exit(ctx, _ExitReason.LONG_CLOSE_BELOW_VWAP)
             elif self._stop_price is not None and bar.low <= self._stop_price:
@@ -569,7 +596,7 @@ class VwapFactorResearchStrategy(Strategy):
         stop_distance = atr * self._config.stop_atr_multiple
         target_distance = stop_distance * self._config.target_r_multiple
         metadata = self._entry_metadata()
-        if self._direction is _Direction.LONG:
+        if self._direction is PositionSide.LONG:
             self._stop_price = self._entry_price - stop_distance
             self._target_2 = self._entry_price + target_distance
             ctx.target_quantity(self._asset, self._config.target_quantity, metadata=metadata)
@@ -872,6 +899,9 @@ class VwapFactorResearchStrategy(Strategy):
             raise ValueError(f"unknown time_window: {window}")
         return allowed and self._session_open_cooloff_elapsed(bar)
 
+    def _entry_session_blocked(self, bar: Bar) -> bool:
+        return bar.session_id in self._blocked_entry_sessions
+
     @staticmethod
     def _minute_in_interval(minute: int, start: int, end: int) -> bool:
         if start < end:
@@ -977,7 +1007,7 @@ class VwapFactorResearchStrategy(Strategy):
         self._stop_price = None
         self._target_2 = None
 
-    def _enter_state(self, state: _State, direction: _Direction) -> None:
+    def _enter_state(self, state: _State, direction: PositionSide) -> None:
         self._state = state
         self._direction = direction
         self._bars_in_wait = 0
@@ -991,7 +1021,7 @@ class VwapFactorResearchStrategy(Strategy):
         return self._indicators
 
     def _direction_sign(self) -> Decimal:
-        return Decimal("1") if self._direction is _Direction.LONG else Decimal("-1")
+        return Decimal("1") if self._direction is PositionSide.LONG else Decimal("-1")
 
     def _momentum_aligned(self, indicator: AssetIndicator, minimum_abs: Decimal) -> bool:
         value = self._decimal(indicator)

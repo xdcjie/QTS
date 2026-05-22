@@ -9,6 +9,7 @@ from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 from qts.domain.market_data import Bar
+from qts.domain.positions import PositionSide
 from qts.indicators.technical import (
     DirectionalMovementValue,
     DonchianChannelValue,
@@ -16,10 +17,9 @@ from qts.indicators.technical import (
 )
 from qts.strategy_sdk import StrategyContext
 
-from examples.strategies.vwap_factor_research import (
+from strategies.research.vwap_factor_research import (
     VwapFactorResearchConfig,
     VwapFactorResearchStrategy,
-    _Direction,
     _State,
 )
 
@@ -255,7 +255,7 @@ def test_rth_drive_min_atr_filter_requires_directional_open_drive_strength() -> 
         "rth_drive_min_atr", _bar(), Decimal("100"), Decimal("2")
     )
 
-    strategy._enter_state(_State.WAIT_REJECTION, _Direction.SHORT)  # noqa: SLF001
+    strategy._enter_state(_State.WAIT_REJECTION, PositionSide.SHORT)  # noqa: SLF001
 
     assert strategy._factor_filter_passes(  # noqa: SLF001
         "rth_drive_min_atr", _bar(), Decimal("100"), Decimal("2")
@@ -381,6 +381,47 @@ def test_default_session_open_cooloff_preserves_opening_hour_behavior() -> None:
     assert strategy._time_allowed(_bar_at_et(18, 0))  # noqa: SLF001
 
 
+def test_blocked_entry_session_mask_resets_setup_without_entry() -> None:
+    strategy, ctx = initialized_strategy(
+        VwapFactorResearchConfig(blocked_entry_sessions=("2026-05-20",))
+    )
+    ctx.indicator.created[("session_vwap", None)].value = Decimal("100")
+    ctx.indicator.created[("atr", 14)].value = Decimal("2")
+    ctx.indicator.created[("volume_ratio", 20)].value = Decimal("2")
+
+    strategy.on_bar(
+        cast(StrategyContext, ctx),
+        _bar(open=Decimal("100"), close=Decimal("101")),
+    )
+
+    assert ctx.intents == []
+    assert strategy._state == _State.IDLE  # noqa: SLF001
+
+
+def test_blocked_entry_session_mask_still_allows_existing_position_exit() -> None:
+    strategy, ctx = initialized_strategy(
+        VwapFactorResearchConfig(blocked_entry_sessions=("2026-05-20",))
+    )
+    ctx.indicator.created[("session_vwap", None)].value = Decimal("100")
+    ctx.indicator.created[("atr", 14)].value = Decimal("2")
+    ctx.indicator.created[("volume_ratio", 20)].value = Decimal("2")
+    strategy._state = _State.ENTERED  # noqa: SLF001
+    strategy._direction = PositionSide.LONG  # noqa: SLF001
+    strategy._entry_price = Decimal("101")  # noqa: SLF001
+    strategy._stop_price = Decimal("98")  # noqa: SLF001
+    strategy._target_2 = Decimal("107")  # noqa: SLF001
+
+    strategy.on_bar(
+        cast(StrategyContext, ctx),
+        _bar(high=Decimal("108"), close=Decimal("106")),
+    )
+
+    assert ctx.intents[-1][0] == "close"
+    metadata = ctx.intents[-1][3]
+    assert metadata is not None
+    assert metadata["exit_reason"] == "long_target_r_touched"
+
+
 def test_long_exit_levels_use_entry_price_atr_and_r_multiple() -> None:
     strategy, ctx = initialized_strategy(
         VwapFactorResearchConfig(
@@ -409,7 +450,7 @@ def test_short_exit_levels_use_entry_price_atr_and_r_multiple() -> None:
             target_r_multiple=Decimal("2"),
         )
     )
-    strategy._enter_state(_State.WAIT_REJECTION, _Direction.SHORT)  # noqa: SLF001
+    strategy._enter_state(_State.WAIT_REJECTION, PositionSide.SHORT)  # noqa: SLF001
 
     strategy._enter_position(  # noqa: SLF001
         cast(StrategyContext, ctx),
@@ -427,7 +468,7 @@ def test_short_exit_levels_use_entry_price_atr_and_r_multiple() -> None:
 def test_vwap_cross_does_not_exit_when_vwap_cross_exit_is_disabled() -> None:
     strategy, ctx = initialized_strategy(VwapFactorResearchConfig(exit_on_vwap_cross=False))
     strategy._state = _State.ENTERED  # noqa: SLF001
-    strategy._direction = _Direction.LONG  # noqa: SLF001
+    strategy._direction = PositionSide.LONG  # noqa: SLF001
     strategy._stop_price = Decimal("95")  # noqa: SLF001
     strategy._target_2 = Decimal("110")  # noqa: SLF001
 
@@ -444,7 +485,7 @@ def test_vwap_cross_does_not_exit_when_vwap_cross_exit_is_disabled() -> None:
 def test_exit_reason_metadata_is_attached_to_close_intent() -> None:
     strategy, ctx = initialized_strategy()
     strategy._state = _State.ENTERED  # noqa: SLF001
-    strategy._direction = _Direction.LONG  # noqa: SLF001
+    strategy._direction = PositionSide.LONG  # noqa: SLF001
     strategy._entry_price = Decimal("101")  # noqa: SLF001
     strategy._stop_price = Decimal("98")  # noqa: SLF001
     strategy._target_2 = Decimal("107")  # noqa: SLF001
@@ -470,7 +511,7 @@ def initialized_strategy(
     ctx = FakeContext()
     strategy = VwapFactorResearchStrategy(config or VwapFactorResearchConfig())
     strategy.initialize(cast(StrategyContext, ctx))
-    strategy._enter_state(_State.WAIT_REJECTION, _Direction.LONG)  # noqa: SLF001
+    strategy._enter_state(_State.WAIT_REJECTION, PositionSide.LONG)  # noqa: SLF001
     return strategy, ctx
 
 

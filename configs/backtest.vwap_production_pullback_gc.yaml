@@ -4,13 +4,16 @@ market_data:
   catalog: research_futures
 roots:
   - GC
+  - SI
 symbols:
   - GC
-start: "2025-06-01T00:00:00Z"
-end: "2025-06-08T00:00:00Z"
-timeframe: 1m
+  - SI
+start: "2010-06-06T00:00:00Z"
+end: "2026-04-10T00:00:00Z"
+timeframe: 15m
 initial_cash: "100000"
-strategy_config: configs/strategies/vwap_factor_research.yaml
+strategy_class: strategies.production.vwap_production_pullback:GcVwapProductionPullbackStrategy
+strategy_params: {}
 cost_model:
   fixed_commission_per_contract: "2.50"
   slippage_bps: "0.25"
@@ -20,4 +23,4 @@ roll_policy:
   enabled: true
   method: first_notice_date
   roll_sessions_before_first_notice: 3
-warmup_bars: 121
+warmup_bars: 11042

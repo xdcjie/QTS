@@ -9,11 +9,11 @@ symbols:
 start: "2010-06-06T00:00:00Z"
 end: "2023-01-01T00:00:00Z"
 timeframe: 1m
-initial_cash: "1000000"
-strategy_class: examples.strategies.vwap_factor_research:VwapFactorResearchStrategy
+initial_cash: "100000"
+strategy_class: strategies.research.vwap_factor_research:VwapFactorResearchStrategy
 strategy_params:
   symbol: GC
-  target_quantity: "1"
+  target_quantity: "3"
   vwap_slope_lookback: 5
   max_bars_in_wait_state: 5
   pullback_touch_atr_below: "0.15"
@@ -33,8 +33,8 @@ strategy_params:
   time_window: evening_18_22
   factor_filters: []
 cost_model:
-  fixed_commission_per_contract: "0"
-  slippage_bps: "0"
+  fixed_commission_per_contract: "2.50"
+  slippage_bps: "0.25"
 risk_config:
   max_notional: "100000000"
 roll_policy:

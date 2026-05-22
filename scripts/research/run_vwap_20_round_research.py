@@ -1,8 +1,13 @@
-"""Run 20 framework backtest rounds for VWAP factor research.
+"""Historical 20-round framework backtest runner for VWAP factor research.
 
 The script creates a research-only compact GC dataset for the requested
 2024-2026 window, generates one config per candidate and sample split, runs
 ``scripts/run_backtest.py`` for every round, and writes summary artifacts.
+
+New VWAP research should use the canonical workflow entrypoint instead:
+``scripts/run_research.py --config configs/research/vwap.yaml workflow
+configs/research/workflows/vwap_factor_search.yaml``. Keep this runner only for
+reproducing the historical 2026-05-19 20-round artifact set.
 """
 
 from __future__ import annotations
@@ -378,7 +383,7 @@ start: "{start.isoformat().replace("+00:00", "Z")}"
 end: "{end.isoformat().replace("+00:00", "Z")}"
 timeframe: 1m
 initial_cash: "1000000"
-strategy_class: examples.strategies.vwap_factor_research:VwapFactorResearchStrategy
+strategy_class: strategies.research.vwap_factor_research:VwapFactorResearchStrategy
 strategy_params:
 {params}
 cost_model:
@@ -587,7 +592,7 @@ def write_summary(candidates: list[Candidate], rows: list[dict[str, object]]) ->
                     "oos_window": [SPLIT.isoformat(), END.isoformat()],
                     "backtest_script": "scripts/run_backtest.py",
                     "strategy_class": (
-                        "examples.strategies.vwap_factor_research:VwapFactorResearchStrategy"
+                        "strategies.research.vwap_factor_research:VwapFactorResearchStrategy"
                     ),
                     "compact_history": str(COMPACT_HISTORY.relative_to(REPO_ROOT)),
                     "selection_note": (
@@ -627,7 +632,7 @@ def markdown_summary(paired: list[dict[str, object]]) -> str:
         "## Scope",
         "",
         "- Framework path: generated configs are run through `scripts/run_backtest.py`.",
-        "- Strategy path: `examples.strategies.vwap_factor_research:"
+        "- Strategy path: `strategies.research.vwap_factor_research:"
         "VwapFactorResearchStrategy` uses Strategy SDK indicators and target APIs.",
         "- Data path: research-only compact GC historical CSV preserves the configured "
         "chain/session/roll boundary for the 2024-05-01 to 2026-04-10 window.",

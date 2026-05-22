@@ -5,8 +5,10 @@ capital_metrics:
 parameters:
   - name: time_window
     values: [evening_18_22]
+  - name: target_quantity
+    values: ["3", "4"]
   - name: min_volume_ratio
-    values: ["1.2"]
+    values: ["1.2", "1.3"]
   - name: pullback_touch_atr_below
     values: ["0.15"]
   - name: max_pullback_break_atr
