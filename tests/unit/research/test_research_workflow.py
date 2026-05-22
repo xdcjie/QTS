@@ -7,7 +7,6 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
-import yaml  # type: ignore[import-untyped]
 from qts.research import ResearchSessionConfig
 from qts.research.optimizer import WalkForwardPlan, WalkForwardSplit
 from qts.research.workflow import (
@@ -757,24 +756,8 @@ def test_vwap_research_workflows_search_margin_sized_quantities(
         assert step.payload["parameters"]["target_quantity"] == list(expected_quantities)
 
 
-@pytest.mark.parametrize(
-    "optimizer_path",
-    [
-        Path("configs/optimizer/vwap_factor_research.yaml"),
-        Path("configs/optimizer/vwap_factor_research_risk_reward.yaml"),
-        Path("configs/optimizer/vwap_factor_search.yaml"),
-    ],
-)
-def test_vwap_optimizer_configs_search_margin_sized_gc_quantities(
-    optimizer_path: Path,
-) -> None:
-    payload = yaml.safe_load(optimizer_path.read_text(encoding="utf-8"))
-    parameter_values = {
-        str(parameter["name"]): parameter["values"] for parameter in payload["parameters"]
-    }
-
-    assert payload["backtest_config"] == "configs/backtest.vwap_factor_research.yaml"
-    assert parameter_values["target_quantity"] == ["3", "4"]
+def test_no_legacy_vwap_optimizer_configs_remain() -> None:
+    assert sorted(path.name for path in Path("configs/optimizer").glob("vwap*.yaml")) == []
 
 
 @pytest.mark.parametrize(
@@ -1062,7 +1045,7 @@ def test_vwap_long_research_includes_costed_oos_volume_candidates(
     assert expected_volume_ratio in parameters["min_volume_ratio"]
 
 
-def test_vwap_gc_research_workflow_and_optimizer_include_volume_13_candidate() -> None:
+def test_vwap_gc_research_workflow_includes_volume_13_candidate() -> None:
     workflow_config = ResearchWorkflowConfig.from_yaml(
         Path("configs/research/workflows/vwap_factor_search.yaml")
     )
@@ -1070,50 +1053,38 @@ def test_vwap_gc_research_workflow_and_optimizer_include_volume_13_candidate() -
         if step.kind == "optimize":
             assert "1.3" in step.payload["parameters"]["min_volume_ratio"]
 
-    for optimizer_path in (
-        Path("configs/optimizer/vwap_factor_research.yaml"),
-        Path("configs/optimizer/vwap_factor_research_risk_reward.yaml"),
-        Path("configs/optimizer/vwap_factor_search.yaml"),
-    ):
-        payload = yaml.safe_load(optimizer_path.read_text(encoding="utf-8"))
-        parameter_values = {
-            str(parameter["name"]): parameter["values"] for parameter in payload["parameters"]
-        }
-        assert "1.3" in parameter_values["min_volume_ratio"]
 
-
-@pytest.mark.parametrize(
-    ("workflow_step_id", "optimizer_path"),
-    [
-        ("factor-search", Path("configs/optimizer/vwap_factor_search.yaml")),
-        ("risk-reward", Path("configs/optimizer/vwap_factor_research_risk_reward.yaml")),
-    ],
-)
-def test_vwap_workflow_optimizer_steps_match_legacy_optimizer_configs(
-    workflow_step_id: str,
-    optimizer_path: Path,
-) -> None:
-    session_config = ResearchSessionConfig.from_yaml(Path("configs/research/vwap.yaml"))
+def test_vwap_canonical_workflow_has_expected_optimize_steps() -> None:
     workflow_config = ResearchWorkflowConfig.from_yaml(
         Path("configs/research/workflows/vwap_factor_search.yaml")
     )
-    workflow_step = next(step for step in workflow_config.steps if step.step_id == workflow_step_id)
-    optimizer_payload = yaml.safe_load(optimizer_path.read_text(encoding="utf-8"))
+    optimize_steps = [step for step in workflow_config.steps if step.kind == "optimize"]
 
-    optimizer_parameters = {
-        str(parameter["name"]): parameter["values"] for parameter in optimizer_payload["parameters"]
-    }
+    assert [(step.step_id, step.payload["objective_metric"]) for step in optimize_steps] == [
+        ("factor-search", "sharpe_ratio"),
+        ("risk-reward", "sharpe_ratio"),
+    ]
 
-    assert Path(str(optimizer_payload["backtest_config"])).resolve() == (
-        session_config.backtest_config_path.resolve()
-    )
-    assert optimizer_payload["objective_metric"] == workflow_step.payload["objective_metric"]
-    assert optimizer_payload["capital_metrics"] == workflow_step.payload["capital_metrics"]
+    factor_search = optimize_steps[0].payload
+    assert factor_search["output_root"] == "../../../runs/research/vwap/factor-search"
     assert (
-        optimizer_payload["validation"]["constraints"]
-        == workflow_step.payload["validation"]["constraints"]
+        factor_search["validation_output"]
+        == "../../../runs/research/vwap/validation/factor-search.json"
     )
-    assert optimizer_parameters == workflow_step.payload["parameters"]
+    assert factor_search["capital_metrics"] == {"margin_proxy": "12000"}
+    assert factor_search["parameters"]["target_quantity"] == ["3", "4"]
+    assert factor_search["parameters"]["time_window"] == ["evening_18_22"]
+
+    risk_reward = optimize_steps[1].payload
+    assert risk_reward["output_root"] == "../../../runs/research/vwap/risk-reward"
+    assert (
+        risk_reward["validation_output"]
+        == "../../../runs/research/vwap/validation/risk-reward.json"
+    )
+    assert risk_reward["capital_metrics"] == {"margin_proxy": "12000"}
+    assert risk_reward["parameters"]["target_quantity"] == ["3", "4"]
+    assert risk_reward["parameters"]["time_window"] == ["evening_18_22"]
+    assert risk_reward["validation"]["walk_forward"]["top_n"] == 3
 
 
 def _required_warmup_for_workflow(

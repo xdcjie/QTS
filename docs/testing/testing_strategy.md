@@ -32,6 +32,9 @@ make check
 - Market data subscription deduplication and provider source timeframe semantics require anchor tests.
 - Domain-sensitive implementation must pass `make guardrails`; these checks
   enforce architecture boundaries that tests alone do not prove.
+- Non-trivial implementation must name the applicable Flow ID from
+  `docs/architecture/system_flows.md` and run the flow's required verification,
+  not only the narrow behavior tests.
 
 ## Domain-sensitive change gate
 
@@ -50,6 +53,42 @@ The change should not proceed until the abstraction boundary is explicit. If a
 rule is product-, broker-, strategy-, or environment-specific, it must enter the
 system through the right boundary: registry/spec/session data, broker adapters,
 strategy code, configuration, or documented policy objects.
+
+## Flow-first change gate
+
+Before a non-trivial implementation proceeds, record this gate in the
+implementation notes or PR:
+
+```text
+Flow ID:
+Canonical entry:
+Config owner:
+Allowed owner:
+Iteration point:
+Future-data risk:
+Required verification:
+```
+
+Use one block per flow when a change crosses flows. The flow catalog defines the
+minimum verification for `FLOW-DATA`, `FLOW-RESEARCH`, `FLOW-OPTIMIZER`,
+`FLOW-BACKTEST`, `FLOW-PAPER`, `FLOW-LIVE`, `FLOW-PROMOTION`, and
+`FLOW-REPORTING`.
+
+No-future-data verification is mandatory whenever data visibility, factor
+labels, optimizer windows, backtest replay, paper/live event ordering, or report
+horizons change. Strategy-facing bars are visible only after their `[start,
+end)` interval completes.
+
+New VWAP research must be verified through the canonical workflow:
+
+```bash
+PYTHONPATH=backend/src uv run python scripts/run_research.py \
+  --config configs/research/vwap.yaml \
+  workflow configs/research/workflows/vwap_factor_search.yaml
+```
+
+Ad hoc VWAP runners and VWAP-specific `configs/optimizer` YAML are forbidden
+verification paths and must not remain or be reintroduced.
 
 ## Guardrail checks
 

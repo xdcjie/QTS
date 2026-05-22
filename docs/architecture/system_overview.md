@@ -15,6 +15,36 @@ The final architecture is split into twelve layers:
 11. Execution Layer: OrderManager, order/execution adapters, execution reports
 12. Infrastructure Layer: config, DB, logging, metrics, deployment
 
+## Flow catalog
+
+`docs/architecture/system_flows.md` is the source of truth for flow-first
+development gates. A non-trivial implementation must identify the applicable
+Flow ID before changing behavior:
+
+```text
+FLOW-DATA -> FLOW-RESEARCH -> FLOW-OPTIMIZER -> FLOW-BACKTEST
+  -> FLOW-PROMOTION -> FLOW-PAPER -> FLOW-PROMOTION -> FLOW-LIVE
+```
+
+`FLOW-REPORTING` reads completed artifacts from the other flows and writes
+deterministic evidence. It is never a trading path.
+
+Flow IDs do not change module ownership. They make the owning entrypoint,
+configuration owner, allowed implementation owner, iteration point,
+future-data risk, verification, and exit/promotion criteria explicit before
+work begins.
+
+New VWAP research must enter through:
+
+```bash
+PYTHONPATH=backend/src uv run python scripts/run_research.py \
+  --config configs/research/vwap.yaml \
+  workflow configs/research/workflows/vwap_factor_search.yaml
+```
+
+Legacy VWAP ad hoc runners and VWAP-specific `configs/optimizer` entries are
+not valid alternate entrypoints and must not remain or be reintroduced.
+
 ## Primary runtime flow
 
 ```text

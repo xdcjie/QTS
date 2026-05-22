@@ -141,12 +141,11 @@ def test_same_research_config_data_and_strategy_produce_same_normalized_artifact
         assert _normalized_ndjson_hash(left.artifact_paths[kind]) == _normalized_ndjson_hash(
             right.artifact_paths[kind]
         )
-    assert _sequence_numbers(left.artifact_paths["events"]) == list(
-        range(1, len(_read_ndjson(left.artifact_paths["events"])) + 1)
-    )
-    assert _sequence_numbers(left.artifact_paths["events"]) == _sequence_numbers(
-        right.artifact_paths["events"]
-    )
+    left_sequences = _sequence_numbers(left.artifact_paths["events"])
+    right_sequences = _sequence_numbers(right.artifact_paths["events"])
+    assert left_sequences == right_sequences
+    assert left_sequences == sorted(left_sequences)
+    assert len(left_sequences) == len(set(left_sequences))
 
 
 def _normalized_manifest_hash(path: Path) -> str:

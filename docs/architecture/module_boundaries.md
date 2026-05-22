@@ -16,6 +16,12 @@ Is this source-specific, adapter-specific, mode-specific, or shared runtime/doma
 Does the module only orchestrate other owners, or does it own reusable behavior?
 ```
 
+Also choose the applicable Flow ID from `docs/architecture/system_flows.md` and
+state the canonical entrypoint, config owner, allowed implementation owner,
+iteration point, future-data risk, and verification gate before editing
+non-trivial behavior. Module placement is not sufficient if the change enters
+through the wrong flow.
+
 If both backtest and live need the rule, it must not live in `qts.backtest` or
 `qts.data.historical`. Those packages may call shared services, but they do not
 own shared financial semantics.
@@ -44,6 +50,27 @@ For backtests, configured historical bar streams, dataset metadata, instrument
 registry construction, and roll-aware replay input assembly belong in cohesive
 data/backtest input boundaries. The runner should invoke those boundaries and
 then call the engine.
+
+For research and optimizer work, `qts.research` and `qts.research.optimizer`
+own evidence, workflow gates, parameter grids, validation constraints,
+walk-forward splits, failure-window vetoes, and research reports. They may call
+`BacktestPipeline` through public session/runner APIs, but they must not own
+runtime, broker, risk, order, execution, account, registry, session, or market
+data semantics. Research outputs become paper/live behavior only through the
+promotion flow.
+
+New VWAP research must use:
+
+```bash
+PYTHONPATH=backend/src uv run python scripts/run_research.py \
+  --config configs/research/vwap.yaml \
+  workflow configs/research/workflows/vwap_factor_search.yaml
+```
+
+Legacy VWAP ad hoc runners under `scripts/research/run_vwap_*.py` and
+VWAP-specific optimizer configs under `configs/optimizer` are forbidden
+shortcuts. They are not compatibility boundaries and must not remain or be
+reintroduced.
 
 Do not use backtest package placement to describe the source's time model.
 `historical` versus `realtime` is a market data source property;

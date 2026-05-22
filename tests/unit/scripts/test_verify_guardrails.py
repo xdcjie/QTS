@@ -6,6 +6,8 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any, cast
 
+import pytest
+
 
 def _load_guardrails_module() -> ModuleType:
     module_path = Path("scripts/verify_guardrails.py")
@@ -1134,6 +1136,136 @@ def test_guardrails_reject_provider_sdk_import_in_runtime(tmp_path: Path) -> Non
     assert _codes(root) == {"PROVIDER_SDK_IMPORT"}
 
 
+def test_guardrails_reject_research_run_research_scripts(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "scripts/research/run_factor_research.py",
+        '"""One-off research runner shortcut."""\n',
+    )
+
+    assert _codes(root) == {"RESEARCH_RUN_SCRIPT"}
+
+
+def test_guardrails_reject_vwap_research_runner_scripts(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "scripts/research/run_vwap_smoke.py",
+        '"""One-off VWAP research runner shortcut."""\n',
+    )
+
+    assert _codes(root) == {"RESEARCH_RUN_SCRIPT"}
+
+
+def test_guardrails_reject_nested_vwap_research_runner_scripts(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "scripts/research/legacy/run_vwap_smoke.py",
+        '"""Nested one-off VWAP research runner shortcut."""\n',
+    )
+
+    assert _codes(root) == {"RESEARCH_RUN_SCRIPT"}
+
+
+@pytest.mark.parametrize(
+    "relative_path",
+    [
+        "configs/optimizer/vwap_factor_search.yaml",
+        "configs/optimizer/gc_vwap_factor_search.yaml",
+        "configs/optimizer/vwap_factor_search.yml",
+    ],
+)
+def test_guardrails_reject_vwap_optimizer_configs(
+    tmp_path: Path,
+    relative_path: str,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        relative_path,
+        "objective_metric: sharpe_ratio\n",
+    )
+
+    assert _codes(root) == {"VWAP_OPTIMIZER_CONFIG"}
+
+
+def test_guardrails_allow_quickstart_optimizer_config(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "configs/optimizer/quickstart.yaml",
+        Path("configs/optimizer/quickstart.yaml").read_text(encoding="utf-8"),
+    )
+
+    assert _codes(root) == set()
+
+
+def test_guardrails_reject_production_strategy_imports_from_research(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "strategies/production/bad.py",
+        "from strategies.research.vwap_factor_research import VwapFactorResearchStrategy\n",
+    )
+
+    assert _codes(root) == {"PRODUCTION_STRATEGY_IMPORT"}
+
+
+def test_guardrails_reject_production_strategy_imports_from_examples(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "strategies/production/bad.py",
+        "import examples.strategies.vwap_pullback_v2\n",
+    )
+
+    assert _codes(root) == {"PRODUCTION_STRATEGY_IMPORT"}
+
+
+@pytest.mark.parametrize(
+    "forbidden_key",
+    ["generate_code", "promote", "paper", "live", "broker", "orders", "runtime", "trade"],
+)
+def test_guardrails_reject_research_workflow_runtime_keys_anywhere(
+    tmp_path: Path, forbidden_key: str
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "configs/research/workflows/bad.yaml",
+        "version: 1\n"
+        "steps:\n"
+        "  - id: shortcut\n"
+        "    kind: research\n"
+        "    nested:\n"
+        f"      {forbidden_key}: true\n",
+    )
+
+    violations = [
+        violation for violation in run_guardrails(root) if violation.code != "PLATFORM_FREEZE"
+    ]
+
+    assert {violation.code for violation in violations} == {"RESEARCH_WORKFLOW_RUNTIME_KEY"}
+    assert {violation.symbol for violation in violations} == {forbidden_key}
+
+
+def test_guardrails_allow_vwap_factor_research_workflow(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "configs/research/workflows/vwap_factor_search.yaml",
+        Path("configs/research/workflows/vwap_factor_search.yaml").read_text(encoding="utf-8"),
+    )
+
+    assert _codes(root) == set()
+
+
 def test_guardrail_report_contains_remediation(tmp_path: Path) -> None:
     root = tmp_path
     _write_platform_freeze_stub(root)
@@ -1466,15 +1598,15 @@ def test_guardrail_suite_can_target_product_specific_rule(tmp_path: Path) -> Non
     }
 
 
-def test_guardrail_script_uses_canonical_quality_entrypoint() -> None:
+def test_guardrail_script_extends_canonical_quality_entrypoint() -> None:
     source = Path("scripts/verify_guardrails.py").read_text(encoding="utf-8")
     guardrails = _load_guardrails_module()
 
     assert "qts.quality.guardrails" not in source
     assert "from qts.quality import" in source
-    assert guardrails.GuardrailSuite.__module__ == "qts.quality.suite"
-    assert guardrails.run_guardrails.__module__ == "qts.quality.suite"
+    assert guardrails.GuardrailSuite.__mro__[1].__module__ == "qts.quality.suite"
     assert guardrails.ProductionPlaceholderDocstringRule.__module__.startswith("qts.quality.rules.")
+    assert guardrails.ResearchRunScriptRule.__module__ == "qts.quality.rules.flows"
 
 
 def test_all_guardrail_rules_live_under_rule_modules() -> None:
@@ -1501,7 +1633,9 @@ def test_guardrail_suite_default_preserves_expected_codes(tmp_path: Path) -> Non
 
 def test_guardrail_suite_includes_required_m0_hard_gate_rules() -> None:
     guardrails = _load_guardrails_module()
-    rule_names = {rule.__class__.__name__ for rule in guardrails.GuardrailSuite().rules}
+    rules = guardrails.GuardrailSuite().rules
+    rule_names = {rule.__class__.__name__ for rule in rules}
+    rule_codes = {rule.code for rule in rules}
 
     assert {
         "ImportBoundaryRule",
@@ -1520,6 +1654,12 @@ def test_guardrail_suite_includes_required_m0_hard_gate_rules() -> None:
         "PlatformFreezeRule",
         "RuntimeExecutionBoundaryRule",
     } <= rule_names
+    assert {
+        "RESEARCH_RUN_SCRIPT",
+        "VWAP_OPTIMIZER_CONFIG",
+        "PRODUCTION_STRATEGY_IMPORT",
+        "RESEARCH_WORKFLOW_RUNTIME_KEY",
+    } <= rule_codes
 
 
 def test_guardrail_report_contains_rule_path_symbol_and_guidance(tmp_path: Path) -> None:

@@ -10,6 +10,7 @@ from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
+import pytest
 from qts.research import ExperimentStore, FactorSpecDrafter, ResearchSession
 from qts.research.factor_discovery import FactorIdea
 from qts.research.factor_evaluation import (
@@ -54,7 +55,7 @@ def _run_cli(*args: str) -> subprocess.CompletedProcess[str]:
         text=True,
         check=False,
         env={
-            "PYTHONPATH": "backend/src",
+            "PYTHONPATH": f"backend/src{os.pathsep}.",
             "QTS_API_DEV_TOKENS": "1",
             "PATH": os.environ.get("PATH", ""),
         },
@@ -333,6 +334,79 @@ steps:
             "quantity": ["1", "2"],
         },
         objective_metric="total_return",
+        output_root=tmp_path / "direct-optimizer",
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    workflow_ranked = payload["steps"][0]["outputs"]["ranked_results"]
+
+    assert [
+        (
+            item["parameters"],
+            item["objective_value"],
+            _research_result_metrics(Path(item["manifest_path"])),
+        )
+        for item in workflow_ranked
+    ] == [
+        (
+            dict(item.parameters),
+            str(item.objective_value),
+            _research_result_metrics(item.manifest_path),
+        )
+        for item in direct_results
+    ]
+
+
+def test_canonical_vwap_workflow_optimize_matches_direct_research_session_metrics(
+    tmp_path: Path,
+) -> None:
+    if (
+        not Path("historical/data/gc.csv").exists()
+        or not Path("historical/chains/GC.json").exists()
+    ):
+        pytest.skip("canonical VWAP research data is not available")
+    workflow_path = _write_workflow(
+        tmp_path,
+        f"""
+version: 1
+workflow_id: vwap-path-equivalence
+steps:
+  - id: optimize
+    kind: optimize
+    objective_metric: sharpe_ratio
+    output_root: {tmp_path / "workflow-optimizer"}
+    parameters:
+      time_window: [evening_18_22]
+      target_quantity: ["3"]
+      min_volume_ratio: ["1.2"]
+      pullback_touch_atr_below: ["0.15"]
+      max_pullback_break_atr: ["1.0"]
+      stop_atr_multiple: ["1.0"]
+      target_r_multiple: ["2.0"]
+      factor_filters:
+        - []
+""",
+    )
+
+    result = _run_cli(
+        "--config",
+        "configs/research/vwap.yaml",
+        "workflow",
+        str(workflow_path),
+    )
+    direct_results = ResearchSession.from_yaml(Path("configs/research/vwap.yaml")).optimize(
+        parameters={
+            "time_window": ["evening_18_22"],
+            "target_quantity": ["3"],
+            "min_volume_ratio": ["1.2"],
+            "pullback_touch_atr_below": ["0.15"],
+            "max_pullback_break_atr": ["1.0"],
+            "stop_atr_multiple": ["1.0"],
+            "target_r_multiple": ["2.0"],
+            "factor_filters": [[]],
+        },
+        objective_metric="sharpe_ratio",
         output_root=tmp_path / "direct-optimizer",
     )
 

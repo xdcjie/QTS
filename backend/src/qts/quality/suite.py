@@ -25,9 +25,12 @@ from qts.quality.rules import (
     ProductionNoFakeClassRule,
     ProductionNoTestingImportRule,
     ProductionPlaceholderDocstringRule,
+    ProductionStrategyImportRule,
     ProductSpecificRule,
     ProviderSdkImportRule,
     RemovedImportNoNewUsageRule,
+    ResearchRunScriptRule,
+    ResearchWorkflowRuntimeKeyRule,
     RuntimeCoordinatorDecisionRule,
     RuntimeExecutionBoundaryRule,
     RuntimeSessionComplexityRule,
@@ -39,6 +42,7 @@ from qts.quality.rules import (
     TestSupportRule,
     TransportAdapterImportRule,
     TransportCanonicalPathRule,
+    VwapOptimizerConfigRule,
 )
 
 
@@ -81,6 +85,10 @@ class GuardrailSuite:
             SingleFieldDtoJustificationRule(repo_root=repo_root),
             DuplicateDtoNameRule(),
             CallerPresenceRule(repo_root=repo_root),
+            ResearchRunScriptRule(),
+            VwapOptimizerConfigRule(),
+            ProductionStrategyImportRule(),
+            ResearchWorkflowRuntimeKeyRule(),
         )
 
     def check_file(

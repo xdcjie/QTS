@@ -24,6 +24,44 @@ If implementation conflicts with docs, stop and propose either a design update o
 
 Important specs must become gates. For every durable boundary, invariant, or architecture rule touched by a task, identify at least one enforcement mechanism: `make guardrails`, unit/integration/anchor/regression tests, static checks, review checklist, or manual approval. Passing behavior tests alone is not enough if a boundary gate applies.
 
+## 1.1 Flow-first implementation gate
+
+For every non-trivial implementation, choose the applicable Flow ID from
+`docs/architecture/system_flows.md` before editing code or configs. If multiple
+flows are touched, state one gate per flow:
+
+```text
+Flow ID:
+Canonical entry:
+Config owner:
+Allowed owner:
+Iteration point:
+Future-data risk:
+Required verification:
+```
+
+The answer must be concrete, not generic. `Allowed owner` must name the package,
+module, config owner, or documentation owner that is allowed to change.
+`Future-data risk` must state whether the change can expose data, labels,
+optimizer windows, replay bars, broker/account events, or reports before they
+are actually available.
+
+The change should not proceed if the requested implementation would enter
+through a non-canonical entrypoint, use the wrong config owner, or iterate at a
+point forbidden by `system_flows.md`.
+
+New VWAP research must use:
+
+```bash
+PYTHONPATH=backend/src uv run python scripts/run_research.py \
+  --config configs/research/vwap.yaml \
+  workflow configs/research/workflows/vwap_factor_search.yaml
+```
+
+Legacy VWAP ad hoc runners under `scripts/research/run_vwap_*.py` and
+VWAP-specific optimizer configs under `configs/optimizer` are not allowed to
+remain or be reintroduced.
+
 For domain-sensitive changes, state this before editing code:
 
 ```text
