@@ -20,6 +20,7 @@ steps:
 
   - id: baseline
     kind: backtest
+    backtest_config: ../../backtest.vwap_production_pullback_gc.yaml
     output_dir: ../../../runs/research/vwap/baseline
 
   - id: factor-search

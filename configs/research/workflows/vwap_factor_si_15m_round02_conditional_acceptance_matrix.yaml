@@ -1,0 +1,64 @@
+# SI 15m VWAP round 02 matrix: apply VWAP acceptance only inside bad regimes.
+#
+# Research evidence only. report_2025_2026 is a holdout report/veto, not an
+# optimization target.
+
+version: 1
+workflow_id: vwap-factor-si-15m-round02-conditional-acceptance-matrix
+steps:
+  - id: implementation
+    kind: implementation_gate
+    required_strategy: strategies.research.vwap_factor_research:VwapFactorResearchStrategy
+
+  - id: matrix
+    kind: backtest_matrix
+    output_root: ../../../runs/research/vwap/si-15m-long/round02-conditional-acceptance-prefilter
+    summary_output: ../../../runs/research/vwap/si-15m-long/validation/round02-conditional-acceptance-prefilter.json
+    metrics: [total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor]
+    base_strategy_params:
+      symbol: SI
+      time_window: asia_20_02
+      target_quantity: "3"
+      min_volume_ratio: "1.5"
+      pullback_touch_atr_below: "0.15"
+      max_pullback_break_atr: "1.0"
+      stop_atr_multiple: "1.0"
+      target_r_multiple: "2.0"
+    periods:
+      - name: failure_2022_2024
+        start: 2022-01-01
+        end: 2025-01-01
+      - name: report_2025_2026
+        start: 2025-01-01
+        end: 2026-04-10
+    candidates:
+      - name: base
+        strategy_params:
+          factor_filters: [trend_regime_aligned, session_sigma_range]
+      - name: acceptance_070
+        strategy_params:
+          factor_filters: [trend_regime_aligned, session_sigma_range, vwap_acceptance]
+          vwap_acceptance_min: "0.70"
+      - name: bad_hard14_accept_070
+        strategy_params:
+          factor_filters: [trend_regime_aligned, session_sigma_range, vwap_acceptance_if_bad_regime]
+          bad_regime_rule: hard14
+          bad_regime_unready_policy: allow
+          vwap_acceptance_min: "0.70"
+      - name: bad_churn225_accept_070
+        strategy_params:
+          factor_filters: [trend_regime_aligned, session_sigma_range, vwap_acceptance_if_bad_regime]
+          bad_regime_rule: hard_churn225
+          bad_regime_unready_policy: allow
+          vwap_acceptance_min: "0.70"
+      - name: bad_ccvol17_accept_070
+        strategy_params:
+          factor_filters: [trend_regime_aligned, session_sigma_range, vwap_acceptance_if_bad_regime]
+          bad_regime_rule: hard14_ccvol17
+          bad_regime_unready_policy: allow
+          vwap_acceptance_min: "0.70"
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/si-15m-long/reports
+    output_path: vwap-factor-si-15m-round02-conditional-acceptance-prefilter-report.md

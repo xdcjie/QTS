@@ -8,7 +8,7 @@ roots:
 symbols:
   - GC
   - SI
-start: "2010-06-06T00:00:00Z"
+start: "2025-01-01T00:00:00Z"
 end: "2026-04-10T00:00:00Z"
 timeframe: 15m
 initial_cash: "100000"

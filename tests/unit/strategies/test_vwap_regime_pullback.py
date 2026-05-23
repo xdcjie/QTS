@@ -246,6 +246,8 @@ def test_formal_backtest_configs_feed_gc_and_si_for_online_regime_gate() -> None
         payload = yaml.safe_load(path.read_text(encoding="utf-8"))
         assert payload["roots"] == ["GC", "SI"]
         assert payload["symbols"] == ["GC", "SI"]
+        assert payload["start"] == "2025-01-01T00:00:00Z"
+        assert payload["end"] == "2026-04-10T00:00:00Z"
         assert payload["timeframe"] == "15m"
         assert payload["strategy_class"] == expected_class
         assert payload["warmup_bars"] >= 120 * 92

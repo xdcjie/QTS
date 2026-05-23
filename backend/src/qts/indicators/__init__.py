@@ -1,5 +1,6 @@
 from qts.indicators.price import EMA, SMA
 from qts.indicators.rolling import RollingWindow
+from qts.indicators.session_regime import SessionRegimeGateConfig, TrailingSessionRegimeGate
 from qts.indicators.technical import (
     ADX,
     MACD,
@@ -43,10 +44,12 @@ __all__ = [
     "RollingWindow",
     "SMA",
     "SessionVWAP",
+    "SessionRegimeGateConfig",
     "StandardDeviation",
     "StochasticOscillator",
     "Supertrend",
     "SupertrendValue",
+    "TrailingSessionRegimeGate",
     "VolumeRatio",
     "WilliamsR",
 ]

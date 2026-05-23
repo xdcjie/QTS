@@ -57,3 +57,48 @@ def test_historical_chain_missing_required_fields_raise_value_error(tmp_path: Pa
 
     with pytest.raises(ValueError, match="multiplier"):
         HistoricalChain.load(bad)
+
+
+def test_historical_chain_contract_for_symbol_and_expiry_works_for_duplicate_symbols() -> None:
+    chain = HistoricalChain.load(Path("historical/chains/GC.json"))
+
+    assert chain.contract_for_symbol("GCM6").expiry == datetime(2016, 6, 28, 22, tzinfo=UTC)
+    assert chain.contract_for_symbol_and_expiry("GCM6", date(2016, 6, 28)).expiry == datetime(
+        2016,
+        6,
+        28,
+        22,
+        tzinfo=UTC,
+    )
+    assert chain.contract_for_symbol_and_expiry("GCM6", "2026-06-26").expiry == datetime(
+        2026,
+        6,
+        26,
+        tzinfo=UTC,
+    )
+    assert chain.contract_for_symbol_and_expiry(
+        "GCM6",
+        datetime(2026, 6, 26, 0, tzinfo=UTC),
+    ).expiry == datetime(
+        2026,
+        6,
+        26,
+        tzinfo=UTC,
+    )
+
+
+def test_historical_chain_contract_for_symbol_and_expiry_rejects_unknown_contract() -> None:
+    chain = HistoricalChain.load(Path("historical/chains/GC.json"))
+
+    with pytest.raises(KeyError, match="historical contract not found"):
+        chain.contract_for_symbol_and_expiry("GCM6", date(2010, 1, 1))
+    with pytest.raises(KeyError, match="historical contract not found"):
+        chain.contract_for_symbol_and_expiry("GCM6", "2040-01-01")
+
+
+def test_historical_chain_instrument_id_for_symbol_and_expiry_works() -> None:
+    chain = HistoricalChain.load(Path("historical/chains/GC.json"))
+
+    assert chain.instrument_id_for_symbol_and_expiry(
+        "GCM6", date(2026, 6, 26)
+    ) == chain.instrument_id_for_symbol("GCM6")

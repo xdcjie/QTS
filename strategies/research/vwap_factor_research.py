@@ -18,6 +18,7 @@ from zoneinfo import ZoneInfo
 
 from qts.domain.market_data import Bar
 from qts.domain.positions import PositionSide
+from qts.indicators.session_regime import SessionRegimeGateConfig, TrailingSessionRegimeGate
 from qts.indicators.technical import (
     BollingerBandsValue,
     DirectionalMovementValue,
@@ -40,10 +41,23 @@ class _ExitReason(StrEnum):
     SESSION_CLOSE_FLAT = "session_close_flat"
     LONG_CLOSE_BELOW_VWAP = "long_close_below_vwap"
     SHORT_CLOSE_ABOVE_VWAP = "short_close_above_vwap"
+    LONG_EARLY_NO_PROGRESS = "long_early_no_progress"
+    SHORT_EARLY_NO_PROGRESS = "short_early_no_progress"
     LONG_STOP_ATR_TOUCHED = "long_stop_atr_touched"
     SHORT_STOP_ATR_TOUCHED = "short_stop_atr_touched"
     LONG_TARGET_R_TOUCHED = "long_target_r_touched"
     SHORT_TARGET_R_TOUCHED = "short_target_r_touched"
+
+
+class _NoProgressAction(StrEnum):
+    EXIT = "exit"
+    REDUCE_QUANTITY = "reduce_quantity"
+    REDUCE_TARGET = "reduce_target"
+
+
+class _EntrySizeRule(StrEnum):
+    OFF = "off"
+    SIGMA_MOMENTUM_REDUCE = "sigma_momentum_reduce"
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,11 +103,40 @@ class VwapFactorResearchConfig:
     williams_r_max: Decimal = Decimal("-20")
     max_bollinger_z_abs: Decimal = Decimal("1.5")
     vwap_slope_min_atr: Decimal = Decimal("0")
+    ma20_80_min_abs: Decimal = Decimal("0")
     atr_pct_min: Decimal = Decimal("0")
     atr_pct_max: Decimal = Decimal("99")
     session_sigma_min_atr: Decimal = Decimal("0")
     session_sigma_max_atr: Decimal = Decimal("99")
     rth_drive_min_atr: Decimal = Decimal("0")
+    rejection_close_location_min: Decimal = Decimal("0")
+    rejection_body_ratio_min: Decimal = Decimal("0")
+    vwap_acceptance_window: int = 20
+    vwap_acceptance_min: Decimal = Decimal("0.70")
+    range_expansion_lookback_sessions: int = 20
+    range_expansion_min: Decimal = Decimal("1.10")
+    range_expansion_max: Decimal = Decimal("99")
+    bad_regime_rule: str = "off"
+    bad_regime_lookback_sessions: int = 120
+    bad_regime_min_history_sessions: int = 120
+    bad_regime_unready_policy: str = "allow"
+    bad_regime_range_min: Decimal = Decimal("0.015")
+    bad_regime_asia_share_max: Decimal = Decimal("0.14")
+    bad_regime_min_return_floor: Decimal = Decimal("-0.15")
+    bad_regime_mean_churn_min: Decimal = Decimal("2.25")
+    bad_regime_mean_realized_vol_max: Decimal = Decimal("0.017")
+    bad_regime_target_r_multiple: Decimal = Decimal("0")
+    early_no_progress_exit_bars: int = 0
+    early_no_progress_adverse_r: Decimal = Decimal("0")
+    early_no_progress_favorable_r: Decimal = Decimal("0")
+    early_no_progress_action: str = "exit"
+    early_no_progress_reduced_quantity: Decimal = Decimal("0")
+    early_no_progress_target_r_multiple: Decimal = Decimal("0")
+    entry_size_rule: str = "off"
+    entry_size_session_sigma_min_atr: Decimal = Decimal("0")
+    entry_size_momentum_min_abs: Decimal = Decimal("0")
+    entry_size_reduced_quantity: Decimal = Decimal("0")
+    max_entries_per_session: int = 0
 
     rsi_window: int = 14
     adx_window: int = 14
@@ -159,6 +202,10 @@ class VwapFactorResearchConfig:
             "macd_fast_window": self.macd_fast_window,
             "macd_slow_window": self.macd_slow_window,
             "macd_signal_window": self.macd_signal_window,
+            "vwap_acceptance_window": self.vwap_acceptance_window,
+            "range_expansion_lookback_sessions": self.range_expansion_lookback_sessions,
+            "bad_regime_lookback_sessions": self.bad_regime_lookback_sessions,
+            "bad_regime_min_history_sessions": self.bad_regime_min_history_sessions,
             "technical_score_min": self.technical_score_min,
             "oscillator_score_min": self.oscillator_score_min,
             "volume_curve_lookback_sessions": self.volume_curve_lookback_sessions,
@@ -171,6 +218,10 @@ class VwapFactorResearchConfig:
             raise ValueError("min_session_open_minutes must be non-negative")
         if self.min_session_open_minutes >= 24 * 60:
             raise ValueError("min_session_open_minutes must be less than one day")
+        if self.max_entries_per_session < 0:
+            raise ValueError("max_entries_per_session must be non-negative")
+        if self.early_no_progress_exit_bars < 0:
+            raise ValueError("early_no_progress_exit_bars must be non-negative")
         for name in ("session_open_et_hour", "session_close_et_hour"):
             value = getattr(self, name)
             if not 0 <= value <= 23:
@@ -206,11 +257,30 @@ class VwapFactorResearchConfig:
             "williams_r_max",
             "max_bollinger_z_abs",
             "vwap_slope_min_atr",
+            "ma20_80_min_abs",
             "atr_pct_min",
             "atr_pct_max",
             "session_sigma_min_atr",
             "session_sigma_max_atr",
             "rth_drive_min_atr",
+            "rejection_close_location_min",
+            "rejection_body_ratio_min",
+            "vwap_acceptance_min",
+            "range_expansion_min",
+            "range_expansion_max",
+            "bad_regime_range_min",
+            "bad_regime_asia_share_max",
+            "bad_regime_min_return_floor",
+            "bad_regime_mean_churn_min",
+            "bad_regime_mean_realized_vol_max",
+            "bad_regime_target_r_multiple",
+            "early_no_progress_adverse_r",
+            "early_no_progress_favorable_r",
+            "early_no_progress_reduced_quantity",
+            "early_no_progress_target_r_multiple",
+            "entry_size_session_sigma_min_atr",
+            "entry_size_momentum_min_abs",
+            "entry_size_reduced_quantity",
             "ts_momentum_min_abs",
             "volume_curve_ratio_min",
             "volume_curve_ratio_max",
@@ -270,6 +340,59 @@ class VwapFactorResearchConfig:
             raise ValueError("stop_atr_multiple must be positive")
         if self.target_r_multiple <= Decimal("0"):
             raise ValueError("target_r_multiple must be positive")
+        if self.bad_regime_target_r_multiple < Decimal("0"):
+            raise ValueError("bad_regime_target_r_multiple must be non-negative")
+        if self.early_no_progress_adverse_r < Decimal("0"):
+            raise ValueError("early_no_progress_adverse_r must be non-negative")
+        if self.early_no_progress_favorable_r < Decimal("0"):
+            raise ValueError("early_no_progress_favorable_r must be non-negative")
+        if self.early_no_progress_exit_bars > 0 and self.early_no_progress_adverse_r == Decimal(
+            "0"
+        ):
+            raise ValueError("early_no_progress_adverse_r must be positive when enabled")
+        object.__setattr__(
+            self,
+            "early_no_progress_action",
+            self.early_no_progress_action.strip().lower(),
+        )
+        allowed_no_progress_actions = {item.value for item in _NoProgressAction}
+        if self.early_no_progress_action not in allowed_no_progress_actions:
+            raise ValueError(
+                f"early_no_progress_action must be one of {sorted(allowed_no_progress_actions)}"
+            )
+        quantity_actions = {
+            _NoProgressAction.REDUCE_QUANTITY.value,
+        }
+        target_actions = {
+            _NoProgressAction.REDUCE_TARGET.value,
+        }
+        if self.early_no_progress_action in quantity_actions:
+            if self.early_no_progress_reduced_quantity <= Decimal("0"):
+                raise ValueError("early_no_progress_reduced_quantity must be positive")
+            if self.early_no_progress_reduced_quantity >= self.target_quantity:
+                raise ValueError(
+                    "early_no_progress_reduced_quantity must be less than target_quantity"
+                )
+        if self.early_no_progress_action in target_actions:
+            if self.early_no_progress_target_r_multiple <= Decimal("0"):
+                raise ValueError("early_no_progress_target_r_multiple must be positive")
+            if self.early_no_progress_target_r_multiple >= self.target_r_multiple:
+                raise ValueError(
+                    "early_no_progress_target_r_multiple must be less than target_r_multiple"
+                )
+        object.__setattr__(self, "entry_size_rule", self.entry_size_rule.strip().lower())
+        allowed_entry_size_rules = {item.value for item in _EntrySizeRule}
+        if self.entry_size_rule not in allowed_entry_size_rules:
+            raise ValueError(f"entry_size_rule must be one of {sorted(allowed_entry_size_rules)}")
+        if self.entry_size_rule == _EntrySizeRule.SIGMA_MOMENTUM_REDUCE.value:
+            if self.entry_size_session_sigma_min_atr <= Decimal("0"):
+                raise ValueError("entry_size_session_sigma_min_atr must be positive")
+            if self.entry_size_momentum_min_abs <= Decimal("0"):
+                raise ValueError("entry_size_momentum_min_abs must be positive")
+            if self.entry_size_reduced_quantity <= Decimal("0"):
+                raise ValueError("entry_size_reduced_quantity must be positive")
+            if self.entry_size_reduced_quantity >= self.target_quantity:
+                raise ValueError("entry_size_reduced_quantity must be less than target_quantity")
         if self.distance_min_atr > self.distance_max_atr:
             raise ValueError("distance_min_atr must be <= distance_max_atr")
         if self.volume_ratio_min > self.volume_ratio_max:
@@ -278,6 +401,32 @@ class VwapFactorResearchConfig:
             raise ValueError("atr_pct_min must be <= atr_pct_max")
         if self.session_sigma_min_atr > self.session_sigma_max_atr:
             raise ValueError("session_sigma_min_atr must be <= session_sigma_max_atr")
+        if not Decimal("0") <= self.rejection_close_location_min <= Decimal("1"):
+            raise ValueError("rejection_close_location_min must be between 0 and 1")
+        if not Decimal("0") <= self.rejection_body_ratio_min <= Decimal("1"):
+            raise ValueError("rejection_body_ratio_min must be between 0 and 1")
+        if not Decimal("0") <= self.vwap_acceptance_min <= Decimal("1"):
+            raise ValueError("vwap_acceptance_min must be between 0 and 1")
+        if self.range_expansion_min > self.range_expansion_max:
+            raise ValueError("range_expansion_min must be <= range_expansion_max")
+        object.__setattr__(self, "bad_regime_rule", self.bad_regime_rule.strip().lower())
+        object.__setattr__(
+            self,
+            "bad_regime_unready_policy",
+            self.bad_regime_unready_policy.strip().lower(),
+        )
+        SessionRegimeGateConfig(
+            rule=self.bad_regime_rule,
+            symbols=(self.symbol,),
+            lookback_sessions=self.bad_regime_lookback_sessions,
+            min_history_sessions=self.bad_regime_min_history_sessions,
+            unready_policy=self.bad_regime_unready_policy,
+            range_min=self.bad_regime_range_min,
+            asia_share_max=self.bad_regime_asia_share_max,
+            min_return_floor=self.bad_regime_min_return_floor,
+            mean_churn_min=self.bad_regime_mean_churn_min,
+            mean_realized_vol_max=self.bad_regime_mean_realized_vol_max,
+        )
         if self.macd_fast_window >= self.macd_slow_window:
             raise ValueError("macd_fast_window must be < macd_slow_window")
         if self.sma_fast_window >= self.sma_slow_window:
@@ -286,6 +435,8 @@ class VwapFactorResearchConfig:
             raise ValueError("sma_long_fast_window must be < sma_long_slow_window")
         if self.volume_curve_ratio_min > self.volume_curve_ratio_max:
             raise ValueError("volume_curve_ratio_min must be <= volume_curve_ratio_max")
+        if self.ma20_80_min_abs < Decimal("0"):
+            raise ValueError("ma20_80_min_abs must be non-negative")
 
     @property
     def required_warmup_bars(self) -> int:
@@ -305,14 +456,24 @@ class VwapFactorResearchConfig:
             "volume_range",
             "volume_le",
             "vwap_slope_strength",
+            "vwap_slope_strength_if_bad_regime",
             "atr_pct_range",
             "session_sigma_range",
             "rth_drive_min_atr",
             "rth_drive_non_positive",
             "rth_drive_positive",
+            "rejection_quality",
             "volume_curve_range",
+            "range_expansion",
         }:
             return ()
+        if filter_name == "vwap_acceptance":
+            return (self.vwap_acceptance_window,)
+        if filter_name in {
+            "vwap_acceptance_if_bad_regime",
+            "vwap_acceptance_or_range_expansion",
+        }:
+            return (self.vwap_acceptance_window,)
         if filter_name == "trend_regime_aligned":
             return (
                 self.vwap_slope_lookback,
@@ -333,11 +494,11 @@ class VwapFactorResearchConfig:
             return (self.roc_window + 1,)
         if filter_name == "mom60_aligned":
             return (self.ts_momentum_60_window + 1,)
-        if filter_name in {"mom120_aligned", "mom120_min"}:
+        if filter_name in {"mom120_aligned", "mom120_min", "mom120_min_if_bad_regime"}:
             return (self.ts_momentum_120_window + 1,)
         if filter_name == "mom240_aligned":
             return (self.ts_momentum_240_window + 1,)
-        if filter_name == "ma20_80_aligned":
+        if filter_name in {"ma20_80_aligned", "ma20_80_min", "session_sigma_or_ma20_80_min"}:
             return (self.sma_slow_window,)
         if filter_name == "ma50_200_aligned":
             return (self.sma_long_slow_window,)
@@ -377,9 +538,13 @@ class VwapFactorResearchConfig:
 @dataclass(slots=True)
 class _SessionState:
     session_id: str | None = None
+    entries: int = 0
     sum_var_x_vol: Decimal = Decimal("0")
     sum_vol: Decimal = Decimal("0")
     vwap_history: deque[Decimal] = field(default_factory=deque)
+    vwap_position_history: deque[int] = field(default_factory=deque)
+    session_high: Decimal | None = None
+    session_low: Decimal | None = None
     rth_open: Decimal | None = None
     rth_drive: Decimal | None = None
 
@@ -432,11 +597,30 @@ class VwapFactorResearchStrategy(Strategy):
         self._entry_price: Decimal | None = None
         self._stop_price: Decimal | None = None
         self._target_2: Decimal | None = None
+        self._entry_bars = 0
+        self._entry_max_adverse_r = Decimal("0")
+        self._entry_max_favorable_r = Decimal("0")
+        self._early_no_progress_action_taken = False
         self._session = _SessionState()
         self._et_tz = ZoneInfo("US/Eastern")
         self._volume_curve_history: dict[int, deque[Decimal]] = {}
+        self._session_range_curve_history: dict[int, deque[Decimal]] = {}
         self._factor_diagnostics: tuple[dict[str, object], ...] = ()
         self._blocked_entry_sessions = frozenset(self._config.blocked_entry_sessions)
+        self._bad_regime_gate = TrailingSessionRegimeGate(
+            SessionRegimeGateConfig(
+                rule=self._config.bad_regime_rule,
+                symbols=(self._config.symbol,),
+                lookback_sessions=self._config.bad_regime_lookback_sessions,
+                min_history_sessions=self._config.bad_regime_min_history_sessions,
+                unready_policy=self._config.bad_regime_unready_policy,
+                range_min=self._config.bad_regime_range_min,
+                asia_share_max=self._config.bad_regime_asia_share_max,
+                min_return_floor=self._config.bad_regime_min_return_floor,
+                mean_churn_min=self._config.bad_regime_mean_churn_min,
+                mean_realized_vol_max=self._config.bad_regime_mean_realized_vol_max,
+            )
+        )
 
     @property
     def factor_diagnostics(self) -> tuple[dict[str, object], ...]:
@@ -479,6 +663,7 @@ class VwapFactorResearchStrategy(Strategy):
 
     def on_bar(self, ctx: StrategyContext, bar: Bar) -> None:
         indicators = self._require_indicators()
+        self._bad_regime_gate.update_bar(self._config.symbol, bar)
         self._update_session_state(bar)
         if not self._core_ready(indicators):
             return
@@ -568,20 +753,30 @@ class VwapFactorResearchStrategy(Strategy):
                 self._enter_position(ctx, bar, vwap, atr)
 
     def _step_entered(self, ctx: StrategyContext, bar: Bar, vwap: Decimal) -> None:
+        self._update_entry_excursion_state(bar)
+        no_progress = self._should_exit_early_no_progress()
         if self._direction is PositionSide.LONG:
             if self._config.exit_on_vwap_cross and bar.close < vwap:
                 self._exit(ctx, _ExitReason.LONG_CLOSE_BELOW_VWAP)
+            elif no_progress and self._no_progress_action() is _NoProgressAction.EXIT:
+                self._exit(ctx, _ExitReason.LONG_EARLY_NO_PROGRESS)
             elif self._stop_price is not None and bar.low <= self._stop_price:
                 self._exit(ctx, _ExitReason.LONG_STOP_ATR_TOUCHED)
             elif self._target_2 is not None and bar.high >= self._target_2:
                 self._exit(ctx, _ExitReason.LONG_TARGET_R_TOUCHED)
+            elif no_progress:
+                self._apply_no_progress_risk_action(ctx)
         else:
             if self._config.exit_on_vwap_cross and bar.close > vwap:
                 self._exit(ctx, _ExitReason.SHORT_CLOSE_ABOVE_VWAP)
+            elif no_progress and self._no_progress_action() is _NoProgressAction.EXIT:
+                self._exit(ctx, _ExitReason.SHORT_EARLY_NO_PROGRESS)
             elif self._stop_price is not None and bar.high >= self._stop_price:
                 self._exit(ctx, _ExitReason.SHORT_STOP_ATR_TOUCHED)
             elif self._target_2 is not None and bar.low <= self._target_2:
                 self._exit(ctx, _ExitReason.SHORT_TARGET_R_TOUCHED)
+            elif no_progress:
+                self._apply_no_progress_risk_action(ctx)
 
     def _enter_position(
         self,
@@ -594,29 +789,129 @@ class VwapFactorResearchStrategy(Strategy):
             return
         self._entry_price = bar.close
         stop_distance = atr * self._config.stop_atr_multiple
-        target_distance = stop_distance * self._config.target_r_multiple
-        metadata = self._entry_metadata()
+        target_distance = stop_distance * self._entry_target_r_multiple()
+        quantity = self._entry_quantity(atr)
+        metadata = self._entry_metadata(quantity)
         if self._direction is PositionSide.LONG:
             self._stop_price = self._entry_price - stop_distance
             self._target_2 = self._entry_price + target_distance
-            ctx.target_quantity(self._asset, self._config.target_quantity, metadata=metadata)
+            ctx.target_quantity(self._asset, quantity, metadata=metadata)
         else:
             self._stop_price = self._entry_price + stop_distance
             self._target_2 = self._entry_price - target_distance
-            ctx.target_quantity(self._asset, -self._config.target_quantity, metadata=metadata)
+            ctx.target_quantity(self._asset, -quantity, metadata=metadata)
+        self._session.entries += 1
         self._state = _State.ENTERED
         self._bars_in_wait = 0
+        self._entry_bars = 0
+        self._entry_max_adverse_r = Decimal("0")
+        self._entry_max_favorable_r = Decimal("0")
+        self._early_no_progress_action_taken = False
 
-    def _entry_metadata(self) -> dict[str, str] | None:
-        if not self._factor_diagnostics:
+    def _update_entry_excursion_state(self, bar: Bar) -> None:
+        if (
+            self._entry_price is None
+            or self._stop_price is None
+            or self._direction is None
+            or self._entry_price == self._stop_price
+        ):
+            return
+        self._entry_bars += 1
+        stop_distance = abs(self._entry_price - self._stop_price)
+        if self._direction is PositionSide.LONG:
+            adverse_r = (self._entry_price - bar.low) / stop_distance
+            favorable_r = (bar.high - self._entry_price) / stop_distance
+        else:
+            adverse_r = (bar.high - self._entry_price) / stop_distance
+            favorable_r = (self._entry_price - bar.low) / stop_distance
+        self._entry_max_adverse_r = max(self._entry_max_adverse_r, adverse_r)
+        self._entry_max_favorable_r = max(self._entry_max_favorable_r, favorable_r)
+
+    def _should_exit_early_no_progress(self) -> bool:
+        if self._config.early_no_progress_exit_bars == 0:
+            return False
+        return (
+            0 < self._entry_bars <= self._config.early_no_progress_exit_bars
+            and self._entry_max_adverse_r >= self._config.early_no_progress_adverse_r
+            and self._entry_max_favorable_r < self._config.early_no_progress_favorable_r
+        )
+
+    def _apply_no_progress_risk_action(self, ctx: StrategyContext) -> None:
+        if self._early_no_progress_action_taken:
+            return
+        action = self._no_progress_action()
+        if action is _NoProgressAction.REDUCE_TARGET:
+            self._reduce_entry_target(self._config.early_no_progress_target_r_multiple)
+        if action is _NoProgressAction.REDUCE_QUANTITY and self._asset is not None:
+            ctx.target_quantity(
+                self._asset,
+                self._signed_quantity(self._config.early_no_progress_reduced_quantity),
+                metadata=self._no_progress_action_metadata(action),
+            )
+        self._early_no_progress_action_taken = True
+
+    def _reduce_entry_target(self, target_r_multiple: Decimal) -> None:
+        if self._entry_price is None or self._stop_price is None or self._direction is None:
+            return
+        stop_distance = abs(self._entry_price - self._stop_price)
+        target_distance = stop_distance * target_r_multiple
+        if self._direction is PositionSide.LONG:
+            self._target_2 = self._entry_price + target_distance
+        else:
+            self._target_2 = self._entry_price - target_distance
+
+    def _signed_quantity(self, quantity: Decimal) -> Decimal:
+        return quantity if self._direction is PositionSide.LONG else -quantity
+
+    def _no_progress_action(self) -> _NoProgressAction:
+        return _NoProgressAction(self._config.early_no_progress_action)
+
+    def _no_progress_action_metadata(self, action: _NoProgressAction) -> dict[str, str]:
+        payload = {
+            "entry_bars": str(self._entry_bars),
+            "entry_max_adverse_r": str(self._entry_max_adverse_r),
+            "entry_max_favorable_r": str(self._entry_max_favorable_r),
+            "no_progress_action": action.value,
+        }
+        if self._target_2 is not None:
+            payload["target_price"] = str(self._target_2)
+        return payload
+
+    def _entry_target_r_multiple(self) -> Decimal:
+        if (
+            self._config.bad_regime_target_r_multiple > Decimal("0")
+            and not self._bad_regime_gate.allows_new_entries()
+        ):
+            return self._config.bad_regime_target_r_multiple
+        return self._config.target_r_multiple
+
+    def _entry_quantity(self, atr: Decimal) -> Decimal:
+        if self._config.entry_size_rule != _EntrySizeRule.SIGMA_MOMENTUM_REDUCE.value:
+            return self._config.target_quantity
+        sigma_atr = self._session_sigma_atr(atr)
+        momentum = self._decimal(self._require_indicators().roc_120)
+        if (
+            sigma_atr is not None
+            and momentum is not None
+            and sigma_atr >= self._config.entry_size_session_sigma_min_atr
+            and self._direction_sign() * momentum >= self._config.entry_size_momentum_min_abs
+        ):
+            return self._config.entry_size_reduced_quantity
+        return self._config.target_quantity
+
+    def _entry_metadata(self, quantity: Decimal) -> dict[str, str] | None:
+        if not self._factor_diagnostics and quantity == self._config.target_quantity:
             return None
-        return {
-            "factor_diagnostics": json.dumps(
+        payload: dict[str, str] = {}
+        if self._factor_diagnostics:
+            payload["factor_diagnostics"] = json.dumps(
                 list(self._factor_diagnostics),
                 separators=(",", ":"),
                 sort_keys=True,
             )
-        }
+        if quantity != self._config.target_quantity:
+            payload["entry_size_rule"] = self._config.entry_size_rule
+        return payload
 
     def _factor_filters_pass(self, bar: Bar, vwap: Decimal, atr: Decimal) -> bool:
         diagnostics: list[dict[str, object]] = []
@@ -649,14 +944,38 @@ class VwapFactorResearchStrategy(Strategy):
             return self._format_decimal(self._decimal(indicators.volume_ratio))
         if filter_name == "vwap_slope_strength":
             return self._format_decimal(self._vwap_slope_strength_atr(atr))
+        if filter_name == "vwap_slope_strength_if_bad_regime":
+            blocked = not self._bad_regime_gate.allows_new_entries()
+            strength = self._format_decimal(self._vwap_slope_strength_atr(atr))
+            return f"bad_regime={blocked},vwap_slope_atr={strength}"
         if filter_name == "atr_pct_range":
             return self._format_decimal(self._atr_pct(bar, atr))
         if filter_name == "session_sigma_range":
             return self._format_decimal(self._session_sigma_atr(atr))
+        if filter_name == "session_sigma_or_ma20_80_min":
+            sigma = self._format_decimal(self._session_sigma_atr(atr))
+            ma_spread = self._sma_spread(indicators.sma_fast, indicators.sma_slow)
+            return f"session_sigma={sigma},ma20_80={ma_spread}"
         if filter_name == "rth_drive_min_atr":
             return self._format_decimal(self._rth_drive_atr(atr))
         if filter_name in {"rth_drive_non_positive", "rth_drive_positive"}:
             return self._format_decimal(self._session.rth_drive)
+        if filter_name == "rejection_quality":
+            close_location = self._format_decimal(self._directional_close_location(bar))
+            body_ratio = self._format_decimal(self._body_ratio(bar))
+            return f"close_location={close_location},body_ratio={body_ratio}"
+        if filter_name == "vwap_acceptance":
+            return self._format_decimal(self._vwap_acceptance_ratio())
+        if filter_name == "vwap_acceptance_if_bad_regime":
+            acceptance = self._format_decimal(self._vwap_acceptance_ratio())
+            blocked = not self._bad_regime_gate.allows_new_entries()
+            return f"bad_regime={blocked},acceptance={acceptance}"
+        if filter_name == "range_expansion":
+            return self._format_decimal(self._range_expansion(bar))
+        if filter_name == "vwap_acceptance_or_range_expansion":
+            acceptance = self._format_decimal(self._vwap_acceptance_ratio())
+            expansion = self._format_decimal(self._range_expansion(bar))
+            return f"acceptance={acceptance},range_expansion={expansion}"
         if filter_name == "trend_regime_aligned":
             strength = self._format_decimal(self._vwap_slope_strength_atr(atr))
             momentum = self._format_decimal(self._decimal(indicators.roc_120))
@@ -685,9 +1004,13 @@ class VwapFactorResearchStrategy(Strategy):
             return self._format_decimal(self._decimal(indicators.roc_60))
         if filter_name in {"mom120_aligned", "mom120_min"}:
             return self._format_decimal(self._decimal(indicators.roc_120))
+        if filter_name == "mom120_min_if_bad_regime":
+            blocked = not self._bad_regime_gate.allows_new_entries()
+            momentum = self._format_decimal(self._decimal(indicators.roc_120))
+            return f"bad_regime={blocked},roc120={momentum}"
         if filter_name == "mom240_aligned":
             return self._format_decimal(self._decimal(indicators.roc_240))
-        if filter_name == "ma20_80_aligned":
+        if filter_name in {"ma20_80_aligned", "ma20_80_min"}:
             return self._sma_spread(indicators.sma_fast, indicators.sma_slow)
         if filter_name == "ma50_200_aligned":
             return self._sma_spread(indicators.sma_long_fast, indicators.sma_long_slow)
@@ -757,6 +1080,10 @@ class VwapFactorResearchStrategy(Strategy):
         if filter_name == "vwap_slope_strength":
             strength = self._vwap_slope_strength_atr(atr)
             return strength is not None and strength >= self._config.vwap_slope_min_atr
+        if filter_name == "vwap_slope_strength_if_bad_regime":
+            if self._bad_regime_gate.allows_new_entries():
+                return True
+            return self._factor_filter_passes("vwap_slope_strength", bar, vwap, atr)
         if filter_name == "atr_pct_range":
             atr_pct = self._atr_pct(bar, atr)
             return (
@@ -771,6 +1098,15 @@ class VwapFactorResearchStrategy(Strategy):
                 <= sigma_atr
                 <= self._config.session_sigma_max_atr
             )
+        if filter_name == "session_sigma_or_ma20_80_min":
+            sigma_atr = self._session_sigma_atr(atr)
+            if sigma_atr is None or sigma_atr > self._config.session_sigma_max_atr:
+                return False
+            return sigma_atr >= self._config.session_sigma_min_atr or self._sma_pair_min_aligned(
+                indicators.sma_fast,
+                indicators.sma_slow,
+                self._config.ma20_80_min_abs,
+            )
         if filter_name == "rth_drive_min_atr":
             drive_atr = self._rth_drive_atr(atr)
             return drive_atr is not None and drive_atr >= self._config.rth_drive_min_atr
@@ -784,6 +1120,42 @@ class VwapFactorResearchStrategy(Strategy):
             return self._session.rth_drive is not None and direction * self._session.rth_drive <= 0
         if filter_name == "rth_drive_positive":
             return self._session.rth_drive is not None and direction * self._session.rth_drive > 0
+        if filter_name == "rejection_quality":
+            close_location = self._directional_close_location(bar)
+            body_ratio = self._body_ratio(bar)
+            return (
+                close_location is not None
+                and body_ratio is not None
+                and close_location >= self._config.rejection_close_location_min
+                and body_ratio >= self._config.rejection_body_ratio_min
+            )
+        if filter_name == "vwap_acceptance":
+            ratio = self._vwap_acceptance_ratio()
+            return ratio is not None and ratio >= self._config.vwap_acceptance_min
+        if filter_name == "vwap_acceptance_if_bad_regime":
+            if self._bad_regime_gate.allows_new_entries():
+                return True
+            ratio = self._vwap_acceptance_ratio()
+            return ratio is not None and ratio >= self._config.vwap_acceptance_min
+        if filter_name == "range_expansion":
+            ratio = self._range_expansion(bar)
+            return (
+                ratio is not None
+                and self._config.range_expansion_min <= ratio <= self._config.range_expansion_max
+            )
+        if filter_name == "vwap_acceptance_or_range_expansion":
+            acceptance = self._vwap_acceptance_ratio()
+            range_expansion = self._range_expansion(bar)
+            acceptance_passes = (
+                acceptance is not None and acceptance >= self._config.vwap_acceptance_min
+            )
+            expansion_passes = (
+                range_expansion is not None
+                and self._config.range_expansion_min
+                <= range_expansion
+                <= self._config.range_expansion_max
+            )
+            return acceptance_passes or expansion_passes
         if filter_name == "rsi_mid":
             rsi = self._decimal(indicators.rsi)
             return rsi is not None and self._config.rsi_min <= rsi <= self._config.rsi_max
@@ -817,8 +1189,18 @@ class VwapFactorResearchStrategy(Strategy):
             return self._momentum_aligned(indicators.roc_240, Decimal("0"))
         if filter_name == "mom120_min":
             return self._momentum_aligned(indicators.roc_120, self._config.ts_momentum_min_abs)
+        if filter_name == "mom120_min_if_bad_regime":
+            if self._bad_regime_gate.allows_new_entries():
+                return True
+            return self._momentum_aligned(indicators.roc_120, self._config.ts_momentum_min_abs)
         if filter_name == "ma20_80_aligned":
             return self._sma_pair_aligned(indicators.sma_fast, indicators.sma_slow)
+        if filter_name == "ma20_80_min":
+            return self._sma_pair_min_aligned(
+                indicators.sma_fast,
+                indicators.sma_slow,
+                self._config.ma20_80_min_abs,
+            )
         if filter_name == "ma50_200_aligned":
             return self._sma_pair_aligned(indicators.sma_long_fast, indicators.sma_long_slow)
         if filter_name == "technical_score_min":
@@ -879,6 +1261,7 @@ class VwapFactorResearchStrategy(Strategy):
             "overnight_18_06": ((18 * 60, 6 * 60),),
             "night_18_08": ((18 * 60, 8 * 60),),
             "asia_20_02": ((20 * 60, 2 * 60),),
+            "asia_22_02": ((22 * 60, 2 * 60),),
             "early_00_08": ((0, 8 * 60),),
             "pre_rth_06_08": ((6 * 60, 8 * 60),),
             "rth_08_12": ((8 * 60, 12 * 60),),
@@ -900,7 +1283,12 @@ class VwapFactorResearchStrategy(Strategy):
         return allowed and self._session_open_cooloff_elapsed(bar)
 
     def _entry_session_blocked(self, bar: Bar) -> bool:
-        return bar.session_id in self._blocked_entry_sessions
+        if bar.session_id in self._blocked_entry_sessions:
+            return True
+        return (
+            self._config.max_entries_per_session > 0
+            and self._session.entries >= self._config.max_entries_per_session
+        )
 
     @staticmethod
     def _minute_in_interval(minute: int, start: int, end: int) -> bool:
@@ -921,6 +1309,7 @@ class VwapFactorResearchStrategy(Strategy):
     def _update_session_state(self, bar: Bar) -> None:
         if bar.session_id != self._session.session_id:
             self._session = _SessionState(session_id=bar.session_id)
+        self._update_session_range_curve(bar)
         vwap = self._decimal(self._require_indicators().vwap)
         if vwap is not None:
             deviation = bar.close - vwap
@@ -930,8 +1319,33 @@ class VwapFactorResearchStrategy(Strategy):
             history.append(vwap)
             while len(history) > self._config.vwap_slope_lookback:
                 history.popleft()
+            position_history = self._session.vwap_position_history
+            position_history.append(self._vwap_position(bar, vwap))
+            while len(position_history) > self._config.vwap_acceptance_window:
+                position_history.popleft()
         self._update_rth_drive(bar)
         self._update_volume_curve(bar)
+
+    def _update_session_range_curve(self, bar: Bar) -> None:
+        self._session.session_high = (
+            bar.high
+            if self._session.session_high is None
+            else max(self._session.session_high, bar.high)
+        )
+        self._session.session_low = (
+            bar.low
+            if self._session.session_low is None
+            else min(self._session.session_low, bar.low)
+        )
+        current_range = self._current_session_range()
+        if current_range is None:
+            return
+        minute = self._et_minute(bar)
+        history = self._session_range_curve_history.setdefault(
+            minute,
+            deque(maxlen=self._config.range_expansion_lookback_sessions + 1),
+        )
+        history.append(current_range)
 
     def _update_rth_drive(self, bar: Bar) -> None:
         et = bar.end_time.astimezone(self._et_tz)
@@ -1006,6 +1420,10 @@ class VwapFactorResearchStrategy(Strategy):
         self._entry_price = None
         self._stop_price = None
         self._target_2 = None
+        self._entry_bars = 0
+        self._entry_max_adverse_r = Decimal("0")
+        self._entry_max_favorable_r = Decimal("0")
+        self._early_no_progress_action_taken = False
 
     def _enter_state(self, state: _State, direction: PositionSide) -> None:
         self._state = state
@@ -1036,6 +1454,21 @@ class VwapFactorResearchStrategy(Strategy):
             and self._direction_sign() * (fast_value - slow_value) > Decimal("0")
         )
 
+    def _sma_pair_min_aligned(
+        self,
+        fast: AssetIndicator,
+        slow: AssetIndicator,
+        minimum_abs: Decimal,
+    ) -> bool:
+        fast_value = self._decimal(fast)
+        slow_value = self._decimal(slow)
+        if fast_value is None or slow_value is None:
+            return False
+        aligned_spread = self._direction_sign() * (fast_value - slow_value)
+        if minimum_abs == Decimal("0"):
+            return aligned_spread > Decimal("0")
+        return aligned_spread >= minimum_abs
+
     def _sma_spread(self, fast: AssetIndicator, slow: AssetIndicator) -> str | None:
         fast_value = self._decimal(fast)
         slow_value = self._decimal(slow)
@@ -1063,6 +1496,58 @@ class VwapFactorResearchStrategy(Strategy):
         if sigma is None:
             return None
         return sigma / atr
+
+    def _vwap_acceptance_ratio(self) -> Decimal | None:
+        history = self._session.vwap_position_history
+        if len(history) < self._config.vwap_acceptance_window:
+            return None
+        direction = 1 if self._direction is PositionSide.LONG else -1
+        aligned = sum(1 for item in history if item == direction)
+        return Decimal(aligned) / Decimal(self._config.vwap_acceptance_window)
+
+    def _range_expansion(self, bar: Bar) -> Decimal | None:
+        current_range = self._current_session_range()
+        if current_range is None:
+            return None
+        history = self._session_range_curve_history.get(self._et_minute(bar))
+        if history is None:
+            return None
+        observations = tuple(history)[:-1]
+        if len(observations) < 5:
+            return None
+        average = sum(observations, Decimal("0")) / Decimal(len(observations))
+        if average == Decimal("0"):
+            return None
+        return current_range / average
+
+    def _directional_close_location(self, bar: Bar) -> Decimal | None:
+        bar_range = bar.high - bar.low
+        if bar_range <= Decimal("0"):
+            return None
+        close_location = (bar.close - bar.low) / bar_range
+        if self._direction is PositionSide.SHORT:
+            return Decimal("1") - close_location
+        return close_location
+
+    @staticmethod
+    def _body_ratio(bar: Bar) -> Decimal | None:
+        bar_range = bar.high - bar.low
+        if bar_range <= Decimal("0"):
+            return None
+        return abs(bar.close - bar.open) / bar_range
+
+    def _current_session_range(self) -> Decimal | None:
+        if self._session.session_high is None or self._session.session_low is None:
+            return None
+        return self._session.session_high - self._session.session_low
+
+    @staticmethod
+    def _vwap_position(bar: Bar, vwap: Decimal) -> int:
+        if bar.close > vwap:
+            return 1
+        if bar.close < vwap:
+            return -1
+        return 0
 
     def _rth_drive_atr(self, atr: Decimal) -> Decimal | None:
         if atr <= Decimal("0") or self._session.rth_drive is None:

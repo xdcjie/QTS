@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
@@ -241,6 +242,126 @@ steps:
     ]
     assert result.steps[2].outputs["manifest_path"] == "runs/backtest/manifest.json"
     assert result.steps[3].outputs["ranked_results"][0]["objective_value"] == "1.2"
+
+
+def test_runner_allows_backtest_step_to_override_session_backtest_config(
+    tmp_path: Path,
+) -> None:
+    production_config = tmp_path / "production-baseline.yaml"
+    production_config.write_text("mode: backtest\n", encoding="utf-8")
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: production-baseline
+steps:
+  - id: baseline
+    kind: backtest
+    backtest_config: production-baseline.yaml
+    strategy_params:
+      quantity: "4"
+""",
+    )
+    session = _FakeSession(accepted_specs=())
+
+    result = ResearchWorkflowRunner().run(
+        session,
+        ResearchWorkflowConfig.from_yaml(workflow_path),
+    )
+
+    assert result.status == "completed"
+    assert session.backtest_calls == [{"quantity": "4"}]
+    assert session.backtest_kwargs == [
+        {
+            "backtest_config_path": production_config,
+            "output_dir": None,
+            "strategy_params": {"quantity": "4"},
+        }
+    ]
+
+
+def test_runner_runs_backtest_matrix_and_writes_summary(tmp_path: Path) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: matrix-research
+steps:
+  - id: matrix
+    kind: backtest_matrix
+    backtest_config: research-backtest.yaml
+    output_root: matrix-runs
+    summary_output: matrix-summary.json
+    base_strategy_params:
+      symbol: GC
+      time_window: asia_20_02
+    metrics: [total_return, sharpe_ratio]
+    periods:
+      - name: failure_2022
+        start: 2022-01-01
+        end: 2023-01-01
+    candidates:
+      - name: base
+        strategy_params:
+          factor_filters: [session_sigma_range, mom120_aligned]
+      - name: escape
+        strategy_params:
+          factor_filters: [session_sigma_range, mom120_aligned, vwap_acceptance_or_range_expansion]
+          vwap_acceptance_min: "0.70"
+          range_expansion_min: "1.10"
+""",
+    )
+    session = _FakeSession(accepted_specs=(), backtest_manifest_root=tmp_path / "manifests")
+
+    result = ResearchWorkflowRunner().run(
+        session,
+        ResearchWorkflowConfig.from_yaml(workflow_path),
+    )
+
+    assert result.status == "completed"
+    assert result.steps[0].outputs == {
+        "candidate_count": 2,
+        "period_count": 1,
+        "run_count": 2,
+        "summary_path": str(tmp_path / "matrix-summary.json"),
+    }
+    assert session.backtest_kwargs == [
+        {
+            "backtest_config_path": tmp_path / "research-backtest.yaml",
+            "end": datetime(2023, 1, 1, tzinfo=UTC),
+            "output_dir": tmp_path / "matrix-runs" / "failure_2022" / "base",
+            "start": datetime(2022, 1, 1, tzinfo=UTC),
+            "strategy_params": {
+                "factor_filters": ["session_sigma_range", "mom120_aligned"],
+                "symbol": "GC",
+                "time_window": "asia_20_02",
+            },
+        },
+        {
+            "backtest_config_path": tmp_path / "research-backtest.yaml",
+            "end": datetime(2023, 1, 1, tzinfo=UTC),
+            "output_dir": tmp_path / "matrix-runs" / "failure_2022" / "escape",
+            "start": datetime(2022, 1, 1, tzinfo=UTC),
+            "strategy_params": {
+                "factor_filters": [
+                    "session_sigma_range",
+                    "mom120_aligned",
+                    "vwap_acceptance_or_range_expansion",
+                ],
+                "range_expansion_min": "1.10",
+                "symbol": "GC",
+                "time_window": "asia_20_02",
+                "vwap_acceptance_min": "0.70",
+            },
+        },
+    ]
+    summary = json.loads((tmp_path / "matrix-summary.json").read_text(encoding="utf-8"))
+    assert summary["candidate_count"] == 2
+    assert summary["period_count"] == 1
+    assert summary["rows"][0]["candidate"] == "base"
+    assert summary["rows"][0]["total_return"] == "0.1"
+    assert summary["rows"][1]["candidate"] == "escape"
+    assert summary["rows"][1]["sharpe_ratio"] == "0.7"
 
 
 def test_runner_runs_walk_forward_validation_for_top_optimizer_candidates(
@@ -1058,7 +1179,11 @@ def test_vwap_canonical_workflow_has_expected_optimize_steps() -> None:
     workflow_config = ResearchWorkflowConfig.from_yaml(
         Path("configs/research/workflows/vwap_factor_search.yaml")
     )
+    baseline = next(step for step in workflow_config.steps if step.step_id == "baseline")
     optimize_steps = [step for step in workflow_config.steps if step.kind == "optimize"]
+
+    assert baseline.kind == "backtest"
+    assert baseline.payload["backtest_config"] == "../../backtest.vwap_production_pullback_gc.yaml"
 
     assert [(step.step_id, step.payload["objective_metric"]) for step in optimize_steps] == [
         ("factor-search", "sharpe_ratio"),
@@ -1243,10 +1368,13 @@ class _FakeSession:
         self,
         *,
         accepted_specs: tuple[str, ...],
+        backtest_manifest_root: Path | None = None,
         evaluation_output_dir: Path | None = None,
     ) -> None:
         self._accepted_specs = accepted_specs
+        self._backtest_manifest_root = backtest_manifest_root
         self.backtest_calls: list[dict[str, object]] = []
+        self.backtest_kwargs: list[dict[str, object]] = []
         self.optimize_calls: list[dict[str, object]] = []
         self.walk_forward_calls: list[dict[str, object]] = []
         self.failure_veto_calls: list[dict[str, object]] = []
@@ -1263,13 +1391,96 @@ class _FakeSession:
             return ()
         return tuple(SimpleNamespace(name=name) for name in self._accepted_specs)
 
-    def run_backtest(self, *, strategy_params: dict[str, object] | None = None) -> object:
+    def run_backtest(
+        self,
+        *,
+        end: datetime | None = None,
+        start: datetime | None = None,
+        strategy_params: dict[str, object] | None = None,
+        output_dir: Path | None = None,
+        backtest_config_path: Path | None = None,
+    ) -> SimpleNamespace:
         self.backtest_calls.append(dict(strategy_params or {}))
+        kwargs: dict[str, object] = {
+            "backtest_config_path": backtest_config_path,
+            "output_dir": output_dir,
+            "strategy_params": dict(strategy_params or {}),
+        }
+        if start is not None or end is not None:
+            kwargs = {
+                "end": end,
+                "output_dir": output_dir,
+                "start": start,
+                "strategy_params": dict(strategy_params or {}),
+            }
+            if backtest_config_path is not None:
+                kwargs["backtest_config_path"] = backtest_config_path
+        self.backtest_kwargs.append(kwargs)
+        manifest_path = Path("runs/backtest/manifest.json")
+        if self._backtest_manifest_root is not None:
+            self._backtest_manifest_root.mkdir(parents=True, exist_ok=True)
+            manifest_path = (
+                self._backtest_manifest_root / f"bt-{len(self.backtest_calls):04d}.manifest.json"
+            )
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "metrics": {
+                            "sharpe_ratio": str(
+                                Decimal("0.5") + Decimal(len(self.backtest_calls)) / 10
+                            ),
+                            "total_return": str(Decimal(len(self.backtest_calls)) / 10),
+                        }
+                    },
+                    sort_keys=True,
+                ),
+                encoding="utf-8",
+            )
         return SimpleNamespace(
-            manifest_path=Path("runs/backtest/manifest.json"),
+            manifest_path=manifest_path,
             processed_bars=5,
             trading_bars=5,
         )
+
+    def run_backtest_matrix(
+        self,
+        *,
+        base_strategy_params: dict[str, object],
+        backtest_config_path: Path | None = None,
+        candidates: tuple[dict[str, object], ...],
+        metrics: tuple[str, ...],
+        output_root: Path,
+        periods: tuple[dict[str, Any], ...],
+    ) -> tuple[dict[str, object], ...]:
+        rows: list[dict[str, object]] = []
+        for period in periods:
+            for candidate in candidates:
+                candidate_params = candidate["strategy_params"]
+                assert isinstance(candidate_params, dict)
+                strategy_params = {
+                    **base_strategy_params,
+                    **candidate_params,
+                }
+                result = self.run_backtest(
+                    start=period["start"],
+                    end=period["end"],
+                    strategy_params=strategy_params,
+                    output_dir=output_root / str(period["name"]) / str(candidate["name"]),
+                    backtest_config_path=backtest_config_path,
+                )
+                payload = json.loads(Path(result.manifest_path).read_text(encoding="utf-8"))
+                manifest_metrics = payload["metrics"]
+                row = {
+                    "candidate": candidate["name"],
+                    "manifest_path": str(result.manifest_path),
+                    "period": period["name"],
+                    "processed_bars": result.processed_bars,
+                    "strategy_params": strategy_params,
+                    "trading_bars": result.trading_bars,
+                }
+                row.update({metric: manifest_metrics.get(metric) for metric in metrics})
+                rows.append(row)
+        return tuple(rows)
 
     def optimize(
         self,

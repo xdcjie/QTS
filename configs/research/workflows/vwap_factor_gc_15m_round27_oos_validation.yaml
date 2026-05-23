@@ -1,0 +1,93 @@
+# GC 15m VWAP round 27: OOS validation for trend-confirmed risk controls.
+#
+# Research evidence only. This checks whether the round 26 trend confirmation
+# improves post-2026-04-10 without overfitting away the strong 2025 to
+# 2026-04-10 OOS segment.
+
+version: 1
+workflow_id: vwap-factor-gc-15m-round27-oos-validation
+steps:
+  - id: implementation
+    kind: implementation_gate
+    required_strategy: strategies.research.vwap_factor_research:VwapFactorResearchStrategy
+
+  - id: matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.vwap_factor_research_gc_15m_long_is.yaml
+    output_root: ../../../runs/research/vwap/gc-15m-long/round27-oos-validation
+    summary_output: ../../../runs/research/vwap/gc-15m-long/validation/round27-oos-validation.json
+    metrics: [total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor]
+    base_strategy_params:
+      symbol: GC
+      time_window: asia_20_02
+      target_quantity: "4"
+      min_volume_ratio: "1.3"
+      pullback_touch_atr_below: "0.15"
+      max_pullback_break_atr: "1.0"
+      stop_atr_multiple: "1.0"
+      target_r_multiple: "1.5"
+      bad_regime_rule: hard14
+      bad_regime_unready_policy: allow
+      bad_regime_target_r_multiple: "1.5"
+      vwap_acceptance_min: "0.75"
+      ts_momentum_min_abs: "0.50"
+      factor_filters: [session_sigma_range, mom120_aligned, mom120_min, vwap_acceptance_if_bad_regime]
+    periods:
+      - name: failure_2022_2024
+        start: 2022-01-01
+        end: 2025-01-01
+      - name: oos_2025_to_20260410
+        start: 2025-01-01
+        end: 2026-04-10
+      - name: post_20260410_20260523
+        start: 2026-04-10
+        end: 2026-05-23
+      - name: oos_2025_20260523
+        start: 2025-01-01
+        end: 2026-05-23
+    candidates:
+      - name: target150
+        strategy_params: {}
+      - name: q1_np4_range150
+        strategy_params:
+          entry_size_rule: sigma_momentum_reduce
+          entry_size_session_sigma_min_atr: "1.00"
+          entry_size_momentum_min_abs: "2.00"
+          entry_size_reduced_quantity: "1"
+          early_no_progress_exit_bars: 4
+          early_no_progress_adverse_r: "0.50"
+          early_no_progress_favorable_r: "0.25"
+          range_expansion_min: "0"
+          range_expansion_max: "1.50"
+          factor_filters: [session_sigma_range, mom120_aligned, mom120_min, vwap_acceptance_if_bad_regime, range_expansion]
+      - name: q1_np4_range150_mom075
+        strategy_params:
+          entry_size_rule: sigma_momentum_reduce
+          entry_size_session_sigma_min_atr: "1.00"
+          entry_size_momentum_min_abs: "2.00"
+          entry_size_reduced_quantity: "1"
+          early_no_progress_exit_bars: 4
+          early_no_progress_adverse_r: "0.50"
+          early_no_progress_favorable_r: "0.25"
+          range_expansion_min: "0"
+          range_expansion_max: "1.50"
+          ts_momentum_min_abs: "0.75"
+          factor_filters: [session_sigma_range, mom120_aligned, mom120_min, vwap_acceptance_if_bad_regime, range_expansion]
+      - name: q1_np4_range150_mom100
+        strategy_params:
+          entry_size_rule: sigma_momentum_reduce
+          entry_size_session_sigma_min_atr: "1.00"
+          entry_size_momentum_min_abs: "2.00"
+          entry_size_reduced_quantity: "1"
+          early_no_progress_exit_bars: 4
+          early_no_progress_adverse_r: "0.50"
+          early_no_progress_favorable_r: "0.25"
+          range_expansion_min: "0"
+          range_expansion_max: "1.50"
+          ts_momentum_min_abs: "1.00"
+          factor_filters: [session_sigma_range, mom120_aligned, mom120_min, vwap_acceptance_if_bad_regime, range_expansion]
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/gc-15m-long/reports
+    output_path: vwap-factor-gc-15m-round27-oos-validation-report.md

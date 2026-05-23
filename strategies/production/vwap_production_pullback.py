@@ -12,13 +12,12 @@ from collections import deque
 from dataclasses import dataclass, field, replace
 from decimal import Decimal
 from enum import StrEnum
-from statistics import median
 from typing import Any
 from zoneinfo import ZoneInfo
 
 from qts.domain.market_data import Bar
 from qts.domain.positions import PositionSide
-from qts.domain.return_statistics import compound_return, mean_return, realized_volatility
+from qts.indicators.session_regime import TrailingSessionRegimeGate
 from qts.strategy_sdk import AssetIndicator, AssetRef, Strategy, StrategyContext
 
 _REGIME_RULES = frozenset({"off", "hard14", "hard_churn225", "hard14_ccvol17"})
@@ -253,185 +252,7 @@ class _ProductionIndicators:
     sma_slow: AssetIndicator
 
 
-@dataclass(frozen=True, slots=True)
-class _CompletedRegimeSession:
-    range_pct: Decimal
-    asia_volume_share: Decimal
-    close_to_close_return: Decimal
-    churn: Decimal | None
-
-
-@dataclass(slots=True)
-class _RegimeAccumulator:
-    session_id: str
-    open: Decimal
-    high: Decimal
-    low: Decimal
-    close: Decimal
-    total_volume: Decimal
-    asia_volume: Decimal
-
-    @classmethod
-    def from_bar(cls, bar: Bar, *, is_asia: bool) -> _RegimeAccumulator:
-        return cls(
-            session_id=str(bar.session_id),
-            open=bar.open,
-            high=bar.high,
-            low=bar.low,
-            close=bar.close,
-            total_volume=bar.volume,
-            asia_volume=bar.volume if is_asia else Decimal("0"),
-        )
-
-    def update(self, bar: Bar, *, is_asia: bool) -> None:
-        self.high = max(self.high, bar.high)
-        self.low = min(self.low, bar.low)
-        self.close = bar.close
-        self.total_volume += bar.volume
-        if is_asia:
-            self.asia_volume += bar.volume
-
-    def complete(self, previous_close: Decimal | None) -> _CompletedRegimeSession | None:
-        if self.open <= Decimal("0") or previous_close is None or previous_close <= Decimal("0"):
-            return None
-        range_pct = (self.high - self.low) / self.open
-        close_to_close_return = (self.close - previous_close) / previous_close
-        abs_return = abs(close_to_close_return)
-        asia_share = (
-            self.asia_volume / self.total_volume
-            if self.total_volume > Decimal("0")
-            else Decimal("0")
-        )
-        return _CompletedRegimeSession(
-            range_pct=range_pct,
-            asia_volume_share=asia_share,
-            close_to_close_return=close_to_close_return,
-            churn=range_pct / abs_return if abs_return > Decimal("0") else None,
-        )
-
-
-@dataclass(slots=True)
-class _RegimeSymbolState:
-    current: _RegimeAccumulator | None = None
-    previous_close: Decimal | None = None
-    completed: deque[_CompletedRegimeSession] = field(default_factory=deque)
-
-
-@dataclass(frozen=True, slots=True)
-class _RegimeSnapshot:
-    mean_range_pct: Decimal
-    mean_asia_share: Decimal
-    min_trailing_return: Decimal
-    mean_median_churn: Decimal | None
-    mean_realized_vol: Decimal | None
-
-
-class _TrailingRegimeGate:
-    """Online trailing regime gate using completed sessions only."""
-
-    def __init__(self, config: VwapProductionRegimeGateConfig) -> None:
-        self._config = config
-        self._states = {symbol: _RegimeSymbolState() for symbol in config.symbols}
-        self._et_tz = ZoneInfo("US/Eastern")
-
-    def update_bar(self, symbol: str, bar: Bar) -> None:
-        if self._config.rule == "off":
-            return
-        state = self._states.get(symbol.upper())
-        if state is None:
-            return
-        is_asia = self._is_asia_bar(bar)
-        session_id = str(bar.session_id)
-        if state.current is None:
-            state.current = _RegimeAccumulator.from_bar(bar, is_asia=is_asia)
-            return
-        if state.current.session_id != session_id:
-            self._finalize_current(state)
-            state.current = _RegimeAccumulator.from_bar(bar, is_asia=is_asia)
-            return
-        state.current.update(bar, is_asia=is_asia)
-
-    def allows_new_entries(self) -> bool:
-        if self._config.rule == "off":
-            return True
-        snapshot = self._snapshot()
-        if snapshot is None:
-            return self._config.unready_policy == "allow"
-        return not self._blocks(snapshot)
-
-    def _snapshot(self) -> _RegimeSnapshot | None:
-        if any(
-            len(state.completed) < self._config.min_history_sessions
-            for state in self._states.values()
-        ):
-            return None
-
-        ranges: list[Decimal] = []
-        asia_shares: list[Decimal] = []
-        trailing_returns: list[Decimal] = []
-        median_churns: list[Decimal] = []
-        realized_vols: list[Decimal] = []
-
-        for state in self._states.values():
-            sessions = tuple(state.completed)[-self._config.lookback_sessions :]
-            returns = tuple(session.close_to_close_return for session in sessions)
-            ranges.append(mean_return(session.range_pct for session in sessions))
-            asia_shares.append(mean_return(session.asia_volume_share for session in sessions))
-            trailing_returns.append(compound_return(returns))
-            churns = tuple(session.churn for session in sessions if session.churn is not None)
-            if churns:
-                median_churns.append(median(churns))
-            realized_vols.append(realized_volatility(returns))
-
-        return _RegimeSnapshot(
-            mean_range_pct=mean_return(ranges),
-            mean_asia_share=mean_return(asia_shares),
-            min_trailing_return=min(trailing_returns),
-            mean_median_churn=mean_return(median_churns) if median_churns else None,
-            mean_realized_vol=mean_return(realized_vols) if realized_vols else None,
-        )
-
-    def _finalize_current(self, state: _RegimeSymbolState) -> None:
-        if state.current is None:
-            return
-        completed = state.current.complete(state.previous_close)
-        state.previous_close = state.current.close
-        if completed is None:
-            return
-        state.completed.append(completed)
-        while len(state.completed) > self._config.lookback_sessions:
-            state.completed.popleft()
-
-    def _blocks(self, snapshot: _RegimeSnapshot) -> bool:
-        hard14 = (
-            snapshot.mean_range_pct >= self._config.range_min
-            and snapshot.mean_asia_share <= self._config.asia_share_max
-            and snapshot.min_trailing_return > self._config.min_return_floor
-        )
-        if not hard14:
-            return False
-        if self._config.rule == "hard14":
-            return True
-        if self._config.rule == "hard_churn225":
-            return (
-                snapshot.mean_median_churn is not None
-                and snapshot.mean_median_churn >= self._config.mean_churn_min
-            )
-        if self._config.rule == "hard14_ccvol17":
-            return (
-                snapshot.mean_realized_vol is not None
-                and snapshot.mean_realized_vol <= self._config.mean_realized_vol_max
-            )
-        return False
-
-    def _is_asia_bar(self, bar: Bar) -> bool:
-        et_dt = bar.start_time.astimezone(self._et_tz)
-        minutes = et_dt.hour * 60 + et_dt.minute
-        start = self._config.asia_start_et_hour * 60
-        end = self._config.asia_end_et_hour * 60
-        if start < end:
-            return start <= minutes < end
-        return minutes >= start or minutes < end
+_TrailingRegimeGate = TrailingSessionRegimeGate
 
 
 class VwapProductionPullbackStrategy(Strategy):

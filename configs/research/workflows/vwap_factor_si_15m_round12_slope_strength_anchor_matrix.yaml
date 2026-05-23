@@ -1,0 +1,57 @@
+# SI 15m VWAP round 12 matrix: tighten trend-regime VWAP slope strength.
+#
+# Research evidence only. Old anchor years are veto checks for generalization.
+
+version: 1
+workflow_id: vwap-factor-si-15m-round12-slope-strength-anchor-matrix
+steps:
+  - id: implementation
+    kind: implementation_gate
+    required_strategy: strategies.research.vwap_factor_research:VwapFactorResearchStrategy
+
+  - id: matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.vwap_factor_research_si_15m_long_is.yaml
+    output_root: ../../../runs/research/vwap/si-15m-long/round12-slope-strength-anchor
+    summary_output: ../../../runs/research/vwap/si-15m-long/validation/round12-slope-strength-anchor.json
+    metrics: [total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor]
+    base_strategy_params:
+      symbol: SI
+      time_window: asia_20_02
+      target_quantity: "3"
+      min_volume_ratio: "1.5"
+      pullback_touch_atr_below: "0.15"
+      max_pullback_break_atr: "1.0"
+      stop_atr_multiple: "1.0"
+      target_r_multiple: "2.0"
+      bad_regime_rule: hard14
+      bad_regime_unready_policy: allow
+      vwap_acceptance_min: "0.75"
+      factor_filters: [trend_regime_aligned, session_sigma_range, vwap_acceptance_if_bad_regime]
+    periods:
+      - name: anchor_y2011
+        start: 2011-01-01
+        end: 2012-01-01
+      - name: failure_2022_2024
+        start: 2022-01-01
+        end: 2025-01-01
+      - name: report_2025_2026
+        start: 2025-01-01
+        end: 2026-04-10
+    candidates:
+      - name: bad_accept_075
+        strategy_params: {}
+      - name: slope_010
+        strategy_params:
+          vwap_slope_min_atr: "0.10"
+      - name: slope_020
+        strategy_params:
+          vwap_slope_min_atr: "0.20"
+      - name: slope_030
+        strategy_params:
+          vwap_slope_min_atr: "0.30"
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/si-15m-long/reports
+    output_path: vwap-factor-si-15m-round12-slope-strength-anchor-report.md

@@ -1,0 +1,59 @@
+# SI 15m VWAP round 08 matrix: refine momentum strength and exit interaction.
+#
+# Research evidence only. report_2025_2026 is a holdout report/veto.
+
+version: 1
+workflow_id: vwap-factor-si-15m-round08-momentum-exit-refine-matrix
+steps:
+  - id: implementation
+    kind: implementation_gate
+    required_strategy: strategies.research.vwap_factor_research:VwapFactorResearchStrategy
+
+  - id: matrix
+    kind: backtest_matrix
+    output_root: ../../../runs/research/vwap/si-15m-long/round08-momentum-exit-refine-prefilter
+    summary_output: ../../../runs/research/vwap/si-15m-long/validation/round08-momentum-exit-refine-prefilter.json
+    metrics: [total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor]
+    base_strategy_params:
+      symbol: SI
+      time_window: asia_20_02
+      target_quantity: "3"
+      min_volume_ratio: "1.5"
+      pullback_touch_atr_below: "0.15"
+      max_pullback_break_atr: "1.0"
+      stop_atr_multiple: "1.0"
+      target_r_multiple: "2.0"
+      bad_regime_rule: hard14
+      bad_regime_unready_policy: allow
+      vwap_acceptance_min: "0.75"
+      factor_filters: [trend_regime_aligned, session_sigma_range, mom120_min, vwap_acceptance_if_bad_regime]
+    periods:
+      - name: failure_2022_2024
+        start: 2022-01-01
+        end: 2025-01-01
+      - name: report_2025_2026
+        start: 2025-01-01
+        end: 2026-04-10
+    candidates:
+      - name: mom120_100
+        strategy_params:
+          ts_momentum_min_abs: "1.00"
+      - name: mom120_125
+        strategy_params:
+          ts_momentum_min_abs: "1.25"
+      - name: mom120_150
+        strategy_params:
+          ts_momentum_min_abs: "1.50"
+      - name: mom120_150_vwap_exit
+        strategy_params:
+          ts_momentum_min_abs: "1.50"
+          exit_on_vwap_cross: true
+      - name: mom120_125_vwap_exit
+        strategy_params:
+          ts_momentum_min_abs: "1.25"
+          exit_on_vwap_cross: true
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/si-15m-long/reports
+    output_path: vwap-factor-si-15m-round08-momentum-exit-refine-prefilter-report.md

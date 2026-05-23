@@ -96,6 +96,35 @@ class HistoricalChain:
         except KeyError as exc:
             raise KeyError(f"unknown historical contract symbol: {symbol}") from exc
 
+    def contract_for_symbol_and_expiry(
+        self,
+        symbol: str,
+        expiry: datetime | date | str,
+    ) -> HistoricalContract:
+        """Perform contract_for_symbol_and_expiry."""
+        target = self._normalize_expiry_target(expiry)
+        candidates = self.contracts_by_symbol(symbol)
+        for candidate in candidates:
+            if isinstance(target, date) and not isinstance(target, datetime):
+                if candidate.expiry.date() == target:
+                    return candidate
+            elif candidate.expiry == target:
+                return candidate
+        raise KeyError(f"historical contract not found for {symbol} at {expiry!r}")
+
+    def contracts_by_symbol(self, symbol: str) -> tuple[HistoricalContract, ...]:
+        """Return all contracts with the provided local symbol."""
+        return tuple(contract for contract in self.contracts if contract.symbol == symbol)
+
+    def instrument_id_for_symbol_and_expiry(
+        self,
+        symbol: str,
+        expiry: datetime | date | str,
+    ) -> InstrumentId:
+        """Perform instrument_id_for_symbol_and_expiry."""
+        _ = self.contract_for_symbol_and_expiry(symbol, expiry)
+        return InstrumentId(f"FUTURE.{self.exchange}.{self.root}.{symbol}")
+
     def is_outright_symbol(self, symbol: str) -> bool:
         """Perform is_outright_symbol."""
         return "-" not in symbol and symbol in self._contracts_by_symbol
@@ -211,6 +240,24 @@ class HistoricalChain:
         if invalid:
             raise ValueError("active_months entries must be in 1..12")
         return months
+
+    @staticmethod
+    def _normalize_expiry_target(expiry: datetime | date | str) -> datetime | date:
+        """Normalize expiry to comparable datetime/date objects."""
+        if isinstance(expiry, datetime):
+            return expiry.astimezone(UTC) if expiry.tzinfo else expiry.replace(tzinfo=UTC)
+        if isinstance(expiry, date):
+            return expiry
+        if isinstance(expiry, str):
+            expiry_text = expiry.strip()
+            if not expiry_text:
+                raise ValueError("expiry must not be empty")
+            try:
+                return date.fromisoformat(expiry_text)
+            except ValueError:
+                value = datetime.fromisoformat(expiry_text)
+                return value.astimezone(UTC) if value.tzinfo else value.replace(tzinfo=UTC)
+        raise TypeError("expiry must be datetime, date, or ISO formatted string")
 
     @staticmethod
     def _exchange_code(market: str) -> str:

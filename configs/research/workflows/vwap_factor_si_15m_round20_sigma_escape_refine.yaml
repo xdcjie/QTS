@@ -1,0 +1,63 @@
+# SI 15m VWAP round 20 matrix: refine sigma floor with stronger MA escape.
+#
+# Research evidence only. Round19 recovered most 2025-2026 trend PnL with a
+# sigma090+MA escape, but 2021 remained negative. Trade attribution suggests
+# a higher sigma floor plus stronger MA separation may remove residual 2021
+# stops while preserving 2025 trend captures.
+
+version: 1
+workflow_id: vwap-factor-si-15m-round20-sigma-escape-refine
+steps:
+  - id: implementation
+    kind: implementation_gate
+    required_strategy: strategies.research.vwap_factor_research:VwapFactorResearchStrategy
+
+  - id: matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.vwap_factor_research_si_15m_long_is.yaml
+    output_root: ../../../runs/research/vwap/si-15m-long/round20-sigma-escape-refine
+    summary_output: ../../../runs/research/vwap/si-15m-long/validation/round20-sigma-escape-refine.json
+    metrics: [total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor]
+    base_strategy_params:
+      symbol: SI
+      time_window: asia_20_02
+      target_quantity: "3"
+      min_volume_ratio: "1.5"
+      pullback_touch_atr_below: "0.15"
+      max_pullback_break_atr: "1.0"
+      stop_atr_multiple: "1.0"
+      target_r_multiple: "2.0"
+      bad_regime_rule: hard14
+      bad_regime_unready_policy: allow
+      vwap_acceptance_min: "0.75"
+      factor_filters: [trend_regime_aligned, session_sigma_or_ma20_80_min, vwap_slope_strength, vwap_acceptance_if_bad_regime]
+      vwap_slope_min_atr: "0.20"
+      ma20_80_min_abs: "0.27"
+    periods:
+      - name: anchor_y2011
+        start: 2011-01-01
+        end: 2012-01-01
+      - name: anchor_y2021
+        start: 2021-01-01
+        end: 2022-01-01
+      - name: failure_2022_2024
+        start: 2022-01-01
+        end: 2025-01-01
+      - name: report_2025_2026
+        start: 2025-01-01
+        end: 2026-04-10
+    candidates:
+      - name: slope_020_sigma105_or_ma027
+        strategy_params:
+          session_sigma_min_atr: "1.05"
+      - name: slope_020_sigma110_or_ma027
+        strategy_params:
+          session_sigma_min_atr: "1.10"
+      - name: slope_020_sigma115_or_ma027
+        strategy_params:
+          session_sigma_min_atr: "1.15"
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/si-15m-long/reports
+    output_path: vwap-factor-si-15m-round20-sigma-escape-refine-report.md

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import importlib
+import json
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -308,12 +309,23 @@ class ResearchSession:
     def run_backtest(
         self,
         *,
+        backtest_config_path: str | Path | None = None,
+        end: datetime | None = None,
+        start: datetime | None = None,
         strategy_params: Mapping[str, Any] | None = None,
         output_dir: Path | None = None,
     ) -> BacktestStreamResult:
         """Run one backtest through the shared ``BacktestPipeline``."""
 
-        pipeline = BacktestPipeline.from_yaml(self._config.backtest_config_path)
+        if (start is None) != (end is None):
+            raise ValueError("start and end must be provided together")
+        pipeline = BacktestPipeline.from_yaml(
+            Path(backtest_config_path)
+            if backtest_config_path is not None
+            else self._config.backtest_config_path
+        )
+        if start is not None and end is not None:
+            pipeline = pipeline.with_date_range(start=start, end=end)
         if strategy_params:
             pipeline = pipeline.with_strategy_params(strategy_params)
         engine, _bundle = pipeline.build_engine()
@@ -321,6 +333,68 @@ class ResearchSession:
             output_dir or self._config.output_root / "single-run",
             compact_events=True,
         )
+
+    def run_backtest_matrix(
+        self,
+        *,
+        base_strategy_params: Mapping[str, Any],
+        candidates: Sequence[Mapping[str, Any]],
+        metrics: Sequence[str],
+        output_root: Path,
+        periods: Sequence[Mapping[str, Any]],
+        backtest_config_path: str | Path | None = None,
+    ) -> tuple[dict[str, Any], ...]:
+        """Run a candidate/period backtest matrix through one cached pipeline."""
+
+        base_pipeline = BacktestPipeline.from_yaml(
+            Path(backtest_config_path)
+            if backtest_config_path is not None
+            else self._config.backtest_config_path
+        )
+        base_pipeline.catalog()
+        rows: list[dict[str, Any]] = []
+        for period in periods:
+            period_name = str(period["name"])
+            start = period["start"]
+            end = period["end"]
+            if not isinstance(start, datetime) or not isinstance(end, datetime):
+                raise TypeError("backtest matrix periods must contain datetime start/end")
+            period_pipeline = base_pipeline.with_date_range(start=start, end=end)
+            for candidate in candidates:
+                candidate_name = str(candidate["name"])
+                candidate_params = candidate.get("strategy_params", {})
+                if not isinstance(candidate_params, Mapping):
+                    raise TypeError("backtest matrix candidate strategy_params must be a mapping")
+                strategy_params = {**dict(base_strategy_params), **dict(candidate_params)}
+                run_pipeline = period_pipeline.with_strategy_params(strategy_params)
+                engine, _bundle = run_pipeline.build_engine()
+                result = engine.run_streaming(
+                    output_root / period_name / candidate_name,
+                    compact_events=True,
+                )
+                manifest_path = Path(result.manifest_path)
+                manifest_metrics = self._manifest_metrics(manifest_path)
+                row = {
+                    "candidate": candidate_name,
+                    "manifest_path": str(manifest_path),
+                    "period": period_name,
+                    "processed_bars": result.processed_bars,
+                    "strategy_params": strategy_params,
+                    "trading_bars": result.trading_bars,
+                }
+                row.update({metric: manifest_metrics.get(metric) for metric in metrics})
+                rows.append(row)
+        return tuple(rows)
+
+    @staticmethod
+    def _manifest_metrics(manifest_path: Path) -> dict[str, str]:
+        if not manifest_path.exists():
+            return {}
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        metrics = payload.get("metrics", {})
+        if not isinstance(metrics, Mapping):
+            return {}
+        return {str(key): str(value) for key, value in metrics.items()}
 
     def optimize(
         self,

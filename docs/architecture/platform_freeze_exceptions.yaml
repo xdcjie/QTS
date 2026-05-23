@@ -4,6 +4,26 @@ exceptions:
     reason: domain value object for signed position direction shared by portfolio, risk, execution, and strategies
     owner: platform
     expiry: 2027-05-22
+  - class_name: SessionRegimeGateConfig
+    module: qts.indicators.session_regime
+    reason: shared online completed-session regime gate configuration for research and production strategy parity
+    owner: platform
+    expiry: 2027-05-23
+  - class_name: CompletedRegimeSession
+    module: qts.indicators.session_regime
+    reason: shared completed-session regime evidence value object for no-lookahead trailing gates
+    owner: platform
+    expiry: 2027-05-23
+  - class_name: SessionRegimeSnapshot
+    module: qts.indicators.session_regime
+    reason: shared trailing session regime aggregate value object for research and production parity
+    owner: platform
+    expiry: 2027-05-23
+  - class_name: TrailingSessionRegimeGate
+    module: qts.indicators.session_regime
+    reason: shared online completed-session regime gate owner replacing duplicated strategy-local implementations
+    owner: platform
+    expiry: 2027-05-23
   - class_name: ResearchWorkflowStepConfig
     module: qts.research.workflow
     reason: research workflow validated step declaration value object

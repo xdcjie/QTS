@@ -6,7 +6,7 @@ import importlib
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, date, datetime, time
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -244,6 +244,8 @@ class ResearchWorkflowRunner:
                 return self._factor_tearsheet(session, config, step)
             if step.kind == "backtest":
                 return self._backtest(session, config, step)
+            if step.kind == "backtest_matrix":
+                return self._backtest_matrix(session, config, step)
             if step.kind == "optimize":
                 return self._optimize(session, config, step)
             if step.kind == "research_report":
@@ -478,6 +480,9 @@ class ResearchWorkflowRunner:
     ) -> ResearchWorkflowStepResult:
         strategy_params = self._optional_mapping(step.payload.get("strategy_params")) or {}
         kwargs: dict[str, Any] = {"strategy_params": strategy_params}
+        backtest_config = step.payload.get("backtest_config")
+        if backtest_config is not None:
+            kwargs["backtest_config_path"] = config.resolve_path(str(backtest_config))
         output_dir = step.payload.get("output_dir")
         if output_dir is not None:
             kwargs["output_dir"] = config.resolve_path(str(output_dir))
@@ -491,6 +496,74 @@ class ResearchWorkflowRunner:
                 "manifest_path": str(result.manifest_path),
                 "processed_bars": result.processed_bars,
                 "trading_bars": result.trading_bars,
+            },
+        )
+
+    def _backtest_matrix(
+        self,
+        session: Any,
+        config: ResearchWorkflowConfig,
+        step: ResearchWorkflowStepConfig,
+    ) -> ResearchWorkflowStepResult:
+        output_root = config.resolve_path(_required_text(step.payload, "output_root"))
+        periods = self._matrix_periods(step.payload.get("periods"))
+        candidates = self._matrix_candidates(step.payload.get("candidates"))
+        base_strategy_params = (
+            self._optional_mapping(step.payload.get("base_strategy_params")) or {}
+        )
+        metrics = self._string_tuple(
+            step.payload.get(
+                "metrics",
+                [
+                    "total_return",
+                    "sharpe_ratio",
+                    "max_drawdown",
+                    "total_trades",
+                    "profit_factor",
+                ],
+            )
+        )
+        kwargs: dict[str, Any] = {
+            "base_strategy_params": base_strategy_params,
+            "candidates": candidates,
+            "metrics": metrics,
+            "output_root": output_root,
+            "periods": periods,
+        }
+        backtest_config = step.payload.get("backtest_config")
+        if backtest_config is not None:
+            kwargs["backtest_config_path"] = config.resolve_path(str(backtest_config))
+        rows = list(session.run_backtest_matrix(**kwargs))
+        summary_payload = {
+            "candidate_count": len(candidates),
+            "metrics": list(metrics),
+            "output_root": str(output_root),
+            "period_count": len(periods),
+            "rows": rows,
+            "step_id": step.step_id,
+            "workflow_id": config.workflow_id,
+        }
+        summary_output = step.payload.get("summary_output")
+        summary_path = (
+            config.resolve_path(str(summary_output))
+            if summary_output is not None
+            else output_root / "summary.json"
+        )
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_path.write_text(
+            json.dumps(_json_ready(summary_payload), sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        return ResearchWorkflowStepResult(
+            step_id=step.step_id,
+            kind=step.kind,
+            status="passed",
+            message="backtest matrix completed",
+            outputs={
+                "candidate_count": len(candidates),
+                "period_count": len(periods),
+                "run_count": len(rows),
+                "summary_path": str(summary_path),
             },
         )
 
@@ -798,6 +871,47 @@ class ResearchWorkflowRunner:
             )
         return WalkForwardPlan(tuple(splits))
 
+    def _matrix_periods(self, value: Any) -> tuple[dict[str, Any], ...]:
+        if not isinstance(value, list) or not value:
+            raise ValueError("backtest_matrix.periods must be a non-empty list")
+        periods: list[dict[str, Any]] = []
+        for index, raw_period in enumerate(value):
+            if not isinstance(raw_period, Mapping):
+                raise ValueError(f"backtest_matrix.periods[{index}] must be a mapping")
+            period = dict(raw_period)
+            periods.append(
+                {
+                    "end": self._iso_datetime(period["end"], "end"),
+                    "name": self._safe_token(period, "name"),
+                    "start": self._iso_datetime(period["start"], "start"),
+                }
+            )
+        return tuple(periods)
+
+    def _matrix_candidates(self, value: Any) -> tuple[dict[str, Any], ...]:
+        if not isinstance(value, list) or not value:
+            raise ValueError("backtest_matrix.candidates must be a non-empty list")
+        candidates: list[dict[str, Any]] = []
+        for index, raw_candidate in enumerate(value):
+            if not isinstance(raw_candidate, Mapping):
+                raise ValueError(f"backtest_matrix.candidates[{index}] must be a mapping")
+            candidate = dict(raw_candidate)
+            strategy_params = self._optional_mapping(candidate.get("strategy_params")) or {}
+            candidates.append(
+                {
+                    "name": self._safe_token(candidate, "name"),
+                    "strategy_params": strategy_params,
+                }
+            )
+        return tuple(candidates)
+
+    @staticmethod
+    def _safe_token(payload: Mapping[str, Any], field_name: str) -> str:
+        value = _required_text(payload, field_name)
+        if any(character not in _FILENAME_SAFE_CHARS for character in value):
+            raise ValueError(f"{field_name} must be filename-safe")
+        return value
+
     def _walk_forward_robustness_policy(
         self,
         value: Any,
@@ -825,6 +939,23 @@ class ResearchWorkflowRunner:
             return date.fromisoformat(str(value))
         except ValueError as exc:
             raise ValueError(f"{field_name} must be an ISO date") from exc
+
+    @staticmethod
+    def _iso_datetime(value: Any, field_name: str) -> datetime:
+        if isinstance(value, datetime):
+            return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+        if isinstance(value, date):
+            return datetime.combine(value, time.min, tzinfo=UTC)
+        text = str(value)
+        if len(text) == len("YYYY-MM-DD"):
+            return datetime.combine(date.fromisoformat(text), time.min, tzinfo=UTC)
+        if text.endswith("Z"):
+            text = f"{text[:-1]}+00:00"
+        try:
+            parsed = datetime.fromisoformat(text)
+        except ValueError as exc:
+            raise ValueError(f"{field_name} must be an ISO datetime or date") from exc
+        return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
 
     @staticmethod
     def _required_mapping(payload: Mapping[str, Any], field_name: str) -> dict[str, Any]:
@@ -917,6 +1048,7 @@ __all__ = [
 _ALLOWED_STEP_KINDS = frozenset(
     {
         "backtest",
+        "backtest_matrix",
         "factor_candidates",
         "factor_review_gate",
         "factor_evaluation",

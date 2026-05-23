@@ -156,6 +156,103 @@ def test_research_session_parameter_grid_rejects_empty_values(tmp_path: Path) ->
         session.parameter_grid({"lookback": []})
 
 
+def test_research_session_run_backtest_uses_override_config_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_research_config(tmp_path, _minimal_research_yaml(tmp_path))
+    session = ResearchSession.from_yaml(config_path)
+    override_config = tmp_path / "production-baseline.yaml"
+    override_config.write_text("mode: backtest\n", encoding="utf-8")
+    calls: list[dict[str, Any]] = []
+
+    class FakeEngine:
+        def run_streaming(self, output_dir: Path, *, compact_events: bool) -> object:
+            calls.append({"compact_events": compact_events, "output_dir": output_dir})
+            return SimpleNamespace(manifest_path=tmp_path / "manifest.json")
+
+    class FakePipeline:
+        def __init__(self, path: Path) -> None:
+            self._path = path
+
+        @classmethod
+        def from_yaml(cls, path: Path) -> FakePipeline:
+            calls.append({"from_yaml": path})
+            return cls(path)
+
+        def with_strategy_params(self, params: dict[str, object]) -> FakePipeline:
+            calls.append({"strategy_params": params})
+            return self
+
+        def build_engine(self) -> tuple[FakeEngine, object]:
+            calls.append({"build_engine": self._path})
+            return FakeEngine(), object()
+
+    monkeypatch.setattr("qts.research.session.BacktestPipeline", FakePipeline)
+
+    session.run_backtest(
+        backtest_config_path=override_config,
+        strategy_params={"quantity": "4"},
+        output_dir=tmp_path / "baseline",
+    )
+
+    assert calls == [
+        {"from_yaml": override_config},
+        {"strategy_params": {"quantity": "4"}},
+        {"build_engine": override_config},
+        {"compact_events": True, "output_dir": tmp_path / "baseline"},
+    ]
+
+
+def test_research_session_run_backtest_delegates_date_range(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_research_config(tmp_path, _minimal_research_yaml(tmp_path))
+    session = ResearchSession.from_yaml(config_path)
+    calls: list[dict[str, Any]] = []
+
+    class FakeEngine:
+        def run_streaming(self, output_dir: Path, *, compact_events: bool) -> object:
+            calls.append({"compact_events": compact_events, "output_dir": output_dir})
+            return SimpleNamespace(manifest_path=tmp_path / "manifest.json")
+
+    class FakePipeline:
+        @classmethod
+        def from_yaml(cls, path: Path) -> FakePipeline:
+            calls.append({"from_yaml": path})
+            return cls()
+
+        def with_date_range(self, *, start: datetime, end: datetime) -> FakePipeline:
+            calls.append({"date_range": (start, end)})
+            return self
+
+        def build_engine(self) -> tuple[FakeEngine, object]:
+            calls.append({"build_engine": True})
+            return FakeEngine(), object()
+
+    monkeypatch.setattr("qts.research.session.BacktestPipeline", FakePipeline)
+    start = datetime(2022, 1, 1, tzinfo=UTC)
+    end = datetime(2025, 1, 1, tzinfo=UTC)
+
+    session.run_backtest(start=start, end=end)
+
+    assert calls == [
+        {"from_yaml": session.config.backtest_config_path},
+        {"date_range": (start, end)},
+        {"build_engine": True},
+        {"compact_events": True, "output_dir": session.config.output_root / "single-run"},
+    ]
+
+
+def test_research_session_run_backtest_rejects_partial_date_range(tmp_path: Path) -> None:
+    config_path = _write_research_config(tmp_path, _minimal_research_yaml(tmp_path))
+    session = ResearchSession.from_yaml(config_path)
+
+    with pytest.raises(ValueError, match="start and end must be provided together"):
+        session.run_backtest(start=datetime(2022, 1, 1, tzinfo=UTC))
+
+
 def test_research_session_delegates_walk_forward_validation_to_backtest_runner(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
