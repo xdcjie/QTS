@@ -1,0 +1,85 @@
+{
+  "baseline_id": "route-r-vol-managed-allocation",
+  "baseline_created_at": "2026-05-25T17:59:28+08:00",
+  "baseline_source": {
+    "summary_path": "runs/research/vwap/route-r/vol-managed-allocation-summary.json",
+    "summary_sha256": "38aeb26780896973850ee9ef8c9fc6f92af45d94f3c4662132c290e7640f6749",
+    "report_path": "runs/research/vwap/route-r/reports/route-r-vol-managed-allocation-report.md",
+    "report_sha256": "5d22425a580d7eba117117049417799d73c2b932bfd60970f7cd980826489a7d"
+  },
+  "strategy": "Route R volatility-managed allocation",
+  "scan_name": "route_r_volatility_managed_allocation_scan",
+  "research_only": true,
+  "not_tradable_config": true,
+  "first_principles_gate": {
+    "domain_invariant": "Portfolio allocation scans are research evidence only; holdout periods must not tune or score the selected parameters.",
+    "score_periods": [
+      "is_2020_2022",
+      "validation_2022_2024"
+    ],
+    "baseline_period": "is_2020_2022",
+    "validation_periods": [
+      "validation_2022_2024"
+    ],
+    "holdout_report_only_periods": [
+      "holdout_2024_2026"
+    ],
+    "uses_prior_returns_only": true
+  },
+  "scan_counts": {
+    "candidate_count": 5,
+    "evaluated_parameter_count": 216,
+    "satisfying_allocation_count": 15
+  },
+  "selected_allocation": {
+    "rank": 1,
+    "meets_constraints": true,
+    "score": "0.343646067459534555",
+    "parameters": {
+      "lookback_days": 63,
+      "max_gross_exposure": "2.0",
+      "max_leg_weight": "0.70",
+      "min_history_days": 20,
+      "min_trailing_return": "0",
+      "target_annual_vol": "0.40",
+      "top_n_legs": 2
+    },
+    "constraints": {
+      "max_selection_drawdown": "0.20",
+      "min_baseline_annual_return": "0.10",
+      "min_selection_post_annual_return": "0.10"
+    },
+    "selection_summary": {
+      "baseline_annual_return": "0.39143949524960986",
+      "max_selection_drawdown": "0.1796190620162593",
+      "min_selection_post_annual_return": "0.19283108533879445",
+      "min_selection_post_sharpe_ratio": "1.022996896903659"
+    },
+    "period_metrics": {
+      "is_2020_2022": {
+        "active_day_fraction": "0.9660743134087237",
+        "annual_return": "0.39143949524960986",
+        "average_gross_exposure": "1.900147154732949",
+        "full_curve_max_drawdown": "0.1796190620162593",
+        "sharpe_ratio": "1.3217416526411485",
+        "total_return": "0.9334790778398303"
+      },
+      "validation_2022_2024": {
+        "active_day_fraction": "0.9351701782820098",
+        "annual_return": "0.19283108533879445",
+        "average_gross_exposure": "1.9750616679270923",
+        "full_curve_max_drawdown": "0.09995511428883538",
+        "sharpe_ratio": "1.022996896903659",
+        "total_return": "0.41907306590540294"
+      },
+      "holdout_2024_2026": {
+        "active_day_fraction": "0.9688826025459689",
+        "annual_return": "0.2961573126139825",
+        "average_gross_exposure": "1.617393264610581",
+        "full_curve_max_drawdown": "0.3190328617480277",
+        "sharpe_ratio": "0.8232221800289322",
+        "total_return": "0.8004268386755569"
+      }
+    }
+  }
+}
