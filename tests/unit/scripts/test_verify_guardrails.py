@@ -1323,6 +1323,18 @@ def test_guardrail_rejects_research_report_without_decision_block(tmp_path: Path
     assert "RESEARCH_REPORT_DECISION_REQUIRED" in _codes(root)
 
 
+def test_guardrail_skips_gitignored_research_run_outputs(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(root, ".gitignore", "runs/\n")
+    _write(
+        root,
+        "runs/research/reports/workflow-report.md",
+        "# Research Workflow Report\n\n## Evidence Summary\n",
+    )
+
+    assert "RESEARCH_REPORT_DECISION_REQUIRED" not in _codes(root)
+
+
 def test_guardrail_rejects_research_strategy_stale_examples_docstring(
     tmp_path: Path,
 ) -> None:

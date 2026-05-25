@@ -199,6 +199,8 @@ class ResearchReportDecisionRequiredRule:
         root = repo_root / RESEARCH_REPORT_DIR
         if not root.exists():
             return []
+        if is_gitignored_repository_path(repo_root, RESEARCH_REPORT_DIR):
+            return []
 
         violations: list[GuardrailViolation] = []
         for path in sorted(root.rglob("*.md")):
@@ -289,6 +291,27 @@ def line_number(source: str, token: str) -> int | None:
         if normalized_token in line.lower():
             return line_number_
     return None
+
+
+def is_gitignored_repository_path(repo_root: Path, relative_path: Path) -> bool:
+    """Return whether a repository-root path is ignored by a simple .gitignore entry."""
+    gitignore_path = repo_root / ".gitignore"
+    if not gitignore_path.exists():
+        return False
+
+    path_text = relative_path.as_posix()
+    for raw_line in gitignore_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or line.startswith("!"):
+            continue
+        if line.endswith("/"):
+            ignored_dir = line.rstrip("/")
+            if path_text == ignored_dir or path_text.startswith(f"{ignored_dir}/"):
+                return True
+            continue
+        if path_text == line:
+            return True
+    return False
 
 
 __all__ = [
