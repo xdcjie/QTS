@@ -7,6 +7,9 @@ Shared contracts are defined here so provider-specific packages (including
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import timedelta
+
+from qts.data.bars.timeframe import AlignmentMode, Timeframe
 
 LiveFeedTimeframeSet = frozenset[str]
 
@@ -46,26 +49,43 @@ class MarketDataFeedCapabilities:
             raise ValueError(f"source {self.source_id} does not support bars")
         if self.supports_timeframe(requested):
             return requested
-        if "5s" in self.supported_timeframes and requested in {
-            "1m",
-            "5m",
-            "15m",
-            "30m",
-            "1h",
-            "4h",
-        }:
-            return "5s"
-        if "1m" in self.supported_timeframes and requested in {
-            "5m",
-            "15m",
-            "30m",
-            "1h",
-            "4h",
-        }:
-            return "1m"
+        requested_timeframe_model = Timeframe.parse(requested)
+        compatible = sorted(
+            (
+                source
+                for source in self.supported_timeframes
+                if self._can_derive(
+                    source_timeframe=Timeframe.parse(source),
+                    requested_timeframe=requested_timeframe_model,
+                )
+            ),
+            key=self._source_priority,
+        )
+        if compatible:
+            return compatible[0]
         raise ValueError(
             f"requested timeframe {requested} cannot be derived from source {self.source_id}"
         )
+
+    @staticmethod
+    def _can_derive(*, source_timeframe: Timeframe, requested_timeframe: Timeframe) -> bool:
+        if source_timeframe.alignment is not AlignmentMode.CLOCK:
+            return False
+        if source_timeframe.duration is None:
+            return False
+        if requested_timeframe.alignment is AlignmentMode.SESSION:
+            return True
+        if requested_timeframe.duration is None:
+            return False
+        return (
+            requested_timeframe.duration > source_timeframe.duration
+            and requested_timeframe.duration % source_timeframe.duration == timedelta(0)
+        )
+
+    @staticmethod
+    def _source_priority(source_timeframe: str) -> timedelta:
+        parsed = Timeframe.parse(source_timeframe)
+        return parsed.duration or timedelta.max
 
 
 __all__ = ["MarketDataFeedCapabilities", "LiveFeedTimeframeSet"]

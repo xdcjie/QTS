@@ -144,6 +144,7 @@ class RuntimeSession:
         self._market_data_flow = MarketDataFlow(
             target_timeframe=dependencies.target_timeframe,
             exchange_timezone_by_instrument=dependencies.exchange_timezones,
+            session_window_by_instrument=dependencies.session_windows,
         )
         primary_account_id = (
             self._primary_partition_id if len(self._account_partitions) == 1 else None

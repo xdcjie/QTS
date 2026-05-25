@@ -260,3 +260,73 @@ risk_config:
     assert swept_pipeline.config.strategy is not None
     assert swept_pipeline.config.strategy.params["quantity"] == "3"
     assert swept_pipeline.config.strategy.params["entry_bar"] == 2
+
+
+def test_materialized_replay_cache_preserves_backtest_metrics(tmp_path: Path) -> None:
+    backtest_config, _ = _write_fixtures(tmp_path)
+
+    baseline_engine, _ = BacktestPipeline.from_yaml(backtest_config).build_engine()
+    baseline = baseline_engine.run_streaming(tmp_path / "baseline", compact_events=True)
+    cached_engine, _ = (
+        BacktestPipeline.from_yaml(backtest_config)
+        .with_materialized_replay_cache(tmp_path / "replay-cache")
+        .build_engine()
+    )
+    cached = cached_engine.run_streaming(tmp_path / "cached", compact_events=True)
+
+    baseline_manifest = json.loads(Path(baseline.manifest_path).read_text(encoding="utf-8"))
+    cached_manifest = json.loads(Path(cached.manifest_path).read_text(encoding="utf-8"))
+
+    assert cached.processed_bars == baseline.processed_bars
+    assert cached.trading_bars == baseline.trading_bars
+    assert cached_manifest["metrics"] == baseline_manifest["metrics"]
+    assert list((tmp_path / "replay-cache").glob("*.jsonl"))
+
+
+def test_pipeline_optimizer_config_accepts_materialized_replay_cache(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    from scripts import run_optimizer
+
+    backtest_config, _ = _write_fixtures(tmp_path)
+    calls: list[dict[str, Any]] = []
+
+    class FakeRunner:
+        def run(self, job: Any) -> tuple[Any, ...]:
+            calls.append(
+                {
+                    "base_config_path": job.base_config_path,
+                    "materialized_replay_cache_dir": job.materialized_replay_cache_dir,
+                    "objective_metric": job.objective_metric,
+                    "output_root": job.output_root,
+                }
+            )
+            return ()
+
+    monkeypatch.setattr(run_optimizer, "BacktestPipelineRunner", FakeRunner)
+
+    results, objective_metric = run_optimizer._run_pipeline_path(
+        {
+            "backtest_config": str(backtest_config),
+            "objective_metric": "total_return",
+            "materialized_replay_cache": {
+                "enabled": True,
+                "cache_dir": "replay-cache",
+            },
+            "parameters": [{"name": "quantity", "values": ["1"]}],
+        },
+        output_root=tmp_path / "optimizer-runs",
+        config_dir=tmp_path,
+    )
+
+    assert results == ()
+    assert objective_metric == "total_return"
+    assert calls == [
+        {
+            "base_config_path": backtest_config,
+            "materialized_replay_cache_dir": (tmp_path / "replay-cache").resolve(),
+            "objective_metric": "total_return",
+            "output_root": tmp_path / "optimizer-runs",
+        }
+    ]

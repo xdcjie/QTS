@@ -76,6 +76,7 @@ class BacktestWalkForwardValidationJob:
     objective_metric: str
     output_root: Path
     plan: WalkForwardPlan
+    materialized_replay_cache_dir: Path | None = None
 
     def __init__(
         self,
@@ -85,6 +86,7 @@ class BacktestWalkForwardValidationJob:
         objective_metric: str,
         output_root: Path,
         plan: WalkForwardPlan,
+        materialized_replay_cache_dir: Path | None = None,
     ) -> None:
         candidates = tuple(dict(parameters) for parameters in candidate_parameters)
         if not candidates:
@@ -96,6 +98,11 @@ class BacktestWalkForwardValidationJob:
         object.__setattr__(self, "objective_metric", objective_metric)
         object.__setattr__(self, "output_root", Path(output_root))
         object.__setattr__(self, "plan", plan)
+        object.__setattr__(
+            self,
+            "materialized_replay_cache_dir",
+            None if materialized_replay_cache_dir is None else Path(materialized_replay_cache_dir),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,6 +126,10 @@ class BacktestWalkForwardValidationRunner:
         """Run selected candidates on every train/test window."""
         job.output_root.mkdir(parents=True, exist_ok=True)
         base_pipeline = BacktestPipeline.from_yaml(job.base_config_path)
+        if job.materialized_replay_cache_dir is not None:
+            base_pipeline = base_pipeline.with_materialized_replay_cache(
+                job.materialized_replay_cache_dir
+            )
         base_pipeline.catalog()
         results: list[WalkForwardValidationResult] = []
         for split in job.plan.splits:

@@ -13,7 +13,8 @@ end: "2026-04-10T00:00:00Z"
 timeframe: 15m
 initial_cash: "100000"
 strategy_class: strategies.production.vwap_production_pullback:SiVwapProductionPullbackStrategy
-strategy_params: {}
+strategy_params:
+  timeframe: 15m
 cost_model:
   fixed_commission_per_contract: "2.50"
   slippage_bps: "0.25"

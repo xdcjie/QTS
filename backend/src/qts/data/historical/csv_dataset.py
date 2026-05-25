@@ -114,8 +114,9 @@ class HistoricalBarStream:
             except ValueError:
                 self.stats.invalid_rows += 1
                 continue
-            if session_override is not None and bar.session_id != session_override:
-                bar = replace(bar, session_id=session_override)
+            bar = self._with_session_metadata(bar, session_override)
+            if not self._bar_visible_in_range(bar):
+                continue
             self.stats.bars_emitted += 1
             yield bar
 
@@ -178,8 +179,9 @@ class HistoricalBarStream:
                 if output_instrument_id == selected.instrument_id
                 else replace(selected_bar, instrument_id=output_instrument_id)
             )
-            if session_override is not None and output_bar.session_id != session_override:
-                output_bar = replace(output_bar, session_id=session_override)
+            output_bar = self._with_session_metadata(output_bar, session_override)
+            if not self._bar_visible_in_range(output_bar):
+                continue
             self.roll_selections.append(
                 FutureRollSelection(
                     continuous_instrument_id=output_instrument_id,
@@ -201,6 +203,26 @@ class HistoricalBarStream:
         if self._session_window is None:
             return None
         return self._session_window.session_id_for_timestamp(timestamp)
+
+    def _with_session_metadata(self, bar: Bar, session_id: str | None) -> Bar:
+        if session_id is None:
+            return bar
+        if self._timeframe.strip().lower() != "1d" or self._session_window is None:
+            return replace(bar, session_id=session_id)
+        interval = self._session_window.interval_for_session_id(session_id)
+        return replace(
+            bar,
+            start_time=interval.start,
+            end_time=interval.end,
+            session_id=session_id,
+        )
+
+    def _bar_visible_in_range(self, bar: Bar) -> bool:
+        if self._start is not None and bar.end_time <= self._start:
+            return False
+        if self._end is not None and bar.end_time > self._end:
+            return False
+        return True
 
     def _timestamp_groups(
         self,

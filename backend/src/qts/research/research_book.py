@@ -208,7 +208,10 @@ class ResearchBook:
         exchange_timezone = cls._exchange_timezone_for(dataset)
         if exchange_timezone is None:
             raise RuntimeError("exchange timezone is required to aggregate research history")
-        pipeline = BarAggregationPipeline(exchange_timezone)
+        pipeline = BarAggregationPipeline(
+            exchange_timezone,
+            session_window=dataset.chain.session_window() if dataset.chain is not None else None,
+        )
         aggregated: list[Bar] = []
         for bar in stream:
             aggregated.extend(

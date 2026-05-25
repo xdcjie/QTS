@@ -142,10 +142,15 @@ class OrderPlanBuilder:
                 realized_pnl=Decimal("0"),
             ),
         ).quantity
+        target_market_price = self._instrument_context.market_price_for_intent(
+            intent,
+            instrument_id=target_instrument,
+            bar=bar,
+        )
         desired_quantity = self._desired_quantity(
             intent,
             current_quantity=current_quantity,
-            bar=bar,
+            market_price=target_market_price,
         )
         quantity_delta = desired_quantity - current_quantity
         if quantity_delta != Decimal("0"):
@@ -154,11 +159,7 @@ class OrderPlanBuilder:
                     account_id=account_id,
                     instrument_id=target_instrument,
                     quantity_delta=quantity_delta,
-                    market_price=self._instrument_context.market_price_for_intent(
-                        intent,
-                        instrument_id=target_instrument,
-                        bar=bar,
-                    ),
+                    market_price=target_market_price,
                     order_time=bar.end_time,
                     order_spec=intent.order_spec,
                     aggregation_decision_id=aggregation_decision_id,
@@ -172,7 +173,7 @@ class OrderPlanBuilder:
         intent: TargetIntent,
         *,
         current_quantity: Decimal,
-        bar: Bar,
+        market_price: Decimal,
     ) -> Decimal:
         """Return the desired quantity implied by a target intent."""
         if intent.intent_type is TargetIntentType.CLOSE:
@@ -184,11 +185,11 @@ class OrderPlanBuilder:
         if intent.intent_type is TargetIntentType.QUANTITY:
             return intent.value
         if intent.intent_type is TargetIntentType.VALUE:
-            return intent.value / bar.close
+            return intent.value / market_price
         if intent.intent_type is TargetIntentType.PERCENT:
-            current_value = current_quantity * bar.close
-            target_value = max(current_value, bar.close) * intent.value
-            return target_value / bar.close
+            current_value = current_quantity * market_price
+            target_value = max(current_value, market_price) * intent.value
+            return target_value / market_price
 
         raise ValueError(f"unsupported target intent type: {intent.intent_type}")
 

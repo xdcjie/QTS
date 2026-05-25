@@ -280,6 +280,58 @@ def test_two_strategies_one_account_topology() -> None:
     assert payload["topology_hash"].startswith("sha256:")
 
 
+def test_backtest_topology_builder_uses_multi_strategy_specs() -> None:
+    account_id = AccountId("acct-backtest")
+    config = BacktestRuntimeConfig(
+        roots=("SI",),
+        symbols=("SI",),
+        start=datetime(2026, 1, 2, 14, 30, tzinfo=UTC),
+        end=datetime(2026, 1, 2, 14, 31, tzinfo=UTC),
+        timeframe="1m",
+        initial_cash=Decimal("100000"),
+        market_data=BacktestMarketDataReference(
+            config_path=Path("configs/data/historical.local.yaml"),
+            catalog="research_futures",
+        ),
+        strategies=(
+            BacktestStrategyConfig(
+                strategy_id="trend-si",
+                class_path="tests.StrategyA",
+                account_id=account_id.value,
+                allocation=Decimal("0.40"),
+                signal_weight=Decimal("0.40"),
+                signal_aggregation_policy="weighted_net",
+            ),
+            BacktestStrategyConfig(
+                strategy_id="orb-si",
+                class_path="tests.StrategyB",
+                account_id=account_id.value,
+                allocation=Decimal("0.60"),
+                signal_weight=Decimal("0.60"),
+                signal_aggregation_policy="weighted_net",
+            ),
+        ),
+    )
+
+    topology = RuntimeTopologyBuilder.from_backtest_config(
+        config,
+        RuntimeRunId("bt-multi-strategy"),
+    )
+
+    assert topology.accounts[0].account_id == account_id
+    assert [strategy.strategy_id.value for strategy in topology.strategies] == [
+        "trend-si",
+        "orb-si",
+    ]
+    assert [strategy.signal_weight for strategy in topology.strategies] == [
+        Decimal("0.40"),
+        Decimal("0.60"),
+    ]
+    assert {strategy.signal_aggregation_policy for strategy in topology.strategies} == {
+        "weighted_net"
+    }
+
+
 def test_strategy_referencing_missing_account_fails() -> None:
     with pytest.raises(ValueError, match="missing account"):
         RuntimeTopology(

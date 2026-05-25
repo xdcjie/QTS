@@ -239,14 +239,28 @@ Deletion/refactor safety:
 - Characterize existing behavior before splitting large classes or moving responsibilities.
 - Remove verified redundant placeholders only after import/reference checks and relevant tests pass.
 
-## 11. Knowledge graph / MCP usage
+## 11. Knowledge graph / graphify usage
 
-If the project has `code-review-graph` MCP tools available, use them before Grep/Glob/Read for code exploration, impact analysis, and review:
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
 
-- `semantic_search_nodes` / `query_graph` for exploration
-- `get_impact_radius` / `get_affected_flows` for blast radius
-- `detect_changes` / `get_review_context` for review
-- `query_graph` with `tests_for` for coverage
-- `get_architecture_overview` / `list_communities` for structure
+When the user types `/graphify`, invoke the `skill` tool with `skill: "graphify"` before doing anything else.
 
-After successful file modifications, refresh the graph with incremental update before further impact analysis or final review. If graph tools are unavailable or incomplete, fall back to repository search and state that fallback.
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+When the user types `/graphify`, invoke the `skill` tool with `skill: "graphify"` before doing anything else.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).

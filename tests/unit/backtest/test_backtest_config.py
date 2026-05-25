@@ -51,6 +51,55 @@ def test_backtest_run_config_loads_example_yaml_with_stable_hash() -> None:
     assert changed.config_hash != config.config_hash
 
 
+def test_backtest_config_loader_parses_multi_strategy_topology_payload() -> None:
+    payload = {
+        "schema_version": "1",
+        "market_data": {
+            "source": "local_historical",
+            "config": "configs/data/historical.local.yaml",
+            "catalog": "research_futures",
+        },
+        "roots": ["GC", "SI"],
+        "symbols": ["GC", "SI"],
+        "start": "2026-01-02T14:30:00Z",
+        "end": "2026-01-02T14:31:00Z",
+        "timeframe": "1m",
+        "initial_cash": "100000",
+        "risk_config": {"max_notional": "1000000"},
+        "strategies": [
+            {
+                "strategy_id": "trend-si",
+                "class_path": "tests.StrategyA",
+                "account_id": "acct-backtest",
+                "allocation": "0.40",
+                "signal_weight": "0.40",
+                "signal_aggregation_policy": "weighted_net",
+                "params": {"symbol": "SI"},
+            },
+            {
+                "strategy_id": "orb-si",
+                "class_path": "tests.StrategyB",
+                "account_id": "acct-backtest",
+                "allocation": "0.60",
+                "signal_weight": "0.60",
+                "signal_aggregation_policy": "weighted_net",
+                "params": {"symbol": "SI"},
+            },
+        ],
+    }
+
+    config = BacktestConfigLoader.from_payload(payload)
+
+    assert config.strategy_class == "tests.StrategyA"
+    assert config.strategy_params == {"symbol": "SI"}
+    assert len(config.strategies) == 2
+    assert config.strategies[0].strategy_id == "trend-si"
+    assert config.strategies[0].signal_weight == Decimal("0.40")
+    assert config.strategies[0].signal_aggregation_policy == "weighted_net"
+    assert config.strategies[1].strategy_id == "orb-si"
+    assert config.to_payload()["strategies"][1]["signal_weight"] == "0.60"
+
+
 def test_backtest_config_schema_version_is_part_of_config_hash() -> None:
     config = BacktestRuntimeConfig.from_yaml(Path("configs/backtest.gc_si.example.yaml"))
 
@@ -332,6 +381,25 @@ roll_policy:
     assert config.roll_policy.roll_sessions_before_first_notice == 3
 
 
+def test_route_e_carry_trend_backtest_config_keeps_signal_assets_non_tradable() -> None:
+    config = BacktestRuntimeConfig.from_yaml(Path("configs/backtest.route_e_carry_trend.yaml"))
+
+    assert config.roots == ("GC", "SI", "CARRY")
+    assert config.symbols == ("GC", "SI", "GC_CARRY", "SI_CARRY")
+    assert config.instrument_ids == {
+        "GC_CARRY": InstrumentId("RESEARCH.CARRY.GC"),
+        "SI_CARRY": InstrumentId("RESEARCH.CARRY.SI"),
+    }
+    assert (
+        config.strategy_class == "examples.strategies.carry_trend_overlay:CarryTrendOverlayStrategy"
+    )
+    assert config.strategy_params["carry_symbols"] == {
+        "GC": "GC_CARRY",
+        "SI": "SI_CARRY",
+    }
+    assert config.roll_policy.enabled is True
+
+
 def test_backtest_run_config_validates_material_fields() -> None:
     config = BacktestRuntimeConfig.from_yaml(Path("configs/backtest.gc_si.example.yaml"))
 
@@ -341,3 +409,56 @@ def test_backtest_run_config_validates_material_fields() -> None:
         replace(config, start=config.end, end=config.start)
     with pytest.raises(ValueError, match="initial_cash"):
         replace(config, initial_cash=Decimal("0"))
+
+
+def test_route_b_dual_supertrend_backtest_configs_parse() -> None:
+    for config_path, symbol in (
+        (Path("configs/backtest.route_b_dual_supertrend_gc.yaml"), "GC"),
+        (Path("configs/backtest.route_b_dual_supertrend_si.yaml"), "SI"),
+    ):
+        config = BacktestRuntimeConfig.from_yaml(config_path)
+
+        assert config.strategy_class == "examples.strategies.dual_supertrend:DualSupertrendStrategy"
+        assert config.strategy_params["symbol"] == symbol
+        assert config.timeframe == "15m"
+        assert config.initial_cash == Decimal("100000")
+        assert config.cost_model.fixed_commission_per_contract == Decimal("2.50")
+        assert config.cost_model.slippage_bps == Decimal("0.25")
+
+
+def test_route_c_vol_target_trend_backtest_configs_parse() -> None:
+    for config_path, symbol in (
+        (Path("configs/backtest.route_c_vol_target_trend_gc.yaml"), "GC"),
+        (Path("configs/backtest.route_c_vol_target_trend_si.yaml"), "SI"),
+    ):
+        config = BacktestRuntimeConfig.from_yaml(config_path)
+
+        assert (
+            config.strategy_class == "examples.strategies.vol_target_trend:VolTargetTrendStrategy"
+        )
+        assert config.strategy_params["symbol"] == symbol
+        assert config.timeframe == "1d"
+        assert config.initial_cash == Decimal("100000")
+        assert config.cost_model.fixed_commission_per_contract == Decimal("2.50")
+        assert config.cost_model.slippage_bps == Decimal("0.25")
+        assert config.warmup_bars >= 253
+
+
+def test_route_d_gc_si_ratio_mean_reversion_backtest_config_parses() -> None:
+    config = BacktestRuntimeConfig.from_yaml(
+        Path("configs/backtest.route_d_gc_si_ratio_mean_reversion.yaml")
+    )
+
+    assert (
+        config.strategy_class
+        == "examples.strategies.gc_si_ratio_mean_reversion:GcSiRatioMeanReversionStrategy"
+    )
+    assert config.roots == ("GC", "SI")
+    assert config.symbols == ("GC", "SI")
+    assert config.strategy_params["gc_symbol"] == "GC"
+    assert config.strategy_params["si_symbol"] == "SI"
+    assert config.timeframe == "1d"
+    assert config.initial_cash == Decimal("100000")
+    assert config.cost_model.fixed_commission_per_contract == Decimal("2.50")
+    assert config.cost_model.slippage_bps == Decimal("0.25")
+    assert config.warmup_bars >= 120

@@ -170,6 +170,29 @@ def test_initialize_subscribes_and_creates_required_indicators() -> None:
     assert ("atr", 14) in ctx.indicator.created
 
 
+def test_backtest_loader_can_instantiate_dual_supertrend_with_yaml_params() -> None:
+    from qts.backtest.pipeline import BacktestPipeline
+
+    strategy = BacktestPipeline.load_strategy(
+        "examples.strategies.dual_supertrend:DualSupertrendStrategy",
+        {
+            "symbol": "SI",
+            "timeframe": "15m",
+            "base_target_percent": "0.20",
+            "use_trading_hours_filter": True,
+            "trading_hours_timezone": "US/Eastern",
+            "trading_hours_start": "18:00",
+            "trading_hours_end": "17:00",
+        },
+    )
+    ctx = FakeContext()
+
+    strategy.initialize(_ctx(ctx))
+
+    assert ctx.subscriptions[0][0].symbol == "SI"
+    assert ctx.subscriptions[0][1] == "15m"
+
+
 def test_no_entry_before_indicators_are_ready() -> None:
     from examples.strategies.dual_supertrend import DualSupertrendStrategy
 

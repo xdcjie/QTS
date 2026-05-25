@@ -160,6 +160,86 @@ def test_iter_historical_bars_uses_configured_csv_schema_mapping(tmp_path: Path)
     assert bars[0].volume == Decimal("42")
 
 
+def test_iter_historical_bars_maps_daily_source_rows_to_session_interval(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "carry.csv"
+    _write_rows(
+        path,
+        [
+            _row(
+                "GC_CARRY",
+                59,
+                open_="0.001",
+                high="0.001",
+                low="0.001",
+                close="0.001",
+                volume="1",
+            )
+        ],
+    )
+    resolver = StaticSymbolResolver({"GC_CARRY": InstrumentId("RESEARCH.CARRY.GC")})
+    session_window = RegularSessionWindow(
+        exchange_timezone="US/Eastern",
+        open_time=time(18, 0),
+        close_time=time(17, 0),
+    )
+
+    stream = iter_historical_bars(
+        path,
+        resolver,
+        timeframe="1d",
+        session_window=session_window,
+    )
+    bars = tuple(stream)
+
+    assert len(bars) == 1
+    assert bars[0].instrument_id == InstrumentId("RESEARCH.CARRY.GC")
+    assert bars[0].session_id == "2026-01-02"
+    assert bars[0].start_time == datetime(2026, 1, 1, 23, 0, tzinfo=UTC)
+    assert bars[0].end_time == datetime(2026, 1, 2, 22, 0, tzinfo=UTC)
+    assert bars[0].timeframe == "1d"
+    assert bars[0].is_complete is True
+
+
+def test_iter_historical_bars_excludes_daily_source_rows_visible_after_end(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "carry.csv"
+    _write_rows(
+        path,
+        [
+            _row(
+                "GC_CARRY",
+                59,
+                open_="0.001",
+                high="0.001",
+                low="0.001",
+                close="0.001",
+                volume="1",
+            )
+        ],
+    )
+    resolver = StaticSymbolResolver({"GC_CARRY": InstrumentId("RESEARCH.CARRY.GC")})
+    session_window = RegularSessionWindow(
+        exchange_timezone="US/Eastern",
+        open_time=time(18, 0),
+        close_time=time(17, 0),
+    )
+
+    stream = iter_historical_bars(
+        path,
+        resolver,
+        timeframe="1d",
+        end=datetime(2026, 1, 2, 21, 0, tzinfo=UTC),
+        session_window=session_window,
+    )
+
+    assert tuple(stream) == ()
+    assert stream.stats.rows_seen == 1
+    assert stream.stats.bars_emitted == 0
+
+
 def test_explicit_default_schema_accepts_semantic_columns_without_databento_order(
     tmp_path: Path,
 ) -> None:

@@ -5,8 +5,9 @@ from __future__ import annotations
 from datetime import tzinfo
 from typing import TYPE_CHECKING
 
-from qts.data.bars.consolidator import NMinuteConsolidator
+from qts.data.bars.consolidator import Consolidator, NMinuteConsolidator
 from qts.data.bars.timeframe import Timeframe
+from qts.data.sessions import RegularSessionWindow
 
 if TYPE_CHECKING:
     from qts.domain.market_data import Bar
@@ -15,10 +16,16 @@ if TYPE_CHECKING:
 class BarAggregationPipeline:
     """Own complete-bar consolidation state for runtime market-data streams."""
 
-    def __init__(self, exchange_timezone: str | tzinfo) -> None:
+    def __init__(
+        self,
+        exchange_timezone: str | tzinfo,
+        *,
+        session_window: RegularSessionWindow | None = None,
+    ) -> None:
         """Perform __init__."""
         self._exchange_timezone = exchange_timezone
-        self._consolidators: dict[tuple[object, ...], NMinuteConsolidator] = {}
+        self._session_window = session_window
+        self._consolidators: dict[tuple[object, ...], Consolidator] = {}
 
     def aggregate(self, bar: Bar, target_timeframe: Timeframe) -> tuple[Bar, ...]:
         """Aggregate one 1+ minute bar into an explicit target timeframe."""
@@ -55,7 +62,7 @@ class BarAggregationPipeline:
         *,
         source_timeframe: Timeframe,
         target_timeframe: Timeframe,
-    ) -> NMinuteConsolidator:
+    ) -> Consolidator:
         """Return the consolidator that owns one source/target stream."""
         consolidator = self._consolidators.get(key)
         if consolidator is None:
@@ -63,6 +70,7 @@ class BarAggregationPipeline:
                 source_timeframe=source_timeframe,
                 target_timeframe=target_timeframe,
                 exchange_timezone=self._exchange_timezone,
+                session_window=self._session_window,
             )
             self._consolidators[key] = consolidator
         return consolidator

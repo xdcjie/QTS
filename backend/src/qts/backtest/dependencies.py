@@ -9,6 +9,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from qts.core.ids import InstrumentId
+from qts.data.sessions import RegularSessionWindow
 from qts.domain.market_data import Bar
 from qts.registry.future_roll import FutureRollRegistry
 from qts.registry.instrument_registry import InstrumentRegistry
@@ -44,6 +45,9 @@ class BacktestEngineDependencies:
     exchange_timezone_by_instrument: Mapping[InstrumentId, str | tzinfo] = field(
         default_factory=dict
     )
+    session_window_by_instrument: Mapping[InstrumentId, RegularSessionWindow] = field(
+        default_factory=dict
+    )
     execution_adapter: ExecutionAdapter | None = None
 
     @classmethod
@@ -56,6 +60,7 @@ class BacktestEngineDependencies:
         future_roll_registry: FutureRollRegistry | None = None,
         contract_multipliers: Mapping[InstrumentId, Decimal] | None = None,
         exchange_timezone_by_instrument: Mapping[InstrumentId, str | tzinfo] | None = None,
+        session_window_by_instrument: Mapping[InstrumentId, RegularSessionWindow] | None = None,
         execution_adapter: ExecutionAdapter | None = None,
     ) -> BacktestEngineDependencies:
         """Build runtime dependencies with stable defaults."""
@@ -70,6 +75,7 @@ class BacktestEngineDependencies:
             future_roll_registry=future_roll_registry,
             contract_multipliers=dict(contract_multipliers or {}),
             exchange_timezone_by_instrument=dict(exchange_timezone_by_instrument or {}),
+            session_window_by_instrument=dict(session_window_by_instrument or {}),
             execution_adapter=execution_adapter,
         )
 
@@ -104,6 +110,9 @@ class BacktestActorLoopDependencies:
     market_data_provenance_for: MarketDataProvenanceProvider = empty_market_data_provenance
     contract_multipliers: Mapping[InstrumentId, Decimal] = field(default_factory=dict)
     exchange_timezone_by_instrument: Mapping[InstrumentId, str | tzinfo] = field(
+        default_factory=dict
+    )
+    session_window_by_instrument: Mapping[InstrumentId, RegularSessionWindow] = field(
         default_factory=dict
     )
     future_roll_registry: FutureRollRegistry | None = None

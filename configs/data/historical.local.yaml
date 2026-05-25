@@ -40,3 +40,15 @@ historical_data:
           bars:
             - file: si.csv
               timeframe: 1m
+        CARRY:
+          asset_class: research_signal
+          bars:
+            - file: carry.csv
+              timeframe: 1d
+              exchange_timezone: US/Eastern
+              timezone_policy: source_utc_exchange_sessions
+              normalization: calendar_spread_carry_signal_v1
+              session_window:
+                exchange_timezone: US/Eastern
+                open_time: "18:00"
+                close_time: "17:00"

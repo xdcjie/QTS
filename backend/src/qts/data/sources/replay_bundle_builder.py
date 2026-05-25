@@ -16,6 +16,7 @@ from qts.data.bars.timeframe import AlignmentMode, Timeframe
 from qts.data.historical.catalog import HistoricalCatalog, HistoricalDataset
 from qts.data.historical.csv_dataset import HistoricalBarStream, iter_historical_bars
 from qts.data.provenance import DatasetMetadata
+from qts.data.sessions import RegularSessionWindow
 from qts.domain.instruments import AssetClass, ContractSpec, Instrument, SettlementType
 from qts.domain.market_data import Bar
 from qts.registry.future_roll import (
@@ -37,6 +38,7 @@ class ReplayMarketDataBundle:
     bars: Iterator[Bar]
     dataset_stats: dict[str, dict[str, int]]
     exchange_timezone_by_instrument: dict[InstrumentId, str]
+    session_window_by_instrument: dict[InstrumentId, RegularSessionWindow]
     instrument_registry: InstrumentRegistry
     dataset_metadata: tuple[DatasetMetadata, ...]
     contract_multipliers: dict[InstrumentId, Decimal]
@@ -72,7 +74,7 @@ class ReplayMarketDataBundleBuilder:
         """Build replay inputs from the configured historical catalog."""
 
         roll_registry = self._roll_registry()
-        bars, dataset_stats, exchange_timezones = self._stream_configured_bars(
+        bars, dataset_stats, exchange_timezones, session_windows = self._stream_configured_bars(
             self._catalog,
             roll_registry=roll_registry,
         )
@@ -80,6 +82,7 @@ class ReplayMarketDataBundleBuilder:
             bars=bars,
             dataset_stats=dataset_stats,
             exchange_timezone_by_instrument=exchange_timezones,
+            session_window_by_instrument=session_windows,
             instrument_registry=self._instrument_registry_for(
                 self._catalog,
                 roll_registry=roll_registry,
@@ -102,10 +105,16 @@ class ReplayMarketDataBundleBuilder:
         catalog: HistoricalCatalog,
         *,
         roll_registry: FutureRollRegistry | None,
-    ) -> tuple[Iterator[Bar], dict[str, dict[str, int]], dict[InstrumentId, str]]:
+    ) -> tuple[
+        Iterator[Bar],
+        dict[str, dict[str, int]],
+        dict[InstrumentId, str],
+        dict[InstrumentId, RegularSessionWindow],
+    ]:
         requested = set(self._config.symbols)
         stats: dict[str, dict[str, int]] = {}
         exchange_timezones: dict[InstrumentId, str] = {}
+        session_windows: dict[InstrumentId, RegularSessionWindow] = {}
         streams: list[tuple[int, Iterator[Bar]]] = []
         for root_index, root in enumerate(self._config.roots):
             dataset = catalog.datasets[root]
@@ -144,16 +153,25 @@ class ReplayMarketDataBundleBuilder:
                     ),
                 )
             exchange_timezone = self._exchange_timezone_for(dataset)
+            session_window = dataset.session_window or (
+                dataset.chain.session_window() if dataset.chain is not None else None
+            )
             if exchange_timezone is not None and dataset.chain is not None:
                 for contract in dataset.chain.contracts:
                     exchange_timezones.setdefault(
                         dataset.chain.instrument_id_for_symbol(contract.symbol),
                         exchange_timezone,
                     )
+                    if session_window is not None:
+                        session_windows.setdefault(
+                            dataset.chain.instrument_id_for_symbol(contract.symbol),
+                            session_window,
+                        )
             if exchange_timezone is not None and continuous_id is not None:
                 exchange_timezones.setdefault(continuous_id, exchange_timezone)
+            if session_window is not None and continuous_id is not None:
+                session_windows.setdefault(continuous_id, session_window)
             source_timeframe = dataset.source_timeframe or self._config.timeframe
-            session_window = dataset.chain.session_window() if dataset.chain is not None else None
             stream = iter_historical_bars(
                 dataset.csv_path,
                 dataset.symbol_resolver,
@@ -181,7 +199,7 @@ class ReplayMarketDataBundleBuilder:
                     self._with_time_grid_synthesis(per_root, timeframe=source_timeframe),
                 )
             )
-        return self._merge_ordered_bar_streams(streams), stats, exchange_timezones
+        return self._merge_ordered_bar_streams(streams), stats, exchange_timezones, session_windows
 
     def _with_time_grid_synthesis(self, stream: Iterator[Bar], *, timeframe: str) -> Iterator[Bar]:
         """Wrap a per-root bar stream so intra-session gaps emit synthetic bars."""

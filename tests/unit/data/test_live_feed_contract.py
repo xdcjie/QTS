@@ -38,7 +38,30 @@ def test_feed_capabilities_choose_source_timeframe_for_derived_bar_request() -> 
     )
 
     assert capabilities.source_timeframe_for("1m") == "5s"
+    assert capabilities.source_timeframe_for("2m") == "5s"
+    assert capabilities.source_timeframe_for("3m") == "5s"
     assert capabilities.source_timeframe_for("5m") == "5s"
+
+
+def test_one_minute_source_can_derive_two_and_three_minute_bars() -> None:
+    capabilities = MarketDataFeedCapabilities(
+        source_id="historical-1m",
+        supports_bars=True,
+        supported_timeframes=frozenset({"1m"}),
+    )
+
+    assert capabilities.source_timeframe_for("2m") == "1m"
+    assert capabilities.source_timeframe_for("3m") == "1m"
+
+
+def test_one_minute_source_can_derive_session_daily_bars() -> None:
+    capabilities = MarketDataFeedCapabilities(
+        source_id="historical-1m",
+        supports_bars=True,
+        supported_timeframes=frozenset({"1m"}),
+    )
+
+    assert capabilities.source_timeframe_for("1d") == "1m"
 
 
 def test_fake_live_feed_exposes_configured_capabilities_and_subscription_count() -> None:

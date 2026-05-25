@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import time
 from decimal import Decimal
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from qts.domain.market_data import Bar
@@ -159,8 +160,9 @@ class DualSupertrendIndicators:
 class DualSupertrendStrategy(Strategy):
     """Dual Supertrend trend-following strategy with optional regime filters."""
 
-    def __init__(self, config: DualSupertrendConfig | None = None) -> None:
-        self._config = config or DualSupertrendConfig()
+    def __init__(self, config: DualSupertrendConfig | None = None, **overrides: Any) -> None:
+        base_config = config or DualSupertrendConfig()
+        self._config = replace(base_config, **overrides) if overrides else base_config
         self._asset: AssetRef | None = None
         self._indicators: DualSupertrendIndicators | None = None
         self._position_side: int = 0

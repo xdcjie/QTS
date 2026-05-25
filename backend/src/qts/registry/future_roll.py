@@ -260,6 +260,28 @@ class FutureRollRegistry:
         except KeyError as exc:
             raise KeyError(f"unknown continuous future: {continuous_instrument_id}") from exc
 
+    def selection_history(
+        self,
+        continuous_instrument_id: InstrumentId | str | None = None,
+    ) -> tuple[FutureRollSelection, ...]:
+        """Return recorded roll selections for replay cache materialization."""
+
+        if continuous_instrument_id is None:
+            return tuple(
+                selection
+                for selections in self._selections_by_continuous.values()
+                for selection in selections
+            )
+        continuous_id = (
+            continuous_instrument_id
+            if isinstance(continuous_instrument_id, InstrumentId)
+            else self.continuous_instrument_id(continuous_instrument_id)
+        )
+        try:
+            return tuple(self._selections_by_continuous[continuous_id])
+        except KeyError as exc:
+            raise KeyError(f"unknown continuous future: {continuous_id}") from exc
+
     def execution_price(
         self,
         continuous_instrument_id: InstrumentId,

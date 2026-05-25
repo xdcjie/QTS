@@ -29,6 +29,7 @@ class GcSiMomentumStrategy(Strategy):
         self._short_window = short_window
         self._long_window = long_window
         self._assets: tuple[AssetRef, ...] = ()
+        self._target_quantity_by_asset: dict[AssetRef, Decimal] = {}
 
     def initialize(self, ctx: StrategyContext) -> None:
         self._assets = tuple(_asset_for_symbol(ctx, symbol) for symbol in self._symbols)
@@ -46,10 +47,15 @@ class GcSiMomentumStrategy(Strategy):
             long_prices = [item.close for item in history]
             short_average = _average(short_prices)
             long_average = _average(long_prices)
-            if short_average > long_average:
-                ctx.target_quantity(asset, Decimal("1"))
-            else:
+            target_quantity = Decimal("1") if short_average > long_average else Decimal("0")
+            current_target = self._target_quantity_by_asset.get(asset, Decimal("0"))
+            if target_quantity == current_target:
+                continue
+            self._target_quantity_by_asset[asset] = target_quantity
+            if target_quantity == Decimal("0"):
                 ctx.close(asset)
+            else:
+                ctx.target_quantity(asset, target_quantity)
 
 
 def _average(values: Iterable[Decimal]) -> Decimal:

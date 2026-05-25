@@ -11,7 +11,7 @@ import json
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import date
-from decimal import Decimal
+from decimal import ROUND_FLOOR, Decimal
 from enum import StrEnum
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -58,6 +58,12 @@ class _NoProgressAction(StrEnum):
 class _EntrySizeRule(StrEnum):
     OFF = "off"
     SIGMA_MOMENTUM_REDUCE = "sigma_momentum_reduce"
+    RISK_BUDGET = "risk_budget"
+
+
+class _ExitStyle(StrEnum):
+    FULL_TARGET = "full_target"
+    PARTIAL_RUNNER = "partial_runner"
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +71,7 @@ class VwapFactorResearchConfig:
     """Configuration for one research candidate."""
 
     symbol: str = "GC"
+    timeframe: str = "1m"
     target_quantity: Decimal = Decimal("1")
 
     atr_window: int = 14
@@ -136,6 +143,15 @@ class VwapFactorResearchConfig:
     entry_size_session_sigma_min_atr: Decimal = Decimal("0")
     entry_size_momentum_min_abs: Decimal = Decimal("0")
     entry_size_reduced_quantity: Decimal = Decimal("0")
+    risk_budget: Decimal = Decimal("0")
+    risk_budget_point_value: Decimal = Decimal("1")
+    risk_budget_min_quantity: Decimal = Decimal("1")
+    risk_budget_max_quantity: Decimal = Decimal("0")
+    exit_style: str = "full_target"
+    partial_target_r_multiple: Decimal = Decimal("1")
+    partial_exit_fraction: Decimal = Decimal("0.5")
+    runner_target_r_multiple: Decimal = Decimal("2")
+    runner_stop_to_breakeven: bool = False
     max_entries_per_session: int = 0
 
     rsi_window: int = 14
@@ -163,6 +179,10 @@ class VwapFactorResearchConfig:
     technical_score_min: int = 4
     oscillator_score_min: int = 4
     volume_curve_lookback_sessions: int = 20
+    trend_efficiency_lookback: int = 20
+    trend_efficiency_min: Decimal = Decimal("0.60")
+    trend_age_min_bars: int = 0
+    trend_age_max_bars: int = 999999
 
     ts_momentum_min_abs: Decimal = Decimal("0")
     volume_curve_ratio_min: Decimal = Decimal("0.6")
@@ -209,6 +229,7 @@ class VwapFactorResearchConfig:
             "technical_score_min": self.technical_score_min,
             "oscillator_score_min": self.oscillator_score_min,
             "volume_curve_lookback_sessions": self.volume_curve_lookback_sessions,
+            "trend_efficiency_lookback": self.trend_efficiency_lookback,
             "minutes_before_close_flat": self.minutes_before_close_flat,
         }
         for name, value in positive_ints.items():
@@ -222,6 +243,10 @@ class VwapFactorResearchConfig:
             raise ValueError("max_entries_per_session must be non-negative")
         if self.early_no_progress_exit_bars < 0:
             raise ValueError("early_no_progress_exit_bars must be non-negative")
+        if self.trend_age_min_bars < 0:
+            raise ValueError("trend_age_min_bars must be non-negative")
+        if self.trend_age_max_bars < self.trend_age_min_bars:
+            raise ValueError("trend_age_max_bars must be >= trend_age_min_bars")
         for name in ("session_open_et_hour", "session_close_et_hour"):
             value = getattr(self, name)
             if not 0 <= value <= 23:
@@ -281,6 +306,14 @@ class VwapFactorResearchConfig:
             "entry_size_session_sigma_min_atr",
             "entry_size_momentum_min_abs",
             "entry_size_reduced_quantity",
+            "risk_budget",
+            "risk_budget_point_value",
+            "risk_budget_min_quantity",
+            "risk_budget_max_quantity",
+            "partial_target_r_multiple",
+            "partial_exit_fraction",
+            "runner_target_r_multiple",
+            "trend_efficiency_min",
             "ts_momentum_min_abs",
             "volume_curve_ratio_min",
             "volume_curve_ratio_max",
@@ -294,6 +327,12 @@ class VwapFactorResearchConfig:
                 self,
                 "exit_on_vwap_cross",
                 self.exit_on_vwap_cross.strip().lower() in {"1", "true", "yes", "on"},
+            )
+        if isinstance(self.runner_stop_to_breakeven, str):
+            object.__setattr__(
+                self,
+                "runner_stop_to_breakeven",
+                self.runner_stop_to_breakeven.strip().lower() in {"1", "true", "yes", "on"},
             )
         if isinstance(self.factor_filters, str):
             object.__setattr__(self, "factor_filters", (self.factor_filters,))
@@ -328,8 +367,11 @@ class VwapFactorResearchConfig:
             "blocked_entry_sessions",
             normalized_blocked_sessions,
         )
+        object.__setattr__(self, "timeframe", self.timeframe.strip().lower())
         if not self.symbol.strip():
             raise ValueError("symbol is required")
+        if not self.timeframe:
+            raise ValueError("timeframe is required")
         if self.target_quantity <= Decimal("0"):
             raise ValueError("target_quantity must be positive")
         if self.pullback_touch_atr_below <= Decimal("0"):
@@ -393,6 +435,33 @@ class VwapFactorResearchConfig:
                 raise ValueError("entry_size_reduced_quantity must be positive")
             if self.entry_size_reduced_quantity >= self.target_quantity:
                 raise ValueError("entry_size_reduced_quantity must be less than target_quantity")
+        if self.entry_size_rule == _EntrySizeRule.RISK_BUDGET.value:
+            if self.risk_budget <= Decimal("0"):
+                raise ValueError("risk_budget must be positive")
+            if self.risk_budget_point_value <= Decimal("0"):
+                raise ValueError("risk_budget_point_value must be positive")
+            if self.risk_budget_min_quantity < Decimal("0"):
+                raise ValueError("risk_budget_min_quantity must be non-negative")
+            if self.risk_budget_max_quantity < Decimal("0"):
+                raise ValueError("risk_budget_max_quantity must be non-negative")
+            if (
+                self.risk_budget_max_quantity > Decimal("0")
+                and self.risk_budget_min_quantity > self.risk_budget_max_quantity
+            ):
+                raise ValueError("risk_budget_min_quantity must be <= risk_budget_max_quantity")
+        object.__setattr__(self, "exit_style", self.exit_style.strip().lower())
+        allowed_exit_styles = {item.value for item in _ExitStyle}
+        if self.exit_style not in allowed_exit_styles:
+            raise ValueError(f"exit_style must be one of {sorted(allowed_exit_styles)}")
+        if self.exit_style == _ExitStyle.PARTIAL_RUNNER.value:
+            if self.partial_target_r_multiple <= Decimal("0"):
+                raise ValueError("partial_target_r_multiple must be positive")
+            if not Decimal("0") < self.partial_exit_fraction < Decimal("1"):
+                raise ValueError("partial_exit_fraction must be between 0 and 1")
+            if self.runner_target_r_multiple <= self.partial_target_r_multiple:
+                raise ValueError("runner_target_r_multiple must be greater than partial target")
+        if not Decimal("0") <= self.trend_efficiency_min <= Decimal("1"):
+            raise ValueError("trend_efficiency_min must be between 0 and 1")
         if self.distance_min_atr > self.distance_max_atr:
             raise ValueError("distance_min_atr must be <= distance_max_atr")
         if self.volume_ratio_min > self.volume_ratio_max:
@@ -465,8 +534,11 @@ class VwapFactorResearchConfig:
             "rejection_quality",
             "volume_curve_range",
             "range_expansion",
+            "trend_age",
         }:
             return ()
+        if filter_name == "trend_efficiency":
+            return (self.trend_efficiency_lookback + 1,)
         if filter_name == "vwap_acceptance":
             return (self.vwap_acceptance_window,)
         if filter_name in {
@@ -543,6 +615,8 @@ class _SessionState:
     sum_vol: Decimal = Decimal("0")
     vwap_history: deque[Decimal] = field(default_factory=deque)
     vwap_position_history: deque[int] = field(default_factory=deque)
+    trend_direction: int = 0
+    trend_age_bars: int = 0
     session_high: Decimal | None = None
     session_low: Decimal | None = None
     rth_open: Decimal | None = None
@@ -597,6 +671,11 @@ class VwapFactorResearchStrategy(Strategy):
         self._entry_price: Decimal | None = None
         self._stop_price: Decimal | None = None
         self._target_2: Decimal | None = None
+        self._partial_target: Decimal | None = None
+        self._entry_quantity_value: Decimal | None = None
+        self._runner_quantity: Decimal | None = None
+        self._entry_risk_per_contract: Decimal | None = None
+        self._partial_taken = False
         self._entry_bars = 0
         self._entry_max_adverse_r = Decimal("0")
         self._entry_max_favorable_r = Decimal("0")
@@ -630,6 +709,9 @@ class VwapFactorResearchStrategy(Strategy):
     def initialize(self, ctx: StrategyContext) -> None:
         asset = ctx.symbol(self._config.symbol)
         self._asset = asset
+        ctx.subscribe(
+            asset, timeframe=self._config.timeframe, warmup=self._config.required_warmup_bars
+        )
         self._indicators = _Indicators(
             vwap=ctx.indicator.session_vwap(asset),
             atr=ctx.indicator.atr(asset, self._config.atr_window),
@@ -762,6 +844,8 @@ class VwapFactorResearchStrategy(Strategy):
                 self._exit(ctx, _ExitReason.LONG_EARLY_NO_PROGRESS)
             elif self._stop_price is not None and bar.low <= self._stop_price:
                 self._exit(ctx, _ExitReason.LONG_STOP_ATR_TOUCHED)
+            elif self._partial_target_touched(bar):
+                self._apply_partial_runner(ctx, "long_partial_target_r_touched")
             elif self._target_2 is not None and bar.high >= self._target_2:
                 self._exit(ctx, _ExitReason.LONG_TARGET_R_TOUCHED)
             elif no_progress:
@@ -773,6 +857,8 @@ class VwapFactorResearchStrategy(Strategy):
                 self._exit(ctx, _ExitReason.SHORT_EARLY_NO_PROGRESS)
             elif self._stop_price is not None and bar.high >= self._stop_price:
                 self._exit(ctx, _ExitReason.SHORT_STOP_ATR_TOUCHED)
+            elif self._partial_target_touched(bar):
+                self._apply_partial_runner(ctx, "short_partial_target_r_touched")
             elif self._target_2 is not None and bar.low <= self._target_2:
                 self._exit(ctx, _ExitReason.SHORT_TARGET_R_TOUCHED)
             elif no_progress:
@@ -789,16 +875,32 @@ class VwapFactorResearchStrategy(Strategy):
             return
         self._entry_price = bar.close
         stop_distance = atr * self._config.stop_atr_multiple
-        target_distance = stop_distance * self._entry_target_r_multiple()
+        self._entry_risk_per_contract = stop_distance * self._config.risk_budget_point_value
         quantity = self._entry_quantity(atr)
+        if quantity <= Decimal("0"):
+            self._reset()
+            return
+        target_distance = stop_distance * self._entry_final_target_r_multiple()
+        self._entry_quantity_value = quantity
+        self._runner_quantity = quantity
+        self._partial_target = None
+        self._partial_taken = False
         metadata = self._entry_metadata(quantity)
         if self._direction is PositionSide.LONG:
             self._stop_price = self._entry_price - stop_distance
             self._target_2 = self._entry_price + target_distance
+            if self._exit_style() is _ExitStyle.PARTIAL_RUNNER:
+                self._partial_target = (
+                    self._entry_price + stop_distance * self._config.partial_target_r_multiple
+                )
             ctx.target_quantity(self._asset, quantity, metadata=metadata)
         else:
             self._stop_price = self._entry_price + stop_distance
             self._target_2 = self._entry_price - target_distance
+            if self._exit_style() is _ExitStyle.PARTIAL_RUNNER:
+                self._partial_target = (
+                    self._entry_price - stop_distance * self._config.partial_target_r_multiple
+                )
             ctx.target_quantity(self._asset, -quantity, metadata=metadata)
         self._session.entries += 1
         self._state = _State.ENTERED
@@ -850,6 +952,55 @@ class VwapFactorResearchStrategy(Strategy):
             )
         self._early_no_progress_action_taken = True
 
+    def _partial_target_touched(self, bar: Bar) -> bool:
+        if (
+            self._exit_style() is not _ExitStyle.PARTIAL_RUNNER
+            or self._partial_taken
+            or self._partial_target is None
+        ):
+            return False
+        if self._direction is PositionSide.LONG:
+            return bar.high >= self._partial_target
+        return bar.low <= self._partial_target
+
+    def _apply_partial_runner(self, ctx: StrategyContext, reason: str) -> None:
+        if self._asset is None or self._entry_quantity_value is None:
+            return
+        partial_quantity = (
+            self._entry_quantity_value * self._config.partial_exit_fraction
+        ).to_integral_value(rounding=ROUND_FLOOR)
+        runner_quantity = self._entry_quantity_value - partial_quantity
+        if partial_quantity <= Decimal("0") or runner_quantity <= Decimal("0"):
+            return
+        self._runner_quantity = runner_quantity
+        self._partial_taken = True
+        if self._config.runner_stop_to_breakeven and self._entry_price is not None:
+            self._stop_price = self._entry_price
+        ctx.target_quantity(
+            self._asset,
+            self._signed_quantity(runner_quantity),
+            metadata=self._partial_runner_metadata(reason),
+        )
+
+    def _partial_runner_metadata(self, reason: str) -> dict[str, str]:
+        payload = {
+            "entry_bars": str(self._entry_bars),
+            "entry_max_adverse_r": str(self._entry_max_adverse_r),
+            "entry_max_favorable_r": str(self._entry_max_favorable_r),
+            "partial_exit_reason": reason,
+        }
+        if self._entry_price is not None:
+            payload["entry_price"] = str(self._entry_price)
+        if self._partial_target is not None:
+            payload["partial_target_price"] = str(self._partial_target)
+        if self._target_2 is not None:
+            payload["target_price"] = str(self._target_2)
+        if self._entry_quantity_value is not None:
+            payload["entry_quantity"] = str(self._entry_quantity_value)
+        if self._runner_quantity is not None:
+            payload["runner_quantity"] = str(self._runner_quantity)
+        return payload
+
     def _reduce_entry_target(self, target_r_multiple: Decimal) -> None:
         if self._entry_price is None or self._stop_price is None or self._direction is None:
             return
@@ -885,7 +1036,17 @@ class VwapFactorResearchStrategy(Strategy):
             return self._config.bad_regime_target_r_multiple
         return self._config.target_r_multiple
 
+    def _entry_final_target_r_multiple(self) -> Decimal:
+        if self._exit_style() is _ExitStyle.PARTIAL_RUNNER:
+            return self._config.runner_target_r_multiple
+        return self._entry_target_r_multiple()
+
+    def _exit_style(self) -> _ExitStyle:
+        return _ExitStyle(self._config.exit_style)
+
     def _entry_quantity(self, atr: Decimal) -> Decimal:
+        if self._config.entry_size_rule == _EntrySizeRule.RISK_BUDGET.value:
+            return self._risk_budget_quantity(atr)
         if self._config.entry_size_rule != _EntrySizeRule.SIGMA_MOMENTUM_REDUCE.value:
             return self._config.target_quantity
         sigma_atr = self._session_sigma_atr(atr)
@@ -899,8 +1060,28 @@ class VwapFactorResearchStrategy(Strategy):
             return self._config.entry_size_reduced_quantity
         return self._config.target_quantity
 
+    def _risk_budget_quantity(self, atr: Decimal) -> Decimal:
+        stop_distance = atr * self._config.stop_atr_multiple
+        risk_per_contract = stop_distance * self._config.risk_budget_point_value
+        self._entry_risk_per_contract = risk_per_contract
+        if risk_per_contract <= Decimal("0"):
+            return Decimal("0")
+        quantity = (self._config.risk_budget / risk_per_contract).to_integral_value(
+            rounding=ROUND_FLOOR
+        )
+        if quantity < self._config.risk_budget_min_quantity:
+            return Decimal("0")
+        if self._config.risk_budget_max_quantity > Decimal("0"):
+            quantity = min(quantity, self._config.risk_budget_max_quantity)
+        return quantity
+
     def _entry_metadata(self, quantity: Decimal) -> dict[str, str] | None:
-        if not self._factor_diagnostics and quantity == self._config.target_quantity:
+        uses_risk_budget = self._config.entry_size_rule == _EntrySizeRule.RISK_BUDGET.value
+        if (
+            not self._factor_diagnostics
+            and quantity == self._config.target_quantity
+            and not uses_risk_budget
+        ):
             return None
         payload: dict[str, str] = {}
         if self._factor_diagnostics:
@@ -911,6 +1092,12 @@ class VwapFactorResearchStrategy(Strategy):
             )
         if quantity != self._config.target_quantity:
             payload["entry_size_rule"] = self._config.entry_size_rule
+        if uses_risk_budget:
+            payload["entry_size_rule"] = self._config.entry_size_rule
+            payload["entry_quantity"] = str(quantity)
+            payload["risk_budget"] = str(self._config.risk_budget)
+            if self._entry_risk_per_contract is not None:
+                payload["risk_per_contract"] = str(self._entry_risk_per_contract)
         return payload
 
     def _factor_filters_pass(self, bar: Bar, vwap: Decimal, atr: Decimal) -> bool:
@@ -944,6 +1131,10 @@ class VwapFactorResearchStrategy(Strategy):
             return self._format_decimal(self._decimal(indicators.volume_ratio))
         if filter_name == "vwap_slope_strength":
             return self._format_decimal(self._vwap_slope_strength_atr(atr))
+        if filter_name == "trend_efficiency":
+            return self._format_decimal(self._trend_efficiency())
+        if filter_name == "trend_age":
+            return str(self._session.trend_age_bars)
         if filter_name == "vwap_slope_strength_if_bad_regime":
             blocked = not self._bad_regime_gate.allows_new_entries()
             strength = self._format_decimal(self._vwap_slope_strength_atr(atr))
@@ -1080,6 +1271,16 @@ class VwapFactorResearchStrategy(Strategy):
         if filter_name == "vwap_slope_strength":
             strength = self._vwap_slope_strength_atr(atr)
             return strength is not None and strength >= self._config.vwap_slope_min_atr
+        if filter_name == "trend_efficiency":
+            efficiency = self._trend_efficiency()
+            return efficiency is not None and efficiency >= self._config.trend_efficiency_min
+        if filter_name == "trend_age":
+            return (
+                self._session.trend_direction == int(direction)
+                and self._config.trend_age_min_bars
+                <= self._session.trend_age_bars
+                <= self._config.trend_age_max_bars
+            )
         if filter_name == "vwap_slope_strength_if_bad_regime":
             if self._bad_regime_gate.allows_new_entries():
                 return True
@@ -1316,8 +1517,13 @@ class VwapFactorResearchStrategy(Strategy):
             self._session.sum_var_x_vol += deviation * deviation * bar.volume
             self._session.sum_vol += bar.volume
             history = self._session.vwap_history
+            self._update_trend_age(vwap)
             history.append(vwap)
-            while len(history) > self._config.vwap_slope_lookback:
+            max_vwap_history = max(
+                self._config.vwap_slope_lookback,
+                self._config.trend_efficiency_lookback + 1,
+            )
+            while len(history) > max_vwap_history:
                 history.popleft()
             position_history = self._session.vwap_position_history
             position_history.append(self._vwap_position(bar, vwap))
@@ -1364,6 +1570,25 @@ class VwapFactorResearchStrategy(Strategy):
         )
         history.append(bar.volume)
 
+    def _update_trend_age(self, vwap: Decimal) -> None:
+        history = self._session.vwap_history
+        if not history:
+            return
+        previous = history[-1]
+        if vwap > previous:
+            direction = 1
+        elif vwap < previous:
+            direction = -1
+        else:
+            self._session.trend_direction = 0
+            self._session.trend_age_bars = 0
+            return
+        if direction == self._session.trend_direction:
+            self._session.trend_age_bars += 1
+        else:
+            self._session.trend_direction = direction
+            self._session.trend_age_bars = 1
+
     def _vwap_slope_positive(self) -> bool | None:
         history = self._session.vwap_history
         if len(history) < self._config.vwap_slope_lookback:
@@ -1409,6 +1634,17 @@ class VwapFactorResearchStrategy(Strategy):
             payload["stop_price"] = str(self._stop_price)
         if self._target_2 is not None:
             payload["target_price"] = str(self._target_2)
+        if self._entry_quantity_value is not None:
+            payload["entry_quantity"] = str(self._entry_quantity_value)
+            payload["entry_bars"] = str(self._entry_bars)
+            payload["entry_max_adverse_r"] = str(self._entry_max_adverse_r)
+            payload["entry_max_favorable_r"] = str(self._entry_max_favorable_r)
+            payload["partial_taken"] = str(self._partial_taken).lower()
+        if (
+            self._runner_quantity is not None
+            and self._runner_quantity != self._entry_quantity_value
+        ):
+            payload["runner_quantity"] = str(self._runner_quantity)
         return payload
 
     def _reset(self) -> None:
@@ -1420,6 +1656,11 @@ class VwapFactorResearchStrategy(Strategy):
         self._entry_price = None
         self._stop_price = None
         self._target_2 = None
+        self._partial_target = None
+        self._entry_quantity_value = None
+        self._runner_quantity = None
+        self._entry_risk_per_contract = None
+        self._partial_taken = False
         self._entry_bars = 0
         self._entry_max_adverse_r = Decimal("0")
         self._entry_max_favorable_r = Decimal("0")
@@ -1483,6 +1724,21 @@ class VwapFactorResearchStrategy(Strategy):
         if len(history) < self._config.vwap_slope_lookback:
             return None
         return self._direction_sign() * (history[-1] - history[0]) / atr
+
+    def _trend_efficiency(self) -> Decimal | None:
+        required = self._config.trend_efficiency_lookback + 1
+        history = tuple(self._session.vwap_history)
+        if len(history) < required:
+            return None
+        window = history[-required:]
+        path = sum(
+            (abs(window[index] - window[index - 1]) for index in range(1, len(window))),
+            Decimal("0"),
+        )
+        if path <= Decimal("0"):
+            return None
+        net = self._direction_sign() * (window[-1] - window[0])
+        return net / path
 
     def _atr_pct(self, bar: Bar, atr: Decimal) -> Decimal | None:
         if atr <= Decimal("0") or bar.close <= Decimal("0"):

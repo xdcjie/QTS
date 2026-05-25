@@ -115,6 +115,7 @@ class VwapProductionPullbackConfig:
     """Small paper/live configuration for the stable production strategy."""
 
     symbol: str = "GC"
+    timeframe: str = "15m"
     target_quantity: Decimal = Decimal("4")
     min_volume_ratio: Decimal = Decimal("1.3")
     confirmation_profile: str = "session_sigma_mom120"
@@ -149,6 +150,10 @@ class VwapProductionPullbackConfig:
         if not self.symbol.strip():
             raise ValueError("symbol is required")
         object.__setattr__(self, "symbol", self.symbol.strip().upper())
+        timeframe = str(self.timeframe).strip().lower()
+        if not timeframe:
+            raise ValueError("timeframe is required")
+        object.__setattr__(self, "timeframe", timeframe)
         profile = str(self.confirmation_profile).strip().lower()
         if profile not in _CONFIRMATION_PROFILES:
             raise ValueError(
@@ -210,12 +215,31 @@ class VwapProductionPullbackConfig:
                 "regime_gate",
                 VwapProductionRegimeGateConfig(**self.regime_gate),
             )
+        if self.regime_gate.timeframe.strip().lower() != self.timeframe:
+            object.__setattr__(
+                self,
+                "regime_gate",
+                replace(self.regime_gate, timeframe=self.timeframe),
+            )
+
+    @property
+    def required_warmup_bars(self) -> int:
+        """Return the main strategy warmup required by configured indicators."""
+        return max(
+            self.atr_window,
+            self.volume_ratio_window,
+            self.vwap_slope_lookback,
+            self.ts_momentum_120_window,
+            self.sma_fast_window,
+            self.sma_slow_window,
+        )
 
     @classmethod
     def gc_best_stable(cls) -> VwapProductionPullbackConfig:
         """Return the selected GC production candidate."""
         return cls(
             symbol="GC",
+            timeframe="15m",
             target_quantity=Decimal("4"),
             min_volume_ratio=Decimal("1.3"),
             confirmation_profile="session_sigma_mom120",
@@ -227,6 +251,7 @@ class VwapProductionPullbackConfig:
         """Return the selected SI production candidate."""
         return cls(
             symbol="SI",
+            timeframe="15m",
             target_quantity=Decimal("3"),
             min_volume_ratio=Decimal("1.5"),
             confirmation_profile="trend_session_sigma",
@@ -291,6 +316,9 @@ class VwapProductionPullbackStrategy(Strategy):
     def initialize(self, ctx: StrategyContext) -> None:
         asset = ctx.symbol(self._config.symbol)
         self._asset = asset
+        subscription_warmups = {
+            asset.instrument_id: (asset, self._config.required_warmup_bars),
+        }
         self._indicators = _ProductionIndicators(
             vwap=ctx.indicator.session_vwap(asset),
             atr=ctx.indicator.atr(asset, self._config.atr_window),
@@ -299,16 +327,27 @@ class VwapProductionPullbackStrategy(Strategy):
             sma_fast=ctx.indicator.sma(asset, self._config.sma_fast_window),
             sma_slow=ctx.indicator.sma(asset, self._config.sma_slow_window),
         )
-        if self._regime_config.rule == "off":
-            return
-        for symbol in self._regime_config.symbols:
-            regime_asset = ctx.symbol(symbol)
-            self._regime_symbol_by_instrument_id[regime_asset.instrument_id] = symbol
-            ctx.subscribe(
-                regime_asset,
-                timeframe=self._regime_config.timeframe,
-                warmup=_regime_warmup_bars(self._regime_config),
+        if self._regime_config.rule != "off":
+            regime_warmup = _regime_warmup_bars(
+                self._regime_config,
+                timeframe=self._config.timeframe,
             )
+            for symbol in self._regime_config.symbols:
+                regime_asset = ctx.symbol(symbol)
+                self._regime_symbol_by_instrument_id[regime_asset.instrument_id] = symbol
+                current = subscription_warmups.get(regime_asset.instrument_id)
+                if current is None:
+                    subscription_warmups[regime_asset.instrument_id] = (
+                        regime_asset,
+                        regime_warmup,
+                    )
+                else:
+                    subscription_warmups[regime_asset.instrument_id] = (
+                        current[0],
+                        max(current[1], regime_warmup),
+                    )
+        for subscribed_asset, warmup in subscription_warmups.values():
+            ctx.subscribe(subscribed_asset, timeframe=self._config.timeframe, warmup=warmup)
 
     def on_bar(self, ctx: StrategyContext, bar: Bar) -> None:
         regime_symbol = self._regime_symbol_by_instrument_id.get(bar.instrument_id)
@@ -710,8 +749,12 @@ class SiVwapProductionPullbackStrategy(VwapProductionPullbackStrategy):
         super().__init__(replace(base, **overrides) if overrides else base)
 
 
-def _regime_warmup_bars(config: VwapProductionRegimeGateConfig) -> int:
-    timeframe = config.timeframe.strip().lower()
+def _regime_warmup_bars(
+    config: VwapProductionRegimeGateConfig,
+    *,
+    timeframe: str | None = None,
+) -> int:
+    timeframe = (timeframe or config.timeframe).strip().lower()
     if not timeframe.endswith("m"):
         return config.lookback_sessions + 2
     minutes = int(timeframe[:-1])

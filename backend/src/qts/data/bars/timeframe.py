@@ -17,6 +17,8 @@ class AlignmentMode(StrEnum):
 _SUPPORTED_CLOCK_DURATIONS = {
     "5s": timedelta(seconds=5),
     "1m": timedelta(minutes=1),
+    "2m": timedelta(minutes=2),
+    "3m": timedelta(minutes=3),
     "5m": timedelta(minutes=5),
     "15m": timedelta(minutes=15),
     "30m": timedelta(minutes=30),

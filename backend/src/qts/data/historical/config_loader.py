@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import time
 from pathlib import Path
 
 import yaml  # type: ignore[import-untyped]
@@ -16,6 +17,7 @@ from qts.data.historical.config import (
     HistoricalMarketDataConfig,
 )
 from qts.data.historical.csv_format import HistoricalCsvSchema
+from qts.data.sessions import RegularSessionWindow
 
 _DATASET_STORAGE_PATH_KEYS = frozenset(
     {
@@ -211,9 +213,25 @@ class HistoricalMarketDataConfigLoader:
                         if raw_bar.get("normalization") is not None
                         else None
                     ),
+                    session_window=HistoricalMarketDataConfigLoader._parse_session_window(
+                        raw_bar.get("session_window")
+                    ),
                 )
             )
         return tuple(bars)
+
+    @staticmethod
+    def _parse_session_window(payload: object) -> RegularSessionWindow | None:
+        """Parse optional bar-file session window metadata."""
+        if payload is None:
+            return None
+        if not isinstance(payload, Mapping):
+            raise ValueError("historical bar session_window must be a mapping")
+        return RegularSessionWindow(
+            exchange_timezone=str(payload["exchange_timezone"]),
+            open_time=time.fromisoformat(str(payload["open_time"])),
+            close_time=time.fromisoformat(str(payload["close_time"])),
+        )
 
     @staticmethod
     def _parse_schemas(payload: object) -> dict[str, HistoricalCsvSchema]:

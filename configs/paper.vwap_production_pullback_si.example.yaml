@@ -28,4 +28,5 @@ secrets:
 
 strategy:
   class_path: strategies.production.vwap_production_pullback:SiVwapProductionPullbackStrategy
-  params: {}
+  params:
+    timeframe: 15m

@@ -1,0 +1,49 @@
+market_data:
+  source: local_historical
+  config: configs/data/historical.local.yaml
+  catalog: research_futures
+roots:
+  - GC
+  - SI
+  - CARRY
+symbols:
+  - GC
+  - SI
+  - GC_CARRY
+  - SI_CARRY
+instrument_ids:
+  GC_CARRY: RESEARCH.CARRY.GC
+  SI_CARRY: RESEARCH.CARRY.SI
+start: "2020-01-01T00:00:00Z"
+end: "2026-04-10T00:00:00Z"
+timeframe: 1d
+initial_cash: "100000"
+strategy_class: examples.strategies.carry_trend_overlay:CarryTrendOverlayStrategy
+strategy_params:
+  symbols:
+    - GC
+    - SI
+  carry_symbols:
+    GC: GC_CARRY
+    SI: SI_CARRY
+  timeframe: 1d
+  momentum_lookback_bars: 126
+  volatility_lookback_bars: 40
+  carry_lookback_bars: 20
+  min_momentum_return: "0.03"
+  min_carry: "0"
+  target_annual_vol: "0.15"
+  max_target_percent: "0.40"
+  rebalance_threshold: "0.01"
+  history_buffer_bars: 20
+  allow_short: true
+cost_model:
+  fixed_commission_per_contract: "2.50"
+  slippage_bps: "0.25"
+risk_config:
+  max_notional: "100000000"
+roll_policy:
+  enabled: true
+  method: first_notice_date
+  roll_sessions_before_first_notice: 3
+warmup_bars: 0

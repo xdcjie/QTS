@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import inspect
-from datetime import UTC, datetime
+from datetime import UTC, datetime, time, timedelta
 from decimal import Decimal
 
 from qts.core.ids import AccountId, InstrumentId, RuntimeRunId, StrategyId
@@ -217,4 +217,58 @@ def test_runtime_market_data_coordinator_delivers_only_complete_derived_timefram
     assert bar.timeframe == "5m"
     assert bar.start_time == start
     assert bar.end_time == start.replace(minute=35)
+    assert len(result.orders) == 1
+
+
+def test_runtime_session_derives_session_daily_bars_with_runtime_session_window() -> None:
+    from qts.data.sessions import RegularSessionWindow
+    from qts.risk.risk_engine import RiskEngine
+    from qts.runtime.actors.account_actor import AccountActor
+    from qts.runtime.dependencies import RuntimeSessionDependencies
+    from qts.runtime.session import RuntimeSession
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    adapter = _RecordingExecutionAdapter()
+    session = RuntimeSession(
+        RuntimeSessionDependencies(
+            strategy=_BuyOnceStrategy(),
+            risk_engine=RiskEngine([]),
+            instrument_context=_InstrumentContext(),
+            execution_adapter=adapter,
+            account_actor=AccountActor(
+                initial_cash={"USD": Decimal("10000")},
+                account_id=AccountId("acct-coordinator-session-daily"),
+            ),
+            instrument_registry=_registry(),
+            portfolio_view=_portfolio_view,
+            multiplier_for=lambda instrument_id: Decimal("1"),
+            account_id=AccountId("acct-coordinator-session-daily"),
+            target_timeframe="1d",
+            exchange_timezone_by_instrument={instrument_id: UTC},
+            session_window_by_instrument={
+                instrument_id: RegularSessionWindow(
+                    exchange_timezone="UTC",
+                    open_time=time(22, 0),
+                    close_time=time(22, 3),
+                )
+            },
+        )
+    )
+
+    session.start()
+    start = datetime(2026, 1, 2, 22, 0, tzinfo=UTC)
+    for minute in range(2):
+        result = session.on_market_data(_bar(start + timedelta(minutes=minute)))
+        assert result.market_data == ()
+        assert result.orders == ()
+
+    result = session.on_market_data(_bar(start + timedelta(minutes=2)))
+
+    assert len(result.market_data) == 1
+    [bar] = result.market_data
+    assert bar.timeframe == "1d"
+    assert bar.start_time == start
+    assert bar.end_time == start + timedelta(minutes=3)
+    assert bar.is_complete
+    assert not bar.is_partial
     assert len(result.orders) == 1

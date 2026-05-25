@@ -6,7 +6,7 @@
 data:
   config: ../data/historical.local.yaml
   catalog: research_futures
-  roots: [GC]
+  roots: [GC, SI]
   timeframe: 1m
 backtest_config: ../backtest.vwap_factor_research.yaml
 store: ../../runs/research/vwap

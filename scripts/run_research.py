@@ -10,7 +10,10 @@ from pathlib import Path
 from typing import Any
 
 from qts.research import ResearchSession
-from qts.research.workflow import ResearchWorkflowConfig, ResearchWorkflowRunner
+from qts.research.workflow import (
+    ResearchWorkflowConfig,
+    ResearchWorkflowRunner,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -47,6 +50,24 @@ def _add_runs_parser(subparsers: Any) -> None:
 def _add_workflow_parser(subparsers: Any) -> None:
     parser = subparsers.add_parser("workflow", help="Run a gate-based research workflow")
     parser.add_argument("workflow_config", type=Path, help="Research workflow YAML config")
+    parser.add_argument(
+        "--step",
+        dest="step_id",
+        default=None,
+        help="Run only the workflow step with this id",
+    )
+    parser.add_argument(
+        "--from-step",
+        dest="from_step_id",
+        default=None,
+        help="Run from this workflow step id, inclusive",
+    )
+    parser.add_argument(
+        "--to-step",
+        dest="to_step_id",
+        default=None,
+        help="Run through this workflow step id, inclusive",
+    )
     parser.add_argument(
         "--format",
         choices=("json", "text"),
@@ -128,10 +149,17 @@ def _list_runs(args: argparse.Namespace, session: ResearchSession) -> int:
 
 def _run_workflow(args: argparse.Namespace, session: ResearchSession) -> int:
     _ensure_repo_root_on_path()
-    result = ResearchWorkflowRunner().run(
-        session,
-        ResearchWorkflowConfig.from_yaml(args.workflow_config),
-    )
+    try:
+        result = ResearchWorkflowRunner().run(
+            session,
+            ResearchWorkflowConfig.from_yaml(args.workflow_config),
+            step_id=args.step_id,
+            from_step_id=args.from_step_id,
+            to_step_id=args.to_step_id,
+        )
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
     if args.format == "json":
         print(json.dumps(result.to_payload(), sort_keys=True, indent=2))
     else:

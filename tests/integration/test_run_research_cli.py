@@ -240,6 +240,74 @@ steps:
     assert not (tmp_path / "research-runs" / "single-run").exists()
 
 
+def test_research_cli_workflow_runs_only_selected_step(tmp_path: Path) -> None:
+    config_path = _write_research_session_config(tmp_path)
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: selected-cli-step
+steps:
+  - id: implementation
+    kind: implementation_gate
+    required_modules:
+      - examples.strategies.gc_si_momentum
+  - id: backtest
+    kind: backtest
+    strategy_params:
+      quantity: "2"
+      entry_bar: 1
+""",
+    )
+
+    result = _run_cli(
+        "--config",
+        str(config_path),
+        "workflow",
+        str(workflow_path),
+        "--step",
+        "implementation",
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload["status"] == "completed"
+    assert [(step["id"], step["status"]) for step in payload["steps"]] == [
+        ("implementation", "passed")
+    ]
+    assert not (tmp_path / "research-runs" / "single-run").exists()
+
+
+def test_research_cli_workflow_rejects_conflicting_step_selection(tmp_path: Path) -> None:
+    config_path = _write_research_session_config(tmp_path)
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: conflicting-selection
+steps:
+  - id: implementation
+    kind: implementation_gate
+    required_modules:
+      - examples.strategies.gc_si_momentum
+""",
+    )
+
+    result = _run_cli(
+        "--config",
+        str(config_path),
+        "workflow",
+        str(workflow_path),
+        "--step",
+        "implementation",
+        "--from-step",
+        "implementation",
+    )
+
+    assert result.returncode == 2
+    assert "--step cannot be combined with --from-step or --to-step" in result.stderr
+
+
 def test_research_cli_workflow_runs_backtest_and_optimize_after_gates_pass(
     tmp_path: Path,
 ) -> None:

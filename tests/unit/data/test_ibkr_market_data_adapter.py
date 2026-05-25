@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, time, timedelta
 from decimal import Decimal
 
 
@@ -99,3 +99,55 @@ def test_ibkr_market_data_type_sets_permission_state() -> None:
     assert event.provider_market_data_type == 3
     assert event.permission_state is MarketDataPermissionState.DELAYED
     assert adapter.permission_state is MarketDataPermissionState.DELAYED
+
+
+def test_ibkr_market_data_adapter_derives_realtime_futures_session_id_from_session_window() -> None:
+    from qts.core.ids import BrokerId, InstrumentId
+    from qts.data.adapters.ibkr_market_data import (
+        IbkrMarketDataAdapter,
+        IbkrMarketDataConnection,
+    )
+    from qts.data.sessions import RegularSessionWindow
+    from qts.data.transports.ibkr_tws_market_data_transport import IbkrBarPayload
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("FUTURE.COMEX.GC.GCM6")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "GCM6")
+    adapter = IbkrMarketDataAdapter(
+        connection=IbkrMarketDataConnection(
+            host="127.0.0.1",
+            port=4002,
+            client_id=101,
+            source_id="ibkr-paper-md",
+        ),
+        symbol_mapping=mapping,
+        session_window_by_instrument={
+            instrument_id: RegularSessionWindow(
+                exchange_timezone="America/New_York",
+                open_time=time(18, 0),
+                close_time=time(17, 0),
+            )
+        },
+    )
+
+    bar = adapter.on_bar(
+        IbkrBarPayload(
+            broker_symbol="GCM6",
+            start_time=datetime(2026, 5, 19, 22, 0, tzinfo=UTC),
+            end_time=datetime(2026, 5, 19, 22, 0, 5, tzinfo=UTC),
+            timeframe="5s",
+            session_id="2026-05-19",
+            open=Decimal("4486.6"),
+            high=Decimal("4486.6"),
+            low=Decimal("4486.6"),
+            close=Decimal("4486.6"),
+            volume=Decimal("10"),
+            vwap=Decimal("4486.6"),
+            trade_count=1,
+            is_complete=True,
+        )
+    )
+
+    assert bar.session_id == "2026-05-20"
+    assert bar.start_time + timedelta(seconds=5) == bar.end_time

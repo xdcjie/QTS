@@ -116,9 +116,13 @@ class FakeContext:
     def __init__(self) -> None:
         self.indicator = FakeIndicatorFactory()
         self.intents: list[tuple[str, FakeAsset, Decimal | None, dict[str, str] | None]] = []
+        self.subscriptions: list[tuple[FakeAsset, str, int]] = []
 
     def symbol(self, symbol: str) -> FakeAsset:
         return FakeAsset(symbol=symbol)
+
+    def subscribe(self, asset: FakeAsset, *, timeframe: str, warmup: int = 1) -> None:
+        self.subscriptions.append((asset, timeframe, warmup))
 
     def target_quantity(
         self,
@@ -133,6 +137,13 @@ class FakeContext:
 
     def close(self, asset: FakeAsset, *, metadata: dict[str, str] | None = None) -> None:
         self.intents.append(("close", asset, None, metadata))
+
+
+def test_research_strategy_declares_main_bar_timeframe_subscription() -> None:
+    config = VwapFactorResearchConfig(timeframe="3m")
+    _strategy, ctx = initialized_strategy(config)
+
+    assert ctx.subscriptions == [(FakeAsset(symbol="GC"), "3m", config.required_warmup_bars)]
 
 
 def test_ma_50_200_filter_requires_alignment_with_trade_direction() -> None:
@@ -312,6 +323,63 @@ def test_vwap_acceptance_filter_requires_directional_close_acceptance() -> None:
 
     assert not strategy._factor_filter_passes(  # noqa: SLF001
         "vwap_acceptance", _bar(), Decimal("100"), Decimal("2")
+    )
+
+
+def test_trend_efficiency_filter_requires_directional_low_churn_vwap_path() -> None:
+    strategy, _ctx = initialized_strategy(
+        VwapFactorResearchConfig(
+            trend_efficiency_lookback=4,
+            trend_efficiency_min=Decimal("0.80"),
+        )
+    )
+    strategy._session.vwap_history.extend(  # noqa: SLF001
+        (Decimal("100"), Decimal("101"), Decimal("102"), Decimal("103"), Decimal("104"))
+    )
+
+    assert strategy._factor_filter_passes(  # noqa: SLF001
+        "trend_efficiency", _bar(), Decimal("100"), Decimal("2")
+    )
+
+    strategy._session.vwap_history.clear()  # noqa: SLF001
+    strategy._session.vwap_history.extend(  # noqa: SLF001
+        (Decimal("100"), Decimal("102"), Decimal("101"), Decimal("103"), Decimal("102"))
+    )
+
+    assert not strategy._factor_filter_passes(  # noqa: SLF001
+        "trend_efficiency", _bar(), Decimal("100"), Decimal("2")
+    )
+
+
+def test_trend_age_filter_rejects_too_young_and_late_trends() -> None:
+    strategy, _ctx = initialized_strategy(
+        VwapFactorResearchConfig(trend_age_min_bars=2, trend_age_max_bars=5)
+    )
+    strategy._session.trend_direction = 1  # noqa: SLF001
+    strategy._session.trend_age_bars = 3  # noqa: SLF001
+
+    assert strategy._factor_filter_passes(  # noqa: SLF001
+        "trend_age", _bar(), Decimal("100"), Decimal("2")
+    )
+
+    strategy._session.trend_age_bars = 1  # noqa: SLF001
+
+    assert not strategy._factor_filter_passes(  # noqa: SLF001
+        "trend_age", _bar(), Decimal("100"), Decimal("2")
+    )
+
+    strategy._session.trend_age_bars = 6  # noqa: SLF001
+
+    assert not strategy._factor_filter_passes(  # noqa: SLF001
+        "trend_age", _bar(), Decimal("100"), Decimal("2")
+    )
+
+    strategy._enter_state(_State.WAIT_REJECTION, PositionSide.SHORT)  # noqa: SLF001
+    strategy._session.trend_direction = -1  # noqa: SLF001
+    strategy._session.trend_age_bars = 3  # noqa: SLF001
+
+    assert strategy._factor_filter_passes(  # noqa: SLF001
+        "trend_age", _bar(), Decimal("100"), Decimal("2")
     )
 
 
@@ -832,6 +900,134 @@ def test_sigma_momentum_entry_sizing_reduces_quantity_for_extended_high_noise_en
     )
 
 
+def test_risk_budget_entry_sizing_uses_stop_distance_and_point_value() -> None:
+    strategy, ctx = initialized_strategy(
+        VwapFactorResearchConfig(
+            entry_size_rule="risk_budget",
+            risk_budget=Decimal("600"),
+            risk_budget_point_value=Decimal("100"),
+            risk_budget_max_quantity=Decimal("4"),
+            stop_atr_multiple=Decimal("1"),
+            target_quantity=Decimal("4"),
+        )
+    )
+
+    strategy._enter_position(  # noqa: SLF001
+        cast(StrategyContext, ctx),
+        _bar(close=Decimal("101"), low=Decimal("99")),
+        Decimal("100"),
+        Decimal("2"),
+    )
+
+    intent = ctx.intents[-1]
+    assert intent[0] == "target_quantity"
+    assert intent[2] == Decimal("3")
+    metadata = intent[3]
+    assert metadata is not None
+    assert metadata["entry_size_rule"] == "risk_budget"
+    assert metadata["entry_quantity"] == "3"
+    assert metadata["risk_budget"] == "600"
+    assert metadata["risk_per_contract"] == "200"
+
+
+def test_risk_budget_entry_sizing_skips_entry_when_budget_is_below_one_contract_risk() -> None:
+    strategy, ctx = initialized_strategy(
+        VwapFactorResearchConfig(
+            entry_size_rule="risk_budget",
+            risk_budget=Decimal("199"),
+            risk_budget_point_value=Decimal("100"),
+            stop_atr_multiple=Decimal("1"),
+            target_quantity=Decimal("4"),
+        )
+    )
+
+    strategy._enter_position(  # noqa: SLF001
+        cast(StrategyContext, ctx),
+        _bar(close=Decimal("101"), low=Decimal("99")),
+        Decimal("100"),
+        Decimal("2"),
+    )
+
+    assert ctx.intents == []
+    assert strategy._state == _State.IDLE  # noqa: SLF001
+    assert strategy._session.entries == 0  # noqa: SLF001
+
+
+def test_partial_runner_reduces_at_first_target_and_keeps_runner_open() -> None:
+    strategy, ctx = initialized_strategy(
+        VwapFactorResearchConfig(
+            target_quantity=Decimal("4"),
+            stop_atr_multiple=Decimal("1"),
+            exit_style="partial_runner",
+            partial_target_r_multiple=Decimal("1"),
+            partial_exit_fraction=Decimal("0.50"),
+            runner_target_r_multiple=Decimal("2.5"),
+            runner_stop_to_breakeven=True,
+        )
+    )
+
+    strategy._enter_position(  # noqa: SLF001
+        cast(StrategyContext, ctx),
+        _bar(close=Decimal("100"), low=Decimal("99")),
+        Decimal("100"),
+        Decimal("2"),
+    )
+
+    strategy._step_entered(  # noqa: SLF001
+        cast(StrategyContext, ctx),
+        _bar(open=Decimal("100"), high=Decimal("102.1"), low=Decimal("99"), close=Decimal("102")),
+        Decimal("100"),
+    )
+
+    assert ctx.intents[-1][0] == "target_quantity"
+    assert ctx.intents[-1][2] == Decimal("2")
+    metadata = ctx.intents[-1][3]
+    assert metadata is not None
+    assert metadata["partial_exit_reason"] == "long_partial_target_r_touched"
+    assert metadata["runner_quantity"] == "2"
+    assert metadata["entry_quantity"] == "4"
+    assert strategy._state == _State.ENTERED  # noqa: SLF001
+    assert strategy._stop_price == Decimal("100")  # noqa: SLF001
+
+
+def test_partial_runner_final_exit_records_runner_diagnostics() -> None:
+    strategy, ctx = initialized_strategy(
+        VwapFactorResearchConfig(
+            target_quantity=Decimal("4"),
+            stop_atr_multiple=Decimal("1"),
+            exit_style="partial_runner",
+            partial_target_r_multiple=Decimal("1"),
+            partial_exit_fraction=Decimal("0.50"),
+            runner_target_r_multiple=Decimal("2.5"),
+        )
+    )
+
+    strategy._enter_position(  # noqa: SLF001
+        cast(StrategyContext, ctx),
+        _bar(close=Decimal("100"), low=Decimal("99")),
+        Decimal("100"),
+        Decimal("2"),
+    )
+    strategy._step_entered(  # noqa: SLF001
+        cast(StrategyContext, ctx),
+        _bar(open=Decimal("100"), high=Decimal("102.1"), low=Decimal("99"), close=Decimal("102")),
+        Decimal("100"),
+    )
+    strategy._step_entered(  # noqa: SLF001
+        cast(StrategyContext, ctx),
+        _bar(open=Decimal("102"), high=Decimal("105.2"), low=Decimal("101"), close=Decimal("105")),
+        Decimal("100"),
+    )
+
+    assert ctx.intents[-1][0] == "close"
+    metadata = ctx.intents[-1][3]
+    assert metadata is not None
+    assert metadata["exit_reason"] == "long_target_r_touched"
+    assert metadata["partial_taken"] == "true"
+    assert metadata["entry_quantity"] == "4"
+    assert metadata["runner_quantity"] == "2"
+
+
 def test_vwap_cross_does_not_exit_when_vwap_cross_exit_is_disabled() -> None:
     strategy, ctx = initialized_strategy(VwapFactorResearchConfig(exit_on_vwap_cross=False))
     strategy._state = _State.ENTERED  # noqa: SLF001
@@ -1037,6 +1233,32 @@ def test_exit_reason_metadata_is_attached_to_close_intent() -> None:
         "stop_price": "98",
         "target_price": "107",
     }
+
+
+def test_exit_metadata_records_trade_level_diagnostics_for_real_entries() -> None:
+    strategy, ctx = initialized_strategy(
+        VwapFactorResearchConfig(stop_atr_multiple=Decimal("1"), target_r_multiple=Decimal("1"))
+    )
+    strategy._enter_position(  # noqa: SLF001
+        cast(StrategyContext, ctx),
+        _bar(close=Decimal("101"), low=Decimal("99")),
+        Decimal("100"),
+        Decimal("2"),
+    )
+
+    strategy._step_entered(  # noqa: SLF001
+        cast(StrategyContext, ctx),
+        _bar(open=Decimal("101"), high=Decimal("103.1"), low=Decimal("100"), close=Decimal("103")),
+        Decimal("100"),
+    )
+
+    metadata = ctx.intents[-1][3]
+    assert metadata is not None
+    assert metadata["exit_reason"] == "long_target_r_touched"
+    assert metadata["entry_quantity"] == "1"
+    assert metadata["entry_bars"] == "1"
+    assert metadata["entry_max_adverse_r"] == "0.5"
+    assert metadata["entry_max_favorable_r"] == "1.05"
 
 
 def initialized_strategy(

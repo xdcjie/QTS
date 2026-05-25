@@ -311,6 +311,7 @@ class ResearchSession:
         *,
         backtest_config_path: str | Path | None = None,
         end: datetime | None = None,
+        materialized_replay_cache_dir: Path | None = None,
         start: datetime | None = None,
         strategy_params: Mapping[str, Any] | None = None,
         output_dir: Path | None = None,
@@ -324,6 +325,8 @@ class ResearchSession:
             if backtest_config_path is not None
             else self._config.backtest_config_path
         )
+        if materialized_replay_cache_dir is not None:
+            pipeline = pipeline.with_materialized_replay_cache(materialized_replay_cache_dir)
         if start is not None and end is not None:
             pipeline = pipeline.with_date_range(start=start, end=end)
         if strategy_params:
@@ -343,6 +346,7 @@ class ResearchSession:
         output_root: Path,
         periods: Sequence[Mapping[str, Any]],
         backtest_config_path: str | Path | None = None,
+        materialized_replay_cache_dir: Path | None = None,
     ) -> tuple[dict[str, Any], ...]:
         """Run a candidate/period backtest matrix through one cached pipeline."""
 
@@ -351,6 +355,10 @@ class ResearchSession:
             if backtest_config_path is not None
             else self._config.backtest_config_path
         )
+        if materialized_replay_cache_dir is not None:
+            base_pipeline = base_pipeline.with_materialized_replay_cache(
+                materialized_replay_cache_dir
+            )
         base_pipeline.catalog()
         rows: list[dict[str, Any]] = []
         for period in periods:
@@ -402,6 +410,7 @@ class ResearchSession:
         parameters: Mapping[str, Sequence[Any]],
         objective_metric: str | None = None,
         output_root: Path | None = None,
+        materialized_replay_cache_dir: Path | None = None,
     ) -> tuple[OptimizationResult, ...]:
         """Run a parameter sweep through ``BacktestPipelineRunner``."""
 
@@ -411,6 +420,7 @@ class ResearchSession:
                 parameter_grid=self.parameter_grid(parameters),
                 output_root=output_root or self._config.output_root / "optimizer",
                 objective_metric=objective_metric or self._config.objective_metric,
+                materialized_replay_cache_dir=materialized_replay_cache_dir,
             )
         )
 
@@ -423,6 +433,7 @@ class ResearchSession:
         capital_metric_config: Mapping[str, Any] | None = None,
         objective_metric: str | None = None,
         output_root: Path | None = None,
+        materialized_replay_cache_dir: Path | None = None,
     ) -> WalkForwardValidationSummary:
         """Rerun selected optimizer candidates across walk-forward windows."""
         results = BacktestWalkForwardValidationRunner().run(
@@ -432,6 +443,7 @@ class ResearchSession:
                 objective_metric=objective_metric or self._config.objective_metric,
                 output_root=output_root or self._config.output_root / "walk-forward",
                 plan=plan,
+                materialized_replay_cache_dir=materialized_replay_cache_dir,
             )
         )
         return WalkForwardValidationSummary.from_results(
@@ -452,6 +464,7 @@ class ResearchSession:
         capital_metric_config: Mapping[str, Any] | None = None,
         objective_metric: str | None = None,
         output_root: Path | None = None,
+        materialized_replay_cache_dir: Path | None = None,
     ) -> FailureWindowVetoSummary:
         """Rerun selected optimizer candidates across failure-veto windows."""
         results = FailureWindowVetoRunner().run(
@@ -462,6 +475,7 @@ class ResearchSession:
                 output_root=output_root or self._config.output_root / "failure-veto",
                 windows=tuple(windows),
                 report_only_windows=tuple(report_only_windows),
+                materialized_replay_cache_dir=materialized_replay_cache_dir,
             )
         )
         return FailureWindowVetoSummary.from_results(

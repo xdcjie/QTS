@@ -20,6 +20,7 @@ import importlib
 import importlib.util
 from collections.abc import Mapping
 from datetime import datetime
+from decimal import Decimal
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -29,20 +30,29 @@ from qts.data.historical.catalog import (
     HistoricalCatalog,
     HistoricalCatalogLoadConfig,
 )
+from qts.data.sources.materialized_replay_cache import materialized_replay_inputs
 from qts.data.sources.replay_market_data_source import (
     ReplayMarketDataBundle,
     ReplayMarketDataSource,
 )
-from qts.runtime.config import BacktestRuntimeConfig
+from qts.runtime.config import BacktestRuntimeConfig, BacktestStrategyConfig
 from qts.strategy_sdk import Strategy
 
 
 class BacktestPipeline:
     """Construct catalog + engine + strategy for a single backtest config."""
 
-    def __init__(self, config: BacktestRuntimeConfig) -> None:
+    def __init__(
+        self,
+        config: BacktestRuntimeConfig,
+        *,
+        materialized_replay_cache_dir: Path | None = None,
+    ) -> None:
         self._config = config
         self._catalog: HistoricalCatalog | None = None
+        self._materialized_replay_cache_dir = (
+            None if materialized_replay_cache_dir is None else Path(materialized_replay_cache_dir)
+        )
 
     @classmethod
     def from_yaml(cls, config_path: Path) -> BacktestPipeline:
@@ -68,16 +78,25 @@ class BacktestPipeline:
         this once per run to obtain a fresh bars iterator and strategy
         instance.
         """
-        inputs = ReplayMarketDataSource(self._config, self.catalog()).build()
-        strategy = self.load_strategy(self._config.strategy_class, self._config.strategy_params)
+        catalog = self.catalog()
+        inputs = ReplayMarketDataSource(self._config, catalog).build()
+        if self._materialized_replay_cache_dir is not None:
+            inputs = materialized_replay_inputs(
+                config=self._config,
+                catalog=catalog,
+                inputs=inputs,
+                cache_dir=self._materialized_replay_cache_dir,
+            )
+        strategies = self.load_strategy_set()
         engine = BacktestEngine.from_config(
             self._config,
             bars=inputs.bars,
-            strategy=strategy,
+            strategies=strategies,
             instrument_registry=inputs.instrument_registry,
             dataset_metadata=inputs.dataset_metadata,
             future_roll_registry=inputs.future_roll_registry,
             exchange_timezone_by_instrument=inputs.exchange_timezone_by_instrument,
+            session_window_by_instrument=inputs.session_window_by_instrument,
             contract_multipliers=inputs.contract_multipliers,
         )
         return engine, inputs
@@ -97,14 +116,28 @@ class BacktestPipeline:
                 self._config,
                 strategy=strategy,
                 strategy_params=merged,
-            )
+            ),
+            materialized_replay_cache_dir=self._materialized_replay_cache_dir,
         )
         sibling._catalog = self._catalog
         return sibling
 
     def with_date_range(self, *, start: datetime, end: datetime) -> BacktestPipeline:
         """Return a sibling pipeline with a different backtest date range."""
-        sibling = BacktestPipeline(dataclasses.replace(self._config, start=start, end=end))
+        sibling = BacktestPipeline(
+            dataclasses.replace(self._config, start=start, end=end),
+            materialized_replay_cache_dir=self._materialized_replay_cache_dir,
+        )
+        sibling._catalog = self._catalog
+        return sibling
+
+    def with_materialized_replay_cache(self, cache_dir: Path | None) -> BacktestPipeline:
+        """Return a sibling pipeline that reuses materialized strategy-facing bars."""
+
+        sibling = BacktestPipeline(
+            self._config,
+            materialized_replay_cache_dir=None if cache_dir is None else Path(cache_dir),
+        )
         sibling._catalog = self._catalog
         return sibling
 
@@ -123,6 +156,35 @@ class BacktestPipeline:
         module = cls._import_strategy_module(module_name)
         strategy_type = cls._strategy_type_from_module(module, class_name)
         return strategy_type(**dict(params))
+
+    def load_strategy_set(self) -> tuple[Strategy, ...]:
+        """Load every strategy instance declared by this backtest config."""
+        return tuple(
+            self.load_strategy(strategy.class_path, strategy.params)
+            for strategy in self._strategy_configs()
+        )
+
+    def _strategy_configs(self) -> tuple[BacktestStrategyConfig, ...]:
+        if self._config.strategies:
+            return self._config.strategies
+        return (
+            BacktestStrategyConfig(
+                class_path=self._config.strategy_class,
+                params=self._config.strategy_params,
+                strategy_id=(
+                    None if self._config.strategy is None else self._config.strategy.strategy_id
+                ),
+                account_id=None
+                if self._config.strategy is None
+                else self._config.strategy.account_id,
+                allocation=(
+                    Decimal("1")
+                    if self._config.strategy is None
+                    else self._config.strategy.allocation
+                ),
+                enabled=True if self._config.strategy is None else self._config.strategy.enabled,
+            ),
+        )
 
     def _catalog_load_config(self) -> HistoricalCatalogLoadConfig:
         market_data = self._config.market_data

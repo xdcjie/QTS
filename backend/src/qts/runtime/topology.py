@@ -311,6 +311,27 @@ class RuntimeTopologyBuilder:
         if not raw_symbols:
             raise ValueError("backtest topology requires at least one instrument")
         subscriptions = tuple(dict.fromkeys(raw_symbols))
+        if config.strategies:
+            strategy_specs = cls._backtest_strategy_specs(
+                config,
+                default_account_id=account_id_value,
+                subscriptions=subscriptions,
+            )
+            strategy_account_ids = {strategy.account_id for strategy in strategy_specs}
+            if len(strategy_account_ids) != 1:
+                raise ValueError("backtest multi-strategy topology requires one account")
+            account_id_value = next(iter(strategy_account_ids)).value
+        else:
+            strategy_specs = (
+                StrategyRuntimeSpec(
+                    strategy_id=strategy_id,
+                    strategy_class=strategy_class,
+                    account_id=AccountId(account_id_value),
+                    subscriptions=subscriptions,
+                    capital_allocation=strategy_allocation,
+                    enabled=strategy_enabled,
+                ),
+            )
         return RuntimeTopology(
             run_id=run_id,
             mode=RuntimeMode.BACKTEST,
@@ -321,16 +342,7 @@ class RuntimeTopologyBuilder:
                     account_environment=AccountEnvironment.SIMULATED,
                 ),
             ),
-            strategies=(
-                StrategyRuntimeSpec(
-                    strategy_id=strategy_id,
-                    strategy_class=strategy_class,
-                    account_id=AccountId(account_id_value),
-                    subscriptions=subscriptions,
-                    capital_allocation=strategy_allocation,
-                    enabled=strategy_enabled,
-                ),
-            ),
+            strategies=strategy_specs,
             broker_routes=(),
             market_data_routes=(
                 MarketDataRouteSpec(
@@ -341,6 +353,34 @@ class RuntimeTopologyBuilder:
                 ),
             ),
         )
+
+    @classmethod
+    def _backtest_strategy_specs(
+        cls,
+        config: BacktestRuntimeConfig,
+        *,
+        default_account_id: str,
+        subscriptions: tuple[InstrumentId, ...],
+    ) -> tuple[StrategyRuntimeSpec, ...]:
+        specs: list[StrategyRuntimeSpec] = []
+        for strategy in config.strategies:
+            strategy_class = strategy.class_path
+            account_id = strategy.account_id or default_account_id
+            specs.append(
+                StrategyRuntimeSpec(
+                    strategy_id=StrategyId(strategy.strategy_id or cls._short_name(strategy_class)),
+                    strategy_class=strategy_class,
+                    account_id=AccountId(account_id),
+                    subscriptions=subscriptions,
+                    capital_allocation=strategy.allocation,
+                    enabled=strategy.enabled,
+                    signal_aggregation_policy=strategy.signal_aggregation_policy,
+                    signal_priority=strategy.signal_priority,
+                    signal_weight=strategy.signal_weight,
+                    conflict_group=strategy.conflict_group,
+                )
+            )
+        return tuple(specs)
 
     @classmethod
     def from_live_config(

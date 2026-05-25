@@ -27,7 +27,13 @@ from qts.runtime.actors.strategy_actor import (
 )
 from qts.runtime.mailbox import Mailbox
 from qts.runtime.signal_policy import SignalAggregationPolicy
-from qts.strategy_sdk import PortfolioView, Strategy, StrategyContext, TargetIntent
+from qts.strategy_sdk import (
+    DataSubscription,
+    PortfolioView,
+    Strategy,
+    StrategyContext,
+    TargetIntent,
+)
 from qts.strategy_sdk.data_view import DataView
 
 PortfolioViewBuilder = Callable[..., PortfolioView]
@@ -101,6 +107,11 @@ class StrategyExecutionPipeline:
         self._signal_weight = Decimal(signal_weight)
         self._conflict_group = conflict_group
         self._history_limit = self._history_limit_from_subscriptions() if prune_history else None
+
+    @property
+    def subscriptions(self) -> tuple[DataSubscription, ...]:
+        """Return market-data subscriptions declared during strategy initialization."""
+        return self._ctx.subscriptions
 
     def execute_bar(
         self,

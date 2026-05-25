@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml  # type: ignore[import-untyped]
@@ -22,6 +23,39 @@ from strategies.research.vwap_factor_research import VwapFactorResearchStrategy
 
 _GC_INSTRUMENT = InstrumentId("FUTURE.CME.GC.GCG6")
 _SI_INSTRUMENT = InstrumentId("FUTURE.CME.SI.SIH6")
+
+
+class _FakeIndicatorFactory:
+    def session_vwap(self, _asset: object) -> object:
+        return object()
+
+    def atr(self, _asset: object, _window: int) -> object:
+        return object()
+
+    def volume_ratio(self, _asset: object, _window: int) -> object:
+        return object()
+
+    def rate_of_change(self, _asset: object, _window: int) -> object:
+        return object()
+
+    def sma(self, _asset: object, _window: int) -> object:
+        return object()
+
+
+class _FakeStrategyContext:
+    def __init__(self) -> None:
+        self.indicator = _FakeIndicatorFactory()
+        self.assets: dict[str, Any] = {}
+        self.subscriptions: list[tuple[str, str, int]] = []
+
+    def symbol(self, symbol: str) -> Any:
+        instrument_id = _GC_INSTRUMENT if symbol == "GC" else _SI_INSTRUMENT
+        asset = type("FakeAsset", (), {"instrument_id": instrument_id, "symbol": symbol})()
+        self.assets[symbol] = asset
+        return asset
+
+    def subscribe(self, asset: Any, *, timeframe: str, warmup: int = 1) -> None:
+        self.subscriptions.append((asset.symbol, timeframe, warmup))
 
 
 def _bar(
@@ -106,6 +140,42 @@ def test_si_strategy_uses_best_stable_production_candidate_parameters() -> None:
 
 def test_production_strategy_does_not_depend_on_research_strategy() -> None:
     assert not issubclass(VwapProductionPullbackStrategy, VwapFactorResearchStrategy)
+
+
+def test_production_strategy_declares_main_bar_timeframe_subscription() -> None:
+    config = VwapProductionPullbackConfig(
+        symbol="GC",
+        timeframe="3m",
+        regime_gate=VwapProductionRegimeGateConfig(rule="off"),
+    )
+    strategy = VwapProductionPullbackStrategy(config)
+    ctx: Any = _FakeStrategyContext()
+
+    strategy.initialize(ctx)
+
+    assert ctx.subscriptions == [("GC", "3m", config.required_warmup_bars)]
+
+
+def test_production_regime_subscriptions_follow_strategy_timeframe_config() -> None:
+    config = VwapProductionPullbackConfig(
+        symbol="GC",
+        timeframe="2m",
+        regime_gate=VwapProductionRegimeGateConfig(
+            symbols=("GC", "SI"),
+            timeframe="15m",
+            lookback_sessions=2,
+            min_history_sessions=2,
+        ),
+    )
+    strategy = VwapProductionPullbackStrategy(config)
+    ctx: Any = _FakeStrategyContext()
+
+    strategy.initialize(ctx)
+
+    assert ctx.subscriptions == [
+        ("GC", "2m", 1382),
+        ("SI", "2m", 1382),
+    ]
 
 
 def test_trailing_gate_blocks_only_after_prior_completed_sessions_are_ready() -> None:
@@ -228,8 +298,8 @@ def test_formal_strategy_configs_point_to_gc_and_si_wrappers() -> None:
     assert si_payload["class_path"] == (
         "strategies.production.vwap_production_pullback:SiVwapProductionPullbackStrategy"
     )
-    assert gc_payload["params"] == {}
-    assert si_payload["params"] == {}
+    assert gc_payload["params"] == {"timeframe": "15m"}
+    assert si_payload["params"] == {"timeframe": "15m"}
 
 
 def test_formal_backtest_configs_feed_gc_and_si_for_online_regime_gate() -> None:
@@ -250,6 +320,7 @@ def test_formal_backtest_configs_feed_gc_and_si_for_online_regime_gate() -> None
         assert payload["end"] == "2026-04-10T00:00:00Z"
         assert payload["timeframe"] == "15m"
         assert payload["strategy_class"] == expected_class
+        assert payload["strategy_params"] == {"timeframe": "15m"}
         assert payload["warmup_bars"] >= 120 * 92
 
 
@@ -269,7 +340,7 @@ def test_formal_paper_example_configs_point_to_gc_and_si_wrappers() -> None:
         assert payload["provider"] == "ibkr"
         assert payload["observe_only"] is True
         assert payload["strategy"]["class_path"] == expected_class
-        assert payload["strategy"]["params"] == {}
+        assert payload["strategy"]["params"] == {"timeframe": "15m"}
         ibkr_config = IbkrEnvironmentConfig.from_yaml(path)
         assert ibkr_config.mode == "paper"
         assert ibkr_config.observe_only is True

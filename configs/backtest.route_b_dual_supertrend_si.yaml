@@ -1,0 +1,41 @@
+market_data:
+  source: local_historical
+  config: configs/data/historical.local.yaml
+  catalog: research_futures
+roots:
+  - SI
+symbols:
+  - SI
+start: "2020-01-01T00:00:00Z"
+end: "2026-04-10T00:00:00Z"
+timeframe: 15m
+initial_cash: "100000"
+strategy_class: examples.strategies.dual_supertrend:DualSupertrendStrategy
+strategy_params:
+  symbol: SI
+  timeframe: 15m
+  allow_short: true
+  base_target_percent: "0.20"
+  max_target_percent: "0.40"
+  use_adx_filter: true
+  min_adx: "18"
+  use_volume_filter: true
+  min_volume_ratio: "1.1"
+  use_atr_position_sizing: true
+  target_atr_fraction: "0.01"
+  use_trading_hours_filter: true
+  trading_hours_timezone: US/Eastern
+  trading_hours_start: "18:00"
+  trading_hours_end: "17:00"
+  stop_atr_multiple: "2.0"
+  trail_atr_multiple: "3.0"
+cost_model:
+  fixed_commission_per_contract: "2.50"
+  slippage_bps: "0.25"
+risk_config:
+  max_notional: "100000000"
+roll_policy:
+  enabled: true
+  method: first_notice_date
+  roll_sessions_before_first_notice: 3
+warmup_bars: 600

@@ -27,9 +27,25 @@ def test_ibkr_style_capability_maps_requested_minutes_to_single_5s_source() -> N
         ),
         capabilities=capabilities,
     )
-    five_minutes = plan_physical_subscription(
+    two_minutes = plan_physical_subscription(
         LogicalSubscription(
             subscriber_id="strategy-b",
+            instrument_id=instrument_id,
+            requested_timeframe="2m",
+        ),
+        capabilities=capabilities,
+    )
+    three_minutes = plan_physical_subscription(
+        LogicalSubscription(
+            subscriber_id="strategy-c",
+            instrument_id=instrument_id,
+            requested_timeframe="3m",
+        ),
+        capabilities=capabilities,
+    )
+    five_minutes = plan_physical_subscription(
+        LogicalSubscription(
+            subscriber_id="strategy-d",
             instrument_id=instrument_id,
             requested_timeframe="5m",
         ),
@@ -43,6 +59,8 @@ def test_ibkr_style_capability_maps_requested_minutes_to_single_5s_source() -> N
         source_timeframe="5s",
     )
     assert one_minute == expected
+    assert two_minutes == expected
+    assert three_minutes == expected
     assert five_minutes == expected
 
 

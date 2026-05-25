@@ -62,9 +62,33 @@ class BacktestConfigLoader:
             else None
         )
 
+        raw_strategies = payload.get("strategies")
+        strategies: tuple[BacktestStrategyConfig, ...] = ()
+        if raw_strategies is not None:
+            if not isinstance(raw_strategies, list | tuple) or not raw_strategies:
+                raise ValueError("strategies must be a non-empty list")
+            parsed_strategies: list[BacktestStrategyConfig] = []
+            for index, raw_strategy in enumerate(raw_strategies):
+                if not isinstance(raw_strategy, dict):
+                    raise ValueError(f"strategies[{index}] must be a mapping")
+                parsed_strategies.append(BacktestStrategyConfig.from_payload(raw_strategy))
+            strategies = tuple(parsed_strategies)
+
         strategy = None
         strategy_class: str
-        if strategy_config_path is not None:
+        if strategies:
+            if (
+                strategy_config_path is not None
+                or "strategy_class" in payload
+                or "strategy_params" in payload
+            ):
+                raise ValueError(
+                    "strategies must not be combined with strategy_config, "
+                    "strategy_class, or strategy_params"
+                )
+            strategy_class = strategies[0].class_path
+            strategy_params = dict(strategies[0].params)
+        elif strategy_config_path is not None:
             if "strategy_class" in payload or "strategy_params" in payload:
                 raise ValueError(
                     "strategy_config must not be combined with strategy_class or strategy_params"
@@ -86,6 +110,7 @@ class BacktestConfigLoader:
             market_data=cls._parse_market_data_reference(payload.get("market_data")),
             strategy_config_path=strategy_config_path,
             strategy=strategy,
+            strategies=strategies,
             strategy_params=cast(dict[str, Any], strategy_params),
             instrument_ids={
                 str(symbol): InstrumentId(str(instrument_id))

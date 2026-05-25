@@ -23,6 +23,11 @@ from qts.research.optimizer import (
     WalkForwardSplit,
     derive_capital_metrics,
 )
+from qts.research.portfolio_ensemble import (
+    evaluate_portfolio_ensemble,
+    scan_portfolio_ensemble_allocations,
+    scan_volatility_managed_allocations,
+)
 from qts.research.report import ResearchWorkflowReport, ResearchWorkflowReportWriter
 
 
@@ -201,12 +206,25 @@ class ResearchWorkflowResult:
 class ResearchWorkflowRunner:
     """Runs research workflow steps through ``ResearchSession`` public APIs."""
 
-    def run(self, session: Any, config: ResearchWorkflowConfig) -> ResearchWorkflowResult:
+    def run(
+        self,
+        session: Any,
+        config: ResearchWorkflowConfig,
+        *,
+        step_id: str | None = None,
+        from_step_id: str | None = None,
+        to_step_id: str | None = None,
+    ) -> ResearchWorkflowResult:
         """Run a workflow until completion or a blocking gate."""
 
         results: list[ResearchWorkflowStepResult] = []
         overall_status = "completed"
-        for step in config.steps:
+        for step in self._selected_steps(
+            config,
+            step_id=step_id,
+            from_step_id=from_step_id,
+            to_step_id=to_step_id,
+        ):
             result = self._run_step(session, config, step, steps=tuple(results))
             results.append(result)
             if result.status != "passed":
@@ -222,6 +240,63 @@ class ResearchWorkflowRunner:
             status=overall_status,
             steps=tuple(results),
         )
+
+    def _selected_steps(
+        self,
+        config: ResearchWorkflowConfig,
+        *,
+        step_id: str | None,
+        from_step_id: str | None,
+        to_step_id: str | None,
+    ) -> tuple[ResearchWorkflowStepConfig, ...]:
+        self._validate_selection(
+            step_id=step_id,
+            from_step_id=from_step_id,
+            to_step_id=to_step_id,
+        )
+        if step_id is None and from_step_id is None and to_step_id is None:
+            return config.steps
+        step_index_by_id = {step.step_id: index for index, step in enumerate(config.steps)}
+        if step_id is not None:
+            return (config.steps[self._step_index(step_index_by_id, step_id)],)
+        start_index = (
+            0 if from_step_id is None else self._step_index(step_index_by_id, from_step_id)
+        )
+        end_index = (
+            len(config.steps) - 1
+            if to_step_id is None
+            else self._step_index(step_index_by_id, to_step_id)
+        )
+        if start_index > end_index:
+            raise ValueError(
+                "workflow step range is empty: "
+                f"{config.steps[start_index].step_id} is after {config.steps[end_index].step_id}"
+            )
+        return config.steps[start_index : end_index + 1]
+
+    @staticmethod
+    def _validate_selection(
+        *,
+        step_id: str | None,
+        from_step_id: str | None,
+        to_step_id: str | None,
+    ) -> None:
+        if step_id is not None and (from_step_id is not None or to_step_id is not None):
+            raise ValueError("--step cannot be combined with --from-step or --to-step")
+        for field_name, value in {
+            "step_id": step_id,
+            "from_step_id": from_step_id,
+            "to_step_id": to_step_id,
+        }.items():
+            if value is not None and not value.strip():
+                raise ValueError(f"{field_name} must not be empty")
+
+    @staticmethod
+    def _step_index(step_index_by_id: Mapping[str, int], step_id: str) -> int:
+        try:
+            return step_index_by_id[step_id]
+        except KeyError as exc:
+            raise ValueError(f"workflow step not found: {step_id}") from exc
 
     def _run_step(
         self,
@@ -248,6 +323,12 @@ class ResearchWorkflowRunner:
                 return self._backtest_matrix(session, config, step)
             if step.kind == "optimize":
                 return self._optimize(session, config, step)
+            if step.kind == "portfolio_ensemble":
+                return self._portfolio_ensemble(config, step)
+            if step.kind == "portfolio_ensemble_scan":
+                return self._portfolio_ensemble_scan(config, step)
+            if step.kind == "portfolio_volatility_managed_scan":
+                return self._portfolio_volatility_managed_scan(config, step)
             if step.kind == "research_report":
                 return self._research_report(config, steps, step)
         except Exception as exc:  # pragma: no cover - exercised by CLI integration.
@@ -428,6 +509,151 @@ class ResearchWorkflowRunner:
             outputs={"report_path": str(report_path)},
         )
 
+    def _portfolio_ensemble(
+        self,
+        config: ResearchWorkflowConfig,
+        step: ResearchWorkflowStepConfig,
+    ) -> ResearchWorkflowStepResult:
+        payload = dict(step.payload)
+        raw_legs = payload.get("legs")
+        if not isinstance(raw_legs, list):
+            raise ValueError("portfolio_ensemble.legs must be a non-empty list")
+        resolved_legs: list[dict[str, Any]] = []
+        for index, raw_leg in enumerate(raw_legs):
+            if not isinstance(raw_leg, Mapping):
+                raise ValueError(f"portfolio_ensemble.legs[{index}] must be a mapping")
+            leg_payload = dict(raw_leg)
+            leg_payload["manifest_path"] = str(
+                config.resolve_path(_required_text(leg_payload, "manifest_path"))
+            )
+            resolved_legs.append(leg_payload)
+        payload["legs"] = resolved_legs
+        result = evaluate_portfolio_ensemble(payload)
+        summary_output = step.payload.get("summary_output")
+        summary_path = (
+            config.resolve_path(str(summary_output))
+            if summary_output is not None
+            else config.workflow_config_path.parent
+            / f"{result['allocation_name']}-portfolio-ensemble-summary.json"
+        )
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_path.write_text(
+            json.dumps(_json_ready(result), sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        return ResearchWorkflowStepResult(
+            step_id=step.step_id,
+            kind=step.kind,
+            status="passed",
+            message="portfolio ensemble research summary written",
+            outputs={
+                "allocation_name": result["allocation_name"],
+                "leg_count": result["leg_count"],
+                "point_count": result["point_count"],
+                "research_only": result["research_only"],
+                "summary_path": str(summary_path),
+            },
+        )
+
+    def _portfolio_ensemble_scan(
+        self,
+        config: ResearchWorkflowConfig,
+        step: ResearchWorkflowStepConfig,
+    ) -> ResearchWorkflowStepResult:
+        payload = dict(step.payload)
+        payload["candidates"] = self._resolved_period_manifest_candidates(
+            config,
+            step,
+            kind_name="portfolio_ensemble_scan",
+        )
+        result = scan_portfolio_ensemble_allocations(payload)
+        summary_output = step.payload.get("summary_output")
+        summary_path = (
+            config.resolve_path(str(summary_output))
+            if summary_output is not None
+            else config.workflow_config_path.parent
+            / f"{result['scan_name']}-portfolio-ensemble-scan-summary.json"
+        )
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_path.write_text(
+            json.dumps(_json_ready(result), sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        return ResearchWorkflowStepResult(
+            step_id=step.step_id,
+            kind=step.kind,
+            status="passed",
+            message="portfolio ensemble allocation scan written",
+            outputs={
+                "candidate_count": result["candidate_count"],
+                "evaluated_allocation_count": result["evaluated_allocation_count"],
+                "satisfying_allocation_count": result["satisfying_allocation_count"],
+                "summary_path": str(summary_path),
+            },
+        )
+
+    def _portfolio_volatility_managed_scan(
+        self,
+        config: ResearchWorkflowConfig,
+        step: ResearchWorkflowStepConfig,
+    ) -> ResearchWorkflowStepResult:
+        payload = dict(step.payload)
+        payload["candidates"] = self._resolved_period_manifest_candidates(
+            config,
+            step,
+            kind_name="portfolio_volatility_managed_scan",
+        )
+        result = scan_volatility_managed_allocations(payload)
+        summary_output = step.payload.get("summary_output")
+        summary_path = (
+            config.resolve_path(str(summary_output))
+            if summary_output is not None
+            else config.workflow_config_path.parent
+            / f"{result['scan_name']}-portfolio-volatility-managed-summary.json"
+        )
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_path.write_text(
+            json.dumps(_json_ready(result), sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        return ResearchWorkflowStepResult(
+            step_id=step.step_id,
+            kind=step.kind,
+            status="passed",
+            message="portfolio volatility managed allocation scan written",
+            outputs={
+                "candidate_count": result["candidate_count"],
+                "evaluated_parameter_count": result["evaluated_parameter_count"],
+                "satisfying_allocation_count": result["satisfying_allocation_count"],
+                "summary_path": str(summary_path),
+            },
+        )
+
+    def _resolved_period_manifest_candidates(
+        self,
+        config: ResearchWorkflowConfig,
+        step: ResearchWorkflowStepConfig,
+        *,
+        kind_name: str,
+    ) -> list[dict[str, Any]]:
+        raw_candidates = step.payload.get("candidates")
+        if not isinstance(raw_candidates, list):
+            raise ValueError(f"{kind_name}.candidates must be a non-empty list")
+        resolved_candidates: list[dict[str, Any]] = []
+        for index, raw_candidate in enumerate(raw_candidates):
+            if not isinstance(raw_candidate, Mapping):
+                raise ValueError(f"{kind_name}.candidates[{index}] must be a mapping")
+            candidate_payload = dict(raw_candidate)
+            raw_manifests = candidate_payload.get("period_manifests")
+            if not isinstance(raw_manifests, Mapping):
+                raise ValueError(f"{kind_name}.candidate.period_manifests is required")
+            candidate_payload["period_manifests"] = {
+                str(period): str(config.resolve_path(str(path)))
+                for period, path in raw_manifests.items()
+            }
+            resolved_candidates.append(candidate_payload)
+        return resolved_candidates
+
     def _factor_tearsheet(
         self,
         session: Any,
@@ -486,6 +712,9 @@ class ResearchWorkflowRunner:
         output_dir = step.payload.get("output_dir")
         if output_dir is not None:
             kwargs["output_dir"] = config.resolve_path(str(output_dir))
+        materialized_cache_dir = self._materialized_replay_cache_dir(config, step.payload)
+        if materialized_cache_dir is not None:
+            kwargs["materialized_replay_cache_dir"] = materialized_cache_dir
         result = session.run_backtest(**kwargs)
         return ResearchWorkflowStepResult(
             step_id=step.step_id,
@@ -533,6 +762,9 @@ class ResearchWorkflowRunner:
         backtest_config = step.payload.get("backtest_config")
         if backtest_config is not None:
             kwargs["backtest_config_path"] = config.resolve_path(str(backtest_config))
+        materialized_cache_dir = self._materialized_replay_cache_dir(config, step.payload)
+        if materialized_cache_dir is not None:
+            kwargs["materialized_replay_cache_dir"] = materialized_cache_dir
         rows = list(session.run_backtest_matrix(**kwargs))
         summary_payload = {
             "candidate_count": len(candidates),
@@ -583,6 +815,9 @@ class ResearchWorkflowRunner:
         output_root = step.payload.get("output_root")
         if output_root is not None:
             kwargs["output_root"] = config.resolve_path(str(output_root))
+        materialized_cache_dir = self._materialized_replay_cache_dir(config, step.payload)
+        if materialized_cache_dir is not None:
+            kwargs["materialized_replay_cache_dir"] = materialized_cache_dir
         results = session.optimize(**kwargs)
         capital_metric_config = self._optional_mapping(step.payload.get("capital_metrics"))
         constraints = self._validation_constraints(step.payload.get("validation"))
@@ -621,6 +856,7 @@ class ResearchWorkflowRunner:
                     else config.resolve_path(str(walk_forward_output_root))
                 ),
                 plan=plan,
+                materialized_replay_cache_dir=materialized_cache_dir,
             )
             walk_forward_summary_payload = walk_forward_summary.to_payload()
             robustness_policy = self._walk_forward_robustness_policy(
@@ -674,6 +910,7 @@ class ResearchWorkflowRunner:
                     field_name="report_only_windows",
                     report_only=True,
                 ),
+                materialized_replay_cache_dir=materialized_cache_dir,
             )
             failure_veto_summary_payload = failure_veto_summary.to_payload()
             raw_failure_veto_output = failure_veto_payload.get("summary_output")
@@ -752,6 +989,27 @@ class ResearchWorkflowRunner:
             raw_constraints,
             field_name="validation.constraints",
         )
+
+    def _materialized_replay_cache_dir(
+        self,
+        config: ResearchWorkflowConfig,
+        payload: Mapping[str, Any],
+    ) -> Path | None:
+        value = payload.get("materialized_replay_cache")
+        if value is None or value is False:
+            return None
+        if isinstance(value, str):
+            if not value.strip():
+                raise ValueError("materialized_replay_cache must not be empty")
+            return config.resolve_path(value)
+        if isinstance(value, Mapping):
+            if not bool(value.get("enabled", False)):
+                return None
+            raw_cache_dir = value.get("cache_dir")
+            if not isinstance(raw_cache_dir, str) or not raw_cache_dir.strip():
+                raise ValueError("materialized_replay_cache.cache_dir is required")
+            return config.resolve_path(raw_cache_dir)
+        raise ValueError("materialized_replay_cache must be a path or mapping")
 
     def _metric_constraints_from_sequence(
         self,
@@ -1055,6 +1313,9 @@ _ALLOWED_STEP_KINDS = frozenset(
         "factor_tearsheet",
         "implementation_gate",
         "optimize",
+        "portfolio_ensemble",
+        "portfolio_ensemble_scan",
+        "portfolio_volatility_managed_scan",
         "research_report",
     }
 )

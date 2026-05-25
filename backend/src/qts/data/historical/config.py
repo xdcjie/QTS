@@ -8,6 +8,7 @@ from pathlib import Path
 
 from qts.data.capabilities import MarketDataFeedCapabilities
 from qts.data.historical.csv_format import DEFAULT_HISTORICAL_CSV_SCHEMA, HistoricalCsvSchema
+from qts.data.sessions import RegularSessionWindow
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,6 +89,7 @@ class HistoricalBarFileConfig:
     exchange_timezone: str | None = None
     timezone_policy: str | None = None
     normalization: str | None = None
+    session_window: RegularSessionWindow | None = None
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""
@@ -173,6 +175,7 @@ class HistoricalDatasetLocation:
     normalization: str
     schema_name: str | None
     csv_schema: HistoricalCsvSchema
+    session_window: RegularSessionWindow | None
     bar: HistoricalBarFileConfig
     dataset: HistoricalDatasetConfig
     store: HistoricalDataStoreConfig
@@ -265,6 +268,7 @@ class HistoricalMarketDataConfig:
             normalization=bar.normalization or store.defaults.normalization,
             schema_name=schema_name,
             csv_schema=self._csv_schema(schema_name),
+            session_window=bar.session_window,
             bar=bar,
             dataset=dataset,
             store=store,

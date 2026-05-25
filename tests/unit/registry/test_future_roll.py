@@ -160,6 +160,7 @@ def test_future_roll_registry_resolves_continuous_id_to_selected_contract() -> N
     assert registry.resolve_contract(continuous_id, as_of=t1) == second
     assert registry.related_contracts(continuous_id) == (first, second)
     assert registry.execution_price(continuous_id, first, as_of=t1) == Decimal("1220.3")
+    assert registry.selection_history(continuous_id)[-1].concrete_instrument_id == second
 
 
 def test_future_roll_registry_can_retain_only_latest_selection_for_streaming() -> None:

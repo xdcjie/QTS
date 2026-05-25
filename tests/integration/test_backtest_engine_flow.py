@@ -63,6 +63,89 @@ def test_backtest_engine_runs_strategy_through_execution_flow(tmp_path: Path) ->
     assert result.processed_bars == 2
 
 
+def test_backtest_engine_runs_multi_strategy_config_through_shared_aggregation(
+    tmp_path: Path,
+) -> None:
+    from qts.backtest.engine import BacktestEngine
+    from qts.core.ids import AccountId, InstrumentId
+    from qts.runtime.config import (
+        BacktestMarketDataReference,
+        BacktestRuntimeConfig,
+        BacktestStrategyConfig,
+    )
+    from qts.strategy_sdk import Strategy
+
+    class FixedTargetStrategy(Strategy):
+        def __init__(self, quantity: Decimal) -> None:
+            self.quantity = quantity
+
+        def initialize(self, ctx: Any) -> None:
+            self.asset = ctx.symbol("AAPL")
+
+        def on_bar(self, ctx: Any, bar: object) -> None:
+            ctx.target_quantity(self.asset, self.quantity)
+
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    runtime_config = BacktestRuntimeConfig(
+        roots=("AAPL",),
+        symbols=("AAPL",),
+        start=start,
+        end=start + timedelta(minutes=1),
+        timeframe="1m",
+        initial_cash=Decimal("10000"),
+        instrument_ids={"AAPL": InstrumentId("EQUITY.US.NASDAQ.AAPL")},
+        market_data=BacktestMarketDataReference(
+            config_path=tmp_path / "historical.yaml",
+            catalog="unit",
+        ),
+        strategies=(
+            BacktestStrategyConfig(
+                strategy_id="strat-a",
+                class_path="tests.FixedTargetStrategy",
+                account_id="acct-backtest",
+                signal_aggregation_policy="weighted_net",
+                signal_weight=Decimal("0.50"),
+            ),
+            BacktestStrategyConfig(
+                strategy_id="strat-b",
+                class_path="tests.FixedTargetStrategy",
+                account_id="acct-backtest",
+                signal_aggregation_policy="weighted_net",
+                signal_weight=Decimal("0.50"),
+            ),
+        ),
+    )
+
+    captured = run_engine_streaming(
+        BacktestEngine(
+            strategies=(
+                FixedTargetStrategy(Decimal("10")),
+                FixedTargetStrategy(Decimal("20")),
+            ),
+            bars=[_bar(start, "100")],
+            initial_cash=Decimal("10000"),
+            backtest_runtime_config=runtime_config,
+        ),
+        tmp_path / "multi-strategy-aggregation",
+    )
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    assert captured.result.final_account.positions[instrument_id].quantity == Decimal("15")
+    assert captured.result.final_account.cash["USD"] == Decimal("8500.00")
+    assert captured.manifest["runtime_topology"]["strategy_count"] == 2
+
+    signal_event = next(
+        event for event in captured.events if event["kind"] == "runtime.signal_aggregated"
+    )
+    order_event = next(
+        event for event in captured.events if event["kind"] == "runtime.order_submitted"
+    )
+    assert signal_event["payload"]["contributing_strategy_ids"] == ["strat-a", "strat-b"]
+    assert signal_event["payload"]["target_after_aggregation"] == "15.00"
+    assert order_event["payload"]["contributing_strategy_ids"] == ["strat-a", "strat-b"]
+    assert order_event["account_id"] == AccountId("acct-backtest").value
+
+
 def test_backtest_engine_target_intents_must_pass_pre_trade_risk_before_order_manager(
     tmp_path: Path,
 ) -> None:
@@ -286,3 +369,86 @@ def test_backtest_engine_streams_source_bars_through_market_data_actor(
     assert result.trading_bars == 1
     assert Decimal(captured.fills[0]["price"]) == Decimal("104")
     assert datetime.fromisoformat(captured.trade_ledger[0]["source_bar_time"]) == start
+
+
+def test_backtest_engine_supports_two_minute_target_timeframe(
+    tmp_path: Path,
+) -> None:
+    from qts.backtest.engine import BacktestEngine
+    from qts.core.ids import InstrumentId
+    from qts.strategy_sdk import Strategy
+
+    class BuyOnceStrategy(Strategy):
+        def initialize(self, ctx: Any) -> None:
+            self.asset = ctx.symbol("AAPL")
+            self.has_ordered = False
+
+        def on_bar(self, ctx: Any, bar: object) -> None:
+            assert isinstance(bar, Bar)
+            assert bar.timeframe == "2m"
+            assert ctx.data.close(self.asset) == Decimal("101")
+            if not self.has_ordered:
+                ctx.target_quantity(self.asset, Decimal("1"))
+                self.has_ordered = True
+
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    source_bars = [_bar(start, "100"), _bar(start + timedelta(minutes=1), "101")]
+
+    captured = run_engine_streaming(
+        BacktestEngine(
+            strategy=BuyOnceStrategy(),
+            bars=source_bars,
+            initial_cash=Decimal("10000"),
+            target_timeframe="2m",
+            exchange_timezone_by_instrument={instrument_id: UTC},
+        ),
+        tmp_path / "two-minute-market-data",
+    )
+    result = captured.result
+
+    assert result.processed_bars == 1
+    assert result.trading_bars == 1
+    assert Decimal(captured.fills[0]["price"]) == Decimal("101")
+
+
+def test_backtest_engine_uses_strategy_subscription_timeframe_over_config_target(
+    tmp_path: Path,
+) -> None:
+    from qts.backtest.engine import BacktestEngine
+    from qts.core.ids import InstrumentId
+    from qts.strategy_sdk import Strategy
+
+    class SubscribedTimeframeStrategy(Strategy):
+        def initialize(self, ctx: Any) -> None:
+            self.asset = ctx.symbol("AAPL")
+            self.has_ordered = False
+            ctx.subscribe(self.asset, timeframe="2m", warmup=1)
+
+        def on_bar(self, ctx: Any, bar: object) -> None:
+            assert isinstance(bar, Bar)
+            assert bar.timeframe == "2m"
+            assert ctx.data.close(self.asset) == Decimal("101")
+            if not self.has_ordered:
+                ctx.target_quantity(self.asset, Decimal("1"))
+                self.has_ordered = True
+
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    source_bars = [_bar(start, "100"), _bar(start + timedelta(minutes=1), "101")]
+
+    captured = run_engine_streaming(
+        BacktestEngine(
+            strategy=SubscribedTimeframeStrategy(),
+            bars=source_bars,
+            initial_cash=Decimal("10000"),
+            target_timeframe="1m",
+            exchange_timezone_by_instrument={instrument_id: UTC},
+        ),
+        tmp_path / "strategy-subscription-timeframe",
+    )
+    result = captured.result
+
+    assert result.processed_bars == 1
+    assert result.trading_bars == 1
+    assert Decimal(captured.fills[0]["price"]) == Decimal("101")

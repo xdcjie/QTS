@@ -32,10 +32,17 @@ class BacktestPipelineJob:
     parameter_grid: ParameterGrid
     output_root: Path
     objective_metric: str = "sharpe_ratio"
+    materialized_replay_cache_dir: Path | None = None
 
     def __post_init__(self) -> None:
         if not self.objective_metric.strip():
             raise ValueError("objective_metric must not be empty")
+        if self.materialized_replay_cache_dir is not None:
+            object.__setattr__(
+                self,
+                "materialized_replay_cache_dir",
+                Path(self.materialized_replay_cache_dir),
+            )
         if not self.base_config_path.exists():
             raise FileNotFoundError(f"base backtest config not found: {self.base_config_path}")
 
@@ -47,6 +54,10 @@ class BacktestPipelineRunner:
         """Run every combination and return ranked results."""
         job.output_root.mkdir(parents=True, exist_ok=True)
         base_pipeline = BacktestPipeline.from_yaml(job.base_config_path)
+        if job.materialized_replay_cache_dir is not None:
+            base_pipeline = base_pipeline.with_materialized_replay_cache(
+                job.materialized_replay_cache_dir
+            )
         base_pipeline.catalog()  # warm the cached catalog before the loop
         results: list[OptimizationResult] = []
         for index, combination in enumerate(job.parameter_grid):

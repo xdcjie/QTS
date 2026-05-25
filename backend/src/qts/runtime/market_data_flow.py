@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import tzinfo
 
 from qts.core.ids import InstrumentId
 from qts.data.permissions import MarketDataPermissionEvent, MarketDataPermissionState
 from qts.data.provenance import ReplayDataAnomalyEvent, ReplayDataAnomalyType
+from qts.data.sessions import RegularSessionWindow
 from qts.data.sources.streaming_market_data_source import (
     StreamingMarketDataDegradation,
     StreamingMarketDataSubscriptionEvent,
@@ -37,14 +39,18 @@ class MarketDataFlow:
         self,
         *,
         target_timeframe: str | None,
-        exchange_timezone_by_instrument: dict[InstrumentId, str | tzinfo],
+        exchange_timezone_by_instrument: Mapping[InstrumentId, str | tzinfo],
+        session_window_by_instrument: Mapping[InstrumentId, RegularSessionWindow] | None = None,
     ) -> None:
         """Create runtime flow state for market data actor fan-out."""
         self._target_timeframe = target_timeframe
         self._exchange_timezone_by_instrument = dict(exchange_timezone_by_instrument)
+        self._session_window_by_instrument = dict(session_window_by_instrument or {})
         self._mailbox = Mailbox()
         self._subscriber = ActorRef(mailbox=self._mailbox)
-        self._refs: dict[tuple[str | None, str | tzinfo | None], ActorRef] = {}
+        self._refs: dict[
+            tuple[str | None, str | tzinfo | None, RegularSessionWindow | None], ActorRef
+        ] = {}
         self._permission_context = MarketDataRiskContext()
         self._stale_context_by_instrument: dict[InstrumentId, MarketDataRiskContext] = {}
 
@@ -112,6 +118,7 @@ class MarketDataFlow:
         """Return the actor ref responsible for this bar's aggregation shape."""
         aggregate_timeframe = None
         exchange_timezone: str | tzinfo | None = None
+        session_window: RegularSessionWindow | None = None
         if self._target_timeframe is not None and bar.timeframe != self._target_timeframe:
             aggregate_timeframe = self._target_timeframe
             try:
@@ -121,7 +128,8 @@ class MarketDataFlow:
                     f"exchange timezone is required to aggregate {bar.instrument_id} "
                     f"from {bar.timeframe} to {self._target_timeframe}"
                 ) from exc
-        key = (aggregate_timeframe, exchange_timezone)
+            session_window = self._session_window_by_instrument.get(bar.instrument_id)
+        key = (aggregate_timeframe, exchange_timezone, session_window)
         ref = self._refs.get(key)
         if ref is None:
             ref = ActorRef(
@@ -129,6 +137,7 @@ class MarketDataFlow:
                     subscribers=(self._subscriber,),
                     aggregate_timeframe=aggregate_timeframe,
                     exchange_timezone=exchange_timezone,
+                    session_window=session_window,
                 ),
                 mailbox=Mailbox(),
             )

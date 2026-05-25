@@ -12,6 +12,7 @@ from qts.data.historical.config import HistoricalDatasetConfig, HistoricalMarket
 from qts.data.historical.csv_dataset import CsvDatasetDescription, describe_csv_dataset
 from qts.data.historical.csv_format import DEFAULT_HISTORICAL_CSV_SCHEMA, HistoricalCsvSchema
 from qts.data.historical.symbols import HistoricalFutureChainSymbolResolver
+from qts.data.sessions import RegularSessionWindow
 from qts.registry.symbol_resolution import SourceSymbolResolver, StaticSymbolResolver
 
 
@@ -27,6 +28,7 @@ class HistoricalDataset:
     dataset: CsvDatasetDescription
     source_timeframe: str | None = None
     exchange_timezone: str | None = None
+    session_window: RegularSessionWindow | None = None
     timezone_policy: str = "source_utc_exchange_sessions"
     normalization: str = "raw"
     csv_schema: HistoricalCsvSchema = DEFAULT_HISTORICAL_CSV_SCHEMA
@@ -117,6 +119,7 @@ class HistoricalCatalog:
                 source_timeframe=location.source_timeframe,
                 exchange_timezone=location.exchange_timezone
                 or (chain.timezone if chain is not None else None),
+                session_window=location.session_window,
                 timezone_policy=location.timezone_policy,
                 normalization=location.normalization,
                 csv_schema=location.csv_schema,

@@ -23,11 +23,11 @@ steps:
     backtest_config: ../../backtest.vwap_production_pullback_gc.yaml
     output_dir: ../../../runs/research/vwap/baseline
 
-  - id: factor-search
+  - id: structural-candidates
     kind: optimize
     objective_metric: sharpe_ratio
-    output_root: ../../../runs/research/vwap/factor-search
-    validation_output: ../../../runs/research/vwap/validation/factor-search.json
+    output_root: ../../../runs/research/vwap/structural-candidates
+    validation_output: ../../../runs/research/vwap/validation/structural-candidates.json
     capital_metrics:
       margin_proxy: "12000"
     validation:
@@ -44,112 +44,1371 @@ steps:
         - metric: sharpe_ratio
           operator: ">="
           threshold: "0"
+      failure_window_veto:
+        top_n: 2
+        require_passing_candidate: false
+        output_root: ../../../runs/research/vwap/structural-candidates/failure-veto
+        summary_output: ../../../runs/research/vwap/validation/structural-candidates-failure-veto.json
+        windows:
+          - name: failure-2022
+            start: 2022-01-01
+            end: 2023-01-01
+          - name: failure-2023
+            start: 2023-01-01
+            end: 2024-01-01
+          - name: failure-2024
+            start: 2024-01-01
+            end: 2025-01-01
+        report_only_windows:
+          - name: report-known-2025
+            start: 2025-01-01
+            end: 2026-01-01
+          - name: true-oos-after-2026-01-01
+            start: 2026-01-01
+            end: 2027-01-01
+        constraints:
+          - metric: pnl_usd
+            operator: ">"
+            threshold: "0"
+          - metric: max_drawdown
+            operator: "<="
+            threshold: "0.05"
     parameters:
-      time_window: [evening_18_22]
-      target_quantity: ["3", "4"]
-      min_volume_ratio: ["1.2", "1.3"]
+      time_window: [full_session]
+      timeframe: [1m, 2m, 3m, 5m, 15m]
+      entry_size_rule: [risk_budget]
+      risk_budget: ["600"]
+      risk_budget_point_value: ["100"]
+      risk_budget_min_quantity: ["1"]
+      risk_budget_max_quantity: ["4"]
+      factor_filters:
+        - [vwap_acceptance, trend_efficiency, trend_age, session_sigma_range]
+        - [vwap_slope_strength, vwap_acceptance, trend_efficiency, trend_age, session_sigma_range]
+      trend_efficiency_lookback: [20]
+      trend_efficiency_min: ["0.60"]
+      trend_age_min_bars: [4]
+      trend_age_max_bars: [80]
+      vwap_acceptance_window: [20]
+      vwap_acceptance_min: ["0.70"]
+      min_session_open_minutes: [0]
+      min_volume_ratio: ["1.3"]
       pullback_touch_atr_below: ["0.15"]
       max_pullback_break_atr: ["1.0"]
       stop_atr_multiple: ["1.0"]
-      target_r_multiple: ["2.0"]
-      factor_filters:
-        - []
-        - [distance_mid]
-        - [vwap_slope_strength]
-        - [atr_pct_range]
-        - [session_sigma_range]
-        - [rth_drive_min_atr]
-        - [trend_regime_aligned]
-        - [rsi_mid]
-        - [mfi_mid]
-        - [volume_curve_range]
-        - [adx_aligned]
-        - [macd_aligned]
-        - [roc_aligned]
-        - [mom60_aligned]
-        - [mom120_aligned]
-        - [ma20_80_aligned]
-        - [technical_score_min]
-        - [bollinger_inside]
-        - [donchian_half_aligned]
-        - [keltner_inside]
-        - [cmf_aligned]
-        - [volume_curve_range, adx_aligned]
-        - [volume_curve_range, macd_aligned]
-        - [volume_curve_range, rsi_mid]
-        - [volume_curve_range, cmf_aligned]
-        - [adx_aligned, mom120_aligned]
-        - [mom120_min, volume_curve_range]
-        - [vwap_slope_strength, mom120_aligned]
-        - [vwap_slope_strength, volume_curve_range]
-        - [atr_pct_range, mom120_aligned]
-        - [session_sigma_range, mom120_aligned]
-        - [rth_drive_min_atr, mom120_aligned]
-        - [trend_regime_aligned, atr_pct_range]
-        - [trend_regime_aligned, session_sigma_range]
+      exit_style: [partial_runner]
+      partial_target_r_multiple: ["1.0"]
+      partial_exit_fraction: ["0.50"]
+      runner_target_r_multiple: ["2.5"]
+      runner_stop_to_breakeven: [true]
 
-  - id: risk-reward
-    kind: optimize
-    objective_metric: sharpe_ratio
-    output_root: ../../../runs/research/vwap/risk-reward
-    validation_output: ../../../runs/research/vwap/validation/risk-reward.json
-    capital_metrics:
-      margin_proxy: "12000"
-    validation:
-      constraints:
-        - metric: total_trades
-          operator: ">="
-          threshold: "3"
-        - metric: pnl_usd
-          operator: ">"
-          threshold: "0"
-        - metric: max_drawdown
-          operator: "<="
-          threshold: "0.05"
-        - metric: sharpe_ratio
-          operator: ">="
-          threshold: "0"
-      walk_forward:
-        top_n: 3
-        output_root: ../../../runs/research/vwap/walk-forward/risk-reward
-        summary_output: ../../../runs/research/vwap/validation/risk-reward-walk-forward.json
-        robustness:
-          phases: [test]
-          min_windows: 3
-          max_losing_windows: 0
-          min_window_pnl_usd: "0"
-          min_window_best_objective: "0"
-          min_total_pnl_usd: "1"
-        splits:
-          - name: regime-2024-summer-to-q4
-            train_start: 2024-07-01
-            train_end: 2024-09-01
-            test_start: 2024-10-01
-            test_end: 2024-12-01
-          - name: regime-2025-q1-to-summer
-            train_start: 2025-01-01
-            train_end: 2025-03-01
-            test_start: 2025-06-01
-            test_end: 2025-08-01
-          - name: regime-2025-late-summer-to-winter
-            train_start: 2025-08-01
-            train_end: 2025-10-01
-            test_start: 2025-11-01
-            test_end: 2026-01-01
-    parameters:
-      time_window: [evening_18_22]
-      target_quantity: ["3", "4"]
-      factor_filters:
-        - [session_sigma_range, mom120_aligned]
-        - [session_sigma_range, mom120_aligned, volume_curve_range]
-      min_session_open_minutes: [0, 30]
-      min_volume_ratio: ["1.1", "1.2", "1.3"]
-      pullback_touch_atr_below: ["0.1", "0.15", "0.2"]
-      max_pullback_break_atr: ["1.0"]
-      stop_atr_multiple: ["0.8", "1.0", "1.2"]
-      target_r_multiple: ["1.5", "2.0"]
+  - id: gc-15m-stable-annualized-scale
+    kind: backtest_matrix
+    backtest_config: ../../backtest.vwap_factor_research_gc_15m_long_is.yaml
+    output_root: ../../../runs/research/vwap/gc-15m-long/stable-annualized-scale
+    summary_output: ../../../runs/research/vwap/gc-15m-long/validation/stable-annualized-scale.json
+    metrics: [compounding_annual_return, total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor]
+    periods:
+      - {name: selection_2022_2024, start: "2022-01-01", end: "2025-01-01"}
+      - {name: report_2025_to_20260410, start: "2025-01-01", end: "2026-04-10"}
+      - {name: true_oos_after_2026_01_01, start: "2026-01-01", end: "2027-01-01"}
+    base_strategy_params:
+      symbol: GC
+      timeframe: 15m
+      time_window: asia_20_02
+      min_volume_ratio: "1.3"
+      pullback_touch_atr_below: "0.15"
+      max_pullback_break_atr: "1.0"
+      stop_atr_multiple: "1.0"
+      target_r_multiple: "1.5"
+      bad_regime_rule: hard14
+      bad_regime_target_r_multiple: "1.5"
+      bad_regime_unready_policy: allow
+      early_no_progress_exit_bars: 4
+      early_no_progress_adverse_r: "0.50"
+      early_no_progress_favorable_r: "0.25"
+      entry_size_rule: sigma_momentum_reduce
+      entry_size_session_sigma_min_atr: "1.00"
+      entry_size_momentum_min_abs: "2.00"
+      entry_size_reduced_quantity: "1"
+      factor_filters: [session_sigma_range, mom120_aligned, mom120_min, vwap_acceptance_if_bad_regime, range_expansion]
+      range_expansion_min: "0"
+      range_expansion_max: "1.50"
+      ts_momentum_min_abs: "1.00"
+      vwap_acceptance_min: "0.75"
+    candidates:
+      - name: q1_np4_range150_mom100_q4
+        strategy_params: {target_quantity: "4"}
+      - name: q1_np4_range150_mom100_q6
+        strategy_params: {target_quantity: "6"}
+      - name: q1_np4_range150_mom100_q8
+        strategy_params: {target_quantity: "8"}
+      - name: q1_np4_range150_mom100_q10
+        strategy_params: {target_quantity: "10"}
+      - name: q1_np4_range150_mom100_q12
+        strategy_params: {target_quantity: "12"}
 
   - id: report
     kind: research_report
     output_root: ../../../runs/research/vwap/reports
     output_path: vwap-factor-search-report.md
+
+  - id: route-b-implementation
+    kind: implementation_gate
+    required_strategy: examples.strategies.dual_supertrend:DualSupertrendStrategy
+
+  - id: route-b-vwap-gc-rolling
+    kind: backtest_matrix
+    backtest_config: ../../backtest.vwap_factor_research_gc_15m_long_is.yaml
+    output_root: ../../../runs/research/vwap/route-b/vwap-gc-rolling
+    summary_output: ../../../runs/research/vwap/route-b/vwap-gc-rolling-summary.json
+    metrics: [compounding_annual_return, total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor, total_commission, total_slippage]
+    periods:
+      - {name: is_2020_2022, start: "2020-01-01", end: "2022-01-01"}
+      - {name: validation_2022_2024, start: "2022-01-01", end: "2024-01-01"}
+      - {name: holdout_2024_2026, start: "2024-01-01", end: "2026-04-10"}
+      - {name: anchor_2010_2020, start: "2010-06-06", end: "2020-01-01"}
+    base_strategy_params:
+      symbol: GC
+      timeframe: 15m
+      time_window: asia_20_02
+      target_quantity: "4"
+      min_volume_ratio: "1.3"
+      pullback_touch_atr_below: "0.15"
+      max_pullback_break_atr: "1.0"
+      stop_atr_multiple: "1.0"
+      target_r_multiple: "2.0"
+      bad_regime_rule: hard14
+      bad_regime_unready_policy: block
+      factor_filters: [session_sigma_range, mom120_aligned]
+    candidates:
+      - name: vwap_gc_sigma_mom120_vol13
+        strategy_params:
+          factor_filters: [session_sigma_range, mom120_aligned]
+      - name: vwap_gc_sigma_mom120_volume_vol13
+        strategy_params:
+          factor_filters: [session_sigma_range, mom120_aligned, volume_curve_range]
+      - name: vwap_gc_trend_sigma_slope_accept
+        strategy_params:
+          factor_filters: [trend_regime_aligned, session_sigma_range, vwap_slope_strength, vwap_acceptance_if_bad_regime]
+          vwap_slope_min_atr: "0.20"
+
+  - id: route-b-vwap-si-rolling
+    kind: backtest_matrix
+    backtest_config: ../../backtest.vwap_factor_research_si_15m_long_is.yaml
+    output_root: ../../../runs/research/vwap/route-b/vwap-si-rolling
+    summary_output: ../../../runs/research/vwap/route-b/vwap-si-rolling-summary.json
+    metrics: [compounding_annual_return, total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor, total_commission, total_slippage]
+    periods:
+      - {name: is_2020_2022, start: "2020-01-01", end: "2022-01-01"}
+      - {name: validation_2022_2024, start: "2022-01-01", end: "2024-01-01"}
+      - {name: holdout_2024_2026, start: "2024-01-01", end: "2026-04-10"}
+      - {name: anchor_2010_2020, start: "2010-06-06", end: "2020-01-01"}
+    base_strategy_params:
+      symbol: SI
+      timeframe: 15m
+      time_window: asia_20_02
+      target_quantity: "3"
+      min_volume_ratio: "1.5"
+      pullback_touch_atr_below: "0.15"
+      max_pullback_break_atr: "1.0"
+      stop_atr_multiple: "1.0"
+      target_r_multiple: "2.0"
+      bad_regime_rule: hard14_ccvol17
+      bad_regime_unready_policy: block
+      factor_filters: [trend_regime_aligned, session_sigma_range]
+    candidates:
+      - name: vwap_si_trend_sigma_vol15
+        strategy_params:
+          factor_filters: [trend_regime_aligned, session_sigma_range]
+      - name: vwap_si_trend_sigma_slope_accept
+        strategy_params:
+          factor_filters: [trend_regime_aligned, session_sigma_range, vwap_slope_strength, vwap_acceptance_if_bad_regime]
+          vwap_slope_min_atr: "0.20"
+      - name: vwap_si_trend_sigma_volume
+        strategy_params:
+          factor_filters: [trend_regime_aligned, session_sigma_range, volume_curve_range]
+
+  - id: route-b-dual-supertrend-gc
+    kind: backtest_matrix
+    backtest_config: ../../backtest.route_b_dual_supertrend_gc.yaml
+    output_root: ../../../runs/research/vwap/route-b/dual-supertrend-gc
+    summary_output: ../../../runs/research/vwap/route-b/dual-supertrend-gc-summary.json
+    metrics: [compounding_annual_return, total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor, total_commission, total_slippage]
+    periods:
+      - {name: is_2020_2022, start: "2020-01-01", end: "2022-01-01"}
+      - {name: validation_2022_2024, start: "2022-01-01", end: "2024-01-01"}
+      - {name: holdout_2024_2026, start: "2024-01-01", end: "2026-04-10"}
+      - {name: anchor_2010_2020, start: "2010-06-06", end: "2020-01-01"}
+    base_strategy_params:
+      symbol: GC
+      timeframe: 15m
+    candidates:
+      - name: st_gc_fast10_slow20
+        strategy_params: {fast_window: 10, slow_window: 20, min_adx: "18", min_volume_ratio: "1.1"}
+      - name: st_gc_fast14_slow42
+        strategy_params: {fast_window: 14, slow_window: 42, min_adx: "20", min_volume_ratio: "1.0"}
+
+  - id: route-b-dual-supertrend-si
+    kind: backtest_matrix
+    backtest_config: ../../backtest.route_b_dual_supertrend_si.yaml
+    output_root: ../../../runs/research/vwap/route-b/dual-supertrend-si
+    summary_output: ../../../runs/research/vwap/route-b/dual-supertrend-si-summary.json
+    metrics: [compounding_annual_return, total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor, total_commission, total_slippage]
+    periods:
+      - {name: is_2020_2022, start: "2020-01-01", end: "2022-01-01"}
+      - {name: validation_2022_2024, start: "2022-01-01", end: "2024-01-01"}
+      - {name: holdout_2024_2026, start: "2024-01-01", end: "2026-04-10"}
+      - {name: anchor_2010_2020, start: "2010-06-06", end: "2020-01-01"}
+    base_strategy_params:
+      symbol: SI
+      timeframe: 15m
+    candidates:
+      - name: st_si_fast10_slow20
+        strategy_params: {fast_window: 10, slow_window: 20, min_adx: "18", min_volume_ratio: "1.1"}
+      - name: st_si_fast14_slow42
+        strategy_params: {fast_window: 14, slow_window: 42, min_adx: "20", min_volume_ratio: "1.0"}
+
+  - id: route-b-report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/route-b/reports
+    output_path: route-b-strategy-research-report.md
+    metadata:
+      holdout_policy: "2024-2026 is report-only and must not tune candidate selection"
+
+  - id: route-c-implementation
+    kind: implementation_gate
+    required_strategy: examples.strategies.vol_target_trend:VolTargetTrendStrategy
+
+  - id: route-c-vol-target-trend-gc
+    kind: backtest_matrix
+    backtest_config: ../../backtest.route_c_vol_target_trend_gc.yaml
+    output_root: ../../../runs/research/vwap/route-c/vol-target-trend-gc
+    summary_output: ../../../runs/research/vwap/route-c/vol-target-trend-gc-summary.json
+    metrics: [compounding_annual_return, total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor, total_commission, total_slippage]
+    periods:
+      - {name: is_2020_2022, start: "2020-01-01", end: "2022-01-01"}
+      - {name: validation_2022_2024, start: "2022-01-01", end: "2024-01-01"}
+      - {name: holdout_2024_2026, start: "2024-01-01", end: "2026-04-10"}
+      - {name: anchor_2010_2020, start: "2010-06-06", end: "2020-01-01"}
+    base_strategy_params:
+      symbol: GC
+      timeframe: 1d
+      allow_short: true
+      min_signal_return: "0.03"
+      rebalance_threshold: "0.02"
+    candidates:
+      - name: tsm_63_vol20_target20
+        strategy_params:
+          momentum_lookback_bars: 63
+          volatility_lookback_bars: 20
+          target_annual_vol: "0.20"
+          max_target_percent: "0.50"
+      - name: tsm_126_vol40_target20
+        strategy_params:
+          momentum_lookback_bars: 126
+          volatility_lookback_bars: 40
+          target_annual_vol: "0.20"
+          max_target_percent: "0.50"
+      - name: tsm_252_vol60_target15
+        strategy_params:
+          momentum_lookback_bars: 252
+          volatility_lookback_bars: 60
+          target_annual_vol: "0.15"
+          max_target_percent: "0.40"
+
+  - id: route-c-vol-target-trend-si
+    kind: backtest_matrix
+    backtest_config: ../../backtest.route_c_vol_target_trend_si.yaml
+    output_root: ../../../runs/research/vwap/route-c/vol-target-trend-si
+    summary_output: ../../../runs/research/vwap/route-c/vol-target-trend-si-summary.json
+    metrics: [compounding_annual_return, total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor, total_commission, total_slippage]
+    periods:
+      - {name: is_2020_2022, start: "2020-01-01", end: "2022-01-01"}
+      - {name: validation_2022_2024, start: "2022-01-01", end: "2024-01-01"}
+      - {name: holdout_2024_2026, start: "2024-01-01", end: "2026-04-10"}
+      - {name: anchor_2010_2020, start: "2010-06-06", end: "2020-01-01"}
+    base_strategy_params:
+      symbol: SI
+      timeframe: 1d
+      allow_short: true
+      min_signal_return: "0.03"
+      rebalance_threshold: "0.02"
+    candidates:
+      - name: tsm_63_vol20_target20
+        strategy_params:
+          momentum_lookback_bars: 63
+          volatility_lookback_bars: 20
+          target_annual_vol: "0.20"
+          max_target_percent: "0.50"
+      - name: tsm_126_vol40_target20
+        strategy_params:
+          momentum_lookback_bars: 126
+          volatility_lookback_bars: 40
+          target_annual_vol: "0.20"
+          max_target_percent: "0.50"
+      - name: tsm_252_vol60_target15
+        strategy_params:
+          momentum_lookback_bars: 252
+          volatility_lookback_bars: 60
+          target_annual_vol: "0.15"
+          max_target_percent: "0.40"
+
+  - id: route-c-report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/route-c/reports
+    output_path: route-c-vol-target-trend-report.md
+    metadata:
+      holdout_policy: "2024-2026 is report-only and must not tune candidate selection"
+
+  - id: route-d-implementation
+    kind: implementation_gate
+    required_strategy: examples.strategies.gc_si_ratio_mean_reversion:GcSiRatioMeanReversionStrategy
+
+  - id: route-d-gc-si-ratio-mean-reversion
+    kind: backtest_matrix
+    backtest_config: ../../backtest.route_d_gc_si_ratio_mean_reversion.yaml
+    output_root: ../../../runs/research/vwap/route-d/gc-si-ratio-mean-reversion
+    summary_output: ../../../runs/research/vwap/route-d/gc-si-ratio-mean-reversion-summary.json
+    metrics: [compounding_annual_return, total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor, total_commission, total_slippage]
+    periods:
+      - {name: is_2020_2022, start: "2020-01-01", end: "2022-01-01"}
+      - {name: validation_2022_2024, start: "2022-01-01", end: "2024-01-01"}
+      - {name: holdout_2024_2026, start: "2024-01-01", end: "2026-04-10"}
+      - {name: anchor_2010_2020, start: "2010-06-06", end: "2020-01-01"}
+    base_strategy_params:
+      gc_symbol: GC
+      si_symbol: SI
+      timeframe: 1d
+      gc_contracts: "1"
+      si_contracts: "2"
+      min_ratio_std: "0.0001"
+    candidates:
+      - name: ratio_20_entry15_exit025_1x2
+        strategy_params:
+          lookback_bars: 20
+          entry_z: "1.5"
+          exit_z: "0.25"
+      - name: ratio_60_entry15_exit025_1x2
+        strategy_params:
+          lookback_bars: 60
+          entry_z: "1.5"
+          exit_z: "0.25"
+      - name: ratio_60_entry20_exit050_1x2
+        strategy_params:
+          lookback_bars: 60
+          entry_z: "2.0"
+          exit_z: "0.50"
+      - name: ratio_120_entry20_exit050_1x2
+        strategy_params:
+          lookback_bars: 120
+          entry_z: "2.0"
+          exit_z: "0.50"
+
+  - id: route-d-report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/route-d/reports
+    output_path: route-d-gc-si-relative-value-report.md
+    metadata:
+      holdout_policy: "2024-2026 is report-only and must not tune candidate selection"
+
+  - id: route-e-implementation
+    kind: implementation_gate
+    required_strategy: examples.strategies.carry_trend_overlay:CarryTrendOverlayStrategy
+
+  - id: route-e-carry-trend-overlay
+    kind: backtest_matrix
+    backtest_config: ../../backtest.route_e_carry_trend.yaml
+    output_root: ../../../runs/research/vwap/route-e/carry-trend-overlay
+    summary_output: ../../../runs/research/vwap/route-e/carry-trend-overlay-summary.json
+    metrics: [compounding_annual_return, total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor, total_commission, total_slippage]
+    periods:
+      - {name: is_2020_2022, start: "2020-01-01", end: "2022-01-01"}
+      - {name: validation_2022_2024, start: "2022-01-01", end: "2024-01-01"}
+      - {name: holdout_2024_2026, start: "2024-01-01", end: "2026-04-10"}
+      - {name: anchor_2010_2020, start: "2010-06-06", end: "2020-01-01"}
+    base_strategy_params:
+      symbols: [GC, SI]
+      carry_symbols:
+        GC: GC_CARRY
+        SI: SI_CARRY
+      timeframe: 1d
+      rebalance_threshold: "0.01"
+      history_buffer_bars: 20
+      allow_short: true
+    candidates:
+      - name: carry_trend_63_5_min0_target10
+        strategy_params:
+          momentum_lookback_bars: 63
+          volatility_lookback_bars: 20
+          carry_lookback_bars: 5
+          min_momentum_return: "0.02"
+          min_carry: "0"
+          target_annual_vol: "0.10"
+          max_target_percent: "0.35"
+      - name: carry_trend_126_20_min0_target15
+        strategy_params:
+          momentum_lookback_bars: 126
+          volatility_lookback_bars: 40
+          carry_lookback_bars: 20
+          min_momentum_return: "0.03"
+          min_carry: "0"
+          target_annual_vol: "0.15"
+          max_target_percent: "0.40"
+      - name: carry_trend_252_20_min0_target15
+        strategy_params:
+          momentum_lookback_bars: 252
+          volatility_lookback_bars: 60
+          carry_lookback_bars: 20
+          min_momentum_return: "0.05"
+          min_carry: "0"
+          target_annual_vol: "0.15"
+          max_target_percent: "0.40"
+      - name: carry_trend_126_60_min025_target15
+        strategy_params:
+          momentum_lookback_bars: 126
+          volatility_lookback_bars: 40
+          carry_lookback_bars: 60
+          min_momentum_return: "0.03"
+          min_carry: "0.00025"
+          target_annual_vol: "0.15"
+          max_target_percent: "0.40"
+
+  - id: route-e-report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/route-e/reports
+    output_path: route-e-carry-trend-overlay-report.md
+    metadata:
+      holdout_policy: "2024-2026 is report-only and must not tune candidate selection"
+
+  - id: route-f-implementation
+    kind: implementation_gate
+    required_strategy: examples.strategies.dual_momentum_rotation:DualMomentumRotationStrategy
+
+  - id: route-f-dual-momentum-rotation
+    kind: backtest_matrix
+    backtest_config: ../../backtest.route_f_dual_momentum_rotation.yaml
+    output_root: ../../../runs/research/vwap/route-f/dual-momentum-rotation
+    summary_output: ../../../runs/research/vwap/route-f/dual-momentum-rotation-summary.json
+    metrics: [compounding_annual_return, total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor, total_commission, total_slippage]
+    periods:
+      - {name: is_2020_2022, start: "2020-01-01", end: "2022-01-01"}
+      - {name: validation_2022_2024, start: "2022-01-01", end: "2024-01-01"}
+      - {name: holdout_2024_2026, start: "2024-01-01", end: "2026-04-10"}
+    base_strategy_params:
+      symbols: [GC, SI]
+      timeframe: 1d
+      target_quantities:
+        GC: "1"
+        SI: "1"
+      history_buffer_bars: 20
+    candidates:
+      - name: dual_mom_63_21_abs0_rel005
+        strategy_params:
+          lookback_bars: 63
+          rebalance_bars: 21
+          min_absolute_momentum: "0"
+          min_relative_momentum: "0.05"
+      - name: dual_mom_63_5_abs0_rel010
+        strategy_params:
+          lookback_bars: 63
+          rebalance_bars: 5
+          min_absolute_momentum: "0"
+          min_relative_momentum: "0.10"
+      - name: dual_mom_63_5_abs002_rel010
+        strategy_params:
+          lookback_bars: 63
+          rebalance_bars: 5
+          min_absolute_momentum: "0.02"
+          min_relative_momentum: "0.10"
+      - name: dual_mom_84_1_abs0_rel005
+        strategy_params:
+          lookback_bars: 84
+          rebalance_bars: 1
+          min_absolute_momentum: "0"
+          min_relative_momentum: "0.05"
+      - name: dual_mom_84_1_abs005_rel005
+        strategy_params:
+          lookback_bars: 84
+          rebalance_bars: 1
+          min_absolute_momentum: "0.05"
+          min_relative_momentum: "0.05"
+
+  - id: route-f-report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/route-f/reports
+    output_path: route-f-dual-momentum-rotation-report.md
+    metadata:
+      holdout_policy: "2024-2026 is report-only and must not tune candidate selection"
+
+  - id: route-g-implementation
+    kind: implementation_gate
+    required_strategy: examples.strategies.dual_momentum_rotation:DualMomentumRotationStrategy
+
+  - id: route-g-risk-managed-dual-momentum
+    kind: backtest_matrix
+    backtest_config: ../../backtest.route_g_dual_momentum_risk_managed.yaml
+    output_root: ../../../runs/research/vwap/route-g/risk-managed-dual-momentum
+    summary_output: ../../../runs/research/vwap/route-g/risk-managed-dual-momentum-summary.json
+    metrics: [compounding_annual_return, total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor, total_commission, total_slippage]
+    periods:
+      - {name: is_2020_2022, start: "2020-01-01", end: "2022-01-01"}
+      - {name: validation_2022_2024, start: "2022-01-01", end: "2024-01-01"}
+      - {name: holdout_2024_2026, start: "2024-01-01", end: "2026-04-10"}
+    base_strategy_params:
+      symbols: [GC, SI]
+      timeframe: 1d
+      lookback_bars: 84
+      rebalance_bars: 1
+      min_absolute_momentum: "0.05"
+      min_relative_momentum: "0.05"
+      volatility_lookback_bars: 40
+      target_quantities:
+        GC: "1"
+        SI: "1"
+      history_buffer_bars: 20
+    candidates:
+      - name: risk_mom_84_vol40_max25_confirm2
+        strategy_params:
+          high_volatility_threshold: "0.25"
+          high_volatility_confirmation_bars: 2
+
+  - id: route-g-report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/route-g/reports
+    output_path: route-g-risk-managed-dual-momentum-report.md
+    metadata:
+      holdout_policy: "2024-2026 is report-only and must not tune candidate selection"
+
+  - id: route-g-selected-anchor
+    kind: backtest_matrix
+    backtest_config: ../../backtest.route_g_dual_momentum_risk_managed.yaml
+    output_root: ../../../runs/research/vwap/route-g/selected-anchor
+    summary_output: ../../../runs/research/vwap/route-g/selected-anchor-summary.json
+    metrics: [compounding_annual_return, total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor, total_commission, total_slippage]
+    periods:
+      - {name: anchor_2010_2020, start: "2010-06-06", end: "2020-01-01"}
+    base_strategy_params:
+      symbols: [GC, SI]
+      timeframe: 1d
+      lookback_bars: 84
+      rebalance_bars: 1
+      min_absolute_momentum: "0.05"
+      min_relative_momentum: "0.05"
+      volatility_lookback_bars: 40
+      high_volatility_threshold: "0.25"
+      high_volatility_confirmation_bars: 2
+      target_quantities:
+        GC: "1"
+        SI: "1"
+      history_buffer_bars: 20
+    candidates:
+      - name: risk_mom_84_vol40_max25_confirm2
+        strategy_params: {}
+
+  - id: route-h-implementation
+    kind: implementation_gate
+    required_strategy: examples.strategies.dual_momentum_rotation:DualMomentumRotationStrategy
+
+  - id: route-h-drawdown-gated-dual-momentum
+    kind: backtest_matrix
+    backtest_config: ../../backtest.route_h_dual_momentum_drawdown_gate.yaml
+    output_root: ../../../runs/research/vwap/route-h/drawdown-gated-dual-momentum
+    summary_output: ../../../runs/research/vwap/route-h/drawdown-gated-dual-momentum-summary.json
+    metrics: [compounding_annual_return, total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor, total_commission, total_slippage]
+    periods:
+      - {name: is_2020_2022, start: "2020-01-01", end: "2022-01-01"}
+      - {name: validation_2022_2024, start: "2022-01-01", end: "2024-01-01"}
+      - {name: holdout_2024_2026, start: "2024-01-01", end: "2026-04-10"}
+    base_strategy_params:
+      symbols: [GC, SI]
+      timeframe: 1d
+      lookback_bars: 84
+      rebalance_bars: 1
+      min_absolute_momentum: "0.05"
+      min_relative_momentum: "0.05"
+      volatility_lookback_bars: 40
+      high_volatility_threshold: "0.25"
+      high_volatility_confirmation_bars: 2
+      target_quantities:
+        GC: "1"
+        SI: "1"
+      history_buffer_bars: 20
+    candidates:
+      - name: dd_gate_20_cool63
+        strategy_params:
+          max_drawdown_fraction: "0.20"
+          drawdown_cooldown_bars: 63
+      - name: dd_gate_20_cool126
+        strategy_params:
+          max_drawdown_fraction: "0.20"
+          drawdown_cooldown_bars: 126
+      - name: dd_gate_25_cool63
+        strategy_params:
+          max_drawdown_fraction: "0.25"
+          drawdown_cooldown_bars: 63
+      - name: dd_gate_25_cool126
+        strategy_params:
+          max_drawdown_fraction: "0.25"
+          drawdown_cooldown_bars: 126
+
+  - id: route-h-report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/route-h/reports
+    output_path: route-h-drawdown-gated-dual-momentum-report.md
+    metadata:
+      holdout_policy: "2024-2026 is report-only and must not tune candidate selection"
+
+  - id: route-i-implementation
+    kind: implementation_gate
+    required_strategy: examples.strategies.dual_momentum_rotation:DualMomentumRotationStrategy
+
+  - id: route-i-threshold-confirmation-dual-momentum
+    kind: backtest_matrix
+    backtest_config: ../../backtest.route_i_dual_momentum_threshold_confirmation.yaml
+    output_root: ../../../runs/research/vwap/route-i/threshold-confirmation-dual-momentum
+    summary_output: ../../../runs/research/vwap/route-i/threshold-confirmation-dual-momentum-summary.json
+    metrics: [compounding_annual_return, total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor, total_commission, total_slippage]
+    periods:
+      - {name: is_2020_2022, start: "2020-01-01", end: "2022-01-01"}
+      - {name: validation_2022_2024, start: "2022-01-01", end: "2024-01-01"}
+      - {name: holdout_2024_2026, start: "2024-01-01", end: "2026-04-10"}
+    base_strategy_params:
+      symbols: [GC, SI]
+      timeframe: 1d
+      lookback_bars: 84
+      rebalance_bars: 1
+      min_relative_momentum: "0.05"
+      volatility_lookback_bars: 40
+      target_quantities:
+        GC: "1"
+        SI: "1"
+      history_buffer_bars: 20
+    candidates:
+      - name: abs0_no_confirmation
+        strategy_params:
+          min_absolute_momentum: "0"
+      - name: abs0_vol25_confirm2
+        strategy_params:
+          min_absolute_momentum: "0"
+          high_volatility_threshold: "0.25"
+          high_volatility_confirmation_bars: 2
+      - name: abs0_vol30_confirm2
+        strategy_params:
+          min_absolute_momentum: "0"
+          high_volatility_threshold: "0.30"
+          high_volatility_confirmation_bars: 2
+      - name: abs002_vol25_confirm2
+        strategy_params:
+          min_absolute_momentum: "0.02"
+          high_volatility_threshold: "0.25"
+          high_volatility_confirmation_bars: 2
+
+  - id: route-i-report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/route-i/reports
+    output_path: route-i-threshold-confirmation-dual-momentum-report.md
+    metadata:
+      holdout_policy: "2024-2026 is report-only and must not tune candidate selection"
+
+  - id: route-i-selected-anchor
+    kind: backtest_matrix
+    backtest_config: ../../backtest.route_i_dual_momentum_threshold_confirmation.yaml
+    output_root: ../../../runs/research/vwap/route-i/selected-anchor
+    summary_output: ../../../runs/research/vwap/route-i/selected-anchor-summary.json
+    metrics: [compounding_annual_return, total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor, total_commission, total_slippage]
+    periods:
+      - {name: anchor_2010_2020, start: "2010-06-06", end: "2020-01-01"}
+    base_strategy_params:
+      symbols: [GC, SI]
+      timeframe: 1d
+      lookback_bars: 84
+      rebalance_bars: 1
+      min_absolute_momentum: "0"
+      min_relative_momentum: "0.05"
+      volatility_lookback_bars: 40
+      target_quantities:
+        GC: "1"
+        SI: "1"
+      history_buffer_bars: 20
+    candidates:
+      - name: abs0_no_confirmation
+        strategy_params: {}
+
+  - id: route-j-si-vwap-pair-anchor
+    kind: portfolio_ensemble
+    reporting_grid: daily_utc
+    allocation_name: si_vwap_pair
+    summary_output: ../../../runs/research/vwap/route-j/si-vwap-pair/anchor_2010_2020.json
+    legs:
+      - name: vwap_si_trend_sigma_vol15
+        manifest_path: ../../../runs/research/vwap/route-b/vwap-si-rolling/anchor_2010_2020/vwap_si_trend_sigma_vol15/bt-5e48049813ac.manifest.json
+        weight: "1"
+      - name: vwap_si_trend_sigma_slope_accept
+        manifest_path: ../../../runs/research/vwap/route-b/vwap-si-rolling/anchor_2010_2020/vwap_si_trend_sigma_slope_accept/bt-2ae1e62a2b40.manifest.json
+        weight: "1"
+
+  - id: route-j-si-vwap-pair-is
+    kind: portfolio_ensemble
+    reporting_grid: daily_utc
+    allocation_name: si_vwap_pair
+    summary_output: ../../../runs/research/vwap/route-j/si-vwap-pair/is_2020_2022.json
+    legs:
+      - name: vwap_si_trend_sigma_vol15
+        manifest_path: ../../../runs/research/vwap/route-b/vwap-si-rolling/is_2020_2022/vwap_si_trend_sigma_vol15/bt-ce5e5a816bf7.manifest.json
+        weight: "1"
+      - name: vwap_si_trend_sigma_slope_accept
+        manifest_path: ../../../runs/research/vwap/route-b/vwap-si-rolling/is_2020_2022/vwap_si_trend_sigma_slope_accept/bt-008cc01838e0.manifest.json
+        weight: "1"
+
+  - id: route-j-si-vwap-pair-validation
+    kind: portfolio_ensemble
+    reporting_grid: daily_utc
+    allocation_name: si_vwap_pair
+    summary_output: ../../../runs/research/vwap/route-j/si-vwap-pair/validation_2022_2024.json
+    legs:
+      - name: vwap_si_trend_sigma_vol15
+        manifest_path: ../../../runs/research/vwap/route-b/vwap-si-rolling/validation_2022_2024/vwap_si_trend_sigma_vol15/bt-20f9293505a6.manifest.json
+        weight: "1"
+      - name: vwap_si_trend_sigma_slope_accept
+        manifest_path: ../../../runs/research/vwap/route-b/vwap-si-rolling/validation_2022_2024/vwap_si_trend_sigma_slope_accept/bt-7fb66862f333.manifest.json
+        weight: "1"
+
+  - id: route-j-si-vwap-pair-holdout
+    kind: portfolio_ensemble
+    reporting_grid: daily_utc
+    allocation_name: si_vwap_pair
+    summary_output: ../../../runs/research/vwap/route-j/si-vwap-pair/holdout_2024_2026.json
+    legs:
+      - name: vwap_si_trend_sigma_vol15
+        manifest_path: ../../../runs/research/vwap/route-b/vwap-si-rolling/holdout_2024_2026/vwap_si_trend_sigma_vol15/bt-7d468fb2844d.manifest.json
+        weight: "1"
+      - name: vwap_si_trend_sigma_slope_accept
+        manifest_path: ../../../runs/research/vwap/route-b/vwap-si-rolling/holdout_2024_2026/vwap_si_trend_sigma_slope_accept/bt-7579bc955008.manifest.json
+        weight: "1"
+
+  - id: route-j-i50-si-vwap-anchor
+    kind: portfolio_ensemble
+    reporting_grid: daily_utc
+    allocation_name: i50_si_vwap
+    summary_output: ../../../runs/research/vwap/route-j/i50-si-vwap/anchor_2010_2020.json
+    legs:
+      - name: abs0_no_confirmation
+        manifest_path: ../../../runs/research/vwap/route-i/selected-anchor/anchor_2010_2020/abs0_no_confirmation/bt-0f783c14386d.manifest.json
+        weight: "1"
+      - name: vwap_si_trend_sigma_slope_accept
+        manifest_path: ../../../runs/research/vwap/route-b/vwap-si-rolling/anchor_2010_2020/vwap_si_trend_sigma_slope_accept/bt-2ae1e62a2b40.manifest.json
+        weight: "1"
+
+  - id: route-j-i50-si-vwap-is
+    kind: portfolio_ensemble
+    reporting_grid: daily_utc
+    allocation_name: i50_si_vwap
+    summary_output: ../../../runs/research/vwap/route-j/i50-si-vwap/is_2020_2022.json
+    legs:
+      - name: abs0_no_confirmation
+        manifest_path: ../../../runs/research/vwap/route-i/threshold-confirmation-dual-momentum/is_2020_2022/abs0_no_confirmation/bt-65d155c32fd5.manifest.json
+        weight: "1"
+      - name: vwap_si_trend_sigma_slope_accept
+        manifest_path: ../../../runs/research/vwap/route-b/vwap-si-rolling/is_2020_2022/vwap_si_trend_sigma_slope_accept/bt-008cc01838e0.manifest.json
+        weight: "1"
+
+  - id: route-j-i50-si-vwap-validation
+    kind: portfolio_ensemble
+    reporting_grid: daily_utc
+    allocation_name: i50_si_vwap
+    summary_output: ../../../runs/research/vwap/route-j/i50-si-vwap/validation_2022_2024.json
+    legs:
+      - name: abs0_no_confirmation
+        manifest_path: ../../../runs/research/vwap/route-i/threshold-confirmation-dual-momentum/validation_2022_2024/abs0_no_confirmation/bt-838a32268c8e.manifest.json
+        weight: "1"
+      - name: vwap_si_trend_sigma_slope_accept
+        manifest_path: ../../../runs/research/vwap/route-b/vwap-si-rolling/validation_2022_2024/vwap_si_trend_sigma_slope_accept/bt-7fb66862f333.manifest.json
+        weight: "1"
+
+  - id: route-j-i50-si-vwap-holdout
+    kind: portfolio_ensemble
+    reporting_grid: daily_utc
+    allocation_name: i50_si_vwap
+    summary_output: ../../../runs/research/vwap/route-j/i50-si-vwap/holdout_2024_2026.json
+    legs:
+      - name: abs0_no_confirmation
+        manifest_path: ../../../runs/research/vwap/route-i/threshold-confirmation-dual-momentum/holdout_2024_2026/abs0_no_confirmation/bt-c39aaa1346ba.manifest.json
+        weight: "1"
+      - name: vwap_si_trend_sigma_slope_accept
+        manifest_path: ../../../runs/research/vwap/route-b/vwap-si-rolling/holdout_2024_2026/vwap_si_trend_sigma_slope_accept/bt-7579bc955008.manifest.json
+        weight: "1"
+
+  - id: route-j-g50-si-vwap-anchor
+    kind: portfolio_ensemble
+    reporting_grid: daily_utc
+    allocation_name: g50_si_vwap
+    summary_output: ../../../runs/research/vwap/route-j/g50-si-vwap/anchor_2010_2020.json
+    legs:
+      - name: risk_mom_84_vol40_max25_confirm2
+        manifest_path: ../../../runs/research/vwap/route-g/selected-anchor/anchor_2010_2020/risk_mom_84_vol40_max25_confirm2/bt-2d60d4057d97.manifest.json
+        weight: "1"
+      - name: vwap_si_trend_sigma_slope_accept
+        manifest_path: ../../../runs/research/vwap/route-b/vwap-si-rolling/anchor_2010_2020/vwap_si_trend_sigma_slope_accept/bt-2ae1e62a2b40.manifest.json
+        weight: "1"
+
+  - id: route-j-g50-si-vwap-is
+    kind: portfolio_ensemble
+    reporting_grid: daily_utc
+    allocation_name: g50_si_vwap
+    summary_output: ../../../runs/research/vwap/route-j/g50-si-vwap/is_2020_2022.json
+    legs:
+      - name: risk_mom_84_vol40_max25_confirm2
+        manifest_path: ../../../runs/research/vwap/route-g/risk-managed-dual-momentum/is_2020_2022/risk_mom_84_vol40_max25_confirm2/bt-558c15a628a5.manifest.json
+        weight: "1"
+      - name: vwap_si_trend_sigma_slope_accept
+        manifest_path: ../../../runs/research/vwap/route-b/vwap-si-rolling/is_2020_2022/vwap_si_trend_sigma_slope_accept/bt-008cc01838e0.manifest.json
+        weight: "1"
+
+  - id: route-j-g50-si-vwap-validation
+    kind: portfolio_ensemble
+    reporting_grid: daily_utc
+    allocation_name: g50_si_vwap
+    summary_output: ../../../runs/research/vwap/route-j/g50-si-vwap/validation_2022_2024.json
+    legs:
+      - name: risk_mom_84_vol40_max25_confirm2
+        manifest_path: ../../../runs/research/vwap/route-g/risk-managed-dual-momentum/validation_2022_2024/risk_mom_84_vol40_max25_confirm2/bt-efa71ab88e69.manifest.json
+        weight: "1"
+      - name: vwap_si_trend_sigma_slope_accept
+        manifest_path: ../../../runs/research/vwap/route-b/vwap-si-rolling/validation_2022_2024/vwap_si_trend_sigma_slope_accept/bt-7fb66862f333.manifest.json
+        weight: "1"
+
+  - id: route-j-g50-si-vwap-holdout
+    kind: portfolio_ensemble
+    reporting_grid: daily_utc
+    allocation_name: g50_si_vwap
+    summary_output: ../../../runs/research/vwap/route-j/g50-si-vwap/holdout_2024_2026.json
+    legs:
+      - name: risk_mom_84_vol40_max25_confirm2
+        manifest_path: ../../../runs/research/vwap/route-g/risk-managed-dual-momentum/holdout_2024_2026/risk_mom_84_vol40_max25_confirm2/bt-8e31cbb5f4d6.manifest.json
+        weight: "1"
+      - name: vwap_si_trend_sigma_slope_accept
+        manifest_path: ../../../runs/research/vwap/route-b/vwap-si-rolling/holdout_2024_2026/vwap_si_trend_sigma_slope_accept/bt-7579bc955008.manifest.json
+        weight: "1"
+
+  - id: route-j-report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/route-j/reports
+    output_path: route-j-portfolio-ensemble-report.md
+    metadata:
+      research_only: "portfolio_ensemble consumes completed equity curves and is not a production execution path"
+      holdout_policy: "2024-2026 is report-only and must not tune allocation selection"
+
+  - id: route-k-allocation-scan
+    kind: portfolio_ensemble_scan
+    scan_name: route_k_static_allocation_scan
+    reporting_grid: daily_utc
+    weight_step: "0.05"
+    max_active_legs: 4
+    top_n: 20
+    summary_output: ../../../runs/research/vwap/route-k/allocation-scan-summary.json
+    periods:
+      - anchor_2010_2020
+      - is_2020_2022
+      - validation_2022_2024
+      - holdout_2024_2026
+    baseline_period: anchor_2010_2020
+    post_periods: [is_2020_2022, validation_2022_2024, holdout_2024_2026]
+    constraints:
+      min_baseline_annual_return: "0"
+      min_post_annual_return: "0.10"
+      max_full_drawdown: "0.25"
+    candidates:
+      - name: vwap_si_trend_sigma_vol15
+        period_manifests:
+          anchor_2010_2020: ../../../runs/research/vwap/route-b/vwap-si-rolling/anchor_2010_2020/vwap_si_trend_sigma_vol15/bt-5e48049813ac.manifest.json
+          is_2020_2022: ../../../runs/research/vwap/route-b/vwap-si-rolling/is_2020_2022/vwap_si_trend_sigma_vol15/bt-ce5e5a816bf7.manifest.json
+          validation_2022_2024: ../../../runs/research/vwap/route-b/vwap-si-rolling/validation_2022_2024/vwap_si_trend_sigma_vol15/bt-20f9293505a6.manifest.json
+          holdout_2024_2026: ../../../runs/research/vwap/route-b/vwap-si-rolling/holdout_2024_2026/vwap_si_trend_sigma_vol15/bt-7d468fb2844d.manifest.json
+      - name: vwap_si_trend_sigma_slope_accept
+        period_manifests:
+          anchor_2010_2020: ../../../runs/research/vwap/route-b/vwap-si-rolling/anchor_2010_2020/vwap_si_trend_sigma_slope_accept/bt-2ae1e62a2b40.manifest.json
+          is_2020_2022: ../../../runs/research/vwap/route-b/vwap-si-rolling/is_2020_2022/vwap_si_trend_sigma_slope_accept/bt-008cc01838e0.manifest.json
+          validation_2022_2024: ../../../runs/research/vwap/route-b/vwap-si-rolling/validation_2022_2024/vwap_si_trend_sigma_slope_accept/bt-7fb66862f333.manifest.json
+          holdout_2024_2026: ../../../runs/research/vwap/route-b/vwap-si-rolling/holdout_2024_2026/vwap_si_trend_sigma_slope_accept/bt-7579bc955008.manifest.json
+      - name: risk_mom_84_vol40_max25_confirm2
+        period_manifests:
+          anchor_2010_2020: ../../../runs/research/vwap/route-g/selected-anchor/anchor_2010_2020/risk_mom_84_vol40_max25_confirm2/bt-2d60d4057d97.manifest.json
+          is_2020_2022: ../../../runs/research/vwap/route-g/risk-managed-dual-momentum/is_2020_2022/risk_mom_84_vol40_max25_confirm2/bt-558c15a628a5.manifest.json
+          validation_2022_2024: ../../../runs/research/vwap/route-g/risk-managed-dual-momentum/validation_2022_2024/risk_mom_84_vol40_max25_confirm2/bt-efa71ab88e69.manifest.json
+          holdout_2024_2026: ../../../runs/research/vwap/route-g/risk-managed-dual-momentum/holdout_2024_2026/risk_mom_84_vol40_max25_confirm2/bt-8e31cbb5f4d6.manifest.json
+      - name: abs0_no_confirmation
+        period_manifests:
+          anchor_2010_2020: ../../../runs/research/vwap/route-i/selected-anchor/anchor_2010_2020/abs0_no_confirmation/bt-0f783c14386d.manifest.json
+          is_2020_2022: ../../../runs/research/vwap/route-i/threshold-confirmation-dual-momentum/is_2020_2022/abs0_no_confirmation/bt-65d155c32fd5.manifest.json
+          validation_2022_2024: ../../../runs/research/vwap/route-i/threshold-confirmation-dual-momentum/validation_2022_2024/abs0_no_confirmation/bt-838a32268c8e.manifest.json
+          holdout_2024_2026: ../../../runs/research/vwap/route-i/threshold-confirmation-dual-momentum/holdout_2024_2026/abs0_no_confirmation/bt-c39aaa1346ba.manifest.json
+
+  - id: route-k-report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/route-k/reports
+    output_path: route-k-allocation-scan-report.md
+    metadata:
+      research_only: "portfolio_ensemble_scan consumes completed equity curves and is not a production execution path"
+      holdout_policy: "2024-2026 is report-only and must not tune allocation selection"
+
+  - id: route-l-vol-managed-allocation-scan
+    kind: portfolio_volatility_managed_scan
+    scan_name: route_l_volatility_managed_allocation_scan
+    reporting_grid: daily_utc
+    summary_output: ../../../runs/research/vwap/route-l/vol-managed-allocation-summary.json
+    periods:
+      - anchor_2010_2020
+      - is_2020_2022
+      - validation_2022_2024
+      - holdout_2024_2026
+    baseline_period: anchor_2010_2020
+    selection_periods: [anchor_2010_2020, is_2020_2022, validation_2022_2024]
+    post_selection_periods: [is_2020_2022, validation_2022_2024]
+    constraints:
+      min_baseline_annual_return: "0"
+      min_selection_post_annual_return: "0.10"
+      max_selection_drawdown: "0.25"
+    parameter_grid:
+      lookback_days: [21, 42, 63, 126]
+      min_history_days: [20]
+      min_trailing_return: ["0", "0.02", "0.05"]
+      top_n_legs: [1, 2]
+      target_annual_vol: ["0.15", "0.20", "0.25", "0.30"]
+      max_gross_exposure: ["1.0", "1.5", "2.0"]
+      max_leg_weight: ["1.0"]
+    candidates:
+      - name: vwap_si_trend_sigma_vol15
+        period_manifests:
+          anchor_2010_2020: ../../../runs/research/vwap/route-b/vwap-si-rolling/anchor_2010_2020/vwap_si_trend_sigma_vol15/bt-5e48049813ac.manifest.json
+          is_2020_2022: ../../../runs/research/vwap/route-b/vwap-si-rolling/is_2020_2022/vwap_si_trend_sigma_vol15/bt-ce5e5a816bf7.manifest.json
+          validation_2022_2024: ../../../runs/research/vwap/route-b/vwap-si-rolling/validation_2022_2024/vwap_si_trend_sigma_vol15/bt-20f9293505a6.manifest.json
+          holdout_2024_2026: ../../../runs/research/vwap/route-b/vwap-si-rolling/holdout_2024_2026/vwap_si_trend_sigma_vol15/bt-7d468fb2844d.manifest.json
+      - name: vwap_si_trend_sigma_slope_accept
+        period_manifests:
+          anchor_2010_2020: ../../../runs/research/vwap/route-b/vwap-si-rolling/anchor_2010_2020/vwap_si_trend_sigma_slope_accept/bt-2ae1e62a2b40.manifest.json
+          is_2020_2022: ../../../runs/research/vwap/route-b/vwap-si-rolling/is_2020_2022/vwap_si_trend_sigma_slope_accept/bt-008cc01838e0.manifest.json
+          validation_2022_2024: ../../../runs/research/vwap/route-b/vwap-si-rolling/validation_2022_2024/vwap_si_trend_sigma_slope_accept/bt-7fb66862f333.manifest.json
+          holdout_2024_2026: ../../../runs/research/vwap/route-b/vwap-si-rolling/holdout_2024_2026/vwap_si_trend_sigma_slope_accept/bt-7579bc955008.manifest.json
+      - name: risk_mom_84_vol40_max25_confirm2
+        period_manifests:
+          anchor_2010_2020: ../../../runs/research/vwap/route-g/selected-anchor/anchor_2010_2020/risk_mom_84_vol40_max25_confirm2/bt-2d60d4057d97.manifest.json
+          is_2020_2022: ../../../runs/research/vwap/route-g/risk-managed-dual-momentum/is_2020_2022/risk_mom_84_vol40_max25_confirm2/bt-558c15a628a5.manifest.json
+          validation_2022_2024: ../../../runs/research/vwap/route-g/risk-managed-dual-momentum/validation_2022_2024/risk_mom_84_vol40_max25_confirm2/bt-efa71ab88e69.manifest.json
+          holdout_2024_2026: ../../../runs/research/vwap/route-g/risk-managed-dual-momentum/holdout_2024_2026/risk_mom_84_vol40_max25_confirm2/bt-8e31cbb5f4d6.manifest.json
+      - name: abs0_no_confirmation
+        period_manifests:
+          anchor_2010_2020: ../../../runs/research/vwap/route-i/selected-anchor/anchor_2010_2020/abs0_no_confirmation/bt-0f783c14386d.manifest.json
+          is_2020_2022: ../../../runs/research/vwap/route-i/threshold-confirmation-dual-momentum/is_2020_2022/abs0_no_confirmation/bt-65d155c32fd5.manifest.json
+          validation_2022_2024: ../../../runs/research/vwap/route-i/threshold-confirmation-dual-momentum/validation_2022_2024/abs0_no_confirmation/bt-838a32268c8e.manifest.json
+          holdout_2024_2026: ../../../runs/research/vwap/route-i/threshold-confirmation-dual-momentum/holdout_2024_2026/abs0_no_confirmation/bt-c39aaa1346ba.manifest.json
+
+  - id: route-l-report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/route-l/reports
+    output_path: route-l-vol-managed-allocation-report.md
+    metadata:
+      research_only: "portfolio_volatility_managed_scan consumes completed equity curves and is not a production execution path"
+      holdout_policy: "2024-2026 is report-only and must not tune allocation parameter selection"
+
+  - id: route-m-implementation
+    kind: implementation_gate
+    required_strategy: examples.strategies.dual_momentum_rotation:DualMomentumRotationStrategy
+
+  - id: route-m-multi-horizon-dual-momentum
+    kind: backtest_matrix
+    backtest_config: ../../backtest.route_m_multi_horizon_dual_momentum.yaml
+    output_root: ../../../runs/research/vwap/route-m/multi-horizon-dual-momentum
+    summary_output: ../../../runs/research/vwap/route-m/multi-horizon-dual-momentum-summary.json
+    materialized_replay_cache:
+      enabled: true
+      cache_dir: ../../../runs/research/vwap/replay-cache/route-m
+    metrics: [compounding_annual_return, total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor, total_commission, total_slippage]
+    periods:
+      - {name: is_2020_2022, start: "2020-01-01", end: "2022-01-01"}
+      - {name: validation_2022_2024, start: "2022-01-01", end: "2024-01-01"}
+      - {name: holdout_2024_2026, start: "2024-01-01", end: "2026-04-10"}
+    base_strategy_params:
+      symbols: [GC, SI]
+      timeframe: 1d
+      lookback_bars: [21, 63, 126]
+      rebalance_bars: 1
+      min_absolute_momentum: "0"
+      min_relative_momentum: "0.03"
+      volatility_lookback_bars: 40
+      target_quantities:
+        GC: "1"
+        SI: "1"
+      history_buffer_bars: 20
+    candidates:
+      - name: mh_21_63_126_abs0_rel03
+        strategy_params: {}
+      - name: mh_42_84_168_abs0_rel03
+        strategy_params:
+          lookback_bars: [42, 84, 168]
+      - name: mh_63_126_252_abs0_rel02
+        strategy_params:
+          lookback_bars: [63, 126, 252]
+          min_relative_momentum: "0.02"
+      - name: mh_21_84_252_abs2_rel03_confirm2
+        strategy_params:
+          lookback_bars: [21, 84, 252]
+          min_absolute_momentum: "0.02"
+          high_volatility_threshold: "0.25"
+          high_volatility_confirmation_bars: 2
+
+  - id: route-m-report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/route-m/reports
+    output_path: route-m-multi-horizon-dual-momentum-report.md
+    metadata:
+      research_only: "multi-horizon dual momentum research uses completed backtest artifacts only"
+      holdout_policy: "2024-2026 is report-only and must not tune candidate selection"
+
+  - id: route-n-implementation
+    kind: implementation_gate
+    required_strategy: examples.strategies.carry_momentum_rotation:CarryMomentumRotationStrategy
+
+  - id: route-n-carry-momentum-rotation
+    kind: backtest_matrix
+    backtest_config: ../../backtest.route_n_carry_momentum_rotation.yaml
+    output_root: ../../../runs/research/vwap/route-n/carry-momentum-rotation
+    summary_output: ../../../runs/research/vwap/route-n/carry-momentum-rotation-summary.json
+    materialized_replay_cache:
+      enabled: true
+      cache_dir: ../../../runs/research/vwap/replay-cache/route-n
+    metrics: [compounding_annual_return, total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor, total_commission, total_slippage]
+    periods:
+      - {name: is_2020_2022, start: "2020-01-01", end: "2022-01-01"}
+      - {name: validation_2022_2024, start: "2022-01-01", end: "2024-01-01"}
+      - {name: holdout_2024_2026, start: "2024-01-01", end: "2026-04-10"}
+    base_strategy_params:
+      symbols: [GC, SI]
+      carry_symbols:
+        GC: GC_CARRY
+        SI: SI_CARRY
+      timeframe: 1d
+      momentum_lookback_bars: [21, 63, 126]
+      volatility_lookback_bars: 40
+      carry_zscore_lookback_bars: 20
+      carry_zscore_weight: "0.02"
+      min_score: "0"
+      min_relative_score: "0.02"
+      target_annual_vol: "0.20"
+      max_target_percent: "0.50"
+      rebalance_threshold: "0.01"
+      history_buffer_bars: 20
+    candidates:
+      - name: cmr_21_63_126_cz20_w02_rel02_tv20
+        strategy_params: {}
+      - name: cmr_21_63_126_cz20_w02_rel00_tv20
+        strategy_params:
+          min_relative_score: "0"
+      - name: cmr_21_63_126_cz20_w02_rel02_tv15
+        strategy_params:
+          target_annual_vol: "0.15"
+          max_target_percent: "0.40"
+      - name: cmr_21_63_126_cz20_w02_rel02_tv25
+        strategy_params:
+          target_annual_vol: "0.25"
+      - name: cmr_21_63_126_cz20_w02_rel02_score04_tv20
+        strategy_params:
+          min_score: "0.04"
+      - name: cmr_21_63_126_cz20_w02_rel04_tv20
+        strategy_params:
+          min_relative_score: "0.04"
+      - name: cmr_21_63_126_cz20_w00_rel04_score02_tv20
+        strategy_params:
+          carry_zscore_weight: "0"
+          min_score: "0.02"
+          min_relative_score: "0.04"
+      - name: cmr_21_63_126_cz20_w01_rel04_tv20
+        strategy_params:
+          carry_zscore_weight: "0.01"
+          min_relative_score: "0.04"
+      - name: cmr_42_84_168_cz60_w02_rel02_tv20
+        strategy_params:
+          momentum_lookback_bars: [42, 84, 168]
+          carry_zscore_lookback_bars: 60
+
+  - id: route-n-report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/route-n/reports
+    output_path: route-n-carry-momentum-rotation-report.md
+    metadata:
+      research_only: "carry-momentum rotation research uses completed backtest artifacts only"
+      holdout_policy: "2024-2026 is report-only and must not tune candidate selection"
+
+  - id: route-o-implementation
+    kind: implementation_gate
+    required_strategy: examples.strategies.opening_range_breakout:OpeningRangeBreakoutStrategy
+
+  - id: route-o-opening-range-breakout
+    kind: backtest_matrix
+    backtest_config: ../../backtest.route_o_opening_range_breakout.yaml
+    output_root: ../../../runs/research/vwap/route-o/opening-range-breakout
+    summary_output: ../../../runs/research/vwap/route-o/opening-range-breakout-summary.json
+    materialized_replay_cache:
+      enabled: true
+      cache_dir: ../../../runs/research/vwap/replay-cache/route-o
+    metrics: [compounding_annual_return, total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor, total_commission, total_slippage]
+    periods:
+      - {name: is_2020_2022, start: "2020-01-01", end: "2022-01-01"}
+      - {name: validation_2022_2024, start: "2022-01-01", end: "2024-01-01"}
+      - {name: holdout_2024_2026, start: "2024-01-01", end: "2026-04-10"}
+    base_strategy_params:
+      symbol: GC
+      timeframe: 15m
+      mode: breakout
+      range_start_et: "08:30"
+      session_close_et: "17:00"
+      opening_range_minutes: 60
+      max_entry_elapsed_minutes: 510
+      minutes_before_close_flat: 60
+      target_quantity: "1"
+      breakout_buffer_ratio: "0"
+      stop_range_multiple: "0.75"
+      target_range_multiple: "1.25"
+      max_holding_bars: 16
+      max_entries_per_session: 1
+      range_width_lookback_sessions: 20
+      range_width_min_history_sessions: 10
+      min_range_width_ratio: "0"
+      max_range_width_ratio: "3"
+    candidates:
+      - name: orb_gc_0830_60_breakout_q1
+        strategy_params: {}
+      - name: orb_si_0830_60_breakout_q1
+        strategy_params:
+          symbol: SI
+      - name: orf_gc_0830_60_failure_q1
+        strategy_params:
+          mode: failure
+      - name: orf_si_0830_60_failure_q1
+        strategy_params:
+          symbol: SI
+          mode: failure
+      - name: orb_gc_1800_60_breakout_q1
+        strategy_params:
+          range_start_et: "18:00"
+          max_entry_elapsed_minutes: 1320
+      - name: orb_si_1800_60_breakout_q1
+        strategy_params:
+          symbol: SI
+          range_start_et: "18:00"
+          max_entry_elapsed_minutes: 1320
+      - name: orf_gc_1800_60_failure_q1
+        strategy_params:
+          mode: failure
+          range_start_et: "18:00"
+          max_entry_elapsed_minutes: 1320
+      - name: orf_si_1800_60_failure_q1
+        strategy_params:
+          symbol: SI
+          mode: failure
+          range_start_et: "18:00"
+          max_entry_elapsed_minutes: 1320
+
+  - id: route-o-report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/route-o/reports
+    output_path: route-o-opening-range-breakout-report.md
+    metadata:
+      research_only: "opening-range breakout/failure research uses completed backtest artifacts only"
+      holdout_policy: "2024-2026 is report-only and must not tune candidate selection"
+
+  - id: route-p-implementation
+    kind: implementation_gate
+    required_strategy: examples.strategies.gc_si_ratio_mean_reversion:GcSiRatioMeanReversionStrategy
+
+  - id: route-p-intraday-ratio-mean-reversion
+    kind: backtest_matrix
+    backtest_config: ../../backtest.route_p_intraday_ratio_mean_reversion.yaml
+    output_root: ../../../runs/research/vwap/route-p/intraday-ratio-mean-reversion
+    summary_output: ../../../runs/research/vwap/route-p/intraday-ratio-mean-reversion-summary.json
+    materialized_replay_cache:
+      enabled: true
+      cache_dir: ../../../runs/research/vwap/replay-cache/route-p
+    metrics: [compounding_annual_return, total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor, total_commission, total_slippage]
+    periods:
+      - {name: is_2020_2022, start: "2020-01-01", end: "2022-01-01"}
+      - {name: validation_2022_2024, start: "2022-01-01", end: "2024-01-01"}
+      - {name: holdout_2024_2026, start: "2024-01-01", end: "2026-04-10"}
+    base_strategy_params:
+      gc_symbol: GC
+      si_symbol: SI
+      timeframe: 15m
+      gc_contracts: "1"
+      si_contracts: "2"
+      min_ratio_std: "0.0001"
+    candidates:
+      - name: ratio15m_64_entry15_exit025_1x2
+        strategy_params:
+          lookback_bars: 64
+          entry_z: "1.5"
+          exit_z: "0.25"
+      - name: ratio15m_96_entry15_exit025_1x2
+        strategy_params:
+          lookback_bars: 96
+          entry_z: "1.5"
+          exit_z: "0.25"
+      - name: ratio15m_192_entry20_exit050_1x2
+        strategy_params:
+          lookback_bars: 192
+          entry_z: "2.0"
+          exit_z: "0.50"
+      - name: ratio15m_384_entry20_exit050_1x2
+        strategy_params:
+          lookback_bars: 384
+          entry_z: "2.0"
+          exit_z: "0.50"
+      - name: ratio15m_192_entry25_exit075_1x2
+        strategy_params:
+          lookback_bars: 192
+          entry_z: "2.5"
+          exit_z: "0.75"
+      - name: ratio15m_96_entry20_exit050_1x1
+        strategy_params:
+          lookback_bars: 96
+          entry_z: "2.0"
+          exit_z: "0.50"
+          si_contracts: "1"
+
+  - id: route-p-report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/route-p/reports
+    output_path: route-p-intraday-ratio-mean-reversion-report.md
+    metadata:
+      research_only: "intraday GC/SI ratio mean-reversion research uses completed backtest artifacts only"
+      holdout_policy: "2024-2026 is report-only and must not tune candidate selection"
+
+  - id: route-q-implementation
+    kind: implementation_gate
+    required_strategy: examples.strategies.opening_range_breakout:OpeningRangeBreakoutStrategy
+
+  - id: route-q-opening-range-risk-refinement
+    kind: backtest_matrix
+    backtest_config: ../../backtest.route_o_opening_range_breakout.yaml
+    output_root: ../../../runs/research/vwap/route-q/opening-range-risk-refinement
+    summary_output: ../../../runs/research/vwap/route-q/opening-range-risk-refinement-summary.json
+    materialized_replay_cache:
+      enabled: true
+      cache_dir: ../../../runs/research/vwap/replay-cache/route-o
+    metrics: [compounding_annual_return, total_return, sharpe_ratio, max_drawdown, total_trades, profit_factor, total_commission, total_slippage]
+    periods:
+      - {name: is_2020_2022, start: "2020-01-01", end: "2022-01-01"}
+      - {name: validation_2022_2024, start: "2022-01-01", end: "2024-01-01"}
+      - {name: holdout_2024_2026, start: "2024-01-01", end: "2026-04-10"}
+    base_strategy_params:
+      symbol: SI
+      timeframe: 15m
+      mode: breakout
+      range_start_et: "08:30"
+      session_close_et: "17:00"
+      opening_range_minutes: 60
+      max_entry_elapsed_minutes: 510
+      minutes_before_close_flat: 60
+      target_quantity: "1"
+      breakout_buffer_ratio: "0"
+      stop_range_multiple: "0.75"
+      target_range_multiple: "1.25"
+      max_holding_bars: 16
+      max_entries_per_session: 1
+      range_width_lookback_sessions: 20
+      range_width_min_history_sessions: 10
+      min_range_width_ratio: "0"
+      max_range_width_ratio: "3"
+    candidates:
+      - name: si0830_base
+        strategy_params: {}
+      - name: si0830_buffer005
+        strategy_params:
+          breakout_buffer_ratio: "0.05"
+      - name: si0830_buffer010
+        strategy_params:
+          breakout_buffer_ratio: "0.10"
+      - name: si0830_stop050_target100
+        strategy_params:
+          stop_range_multiple: "0.50"
+          target_range_multiple: "1.00"
+      - name: si0830_stop050_target150
+        strategy_params:
+          stop_range_multiple: "0.50"
+          target_range_multiple: "1.50"
+      - name: si0830_hold8
+        strategy_params:
+          max_holding_bars: 8
+      - name: si0830_range_width_cap200
+        strategy_params:
+          max_range_width_ratio: "2.00"
+      - name: si0830_range_width_050_200
+        strategy_params:
+          min_range_width_ratio: "0.50"
+          max_range_width_ratio: "2.00"
+
+  - id: route-q-report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/route-q/reports
+    output_path: route-q-opening-range-risk-refinement-report.md
+    metadata:
+      research_only: "opening-range risk refinement uses completed backtest artifacts only"
+      holdout_policy: "2024-2026 is report-only and must not tune candidate selection"
+      selection_policy: "select only with IS and validation evidence; holdout is report-only"
+
+  - id: route-r-vol-managed-allocation-scan
+    kind: portfolio_volatility_managed_scan
+    scan_name: route_r_volatility_managed_allocation_scan
+    reporting_grid: daily_utc
+    summary_output: ../../../runs/research/vwap/route-r/vol-managed-allocation-summary.json
+    periods:
+      - is_2020_2022
+      - validation_2022_2024
+      - holdout_2024_2026
+    baseline_period: is_2020_2022
+    selection_periods: [is_2020_2022, validation_2022_2024]
+    post_selection_periods: [validation_2022_2024]
+    constraints:
+      min_baseline_annual_return: "0.10"
+      min_selection_post_annual_return: "0.10"
+      max_selection_drawdown: "0.20"
+    parameter_grid:
+      lookback_days: [21, 42, 63]
+      min_history_days: [20]
+      min_trailing_return: ["0", "0.02"]
+      top_n_legs: [2, 3]
+      target_annual_vol: ["0.20", "0.30", "0.40"]
+      max_gross_exposure: ["1.5", "2.0", "3.0"]
+      max_leg_weight: ["0.70", "1.0"]
+    candidates:
+      - name: abs0_no_confirmation
+        period_manifests:
+          is_2020_2022: ../../../runs/research/vwap/route-i/threshold-confirmation-dual-momentum/is_2020_2022/abs0_no_confirmation/bt-65d155c32fd5.manifest.json
+          validation_2022_2024: ../../../runs/research/vwap/route-i/threshold-confirmation-dual-momentum/validation_2022_2024/abs0_no_confirmation/bt-838a32268c8e.manifest.json
+          holdout_2024_2026: ../../../runs/research/vwap/route-i/threshold-confirmation-dual-momentum/holdout_2024_2026/abs0_no_confirmation/bt-c39aaa1346ba.manifest.json
+      - name: risk_mom_84_vol40_max25_confirm2
+        period_manifests:
+          is_2020_2022: ../../../runs/research/vwap/route-g/risk-managed-dual-momentum/is_2020_2022/risk_mom_84_vol40_max25_confirm2/bt-558c15a628a5.manifest.json
+          validation_2022_2024: ../../../runs/research/vwap/route-g/risk-managed-dual-momentum/validation_2022_2024/risk_mom_84_vol40_max25_confirm2/bt-efa71ab88e69.manifest.json
+          holdout_2024_2026: ../../../runs/research/vwap/route-g/risk-managed-dual-momentum/holdout_2024_2026/risk_mom_84_vol40_max25_confirm2/bt-8e31cbb5f4d6.manifest.json
+      - name: vwap_si_trend_sigma_slope_accept
+        period_manifests:
+          is_2020_2022: ../../../runs/research/vwap/route-b/vwap-si-rolling/is_2020_2022/vwap_si_trend_sigma_slope_accept/bt-008cc01838e0.manifest.json
+          validation_2022_2024: ../../../runs/research/vwap/route-b/vwap-si-rolling/validation_2022_2024/vwap_si_trend_sigma_slope_accept/bt-7fb66862f333.manifest.json
+          holdout_2024_2026: ../../../runs/research/vwap/route-b/vwap-si-rolling/holdout_2024_2026/vwap_si_trend_sigma_slope_accept/bt-7579bc955008.manifest.json
+      - name: si0830_buffer010
+        period_manifests:
+          is_2020_2022: ../../../runs/research/vwap/route-q/opening-range-risk-refinement/is_2020_2022/si0830_buffer010/bt-efa1f3b81630.manifest.json
+          validation_2022_2024: ../../../runs/research/vwap/route-q/opening-range-risk-refinement/validation_2022_2024/si0830_buffer010/bt-1aa106961935.manifest.json
+          holdout_2024_2026: ../../../runs/research/vwap/route-q/opening-range-risk-refinement/holdout_2024_2026/si0830_buffer010/bt-84323df8bce3.manifest.json
+      - name: si0830_hold8
+        period_manifests:
+          is_2020_2022: ../../../runs/research/vwap/route-q/opening-range-risk-refinement/is_2020_2022/si0830_hold8/bt-d428a29bb4b8.manifest.json
+          validation_2022_2024: ../../../runs/research/vwap/route-q/opening-range-risk-refinement/validation_2022_2024/si0830_hold8/bt-e26557f954de.manifest.json
+          holdout_2024_2026: ../../../runs/research/vwap/route-q/opening-range-risk-refinement/holdout_2024_2026/si0830_hold8/bt-f410a1e71349.manifest.json
+
+  - id: route-r-report
+    kind: research_report
+    output_root: ../../../runs/research/vwap/route-r/reports
+    output_path: route-r-vol-managed-allocation-report.md
+    metadata:
+      research_only: "portfolio_volatility_managed_scan consumes completed equity curves and is not a production execution path"
+      holdout_policy: "2024-2026 is report-only and must not tune allocation parameter selection"

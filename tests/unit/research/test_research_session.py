@@ -329,6 +329,45 @@ def test_research_session_delegates_walk_forward_validation_to_backtest_runner(
     assert summary.to_payload()["run_count"] == 1
 
 
+def test_research_session_passes_materialized_replay_cache_to_optimizer_runner(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config_path = _write_research_config(tmp_path, _minimal_research_yaml(tmp_path))
+    session = ResearchSession.from_yaml(config_path)
+    calls: list[dict[str, Any]] = []
+
+    class FakeRunner:
+        def run(self, job: Any) -> tuple[object, ...]:
+            calls.append(
+                {
+                    "base_config_path": job.base_config_path,
+                    "materialized_replay_cache_dir": job.materialized_replay_cache_dir,
+                    "objective_metric": job.objective_metric,
+                    "output_root": job.output_root,
+                }
+            )
+            return ()
+
+    monkeypatch.setattr("qts.research.session.BacktestPipelineRunner", FakeRunner)
+
+    session.optimize(
+        parameters={"quantity": ["1"]},
+        objective_metric="total_return",
+        output_root=tmp_path / "optimizer",
+        materialized_replay_cache_dir=tmp_path / "replay-cache",
+    )
+
+    assert calls == [
+        {
+            "base_config_path": tmp_path / "backtest.yaml",
+            "materialized_replay_cache_dir": tmp_path / "replay-cache",
+            "objective_metric": "total_return",
+            "output_root": tmp_path / "optimizer",
+        }
+    ]
+
+
 def test_research_session_delegates_failure_window_veto_to_backtest_runner(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

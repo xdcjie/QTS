@@ -5,6 +5,7 @@ from decimal import Decimal
 
 import pytest
 from qts.core.ids import InstrumentId
+from qts.data.sessions import RegularSessionWindow
 from qts.domain.market_data import Bar
 
 
@@ -16,6 +17,7 @@ def _bar(
     low: str,
     close: str,
     volume: str,
+    session_id: str = "2026-01-02",
     is_complete: bool = True,
 ) -> Bar:
     return Bar(
@@ -23,7 +25,7 @@ def _bar(
         start_time=start,
         end_time=start + timedelta(minutes=1),
         timeframe="1m",
-        session_id="2026-01-02",
+        session_id=session_id,
         open=Decimal(open_price),
         high=Decimal(high),
         low=Decimal(low),
@@ -221,3 +223,76 @@ def test_consolidator_rejects_incomplete_source_bar() -> None:
                 is_complete=False,
             )
         )
+
+
+def test_session_daily_consolidator_emits_at_configured_session_close() -> None:
+    from qts.data.bars.consolidator import NMinuteConsolidator
+    from qts.data.bars.timeframe import Timeframe
+
+    start = datetime(2026, 5, 19, 22, 0, tzinfo=UTC)
+    session_window = RegularSessionWindow(
+        exchange_timezone="UTC",
+        open_time=datetime.strptime("22:00", "%H:%M").time(),
+        close_time=datetime.strptime("22:03", "%H:%M").time(),
+    )
+    consolidator = NMinuteConsolidator(
+        source_timeframe=Timeframe.parse("1m"),
+        target_timeframe=Timeframe.parse("1d"),
+        exchange_timezone=UTC,
+        session_window=session_window,
+    )
+
+    emitted: list[Bar] = []
+    emitted.extend(
+        consolidator.update(
+            _bar(
+                start,
+                open_price="4486.6",
+                high="4486.6",
+                low="4486.6",
+                close="4486.6",
+                volume="10",
+                session_id="2026-05-19",
+            )
+        )
+    )
+    emitted.extend(
+        consolidator.update(
+            _bar(
+                start + timedelta(minutes=1),
+                open_price="4486.6",
+                high="4558.4",
+                low="4455.0",
+                close="4546.2",
+                volume="20",
+                session_id="2026-05-19",
+            )
+        )
+    )
+    emitted.extend(
+        consolidator.update(
+            _bar(
+                start + timedelta(minutes=2),
+                open_price="4546.2",
+                high="4546.2",
+                low="4546.2",
+                close="4546.2",
+                volume="30",
+                session_id="2026-05-19",
+            )
+        )
+    )
+
+    assert len(emitted) == 1
+    [daily] = emitted
+    assert daily.start_time == datetime(2026, 5, 19, 22, 0, tzinfo=UTC)
+    assert daily.end_time == datetime(2026, 5, 19, 22, 3, tzinfo=UTC)
+    assert daily.timeframe == "1d"
+    assert daily.session_id == "2026-05-19"
+    assert daily.open == Decimal("4486.6")
+    assert daily.high == Decimal("4558.4")
+    assert daily.low == Decimal("4455.0")
+    assert daily.close == Decimal("4546.2")
+    assert daily.volume == Decimal("60")
+    assert daily.is_complete
+    assert not daily.is_partial

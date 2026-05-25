@@ -1,19 +1,7 @@
 {
-  "root": "GC",
-  "exchange": "CME",
-  "exchange_timezone": "US/Eastern",
-  "csv_path": "historical/data/gc.csv",
-  "chain_path": "historical/chains/GC.json",
-  "timeframe": "1m",
-  "session": {
-    "id_policy": "exchange_local_close_date",
-    "timezone": "US/Eastern",
-    "interval": "[18:00,17:00)"
-  },
-  "selection": "max_session_total_volume_outright_contract",
   "excluded": {
-    "rows_seen": 15142966,
-    "spreads_excluded": 5081841,
+    "rows_seen": 15291573,
+    "spreads_excluded": 5147856,
     "unsupported_contracts_excluded": 0,
     "outside_session_rows_excluded": 24640
   },
@@ -28540,8 +28528,218 @@
       "session_id": "2026-04-10",
       "selected_symbol": "GCM6",
       "selected_instrument_id": "FUTURE.CME.GC.GCM6",
-      "selected_volume": "4145",
-      "selected_bar_count": 120
+      "selected_volume": "112301",
+      "selected_bar_count": 1379
+    },
+    {
+      "session_id": "2026-04-13",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "118333",
+      "selected_bar_count": 1380
+    },
+    {
+      "session_id": "2026-04-14",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "119246",
+      "selected_bar_count": 1378
+    },
+    {
+      "session_id": "2026-04-15",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "99581",
+      "selected_bar_count": 1377
+    },
+    {
+      "session_id": "2026-04-16",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "101792",
+      "selected_bar_count": 1377
+    },
+    {
+      "session_id": "2026-04-17",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "123771",
+      "selected_bar_count": 1373
+    },
+    {
+      "session_id": "2026-04-20",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "115705",
+      "selected_bar_count": 1380
+    },
+    {
+      "session_id": "2026-04-21",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "166159",
+      "selected_bar_count": 1380
+    },
+    {
+      "session_id": "2026-04-22",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "94683",
+      "selected_bar_count": 1380
+    },
+    {
+      "session_id": "2026-04-23",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "143187",
+      "selected_bar_count": 1380
+    },
+    {
+      "session_id": "2026-04-24",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "95466",
+      "selected_bar_count": 1379
+    },
+    {
+      "session_id": "2026-04-27",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "78068",
+      "selected_bar_count": 1378
+    },
+    {
+      "session_id": "2026-04-28",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "132495",
+      "selected_bar_count": 1378
+    },
+    {
+      "session_id": "2026-04-29",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "117641",
+      "selected_bar_count": 1377
+    },
+    {
+      "session_id": "2026-04-30",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "108073",
+      "selected_bar_count": 1379
+    },
+    {
+      "session_id": "2026-05-01",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "86748",
+      "selected_bar_count": 1375
+    },
+    {
+      "session_id": "2026-05-04",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "107621",
+      "selected_bar_count": 1379
+    },
+    {
+      "session_id": "2026-05-05",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "74769",
+      "selected_bar_count": 1377
+    },
+    {
+      "session_id": "2026-05-06",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "140686",
+      "selected_bar_count": 1379
+    },
+    {
+      "session_id": "2026-05-07",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "119860",
+      "selected_bar_count": 1380
+    },
+    {
+      "session_id": "2026-05-08",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "93144",
+      "selected_bar_count": 1380
+    },
+    {
+      "session_id": "2026-05-11",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "117931",
+      "selected_bar_count": 1380
+    },
+    {
+      "session_id": "2026-05-12",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "112156",
+      "selected_bar_count": 1380
+    },
+    {
+      "session_id": "2026-05-13",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "86366",
+      "selected_bar_count": 1379
+    },
+    {
+      "session_id": "2026-05-14",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "88240",
+      "selected_bar_count": 1379
+    },
+    {
+      "session_id": "2026-05-15",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "148271",
+      "selected_bar_count": 1380
+    },
+    {
+      "session_id": "2026-05-18",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "128302",
+      "selected_bar_count": 1380
+    },
+    {
+      "session_id": "2026-05-19",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "117600",
+      "selected_bar_count": 1380
+    },
+    {
+      "session_id": "2026-05-20",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "109695",
+      "selected_bar_count": 1379
+    },
+    {
+      "session_id": "2026-05-21",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "96557",
+      "selected_bar_count": 1376
+    },
+    {
+      "session_id": "2026-05-22",
+      "selected_symbol": "GCM6",
+      "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+      "selected_volume": "76108",
+      "selected_bar_count": 1329
     }
   ]
 }

@@ -36,6 +36,11 @@ from qts.research.factor_evaluation import (
 )
 from qts.research.factor_spec import FactorSpec, FactorSpecDrafter, FactorSpecSourceRef
 from qts.research.factor_spec_store import FactorSpecReview, FactorSpecStore
+from qts.research.portfolio_ensemble import (
+    evaluate_portfolio_ensemble,
+    scan_portfolio_ensemble_allocations,
+    scan_volatility_managed_allocations,
+)
 from qts.research.report import ResearchWorkflowReport, ResearchWorkflowReportWriter
 from qts.research.research_book import (
     HistoryRequest,
@@ -86,6 +91,9 @@ __all__ = [
     "FactorEvaluationTearsheet",
     "FactorEvaluationTearsheetArtifactWriter",
     "FactorEvaluationTearsheetMetrics",
+    "evaluate_portfolio_ensemble",
+    "scan_portfolio_ensemble_allocations",
+    "scan_volatility_managed_allocations",
     "ResearchWorkflowConfig",
     "ResearchWorkflowResult",
     "ResearchWorkflowRunner",

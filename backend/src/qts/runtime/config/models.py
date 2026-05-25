@@ -21,6 +21,7 @@ from qts.runtime.mode import (
     MarketDataEnvironment,
     RuntimeMode,
 )
+from qts.runtime.signal_policy import SignalAggregationPolicy
 
 _SUPPORTED_MARKET_DATA_SOURCES = frozenset({"local_historical"})
 
@@ -181,7 +182,7 @@ class BacktestEngineConfig:
 
     def to_payload(self) -> dict[str, Any]:
         """Serialize this engine config for stable hashing."""
-        payload = {
+        payload: dict[str, Any] = {
             "initial_cash": str(self.initial_cash),
             "warmup_bars": self.warmup_bars,
             "target_timeframe": self.target_timeframe,
@@ -300,6 +301,10 @@ class BacktestStrategyConfig:
     account_id: str | None = None
     allocation: Decimal = Decimal("1")
     enabled: bool = True
+    signal_aggregation_policy: str = SignalAggregationPolicy.SUM_TARGETS.value
+    signal_priority: int = 0
+    signal_weight: Decimal = Decimal("1")
+    conflict_group: str = "default"
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""
@@ -307,12 +312,24 @@ class BacktestStrategyConfig:
             raise ValueError("strategy class_path must not be empty")
         object.__setattr__(self, "params", dict(self.params))
         object.__setattr__(self, "allocation", Decimal(str(self.allocation)))
+        object.__setattr__(self, "signal_weight", Decimal(str(self.signal_weight)))
+        object.__setattr__(
+            self,
+            "signal_aggregation_policy",
+            SignalAggregationPolicy(self.signal_aggregation_policy).value,
+        )
         if self.strategy_id is not None and not self.strategy_id.strip():
             raise ValueError("strategy_id must not be empty")
         if self.account_id is not None and not self.account_id.strip():
             raise ValueError("account_id must not be empty")
         if self.allocation < Decimal("0"):
             raise ValueError("strategy allocation must be non-negative")
+        if self.signal_weight < Decimal("0"):
+            raise ValueError("strategy signal_weight must be non-negative")
+        if self.signal_priority < 0:
+            raise ValueError("strategy signal_priority must be non-negative")
+        if not self.conflict_group.strip():
+            raise ValueError("strategy conflict_group must not be empty")
 
     @classmethod
     def from_yaml(cls, path: Path) -> BacktestStrategyConfig:
@@ -320,7 +337,7 @@ class BacktestStrategyConfig:
         payload = yaml.safe_load(path.read_text(encoding="utf-8"))
         if not isinstance(payload, dict):
             raise ValueError("strategy config must be a mapping")
-        return cls._parse_payload(payload)
+        return cls.from_payload(payload)
 
     def to_payload(self) -> dict[str, Any]:
         """Perform to_payload."""
@@ -330,8 +347,17 @@ class BacktestStrategyConfig:
             "account_id": self.account_id,
             "allocation": str(self.allocation),
             "enabled": self.enabled,
+            "signal_aggregation_policy": self.signal_aggregation_policy,
+            "signal_priority": self.signal_priority,
+            "signal_weight": str(self.signal_weight),
+            "conflict_group": self.conflict_group,
             "params": self.params,
         }
+
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, Any]) -> BacktestStrategyConfig:
+        """Build a strategy config from a validated mapping payload."""
+        return cls._parse_payload(dict(payload))
 
     @classmethod
     def _parse_payload(cls, payload: dict[str, Any]) -> BacktestStrategyConfig:
@@ -349,6 +375,12 @@ class BacktestStrategyConfig:
             ),
             allocation=Decimal(str(payload.get("allocation", "1"))),
             enabled=bool(payload.get("enabled", True)),
+            signal_aggregation_policy=str(
+                payload.get("signal_aggregation_policy", SignalAggregationPolicy.SUM_TARGETS.value)
+            ),
+            signal_priority=int(payload.get("signal_priority", 0)),
+            signal_weight=Decimal(str(payload.get("signal_weight", "1"))),
+            conflict_group=str(payload.get("conflict_group", "default")),
             params=params,
         )
 
@@ -371,6 +403,7 @@ class BacktestRuntimeConfig:
     market_data: BacktestMarketDataReference = field(default_factory=BacktestMarketDataReference)
     strategy_config_path: Path | None = None
     strategy: BacktestStrategyConfig | None = None
+    strategies: tuple[BacktestStrategyConfig, ...] = ()
     strategy_params: dict[str, Any] = field(default_factory=dict)
     instrument_ids: dict[str, InstrumentId] = field(default_factory=dict)
     cost_model: BacktestCostModel = field(default_factory=BacktestCostModel)
@@ -418,13 +451,29 @@ class BacktestRuntimeConfig:
             )
         if self.strategy is not None and not isinstance(self.strategy, BacktestStrategyConfig):
             object.__setattr__(self, "strategy", BacktestStrategyConfig(**self.strategy))
+        object.__setattr__(
+            self,
+            "strategies",
+            tuple(
+                strategy
+                if isinstance(strategy, BacktestStrategyConfig)
+                else BacktestStrategyConfig(**strategy)
+                for strategy in self.strategies
+            ),
+        )
         object.__setattr__(self, "roots", tuple(self.roots))
         object.__setattr__(self, "symbols", tuple(self.symbols))
         object.__setattr__(self, "initial_cash", Decimal(str(self.initial_cash)))
         object.__setattr__(self, "strategy_params", dict(self.strategy_params))
+        if self.strategy is not None and self.strategies:
+            raise ValueError("provide either strategy or strategies, not both")
         if self.strategy is not None:
             object.__setattr__(self, "strategy_class", self.strategy.class_path)
             object.__setattr__(self, "strategy_params", dict(self.strategy.params))
+        if self.strategies:
+            first_strategy = self.strategies[0]
+            object.__setattr__(self, "strategy_class", first_strategy.class_path)
+            object.__setattr__(self, "strategy_params", dict(first_strategy.params))
         object.__setattr__(
             self,
             "instrument_ids",
@@ -474,7 +523,7 @@ class BacktestRuntimeConfig:
 
     def to_payload(self) -> dict[str, Any]:
         """Perform to_payload."""
-        payload = {
+        payload: dict[str, Any] = {
             "schema_version": self.schema_version,
             "mode": RuntimeMode.from_value(self.mode).value,
             "execution_environment": ExecutionEnvironment.from_value(
@@ -510,6 +559,8 @@ class BacktestRuntimeConfig:
             payload["strategy_config"] = str(self.strategy_config_path)
         if self.strategy is not None:
             payload["strategy"] = self.strategy.to_payload()
+        if self.strategies:
+            payload["strategies"] = [strategy.to_payload() for strategy in self.strategies]
         return payload
 
     @staticmethod

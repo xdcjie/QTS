@@ -860,6 +860,7 @@ def test_replay_event_contains_dataset_id() -> None:
         bars=iter((_bar(),)),
         dataset_stats={},
         exchange_timezone_by_instrument={},
+        session_window_by_instrument={},
         instrument_registry=InstrumentRegistry(),
         dataset_metadata=(metadata,),
         contract_multipliers={},

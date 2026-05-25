@@ -240,8 +240,34 @@ def _run_pipeline_path(
         parameter_grid=_build_grid(list(config["parameters"])),
         output_root=output_root,
         objective_metric=objective_metric,
+        materialized_replay_cache_dir=_materialized_replay_cache_dir(config, config_dir),
     )
     return BacktestPipelineRunner().run(job), objective_metric
+
+
+def _materialized_replay_cache_dir(config: dict[str, Any], config_dir: Path) -> Path | None:
+    value = config.get("materialized_replay_cache")
+    if value is None or value is False:
+        return None
+    if isinstance(value, str):
+        if not value.strip():
+            raise ValueError("materialized_replay_cache must not be empty")
+        return _resolve_config_path(value, config_dir)
+    if isinstance(value, dict):
+        if not bool(value.get("enabled", False)):
+            return None
+        raw_cache_dir = value.get("cache_dir")
+        if not isinstance(raw_cache_dir, str) or not raw_cache_dir.strip():
+            raise ValueError("materialized_replay_cache.cache_dir is required")
+        return _resolve_config_path(raw_cache_dir, config_dir)
+    raise ValueError("materialized_replay_cache must be a path or mapping")
+
+
+def _resolve_config_path(value: str, config_dir: Path) -> Path:
+    path = Path(value)
+    if path.is_absolute():
+        return path
+    return (config_dir / path).resolve()
 
 
 def main(argv: Sequence[str] | None = None) -> int:

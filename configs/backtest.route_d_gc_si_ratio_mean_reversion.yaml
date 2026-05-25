@@ -1,0 +1,35 @@
+market_data:
+  source: local_historical
+  config: configs/data/historical.local.yaml
+  catalog: research_futures
+roots:
+  - GC
+  - SI
+symbols:
+  - GC
+  - SI
+start: "2020-01-01T00:00:00Z"
+end: "2026-04-10T00:00:00Z"
+timeframe: 1d
+initial_cash: "100000"
+strategy_class: examples.strategies.gc_si_ratio_mean_reversion:GcSiRatioMeanReversionStrategy
+strategy_params:
+  gc_symbol: GC
+  si_symbol: SI
+  timeframe: 1d
+  lookback_bars: 60
+  entry_z: "1.5"
+  exit_z: "0.25"
+  gc_contracts: "1"
+  si_contracts: "2"
+  min_ratio_std: "0.0001"
+cost_model:
+  fixed_commission_per_contract: "2.50"
+  slippage_bps: "0.25"
+risk_config:
+  max_notional: "100000000"
+roll_policy:
+  enabled: true
+  method: first_notice_date
+  roll_sessions_before_first_notice: 3
+warmup_bars: 120

@@ -11,6 +11,7 @@ from qts.data.bars.pipeline import BarAggregationPipeline
 from qts.data.bars.timeframe import Timeframe
 from qts.data.events import MarketDataSubscription
 from qts.data.interfaces import MarketDataAdapter
+from qts.data.sessions import RegularSessionWindow
 from qts.data.subscriptions import (
     LogicalSubscription,
     LogicalSubscriptionKey,
@@ -59,6 +60,7 @@ class MarketDataActor(Actor):
         *,
         aggregate_timeframe: str | None = None,
         exchange_timezone: str | tzinfo | None = None,
+        session_window: RegularSessionWindow | None = None,
         feed: MarketDataAdapter | None = None,
     ) -> None:
         """Perform __init__."""
@@ -71,7 +73,9 @@ class MarketDataActor(Actor):
         self._exchange_timezone = exchange_timezone
         self._feed = feed
         self._aggregation_pipeline = (
-            BarAggregationPipeline(exchange_timezone) if exchange_timezone is not None else None
+            BarAggregationPipeline(exchange_timezone, session_window=session_window)
+            if exchange_timezone is not None
+            else None
         )
         self._logical_subscribers: dict[LogicalSubscriptionKey, dict[str, ActorRef]] = {}
         self._source_timeframe_by_logical: dict[LogicalSubscriptionKey, str] = {}

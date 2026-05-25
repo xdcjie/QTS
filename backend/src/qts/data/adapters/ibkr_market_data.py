@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 
 from qts.core.ids import InstrumentId
 from qts.data.permissions import MarketDataPermissionEvent, MarketDataPermissionState
+from qts.data.sessions import RegularSessionWindow
 from qts.data.transports.ibkr_tws_market_data_transport import (
     IbkrBarPayload,
     IbkrMarketDataTypePayload,
@@ -57,10 +59,12 @@ class IbkrMarketDataAdapter:
         *,
         connection: IbkrMarketDataConnection,
         symbol_mapping: BrokerSymbolMapping,
+        session_window_by_instrument: Mapping[InstrumentId, RegularSessionWindow] | None = None,
     ) -> None:
         """Perform __init__."""
         self.connection = connection
         self._symbol_mapping = symbol_mapping
+        self._session_window_by_instrument = dict(session_window_by_instrument or {})
         self._permission_state = MarketDataPermissionState.UNAVAILABLE
 
     @property
@@ -155,8 +159,12 @@ class IbkrMarketDataAdapter:
         is_partial: bool = False,
     ) -> Bar:
         """Perform normalize_bar."""
+        instrument_id = self._symbol_mapping.to_instrument_id(broker_symbol)
+        session_window = self._session_window_by_instrument.get(instrument_id)
+        if session_window is not None:
+            session_id = session_window.session_id_for_timestamp(start_time) or session_id
         return Bar(
-            instrument_id=self._symbol_mapping.to_instrument_id(broker_symbol),
+            instrument_id=instrument_id,
             start_time=start_time,
             end_time=end_time,
             timeframe=timeframe,

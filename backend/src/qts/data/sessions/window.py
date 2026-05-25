@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
-from qts.core.time import to_exchange_time
+from qts.core.time import TimeInterval, to_exchange_time
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,6 +33,19 @@ class RegularSessionWindow:
 
         session_date = self.session_date_for_timestamp(timestamp)
         return session_date.isoformat() if session_date is not None else None
+
+    def interval_for_session_id(self, session_id: str | date) -> TimeInterval:
+        """Return the exchange-time interval for a close-date session id."""
+
+        session_date = date.fromisoformat(session_id) if isinstance(session_id, str) else session_id
+        timezone = ZoneInfo(self.exchange_timezone)
+        if self.open_time < self.close_time:
+            open_date = session_date
+        else:
+            open_date = session_date - timedelta(days=1)
+        start = datetime.combine(open_date, self.open_time, tzinfo=timezone).astimezone(UTC)
+        end = datetime.combine(session_date, self.close_time, tzinfo=timezone).astimezone(UTC)
+        return TimeInterval(start=start, end=end)
 
     def session_date_for_timestamp(self, timestamp: datetime) -> date | None:
         """Return the exchange-local close date for timestamp, or None if outside."""

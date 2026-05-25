@@ -25,6 +25,7 @@ from qts.core.ids import (
     StrategyId,
 )
 from qts.data.provenance import DatasetMetadata
+from qts.data.sessions import RegularSessionWindow
 from qts.domain.market_data import Bar
 from qts.execution.adapters.brokerage_capabilities import broker_capabilities_for_model
 from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
@@ -86,7 +87,8 @@ class BacktestEngine:
     def __init__(
         self,
         *,
-        strategy: Strategy,
+        strategy: Strategy | None = None,
+        strategies: Sequence[Strategy] | None = None,
         bars: Iterable[Bar],
         initial_cash: Decimal | None = None,
         engine_config: BacktestEngineConfig | None = None,
@@ -101,6 +103,7 @@ class BacktestEngine:
         warmup_bars: int = 0,
         target_timeframe: str | None = None,
         exchange_timezone_by_instrument: Mapping[InstrumentId, str | tzinfo] | None = None,
+        session_window_by_instrument: Mapping[InstrumentId, RegularSessionWindow] | None = None,
         instrument_registry: InstrumentRegistry | None = None,
         backtest_runtime_config: BacktestRuntimeConfig | None = None,
     ) -> None:
@@ -109,7 +112,18 @@ class BacktestEngine:
         Keyword arguments are normalized into ``BacktestEngineConfig`` and
         ``BacktestEngineDependencies`` when explicit objects are not supplied.
         """
-        self._strategy = strategy
+        if strategies is not None:
+            if strategy is not None:
+                raise ValueError("provide either strategy or strategies, not both")
+            strategy_set = tuple(strategies)
+        elif strategy is not None:
+            strategy_set = (strategy,)
+        else:
+            raise ValueError("strategy or strategies is required")
+        if not strategy_set:
+            raise ValueError("strategies must not be empty")
+        self._strategies = strategy_set
+        self._strategy = strategy_set[0]
         self._backtest_runtime_config = backtest_runtime_config
         if instrument_registry is None and isinstance(bars, Sequence):
             self._registry_bars = tuple(bars)
@@ -138,7 +152,7 @@ class BacktestEngine:
                 initial_cash=engine_config.initial_cash,
                 warmup_bars=engine_config.warmup_bars,
                 target_timeframe=engine_config.target_timeframe,
-                strategy_version=strategy.__class__.__qualname__,
+                strategy_version=self._strategy.__class__.__qualname__,
                 config_payload=engine_config.config_payload,
                 dataset_metadata=engine_config.dataset_metadata,
                 cost_model=engine_config.cost_model,
@@ -152,6 +166,7 @@ class BacktestEngine:
                 future_roll_registry=future_roll_registry,
                 contract_multipliers=contract_multipliers,
                 exchange_timezone_by_instrument=exchange_timezone_by_instrument,
+                session_window_by_instrument=session_window_by_instrument,
             )
 
         self._config = engine_config
@@ -165,6 +180,7 @@ class BacktestEngine:
         self._warmup_bars = engine_config.warmup_bars
         self._target_timeframe = engine_config.target_timeframe
         self._exchange_timezone_by_instrument = dict(dependencies.exchange_timezone_by_instrument)
+        self._session_window_by_instrument = dict(dependencies.session_window_by_instrument)
         self._risk_engine = dependencies.risk_engine
         self._execution_adapter = dependencies.execution_adapter or SimulatedExecutionAdapter(
             self._cost_model,
@@ -205,11 +221,13 @@ class BacktestEngine:
         config: BacktestRuntimeConfig,
         *,
         bars: Iterable[Bar],
-        strategy: Strategy,
+        strategy: Strategy | None = None,
+        strategies: Sequence[Strategy] | None = None,
         instrument_registry: InstrumentRegistry | None = None,
         dataset_metadata: Iterable[DatasetMetadata] = (),
         future_roll_registry: FutureRollRegistry | None = None,
         exchange_timezone_by_instrument: Mapping[InstrumentId, str | tzinfo] | None = None,
+        session_window_by_instrument: Mapping[InstrumentId, RegularSessionWindow] | None = None,
         contract_multipliers: Mapping[InstrumentId, Decimal] | None = None,
     ) -> BacktestEngine:
         """Build an engine from a serialized backtest run config."""
@@ -233,9 +251,11 @@ class BacktestEngine:
             future_roll_registry=future_roll_registry,
             contract_multipliers=contract_multipliers,
             exchange_timezone_by_instrument=exchange_timezone_by_instrument,
+            session_window_by_instrument=session_window_by_instrument,
         )
         return cls(
             strategy=strategy,
+            strategies=strategies,
             bars=bars,
             engine_config=engine_config,
             dependencies=dependencies,
@@ -265,23 +285,27 @@ class BacktestEngine:
         """
         config_hash = stable_json_hash(self._config_hash_payload)
         runtime_run_id = RuntimeRunId(f"bt-{config_hash.removeprefix('sha256:')[:12]}")
-        strategy_id = StrategyId("strategy")
+        strategy_id: StrategyId | None = StrategyId("strategy")
         account_id = AccountId("acct-backtest")
+        strategy_specs = None
         if self._backtest_runtime_config is not None:
             runtime_topology = RuntimeTopologyBuilder.from_backtest_config(
                 self._backtest_runtime_config,
                 runtime_run_id,
             )
             runtime_topology_payload = runtime_topology.to_manifest_payload()
+            strategy_specs = runtime_topology.strategies
             if runtime_topology.accounts:
                 account_id = runtime_topology.accounts[0].account_id
-            if runtime_topology.strategies:
+            if len(runtime_topology.strategies) == 1:
                 strategy_id = runtime_topology.strategies[0].strategy_id
+            elif runtime_topology.strategies:
+                strategy_id = None
         else:
             runtime_topology_payload = self._default_runtime_topology_payload(
                 runtime_run_id=runtime_run_id,
                 account_id=account_id,
-                strategy_id=strategy_id,
+                strategy_id=strategy_id or StrategyId("strategy"),
             )
         writer = BacktestArtifactWriter(
             output_dir,
@@ -300,7 +324,7 @@ class BacktestEngine:
             metrics=metrics,
         )
         actor_loop = BacktestActorLoop(
-            strategy=self._strategy,
+            strategies=self._strategies,
             bars=self._bars,
             config=BacktestActorLoopConfig(
                 initial_cash=self._initial_cash,
@@ -312,6 +336,7 @@ class BacktestEngine:
                 future_roll_registry=self._future_roll_registry,
                 contract_multipliers=self._contract_multipliers,
                 exchange_timezone_by_instrument=self._exchange_timezone_by_instrument,
+                session_window_by_instrument=self._session_window_by_instrument,
                 execution_adapter=self._execution_adapter,
                 process_intent=self._intent_processor.process_intent,
                 portfolio_view=self._portfolio_projector.portfolio_view,
@@ -321,6 +346,7 @@ class BacktestEngine:
             ),
             strategy_id=strategy_id,
             account_id=account_id,
+            strategy_specs=strategy_specs,
         )
         runtime = actor_loop.run(
             sink=sink,

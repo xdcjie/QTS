@@ -154,6 +154,8 @@ def historical_timeframe_delta(timeframe: str) -> timedelta:
         return timedelta(seconds=int(timeframe[:-1]))
     if timeframe.endswith("h"):
         return timedelta(hours=int(timeframe[:-1]))
+    if timeframe == "1d":
+        return timedelta(days=1)
     raise ValueError(f"unsupported historical timeframe: {timeframe}")
 
 

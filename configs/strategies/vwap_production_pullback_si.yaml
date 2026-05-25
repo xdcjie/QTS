@@ -3,4 +3,5 @@ class_path: strategies.production.vwap_production_pullback:SiVwapProductionPullb
 account_id: backtest-account
 allocation: "1.0"
 enabled: true
-params: {}
+params:
+  timeframe: 15m

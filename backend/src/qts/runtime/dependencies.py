@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import tzinfo
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from qts.core.ids import AccountId, InstrumentId, RuntimeRunId, StrategyId
+from qts.data.sessions import RegularSessionWindow
 from qts.data.sources.streaming_market_data_source import StreamingMarketDataSource
 from qts.execution.execution_adapter import ExecutionAdapter
 from qts.registry.future_roll import FutureRollRegistry
@@ -62,6 +63,7 @@ class RuntimeSessionDependencies:
     contract_multipliers: dict[InstrumentId, Decimal] | None = None
     target_timeframe: str | None = None
     exchange_timezone_by_instrument: dict[InstrumentId, str | tzinfo] | None = None
+    session_window_by_instrument: Mapping[InstrumentId, RegularSessionWindow] | None = None
     warmup_bars: int = 0
     order_submission_enabled: bool = True
     startup_decision: BrokerRuntimeStartupDecision | None = None
@@ -113,6 +115,11 @@ class RuntimeSessionDependencies:
     def exchange_timezones(self) -> dict[InstrumentId, str | tzinfo]:
         """Return exchange timezones used by market-data aggregation."""
         return dict(self.exchange_timezone_by_instrument or {})
+
+    @property
+    def session_windows(self) -> dict[InstrumentId, RegularSessionWindow]:
+        """Return session windows used by session-aligned market-data aggregation."""
+        return dict(self.session_window_by_instrument or {})
 
 
 __all__ = [

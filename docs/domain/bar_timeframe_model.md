@@ -15,12 +15,12 @@ qts/data/bars/validation.py    data quality and interval validation
 ## Supported chain
 
 ```text
-5s -> 1m -> 5m -> 15m -> 30m -> 1h -> 4h -> 1d
+5s -> 1m -> 2m -> 3m -> 5m -> 15m -> 30m -> 1h -> 4h -> 1d
 ```
 
 ## Timeframe semantics
 
-- `5s`, `1m`, `5m`, `15m`, `30m`, `1h`, `4h`: clock-aligned bars in exchange timezone.
+- `5s`, `1m`, `2m`, `3m`, `5m`, `15m`, `30m`, `1h`, `4h`: clock-aligned bars in exchange timezone.
 - `1d`: session-aligned bar.
 - `1d` must not be treated as 24 hours.
 - All intervals use `[start, end)`.
