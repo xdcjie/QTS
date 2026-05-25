@@ -47,6 +47,9 @@ Use existing documentation directories before adding new ones:
   and rollout/soak plans.
 - `plan/`: implementation plans, milestone plans, acceptance matrices, backlogs, gap
   analyses, and status reports.
+- `research/`: Research OS contracts, factor discovery/evaluation protocols,
+  experiment evidence rules, subagent work-package templates, and promotion
+  boundaries for moving reviewed evidence toward paper/live consideration.
 - `runtime/`: actor model, router, scheduler, clock, recovery, and runtime lifecycle rules.
 - `strategy_sdk/`: user-facing strategy API, data views, indicators, factors, and examples.
 - `testing/`: testing strategy, anchor-test policy, domain invariants, and integration-flow

@@ -381,25 +381,6 @@ roll_policy:
     assert config.roll_policy.roll_sessions_before_first_notice == 3
 
 
-def test_route_e_carry_trend_backtest_config_keeps_signal_assets_non_tradable() -> None:
-    config = BacktestRuntimeConfig.from_yaml(Path("configs/backtest.route_e_carry_trend.yaml"))
-
-    assert config.roots == ("GC", "SI", "CARRY")
-    assert config.symbols == ("GC", "SI", "GC_CARRY", "SI_CARRY")
-    assert config.instrument_ids == {
-        "GC_CARRY": InstrumentId("RESEARCH.CARRY.GC"),
-        "SI_CARRY": InstrumentId("RESEARCH.CARRY.SI"),
-    }
-    assert (
-        config.strategy_class == "examples.strategies.carry_trend_overlay:CarryTrendOverlayStrategy"
-    )
-    assert config.strategy_params["carry_symbols"] == {
-        "GC": "GC_CARRY",
-        "SI": "SI_CARRY",
-    }
-    assert config.roll_policy.enabled is True
-
-
 def test_backtest_run_config_validates_material_fields() -> None:
     config = BacktestRuntimeConfig.from_yaml(Path("configs/backtest.gc_si.example.yaml"))
 

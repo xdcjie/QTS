@@ -20,6 +20,7 @@ from qts.research.optimizer.runner import OptimizationRunner, extract_objective_
 from qts.research.optimizer.validation import (
     OptimizerValidationSummary,
     OptimizerValidationSummaryWriter,
+    ResearchValidationPolicy,
     derive_capital_metrics,
 )
 from qts.research.optimizer.walk_forward import (
@@ -54,6 +55,7 @@ __all__ = [
     "OptimizerValidationSummaryWriter",
     "ParameterGrid",
     "ParameterSpace",
+    "ResearchValidationPolicy",
     "StrategyFactory",
     "WalkForwardRobustnessDecision",
     "WalkForwardRobustnessPolicy",

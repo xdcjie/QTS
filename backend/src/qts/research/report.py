@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 
 class _WorkflowStepResult(Protocol):
@@ -42,6 +42,47 @@ class _WorkflowResult(Protocol):
 
 
 @dataclass(frozen=True, slots=True)
+class ResearchReviewDecision:
+    """Machine-readable human review decision attached to research evidence."""
+
+    status: str = "keep_researching"
+    reviewer: str | None = None
+    reason: tuple[str, ...] = ()
+    required_next_evidence: tuple[str, ...] = ()
+    evidence_bundle_id: str | None = None
+    trade_diagnostics_available: bool = False
+    validation_scorecard_available: bool = False
+    cost_stress_available: bool = False
+
+    def __post_init__(self) -> None:
+        if self.status not in _ALLOWED_REVIEW_DECISIONS:
+            raise ValueError(f"unsupported review decision status: {self.status}")
+        if self.status == "paper_candidate":
+            if not self.evidence_bundle_id:
+                raise ValueError("paper_candidate requires evidence_bundle_id")
+            if not self.trade_diagnostics_available:
+                raise ValueError("paper_candidate requires trade diagnostics")
+            if not self.validation_scorecard_available:
+                raise ValueError("paper_candidate requires validation scorecard")
+            if not self.cost_stress_available:
+                raise ValueError("paper_candidate requires cost stress evidence")
+
+    def to_payload(self) -> dict[str, Any]:
+        """Return deterministic JSON/YAML-compatible decision payload."""
+
+        return {
+            "cost_stress_available": self.cost_stress_available,
+            "evidence_bundle_id": self.evidence_bundle_id,
+            "reason": list(self.reason),
+            "required_next_evidence": list(self.required_next_evidence),
+            "reviewer": self.reviewer,
+            "status": self.status,
+            "trade_diagnostics_available": self.trade_diagnostics_available,
+            "validation_scorecard_available": self.validation_scorecard_available,
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class ResearchWorkflowReport:
     """Deterministic report payload derived from workflow outputs."""
 
@@ -49,6 +90,9 @@ class ResearchWorkflowReport:
     workflow_status: str
     steps: tuple[dict[str, Any], ...]
     periods: tuple[dict[str, str], ...] = ()
+    run_context: Mapping[str, Any] = field(default_factory=dict)
+    route: Mapping[str, Any] = field(default_factory=dict)
+    decision: ResearchReviewDecision = field(default_factory=ResearchReviewDecision)
 
     @classmethod
     def from_result(cls, result: _WorkflowResult) -> ResearchWorkflowReport:
@@ -56,6 +100,9 @@ class ResearchWorkflowReport:
 
         return cls(
             periods=_normalize_periods(getattr(result, "periods", ())),
+            run_context=_normalize_run_context(getattr(result, "run_context", None)),
+            route=_normalize_route(getattr(result, "route", None)),
+            decision=_normalize_decision(getattr(result, "decision", None)),
             workflow_id=_required_text(result, "workflow_id"),
             workflow_status=_required_text(result, "status"),
             steps=tuple(_normalize_step(step) for step in result.steps),
@@ -66,13 +113,17 @@ class ResearchWorkflowReport:
 
         sections = [
             self._header(),
+            self._evidence_header(),
             self._summary(),
             self._step_section(),
         ]
         period_roles = self._period_roles_section()
         if period_roles:
             sections.append(period_roles)
-        sections.extend([self._evidence_section(), self._footer()])
+        route_section = self._route_section()
+        if route_section:
+            sections.append(route_section)
+        sections.extend([self._evidence_section(), self._decision_section(), self._footer()])
         return "\n\n".join(sections).strip()
 
     def _evidence_section(self) -> str:
@@ -96,6 +147,28 @@ class ResearchWorkflowReport:
             "# Research Workflow Report\n\n"
             f"workflow_id: {self.workflow_id}\n"
             f"workflow_status: {self.workflow_status}"
+        )
+
+    def _evidence_header(self) -> str:
+        """Render run-context evidence required for promotion review traceability."""
+
+        context = self.run_context
+        dataset_ids = context.get("dataset_ids", [])
+        return "\n".join(
+            [
+                "## Evidence Header",
+                f"- Workflow config: {context.get('workflow_config_path', 'unknown')}",
+                f"- Workflow config hash: {context.get('workflow_config_hash', 'unknown')}",
+                f"- Research config: {context.get('research_config_path', 'unknown')}",
+                f"- Research config hash: {context.get('research_config_hash', 'unknown')}",
+                f"- Git branch: {context.get('git_branch', 'unknown')}",
+                f"- Git commit: {context.get('git_commit', 'unknown')}",
+                f"- Dirty workspace: {context.get('git_dirty', 'unknown')}",
+                f"- Dataset IDs: {dataset_ids}",
+                f"- Backtest config hash: {context.get('backtest_config_hash', 'unknown')}",
+                f"- Generated at: {context.get('generated_at', 'unknown')}",
+                f"- Promotion status: {context.get('promotion_status', 'research_only')}",
+            ]
         )
 
     def _summary(self) -> str:
@@ -159,6 +232,39 @@ class ResearchWorkflowReport:
             "This workflow report is research evidence only. "
             "It does not promote strategy code into paper/live execution."
         )
+
+    def _route_section(self) -> str:
+        """Render optional route governance metadata."""
+
+        if not self.route:
+            return ""
+        lines = ["## Route Metadata"]
+        for key in ("route_id", "route_name", "status", "owner"):
+            if key in self.route:
+                lines.append(f"- {key}: {self.route[key]}")
+        if "selection_policy" in self.route:
+            lines.append(f"- selection_policy: {_json_ready(self.route['selection_policy'])}")
+        if "allowed_period_roles" in self.route:
+            lines.append(f"- allowed_period_roles: {self.route['allowed_period_roles']}")
+        return "\n".join(lines)
+
+    def _decision_section(self) -> str:
+        """Render the machine-readable review decision block."""
+
+        payload = self.decision.to_payload()
+        lines = ["## Review Decision", "```yaml", "decision:"]
+        for key in sorted(payload):
+            value = payload[key]
+            if isinstance(value, list):
+                lines.append(f"  {key}:")
+                if value:
+                    lines.extend(f"    - {item}" for item in value)
+                else:
+                    lines.append("    []")
+            else:
+                lines.append(f"  {key}: {_yaml_scalar(value)}")
+        lines.append("```")
+        return "\n".join(lines)
 
 
 class ResearchWorkflowReportWriter:
@@ -402,6 +508,57 @@ def _normalize_periods(periods: Any) -> tuple[dict[str, str], ...]:
     return tuple(normalized)
 
 
+def _normalize_run_context(value: Any) -> Mapping[str, Any]:
+    if value is None:
+        return {}
+    if isinstance(value, Mapping):
+        return cast(Mapping[str, Any], _json_ready(value))
+    to_payload = getattr(value, "to_payload", None)
+    if callable(to_payload):
+        payload = to_payload()
+        if isinstance(payload, Mapping):
+            return cast(Mapping[str, Any], _json_ready(payload))
+    raise ValueError("run_context must be a mapping-like payload")
+
+
+def _normalize_route(value: Any) -> Mapping[str, Any]:
+    if value is None:
+        return {}
+    if isinstance(value, Mapping):
+        return cast(Mapping[str, Any], _json_ready(value))
+    to_payload = getattr(value, "to_payload", None)
+    if callable(to_payload):
+        payload = to_payload()
+        if isinstance(payload, Mapping):
+            return cast(Mapping[str, Any], _json_ready(payload))
+    raise ValueError("route must be a mapping-like payload")
+
+
+def _normalize_decision(value: Any) -> ResearchReviewDecision:
+    if value is None:
+        return ResearchReviewDecision()
+    if isinstance(value, ResearchReviewDecision):
+        return value
+    if isinstance(value, Mapping):
+        return ResearchReviewDecision(
+            status=str(value.get("status", "keep_researching")),
+            reviewer=None if value.get("reviewer") is None else str(value["reviewer"]),
+            reason=tuple(str(item) for item in value.get("reason", ())),
+            required_next_evidence=tuple(
+                str(item) for item in value.get("required_next_evidence", ())
+            ),
+            evidence_bundle_id=(
+                None
+                if value.get("evidence_bundle_id") is None
+                else str(value["evidence_bundle_id"])
+            ),
+            trade_diagnostics_available=bool(value.get("trade_diagnostics_available", False)),
+            validation_scorecard_available=bool(value.get("validation_scorecard_available", False)),
+            cost_stress_available=bool(value.get("cost_stress_available", False)),
+        )
+    raise ValueError("decision must be a ResearchReviewDecision or mapping")
+
+
 def _format_period_bound(value: Any) -> str:
     if hasattr(value, "isoformat"):
         return str(value.isoformat())
@@ -534,7 +691,27 @@ def _as_mapping(value: Any) -> Mapping[str, Any]:
     return value
 
 
+def _yaml_scalar(value: Any) -> str:
+    if value is None:
+        return "null"
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    return str(value)
+
+
+_ALLOWED_REVIEW_DECISIONS = frozenset(
+    {
+        "freeze_forward",
+        "keep_researching",
+        "paper_candidate",
+        "reject",
+        "retire",
+        "small_live_candidate",
+    }
+)
+
 __all__ = [
+    "ResearchReviewDecision",
     "ResearchWorkflowReport",
     "ResearchWorkflowReportWriter",
 ]

@@ -9,6 +9,8 @@ from qts.research import (
     ResearchWorkflowResult,
     ResearchWorkflowStepResult,
 )
+from qts.research.report import ResearchReviewDecision
+from qts.research.workflow import ResearchWorkflowRunContext
 
 
 def _result_step(
@@ -122,6 +124,81 @@ def test_workflow_report_renders_optimizer_capital_metrics() -> None:
     assert "rejected_count: 1" in body
     assert "top_pnl_usd: 160.00" in body
     assert "top_return_on_margin_proxy: 0.0133333333" in body
+
+
+def test_research_report_contains_evidence_header() -> None:
+    run_context = ResearchWorkflowRunContext(
+        workflow_config_path="configs/research/workflows/quickstart.yaml",
+        workflow_config_hash="sha256:workflow",
+        research_config_path="configs/research/quickstart.yaml",
+        research_config_hash="sha256:research",
+        git_branch="master",
+        git_commit="abc123",
+        git_dirty=False,
+        dataset_ids=("fixture:GC:15m",),
+        backtest_config_hash="sha256:backtest",
+        generated_at="2026-05-25T00:00:00+00:00",
+    )
+    report = ResearchWorkflowReport.from_result(
+        ResearchWorkflowResult(
+            workflow_id="quickstart-flow",
+            status="completed",
+            steps=(),
+            run_context=run_context,
+        )
+    )
+
+    body = report.to_markdown()
+
+    assert "## Evidence Header" in body
+    assert "- Workflow config: configs/research/workflows/quickstart.yaml" in body
+    assert "- Workflow config hash: sha256:workflow" in body
+    assert "- Research config: configs/research/quickstart.yaml" in body
+    assert "- Git branch: master" in body
+    assert "- Dirty workspace: False" in body
+    assert "- Promotion status: research_only" in body
+
+
+def test_report_decision_status_enum() -> None:
+    with pytest.raises(ValueError, match="unsupported review decision status"):
+        ResearchReviewDecision(status="looks_good")
+
+
+def test_report_decision_requires_evidence_bundle_for_paper_candidate() -> None:
+    with pytest.raises(ValueError, match="paper_candidate requires evidence_bundle_id"):
+        ResearchReviewDecision(status="paper_candidate")
+
+
+def test_report_decision_blocks_paper_without_required_evidence() -> None:
+    with pytest.raises(ValueError, match="paper_candidate requires trade diagnostics"):
+        ResearchReviewDecision(
+            status="paper_candidate",
+            evidence_bundle_id="evb_fixture",
+            validation_scorecard_available=True,
+            cost_stress_available=True,
+        )
+
+
+def test_report_renders_machine_readable_decision_block() -> None:
+    report = ResearchWorkflowReport.from_result(
+        ResearchWorkflowResult(
+            workflow_id="decision-flow",
+            status="completed",
+            steps=(),
+            decision=ResearchReviewDecision(
+                status="keep_researching",
+                reason=("Need cost stress evidence.",),
+                required_next_evidence=("cost_stress_2x_3x",),
+            ),
+        )
+    )
+
+    body = report.to_markdown()
+
+    assert "## Review Decision" in body
+    assert "status: keep_researching" in body
+    assert "required_next_evidence:" in body
+    assert "- cost_stress_2x_3x" in body
 
 
 def test_research_report_prints_period_roles() -> None:

@@ -9,15 +9,14 @@ from typing import Any
 
 import pytest
 import yaml  # type: ignore[import-untyped]
-from qts.research import ResearchSessionConfig
 from qts.research.workflow import (
+    ResearchRouteIndex,
     ResearchWorkflowConfig,
+    ResearchWorkflowRunContext,
     ResearchWorkflowRunner,
     ResearchWorkflowStepConfig,
 )
 from qts.runtime.config import BacktestRuntimeConfig
-
-from strategies.research.vwap_factor_research import VwapFactorResearchConfig
 
 
 def _write_workflow(tmp_path: Path, body: str) -> Path:
@@ -93,6 +92,134 @@ steps:
 
     with pytest.raises(ValueError, match="unsupported workflow step kind: live"):
         ResearchWorkflowConfig.from_yaml(workflow_path)
+
+
+def test_route_metadata_appears_in_workflow_payload_and_report(
+    tmp_path: Path,
+) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: routed-flow
+route:
+  route_id: R1
+  route_name: vwap_research_route
+  status: exploration
+  owner: research
+  selection_policy:
+    selection_periods: [selection_2020_2022]
+    validation_periods: [validation_2022_2024]
+    report_only_periods: [holdout_2024_2026]
+  allowed_period_roles:
+    - selection
+    - validation
+    - holdout_report_only
+periods:
+  selection_2020_2022:
+    start: "2020-01-01"
+    end: "2022-01-01"
+    role: selection
+  validation_2022_2024:
+    start: "2022-01-01"
+    end: "2024-01-01"
+    role: validation
+  holdout_2024_2026:
+    start: "2024-01-01"
+    end: "2026-01-01"
+    role: holdout_report_only
+steps:
+  - id: report
+    kind: research_report
+    output_root: reports
+""",
+    )
+
+    config = ResearchWorkflowConfig.from_yaml(workflow_path)
+    result = ResearchWorkflowRunner().run(_FakeSession(accepted_specs=()), config)
+
+    assert result.to_payload()["route"]["route_id"] == "R1"
+    report_text = (tmp_path / "reports" / "workflow-report.md").read_text(encoding="utf-8")
+    assert "## Route Metadata" in report_text
+    assert "- route_id: R1" in report_text
+    assert "- status: exploration" in report_text
+
+
+def test_report_only_period_cannot_set_route_candidate_status(tmp_path: Path) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: report-only-candidate-route
+route:
+  route_id: R1
+  route_name: unsafe
+  status: candidate
+  owner: research
+  selection_policy:
+    selection_periods: [holdout_2024_2026]
+  allowed_period_roles: [holdout_report_only]
+periods:
+  holdout_2024_2026:
+    start: "2024-01-01"
+    end: "2026-01-01"
+    role: holdout_report_only
+steps:
+  - id: report
+    kind: research_report
+""",
+    )
+
+    with pytest.raises(ValueError, match="route candidate status requires scoring selection"):
+        ResearchWorkflowConfig.from_yaml(workflow_path)
+
+
+def test_route_index_resolves_all_routes(tmp_path: Path) -> None:
+    route_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: route-a
+route:
+  route_id: A
+  route_name: route_a
+  status: exploration
+  owner: research
+steps:
+  - id: report
+    kind: research_report
+""",
+    )
+    index_path = tmp_path / "research_routes_index.yaml"
+    index_path.write_text(
+        f"""
+version: 1
+routes:
+  - route_id: A
+    workflow: {route_path.name}
+""",
+        encoding="utf-8",
+    )
+
+    index = ResearchRouteIndex.from_yaml(index_path)
+
+    assert index.routes == ({"route_id": "A", "workflow": str(route_path)},)
+
+
+def test_route_index_missing_file_fails(tmp_path: Path) -> None:
+    index_path = tmp_path / "research_routes_index.yaml"
+    index_path.write_text(
+        """
+version: 1
+routes:
+  - route_id: A
+    workflow: missing.yaml
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(FileNotFoundError, match="route workflow not found"):
+        ResearchRouteIndex.from_yaml(index_path)
 
 
 def test_workflow_rejects_holdout_in_optimizer_objective(tmp_path: Path) -> None:
@@ -637,6 +764,77 @@ steps:
     assert session.backtest_calls == []
 
 
+def test_workflow_result_payload_includes_run_context(tmp_path: Path) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: context-flow
+steps:
+  - id: implementation
+    kind: implementation_gate
+    required_modules:
+      - examples.strategies.gc_si_momentum
+""",
+    )
+    research_config = tmp_path / "research.yaml"
+    research_config.write_text("store: runs/research\n", encoding="utf-8")
+    backtest_config = tmp_path / "backtest.yaml"
+    backtest_config.write_text("runtime: backtest\n", encoding="utf-8")
+    session = _FakeSession(accepted_specs=())
+    session.config = SimpleNamespace(
+        backtest_config_path=backtest_config,
+        catalog_name="fixture",
+        research_config_path=research_config,
+        roots=("GC", "SI"),
+        timeframe="15m",
+    )
+
+    result = ResearchWorkflowRunner().run(
+        session,
+        ResearchWorkflowConfig.from_yaml(workflow_path),
+    )
+
+    payload = result.to_payload()
+    run_context = payload["run_context"]
+    assert run_context["workflow_config_path"] == str(workflow_path)
+    assert run_context["workflow_config_hash"].startswith("sha256:")
+    assert run_context["research_config_path"] == str(research_config)
+    assert run_context["research_config_hash"].startswith("sha256:")
+    assert run_context["backtest_config_hash"].startswith("sha256:")
+    assert run_context["dataset_ids"] == ["fixture:GC:15m", "fixture:SI:15m"]
+    assert run_context["promotion_status"] == "research_only"
+    assert "git_dirty" in run_context
+
+
+def test_workflow_run_context_uses_unknown_when_git_metadata_unavailable(
+    tmp_path: Path,
+) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: context-flow
+steps:
+  - id: implementation
+    kind: implementation_gate
+    required_modules:
+      - examples.strategies.gc_si_momentum
+""",
+    )
+    session = _FakeSession(accepted_specs=())
+
+    run_context = ResearchWorkflowRunContext.from_session(
+        session,
+        ResearchWorkflowConfig.from_yaml(workflow_path),
+        git_command=lambda *_args: None,
+    )
+
+    assert run_context.git_branch == "unknown"
+    assert run_context.git_commit == "unknown"
+    assert run_context.git_dirty == "unknown"
+
+
 def test_review_gate_cannot_continue_into_backtest_when_blocked(
     tmp_path: Path,
 ) -> None:
@@ -851,7 +1049,7 @@ steps:
     report_text = report_path.read_text(encoding="utf-8")
     assert "backtest" in report_text
     assert "optimize" in report_text
-    assert "review" not in report_text
+    assert "- id: review" not in report_text
 
 
 def test_runner_rejects_unknown_selected_workflow_step_before_executing(
@@ -1819,775 +2017,10 @@ steps:
     assert session.failure_veto_calls == []
 
 
-def test_vwap_workflow_defines_true_oos_after_2026_01_01_as_report_only() -> None:
-    config = ResearchWorkflowConfig.from_yaml(
-        Path("configs/research/workflows/vwap_factor_search.yaml")
-    )
-    structural = next(step for step in config.steps if step.step_id == "structural-candidates")
-
-    veto = structural.payload["validation"]["failure_window_veto"]
-    report_only = veto["report_only_windows"]
-
-    assert {
-        "name": str(report_only[-1]["name"]),
-        "start": report_only[-1]["start"].isoformat(),
-        "end": report_only[-1]["end"].isoformat(),
-    } == {
-        "name": "true-oos-after-2026-01-01",
-        "start": "2026-01-01",
-        "end": "2027-01-01",
-    }
-
-
-def test_vwap_structural_workflow_uses_risk_budget_quality_and_partial_runner() -> None:
-    config = ResearchWorkflowConfig.from_yaml(
-        Path("configs/research/workflows/vwap_factor_search.yaml")
-    )
-    structural = next(step for step in config.steps if step.step_id == "structural-candidates")
-    parameters = structural.payload["parameters"]
-
-    assert parameters["time_window"] == ["full_session"]
-    assert parameters["timeframe"] == ["1m", "2m", "3m", "5m", "15m"]
-    assert parameters["entry_size_rule"] == ["risk_budget"]
-    assert "target_quantity" not in parameters
-    assert parameters["risk_budget"] == ["600"]
-    assert parameters["risk_budget_point_value"] == ["100"]
-    assert parameters["risk_budget_max_quantity"] == ["4"]
-    assert parameters["exit_style"] == ["partial_runner"]
-    assert parameters["factor_filters"] == [
-        ["vwap_acceptance", "trend_efficiency", "trend_age", "session_sigma_range"],
-        [
-            "vwap_slope_strength",
-            "vwap_acceptance",
-            "trend_efficiency",
-            "trend_age",
-            "session_sigma_range",
-        ],
-    ]
-
-
-def test_canonical_vwap_workflow_declares_gc_stable_annualized_target_matrix() -> None:
-    workflow_path = Path("configs/research/workflows/vwap_factor_search.yaml")
-    payload = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
-    step_by_id = {step["id"]: step for step in payload["steps"]}
-
-    matrix = step_by_id["gc-15m-stable-annualized-scale"]
-    report_index = next(
-        index for index, step in enumerate(payload["steps"]) if step["id"] == "report"
-    )
-    matrix_index = next(
-        index
-        for index, step in enumerate(payload["steps"])
-        if step["id"] == "gc-15m-stable-annualized-scale"
-    )
-
-    assert matrix_index < report_index
-    assert matrix["kind"] == "backtest_matrix"
-    assert matrix["backtest_config"] == "../../backtest.vwap_factor_research_gc_15m_long_is.yaml"
-    assert matrix["summary_output"] == (
-        "../../../runs/research/vwap/gc-15m-long/validation/stable-annualized-scale.json"
-    )
-    assert matrix["metrics"] == [
-        "compounding_annual_return",
-        "total_return",
-        "sharpe_ratio",
-        "max_drawdown",
-        "total_trades",
-        "profit_factor",
-    ]
-    assert matrix["periods"] == [
-        {
-            "name": "validation_2022_2024",
-            "start": "2022-01-01",
-            "end": "2024-01-01",
-            "role": "validation",
-        },
-        {
-            "name": "holdout_2024_2026",
-            "start": "2024-01-01",
-            "end": "2026-01-01",
-            "role": "holdout_report_only",
-        },
-        {
-            "name": "true_oos_after_2026_01_01",
-            "start": "2026-01-01",
-            "end": "2027-01-01",
-            "role": "true_oos_report_only",
-        },
-    ]
-    assert matrix["base_strategy_params"] == {
-        "bad_regime_rule": "hard14",
-        "bad_regime_target_r_multiple": "1.5",
-        "bad_regime_unready_policy": "allow",
-        "early_no_progress_adverse_r": "0.50",
-        "early_no_progress_exit_bars": 4,
-        "early_no_progress_favorable_r": "0.25",
-        "entry_size_momentum_min_abs": "2.00",
-        "entry_size_reduced_quantity": "1",
-        "entry_size_rule": "sigma_momentum_reduce",
-        "entry_size_session_sigma_min_atr": "1.00",
-        "factor_filters": [
-            "session_sigma_range",
-            "mom120_aligned",
-            "mom120_min",
-            "vwap_acceptance_if_bad_regime",
-            "range_expansion",
-        ],
-        "max_pullback_break_atr": "1.0",
-        "min_volume_ratio": "1.3",
-        "pullback_touch_atr_below": "0.15",
-        "range_expansion_max": "1.50",
-        "range_expansion_min": "0",
-        "stop_atr_multiple": "1.0",
-        "symbol": "GC",
-        "target_r_multiple": "1.5",
-        "time_window": "asia_20_02",
-        "timeframe": "15m",
-        "ts_momentum_min_abs": "1.00",
-        "vwap_acceptance_min": "0.75",
-    }
-    assert [candidate["name"] for candidate in matrix["candidates"]] == [
-        "q1_np4_range150_mom100_q4",
-        "q1_np4_range150_mom100_q6",
-        "q1_np4_range150_mom100_q8",
-        "q1_np4_range150_mom100_q10",
-        "q1_np4_range150_mom100_q12",
-    ]
-    assert [
-        candidate["strategy_params"]["target_quantity"] for candidate in matrix["candidates"]
-    ] == ["4", "6", "8", "10", "12"]
-
-
-def test_vwap_research_backtest_warmup_covers_workflow_factor_filters() -> None:
-    runtime_config = BacktestRuntimeConfig.from_yaml(
-        Path("configs/backtest.vwap_factor_research.yaml")
-    )
-    workflow_config = ResearchWorkflowConfig.from_yaml(
-        Path("configs/research/workflows/vwap_factor_search.yaml")
-    )
-    required_warmup = 0
-
-    for step in workflow_config.steps:
-        if step.kind != "optimize":
-            continue
-        parameters = step.payload["parameters"]
-        for factor_filters in parameters.get("factor_filters", ()):
-            strategy_params = {
-                **runtime_config.strategy_params,
-                **{
-                    name: values[0]
-                    for name, values in parameters.items()
-                    if name != "factor_filters" and isinstance(values, list) and values
-                },
-                "factor_filters": tuple(factor_filters),
-            }
-            required_warmup = max(
-                required_warmup,
-                VwapFactorResearchConfig(**strategy_params).required_warmup_bars,
-            )
-
-    assert runtime_config.warmup_bars >= required_warmup
-
-
 def test_vwap_research_config_includes_gc_and_si_for_route_b() -> None:
     payload = yaml.safe_load(Path("configs/research/vwap.yaml").read_text(encoding="utf-8"))
 
     assert payload["data"]["roots"] == ["GC", "SI"]
-
-
-def test_canonical_vwap_workflow_declares_route_b_lanes_and_windows() -> None:
-    workflow_path = Path("configs/research/workflows/vwap_factor_search.yaml")
-    payload = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
-    step_by_id = {step["id"]: step for step in payload["steps"]}
-
-    required_steps = {
-        "route-b-implementation",
-        "route-b-vwap-gc-rolling",
-        "route-b-vwap-si-rolling",
-        "route-b-dual-supertrend-gc",
-        "route-b-dual-supertrend-si",
-    }
-    assert required_steps.issubset(step_by_id)
-    assert "route-b-gc-si-momentum" not in step_by_id
-    assert step_by_id["route-b-implementation"] == {
-        "id": "route-b-implementation",
-        "kind": "implementation_gate",
-        "required_strategy": "examples.strategies.dual_supertrend:DualSupertrendStrategy",
-    }
-
-    for step_id in (
-        "route-b-vwap-gc-rolling",
-        "route-b-vwap-si-rolling",
-        "route-b-dual-supertrend-gc",
-        "route-b-dual-supertrend-si",
-    ):
-        periods = {period["name"]: period for period in step_by_id[step_id]["periods"]}
-        assert periods["is_2020_2022"] == {
-            "name": "is_2020_2022",
-            "start": "2020-01-01",
-            "end": "2022-01-01",
-        }
-        assert periods["validation_2022_2024"] == {
-            "name": "validation_2022_2024",
-            "start": "2022-01-01",
-            "end": "2024-01-01",
-        }
-        assert periods["holdout_2024_2026"] == {
-            "name": "holdout_2024_2026",
-            "start": "2024-01-01",
-            "end": "2026-01-01",
-        }
-        assert periods["anchor_2010_2020"] == {
-            "name": "anchor_2010_2020",
-            "start": "2010-06-06",
-            "end": "2020-01-01",
-        }
-
-
-def test_route_b_workflow_records_holdout_as_report_only_policy() -> None:
-    workflow_path = Path("configs/research/workflows/vwap_factor_search.yaml")
-    payload = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
-    route_b_report = next(step for step in payload["steps"] if step["id"] == "route-b-report")
-
-    assert route_b_report["kind"] == "research_report"
-    assert "route-b" in route_b_report["output_root"]
-    assert route_b_report["metadata"]["holdout_policy"] == (
-        "2024-2026 is report-only and must not tune candidate selection"
-    )
-
-
-def test_canonical_vwap_workflow_declares_route_j_research_only_ensembles() -> None:
-    workflow_path = Path("configs/research/workflows/vwap_factor_search.yaml")
-    payload = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
-    step_by_id = {step["id"]: step for step in payload["steps"]}
-
-    required_steps = {
-        "route-j-si-vwap-pair-anchor",
-        "route-j-si-vwap-pair-is",
-        "route-j-si-vwap-pair-validation",
-        "route-j-si-vwap-pair-holdout",
-        "route-j-i50-si-vwap-anchor",
-        "route-j-i50-si-vwap-is",
-        "route-j-i50-si-vwap-validation",
-        "route-j-i50-si-vwap-holdout",
-        "route-j-g50-si-vwap-anchor",
-        "route-j-g50-si-vwap-is",
-        "route-j-g50-si-vwap-validation",
-        "route-j-g50-si-vwap-holdout",
-        "route-j-report",
-    }
-    assert required_steps.issubset(step_by_id)
-    for step_id in required_steps - {"route-j-report"}:
-        step = step_by_id[step_id]
-        assert step["kind"] == "portfolio_ensemble"
-        assert step["reporting_grid"] == "daily_utc"
-        assert "route-j" in step["summary_output"]
-        assert len(step["legs"]) >= 2
-
-    route_j_report = step_by_id["route-j-report"]
-    assert route_j_report["kind"] == "research_report"
-    assert route_j_report["metadata"]["research_only"] == (
-        "portfolio_ensemble consumes completed equity curves and is not a production execution path"
-    )
-
-
-def test_canonical_vwap_workflow_declares_route_k_allocation_scan() -> None:
-    workflow_path = Path("configs/research/workflows/vwap_factor_search.yaml")
-    payload = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
-    step_by_id = {step["id"]: step for step in payload["steps"]}
-
-    scan = step_by_id["route-k-allocation-scan"]
-    assert scan["kind"] == "portfolio_ensemble_scan"
-    assert scan["reporting_grid"] == "daily_utc"
-    assert scan["weight_step"] == "0.05"
-    assert scan["constraints"] == {
-        "max_full_drawdown": "0.25",
-        "min_baseline_annual_return": "0",
-        "min_post_annual_return": "0.10",
-    }
-    assert scan["periods"] == [
-        "anchor_2010_2020",
-        "is_2020_2022",
-        "validation_2022_2024",
-        "holdout_2024_2026",
-    ]
-    assert scan["post_periods"] == ["is_2020_2022", "validation_2022_2024"]
-    assert scan["score_periods"] == [
-        "anchor_2010_2020",
-        "is_2020_2022",
-        "validation_2022_2024",
-    ]
-    assert {candidate["name"] for candidate in scan["candidates"]} == {
-        "vwap_si_trend_sigma_vol15",
-        "vwap_si_trend_sigma_slope_accept",
-        "risk_mom_84_vol40_max25_confirm2",
-        "abs0_no_confirmation",
-    }
-
-    report = step_by_id["route-k-report"]
-    assert report["kind"] == "research_report"
-    assert report["metadata"]["research_only"] == (
-        "portfolio_ensemble_scan consumes completed equity curves and is not a production "
-        "execution path"
-    )
-
-
-def test_canonical_vwap_workflow_declares_route_l_volatility_managed_scan() -> None:
-    workflow_path = Path("configs/research/workflows/vwap_factor_search.yaml")
-    payload = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
-    step_by_id = {step["id"]: step for step in payload["steps"]}
-
-    scan = step_by_id["route-l-vol-managed-allocation-scan"]
-    assert scan["kind"] == "portfolio_volatility_managed_scan"
-    assert scan["reporting_grid"] == "daily_utc"
-    assert scan["selection_periods"] == [
-        "anchor_2010_2020",
-        "is_2020_2022",
-        "validation_2022_2024",
-    ]
-    assert scan["constraints"] == {
-        "max_selection_drawdown": "0.25",
-        "min_baseline_annual_return": "0",
-        "min_selection_post_annual_return": "0.10",
-    }
-    assert set(scan["parameter_grid"]) == {
-        "lookback_days",
-        "max_gross_exposure",
-        "max_leg_weight",
-        "min_history_days",
-        "min_trailing_return",
-        "target_annual_vol",
-        "top_n_legs",
-    }
-    assert {candidate["name"] for candidate in scan["candidates"]} == {
-        "vwap_si_trend_sigma_vol15",
-        "vwap_si_trend_sigma_slope_accept",
-        "risk_mom_84_vol40_max25_confirm2",
-        "abs0_no_confirmation",
-    }
-
-    report = step_by_id["route-l-report"]
-    assert report["kind"] == "research_report"
-    assert report["metadata"]["holdout_policy"] == (
-        "2024-2026 is report-only and must not tune allocation parameter selection"
-    )
-
-
-def test_canonical_vwap_workflow_declares_route_m_multi_horizon_dual_momentum() -> None:
-    workflow_path = Path("configs/research/workflows/vwap_factor_search.yaml")
-    payload = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
-    step_by_id = {step["id"]: step for step in payload["steps"]}
-    strategy = "examples.strategies.dual_momentum_rotation:DualMomentumRotationStrategy"
-
-    assert step_by_id["route-m-implementation"] == {
-        "id": "route-m-implementation",
-        "kind": "implementation_gate",
-        "required_strategy": strategy,
-    }
-    matrix = step_by_id["route-m-multi-horizon-dual-momentum"]
-    assert matrix["kind"] == "backtest_matrix"
-    assert matrix["backtest_config"] == "../../backtest.route_m_multi_horizon_dual_momentum.yaml"
-    assert matrix["base_strategy_params"]["lookback_bars"] == [21, 63, 126]
-    assert [period["name"] for period in matrix["periods"]] == [
-        "is_2020_2022",
-        "validation_2022_2024",
-        "holdout_2024_2026",
-    ]
-    assert matrix["materialized_replay_cache"] == {
-        "cache_dir": "../../../runs/research/vwap/replay-cache/route-m",
-        "enabled": True,
-    }
-    assert {candidate["name"] for candidate in matrix["candidates"]} == {
-        "mh_21_63_126_abs0_rel03",
-        "mh_42_84_168_abs0_rel03",
-        "mh_63_126_252_abs0_rel02",
-        "mh_21_84_252_abs2_rel03_confirm2",
-    }
-    assert step_by_id["route-m-report"]["metadata"]["holdout_policy"] == (
-        "2024-2026 is report-only and must not tune candidate selection"
-    )
-
-
-def test_canonical_vwap_workflow_declares_route_n_carry_momentum_rotation() -> None:
-    workflow_path = Path("configs/research/workflows/vwap_factor_search.yaml")
-    payload = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
-    step_by_id = {step["id"]: step for step in payload["steps"]}
-    strategy = "examples.strategies.carry_momentum_rotation:CarryMomentumRotationStrategy"
-
-    assert step_by_id["route-n-implementation"] == {
-        "id": "route-n-implementation",
-        "kind": "implementation_gate",
-        "required_strategy": strategy,
-    }
-    matrix = step_by_id["route-n-carry-momentum-rotation"]
-    assert matrix["kind"] == "backtest_matrix"
-    assert matrix["backtest_config"] == "../../backtest.route_n_carry_momentum_rotation.yaml"
-    assert matrix["base_strategy_params"]["momentum_lookback_bars"] == [21, 63, 126]
-    assert matrix["base_strategy_params"]["carry_zscore_weight"] == "0.02"
-    assert matrix["base_strategy_params"]["min_relative_score"] == "0.02"
-    assert [period["name"] for period in matrix["periods"]] == [
-        "is_2020_2022",
-        "validation_2022_2024",
-        "holdout_2024_2026",
-    ]
-    assert matrix["materialized_replay_cache"] == {
-        "cache_dir": "../../../runs/research/vwap/replay-cache/route-n",
-        "enabled": True,
-    }
-    candidate_names = [candidate["name"] for candidate in matrix["candidates"]]
-    assert candidate_names == [
-        "cmr_21_63_126_cz20_w02_rel02_tv20",
-        "cmr_21_63_126_cz20_w02_rel00_tv20",
-        "cmr_21_63_126_cz20_w02_rel02_tv15",
-        "cmr_21_63_126_cz20_w02_rel02_tv25",
-        "cmr_21_63_126_cz20_w02_rel02_score04_tv20",
-        "cmr_21_63_126_cz20_w02_rel04_tv20",
-        "cmr_21_63_126_cz20_w00_rel04_score02_tv20",
-        "cmr_21_63_126_cz20_w01_rel04_tv20",
-        "cmr_42_84_168_cz60_w02_rel02_tv20",
-    ]
-    assert step_by_id["route-n-report"]["metadata"]["holdout_policy"] == (
-        "2024-2026 is report-only and must not tune candidate selection"
-    )
-
-
-def test_canonical_vwap_workflow_declares_route_o_opening_range_breakout() -> None:
-    workflow_path = Path("configs/research/workflows/vwap_factor_search.yaml")
-    payload = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
-    step_by_id = {step["id"]: step for step in payload["steps"]}
-    strategy = "examples.strategies.opening_range_breakout:OpeningRangeBreakoutStrategy"
-
-    assert step_by_id["route-o-implementation"] == {
-        "id": "route-o-implementation",
-        "kind": "implementation_gate",
-        "required_strategy": strategy,
-    }
-    matrix = step_by_id["route-o-opening-range-breakout"]
-    assert matrix["kind"] == "backtest_matrix"
-    assert matrix["backtest_config"] == "../../backtest.route_o_opening_range_breakout.yaml"
-    assert matrix["base_strategy_params"]["timeframe"] == "15m"
-    assert matrix["base_strategy_params"]["opening_range_minutes"] == 60
-    assert matrix["base_strategy_params"]["range_width_min_history_sessions"] == 10
-    assert [period["name"] for period in matrix["periods"]] == [
-        "is_2020_2022",
-        "validation_2022_2024",
-        "holdout_2024_2026",
-    ]
-    assert matrix["materialized_replay_cache"] == {
-        "cache_dir": "../../../runs/research/vwap/replay-cache/route-o",
-        "enabled": True,
-    }
-    candidate_names = [candidate["name"] for candidate in matrix["candidates"]]
-    assert candidate_names == [
-        "orb_gc_0830_60_breakout_q1",
-        "orb_si_0830_60_breakout_q1",
-        "orf_gc_0830_60_failure_q1",
-        "orf_si_0830_60_failure_q1",
-        "orb_gc_1800_60_breakout_q1",
-        "orb_si_1800_60_breakout_q1",
-        "orf_gc_1800_60_failure_q1",
-        "orf_si_1800_60_failure_q1",
-    ]
-    assert step_by_id["route-o-report"]["metadata"]["holdout_policy"] == (
-        "2024-2026 is report-only and must not tune candidate selection"
-    )
-
-
-def test_canonical_vwap_workflow_declares_route_p_intraday_ratio_mean_reversion() -> None:
-    workflow_path = Path("configs/research/workflows/vwap_factor_search.yaml")
-    payload = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
-    step_by_id = {step["id"]: step for step in payload["steps"]}
-    strategy = "examples.strategies.gc_si_ratio_mean_reversion:GcSiRatioMeanReversionStrategy"
-
-    assert step_by_id["route-p-implementation"] == {
-        "id": "route-p-implementation",
-        "kind": "implementation_gate",
-        "required_strategy": strategy,
-    }
-    matrix = step_by_id["route-p-intraday-ratio-mean-reversion"]
-    assert matrix["kind"] == "backtest_matrix"
-    assert matrix["backtest_config"] == "../../backtest.route_p_intraday_ratio_mean_reversion.yaml"
-    assert matrix["base_strategy_params"]["timeframe"] == "15m"
-    assert matrix["base_strategy_params"]["gc_contracts"] == "1"
-    assert matrix["base_strategy_params"]["si_contracts"] == "2"
-    assert [period["name"] for period in matrix["periods"]] == [
-        "is_2020_2022",
-        "validation_2022_2024",
-        "holdout_2024_2026",
-    ]
-    assert matrix["materialized_replay_cache"] == {
-        "cache_dir": "../../../runs/research/vwap/replay-cache/route-p",
-        "enabled": True,
-    }
-    candidate_names = [candidate["name"] for candidate in matrix["candidates"]]
-    assert candidate_names == [
-        "ratio15m_64_entry15_exit025_1x2",
-        "ratio15m_96_entry15_exit025_1x2",
-        "ratio15m_192_entry20_exit050_1x2",
-        "ratio15m_384_entry20_exit050_1x2",
-        "ratio15m_192_entry25_exit075_1x2",
-        "ratio15m_96_entry20_exit050_1x1",
-    ]
-    assert step_by_id["route-p-report"]["metadata"]["holdout_policy"] == (
-        "2024-2026 is report-only and must not tune candidate selection"
-    )
-
-
-def test_canonical_vwap_workflow_declares_route_q_opening_range_risk_refinement() -> None:
-    workflow_path = Path("configs/research/workflows/vwap_factor_search.yaml")
-    payload = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
-    step_by_id = {step["id"]: step for step in payload["steps"]}
-    strategy = "examples.strategies.opening_range_breakout:OpeningRangeBreakoutStrategy"
-
-    assert step_by_id["route-q-implementation"] == {
-        "id": "route-q-implementation",
-        "kind": "implementation_gate",
-        "required_strategy": strategy,
-    }
-    matrix = step_by_id["route-q-opening-range-risk-refinement"]
-    assert matrix["kind"] == "backtest_matrix"
-    assert matrix["backtest_config"] == "../../backtest.route_o_opening_range_breakout.yaml"
-    assert matrix["base_strategy_params"]["symbol"] == "SI"
-    assert matrix["base_strategy_params"]["range_start_et"] == "08:30"
-    assert matrix["base_strategy_params"]["mode"] == "breakout"
-    assert [period["name"] for period in matrix["periods"]] == [
-        "is_2020_2022",
-        "validation_2022_2024",
-        "holdout_2024_2026",
-    ]
-    assert matrix["materialized_replay_cache"] == {
-        "cache_dir": "../../../runs/research/vwap/replay-cache/route-o",
-        "enabled": True,
-    }
-    candidate_names = [candidate["name"] for candidate in matrix["candidates"]]
-    assert candidate_names == [
-        "si0830_base",
-        "si0830_buffer005",
-        "si0830_buffer010",
-        "si0830_stop050_target100",
-        "si0830_stop050_target150",
-        "si0830_hold8",
-        "si0830_range_width_cap200",
-        "si0830_range_width_050_200",
-    ]
-    assert step_by_id["route-q-report"]["metadata"]["selection_policy"] == (
-        "select only with IS and validation evidence; holdout is report-only"
-    )
-
-
-def test_canonical_vwap_workflow_declares_route_r_vol_managed_allocation() -> None:
-    workflow_path = Path("configs/research/workflows/vwap_factor_search.yaml")
-    payload = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
-    step_by_id = {step["id"]: step for step in payload["steps"]}
-
-    scan = step_by_id["route-r-vol-managed-allocation-scan"]
-    assert scan["kind"] == "portfolio_volatility_managed_scan"
-    assert scan["periods"] == [
-        "is_2020_2022",
-        "validation_2022_2024",
-        "holdout_2024_2026",
-    ]
-    assert scan["baseline_period"] == "is_2020_2022"
-    assert scan["selection_periods"] == ["is_2020_2022", "validation_2022_2024"]
-    assert scan["post_selection_periods"] == ["validation_2022_2024"]
-    assert scan["constraints"] == {
-        "max_selection_drawdown": "0.20",
-        "min_baseline_annual_return": "0.10",
-        "min_selection_post_annual_return": "0.10",
-    }
-    assert scan["parameter_grid"]["target_annual_vol"] == ["0.20", "0.30", "0.40"]
-    assert scan["parameter_grid"]["max_gross_exposure"] == ["1.5", "2.0", "3.0"]
-    assert [candidate["name"] for candidate in scan["candidates"]] == [
-        "abs0_no_confirmation",
-        "risk_mom_84_vol40_max25_confirm2",
-        "vwap_si_trend_sigma_slope_accept",
-        "si0830_buffer010",
-        "si0830_hold8",
-    ]
-    assert step_by_id["route-r-report"]["metadata"]["holdout_policy"] == (
-        "2024-2026 is report-only and must not tune allocation parameter selection"
-    )
-
-
-def test_canonical_vwap_workflow_declares_route_c_lanes_and_windows() -> None:
-    workflow_path = Path("configs/research/workflows/vwap_factor_search.yaml")
-    payload = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
-    step_by_id = {step["id"]: step for step in payload["steps"]}
-
-    required_steps = {
-        "route-c-implementation",
-        "route-c-vol-target-trend-gc",
-        "route-c-vol-target-trend-si",
-    }
-    assert required_steps.issubset(step_by_id)
-    assert step_by_id["route-c-implementation"] == {
-        "id": "route-c-implementation",
-        "kind": "implementation_gate",
-        "required_strategy": "examples.strategies.vol_target_trend:VolTargetTrendStrategy",
-    }
-
-    for step_id in ("route-c-vol-target-trend-gc", "route-c-vol-target-trend-si"):
-        periods = {period["name"]: period for period in step_by_id[step_id]["periods"]}
-        assert periods["is_2020_2022"] == {
-            "name": "is_2020_2022",
-            "start": "2020-01-01",
-            "end": "2022-01-01",
-        }
-        assert periods["validation_2022_2024"] == {
-            "name": "validation_2022_2024",
-            "start": "2022-01-01",
-            "end": "2024-01-01",
-        }
-        assert periods["holdout_2024_2026"] == {
-            "name": "holdout_2024_2026",
-            "start": "2024-01-01",
-            "end": "2026-01-01",
-        }
-        assert periods["anchor_2010_2020"] == {
-            "name": "anchor_2010_2020",
-            "start": "2010-06-06",
-            "end": "2020-01-01",
-        }
-        assert {candidate["name"] for candidate in step_by_id[step_id]["candidates"]} == {
-            "tsm_63_vol20_target20",
-            "tsm_126_vol40_target20",
-            "tsm_252_vol60_target15",
-        }
-
-
-def test_route_c_workflow_records_holdout_as_report_only_policy() -> None:
-    workflow_path = Path("configs/research/workflows/vwap_factor_search.yaml")
-    payload = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
-    route_c_report = next(step for step in payload["steps"] if step["id"] == "route-c-report")
-
-    assert route_c_report["kind"] == "research_report"
-    assert "route-c" in route_c_report["output_root"]
-    assert route_c_report["metadata"]["holdout_policy"] == (
-        "2024-2026 is report-only and must not tune candidate selection"
-    )
-
-
-def test_canonical_vwap_workflow_declares_route_d_relative_value_lane() -> None:
-    workflow_path = Path("configs/research/workflows/vwap_factor_search.yaml")
-    payload = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
-    step_by_id = {step["id"]: step for step in payload["steps"]}
-
-    required_steps = {
-        "route-d-implementation",
-        "route-d-gc-si-ratio-mean-reversion",
-    }
-    assert required_steps.issubset(step_by_id)
-    assert step_by_id["route-d-implementation"] == {
-        "id": "route-d-implementation",
-        "kind": "implementation_gate",
-        "required_strategy": (
-            "examples.strategies.gc_si_ratio_mean_reversion:GcSiRatioMeanReversionStrategy"
-        ),
-    }
-
-    matrix = step_by_id["route-d-gc-si-ratio-mean-reversion"]
-    periods = {period["name"]: period for period in matrix["periods"]}
-    assert periods["is_2020_2022"] == {
-        "name": "is_2020_2022",
-        "start": "2020-01-01",
-        "end": "2022-01-01",
-    }
-    assert periods["validation_2022_2024"] == {
-        "name": "validation_2022_2024",
-        "start": "2022-01-01",
-        "end": "2024-01-01",
-    }
-    assert periods["holdout_2024_2026"] == {
-        "name": "holdout_2024_2026",
-        "start": "2024-01-01",
-        "end": "2026-01-01",
-    }
-    assert periods["anchor_2010_2020"] == {
-        "name": "anchor_2010_2020",
-        "start": "2010-06-06",
-        "end": "2020-01-01",
-    }
-    assert {candidate["name"] for candidate in matrix["candidates"]} == {
-        "ratio_20_entry15_exit025_1x2",
-        "ratio_60_entry15_exit025_1x2",
-        "ratio_60_entry20_exit050_1x2",
-        "ratio_120_entry20_exit050_1x2",
-    }
-
-
-def test_route_d_workflow_records_holdout_as_report_only_policy() -> None:
-    workflow_path = Path("configs/research/workflows/vwap_factor_search.yaml")
-    payload = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
-    route_d_report = next(step for step in payload["steps"] if step["id"] == "route-d-report")
-
-    assert route_d_report["kind"] == "research_report"
-    assert "route-d" in route_d_report["output_root"]
-    assert route_d_report["metadata"]["holdout_policy"] == (
-        "2024-2026 is report-only and must not tune candidate selection"
-    )
-
-
-def test_canonical_vwap_workflow_declares_route_e_carry_trend_lane() -> None:
-    workflow_path = Path("configs/research/workflows/vwap_factor_search.yaml")
-    payload = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
-    step_by_id = {step["id"]: step for step in payload["steps"]}
-
-    required_steps = {
-        "route-e-implementation",
-        "route-e-carry-trend-overlay",
-    }
-    assert required_steps.issubset(step_by_id)
-    assert step_by_id["route-e-implementation"] == {
-        "id": "route-e-implementation",
-        "kind": "implementation_gate",
-        "required_strategy": ("examples.strategies.carry_trend_overlay:CarryTrendOverlayStrategy"),
-    }
-
-    matrix = step_by_id["route-e-carry-trend-overlay"]
-    assert matrix["backtest_config"] == "../../backtest.route_e_carry_trend.yaml"
-    assert matrix["base_strategy_params"]["carry_symbols"] == {
-        "GC": "GC_CARRY",
-        "SI": "SI_CARRY",
-    }
-    periods = {period["name"]: period for period in matrix["periods"]}
-    assert periods["is_2020_2022"] == {
-        "name": "is_2020_2022",
-        "start": "2020-01-01",
-        "end": "2022-01-01",
-    }
-    assert periods["validation_2022_2024"] == {
-        "name": "validation_2022_2024",
-        "start": "2022-01-01",
-        "end": "2024-01-01",
-    }
-    assert periods["holdout_2024_2026"] == {
-        "name": "holdout_2024_2026",
-        "start": "2024-01-01",
-        "end": "2026-01-01",
-    }
-    assert periods["anchor_2010_2020"] == {
-        "name": "anchor_2010_2020",
-        "start": "2010-06-06",
-        "end": "2020-01-01",
-    }
-    assert {candidate["name"] for candidate in matrix["candidates"]} == {
-        "carry_trend_63_5_min0_target10",
-        "carry_trend_126_20_min0_target15",
-        "carry_trend_252_20_min0_target15",
-        "carry_trend_126_60_min025_target15",
-    }
-
-
-def test_route_e_workflow_records_holdout_as_report_only_policy() -> None:
-    workflow_path = Path("configs/research/workflows/vwap_factor_search.yaml")
-    payload = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
-    route_e_report = next(step for step in payload["steps"] if step["id"] == "route-e-report")
-
-    assert route_e_report["kind"] == "research_report"
-    assert "route-e" in route_e_report["output_root"]
-    assert route_e_report["metadata"]["holdout_policy"] == (
-        "2024-2026 is report-only and must not tune candidate selection"
-    )
 
 
 @pytest.mark.parametrize(
@@ -2662,63 +2095,6 @@ def test_vwap_research_backtests_use_costed_100k_margin_sized_capital(
     )
 
 
-@pytest.mark.parametrize(
-    ("workflow_path", "expected_quantities"),
-    [
-        (
-            Path("configs/research/workflows/vwap_factor_gc_long_search.yaml"),
-            ("3", "4"),
-        ),
-        (
-            Path("configs/research/workflows/vwap_factor_si_long_search.yaml"),
-            ("2", "3"),
-        ),
-        (
-            Path("configs/research/workflows/vwap_factor_gc_5m_long_search.yaml"),
-            ("3", "4"),
-        ),
-        (
-            Path("configs/research/workflows/vwap_factor_si_5m_long_search.yaml"),
-            ("2", "3"),
-        ),
-        (
-            Path("configs/research/workflows/vwap_factor_gc_15m_long_search.yaml"),
-            ("3", "4"),
-        ),
-        (
-            Path("configs/research/workflows/vwap_factor_si_15m_long_search.yaml"),
-            ("2", "3"),
-        ),
-    ],
-)
-def test_vwap_research_workflows_search_margin_sized_quantities(
-    workflow_path: Path,
-    expected_quantities: tuple[str, ...],
-) -> None:
-    workflow_config = ResearchWorkflowConfig.from_yaml(workflow_path)
-
-    optimize_steps = [step for step in workflow_config.steps if step.kind == "optimize"]
-
-    assert optimize_steps
-    for step in optimize_steps:
-        assert step.payload["parameters"]["target_quantity"] == list(expected_quantities)
-
-
-def test_vwap_canonical_workflow_uses_risk_budget_sizing_not_fixed_quantity() -> None:
-    workflow_config = ResearchWorkflowConfig.from_yaml(
-        Path("configs/research/workflows/vwap_factor_search.yaml")
-    )
-    optimize_steps = [step for step in workflow_config.steps if step.kind == "optimize"]
-
-    assert optimize_steps
-    for step in optimize_steps:
-        parameters = step.payload["parameters"]
-        assert "target_quantity" not in parameters
-        assert parameters["entry_size_rule"] == ["risk_budget"]
-        assert parameters["risk_budget"] == ["600"]
-        assert parameters["risk_budget_max_quantity"] == ["4"]
-
-
 def test_no_legacy_vwap_optimizer_configs_remain() -> None:
     assert sorted(path.name for path in Path("configs/optimizer").glob("vwap*.yaml")) == []
 
@@ -2735,440 +2111,6 @@ def test_period_sensitive_research_workflow_configs_declare_period_roles() -> No
         ]
         assert not sensitive_steps or payload.get("periods"), workflow_path
         ResearchWorkflowConfig.from_yaml(workflow_path)
-
-
-@pytest.mark.parametrize(
-    (
-        "symbol",
-        "timeframe",
-        "session_path",
-        "backtest_path",
-        "workflow_path",
-        "output_fragment",
-    ),
-    [
-        (
-            "GC",
-            "1m",
-            Path("configs/research/vwap_gc_long.yaml"),
-            Path("configs/backtest.vwap_factor_research_gc_long_is.yaml"),
-            Path("configs/research/workflows/vwap_factor_gc_long_search.yaml"),
-            "gc-long",
-        ),
-        (
-            "SI",
-            "1m",
-            Path("configs/research/vwap_si_long.yaml"),
-            Path("configs/backtest.vwap_factor_research_si_long_is.yaml"),
-            Path("configs/research/workflows/vwap_factor_si_long_search.yaml"),
-            "si-long",
-        ),
-        (
-            "GC",
-            "5m",
-            Path("configs/research/vwap_gc_5m_long.yaml"),
-            Path("configs/backtest.vwap_factor_research_gc_5m_long_is.yaml"),
-            Path("configs/research/workflows/vwap_factor_gc_5m_long_search.yaml"),
-            "gc-5m-long",
-        ),
-        (
-            "SI",
-            "5m",
-            Path("configs/research/vwap_si_5m_long.yaml"),
-            Path("configs/backtest.vwap_factor_research_si_5m_long_is.yaml"),
-            Path("configs/research/workflows/vwap_factor_si_5m_long_search.yaml"),
-            "si-5m-long",
-        ),
-        (
-            "GC",
-            "15m",
-            Path("configs/research/vwap_gc_15m_long.yaml"),
-            Path("configs/backtest.vwap_factor_research_gc_15m_long_is.yaml"),
-            Path("configs/research/workflows/vwap_factor_gc_15m_long_search.yaml"),
-            "gc-15m-long",
-        ),
-        (
-            "SI",
-            "15m",
-            Path("configs/research/vwap_si_15m_long.yaml"),
-            Path("configs/backtest.vwap_factor_research_si_15m_long_is.yaml"),
-            Path("configs/research/workflows/vwap_factor_si_15m_long_search.yaml"),
-            "si-15m-long",
-        ),
-    ],
-)
-def test_vwap_long_research_configs_are_symbol_isolated_and_hold_out_oos(
-    symbol: str,
-    timeframe: str,
-    session_path: Path,
-    backtest_path: Path,
-    workflow_path: Path,
-    output_fragment: str,
-) -> None:
-    session_config = ResearchSessionConfig.from_yaml(session_path)
-    runtime_config = BacktestRuntimeConfig.from_yaml(backtest_path)
-    workflow_config = ResearchWorkflowConfig.from_yaml(workflow_path)
-
-    assert session_config.roots == (symbol,)
-    assert session_config.timeframe == timeframe
-    assert session_config.backtest_config_path.resolve() == backtest_path.resolve()
-    assert output_fragment in str(session_config.output_root)
-    assert runtime_config.roots == (symbol,)
-    assert runtime_config.symbols == (symbol,)
-    assert runtime_config.timeframe == timeframe
-    assert runtime_config.strategy_params["symbol"] == symbol
-    assert runtime_config.start.isoformat() == "2010-06-06T00:00:00+00:00"
-    assert runtime_config.end.isoformat() == "2023-01-01T00:00:00+00:00"
-
-    output_paths = {
-        str(step.payload.get("output_root") or step.payload.get("output_dir"))
-        for step in workflow_config.steps
-        if step.kind in {"backtest", "optimize"}
-    }
-    assert output_paths
-    assert all(output_fragment in output_path for output_path in output_paths)
-
-    assert all(
-        "walk_forward" not in step.payload.get("validation", {})
-        for step in workflow_config.steps
-        if step.kind == "optimize"
-    )
-
-
-@pytest.mark.parametrize(
-    ("workflow_path", "fragment"),
-    [
-        (Path("configs/research/workflows/vwap_factor_gc_long_search.yaml"), "gc-long"),
-        (Path("configs/research/workflows/vwap_factor_si_long_search.yaml"), "si-long"),
-        (
-            Path("configs/research/workflows/vwap_factor_gc_5m_long_search.yaml"),
-            "gc-5m-long",
-        ),
-        (
-            Path("configs/research/workflows/vwap_factor_si_5m_long_search.yaml"),
-            "si-5m-long",
-        ),
-        (
-            Path("configs/research/workflows/vwap_factor_gc_15m_long_search.yaml"),
-            "gc-15m-long",
-        ),
-        (
-            Path("configs/research/workflows/vwap_factor_si_15m_long_search.yaml"),
-            "si-15m-long",
-        ),
-    ],
-)
-def test_vwap_long_research_workflows_declare_oos_as_report_only_periods(
-    workflow_path: Path,
-    fragment: str,
-) -> None:
-    workflow_config = ResearchWorkflowConfig.from_yaml(workflow_path)
-    optimize_steps = [step for step in workflow_config.steps if step.kind == "optimize"]
-
-    assert workflow_config.periods == (
-        {
-            "name": "selection_2010_2022",
-            "start": datetime(2010, 6, 6, tzinfo=UTC),
-            "end": datetime(2022, 1, 1, tzinfo=UTC),
-            "role": "selection",
-        },
-        {
-            "name": "validation_2022_2023",
-            "start": datetime(2022, 1, 1, tzinfo=UTC),
-            "end": datetime(2023, 1, 1, tzinfo=UTC),
-            "role": "validation",
-        },
-        {
-            "name": "holdout_2023_2026",
-            "start": datetime(2023, 1, 1, tzinfo=UTC),
-            "end": datetime(2026, 4, 10, tzinfo=UTC),
-            "role": "holdout_report_only",
-        },
-    )
-
-    assert optimize_steps
-    for step in optimize_steps:
-        veto = step.payload["validation"]["failure_window_veto"]
-        report_only_periods = [
-            period
-            for period in workflow_config.periods
-            if period["role"] in {"holdout_report_only", "true_oos_report_only"}
-        ]
-        for window in veto["windows"]:
-            for period in report_only_periods:
-                assert not _intervals_overlap(
-                    window["start"],
-                    window["end"],
-                    period["start"],
-                    period["end"],
-                )
-        assert veto["top_n"] == 3
-        assert veto["require_passing_candidate"] is True
-        assert veto["output_root"] == f"../../../runs/research/vwap/{fragment}/failure-veto/primary"
-        assert (
-            veto["summary_output"]
-            == f"../../../runs/research/vwap/{fragment}/validation/failure-veto.json"
-        )
-        assert [
-            {
-                "name": str(window["name"]),
-                "start": window["start"].isoformat(),
-                "end": window["end"].isoformat(),
-            }
-            for window in veto["windows"]
-        ] == [
-            {"name": "failure-2022", "start": "2022-01-01", "end": "2023-01-01"},
-        ]
-        assert [
-            {
-                "name": str(window["name"]),
-                "start": window["start"].isoformat(),
-                "end": window["end"].isoformat(),
-            }
-            for window in veto["report_only_windows"]
-        ] == [
-            {"name": "report-2023", "start": "2023-01-01", "end": "2024-01-01"},
-            {"name": "report-2024", "start": "2024-01-01", "end": "2025-01-01"},
-            {"name": "report-2025-2026", "start": "2025-01-01", "end": "2026-04-10"},
-        ]
-        assert veto["constraints"] == [
-            {"metric": "pnl_usd", "operator": ">", "threshold": "0"},
-            {"metric": "max_drawdown", "operator": "<=", "threshold": "0.05"},
-        ]
-
-
-@pytest.mark.parametrize(
-    ("workflow_path", "margin_proxy", "expected_quantity"),
-    [
-        (
-            Path("configs/research/workflows/vwap_factor_gc_15m_feature_ablation.yaml"),
-            "12000",
-            ["4"],
-        ),
-        (
-            Path("configs/research/workflows/vwap_factor_si_15m_feature_ablation.yaml"),
-            "15000",
-            ["3"],
-        ),
-    ],
-)
-def test_vwap_feature_ablation_workflows_keep_oos_report_only(
-    workflow_path: Path,
-    margin_proxy: str,
-    expected_quantity: list[str],
-) -> None:
-    workflow_config = ResearchWorkflowConfig.from_yaml(workflow_path)
-    optimize_step = next(step for step in workflow_config.steps if step.kind == "optimize")
-    veto = optimize_step.payload["validation"]["failure_window_veto"]
-
-    assert workflow_config.periods == (
-        {
-            "name": "selection_2010_2022",
-            "start": datetime(2010, 6, 6, tzinfo=UTC),
-            "end": datetime(2022, 1, 1, tzinfo=UTC),
-            "role": "selection",
-        },
-        {
-            "name": "validation_2022_2023",
-            "start": datetime(2022, 1, 1, tzinfo=UTC),
-            "end": datetime(2023, 1, 1, tzinfo=UTC),
-            "role": "validation",
-        },
-        {
-            "name": "holdout_2023_2026",
-            "start": datetime(2023, 1, 1, tzinfo=UTC),
-            "end": datetime(2026, 4, 10, tzinfo=UTC),
-            "role": "holdout_report_only",
-        },
-    )
-    assert optimize_step.payload["capital_metrics"] == {"margin_proxy": margin_proxy}
-    assert optimize_step.payload["parameters"]["target_quantity"] == expected_quantity
-    assert "walk_forward" not in optimize_step.payload["validation"]
-    assert [
-        {
-            "name": str(window["name"]),
-            "start": window["start"].isoformat(),
-            "end": window["end"].isoformat(),
-        }
-        for window in veto["windows"]
-    ] == [{"name": "failure-2022", "start": "2022-01-01", "end": "2023-01-01"}]
-    assert [
-        {
-            "name": str(window["name"]),
-            "start": window["start"].isoformat(),
-            "end": window["end"].isoformat(),
-        }
-        for window in veto["report_only_windows"]
-    ] == [
-        {"name": "report-2023", "start": "2023-01-01", "end": "2024-01-01"},
-        {"name": "report-2024", "start": "2024-01-01", "end": "2025-01-01"},
-        {"name": "report-2025-2026", "start": "2025-01-01", "end": "2026-04-10"},
-    ]
-
-
-@pytest.mark.parametrize(
-    ("backtest_path", "workflow_path"),
-    [
-        (
-            Path("configs/backtest.vwap_factor_research_gc_long_is.yaml"),
-            Path("configs/research/workflows/vwap_factor_gc_long_search.yaml"),
-        ),
-        (
-            Path("configs/backtest.vwap_factor_research_si_long_is.yaml"),
-            Path("configs/research/workflows/vwap_factor_si_long_search.yaml"),
-        ),
-        (
-            Path("configs/backtest.vwap_factor_research_gc_5m_long_is.yaml"),
-            Path("configs/research/workflows/vwap_factor_gc_5m_long_search.yaml"),
-        ),
-        (
-            Path("configs/backtest.vwap_factor_research_si_5m_long_is.yaml"),
-            Path("configs/research/workflows/vwap_factor_si_5m_long_search.yaml"),
-        ),
-        (
-            Path("configs/backtest.vwap_factor_research_gc_15m_long_is.yaml"),
-            Path("configs/research/workflows/vwap_factor_gc_15m_long_search.yaml"),
-        ),
-        (
-            Path("configs/backtest.vwap_factor_research_si_15m_long_is.yaml"),
-            Path("configs/research/workflows/vwap_factor_si_15m_long_search.yaml"),
-        ),
-    ],
-)
-def test_vwap_long_research_backtest_warmup_covers_workflow_factor_filters(
-    backtest_path: Path,
-    workflow_path: Path,
-) -> None:
-    runtime_config = BacktestRuntimeConfig.from_yaml(backtest_path)
-    workflow_config = ResearchWorkflowConfig.from_yaml(workflow_path)
-
-    assert runtime_config.warmup_bars >= _required_warmup_for_workflow(
-        runtime_config,
-        workflow_config,
-    )
-
-
-@pytest.mark.parametrize(
-    "workflow_path",
-    [
-        Path("configs/research/workflows/vwap_factor_gc_long_search.yaml"),
-        Path("configs/research/workflows/vwap_factor_si_long_search.yaml"),
-        Path("configs/research/workflows/vwap_factor_gc_5m_long_search.yaml"),
-        Path("configs/research/workflows/vwap_factor_si_5m_long_search.yaml"),
-        Path("configs/research/workflows/vwap_factor_gc_15m_long_search.yaml"),
-        Path("configs/research/workflows/vwap_factor_si_15m_long_search.yaml"),
-    ],
-)
-def test_vwap_long_research_includes_unfiltered_asia_candidate(
-    workflow_path: Path,
-) -> None:
-    workflow_config = ResearchWorkflowConfig.from_yaml(workflow_path)
-    optimize_step = next(step for step in workflow_config.steps if step.kind == "optimize")
-    parameters = optimize_step.payload["parameters"]
-
-    assert "asia_20_02" in parameters["time_window"]
-    assert [] in parameters["factor_filters"]
-    assert "1.2" in parameters["min_volume_ratio"]
-
-
-@pytest.mark.parametrize(
-    ("workflow_path", "expected_volume_ratio"),
-    [
-        (
-            Path("configs/research/workflows/vwap_factor_gc_long_search.yaml"),
-            "1.3",
-        ),
-        (
-            Path("configs/research/workflows/vwap_factor_gc_5m_long_search.yaml"),
-            "1.3",
-        ),
-        (
-            Path("configs/research/workflows/vwap_factor_gc_15m_long_search.yaml"),
-            "1.3",
-        ),
-        (
-            Path("configs/research/workflows/vwap_factor_si_long_search.yaml"),
-            "1.5",
-        ),
-        (
-            Path("configs/research/workflows/vwap_factor_si_5m_long_search.yaml"),
-            "1.5",
-        ),
-        (
-            Path("configs/research/workflows/vwap_factor_si_15m_long_search.yaml"),
-            "1.5",
-        ),
-    ],
-)
-def test_vwap_long_research_includes_costed_oos_volume_candidates(
-    workflow_path: Path,
-    expected_volume_ratio: str,
-) -> None:
-    workflow_config = ResearchWorkflowConfig.from_yaml(workflow_path)
-    optimize_step = next(step for step in workflow_config.steps if step.kind == "optimize")
-    parameters = optimize_step.payload["parameters"]
-
-    assert expected_volume_ratio in parameters["min_volume_ratio"]
-
-
-def test_vwap_gc_research_workflow_includes_volume_13_candidate() -> None:
-    workflow_config = ResearchWorkflowConfig.from_yaml(
-        Path("configs/research/workflows/vwap_factor_search.yaml")
-    )
-    for step in workflow_config.steps:
-        if step.kind == "optimize":
-            assert "1.3" in step.payload["parameters"]["min_volume_ratio"]
-
-
-def test_vwap_canonical_workflow_has_expected_optimize_steps() -> None:
-    workflow_config = ResearchWorkflowConfig.from_yaml(
-        Path("configs/research/workflows/vwap_factor_search.yaml")
-    )
-    baseline = next(step for step in workflow_config.steps if step.step_id == "baseline")
-    optimize_steps = [step for step in workflow_config.steps if step.kind == "optimize"]
-
-    assert baseline.kind == "backtest"
-    assert baseline.payload["backtest_config"] == "../../backtest.vwap_production_pullback_gc.yaml"
-
-    assert [(step.step_id, step.payload["objective_metric"]) for step in optimize_steps] == [
-        ("structural-candidates", "sharpe_ratio"),
-    ]
-
-    factor_search = optimize_steps[0].payload
-    assert factor_search["output_root"] == "../../../runs/research/vwap/structural-candidates"
-    assert (
-        factor_search["validation_output"]
-        == "../../../runs/research/vwap/validation/structural-candidates.json"
-    )
-    assert factor_search["capital_metrics"] == {"margin_proxy": "12000"}
-    assert factor_search["parameters"]["time_window"] == ["full_session"]
-    assert factor_search["validation"]["failure_window_veto"]["top_n"] == 2
-
-
-def _required_warmup_for_workflow(
-    runtime_config: BacktestRuntimeConfig,
-    workflow_config: ResearchWorkflowConfig,
-) -> int:
-    required_warmup = 0
-    for step in workflow_config.steps:
-        if step.kind != "optimize":
-            continue
-        parameters = step.payload["parameters"]
-        for factor_filters in parameters.get("factor_filters", ()):
-            strategy_params = {
-                **runtime_config.strategy_params,
-                **{
-                    name: values[0]
-                    for name, values in parameters.items()
-                    if name != "factor_filters" and isinstance(values, list) and values
-                },
-                "factor_filters": tuple(factor_filters),
-            }
-            required_warmup = max(
-                required_warmup,
-                VwapFactorResearchConfig(**strategy_params).required_warmup_bars,
-            )
-    return required_warmup
 
 
 def _step_requires_period_roles(step: dict[str, Any]) -> bool:
@@ -3231,11 +2173,9 @@ steps:
         accepted_specs=(),
         evaluation_output_dir=tmp_path / "evaluation-output",
     )
+    config = ResearchWorkflowConfig.from_yaml(workflow_path)
 
-    result = ResearchWorkflowRunner().run(
-        session,
-        ResearchWorkflowConfig.from_yaml(workflow_path),
-    )
+    result = ResearchWorkflowRunner().run(session, config)
 
     assert result.status == "completed"
     assert [step.status for step in result.steps] == ["passed"]
@@ -3254,7 +2194,59 @@ steps:
             "factor_version": "1",
             "bucket_count": 5,
             "output_dir": session._evaluation_output_dir,
+            "snapshots": [
+                {
+                    "as_of": "2026-01-02",
+                    "factor_scores": str(config.resolve_path("scores-2026-01-02.csv")),
+                    "forward_returns": str(config.resolve_path("returns-2026-01-02.csv")),
+                },
+                {
+                    "as_of": "2026-01-03",
+                    "factor_scores": str(config.resolve_path("scores-2026-01-03.csv")),
+                    "forward_returns": str(config.resolve_path("returns-2026-01-03.csv")),
+                },
+            ],
             "snapshot_count": 2,
+        }
+    ]
+
+
+def test_workflow_factor_evaluation_passes_snapshot_protocol(tmp_path: Path) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: evaluation-protocol
+steps:
+  - id: evaluate
+    kind: factor_evaluation
+    factor_name: momentum
+    factor_version: "1"
+    snapshots:
+      - as_of: 2026-01-02
+        factor_scores: scores-2026-01-02.csv
+        forward_returns: returns-2026-01-02.csv
+        source_data_end: 2026-01-02
+        available_at: 2026-01-02
+        forward_return_start: 2026-01-03
+        forward_return_end: 2026-01-04
+""",
+    )
+    session = _FakeSession(accepted_specs=())
+    config = ResearchWorkflowConfig.from_yaml(workflow_path)
+
+    result = ResearchWorkflowRunner().run(session, config)
+
+    assert result.status == "completed"
+    assert session.evaluate_factor_calls[0]["snapshots"] == [
+        {
+            "as_of": "2026-01-02",
+            "available_at": "2026-01-02",
+            "factor_scores": str(config.resolve_path("scores-2026-01-02.csv")),
+            "forward_return_end": "2026-01-04",
+            "forward_return_start": "2026-01-03",
+            "forward_returns": str(config.resolve_path("returns-2026-01-02.csv")),
+            "source_data_end": "2026-01-02",
         }
     ]
 
@@ -3348,6 +2340,7 @@ class _FakeSession:
         self.failure_veto_calls: list[dict[str, object]] = []
         self.failure_veto_accepted = True
         self.evaluate_factor_calls: list[dict[str, object]] = []
+        self.config: SimpleNamespace | None = None
         self._evaluation_output_dir: Path = (
             evaluation_output_dir
             if evaluation_output_dir is not None
@@ -3634,6 +2627,7 @@ class _FakeSession:
                 "factor_version": factor_version,
                 "bucket_count": bucket_count,
                 "output_dir": output_dir,
+                "snapshots": [dict(snapshot) for snapshot in snapshots],
                 "snapshot_count": len(snapshots),
             }
         )

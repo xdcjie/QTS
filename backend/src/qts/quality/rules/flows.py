@@ -207,7 +207,12 @@ class _ResearchWorkflowRuntimeKeyRule:
             return []
 
         violations: list[GuardrailViolation] = []
-        for path in sorted(workflow_path.glob("*.yaml")):
+        workflow_files = [
+            path
+            for path in workflow_path.rglob("*")
+            if path.is_file() and path.suffix.lower() in {".yaml", ".yml"}
+        ]
+        for path in sorted(workflow_files):
             source = path.read_text(encoding="utf-8")
             root_node = yaml.compose(source)
             if root_node is None:

@@ -52,7 +52,7 @@ user-facing path that exercises them.
 
 | Field | Rule |
 | --- | --- |
-| Canonical entrypoint | `PYTHONPATH=backend/src uv run python scripts/run_research.py --config <research-config> workflow <workflow-config>`. New VWAP research must use `PYTHONPATH=backend/src uv run python scripts/run_research.py --config configs/research/vwap.yaml workflow configs/research/workflows/vwap_factor_search.yaml`. |
+| Canonical entrypoint | `PYTHONPATH=backend/src uv run python scripts/run_research.py --config <research-config> workflow <workflow-config>`. The checked-in quickstart example is `PYTHONPATH=backend/src uv run python scripts/run_research.py --config configs/research/quickstart.yaml workflow configs/research/workflows/quickstart.yaml`. |
 | Config owner | `ResearchSession` owns research session YAML. `ResearchWorkflowConfig` owns gate-based workflow YAML. Factor-spec, factor-evaluation, tearsheet, experiment-store, and research-report configs stay under `qts.research` owners. |
 | Allowed implementation owners | `qts.research`, `qts.factors`, `qts.indicators`, strategy code under reviewed strategy boundaries, `scripts/run_research.py` as a thin CLI, and `qts.backtest` only through `ResearchSession.run_backtest(...)` / `ResearchSession.optimize(...)` public paths. |
 | Allowed iteration points | Research queries, non-executable factor spec drafts/reviews, factor evaluation input snapshots, workflow gate thresholds, research-only strategy parameters, tearsheet/report contents, and optimizer/backtest steps declared in workflow YAML. |
@@ -65,7 +65,7 @@ user-facing path that exercises them.
 
 | Field | Rule |
 | --- | --- |
-| Canonical entrypoint | Optimizer work enters through `ResearchSession.optimize(...)` from a `FLOW-RESEARCH` workflow step or through the generic `scripts/run_optimizer.py <config>` path. VWAP optimizer work must be declared inside `configs/research/workflows/vwap_factor_search.yaml`, not in VWAP-specific `configs/optimizer` YAML. |
+| Canonical entrypoint | Optimizer work enters through `ResearchSession.optimize(...)` from a `FLOW-RESEARCH` workflow step or through the generic `scripts/run_optimizer.py <config>` path. VWAP optimizer work must be declared in a reviewed research workflow YAML under `configs/research/workflows/`, not in VWAP-specific `configs/optimizer` YAML. |
 | Config owner | `qts.research.optimizer` owns parameter grids, objective metrics, validation constraints, walk-forward splits, failure-window vetoes, and optimizer validation summaries. `BacktestPipelineJob` / `BacktestPipelineRunner` own backtest-config execution. |
 | Allowed implementation owners | `qts.research.optimizer`, `qts.research.session`, `scripts/run_optimizer.py` as a thin CLI, `scripts/run_research.py` as the workflow CLI, and `qts.backtest` through the shared backtest pipeline. |
 | Allowed iteration points | Parameter spaces, objective metric, validation constraints, train/test windows, failure-window veto windows, selected top-N candidates, capital metric derivations, and output/report locations. |
@@ -139,18 +139,20 @@ user-facing path that exercises them.
 | Required verification | Unit tests for report contracts/schema, deterministic manifest/hash tests, integration tests for report generation when mode artifacts change, and review that report payloads remain read-only. |
 | Exit/promotion criteria | Reports are deterministic, hashable, and linked to source artifacts/manifests. They may support research, optimizer, backtest, paper/live operation, or promotion evidence, but they are not a trading path. |
 
-## VWAP Research Gate
+## Research Workflow Gate
 
-New VWAP research has exactly one canonical workflow:
+Research workflow runs enter through the Research OS workflow command:
 
 ```bash
 PYTHONPATH=backend/src uv run python scripts/run_research.py \
-  --config configs/research/vwap.yaml \
-  workflow configs/research/workflows/vwap_factor_search.yaml
+  --config <research-config> \
+  workflow <workflow-config>
 ```
 
 Do not add, extend, or depend on VWAP ad hoc research runners under
 `scripts/research/run_vwap_*.py`. Do not add or retain VWAP-specific optimizer
-YAML under `configs/optimizer`; VWAP sweeps and validation gates belong in the
-research workflow YAML above. If a branch still contains those legacy paths,
-they are cleanup blockers, not accepted alternate entrypoints.
+YAML under `configs/optimizer`; VWAP sweeps and validation gates belong in
+reviewed research workflow YAML under `configs/research/workflows/`. Deleted
+VWAP workflow files are not compatibility entrypoints. If a branch still
+depends on them, the dependency is a cleanup blocker, not an accepted alternate
+entrypoint.

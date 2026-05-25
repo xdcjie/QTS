@@ -41,6 +41,7 @@ def evaluate_portfolio_ensemble(payload: Mapping[str, Any]) -> dict[str, Any]:
         },
         "metric_point_count": len(metric_curve),
         "metrics": {key: str(value) for key, value in sorted(metrics.items())},
+        "not_tradable_config": True,
         "point_count": len(equity_curve),
         "reporting_grid": reporting_grid,
         "research_only": True,
@@ -78,6 +79,7 @@ def scan_portfolio_ensemble_allocations(payload: Mapping[str, Any]) -> dict[str,
     _validate_period_subset(post_periods, periods, field_name="post_periods")
     _validate_period_subset(score_periods, periods, field_name="score_periods")
     period_roles = _period_roles(payload.get("period_roles"))
+    report_only_periods = _report_only_periods(periods, period_roles=period_roles)
     _reject_report_only_score_periods(
         (baseline_period,),
         period_roles=period_roles,
@@ -114,11 +116,14 @@ def scan_portfolio_ensemble_allocations(payload: Mapping[str, Any]) -> dict[str,
         reverse=True,
     )
     return {
+        "allocation_overfit_warning": _ALLOCATION_OVERFIT_WARNING,
         "candidate_count": len(candidates),
         "constraints": {key: str(value) for key, value in sorted(constraints.items())},
         "evaluated_allocation_count": len(allocations),
+        "not_tradable_config": True,
         "periods": list(periods),
         "post_periods": list(post_periods),
+        "report_only_periods": list(report_only_periods),
         "reporting_grid": reporting_grid,
         "research_only": True,
         "score_periods": list(score_periods),
@@ -158,6 +163,7 @@ def scan_volatility_managed_allocations(payload: Mapping[str, Any]) -> dict[str,
         field_name="post_selection_periods",
     )
     period_roles = _period_roles(payload.get("period_roles"))
+    report_only_periods = _report_only_periods(periods, period_roles=period_roles)
     _reject_report_only_score_periods(
         (baseline_period,),
         period_roles=period_roles,
@@ -195,11 +201,14 @@ def scan_volatility_managed_allocations(payload: Mapping[str, Any]) -> dict[str,
         reverse=True,
     )
     return {
+        "allocation_overfit_warning": _ALLOCATION_OVERFIT_WARNING,
         "candidate_count": len(candidates),
         "constraints": {key: str(value) for key, value in sorted(constraints.items())},
         "evaluated_parameter_count": len(parameter_sets),
+        "not_tradable_config": True,
         "periods": list(periods),
         "post_selection_periods": list(post_selection_periods),
+        "report_only_periods": list(report_only_periods),
         "reporting_grid": reporting_grid,
         "research_only": True,
         "satisfying_allocation_count": sum(
@@ -208,6 +217,7 @@ def scan_volatility_managed_allocations(payload: Mapping[str, Any]) -> dict[str,
         "scan_name": scan_name,
         "selection_periods": list(selection_periods),
         "top_allocations": [_json_decimal_ready(item) for item in allocations[:10]],
+        "uses_prior_returns_only": True,
     }
 
 
@@ -307,6 +317,16 @@ def _reject_report_only_score_periods(
         role = period_roles.get(period)
         if role in _REPORT_ONLY_PERIOD_ROLES:
             raise ValueError(f"{role} report-only period {period} cannot be used in {field_name}")
+
+
+def _report_only_periods(
+    periods: tuple[str, ...],
+    *,
+    period_roles: Mapping[str, str],
+) -> tuple[str, ...]:
+    return tuple(
+        period for period in periods if period_roles.get(period) in _REPORT_ONLY_PERIOD_ROLES
+    )
 
 
 def _volatility_managed_parameter_sets(value: Any) -> tuple[dict[str, Any], ...]:
@@ -978,4 +998,7 @@ __all__ = [
 
 _SCORING_PERIOD_ROLES = frozenset({"anchor", "selection", "validation"})
 _REPORT_ONLY_PERIOD_ROLES = frozenset({"holdout_report_only", "true_oos_report_only"})
+_ALLOCATION_OVERFIT_WARNING = (
+    "Allocation scan is research-only evidence and is not a tradable runtime config."
+)
 _PERIOD_ROLES = _SCORING_PERIOD_ROLES | _REPORT_ONLY_PERIOD_ROLES

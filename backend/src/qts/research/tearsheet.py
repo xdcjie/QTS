@@ -14,6 +14,7 @@ from typing import Any
 from qts.research.factor_evaluation import (
     FactorEvaluationMetrics,
     FactorEvaluationResult,
+    FactorSnapshotProtocol,
 )
 
 
@@ -86,10 +87,12 @@ class FactorEvaluationTearsheet:
             {
                 "as_of": evaluation.as_of.isoformat(),
                 "coverage": evaluation.metrics.coverage,
+                "forward_return_protocol": evaluation.protocol.to_payload(),
                 "long_short_spread": evaluation.metrics.long_short_spread,
                 "missing_symbols": evaluation.metrics.missing_symbols,
                 "rank_ic": evaluation.metrics.rank_ic,
                 "return_count": evaluation.metrics.return_count,
+                "snapshot_hash": evaluation.snapshot_hash,
                 "scored_count": evaluation.metrics.scored_count,
                 "turnover": evaluation.metrics.turnover,
             }
@@ -169,6 +172,7 @@ class FactorEvaluationTearsheet:
         ):
             raise ValueError("factor evaluation artifact missing_symbols must be a string list")
         turnover = raw_metrics.get("turnover")
+        protocol = FactorEvaluationTearsheet._protocol_from_artifact(payload)
         return FactorEvaluationResult(
             as_of=date.fromisoformat(FactorEvaluationTearsheet._required_text(payload, "as_of")),
             factor_name=FactorEvaluationTearsheet._required_text(payload, "factor_name"),
@@ -191,7 +195,21 @@ class FactorEvaluationTearsheet:
                 ),
                 missing_symbols=tuple(missing_symbols),
             ),
+            forward_return_protocol=protocol,
         )
+
+    @staticmethod
+    def _protocol_from_artifact(payload: dict[str, object]) -> Any | None:
+        raw_protocol = payload.get("forward_return_protocol")
+        if raw_protocol is None:
+            return None
+        if not isinstance(raw_protocol, dict):
+            raise ValueError("factor evaluation artifact forward_return_protocol must be an object")
+        protocol = FactorSnapshotProtocol.from_payload(raw_protocol)
+        snapshot_hash = payload.get("snapshot_hash")
+        if snapshot_hash is not None and snapshot_hash != protocol.snapshot_hash:
+            raise ValueError("factor evaluation artifact snapshot_hash does not match protocol")
+        return protocol
 
     @classmethod
     def _metrics_payload(cls, metrics: FactorEvaluationTearsheetMetrics) -> dict[str, object]:

@@ -34,12 +34,12 @@ configuration owner, allowed implementation owner, iteration point,
 future-data risk, verification, and exit/promotion criteria explicit before
 work begins.
 
-New VWAP research must enter through:
+Research workflow runs must enter through:
 
 ```bash
 PYTHONPATH=backend/src uv run python scripts/run_research.py \
-  --config configs/research/vwap.yaml \
-  workflow configs/research/workflows/vwap_factor_search.yaml
+  --config <research-config> \
+  workflow <workflow-config>
 ```
 
 Legacy VWAP ad hoc runners and VWAP-specific `configs/optimizer` entries are

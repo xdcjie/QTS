@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib
 import json
-from collections.abc import Mapping
+import subprocess
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time
 from decimal import Decimal
@@ -18,6 +20,7 @@ from qts.research.optimizer import (
     MetricConstraint,
     OptimizerValidationSummary,
     OptimizerValidationSummaryWriter,
+    ResearchValidationPolicy,
     WalkForwardPlan,
     WalkForwardRobustnessPolicy,
     WalkForwardSplit,
@@ -41,6 +44,163 @@ class ResearchWorkflowStepConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class ResearchWorkflowRunContext:
+    """Machine-readable provenance for one research workflow run."""
+
+    workflow_config_path: str
+    workflow_config_hash: str
+    research_config_path: str = "unknown"
+    research_config_hash: str = "unknown"
+    git_branch: str = "unknown"
+    git_commit: str = "unknown"
+    git_dirty: bool | str = "unknown"
+    dataset_ids: tuple[str, ...] = ()
+    backtest_config_hash: str = "unknown"
+    generated_at: str = ""
+    promotion_status: str = "research_only"
+
+    def __post_init__(self) -> None:
+        if not self.generated_at:
+            object.__setattr__(self, "generated_at", datetime.now(UTC).isoformat())
+        if self.promotion_status != "research_only":
+            raise ValueError("research workflow run context promotion_status must be research_only")
+
+    @classmethod
+    def from_session(
+        cls,
+        session: Any,
+        config: ResearchWorkflowConfig,
+        *,
+        git_command: Callable[[Sequence[str]], str | None] | None = None,
+    ) -> ResearchWorkflowRunContext:
+        """Build run provenance from workflow/session config with explicit unknown fallbacks."""
+
+        session_config = getattr(session, "config", None)
+        research_config_path = getattr(session_config, "research_config_path", None)
+        backtest_config_path = getattr(session_config, "backtest_config_path", None)
+        return cls(
+            workflow_config_path=str(config.workflow_config_path),
+            workflow_config_hash=_sha256_path(config.workflow_config_path),
+            research_config_path=_path_text(research_config_path),
+            research_config_hash=_sha256_path(research_config_path),
+            git_branch=_git_value(["rev-parse", "--abbrev-ref", "HEAD"], git_command),
+            git_commit=_git_value(["rev-parse", "HEAD"], git_command),
+            git_dirty=_git_dirty(git_command),
+            dataset_ids=_dataset_ids(session_config),
+            backtest_config_hash=_sha256_path(backtest_config_path),
+        )
+
+    def to_payload(self) -> dict[str, Any]:
+        """Return a JSON-ready run context payload."""
+
+        return {
+            "backtest_config_hash": self.backtest_config_hash,
+            "dataset_ids": list(self.dataset_ids),
+            "generated_at": self.generated_at,
+            "git_branch": self.git_branch,
+            "git_commit": self.git_commit,
+            "git_dirty": self.git_dirty,
+            "promotion_status": self.promotion_status,
+            "research_config_hash": self.research_config_hash,
+            "research_config_path": self.research_config_path,
+            "workflow_config_hash": self.workflow_config_hash,
+            "workflow_config_path": self.workflow_config_path,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class ResearchRouteMetadata:
+    """Research route governance metadata for large workflow programs."""
+
+    route_id: str
+    route_name: str
+    status: str
+    owner: str
+    selection_policy: Mapping[str, Any]
+    allowed_period_roles: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        if self.status not in _ROUTE_STATUSES:
+            raise ValueError(f"unsupported route status: {self.status}")
+        if any(role not in _PERIOD_ROLES for role in self.allowed_period_roles):
+            raise ValueError("route allowed_period_roles contains unsupported period role")
+
+    def validate_periods(self, periods: tuple[dict[str, Any], ...]) -> None:
+        """Validate route metadata against declared workflow periods."""
+
+        role_by_name = {str(period["name"]): str(period["role"]) for period in periods}
+        allowed_roles = set(self.allowed_period_roles)
+        if allowed_roles:
+            disallowed_periods = {
+                name: role for name, role in role_by_name.items() if role not in allowed_roles
+            }
+            if disallowed_periods:
+                raise ValueError("route allowed_period_roles excludes declared workflow period")
+        for field_name in ("selection_periods", "validation_periods", "report_only_periods"):
+            raw_periods = self.selection_policy.get(field_name, ())
+            names = _period_names_from_field(raw_periods, field_name=f"route.{field_name}")
+            _reject_unknown_period_names(
+                names,
+                role_by_name=role_by_name,
+                field_name=f"route.{field_name}",
+            )
+        if self.status == "candidate":
+            selection_names = _period_names_from_field(
+                self.selection_policy.get("selection_periods", ()),
+                field_name="route.selection_periods",
+            )
+            if not selection_names or all(
+                role_by_name.get(period_name) in _REPORT_ONLY_PERIOD_ROLES
+                for period_name in selection_names
+            ):
+                raise ValueError("route candidate status requires scoring selection periods")
+
+    def to_payload(self) -> dict[str, Any]:
+        """Return JSON-ready route metadata."""
+
+        return {
+            "allowed_period_roles": list(self.allowed_period_roles),
+            "owner": self.owner,
+            "route_id": self.route_id,
+            "route_name": self.route_name,
+            "selection_policy": _json_ready(self.selection_policy),
+            "status": self.status,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class ResearchRouteIndex:
+    """Resolved index of route workflow files."""
+
+    routes: tuple[dict[str, str], ...]
+
+    @classmethod
+    def from_yaml(cls, path: str | Path) -> ResearchRouteIndex:
+        """Load and resolve a route workflow index."""
+
+        index_path = Path(path)
+        raw = yaml.safe_load(index_path.read_text(encoding="utf-8"))
+        if not isinstance(raw, Mapping):
+            raise ValueError("research route index must be a YAML mapping")
+        if raw.get("version") != 1:
+            raise ValueError("research route index version must be 1")
+        raw_routes = raw.get("routes")
+        if not isinstance(raw_routes, list) or not raw_routes:
+            raise ValueError("research route index routes must not be empty")
+        routes: list[dict[str, str]] = []
+        for index, item in enumerate(raw_routes):
+            if not isinstance(item, Mapping):
+                raise ValueError(f"research route index routes[{index}] must be a mapping")
+            route_id = _required_text(item, "route_id")
+            workflow = Path(_required_text(item, "workflow"))
+            workflow_path = workflow if workflow.is_absolute() else index_path.parent / workflow
+            if not workflow_path.exists():
+                raise FileNotFoundError(f"route workflow not found: {workflow_path}")
+            routes.append({"route_id": route_id, "workflow": str(workflow_path)})
+        return cls(routes=tuple(routes))
+
+
+@dataclass(frozen=True, slots=True)
 class ResearchWorkflowConfig:
     """Owns validated gate-based research workflow configuration."""
 
@@ -48,10 +208,13 @@ class ResearchWorkflowConfig:
     workflow_id: str
     periods: tuple[dict[str, Any], ...]
     steps: tuple[ResearchWorkflowStepConfig, ...]
+    route: ResearchRouteMetadata | None = None
 
     def __post_init__(self) -> None:
         """Enforce workflow invariants for direct in-memory construction too."""
 
+        if self.route is not None:
+            self.route.validate_periods(self.periods)
         for index, step in enumerate(self.steps):
             _step_from_payload(
                 index,
@@ -84,6 +247,7 @@ class ResearchWorkflowConfig:
             workflow_config_path=workflow_path,
             workflow_id=workflow_id,
             periods=periods,
+            route=_route_metadata_from_payload(raw.get("route")),
             steps=steps,
         )
 
@@ -179,6 +343,30 @@ def _periods_from_payload(value: Any) -> tuple[dict[str, Any], ...]:
         periods.append(period)
         previous_period = period
     return tuple(periods)
+
+
+def _route_metadata_from_payload(value: Any) -> ResearchRouteMetadata | None:
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise ValueError("research workflow route metadata must be a mapping")
+    raw_allowed_roles = value.get("allowed_period_roles", ())
+    if raw_allowed_roles is None:
+        raw_allowed_roles = ()
+    if not isinstance(raw_allowed_roles, list | tuple):
+        raise ValueError("route.allowed_period_roles must be a sequence")
+    return ResearchRouteMetadata(
+        route_id=ResearchWorkflowConfig._required_safe_token(value, "route_id"),
+        route_name=ResearchWorkflowConfig._required_safe_token(value, "route_name"),
+        status=_required_text(value, "status"),
+        owner=_required_text(value, "owner"),
+        selection_policy=(
+            dict(value["selection_policy"])
+            if isinstance(value.get("selection_policy"), Mapping)
+            else {}
+        ),
+        allowed_period_roles=tuple(str(role) for role in raw_allowed_roles),
+    )
 
 
 def _validate_step_period_roles(
@@ -611,6 +799,9 @@ class ResearchWorkflowResult:
     status: str
     steps: tuple[ResearchWorkflowStepResult, ...]
     periods: tuple[dict[str, Any], ...] = ()
+    run_context: ResearchWorkflowRunContext | None = None
+    route: ResearchRouteMetadata | None = None
+    decision: Any | None = None
 
     @property
     def succeeded(self) -> bool:
@@ -621,11 +812,15 @@ class ResearchWorkflowResult:
     def to_payload(self) -> dict[str, Any]:
         """Return a JSON-ready workflow result payload."""
 
-        payload = {
+        payload: dict[str, Any] = {
             "status": self.status,
             "steps": [step.to_payload() for step in self.steps],
             "workflow_id": self.workflow_id,
         }
+        if self.run_context is not None:
+            payload["run_context"] = self.run_context.to_payload()
+        if self.route is not None:
+            payload["route"] = self.route.to_payload()
         if self.periods:
             period_payloads = [
                 ResearchWorkflowRunner._declared_period_payload(period) for period in self.periods
@@ -652,6 +847,7 @@ class ResearchWorkflowRunner:
     ) -> ResearchWorkflowResult:
         """Run a workflow until completion or a blocking gate."""
 
+        run_context = ResearchWorkflowRunContext.from_session(session, config)
         results: list[ResearchWorkflowStepResult] = []
         overall_status = "completed"
         for step in self._selected_steps(
@@ -660,7 +856,13 @@ class ResearchWorkflowRunner:
             from_step_id=from_step_id,
             to_step_id=to_step_id,
         ):
-            result = self._run_step(session, config, step, steps=tuple(results))
+            result = self._run_step(
+                session,
+                config,
+                step,
+                steps=tuple(results),
+                run_context=run_context,
+            )
             results.append(result)
             if result.status != "passed":
                 overall_status = "failed" if result.status == "failed" else "blocked"
@@ -673,6 +875,8 @@ class ResearchWorkflowRunner:
         return ResearchWorkflowResult(
             workflow_id=config.workflow_id,
             periods=config.periods,
+            run_context=run_context,
+            route=config.route,
             status=overall_status,
             steps=tuple(results),
         )
@@ -740,6 +944,7 @@ class ResearchWorkflowRunner:
         config: ResearchWorkflowConfig,
         step: ResearchWorkflowStepConfig,
         *,
+        run_context: ResearchWorkflowRunContext,
         steps: tuple[ResearchWorkflowStepResult, ...],
     ) -> ResearchWorkflowStepResult:
         try:
@@ -766,7 +971,7 @@ class ResearchWorkflowRunner:
             if step.kind == "portfolio_volatility_managed_scan":
                 return self._portfolio_volatility_managed_scan(config, step)
             if step.kind == "research_report":
-                return self._research_report(config, steps, step)
+                return self._research_report(config, run_context, steps, step)
         except Exception as exc:  # pragma: no cover - exercised by CLI integration.
             return ResearchWorkflowStepResult(
                 step_id=step.step_id,
@@ -881,7 +1086,8 @@ class ResearchWorkflowRunner:
                 raise ValueError("factor_evaluation snapshot.forward_returns must be a path")
             resolved_snapshots.append(
                 {
-                    "as_of": snapshot.get("as_of"),
+                    **_snapshot_protocol_payload(snapshot),
+                    "as_of": _json_ready(snapshot.get("as_of")),
                     "factor_scores": str(config.resolve_path(factor_scores)),
                     "forward_returns": str(config.resolve_path(forward_returns)),
                 }
@@ -917,6 +1123,7 @@ class ResearchWorkflowRunner:
     def _research_report(
         self,
         config: ResearchWorkflowConfig,
+        run_context: ResearchWorkflowRunContext,
         steps: tuple[ResearchWorkflowStepResult, ...],
         step: ResearchWorkflowStepConfig,
     ) -> ResearchWorkflowStepResult:
@@ -933,6 +1140,8 @@ class ResearchWorkflowRunner:
             ResearchWorkflowResult(
                 workflow_id=config.workflow_id,
                 periods=config.periods,
+                run_context=run_context,
+                route=config.route,
                 status="completed",
                 steps=steps,
             )
@@ -1332,6 +1541,8 @@ class ResearchWorkflowRunner:
             constraints,
             capital_metric_config=capital_metric_config,
         )
+        validation_policy = self._research_validation_policy(step.payload)
+        validation_policy_payload = validation_policy.evaluate(validation_summary)
         validation_output = step.payload.get("validation_output")
         validation_output_path: Path | None = None
         if validation_output is not None:
@@ -1459,6 +1670,11 @@ class ResearchWorkflowRunner:
                 None if validation_output_path is None else str(validation_output_path)
             ),
             "validation_summary": validation_summary.to_payload(),
+            "validation_policy": validation_policy_payload,
+            "validation_scorecard": self._validation_scorecard(
+                validation_policy_payload=validation_policy_payload,
+                validation=step.payload.get("validation"),
+            ),
         }
         if walk_forward_summary_payload is not None:
             outputs["walk_forward_validation"] = walk_forward_summary_payload
@@ -1472,17 +1688,60 @@ class ResearchWorkflowRunner:
             outputs["failure_window_veto_output"] = (
                 None if failure_veto_output_path is None else str(failure_veto_output_path)
             )
+        validation_policy_blocked = bool(validation_policy_payload.get("blocked", False))
+        blocked = failure_veto_blocked or validation_policy_blocked
+        message = "optimization completed"
+        if failure_veto_blocked:
+            message = "failure-window veto blocked workflow"
+        elif validation_policy_blocked:
+            message = "optimizer validation policy blocked workflow"
         return ResearchWorkflowStepResult(
             step_id=step.step_id,
             kind=step.kind,
-            status="blocked" if failure_veto_blocked else "passed",
-            message=(
-                "failure-window veto blocked workflow"
-                if failure_veto_blocked
-                else "optimization completed"
-            ),
+            status="blocked" if blocked else "passed",
+            message=message,
             outputs=outputs,
         )
+
+    def _research_validation_policy(
+        self, step_payload: Mapping[str, Any]
+    ) -> ResearchValidationPolicy:
+        raw_policy = self._optional_mapping(step_payload.get("validation_policy")) or {}
+        validation = self._optional_mapping(step_payload.get("validation")) or {}
+        raw_required = raw_policy.get(
+            "require_passing_candidate",
+            validation.get("require_passing_candidate", False),
+        )
+        if not isinstance(raw_required, bool):
+            raise ValueError("validation_policy.require_passing_candidate must be a boolean")
+        return ResearchValidationPolicy(require_passing_candidate=raw_required)
+
+    def _validation_scorecard(
+        self,
+        *,
+        validation_policy_payload: Mapping[str, Any],
+        validation: Any,
+    ) -> dict[str, Any]:
+        validation_payload = self._optional_mapping(validation) or {}
+        return {
+            "cost_stress_status": (
+                "configured"
+                if validation_payload.get("cost_stress") is not None
+                else "not_configured"
+            ),
+            "failure_window_status": (
+                "configured"
+                if validation_payload.get("failure_window_veto") is not None
+                else "not_configured"
+            ),
+            "rejection_reasons": list(validation_policy_payload.get("rejection_reasons", ())),
+            "robustness_score": validation_policy_payload.get("robustness_score", "0"),
+            "walk_forward_status": (
+                "configured"
+                if validation_payload.get("walk_forward") is not None
+                else "not_configured"
+            ),
+        }
 
     def _validation_constraints(self, value: Any) -> tuple[MetricConstraint, ...]:
         validation = self._optional_mapping(value)
@@ -1859,9 +2118,95 @@ def _json_ready(value: Any) -> Any:
     return value
 
 
+def _snapshot_protocol_payload(snapshot: Mapping[str, Any]) -> dict[str, Any]:
+    fields = (
+        "available_at",
+        "forward_return_end",
+        "forward_return_start",
+        "source_data_end",
+    )
+    return {field: _json_ready(snapshot[field]) for field in fields if field in snapshot}
+
+
+def _path_text(value: Any) -> str:
+    if isinstance(value, str | Path):
+        return str(value)
+    return "unknown"
+
+
+def _sha256_path(value: Any) -> str:
+    if not isinstance(value, str | Path):
+        return "unknown"
+    path = Path(value)
+    if not path.exists() or not path.is_file():
+        return "unknown"
+    hasher = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            hasher.update(chunk)
+    return f"sha256:{hasher.hexdigest()}"
+
+
+def _git_value(
+    args: Sequence[str],
+    git_command: Callable[[Sequence[str]], str | None] | None,
+) -> str:
+    value = _call_git(args, git_command)
+    if value is None or not value.strip():
+        return "unknown"
+    return value.strip()
+
+
+def _git_dirty(git_command: Callable[[Sequence[str]], str | None] | None) -> bool | str:
+    value = _call_git(["status", "--porcelain"], git_command)
+    if value is None:
+        return "unknown"
+    return bool(value.strip())
+
+
+def _call_git(
+    args: Sequence[str],
+    git_command: Callable[[Sequence[str]], str | None] | None,
+) -> str | None:
+    if git_command is not None:
+        return git_command(args)
+    try:
+        completed = subprocess.run(
+            ["git", *args],
+            capture_output=True,
+            check=False,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if completed.returncode != 0:
+        return None
+    return completed.stdout
+
+
+def _dataset_ids(session_config: Any) -> tuple[str, ...]:
+    if session_config is None:
+        return ()
+    explicit = getattr(session_config, "dataset_ids", None)
+    if explicit is not None:
+        return tuple(str(item) for item in explicit)
+    catalog_name = getattr(session_config, "catalog_name", None)
+    roots = getattr(session_config, "roots", ())
+    timeframe = getattr(session_config, "timeframe", None)
+    if not isinstance(catalog_name, str) or not isinstance(timeframe, str):
+        return ()
+    if not isinstance(roots, Sequence) or isinstance(roots, str):
+        return ()
+    return tuple(f"{catalog_name}:{root}:{timeframe}" for root in roots)
+
+
 __all__ = [
+    "ResearchRouteIndex",
+    "ResearchRouteMetadata",
     "ResearchWorkflowConfig",
     "ResearchWorkflowResult",
+    "ResearchWorkflowRunContext",
     "ResearchWorkflowRunner",
     "ResearchWorkflowStepConfig",
     "ResearchWorkflowStepResult",
@@ -1886,6 +2231,7 @@ _ALLOWED_STEP_KINDS = frozenset(
 _SCORING_PERIOD_ROLES = frozenset({"anchor", "selection", "validation"})
 _REPORT_ONLY_PERIOD_ROLES = frozenset({"holdout_report_only", "true_oos_report_only"})
 _PERIOD_ROLES = _SCORING_PERIOD_ROLES | _REPORT_ONLY_PERIOD_ROLES
+_ROUTE_STATUSES = frozenset({"candidate", "exploration", "frozen", "rejected"})
 _SCORE_PERIOD_FIELDS = frozenset(
     {
         "baseline_period",

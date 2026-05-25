@@ -37,6 +37,7 @@ from qts.research.factor_evaluation import (
     FactorEvaluationArtifactWriter,
     FactorEvaluationInput,
     FactorEvaluationResult,
+    FactorSnapshotProtocol,
 )
 from qts.research.factor_spec import FactorSpec, FactorSpecDrafter
 from qts.research.factor_spec_store import FactorSpecReview, FactorSpecStore
@@ -760,6 +761,7 @@ class ResearchSession:
                     factor_version=factor_version,
                     factor_result=factor_result,
                     forward_returns=forward_returns,
+                    forward_return_protocol=self._snapshot_protocol(snapshot, as_of),
                     bucket_count=bucket_count,
                     previous_factor_result=previous_factor_result,
                 )
@@ -844,6 +846,29 @@ class ResearchSession:
             except ValueError as exc:
                 raise ValueError("as_of must be an ISO date") from exc
         raise ValueError("as_of must be an ISO date")
+
+    def _snapshot_protocol(
+        self,
+        snapshot: Mapping[str, Any],
+        as_of: date,
+    ) -> FactorSnapshotProtocol:
+        required_fields = (
+            "source_data_end",
+            "available_at",
+            "forward_return_start",
+            "forward_return_end",
+        )
+        if not any(field in snapshot for field in required_fields):
+            return FactorSnapshotProtocol.from_as_of(as_of)
+        missing = [field for field in required_fields if field not in snapshot]
+        if missing:
+            raise ValueError(f"factor snapshot protocol missing fields: {', '.join(missing)}")
+        return FactorSnapshotProtocol(
+            source_data_end=self._as_of(snapshot["source_data_end"]),
+            available_at=self._as_of(snapshot["available_at"]),
+            forward_return_start=self._as_of(snapshot["forward_return_start"]),
+            forward_return_end=self._as_of(snapshot["forward_return_end"]),
+        )
 
     @staticmethod
     def _load_symbol_decimal_map(path: Path, *, value_column: str = "value") -> dict[str, Decimal]:

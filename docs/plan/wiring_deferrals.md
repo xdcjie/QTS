@@ -57,6 +57,7 @@ qts.data.sources.replay_market_data_source.ReplayClock  expires=2027-05-17  targ
 qts.data.sources.replay_market_data_source.ReplayEventSequencer  expires=2027-05-17  target=internal
 qts.observability.audit_sink.InMemoryAuditSink  expires=2027-05-17  target=internal
 qts.quality.guardrails.PlatformFreezeConfig  expires=2027-05-17  target=internal
+qts.research.factor_discovery.UrllibFactorDiscoveryHttpClient  expires=2027-05-25  target=internal
 qts.reporting.backtest.StreamingEquityMetrics  expires=2027-05-17  target=internal
 qts.runtime.durability.RuntimeDurabilityDrill  expires=2027-05-17  target=internal
 qts.runtime.intent_processing.OrderPlanBuilder  expires=2027-05-17  target=internal
@@ -77,6 +78,7 @@ qts.runtime.intent_processing.OrderPlanBuilder  expires=2027-05-17  target=inter
 | `qts.data.sources.replay_market_data_source.ReplayEventSequencer` | internal | Same pattern as ReplayClock. |
 | `qts.observability.audit_sink.InMemoryAuditSink` | internal | Test/in-process sink; production deployments use `StderrJsonAuditSink`. |
 | `qts.quality.guardrails.PlatformFreezeConfig` | internal | Consumed inside the guardrails module via dynamic AST walks. |
+| `qts.research.factor_discovery.UrllibFactorDiscoveryHttpClient` | internal | Default HTTP implementation composed by factor discovery source classes in the same module. |
 | `qts.reconciliation.persistent_drift.PersistentDriftKillSwitch` | OPT-63 | Runtime reconciliation integration (this batch). |
 | `qts.reporting.backtest.StreamingEquityMetrics` | internal | Composed into `BacktestArtifactWriter`. |
 | `qts.runtime.durability.RuntimeDurabilityDrill` | internal | Durability drill harness; remains opt-in. |

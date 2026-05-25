@@ -638,3 +638,170 @@ steps:
     assert payload["steps"][1]["kind"] == "implementation_gate"
     assert payload["steps"][1]["status"] == "blocked"
     assert len(payload["steps"]) == 2
+
+
+def test_research_cli_evidence_bundle_list_show_verify(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text('{"artifact_hashes": {"metrics.json": "sha256:abc"}}\n')
+    report_path = tmp_path / "workflow-report.md"
+    report_path.write_text("# Report\n", encoding="utf-8")
+    summary_path = tmp_path / "workflow-summary.json"
+    summary_path.write_text(
+        json.dumps(
+            {
+                "run_context": {
+                    "backtest_config_hash": "sha256:backtest",
+                    "dataset_ids": ["fixture:GC:15m"],
+                    "generated_at": "2026-05-25T00:00:00+00:00",
+                    "git_branch": "master",
+                    "git_commit": "abc123",
+                    "git_dirty": False,
+                    "promotion_status": "research_only",
+                    "research_config_hash": "sha256:research",
+                    "research_config_path": "configs/research/quickstart.yaml",
+                    "workflow_config_hash": "sha256:workflow",
+                    "workflow_config_path": "configs/research/workflows/quickstart.yaml",
+                },
+                "status": "completed",
+                "steps": [
+                    {
+                        "id": "tearsheet",
+                        "kind": "factor_tearsheet",
+                        "message": "done",
+                        "outputs": {"manifest_path": str(manifest_path)},
+                        "status": "passed",
+                    },
+                    {
+                        "id": "report",
+                        "kind": "research_report",
+                        "message": "done",
+                        "outputs": {"report_path": str(report_path)},
+                        "status": "passed",
+                    },
+                ],
+                "workflow_id": "evidence-cli-flow",
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    registry_root = tmp_path / "evidence"
+
+    created = _run_cli(
+        "evidence",
+        "--registry-root",
+        str(registry_root),
+        "bundle",
+        "--workflow-summary",
+        str(summary_path),
+    )
+
+    assert created.returncode == 0, created.stderr
+    created_payload = json.loads(created.stdout)
+    bundle_id = created_payload["evidence_bundle_id"]
+    assert created_payload["status"] == "research_evidence_only"
+
+    listed = _run_cli("evidence", "--registry-root", str(registry_root), "list")
+    shown = _run_cli("evidence", "--registry-root", str(registry_root), "show", bundle_id)
+    verified = _run_cli("evidence", "--registry-root", str(registry_root), "verify", bundle_id)
+
+    assert listed.returncode == 0, listed.stderr
+    assert bundle_id in listed.stdout
+    assert shown.returncode == 0, shown.stderr
+    assert json.loads(shown.stdout)["workflow_run_id"] == "evidence-cli-flow"
+    assert verified.returncode == 0, verified.stderr
+    assert json.loads(verified.stdout)["accepted"] is True
+
+
+def test_research_cli_idea_record_trial_and_meta_summary(tmp_path: Path) -> None:
+    registry_root = tmp_path / "ideas"
+    idea_payload_path = tmp_path / "idea.json"
+    idea_payload_path.write_text(
+        json.dumps(
+            {
+                "created_at": "2026-05-25T00:00:00+00:00",
+                "edge_type": "momentum",
+                "hypothesis": "Session momentum persists after costs.",
+                "idea_id": "idea-momentum",
+                "source": "fixture",
+                "status": "draft",
+                "title": "Momentum",
+                "trial_count": 0,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    added = _run_cli(
+        "idea",
+        "--registry-root",
+        str(registry_root),
+        "add",
+        "--idea-payload",
+        str(idea_payload_path),
+    )
+    trial = _run_cli(
+        "idea",
+        "--registry-root",
+        str(registry_root),
+        "record-trial",
+        "--idea-id",
+        "idea-momentum",
+        "--experiment-id",
+        "exp-001",
+    )
+    listed = _run_cli("idea", "--registry-root", str(registry_root), "list")
+
+    assert added.returncode == 0, added.stderr
+    assert trial.returncode == 0, trial.stderr
+    assert json.loads(trial.stdout)["trial_count"] == 1
+    assert listed.returncode == 0, listed.stderr
+    assert json.loads(listed.stdout)[0]["idea_id"] == "idea-momentum"
+
+    evidence_records_path = tmp_path / "evidence-records.json"
+    evidence_records_path.write_text(
+        json.dumps(
+            [{"accepted": True, "idea_id": "idea-momentum", "kind": "factor_candidate"}],
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    experiment_records_path = tmp_path / "experiment-records.json"
+    experiment_records_path.write_text(
+        json.dumps([{"accepted": True, "experiment_id": "exp-001", "idea_id": "idea-momentum"}])
+        + "\n",
+        encoding="utf-8",
+    )
+    output_dir = tmp_path / "meta"
+
+    meta = _run_cli(
+        "meta",
+        "--output-dir",
+        str(output_dir),
+        "summary",
+        "--idea-registry-root",
+        str(registry_root),
+        "--evidence-records",
+        str(evidence_records_path),
+        "--experiment-records",
+        str(experiment_records_path),
+        "--period",
+        "monthly",
+        "--period-start",
+        "2026-05-01",
+    )
+
+    assert meta.returncode == 0, meta.stderr
+    meta_payload = json.loads(meta.stdout)
+    assert Path(meta_payload["json_path"]).exists()
+    assert Path(meta_payload["markdown_path"]).exists()
+    assert meta_payload["summary"]["ideas_created"] == 1
+    assert meta_payload["summary"]["validation_pass_rate"] == {
+        "accepted": 2,
+        "rate": 1.0,
+        "total": 2,
+    }

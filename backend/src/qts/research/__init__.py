@@ -1,5 +1,18 @@
 """Research-facing experiment artifacts."""
 
+from qts.research.ablation import (
+    AblationPlan,
+    AblationReport,
+    AblationReportPaths,
+    AblationReportWriter,
+    AblationRun,
+    AblationVariantSummary,
+)
+from qts.research.evidence_registry import (
+    EvidenceRegistry,
+    EvidenceVerificationResult,
+    ResearchEvidenceBundle,
+)
 from qts.research.experiment_manifest import (
     ExperimentManifestConfig,
     ExperimentManifestResult,
@@ -33,15 +46,33 @@ from qts.research.factor_evaluation import (
     FactorEvaluationInput,
     FactorEvaluationMetrics,
     FactorEvaluationResult,
+    FactorSnapshotProtocol,
 )
 from qts.research.factor_spec import FactorSpec, FactorSpecDrafter, FactorSpecSourceRef
 from qts.research.factor_spec_store import FactorSpecReview, FactorSpecStore
+from qts.research.idea_registry import (
+    IdeaRegistry,
+    TrialBudgetWarning,
+    trial_budget_warning,
+    validate_promotion_candidate,
+)
+from qts.research.idea_spec import IdeaSpec
+from qts.research.meta_research import (
+    MetaResearchArtifacts,
+    MetaResearchSummary,
+    MetaResearchSummaryWriter,
+)
 from qts.research.portfolio_ensemble import (
     evaluate_portfolio_ensemble,
     scan_portfolio_ensemble_allocations,
     scan_volatility_managed_allocations,
 )
-from qts.research.report import ResearchWorkflowReport, ResearchWorkflowReportWriter
+from qts.research.promotion import PaperReadinessChecklist, PromotionCandidateSpec
+from qts.research.report import (
+    ResearchReviewDecision,
+    ResearchWorkflowReport,
+    ResearchWorkflowReportWriter,
+)
 from qts.research.research_book import (
     HistoryRequest,
     ResearchBook,
@@ -54,15 +85,32 @@ from qts.research.tearsheet import (
     FactorEvaluationTearsheetArtifactWriter,
     FactorEvaluationTearsheetMetrics,
 )
+from qts.research.trade_diagnostics import (
+    FactorBucketSpec,
+    PaperCandidateDiagnosticsGate,
+    PaperCandidateDiagnosticsValidation,
+    TradeDiagnostic,
+    TradeDiagnosticsReport,
+    TradeDiagnosticSummary,
+)
 from qts.research.workflow import (
+    ResearchRouteIndex,
+    ResearchRouteMetadata,
     ResearchWorkflowConfig,
     ResearchWorkflowResult,
+    ResearchWorkflowRunContext,
     ResearchWorkflowRunner,
     ResearchWorkflowStepConfig,
     ResearchWorkflowStepResult,
 )
 
 __all__ = [
+    "AblationPlan",
+    "AblationReport",
+    "AblationReportPaths",
+    "AblationReportWriter",
+    "AblationRun",
+    "AblationVariantSummary",
     "ExperimentManifestConfig",
     "ExperimentManifestResult",
     "ExperimentManifestWriter",
@@ -70,6 +118,9 @@ __all__ = [
     "ResearchExperimentRecorderConfig",
     "ExperimentStore",
     "ExperimentStoreRecord",
+    "EvidenceRegistry",
+    "EvidenceVerificationResult",
+    "ResearchEvidenceBundle",
     "FactorCandidate",
     "FactorCandidateBatch",
     "FactorCandidateWorkflow",
@@ -88,17 +139,24 @@ __all__ = [
     "FactorEvaluationInput",
     "FactorEvaluationMetrics",
     "FactorEvaluationResult",
+    "FactorSnapshotProtocol",
     "FactorEvaluationTearsheet",
     "FactorEvaluationTearsheetArtifactWriter",
     "FactorEvaluationTearsheetMetrics",
     "evaluate_portfolio_ensemble",
     "scan_portfolio_ensemble_allocations",
     "scan_volatility_managed_allocations",
+    "PaperReadinessChecklist",
+    "PromotionCandidateSpec",
+    "ResearchRouteIndex",
+    "ResearchRouteMetadata",
     "ResearchWorkflowConfig",
     "ResearchWorkflowResult",
+    "ResearchWorkflowRunContext",
     "ResearchWorkflowRunner",
     "ResearchWorkflowStepConfig",
     "ResearchWorkflowStepResult",
+    "ResearchReviewDecision",
     "ResearchWorkflowReport",
     "ResearchWorkflowReportWriter",
     "FactorSpec",
@@ -106,10 +164,24 @@ __all__ = [
     "FactorSpecSourceRef",
     "FactorSpecReview",
     "FactorSpecStore",
+    "IdeaRegistry",
+    "IdeaSpec",
+    "TrialBudgetWarning",
+    "trial_budget_warning",
+    "validate_promotion_candidate",
+    "MetaResearchArtifacts",
+    "MetaResearchSummary",
+    "MetaResearchSummaryWriter",
+    "FactorBucketSpec",
     "HistoryRequest",
+    "PaperCandidateDiagnosticsGate",
+    "PaperCandidateDiagnosticsValidation",
     "ResearchBook",
     "ResearchBookConfig",
     "ResearchHistoryFrame",
     "ResearchSession",
     "ResearchSessionConfig",
+    "TradeDiagnostic",
+    "TradeDiagnosticSummary",
+    "TradeDiagnosticsReport",
 ]

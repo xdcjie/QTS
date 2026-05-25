@@ -1255,12 +1255,93 @@ def test_guardrails_reject_research_workflow_runtime_keys_anywhere(
     assert {violation.symbol for violation in violations} == {forbidden_key}
 
 
-def test_guardrails_allow_vwap_factor_research_workflow(tmp_path: Path) -> None:
+def test_guardrails_scan_nested_research_workflow_runtime_keys(tmp_path: Path) -> None:
     root = tmp_path
     _write(
         root,
-        "configs/research/workflows/vwap_factor_search.yaml",
-        Path("configs/research/workflows/vwap_factor_search.yaml").read_text(encoding="utf-8"),
+        "configs/research/workflows/routes/bad.yaml",
+        "version: 1\nruntime: live\n",
+    )
+
+    assert "RESEARCH_WORKFLOW_RUNTIME_KEY" in _codes(root)
+
+
+def test_guardrail_rejects_promotion_without_evidence_bundle(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "configs/research/promotion/vwap.yaml",
+        "promotion_candidate_id: pc_001\nstatus: review_required\nidea_id: idea_001\n",
+    )
+
+    assert "EVIDENCE_BUNDLE_REQUIRED_FOR_PROMOTION" in _codes(root)
+
+
+def test_guardrail_rejects_candidate_without_idea_id(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "configs/research/promotion/vwap.yaml",
+        "promotion_candidate_id: pc_001\nevidence_bundle_id: evb_001\nstatus: paper_candidate\n"
+        "paper_readiness:\n  trade_diagnostics_available: true\n",
+    )
+
+    assert "IDEA_REGISTRY_REQUIRED_FOR_CANDIDATE" in _codes(root)
+
+
+def test_guardrail_rejects_paper_candidate_without_diagnostics(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "configs/research/promotion/vwap.yaml",
+        "promotion_candidate_id: pc_001\nevidence_bundle_id: evb_001\nidea_id: idea_001\n"
+        "status: paper_candidate\npaper_readiness:\n  trade_diagnostics_available: false\n",
+    )
+
+    assert "TRADE_DIAGNOSTICS_REQUIRED_FOR_PAPER" in _codes(root)
+
+
+def test_guardrail_rejects_route_workflow_without_route_metadata(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "configs/research/workflows/routes/route_a.yaml",
+        "version: 1\nworkflow_id: route-a\nsteps:\n  - id: report\n    kind: research_report\n",
+    )
+
+    assert "ROUTE_METADATA_REQUIRED" in _codes(root)
+
+
+def test_guardrail_rejects_research_report_without_decision_block(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "runs/research/reports/workflow-report.md",
+        "# Research Workflow Report\n\n## Evidence Summary\n",
+    )
+
+    assert "RESEARCH_REPORT_DECISION_REQUIRED" in _codes(root)
+
+
+def test_guardrail_rejects_research_strategy_stale_examples_docstring(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "strategies/research/vwap_factor_research.py",
+        '"""This strategy intentionally lives under examples."""\n',
+    )
+
+    assert "RESEARCH_STRATEGY_STALE_DOCSTRING" in _codes(root)
+
+
+def test_guardrails_allow_valid_research_workflow(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "configs/research/workflows/quickstart.yaml",
+        Path("configs/research/workflows/quickstart.yaml").read_text(encoding="utf-8"),
     )
 
     assert _codes(root) == set()
@@ -1659,6 +1740,12 @@ def test_guardrail_suite_includes_required_m0_hard_gate_rules() -> None:
         "VWAP_OPTIMIZER_CONFIG",
         "PRODUCTION_STRATEGY_IMPORT",
         "RESEARCH_WORKFLOW_RUNTIME_KEY",
+        "EVIDENCE_BUNDLE_REQUIRED_FOR_PROMOTION",
+        "IDEA_REGISTRY_REQUIRED_FOR_CANDIDATE",
+        "TRADE_DIAGNOSTICS_REQUIRED_FOR_PAPER",
+        "ROUTE_METADATA_REQUIRED",
+        "RESEARCH_REPORT_DECISION_REQUIRED",
+        "RESEARCH_STRATEGY_STALE_DOCSTRING",
     } <= rule_codes
 
 

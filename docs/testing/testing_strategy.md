@@ -79,16 +79,18 @@ labels, optimizer windows, backtest replay, paper/live event ordering, or report
 horizons change. Strategy-facing bars are visible only after their `[start,
 end)` interval completes.
 
-New VWAP research must be verified through the canonical workflow:
+Research workflow behavior must be verified through the canonical workflow
+entrypoint:
 
 ```bash
 PYTHONPATH=backend/src uv run python scripts/run_research.py \
-  --config configs/research/vwap.yaml \
-  workflow configs/research/workflows/vwap_factor_search.yaml
+  --config <research-config> \
+  workflow <workflow-config>
 ```
 
 Ad hoc VWAP runners and VWAP-specific `configs/optimizer` YAML are forbidden
-verification paths and must not remain or be reintroduced.
+verification paths and must not remain or be reintroduced. Tests must not
+depend on deleted VWAP workflow files.
 
 ## Guardrail checks
 

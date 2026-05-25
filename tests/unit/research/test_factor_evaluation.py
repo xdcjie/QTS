@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, localcontext
 from pathlib import Path
+from typing import Any
 
 import pytest
 from qts.factors import FactorResult, FactorScore
@@ -14,6 +15,7 @@ from qts.research.factor_evaluation import (
     FactorEvaluationInput,
     FactorEvaluationMetrics,
     FactorEvaluationResult,
+    FactorSnapshotProtocol,
 )
 
 
@@ -24,6 +26,81 @@ class Asset:
 
 def _factor_result(*scores: tuple[Asset, str]) -> FactorResult:
     return FactorResult(ranked=tuple(FactorScore(asset, Decimal(value)) for asset, value in scores))
+
+
+def _protocol(
+    *,
+    source_data_end: date = date(2026, 1, 2),
+    available_at: date = date(2026, 1, 2),
+    forward_return_start: date = date(2026, 1, 3),
+    forward_return_end: date = date(2026, 1, 4),
+) -> Any:
+    return FactorSnapshotProtocol(
+        source_data_end=source_data_end,
+        available_at=available_at,
+        forward_return_start=forward_return_start,
+        forward_return_end=forward_return_end,
+    )
+
+
+def test_factor_snapshot_rejects_source_data_after_available_at() -> None:
+    aaa = Asset("AAA")
+    bbb = Asset("BBB")
+
+    with pytest.raises(ValueError, match="source_data_end must be <= available_at"):
+        FactorEvaluation.evaluate(
+            FactorEvaluationInput(
+                as_of=date(2026, 1, 2),
+                factor_name="momentum",
+                factor_version="1",
+                factor_result=_factor_result((aaa, "2"), (bbb, "1")),
+                forward_returns={aaa.symbol: Decimal("0.02"), bbb.symbol: Decimal("0.01")},
+                forward_return_protocol=_protocol(
+                    source_data_end=date(2026, 1, 3),
+                    available_at=date(2026, 1, 2),
+                ),
+            )
+        )
+
+
+def test_factor_snapshot_rejects_available_at_after_forward_start() -> None:
+    aaa = Asset("AAA")
+    bbb = Asset("BBB")
+
+    with pytest.raises(ValueError, match="available_at must be <= forward_return_start"):
+        FactorEvaluation.evaluate(
+            FactorEvaluationInput(
+                as_of=date(2026, 1, 2),
+                factor_name="momentum",
+                factor_version="1",
+                factor_result=_factor_result((aaa, "2"), (bbb, "1")),
+                forward_returns={aaa.symbol: Decimal("0.02"), bbb.symbol: Decimal("0.01")},
+                forward_return_protocol=_protocol(
+                    available_at=date(2026, 1, 4),
+                    forward_return_start=date(2026, 1, 3),
+                ),
+            )
+        )
+
+
+def test_factor_snapshot_rejects_forward_window_overlap() -> None:
+    aaa = Asset("AAA")
+    bbb = Asset("BBB")
+
+    with pytest.raises(ValueError, match="forward_return_start must be < forward_return_end"):
+        FactorEvaluation.evaluate(
+            FactorEvaluationInput(
+                as_of=date(2026, 1, 2),
+                factor_name="momentum",
+                factor_version="1",
+                factor_result=_factor_result((aaa, "2"), (bbb, "1")),
+                forward_returns={aaa.symbol: Decimal("0.02"), bbb.symbol: Decimal("0.01")},
+                forward_return_protocol=_protocol(
+                    forward_return_start=date(2026, 1, 3),
+                    forward_return_end=date(2026, 1, 3),
+                ),
+            )
+        )
 
 
 def test_factor_evaluation_computes_rank_ic_and_bucket_spread() -> None:
@@ -448,10 +525,12 @@ def test_factor_evaluation_rejects_constant_return_ranks_only() -> None:
 
 def test_factor_evaluation_artifact_is_stable_json(tmp_path: Path) -> None:
     writer = FactorEvaluationArtifactWriter(tmp_path)
+    protocol = _protocol()
     result = FactorEvaluationResult(
         as_of=date(2026, 1, 2),
         factor_name="momentum",
         factor_version="1",
+        forward_return_protocol=protocol,
         metrics=FactorEvaluationMetrics(
             rank_ic=Decimal("1"),
             long_short_spread=Decimal("0.05"),
@@ -473,6 +552,12 @@ def test_factor_evaluation_artifact_is_stable_json(tmp_path: Path) -> None:
         "as_of": "2026-01-02",
         "factor_name": "momentum",
         "factor_version": "1",
+        "forward_return_protocol": {
+            "available_at": "2026-01-02",
+            "forward_return_end": "2026-01-04",
+            "forward_return_start": "2026-01-03",
+            "source_data_end": "2026-01-02",
+        },
         "metrics": {
             "coverage": "1",
             "long_short_spread": "0.05",
@@ -482,6 +567,35 @@ def test_factor_evaluation_artifact_is_stable_json(tmp_path: Path) -> None:
             "scored_count": 3,
             "turnover": "0.5",
         },
+        "snapshot_hash": protocol.snapshot_hash,
+    }
+
+
+def test_factor_artifact_records_snapshot_hash(tmp_path: Path) -> None:
+    aaa = Asset("AAA")
+    bbb = Asset("BBB")
+    protocol = _protocol()
+    evaluation = FactorEvaluation.evaluate(
+        FactorEvaluationInput(
+            as_of=date(2026, 1, 2),
+            factor_name="momentum",
+            factor_version="1",
+            factor_result=_factor_result((aaa, "2"), (bbb, "1")),
+            forward_returns={aaa.symbol: Decimal("0.02"), bbb.symbol: Decimal("0.01")},
+            forward_return_protocol=protocol,
+        )
+    )
+
+    path = FactorEvaluationArtifactWriter(tmp_path).write(evaluation)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+
+    assert evaluation.snapshot_hash == protocol.snapshot_hash
+    assert payload["snapshot_hash"] == protocol.snapshot_hash
+    assert payload["forward_return_protocol"] == {
+        "available_at": "2026-01-02",
+        "forward_return_end": "2026-01-04",
+        "forward_return_start": "2026-01-03",
+        "source_data_end": "2026-01-02",
     }
 
 

@@ -263,20 +263,21 @@ candidate parameters across the declared train/test windows through
 `ResearchSession.validate_optimizer_walk_forward(...)`, which delegates to the
 same `BacktestPipeline` boundary used by normal optimizer runs.
 
-The standard VWAP research workflow is:
+The standard Research OS workflow entrypoint is:
 
 ```bash
 PYTHONPATH=backend/src uv run python scripts/run_research.py \
-  --config configs/research/vwap.yaml \
-  workflow configs/research/workflows/vwap_factor_search.yaml
+  --config <research-config> \
+  workflow <workflow-config>
 ```
 
-It runs source-backed factor discovery, verifies the implemented VWAP strategy,
-runs a baseline backtest, runs factor-filter and risk/reward optimizer sweeps,
-writes optimizer validation summaries, and emits a Markdown research report.
-This is the canonical VWAP research entrypoint. Historical scripts under
-the retired ad hoc research folder were removed with the legacy optimizer
-YAMLs; new VWAP research directions should extend workflow configs instead.
+The checked-in quickstart workflow at `configs/research/workflows/quickstart.yaml`
+runs source-backed factor discovery, review and implementation gates, a baseline
+backtest, an optimizer step, validation summaries, and a Markdown research
+report. Deleted VWAP workflow files are not workflow dependencies. Historical
+scripts under the retired ad hoc research folder were removed with the legacy
+optimizer YAMLs; new VWAP research directions should extend reviewed workflow
+configs instead.
 The VWAP research strategy uses entry-price anchored ATR/R exits:
 `stop_atr_multiple` defines the stop distance from entry and
 `target_r_multiple` defines the profit target as a multiple of that risk.

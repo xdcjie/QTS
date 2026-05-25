@@ -24,6 +24,7 @@ class OptimizerValidationSummary:
     rejected_count: int
     accepted_runs: tuple[dict[str, Any], ...]
     rejections: tuple[dict[str, Any], ...]
+    robustness_score: Decimal = Decimal("0")
     walk_forward_splits: tuple[dict[str, str], ...] = ()
 
     @classmethod
@@ -43,7 +44,8 @@ class OptimizerValidationSummary:
             materialized_constraints,
             capital_metric_config,
         )
-        for result in results:
+        accepted_rank = 0
+        for raw_index, result in enumerate(results, start=1):
             capital_metrics = (
                 derive_capital_metrics(result, capital_metric_config)
                 if should_derive_capital_metrics
@@ -54,11 +56,22 @@ class OptimizerValidationSummary:
                 decision = constraint.evaluate(result, capital_metrics)
                 if not decision.accepted:
                     failed_reasons.append(decision.reason)
-            run_evidence = cls._result_evidence(result, capital_metrics=capital_metrics)
+            run_evidence = {
+                **cls._result_evidence(result, capital_metrics=capital_metrics),
+                "raw_rank": raw_index,
+            }
             if failed_reasons:
-                rejections.append({**run_evidence, "reasons": tuple(failed_reasons)})
+                rejections.append(
+                    {
+                        **run_evidence,
+                        "accepted_rank": None,
+                        "reasons": tuple(failed_reasons),
+                        "rejection_reasons": tuple(failed_reasons),
+                    }
+                )
             else:
-                accepted_runs.append(run_evidence)
+                accepted_rank += 1
+                accepted_runs.append({**run_evidence, "accepted_rank": accepted_rank})
 
         return cls(
             run_count=len(results),
@@ -66,6 +79,7 @@ class OptimizerValidationSummary:
             rejected_count=len(rejections),
             accepted_runs=tuple(accepted_runs),
             rejections=tuple(rejections),
+            robustness_score=_robustness_score(len(accepted_runs), len(results)),
             walk_forward_splits=(
                 () if walk_forward_plan is None else walk_forward_plan.to_metadata()
             ),
@@ -120,8 +134,34 @@ class OptimizerValidationSummary:
             "accepted_runs": self.accepted_runs,
             "rejected_count": self.rejected_count,
             "rejections": self.rejections,
+            "robustness_score": _decimal_text(self.robustness_score),
             "run_count": self.run_count,
             "walk_forward_splits": self.walk_forward_splits,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class ResearchValidationPolicy:
+    """Hard-gate policy over optimizer validation evidence."""
+
+    require_passing_candidate: bool = False
+
+    def evaluate(self, summary: OptimizerValidationSummary) -> dict[str, Any]:
+        """Return machine-readable gate status for optimizer candidate review."""
+
+        blocked = self.require_passing_candidate and summary.accepted_count == 0
+        return {
+            "accepted": not blocked,
+            "accepted_count": summary.accepted_count,
+            "blocked": blocked,
+            "rejected_count": summary.rejected_count,
+            "rejection_reasons": tuple(
+                reason
+                for rejection in summary.rejections
+                for reason in rejection.get("rejection_reasons", ())
+            ),
+            "require_passing_candidate": self.require_passing_candidate,
+            "robustness_score": _decimal_text(summary.robustness_score),
         }
 
 
@@ -221,6 +261,19 @@ def _optional_decimal(value: Any) -> Decimal | None:
     return parsed
 
 
+def _robustness_score(accepted_count: int, run_count: int) -> Decimal:
+    if run_count == 0:
+        return Decimal("0")
+    return (Decimal(accepted_count) / Decimal(run_count) * Decimal("100")).normalize()
+
+
+def _decimal_text(value: Decimal) -> str:
+    text = format(value, "f")
+    if "." in text:
+        return text.rstrip("0").rstrip(".")
+    return text
+
+
 def _should_derive_capital_metrics(
     constraints: Iterable[OptimizationConstraint],
     config: dict[str, Any] | None,
@@ -249,5 +302,6 @@ _CAPITAL_METRIC_NAMES = frozenset(
 __all__ = [
     "OptimizerValidationSummary",
     "OptimizerValidationSummaryWriter",
+    "ResearchValidationPolicy",
     "derive_capital_metrics",
 ]

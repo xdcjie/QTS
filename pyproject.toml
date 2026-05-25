@@ -5,6 +5,7 @@ description = "Python-first quantitative trading system"
 requires-python = ">=3.11"
 dependencies = [
     "exchange-calendars",
+    "fastapi",
     "ib-async>=2.1.0",
     "pandas",
     "pydantic",
@@ -20,7 +21,6 @@ sha256 = "d62d0bd602d9b0154f73246b1224467b6cff7062d34fe864510691b7677148c4"
 
 [dependency-groups]
 api = [
-    "fastapi",
     "uvicorn",
 ]
 dev = [

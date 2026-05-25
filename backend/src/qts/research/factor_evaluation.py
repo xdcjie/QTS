@@ -3,13 +3,94 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
-from datetime import date
+from datetime import date, timedelta
 from decimal import ROUND_HALF_EVEN, Context, Decimal, localcontext
+from hashlib import sha256
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from qts.factors import FactorResult
+
+
+@dataclass(frozen=True, slots=True)
+class FactorSnapshotProtocol:
+    """No-lookahead timing contract for factor snapshots and forward returns."""
+
+    source_data_end: date
+    available_at: date
+    forward_return_start: date
+    forward_return_end: date
+
+    def __post_init__(self) -> None:
+        if self.source_data_end > self.available_at:
+            raise ValueError("source_data_end must be <= available_at")
+        if self.available_at > self.forward_return_start:
+            raise ValueError("available_at must be <= forward_return_start")
+        if self.forward_return_start >= self.forward_return_end:
+            raise ValueError("forward_return_start must be < forward_return_end")
+
+    @classmethod
+    def from_as_of(cls, as_of: date) -> FactorSnapshotProtocol:
+        """Return a conservative compatibility protocol for legacy dated inputs."""
+
+        return cls(
+            source_data_end=as_of,
+            available_at=as_of,
+            forward_return_start=as_of + timedelta(days=1),
+            forward_return_end=as_of + timedelta(days=2),
+        )
+
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, object]) -> FactorSnapshotProtocol:
+        """Load protocol metadata from a JSON artifact payload."""
+
+        return cls(
+            source_data_end=cls._required_protocol_date(payload, "source_data_end"),
+            available_at=cls._required_protocol_date(payload, "available_at"),
+            forward_return_start=cls._required_protocol_date(payload, "forward_return_start"),
+            forward_return_end=cls._required_protocol_date(payload, "forward_return_end"),
+        )
+
+    @property
+    def snapshot_hash(self) -> str:
+        """Return a stable hash of the timing contract."""
+
+        canonical_payload = json.dumps(
+            self.to_payload(),
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        return sha256(canonical_payload.encode("utf-8")).hexdigest()
+
+    def to_payload(self) -> dict[str, str]:
+        """Return JSON-ready protocol metadata."""
+
+        return {
+            "available_at": self.available_at.isoformat(),
+            "forward_return_end": self.forward_return_end.isoformat(),
+            "forward_return_start": self.forward_return_start.isoformat(),
+            "source_data_end": self.source_data_end.isoformat(),
+        }
+
+    @staticmethod
+    def _required_protocol_date(payload: Mapping[str, object], field_name: str) -> date:
+        value = payload.get(field_name)
+        if not isinstance(value, str) or not value:
+            raise ValueError(f"{field_name} is required")
+        return date.fromisoformat(value)
+
+
+def _validate_factor_snapshot_protocol(protocol: FactorSnapshotProtocol) -> None:
+    """Force protocol construction/validation at call sites that accept Any."""
+
+    if protocol.source_data_end > protocol.available_at:
+        raise ValueError("source_data_end must be <= available_at")
+    if protocol.available_at > protocol.forward_return_start:
+        raise ValueError("available_at must be <= forward_return_start")
+    if protocol.forward_return_start >= protocol.forward_return_end:
+        raise ValueError("forward_return_start must be < forward_return_end")
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,6 +102,7 @@ class FactorEvaluationInput:
     factor_version: str
     factor_result: FactorResult
     forward_returns: dict[str, Decimal]
+    forward_return_protocol: Any | None = None
     bucket_count: int = 5
     previous_factor_result: FactorResult | None = None
 
@@ -33,6 +115,14 @@ class FactorEvaluationInput:
         _require_filename_safe_token(self.factor_version, "factor_version")
         if self.bucket_count <= 0:
             raise ValueError("bucket_count must be positive")
+        if self.forward_return_protocol is None:
+            object.__setattr__(
+                self,
+                "forward_return_protocol",
+                FactorSnapshotProtocol.from_as_of(self.as_of),
+            )
+        else:
+            _validate_factor_snapshot_protocol(self.forward_return_protocol)
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,6 +146,31 @@ class FactorEvaluationResult:
     factor_name: str
     factor_version: str
     metrics: FactorEvaluationMetrics
+    forward_return_protocol: Any | None = None
+
+    def __post_init__(self) -> None:
+        if self.forward_return_protocol is None:
+            object.__setattr__(
+                self,
+                "forward_return_protocol",
+                FactorSnapshotProtocol.from_as_of(self.as_of),
+            )
+        else:
+            _validate_factor_snapshot_protocol(self.forward_return_protocol)
+
+    @property
+    def snapshot_hash(self) -> str:
+        """Return the deterministic no-lookahead snapshot protocol hash."""
+
+        return self.protocol.snapshot_hash
+
+    @property
+    def protocol(self) -> FactorSnapshotProtocol:
+        """Return validated no-lookahead timing protocol metadata."""
+
+        if self.forward_return_protocol is None:
+            raise ValueError("forward_return_protocol is required")
+        return cast(FactorSnapshotProtocol, self.forward_return_protocol)
 
 
 class FactorEvaluation:
@@ -96,6 +211,7 @@ class FactorEvaluation:
             as_of=evaluation_input.as_of,
             factor_name=evaluation_input.factor_name,
             factor_version=evaluation_input.factor_version,
+            forward_return_protocol=evaluation_input.forward_return_protocol,
             metrics=metrics,
         )
 
@@ -204,7 +320,9 @@ class FactorEvaluationArtifactWriter:
             "as_of": result.as_of.isoformat(),
             "factor_name": result.factor_name,
             "factor_version": result.factor_version,
+            "forward_return_protocol": result.protocol.to_payload(),
             "metrics": self._metrics_payload(result.metrics),
+            "snapshot_hash": result.snapshot_hash,
         }
         path.write_text(
             json.dumps(payload, sort_keys=True, indent=2) + "\n",
@@ -246,6 +364,7 @@ __all__ = [
     "FactorEvaluationInput",
     "FactorEvaluationMetrics",
     "FactorEvaluationResult",
+    "FactorSnapshotProtocol",
 ]
 
 _METRIC_CONTEXT = Context(prec=50, rounding=ROUND_HALF_EVEN)

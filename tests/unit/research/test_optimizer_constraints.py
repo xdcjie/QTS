@@ -129,6 +129,40 @@ def test_validation_summary_counts_rejected_results(tmp_path: Path) -> None:
     assert "total_return" in summary.rejections[0]["reasons"][0]
 
 
+def test_validation_summary_records_raw_and_accepted_ranks(tmp_path: Path) -> None:
+    rejected = _result_with_manifest(tmp_path / "rejected", {"total_return": "0.01"})
+    first_accepted = _result_with_manifest(tmp_path / "accepted-1", {"total_return": "0.08"})
+    second_accepted = _result_with_manifest(tmp_path / "accepted-2", {"total_return": "0.07"})
+    constraint = MetricConstraint("total_return", ">=", Decimal("0.05"))
+
+    summary = OptimizerValidationSummary.from_results(
+        (rejected, first_accepted, second_accepted),
+        (constraint,),
+    )
+    payload = summary.to_payload()
+
+    assert payload["rejections"][0]["raw_rank"] == 1
+    assert payload["rejections"][0]["accepted_rank"] is None
+    assert payload["accepted_runs"][0]["raw_rank"] == 2
+    assert payload["accepted_runs"][0]["accepted_rank"] == 1
+    assert payload["accepted_runs"][1]["raw_rank"] == 3
+    assert payload["accepted_runs"][1]["accepted_rank"] == 2
+
+
+def test_validation_summary_records_rejection_reasons_without_dropping_runs(
+    tmp_path: Path,
+) -> None:
+    rejected = _result_with_manifest(tmp_path / "rejected", {"total_return": "0.01"})
+    constraint = MetricConstraint("total_return", ">=", Decimal("0.05"))
+
+    payload = OptimizerValidationSummary.from_results((rejected,), (constraint,)).to_payload()
+
+    assert payload["run_count"] == 1
+    assert payload["rejected_count"] == 1
+    assert payload["robustness_score"] == "0"
+    assert payload["rejections"][0]["rejection_reasons"] == payload["rejections"][0]["reasons"]
+
+
 def test_validation_summary_accepts_all_results_without_constraints(tmp_path: Path) -> None:
     result = _result_with_manifest(tmp_path, {"total_return": "0.01"})
 

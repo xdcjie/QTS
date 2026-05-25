@@ -59,18 +59,18 @@ runtime, broker, risk, order, execution, account, registry, session, or market
 data semantics. Research outputs become paper/live behavior only through the
 promotion flow.
 
-New VWAP research must use:
+Research workflow runs must use:
 
 ```bash
 PYTHONPATH=backend/src uv run python scripts/run_research.py \
-  --config configs/research/vwap.yaml \
-  workflow configs/research/workflows/vwap_factor_search.yaml
+  --config <research-config> \
+  workflow <workflow-config>
 ```
 
 Legacy VWAP ad hoc runners under `scripts/research/run_vwap_*.py` and
 VWAP-specific optimizer configs under `configs/optimizer` are forbidden
 shortcuts. They are not compatibility boundaries and must not remain or be
-reintroduced.
+reintroduced. Deleted VWAP workflow files are not valid workflow dependencies.
 
 Do not use backtest package placement to describe the source's time model.
 `historical` versus `realtime` is a market data source property;

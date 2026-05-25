@@ -4,12 +4,14 @@ import json
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
 import pytest
 from qts.research.factor_evaluation import (
     FactorEvaluationArtifactWriter,
     FactorEvaluationMetrics,
     FactorEvaluationResult,
+    FactorSnapshotProtocol,
 )
 from qts.research.tearsheet import (
     FactorEvaluationTearsheet,
@@ -28,11 +30,13 @@ def _evaluation(
     factor_name: str = "momentum",
     factor_version: str = "1",
     missing_symbols: tuple[str, ...] = (),
+    forward_return_protocol: Any | None = None,
 ) -> FactorEvaluationResult:
     return FactorEvaluationResult(
         as_of=as_of,
         factor_name=factor_name,
         factor_version=factor_version,
+        forward_return_protocol=forward_return_protocol,
         metrics=FactorEvaluationMetrics(
             rank_ic=Decimal(rank_ic),
             long_short_spread=Decimal(spread),
@@ -166,6 +170,40 @@ def test_factor_tearsheet_loads_factor_evaluation_artifacts(tmp_path: Path) -> N
     assert tearsheet.metrics.snapshot_count == 2
     assert tearsheet.metrics.mean_rank_ic == Decimal("0.2")
     assert tearsheet.rows()[0]["as_of"] == "2026-01-02"
+
+
+def test_factor_tearsheet_preserves_forward_protocol(tmp_path: Path) -> None:
+    protocol: Any = FactorSnapshotProtocol(
+        source_data_end=date(2026, 1, 2),
+        available_at=date(2026, 1, 2),
+        forward_return_start=date(2026, 1, 3),
+        forward_return_end=date(2026, 1, 4),
+    )
+    writer = FactorEvaluationArtifactWriter(tmp_path / "evaluations")
+    artifact_path = writer.write(
+        _evaluation(
+            date(2026, 1, 2),
+            rank_ic="0.1",
+            spread="0.01",
+            coverage="0.8",
+            forward_return_protocol=protocol,
+        )
+    )
+
+    tearsheet = FactorEvaluationTearsheet.from_artifact_paths((artifact_path,))
+    payload = tearsheet.to_payload()
+    snapshots = payload["snapshots"]
+    assert isinstance(snapshots, tuple)
+    snapshot = snapshots[0]
+    assert isinstance(snapshot, dict)
+
+    assert snapshot["snapshot_hash"] == protocol.snapshot_hash
+    assert snapshot["forward_return_protocol"] == {
+        "available_at": "2026-01-02",
+        "forward_return_end": "2026-01-04",
+        "forward_return_start": "2026-01-03",
+        "source_data_end": "2026-01-02",
+    }
 
 
 def test_factor_tearsheet_writer_rejects_path_like_identity(tmp_path: Path) -> None:

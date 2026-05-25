@@ -1,8 +1,9 @@
 """Research-only VWAP pullback strategy with configurable indicator gates.
 
-This module intentionally lives under ``examples``. It is a strategy-lab
-surface for comparing VWAP pullback variants through the normal Strategy SDK
-and backtest runner without changing the production VWAP v2 strategy.
+This module intentionally lives under ``strategies/research``. It is a
+strategy-lab surface for comparing VWAP pullback variants through the normal
+Strategy SDK and backtest runner without changing the production VWAP v2
+strategy or bypassing the promotion review boundary.
 """
 
 from __future__ import annotations

@@ -115,6 +115,7 @@ def test_portfolio_ensemble_aligns_manifest_equity_curves_without_lookahead(
     ]
     assert Decimal(result["metrics"]["total_return"]) == Decimal("0.155")
     assert Decimal(result["metrics"]["max_drawdown"]) == Decimal("0")
+    assert result["not_tradable_config"] is True
     assert result["research_only"] is True
     assert result["source_manifest_paths"] == [str(manifest_a), str(manifest_b)]
 
@@ -357,13 +358,24 @@ def test_portfolio_ensemble_scan_ranks_weight_grid_and_marks_constraints(
     assert result["scan_name"] == "unit"
     assert result["candidate_count"] == 2
     assert result["evaluated_allocation_count"] == 3
+    assert result["allocation_overfit_warning"] == (
+        "Allocation scan is research-only evidence and is not a tradable runtime config."
+    )
+    assert result["not_tradable_config"] is True
+    assert result["report_only_periods"] == []
+    assert result["research_only"] is True
+    assert result["score_periods"] == ["anchor", "validation"]
     assert result["satisfying_allocation_count"] == 1
     assert result["top_allocations"][0]["weights"] == {"burst": "0.5", "steady": "0.5"}
     assert result["top_allocations"][0]["meets_constraints"] is True
     assert result["top_allocations"][0]["metrics"]["validation"]["annual_return"] > "0.10"
 
 
-def test_portfolio_scan_rejects_holdout_score_period(tmp_path: Path) -> None:
+@pytest.mark.parametrize("score_field", ("baseline_period", "post_periods", "score_periods"))
+def test_portfolio_scan_rejects_holdout_in_all_score_fields(
+    tmp_path: Path,
+    score_field: str,
+) -> None:
     scan_portfolio_ensemble_allocations = _scan_portfolio_ensemble_allocations()
     manifests = {
         period: _write_manifest(
@@ -376,28 +388,69 @@ def test_portfolio_scan_rejects_holdout_score_period(tmp_path: Path) -> None:
         )
         for period in ("anchor", "holdout")
     }
-
-    with pytest.raises(ValueError, match="report-only period.*post_periods"):
-        scan_portfolio_ensemble_allocations(
+    payload: dict[str, Any] = {
+        "scan_name": "unsafe",
+        "periods": ["anchor", "holdout"],
+        "period_roles": {
+            "anchor": "anchor",
+            "holdout": "holdout_report_only",
+        },
+        "baseline_period": "anchor",
+        "post_periods": ["anchor"],
+        "score_periods": ["anchor"],
+        "candidates": [
             {
-                "scan_name": "unsafe",
-                "periods": ["anchor", "holdout"],
-                "period_roles": {
-                    "anchor": "anchor",
-                    "holdout": "holdout_report_only",
-                },
-                "baseline_period": "anchor",
-                "post_periods": ["holdout"],
-                "candidates": [
-                    {
-                        "name": "steady",
-                        "period_manifests": {
-                            period: str(path) for period, path in manifests.items()
-                        },
-                    },
-                ],
-            }
+                "name": "steady",
+                "period_manifests": {period: str(path) for period, path in manifests.items()},
+            },
+        ],
+    }
+    if score_field == "baseline_period":
+        payload["baseline_period"] = "holdout"
+    else:
+        payload[score_field] = ["holdout"]
+
+    with pytest.raises(ValueError, match=rf"report-only period.*{score_field}"):
+        scan_portfolio_ensemble_allocations(payload)
+
+
+def test_portfolio_scan_artifact_records_score_and_report_only_periods(tmp_path: Path) -> None:
+    scan_portfolio_ensemble_allocations = _scan_portfolio_ensemble_allocations()
+    manifests = {
+        period: _write_manifest(
+            tmp_path,
+            f"steady-{period}",
+            (
+                (datetime(2020, 1, 1, tzinfo=UTC), Decimal("100")),
+                (datetime(2021, 1, 1, tzinfo=UTC), Decimal("110")),
+            ),
         )
+        for period in ("anchor", "validation", "holdout")
+    }
+
+    result = scan_portfolio_ensemble_allocations(
+        {
+            "scan_name": "period-roles",
+            "periods": ["anchor", "validation", "holdout"],
+            "period_roles": {
+                "anchor": "anchor",
+                "validation": "validation",
+                "holdout": "holdout_report_only",
+            },
+            "baseline_period": "anchor",
+            "post_periods": ["validation"],
+            "score_periods": ["anchor", "validation"],
+            "candidates": [
+                {
+                    "name": "steady",
+                    "period_manifests": {period: str(path) for period, path in manifests.items()},
+                },
+            ],
+        }
+    )
+
+    assert result["score_periods"] == ["anchor", "validation"]
+    assert result["report_only_periods"] == ["holdout"]
 
 
 def test_volatility_managed_scan_uses_only_prior_returns_for_weights(
@@ -457,6 +510,15 @@ def test_volatility_managed_scan_uses_only_prior_returns_for_weights(
     top = result["top_allocations"][0]
     validation = top["metrics"]["validation"]
     assert result["evaluated_parameter_count"] == 1
+    assert result["allocation_overfit_warning"] == (
+        "Allocation scan is research-only evidence and is not a tradable runtime config."
+    )
+    assert result["not_tradable_config"] is True
+    assert result["post_selection_periods"] == ["validation"]
+    assert result["report_only_periods"] == []
+    assert result["research_only"] is True
+    assert result["selection_periods"] == ["validation"]
+    assert result["uses_prior_returns_only"] is True
     assert top["parameters"]["lookback_days"] == 1
     assert Decimal(validation["total_return"]).quantize(Decimal("0.0001")) == Decimal("0.0876")
     assert Decimal(validation["total_return"]) < Decimal("0.20")

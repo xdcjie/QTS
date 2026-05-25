@@ -50,17 +50,19 @@ The change should not proceed if the requested implementation would enter
 through a non-canonical entrypoint, use the wrong config owner, or iterate at a
 point forbidden by `system_flows.md`.
 
-New VWAP research must use:
+Research workflow runs must enter through:
 
 ```bash
 PYTHONPATH=backend/src uv run python scripts/run_research.py \
-  --config configs/research/vwap.yaml \
-  workflow configs/research/workflows/vwap_factor_search.yaml
+  --config <research-config> \
+  workflow <workflow-config>
 ```
 
 Legacy VWAP ad hoc runners under `scripts/research/run_vwap_*.py` and
 VWAP-specific optimizer configs under `configs/optimizer` are not allowed to
-remain or be reintroduced.
+remain or be reintroduced. Do not depend on deleted VWAP workflow files; create
+or review an existing workflow YAML under `configs/research/workflows/` before
+running workflow research.
 
 For domain-sensitive changes, state this before editing code:
 
