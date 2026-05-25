@@ -48,12 +48,14 @@ class ResearchWorkflowReport:
     workflow_id: str
     workflow_status: str
     steps: tuple[dict[str, Any], ...]
+    periods: tuple[dict[str, str], ...] = ()
 
     @classmethod
     def from_result(cls, result: _WorkflowResult) -> ResearchWorkflowReport:
         """Build a deterministic report from a workflow execution result."""
 
         return cls(
+            periods=_normalize_periods(getattr(result, "periods", ())),
             workflow_id=_required_text(result, "workflow_id"),
             workflow_status=_required_text(result, "status"),
             steps=tuple(_normalize_step(step) for step in result.steps),
@@ -62,13 +64,16 @@ class ResearchWorkflowReport:
     def to_markdown(self) -> str:
         """Render a markdown report that is stable for the same workflow output."""
 
-        return (
-            f"{self._header()}\n\n"
-            f"{self._summary()}\n\n"
-            f"{self._step_section()}\n\n"
-            f"{self._evidence_section()}\n\n"
-            f"{self._footer()}"
-        ).strip()
+        sections = [
+            self._header(),
+            self._summary(),
+            self._step_section(),
+        ]
+        period_roles = self._period_roles_section()
+        if period_roles:
+            sections.append(period_roles)
+        sections.extend([self._evidence_section(), self._footer()])
+        return "\n\n".join(sections).strip()
 
     def _evidence_section(self) -> str:
         """Build the evidence section from recognized step outputs."""
@@ -122,6 +127,28 @@ class ResearchWorkflowReport:
             if outputs:
                 lines.append("- outputs:")
                 lines.extend(f"  - {line}" for line in outputs.splitlines())
+        return "\n".join(lines)
+
+    def _period_roles_section(self) -> str:
+        """Render declared period roles from workflow step outputs."""
+
+        periods = _collect_period_roles(self.steps, self.periods)
+        if not periods:
+            return ""
+        lines = [
+            "## Period Roles",
+            "| Period | Start | End | Role | Usage |",
+            "| --- | --- | --- | --- | --- |",
+        ]
+        for period in periods:
+            lines.append(
+                "| "
+                f"{period['name']} | "
+                f"{period['start']} | "
+                f"{period['end']} | "
+                f"{period['role']} | "
+                f"{period['usage']} |"
+            )
         return "\n".join(lines)
 
     def _footer(self) -> str:
@@ -289,6 +316,102 @@ def _collect_evidence(steps: Sequence[Mapping[str, Any]]) -> list[tuple[str, lis
             )
         )
     return evidence
+
+
+def _collect_period_roles(
+    steps: Sequence[Mapping[str, Any]],
+    declared_periods: Sequence[Mapping[str, Any]] = (),
+) -> list[dict[str, str]]:
+    """Collect deterministic period role rows from step outputs."""
+
+    rows: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for step in steps:
+        outputs = _as_mapping(step.get("outputs", {}))
+        raw_periods = outputs.get("periods", ())
+        if not isinstance(raw_periods, Sequence) or isinstance(raw_periods, str):
+            continue
+        selection_basis = _string_set(outputs.get("selection_basis", ()))
+        report_only = _string_set(outputs.get("report_only_periods", ()))
+        score_periods = _string_set(outputs.get("score_periods", ()))
+        for raw_period in raw_periods:
+            if not isinstance(raw_period, Mapping):
+                continue
+            name = raw_period.get("name")
+            role = raw_period.get("role")
+            if not isinstance(name, str) or not isinstance(role, str):
+                continue
+            if name in seen:
+                continue
+            seen.add(name)
+            usage = "period_role"
+            if name in report_only:
+                usage = "report_only"
+            elif name in selection_basis:
+                usage = "selection_basis"
+            elif name in score_periods:
+                usage = "score_period"
+            rows.append(
+                {
+                    "end": str(raw_period.get("end")),
+                    "name": name,
+                    "role": role,
+                    "start": str(raw_period.get("start")),
+                    "usage": usage,
+                }
+            )
+    for period in declared_periods:
+        name = period.get("name")
+        role = period.get("role")
+        if not isinstance(name, str) or not isinstance(role, str):
+            continue
+        if name in seen:
+            continue
+        seen.add(name)
+        rows.append(
+            {
+                "end": str(period.get("end")),
+                "name": name,
+                "role": role,
+                "start": str(period.get("start")),
+                "usage": "declared",
+            }
+        )
+    return rows
+
+
+def _normalize_periods(periods: Any) -> tuple[dict[str, str], ...]:
+    if not isinstance(periods, Sequence) or isinstance(periods, str):
+        return ()
+    normalized: list[dict[str, str]] = []
+    for period in periods:
+        if not isinstance(period, Mapping):
+            continue
+        name = period.get("name")
+        role = period.get("role")
+        if not isinstance(name, str) or not isinstance(role, str):
+            continue
+        normalized.append(
+            {
+                "end": _format_period_bound(period.get("end")),
+                "name": name,
+                "role": role,
+                "start": _format_period_bound(period.get("start")),
+            }
+        )
+    return tuple(normalized)
+
+
+def _format_period_bound(value: Any) -> str:
+    if hasattr(value, "isoformat"):
+        return str(value.isoformat())
+    return str(value)
+
+
+def _string_set(value: Any) -> set[str]:
+    if not isinstance(value, Sequence) or isinstance(value, str):
+        return set()
+    return {str(item) for item in value}
 
 
 def first_ranked_result_value(steps: Sequence[Mapping[str, Any]], key: str) -> Any:

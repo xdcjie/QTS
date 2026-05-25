@@ -363,6 +363,43 @@ def test_portfolio_ensemble_scan_ranks_weight_grid_and_marks_constraints(
     assert result["top_allocations"][0]["metrics"]["validation"]["annual_return"] > "0.10"
 
 
+def test_portfolio_scan_rejects_holdout_score_period(tmp_path: Path) -> None:
+    scan_portfolio_ensemble_allocations = _scan_portfolio_ensemble_allocations()
+    manifests = {
+        period: _write_manifest(
+            tmp_path,
+            f"steady-{period}",
+            (
+                (datetime(2020, 1, 1, tzinfo=UTC), Decimal("100")),
+                (datetime(2021, 1, 1, tzinfo=UTC), Decimal("110")),
+            ),
+        )
+        for period in ("anchor", "holdout")
+    }
+
+    with pytest.raises(ValueError, match="report-only period.*post_periods"):
+        scan_portfolio_ensemble_allocations(
+            {
+                "scan_name": "unsafe",
+                "periods": ["anchor", "holdout"],
+                "period_roles": {
+                    "anchor": "anchor",
+                    "holdout": "holdout_report_only",
+                },
+                "baseline_period": "anchor",
+                "post_periods": ["holdout"],
+                "candidates": [
+                    {
+                        "name": "steady",
+                        "period_manifests": {
+                            period: str(path) for period, path in manifests.items()
+                        },
+                    },
+                ],
+            }
+        )
+
+
 def test_volatility_managed_scan_uses_only_prior_returns_for_weights(
     tmp_path: Path,
 ) -> None:

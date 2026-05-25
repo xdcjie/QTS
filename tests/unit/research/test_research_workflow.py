@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
@@ -13,6 +13,7 @@ from qts.research import ResearchSessionConfig
 from qts.research.workflow import (
     ResearchWorkflowConfig,
     ResearchWorkflowRunner,
+    ResearchWorkflowStepConfig,
 )
 from qts.runtime.config import BacktestRuntimeConfig
 
@@ -91,6 +92,515 @@ steps:
     )
 
     with pytest.raises(ValueError, match="unsupported workflow step kind: live"):
+        ResearchWorkflowConfig.from_yaml(workflow_path)
+
+
+def test_workflow_rejects_holdout_in_optimizer_objective(tmp_path: Path) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: holdout-objective
+periods:
+  selection_2020_2022:
+    start: "2020-01-01"
+    end: "2022-01-01"
+    role: selection
+  holdout_2024_2026:
+    start: "2024-01-01"
+    end: "2026-01-01"
+    role: holdout_report_only
+steps:
+  - id: optimize
+    kind: optimize
+    objective_metric: sharpe_ratio
+    parameters:
+      quantity: ["1", "2"]
+    validation:
+      failure_window_veto:
+        top_n: 1
+        constraints:
+          - metric: pnl_usd
+            operator: ">"
+            threshold: "0"
+        windows:
+          - name: differently_named_2024_window
+            start: "2024-01-01"
+            end: "2025-01-01"
+""",
+    )
+
+    with pytest.raises(ValueError, match="report-only period.*failure_window_veto.windows"):
+        ResearchWorkflowConfig.from_yaml(workflow_path)
+
+
+def test_workflow_rejects_true_oos_in_candidate_selection(tmp_path: Path) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: true-oos-selection
+periods:
+  selection_2020_2022:
+    start: "2020-01-01"
+    end: "2022-01-01"
+    role: selection
+  true_oos_after_2026_01_01:
+    start: "2026-01-01"
+    end: "2027-01-01"
+    role: true_oos_report_only
+steps:
+  - id: scan
+    kind: portfolio_volatility_managed_scan
+    periods: [selection_2020_2022, true_oos_after_2026_01_01]
+    selection_periods: [true_oos_after_2026_01_01]
+    parameter_grid:
+      lookback_days: [1]
+    candidates:
+      - name: base
+        period_manifests:
+          selection_2020_2022: base-selection.manifest.json
+          true_oos_after_2026_01_01: base-oos.manifest.json
+""",
+    )
+
+    with pytest.raises(ValueError, match="true_oos_report_only.*selection_periods"):
+        ResearchWorkflowConfig.from_yaml(workflow_path)
+
+
+def test_workflow_rejects_period_sensitive_decisions_without_declared_periods(
+    tmp_path: Path,
+) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: missing-period-policy
+steps:
+  - id: optimize
+    kind: optimize
+    objective_metric: sharpe_ratio
+    parameters:
+      alpha: ["1"]
+    validation:
+      failure_window_veto:
+        top_n: 1
+        constraints:
+          - metric: pnl_usd
+            operator: ">"
+            threshold: "0"
+        windows:
+          - name: failure-2024
+            start: "2024-01-01"
+            end: "2025-01-01"
+""",
+    )
+
+    with pytest.raises(ValueError, match="declared periods.*failure_window_veto"):
+        ResearchWorkflowConfig.from_yaml(workflow_path)
+
+
+def test_workflow_config_direct_construction_enforces_period_roles(tmp_path: Path) -> None:
+    step = ResearchWorkflowStepConfig(
+        step_id="matrix",
+        kind="backtest_matrix",
+        payload={
+            "candidates": [{"name": "base", "strategy_params": {}}],
+            "output_root": "matrix-runs",
+            "periods": [
+                {
+                    "end": "2022-01-01",
+                    "name": "selection_2020_2022",
+                    "role": "selection",
+                    "start": "2020-01-01",
+                }
+            ],
+        },
+    )
+
+    with pytest.raises(ValueError, match="declared periods are required.*backtest_matrix"):
+        ResearchWorkflowConfig(
+            workflow_config_path=tmp_path / "workflow.yaml",
+            workflow_id="direct-period-bypass",
+            periods=(),
+            steps=(step,),
+        )
+
+
+def test_workflow_config_direct_construction_ignores_payload_kind_bypass(
+    tmp_path: Path,
+) -> None:
+    step = ResearchWorkflowStepConfig(
+        step_id="matrix",
+        kind="backtest_matrix",
+        payload={
+            "candidates": [{"name": "base", "strategy_params": {}}],
+            "kind": "research_report",
+            "output_root": "matrix-runs",
+            "periods": [
+                {
+                    "end": "2022-01-01",
+                    "name": "selection_2020_2022",
+                    "role": "selection",
+                    "start": "2020-01-01",
+                }
+            ],
+        },
+    )
+
+    with pytest.raises(ValueError, match="declared periods are required.*backtest_matrix"):
+        ResearchWorkflowConfig(
+            workflow_config_path=tmp_path / "workflow.yaml",
+            workflow_id="direct-kind-bypass",
+            periods=(),
+            steps=(step,),
+        )
+
+
+def test_workflow_rejects_scoring_backtest_matrix_period_without_declaration(
+    tmp_path: Path,
+) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: missing-matrix-period-policy
+steps:
+  - id: matrix
+    kind: backtest_matrix
+    output_root: matrix-runs
+    periods:
+      - name: selection_2020_2022
+        start: "2020-01-01"
+        end: "2022-01-01"
+        role: selection
+    candidates:
+      - name: base
+        strategy_params: {}
+""",
+    )
+
+    with pytest.raises(ValueError, match="declared periods are required.*backtest_matrix"):
+        ResearchWorkflowConfig.from_yaml(workflow_path)
+
+
+def test_workflow_rejects_backtest_matrix_period_without_role_or_declaration(
+    tmp_path: Path,
+) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: untyped-matrix-period
+steps:
+  - id: matrix
+    kind: backtest_matrix
+    output_root: matrix-runs
+    periods:
+      - name: report_2025_2026
+        start: "2025-01-01"
+        end: "2026-01-01"
+    candidates:
+      - name: base
+        strategy_params: {}
+""",
+    )
+
+    with pytest.raises(ValueError, match="declared periods are required.*backtest_matrix"):
+        ResearchWorkflowConfig.from_yaml(workflow_path)
+
+
+def test_workflow_rejects_unknown_portfolio_score_period(tmp_path: Path) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: unknown-score-period
+periods:
+  anchor:
+    start: "2020-01-01"
+    end: "2021-01-01"
+    role: anchor
+  validation:
+    start: "2021-01-01"
+    end: "2022-01-01"
+    role: validation
+steps:
+  - id: scan
+    kind: portfolio_ensemble_scan
+    scan_name: unit
+    periods: [anchor, validation]
+    baseline_period: anchor
+    post_periods: [undeclared_holdout]
+    candidates: []
+""",
+    )
+
+    with pytest.raises(ValueError, match="post_periods period undeclared_holdout is not declared"):
+        ResearchWorkflowConfig.from_yaml(workflow_path)
+
+
+def test_workflow_rejects_overlapping_declared_periods(tmp_path: Path) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: overlapping-periods
+periods:
+  holdout_2024_2026:
+    start: "2024-01-01"
+    end: "2026-04-10"
+    role: holdout_report_only
+  true_oos_after_2026_01_01:
+    start: "2026-01-01"
+    end: null
+    role: true_oos_report_only
+steps:
+  - id: report
+    kind: research_report
+""",
+    )
+
+    with pytest.raises(ValueError, match="overlaps previous period"):
+        ResearchWorkflowConfig.from_yaml(workflow_path)
+
+
+def test_workflow_rejects_validation_period_overlapping_holdout(tmp_path: Path) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: validation-overlap
+periods:
+  validation_2022_2024:
+    start: "2022-01-01"
+    end: "2024-01-01"
+    role: validation
+  holdout_2024_2026:
+    start: "2024-01-01"
+    end: "2026-01-01"
+    role: holdout_report_only
+steps:
+  - id: matrix
+    kind: backtest_matrix
+    periods:
+      - name: disguised_validation
+        start: "2022-01-01"
+        end: "2025-01-01"
+        role: validation
+""",
+    )
+
+    with pytest.raises(ValueError, match="declared periods are required.*disguised_validation"):
+        ResearchWorkflowConfig.from_yaml(workflow_path)
+
+
+def test_workflow_rejects_named_report_period_redefining_declared_bounds(
+    tmp_path: Path,
+) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: report-period-boundary-drift
+periods:
+  holdout_2024_2026:
+    start: "2024-01-01"
+    end: "2026-01-01"
+    role: holdout_report_only
+  true_oos_after_2026_01_01:
+    start: "2026-01-01"
+    end: null
+    role: true_oos_report_only
+steps:
+  - id: matrix
+    kind: backtest_matrix
+    periods:
+      - name: holdout_2024_2026
+        start: "2024-01-01"
+        end: "2026-04-10"
+""",
+    )
+
+    with pytest.raises(ValueError, match="holdout_2024_2026.*declared boundaries"):
+        ResearchWorkflowConfig.from_yaml(workflow_path)
+
+
+def test_workflow_rejects_named_scoring_period_redefining_declared_bounds(
+    tmp_path: Path,
+) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: scoring-period-boundary-drift
+periods:
+  selection_2020_2022:
+    start: "2020-01-01"
+    end: "2022-01-01"
+    role: selection
+steps:
+  - id: matrix
+    kind: backtest_matrix
+    periods:
+      - name: selection_2020_2022
+        start: "2020-01-01"
+        end: "2023-01-01"
+        role: selection
+""",
+    )
+
+    with pytest.raises(ValueError, match="selection_2020_2022.*declared boundaries"):
+        ResearchWorkflowConfig.from_yaml(workflow_path)
+
+
+def test_workflow_rejects_named_report_period_reclassifying_declared_role(
+    tmp_path: Path,
+) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: report-period-role-drift
+periods:
+  holdout_2024_2026:
+    start: "2024-01-01"
+    end: "2026-01-01"
+    role: holdout_report_only
+steps:
+  - id: matrix
+    kind: backtest_matrix
+    periods:
+      - name: holdout_2024_2026
+        start: "2024-01-01"
+        end: "2026-01-01"
+        role: validation
+""",
+    )
+
+    with pytest.raises(ValueError, match="holdout_2024_2026.*declared role"):
+        ResearchWorkflowConfig.from_yaml(workflow_path)
+
+
+def test_workflow_rejects_walk_forward_robustness_on_holdout(tmp_path: Path) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: walk-forward-holdout
+periods:
+  validation_2022_2023:
+    start: "2022-01-01"
+    end: "2023-01-01"
+    role: validation
+  holdout_2023_2026:
+    start: "2023-01-01"
+    end: "2026-04-10"
+    role: holdout_report_only
+steps:
+  - id: optimize
+    kind: optimize
+    objective_metric: sharpe_ratio
+    parameters:
+      alpha: ["1"]
+    validation:
+      walk_forward:
+        robustness:
+          phases: [test]
+          min_windows: 1
+        splits:
+          - name: oos-decision
+            train_start: "2010-06-06"
+            train_end: "2023-01-01"
+            test_start: "2023-01-01"
+            test_end: "2026-04-10"
+""",
+    )
+
+    with pytest.raises(ValueError, match="holdout_report_only.*walk_forward.splits"):
+        ResearchWorkflowConfig.from_yaml(workflow_path)
+
+
+def test_workflow_rejects_walk_forward_split_on_holdout_without_robustness(
+    tmp_path: Path,
+) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: walk-forward-holdout-summary
+periods:
+  validation_2022_2023:
+    start: "2022-01-01"
+    end: "2023-01-01"
+    role: validation
+  holdout_2023_2026:
+    start: "2023-01-01"
+    end: "2026-04-10"
+    role: holdout_report_only
+steps:
+  - id: optimize
+    kind: optimize
+    objective_metric: sharpe_ratio
+    parameters:
+      alpha: ["1"]
+    validation:
+      walk_forward:
+        splits:
+          - name: oos-summary
+            train_start: "2010-06-06"
+            train_end: "2023-01-01"
+            test_start: "2023-01-01"
+            test_end: "2026-04-10"
+""",
+    )
+
+    with pytest.raises(ValueError, match="holdout_report_only.*walk_forward.splits"):
+        ResearchWorkflowConfig.from_yaml(workflow_path)
+
+
+def test_workflow_rejects_walk_forward_train_robustness_on_holdout(
+    tmp_path: Path,
+) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: walk-forward-train-holdout
+periods:
+  selection_2020_2021:
+    start: "2020-01-01"
+    end: "2021-01-01"
+    role: selection
+  holdout_2021_2022:
+    start: "2021-01-01"
+    end: "2022-01-01"
+    role: holdout_report_only
+  validation_2022_2023:
+    start: "2022-01-01"
+    end: "2023-01-01"
+    role: validation
+steps:
+  - id: optimize
+    kind: optimize
+    objective_metric: sharpe_ratio
+    parameters:
+      alpha: ["1"]
+    validation:
+      walk_forward:
+        robustness:
+          phases: [train]
+          min_windows: 1
+        splits:
+          - name: train-decision
+            train_start: "2021-01-01"
+            train_end: "2022-01-01"
+            test_start: "2022-01-01"
+            test_end: "2023-01-01"
+""",
+    )
+
+    with pytest.raises(ValueError, match="holdout_report_only.*walk_forward.splits"):
         ResearchWorkflowConfig.from_yaml(workflow_path)
 
 
@@ -379,6 +889,11 @@ def test_runner_passes_materialized_replay_cache_to_backtest_matrix_and_optimize
         """
 version: 1
 workflow_id: materialized-cache
+periods:
+  is:
+    start: "2026-01-01"
+    end: "2026-02-01"
+    role: validation
 steps:
   - id: matrix
     kind: backtest_matrix
@@ -464,6 +979,11 @@ def test_runner_runs_backtest_matrix_and_writes_summary(tmp_path: Path) -> None:
         """
 version: 1
 workflow_id: matrix-research
+periods:
+  failure_2022:
+    start: "2022-01-01"
+    end: "2023-01-01"
+    role: validation
 steps:
   - id: matrix
     kind: backtest_matrix
@@ -500,7 +1020,17 @@ steps:
     assert result.steps[0].outputs == {
         "candidate_count": 2,
         "period_count": 1,
+        "periods": [
+            {
+                "end": "2023-01-01T00:00:00+00:00",
+                "name": "failure_2022",
+                "role": "validation",
+                "start": "2022-01-01T00:00:00+00:00",
+            }
+        ],
+        "report_only_periods": [],
         "run_count": 2,
+        "selection_basis": ["failure_2022"],
         "summary_path": str(tmp_path / "matrix-summary.json"),
     }
     assert session.backtest_kwargs == [
@@ -540,6 +1070,102 @@ steps:
     assert summary["rows"][0]["total_return"] == "0.1"
     assert summary["rows"][1]["candidate"] == "escape"
     assert summary["rows"][1]["sharpe_ratio"] == "0.7"
+    assert summary["selection_basis"] == ["failure_2022"]
+    assert summary["report_only_periods"] == []
+
+
+def test_backtest_matrix_records_period_roles(tmp_path: Path) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: matrix-period-roles
+periods:
+  selection_2020_2022:
+    start: "2020-01-01"
+    end: "2022-01-01"
+    role: selection
+  holdout_2024_2026:
+    start: "2024-01-01"
+    end: "2026-01-01"
+    role: holdout_report_only
+steps:
+  - id: matrix
+    kind: backtest_matrix
+    output_root: matrix-runs
+    summary_output: matrix-summary.json
+    periods:
+      - selection_2020_2022
+      - holdout_2024_2026
+    candidates:
+      - name: base
+        strategy_params: {}
+""",
+    )
+    session = _FakeSession(accepted_specs=(), backtest_manifest_root=tmp_path / "manifests")
+
+    result = ResearchWorkflowRunner().run(
+        session,
+        ResearchWorkflowConfig.from_yaml(workflow_path),
+    )
+
+    assert result.status == "completed"
+    assert result.steps[0].outputs["periods"] == [
+        {
+            "end": "2022-01-01T00:00:00+00:00",
+            "name": "selection_2020_2022",
+            "role": "selection",
+            "start": "2020-01-01T00:00:00+00:00",
+        },
+        {
+            "end": "2026-01-01T00:00:00+00:00",
+            "name": "holdout_2024_2026",
+            "role": "holdout_report_only",
+            "start": "2024-01-01T00:00:00+00:00",
+        },
+    ]
+    summary = json.loads((tmp_path / "matrix-summary.json").read_text(encoding="utf-8"))
+    assert summary["selection_basis"] == ["selection_2020_2022"]
+    assert summary["report_only_periods"] == ["holdout_2024_2026"]
+    assert summary["periods"] == result.steps[0].outputs["periods"]
+
+
+def test_research_report_includes_declared_period_roles_without_period_steps(
+    tmp_path: Path,
+) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: report-period-roles
+periods:
+  selection_2020_2022:
+    start: "2020-01-01"
+    end: "2022-01-01"
+    role: selection
+  holdout_2024_2026:
+    start: "2024-01-01"
+    end: "2026-01-01"
+    role: holdout_report_only
+steps:
+  - id: report
+    kind: research_report
+    output_root: reports
+    output_path: workflow.md
+""",
+    )
+
+    result = ResearchWorkflowRunner().run(
+        _FakeSession(accepted_specs=()),
+        ResearchWorkflowConfig.from_yaml(workflow_path),
+    )
+
+    report_path = tmp_path / "reports" / "workflow.md"
+    report_text = report_path.read_text(encoding="utf-8")
+    assert result.status == "completed"
+    assert "## Period Roles" in report_text
+    assert "selection_2020_2022" in report_text
+    assert "holdout_2024_2026" in report_text
 
 
 def test_runner_runs_portfolio_ensemble_and_writes_research_only_summary(
@@ -669,6 +1295,15 @@ def test_runner_runs_portfolio_ensemble_scan_and_writes_summary(tmp_path: Path) 
         f"""
 version: 1
 workflow_id: allocation-scan
+periods:
+  anchor:
+    start: "2020-01-01"
+    end: "2021-01-01"
+    role: anchor
+  validation:
+    start: "2021-01-01"
+    end: "2022-01-01"
+    role: validation
 steps:
   - id: scan
     kind: portfolio_ensemble_scan
@@ -705,11 +1340,43 @@ steps:
     assert result.steps[0].outputs == {
         "candidate_count": 2,
         "evaluated_allocation_count": 3,
+        "periods": [
+            {
+                "end": "2021-01-01T00:00:00+00:00",
+                "name": "anchor",
+                "role": "anchor",
+                "start": "2020-01-01T00:00:00+00:00",
+            },
+            {
+                "end": "2022-01-01T00:00:00+00:00",
+                "name": "validation",
+                "role": "validation",
+                "start": "2021-01-01T00:00:00+00:00",
+            },
+        ],
+        "report_only_periods": [],
+        "score_periods": ["anchor", "validation"],
         "satisfying_allocation_count": 1,
         "summary_path": str(tmp_path / "scan-summary.json"),
     }
     summary = json.loads((tmp_path / "scan-summary.json").read_text(encoding="utf-8"))
     assert summary["top_allocations"][0]["weights"] == {"burst": "0.5", "steady": "0.5"}
+    assert summary["periods"] == [
+        {
+            "end": "2021-01-01T00:00:00+00:00",
+            "name": "anchor",
+            "role": "anchor",
+            "start": "2020-01-01T00:00:00+00:00",
+        },
+        {
+            "end": "2022-01-01T00:00:00+00:00",
+            "name": "validation",
+            "role": "validation",
+            "start": "2021-01-01T00:00:00+00:00",
+        },
+    ]
+    assert summary["report_only_periods"] == []
+    assert summary["score_periods"] == ["anchor", "validation"]
 
 
 def test_runner_runs_volatility_managed_allocation_scan_and_writes_summary(
@@ -744,6 +1411,11 @@ def test_runner_runs_volatility_managed_allocation_scan_and_writes_summary(
         f"""
 version: 1
 workflow_id: dynamic-allocation-scan
+periods:
+  validation:
+    start: "2021-01-01"
+    end: "2021-01-05"
+    role: validation
 steps:
   - id: scan
     kind: portfolio_volatility_managed_scan
@@ -783,6 +1455,16 @@ steps:
     assert result.steps[0].outputs == {
         "candidate_count": 2,
         "evaluated_parameter_count": 1,
+        "periods": [
+            {
+                "end": "2021-01-05T00:00:00+00:00",
+                "name": "validation",
+                "role": "validation",
+                "start": "2021-01-01T00:00:00+00:00",
+            },
+        ],
+        "report_only_periods": [],
+        "selection_basis": ["validation"],
         "satisfying_allocation_count": 1,
         "summary_path": str(tmp_path / "dynamic-summary.json"),
     }
@@ -798,6 +1480,15 @@ def test_runner_runs_walk_forward_validation_for_top_optimizer_candidates(
         """
 version: 1
 workflow_id: walk-forward-evidence
+periods:
+  selection_2026_q1:
+    start: "2026-01-01"
+    end: "2026-03-01"
+    role: selection
+  validation_2026_q2:
+    start: "2026-04-01"
+    end: "2026-05-01"
+    role: validation
 steps:
   - id: optimize
     kind: optimize
@@ -898,6 +1589,15 @@ def test_runner_runs_failure_window_veto_for_top_optimizer_candidates(
         """
 version: 1
 workflow_id: failure-veto-evidence
+periods:
+  validation_2024_q1:
+    start: "2024-01-01"
+    end: "2024-03-01"
+    role: validation
+  holdout_2024_march:
+    start: "2024-03-01"
+    end: "2024-04-01"
+    role: holdout_report_only
 steps:
   - id: optimize
     kind: optimize
@@ -980,6 +1680,11 @@ def test_failure_window_veto_blocks_workflow_when_required_candidate_is_missing(
         """
 version: 1
 workflow_id: failure-veto-block
+periods:
+  validation_2024_q1:
+    start: "2024-01-01"
+    end: "2024-03-01"
+    role: validation
 steps:
   - id: optimize
     kind: optimize
@@ -1029,6 +1734,11 @@ def test_failure_window_veto_requires_non_empty_constraints(
         f"""
 version: 1
 workflow_id: failure-veto-constraints
+periods:
+  validation_2024_q1:
+    start: "2024-01-01"
+    end: "2024-03-01"
+    role: validation
 steps:
   - id: optimize
     kind: optimize
@@ -1068,6 +1778,11 @@ def test_failure_window_veto_rejects_non_boolean_require_passing_candidate(
         """
 version: 1
 workflow_id: failure-veto-boolean
+periods:
+  validation_2024_q1:
+    start: "2024-01-01"
+    end: "2024-03-01"
+    role: validation
 steps:
   - id: optimize
     kind: optimize
@@ -1181,16 +1896,23 @@ def test_canonical_vwap_workflow_declares_gc_stable_annualized_target_matrix() -
         "profit_factor",
     ]
     assert matrix["periods"] == [
-        {"name": "selection_2022_2024", "start": "2022-01-01", "end": "2025-01-01"},
         {
-            "name": "report_2025_to_20260410",
-            "start": "2025-01-01",
-            "end": "2026-04-10",
+            "name": "validation_2022_2024",
+            "start": "2022-01-01",
+            "end": "2024-01-01",
+            "role": "validation",
+        },
+        {
+            "name": "holdout_2024_2026",
+            "start": "2024-01-01",
+            "end": "2026-01-01",
+            "role": "holdout_report_only",
         },
         {
             "name": "true_oos_after_2026_01_01",
             "start": "2026-01-01",
             "end": "2027-01-01",
+            "role": "true_oos_report_only",
         },
     ]
     assert matrix["base_strategy_params"] == {
@@ -1313,7 +2035,7 @@ def test_canonical_vwap_workflow_declares_route_b_lanes_and_windows() -> None:
         assert periods["holdout_2024_2026"] == {
             "name": "holdout_2024_2026",
             "start": "2024-01-01",
-            "end": "2026-04-10",
+            "end": "2026-01-01",
         }
         assert periods["anchor_2010_2020"] == {
             "name": "anchor_2010_2020",
@@ -1388,6 +2110,12 @@ def test_canonical_vwap_workflow_declares_route_k_allocation_scan() -> None:
         "is_2020_2022",
         "validation_2022_2024",
         "holdout_2024_2026",
+    ]
+    assert scan["post_periods"] == ["is_2020_2022", "validation_2022_2024"]
+    assert scan["score_periods"] == [
+        "anchor_2010_2020",
+        "is_2020_2022",
+        "validation_2022_2024",
     ]
     assert {candidate["name"] for candidate in scan["candidates"]} == {
         "vwap_si_trend_sigma_vol15",
@@ -1713,7 +2441,7 @@ def test_canonical_vwap_workflow_declares_route_c_lanes_and_windows() -> None:
         assert periods["holdout_2024_2026"] == {
             "name": "holdout_2024_2026",
             "start": "2024-01-01",
-            "end": "2026-04-10",
+            "end": "2026-01-01",
         }
         assert periods["anchor_2010_2020"] == {
             "name": "anchor_2010_2020",
@@ -1772,7 +2500,7 @@ def test_canonical_vwap_workflow_declares_route_d_relative_value_lane() -> None:
     assert periods["holdout_2024_2026"] == {
         "name": "holdout_2024_2026",
         "start": "2024-01-01",
-        "end": "2026-04-10",
+        "end": "2026-01-01",
     }
     assert periods["anchor_2010_2020"] == {
         "name": "anchor_2010_2020",
@@ -1835,7 +2563,7 @@ def test_canonical_vwap_workflow_declares_route_e_carry_trend_lane() -> None:
     assert periods["holdout_2024_2026"] == {
         "name": "holdout_2024_2026",
         "start": "2024-01-01",
-        "end": "2026-04-10",
+        "end": "2026-01-01",
     }
     assert periods["anchor_2010_2020"] == {
         "name": "anchor_2010_2020",
@@ -1995,6 +2723,20 @@ def test_no_legacy_vwap_optimizer_configs_remain() -> None:
     assert sorted(path.name for path in Path("configs/optimizer").glob("vwap*.yaml")) == []
 
 
+def test_period_sensitive_research_workflow_configs_declare_period_roles() -> None:
+    for workflow_path in sorted(Path("configs/research/workflows").glob("*.yaml")):
+        payload = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            continue
+        sensitive_steps = [
+            str(step.get("id", ""))
+            for step in payload.get("steps", ())
+            if isinstance(step, dict) and _step_requires_period_roles(step)
+        ]
+        assert not sensitive_steps or payload.get("periods"), workflow_path
+        ResearchWorkflowConfig.from_yaml(workflow_path)
+
+
 @pytest.mark.parametrize(
     (
         "symbol",
@@ -2086,27 +2828,11 @@ def test_vwap_long_research_configs_are_symbol_isolated_and_hold_out_oos(
     assert output_paths
     assert all(output_fragment in output_path for output_path in output_paths)
 
-    walk_forward_splits = [
-        {
-            "name": str(split["name"]),
-            "train_start": split["train_start"].isoformat(),
-            "train_end": split["train_end"].isoformat(),
-            "test_start": split["test_start"].isoformat(),
-            "test_end": split["test_end"].isoformat(),
-        }
+    assert all(
+        "walk_forward" not in step.payload.get("validation", {})
         for step in workflow_config.steps
-        if step.kind == "optimize" and "walk_forward" in step.payload.get("validation", {})
-        for split in step.payload["validation"]["walk_forward"]["splits"]
-    ]
-    assert walk_forward_splits == [
-        {
-            "name": "primary-oos-2023-2026",
-            "train_start": "2010-06-06",
-            "train_end": "2023-01-01",
-            "test_start": "2023-01-01",
-            "test_end": "2026-04-10",
-        },
-    ]
+        if step.kind == "optimize"
+    )
 
 
 @pytest.mark.parametrize(
@@ -2132,16 +2858,50 @@ def test_vwap_long_research_configs_are_symbol_isolated_and_hold_out_oos(
         ),
     ],
 )
-def test_vwap_long_research_workflows_include_2022_2024_failure_veto(
+def test_vwap_long_research_workflows_declare_oos_as_report_only_periods(
     workflow_path: Path,
     fragment: str,
 ) -> None:
     workflow_config = ResearchWorkflowConfig.from_yaml(workflow_path)
     optimize_steps = [step for step in workflow_config.steps if step.kind == "optimize"]
 
+    assert workflow_config.periods == (
+        {
+            "name": "selection_2010_2022",
+            "start": datetime(2010, 6, 6, tzinfo=UTC),
+            "end": datetime(2022, 1, 1, tzinfo=UTC),
+            "role": "selection",
+        },
+        {
+            "name": "validation_2022_2023",
+            "start": datetime(2022, 1, 1, tzinfo=UTC),
+            "end": datetime(2023, 1, 1, tzinfo=UTC),
+            "role": "validation",
+        },
+        {
+            "name": "holdout_2023_2026",
+            "start": datetime(2023, 1, 1, tzinfo=UTC),
+            "end": datetime(2026, 4, 10, tzinfo=UTC),
+            "role": "holdout_report_only",
+        },
+    )
+
     assert optimize_steps
     for step in optimize_steps:
         veto = step.payload["validation"]["failure_window_veto"]
+        report_only_periods = [
+            period
+            for period in workflow_config.periods
+            if period["role"] in {"holdout_report_only", "true_oos_report_only"}
+        ]
+        for window in veto["windows"]:
+            for period in report_only_periods:
+                assert not _intervals_overlap(
+                    window["start"],
+                    window["end"],
+                    period["start"],
+                    period["end"],
+                )
         assert veto["top_n"] == 3
         assert veto["require_passing_candidate"] is True
         assert veto["output_root"] == f"../../../runs/research/vwap/{fragment}/failure-veto/primary"
@@ -2158,8 +2918,6 @@ def test_vwap_long_research_workflows_include_2022_2024_failure_veto(
             for window in veto["windows"]
         ] == [
             {"name": "failure-2022", "start": "2022-01-01", "end": "2023-01-01"},
-            {"name": "failure-2023", "start": "2023-01-01", "end": "2024-01-01"},
-            {"name": "failure-2024", "start": "2024-01-01", "end": "2025-01-01"},
         ]
         assert [
             {
@@ -2168,11 +2926,84 @@ def test_vwap_long_research_workflows_include_2022_2024_failure_veto(
                 "end": window["end"].isoformat(),
             }
             for window in veto["report_only_windows"]
-        ] == [{"name": "report-2025-2026", "start": "2025-01-01", "end": "2026-04-10"}]
+        ] == [
+            {"name": "report-2023", "start": "2023-01-01", "end": "2024-01-01"},
+            {"name": "report-2024", "start": "2024-01-01", "end": "2025-01-01"},
+            {"name": "report-2025-2026", "start": "2025-01-01", "end": "2026-04-10"},
+        ]
         assert veto["constraints"] == [
             {"metric": "pnl_usd", "operator": ">", "threshold": "0"},
             {"metric": "max_drawdown", "operator": "<=", "threshold": "0.05"},
         ]
+
+
+@pytest.mark.parametrize(
+    ("workflow_path", "margin_proxy", "expected_quantity"),
+    [
+        (
+            Path("configs/research/workflows/vwap_factor_gc_15m_feature_ablation.yaml"),
+            "12000",
+            ["4"],
+        ),
+        (
+            Path("configs/research/workflows/vwap_factor_si_15m_feature_ablation.yaml"),
+            "15000",
+            ["3"],
+        ),
+    ],
+)
+def test_vwap_feature_ablation_workflows_keep_oos_report_only(
+    workflow_path: Path,
+    margin_proxy: str,
+    expected_quantity: list[str],
+) -> None:
+    workflow_config = ResearchWorkflowConfig.from_yaml(workflow_path)
+    optimize_step = next(step for step in workflow_config.steps if step.kind == "optimize")
+    veto = optimize_step.payload["validation"]["failure_window_veto"]
+
+    assert workflow_config.periods == (
+        {
+            "name": "selection_2010_2022",
+            "start": datetime(2010, 6, 6, tzinfo=UTC),
+            "end": datetime(2022, 1, 1, tzinfo=UTC),
+            "role": "selection",
+        },
+        {
+            "name": "validation_2022_2023",
+            "start": datetime(2022, 1, 1, tzinfo=UTC),
+            "end": datetime(2023, 1, 1, tzinfo=UTC),
+            "role": "validation",
+        },
+        {
+            "name": "holdout_2023_2026",
+            "start": datetime(2023, 1, 1, tzinfo=UTC),
+            "end": datetime(2026, 4, 10, tzinfo=UTC),
+            "role": "holdout_report_only",
+        },
+    )
+    assert optimize_step.payload["capital_metrics"] == {"margin_proxy": margin_proxy}
+    assert optimize_step.payload["parameters"]["target_quantity"] == expected_quantity
+    assert "walk_forward" not in optimize_step.payload["validation"]
+    assert [
+        {
+            "name": str(window["name"]),
+            "start": window["start"].isoformat(),
+            "end": window["end"].isoformat(),
+        }
+        for window in veto["windows"]
+    ] == [{"name": "failure-2022", "start": "2022-01-01", "end": "2023-01-01"}]
+    assert [
+        {
+            "name": str(window["name"]),
+            "start": window["start"].isoformat(),
+            "end": window["end"].isoformat(),
+        }
+        for window in veto["report_only_windows"]
+    ] == [
+        {"name": "report-2023", "start": "2023-01-01", "end": "2024-01-01"},
+        {"name": "report-2024", "start": "2024-01-01", "end": "2025-01-01"},
+        {"name": "report-2025-2026", "start": "2025-01-01", "end": "2026-04-10"},
+    ]
 
 
 @pytest.mark.parametrize(
@@ -2338,6 +3169,40 @@ def _required_warmup_for_workflow(
                 VwapFactorResearchConfig(**strategy_params).required_warmup_bars,
             )
     return required_warmup
+
+
+def _step_requires_period_roles(step: dict[str, Any]) -> bool:
+    if step.get("kind") in {"portfolio_ensemble_scan", "portfolio_volatility_managed_scan"}:
+        return True
+    if step.get("kind") == "backtest_matrix":
+        return bool(step.get("periods"))
+    validation = step.get("validation")
+    if not isinstance(validation, dict):
+        return False
+    return "failure_window_veto" in validation or "walk_forward" in validation
+
+
+def _intervals_overlap(
+    left_start: object,
+    left_end: object,
+    right_start: object,
+    right_end: object,
+) -> bool:
+    left_start_at = _as_utc_midnight(left_start)
+    left_end_at = _as_utc_midnight(left_end)
+    right_start_at = _as_utc_midnight(right_start)
+    right_end_at = None if right_end is None else _as_utc_midnight(right_end)
+    if right_end_at is None:
+        return left_end_at > right_start_at
+    return left_start_at < right_end_at and right_start_at < left_end_at
+
+
+def _as_utc_midnight(value: object) -> datetime:
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, date):
+        return datetime.combine(value, datetime.min.time(), tzinfo=UTC)
+    raise AssertionError(f"expected date-like value, got {type(value).__name__}")
 
 
 def test_workflow_runs_factor_evaluation_step(tmp_path: Path) -> None:

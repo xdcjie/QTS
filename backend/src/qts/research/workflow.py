@@ -46,7 +46,18 @@ class ResearchWorkflowConfig:
 
     workflow_config_path: Path
     workflow_id: str
+    periods: tuple[dict[str, Any], ...]
     steps: tuple[ResearchWorkflowStepConfig, ...]
+
+    def __post_init__(self) -> None:
+        """Enforce workflow invariants for direct in-memory construction too."""
+
+        for index, step in enumerate(self.steps):
+            _step_from_payload(
+                index,
+                {**dict(step.payload), "id": step.step_id, "kind": step.kind},
+                periods=self.periods,
+            )
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> ResearchWorkflowConfig:
@@ -62,35 +73,38 @@ class ResearchWorkflowConfig:
         if version != 1:
             raise ValueError("research workflow version must be 1")
         workflow_id = cls._required_safe_token(raw, "workflow_id")
+        periods = _periods_from_payload(raw.get("periods"))
         raw_steps = raw.get("steps")
         if not isinstance(raw_steps, list) or not raw_steps:
             raise ValueError("research workflow steps must not be empty")
-        steps = tuple(cls._step_from_payload(index, item) for index, item in enumerate(raw_steps))
+        steps = tuple(
+            _step_from_payload(index, item, periods=periods) for index, item in enumerate(raw_steps)
+        )
         return cls(
             workflow_config_path=workflow_path,
             workflow_id=workflow_id,
+            periods=periods,
             steps=steps,
         )
 
-    @staticmethod
-    def _step_from_payload(index: int, payload: Any) -> ResearchWorkflowStepConfig:
-        if not isinstance(payload, dict):
-            raise ValueError(f"research workflow steps[{index}] must be a mapping")
-        ResearchWorkflowConfig._reject_forbidden_keys(payload)
-        step_id = ResearchWorkflowConfig._required_safe_token(payload, "id")
-        kind = _required_text(payload, "kind")
-        if kind not in _ALLOWED_STEP_KINDS:
-            raise ValueError(f"unsupported workflow step kind: {kind}")
-        step_payload = {
-            str(key): value for key, value in payload.items() if key not in {"id", "kind"}
-        }
-        if kind == "implementation_gate":
-            ResearchWorkflowConfig._validate_implementation_gate_payload(step_payload)
-        return ResearchWorkflowStepConfig(
-            step_id=step_id,
-            kind=kind,
-            payload=step_payload,
-        )
+    def period_role(self, period_name: str) -> str | None:
+        """Return the declared role for a period, if the workflow declares it."""
+
+        period = self._period_by_name().get(period_name)
+        return None if period is None else str(period["role"])
+
+    def period_roles_for(self, period_names: tuple[str, ...]) -> dict[str, str]:
+        """Return declared roles for the supplied period names."""
+
+        roles: dict[str, str] = {}
+        for period_name in period_names:
+            role = self.period_role(period_name)
+            if role is not None:
+                roles[period_name] = role
+        return roles
+
+    def _period_by_name(self) -> dict[str, dict[str, Any]]:
+        return {str(period["name"]): period for period in self.periods}
 
     def resolve_path(self, value: str | Path) -> Path:
         """Resolve workflow-local paths relative to the workflow config file."""
@@ -107,54 +121,464 @@ class ResearchWorkflowConfig:
             raise ValueError(f"{field_name} must be filename-safe")
         return value
 
-    @staticmethod
-    def _reject_forbidden_keys(value: Any) -> None:
-        if isinstance(value, dict):
-            for key, item in value.items():
-                key_text = str(key)
-                if key_text in _FORBIDDEN_WORKFLOW_KEYS:
-                    raise ValueError(f"forbidden workflow key: {key_text}")
-                ResearchWorkflowConfig._reject_forbidden_keys(item)
-        elif isinstance(value, list):
-            for item in value:
-                ResearchWorkflowConfig._reject_forbidden_keys(item)
 
-    @staticmethod
-    def _validate_implementation_gate_payload(payload: Mapping[str, Any]) -> None:
-        module_names = ResearchWorkflowConfig._string_sequence(
-            payload.get("required_modules", ()),
-            field_name="required_modules",
+def _step_from_payload(
+    index: int,
+    payload: Any,
+    *,
+    periods: tuple[dict[str, Any], ...],
+) -> ResearchWorkflowStepConfig:
+    if not isinstance(payload, dict):
+        raise ValueError(f"research workflow steps[{index}] must be a mapping")
+    _reject_forbidden_keys(payload)
+    step_id = ResearchWorkflowConfig._required_safe_token(payload, "id")
+    kind = _required_text(payload, "kind")
+    if kind not in _ALLOWED_STEP_KINDS:
+        raise ValueError(f"unsupported workflow step kind: {kind}")
+    step_payload = {str(key): value for key, value in payload.items() if key not in {"id", "kind"}}
+    if kind == "implementation_gate":
+        _validate_implementation_gate_payload(step_payload)
+    _validate_step_period_roles(kind=kind, step_payload=step_payload, periods=periods)
+    return ResearchWorkflowStepConfig(step_id=step_id, kind=kind, payload=step_payload)
+
+
+def _periods_from_payload(value: Any) -> tuple[dict[str, Any], ...]:
+    if value is None:
+        return ()
+    if not isinstance(value, Mapping):
+        raise ValueError("research workflow periods must be a mapping")
+    periods: list[dict[str, Any]] = []
+    previous_period: dict[str, Any] | None = None
+    for raw_name, raw_period in value.items():
+        name = str(raw_name)
+        if any(character not in _FILENAME_SAFE_CHARS for character in name):
+            raise ValueError("period name must be filename-safe")
+        if not isinstance(raw_period, Mapping):
+            raise ValueError(f"research workflow periods.{name} must be a mapping")
+        start = ResearchWorkflowRunner._iso_datetime(raw_period.get("start"), "start")
+        raw_end = raw_period.get("end")
+        end = None if raw_end is None else ResearchWorkflowRunner._iso_datetime(raw_end, "end")
+        if end is not None and start >= end:
+            raise ValueError(f"period {name} start must be before end")
+        if previous_period is not None:
+            if start < previous_period["start"]:
+                raise ValueError("research workflow periods must be time ordered")
+            previous_end = previous_period["end"]
+            if previous_end is None:
+                raise ValueError(
+                    f"period {name} cannot follow open-ended period {previous_period['name']}"
+                )
+            if start < previous_end:
+                raise ValueError(
+                    f"period {name} overlaps previous period {previous_period['name']}"
+                )
+        role = str(raw_period.get("role", "")).strip()
+        if role not in _PERIOD_ROLES:
+            raise ValueError(f"unsupported period role: {role}")
+        period = {"end": end, "name": name, "role": role, "start": start}
+        periods.append(period)
+        previous_period = period
+    return tuple(periods)
+
+
+def _validate_step_period_roles(
+    *,
+    kind: str,
+    step_payload: Mapping[str, Any],
+    periods: tuple[dict[str, Any], ...],
+) -> None:
+    role_by_name = {str(period["name"]): str(period["role"]) for period in periods}
+    if not role_by_name:
+        _reject_period_sensitive_step_without_periods(kind=kind, step_payload=step_payload)
+        return
+    for field_name in _SCORE_PERIOD_FIELDS:
+        names = _period_names_from_field(step_payload.get(field_name), field_name=field_name)
+        _reject_unknown_period_names(names, role_by_name=role_by_name, field_name=field_name)
+        _reject_report_only_period_names(names, role_by_name=role_by_name, field_name=field_name)
+    if kind == "portfolio_ensemble_scan" and "score_periods" not in step_payload:
+        names = _period_names_from_field(step_payload.get("periods"), field_name="score_periods")
+        _reject_unknown_period_names(
+            names,
+            role_by_name=role_by_name,
+            field_name="score_periods",
         )
-        required_strategy = payload.get("required_strategy")
-        if required_strategy is not None:
-            module_names += (ResearchWorkflowConfig._strategy_module_name(str(required_strategy)),)
-        for module_name in module_names:
-            ResearchWorkflowConfig._reject_internal_implementation_import(module_name)
+        _reject_report_only_period_names(
+            names,
+            role_by_name=role_by_name,
+            field_name="score_periods",
+        )
+    if kind == "portfolio_volatility_managed_scan" and "selection_periods" not in step_payload:
+        names = _period_names_from_field(
+            step_payload.get("periods"),
+            field_name="selection_periods",
+        )
+        _reject_unknown_period_names(
+            names,
+            role_by_name=role_by_name,
+            field_name="selection_periods",
+        )
+        _reject_report_only_period_names(
+            names,
+            role_by_name=role_by_name,
+            field_name="selection_periods",
+        )
+    if kind == "optimize":
+        validation = step_payload.get("validation")
+        if isinstance(validation, Mapping):
+            _validate_optimizer_period_roles(validation, periods=periods, role_by_name=role_by_name)
+    if kind == "backtest_matrix":
+        _validate_backtest_matrix_period_roles(
+            step_payload.get("periods"),
+            periods=periods,
+            field_name="periods",
+        )
 
-    @staticmethod
-    def _string_sequence(value: Any, *, field_name: str) -> tuple[str, ...]:
-        if value is None:
-            return ()
-        if not isinstance(value, list | tuple):
-            raise ValueError(f"{field_name} must be a sequence")
-        return tuple(str(item) for item in value)
 
-    @staticmethod
-    def _strategy_module_name(value: str) -> str:
-        if ":" not in value:
-            return value
-        return value.split(":", maxsplit=1)[0]
+def _validate_optimizer_period_roles(
+    validation: Mapping[str, Any],
+    *,
+    periods: tuple[dict[str, Any], ...],
+    role_by_name: Mapping[str, str],
+) -> None:
+    veto = validation.get("failure_window_veto")
+    if isinstance(veto, Mapping):
+        names = _window_names_from_field(
+            veto.get("windows"),
+            field_name="validation.failure_window_veto.windows",
+        )
+        _reject_report_only_period_names(
+            names,
+            role_by_name=role_by_name,
+            field_name="validation.failure_window_veto.windows",
+        )
+        _reject_report_only_window_overlaps(
+            veto.get("windows"),
+            periods=periods,
+            field_name="validation.failure_window_veto.windows",
+        )
+    walk_forward = validation.get("walk_forward")
+    if isinstance(walk_forward, Mapping):
+        _reject_report_only_walk_forward_overlaps(
+            walk_forward.get("splits"),
+            periods=periods,
+            field_name="validation.walk_forward.splits",
+        )
 
-    @staticmethod
-    def _reject_internal_implementation_import(module_name: str) -> None:
-        if module_name == "qts" or (
-            module_name.startswith("qts.")
-            and not any(
-                module_name == prefix or module_name.startswith(f"{prefix}.")
-                for prefix in _ALLOWED_IMPLEMENTATION_QTS_PREFIXES
+
+def _period_names_from_field(value: Any, *, field_name: str) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        return (value,)
+    if not isinstance(value, list | tuple):
+        raise ValueError(f"{field_name} must be a period name or sequence")
+    names: list[str] = []
+    for item in value:
+        if isinstance(item, str):
+            names.append(item)
+        elif isinstance(item, Mapping):
+            names.append(_required_text(item, "name"))
+        else:
+            raise ValueError(f"{field_name} entries must be period names or mappings")
+    return tuple(names)
+
+
+def _window_names_from_field(value: Any, *, field_name: str) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if not isinstance(value, list | tuple):
+        raise ValueError(f"{field_name} must be a sequence")
+    names: list[str] = []
+    for item in value:
+        if isinstance(item, str):
+            names.append(item)
+        elif isinstance(item, Mapping) and "name" in item:
+            names.append(str(item["name"]))
+    return tuple(names)
+
+
+def _reject_report_only_window_overlaps(
+    value: Any,
+    *,
+    periods: tuple[dict[str, Any], ...],
+    field_name: str,
+) -> None:
+    if value is None:
+        return
+    if not isinstance(value, list | tuple):
+        raise ValueError(f"{field_name} must be a sequence")
+    report_only_periods = _report_only_declared_periods(periods)
+    for index, item in enumerate(value):
+        if isinstance(item, str):
+            continue
+        if not isinstance(item, Mapping):
+            raise ValueError(f"{field_name}[{index}] must be a mapping")
+        if "start" not in item or "end" not in item:
+            continue
+        window_start = ResearchWorkflowRunner._iso_datetime(item["start"], "start")
+        window_end = ResearchWorkflowRunner._iso_datetime(item["end"], "end")
+        if window_start >= window_end:
+            raise ValueError(f"{field_name}[{index}] start must be before end")
+        _reject_interval_report_only_overlaps(
+            window_start,
+            window_end,
+            periods=report_only_periods,
+            field_name=field_name,
+        )
+
+
+def _reject_report_only_walk_forward_overlaps(
+    value: Any,
+    *,
+    periods: tuple[dict[str, Any], ...],
+    field_name: str,
+) -> None:
+    if value is None:
+        return
+    if not isinstance(value, list | tuple):
+        raise ValueError(f"{field_name} must be a sequence")
+    report_only_periods = _report_only_declared_periods(periods)
+    for index, item in enumerate(value):
+        if not isinstance(item, Mapping):
+            raise ValueError(f"{field_name}[{index}] must be a mapping")
+        train_start = ResearchWorkflowRunner._iso_datetime(item.get("train_start"), "train_start")
+        train_end = ResearchWorkflowRunner._iso_datetime(item.get("train_end"), "train_end")
+        if train_start >= train_end:
+            raise ValueError(f"{field_name}[{index}] train_start must be before train_end")
+        _reject_interval_report_only_overlaps(
+            train_start,
+            train_end,
+            periods=report_only_periods,
+            field_name=field_name,
+        )
+        test_start = ResearchWorkflowRunner._iso_datetime(item.get("test_start"), "test_start")
+        test_end = ResearchWorkflowRunner._iso_datetime(item.get("test_end"), "test_end")
+        if test_start >= test_end:
+            raise ValueError(f"{field_name}[{index}] test_start must be before test_end")
+        _reject_interval_report_only_overlaps(
+            test_start,
+            test_end,
+            periods=report_only_periods,
+            field_name=field_name,
+        )
+
+
+def _validate_backtest_matrix_period_roles(
+    value: Any,
+    *,
+    periods: tuple[dict[str, Any], ...],
+    field_name: str,
+) -> None:
+    if value is None:
+        return
+    if not isinstance(value, list | tuple):
+        raise ValueError(f"{field_name} must be a sequence")
+    report_only_periods = _report_only_declared_periods(periods)
+    role_by_name = {str(period["name"]): str(period["role"]) for period in periods}
+    period_by_name = {str(period["name"]): period for period in periods}
+    for index, item in enumerate(value):
+        if isinstance(item, str):
+            _reject_unknown_period_names((item,), role_by_name=role_by_name, field_name=field_name)
+            continue
+        if not isinstance(item, Mapping):
+            raise ValueError(f"{field_name}[{index}] must be a mapping")
+        name = ResearchWorkflowConfig._required_safe_token(item, "name")
+        declared_role = role_by_name.get(name)
+        declared_period = period_by_name.get(name)
+        role = str(item.get("role", "")).strip()
+        if declared_role is None:
+            _validate_undeclared_backtest_matrix_period_role(
+                name=name,
+                role=role,
+                field_name=field_name,
             )
-        ):
-            raise ValueError(f"implementation_gate cannot require internal module: {module_name}")
+        if declared_role is not None and role and role != declared_role:
+            raise ValueError(f"{field_name} period {name} cannot override declared role")
+        if declared_period is not None:
+            _validate_named_inline_period_bounds(
+                item,
+                declared_period=declared_period,
+                field_name=field_name,
+            )
+        if role in _REPORT_ONLY_PERIOD_ROLES or declared_role in _REPORT_ONLY_PERIOD_ROLES:
+            continue
+        if "start" not in item or "end" not in item:
+            continue
+        inline_start = ResearchWorkflowRunner._iso_datetime(item["start"], "start")
+        inline_end = ResearchWorkflowRunner._iso_datetime(item["end"], "end")
+        if inline_start >= inline_end:
+            raise ValueError(f"{field_name}[{index}] start must be before end")
+        _reject_interval_report_only_overlaps(
+            inline_start,
+            inline_end,
+            periods=report_only_periods,
+            field_name=field_name,
+        )
+
+
+def _validate_undeclared_backtest_matrix_period_role(
+    *,
+    name: str,
+    role: str,
+    field_name: str,
+) -> None:
+    if not role:
+        raise ValueError(f"{field_name} period {name} must declare a role or reference a period")
+    if role not in _PERIOD_ROLES:
+        raise ValueError(f"unsupported period role: {role}")
+    if role in _SCORING_PERIOD_ROLES:
+        raise ValueError(f"declared periods are required for scoring period {name}")
+
+
+def _validate_named_inline_period_bounds(
+    value: Mapping[str, Any],
+    *,
+    declared_period: Mapping[str, Any],
+    field_name: str,
+) -> None:
+    if "start" not in value or "end" not in value:
+        return
+    inline_start = ResearchWorkflowRunner._iso_datetime(value["start"], "start")
+    inline_end = ResearchWorkflowRunner._iso_datetime(value["end"], "end")
+    if inline_start >= inline_end:
+        raise ValueError(f"{field_name} period {declared_period['name']} start must be before end")
+    declared_start = declared_period["start"]
+    declared_end = declared_period["end"]
+    if declared_end is None:
+        if inline_start < declared_start:
+            raise ValueError(
+                f"{field_name} period {declared_period['name']} starts before declaration"
+            )
+        return
+    if inline_start != declared_start or inline_end != declared_end:
+        raise ValueError(
+            f"{field_name} period {declared_period['name']} must match declared boundaries"
+        )
+
+
+def _reject_interval_report_only_overlaps(
+    start: datetime,
+    end: datetime,
+    *,
+    periods: tuple[dict[str, Any], ...],
+    field_name: str,
+) -> None:
+    for period in periods:
+        if _intervals_overlap(start, end, period["start"], period["end"]):
+            raise ValueError(
+                f"{period['role']} report-only period {period['name']} overlaps {field_name}"
+            )
+
+
+def _report_only_declared_periods(
+    periods: tuple[dict[str, Any], ...],
+) -> tuple[dict[str, Any], ...]:
+    return tuple(period for period in periods if period["role"] in _REPORT_ONLY_PERIOD_ROLES)
+
+
+def _reject_period_sensitive_step_without_periods(
+    *,
+    kind: str,
+    step_payload: Mapping[str, Any],
+) -> None:
+    if kind in {"portfolio_ensemble_scan", "portfolio_volatility_managed_scan"}:
+        raise ValueError(f"declared periods are required for {kind}")
+    if kind == "backtest_matrix" and step_payload.get("periods") is not None:
+        raise ValueError("declared periods are required for backtest_matrix.periods")
+    if kind != "optimize":
+        return
+    validation = step_payload.get("validation")
+    if not isinstance(validation, Mapping):
+        return
+    if "failure_window_veto" in validation:
+        raise ValueError("declared periods are required for failure_window_veto")
+    if "walk_forward" in validation:
+        raise ValueError("declared periods are required for walk_forward")
+
+
+def _intervals_overlap(
+    left_start: datetime,
+    left_end: datetime,
+    right_start: datetime,
+    right_end: datetime | None,
+) -> bool:
+    if right_end is None:
+        return left_end > right_start
+    return left_start < right_end and right_start < left_end
+
+
+def _reject_report_only_period_names(
+    period_names: tuple[str, ...],
+    *,
+    role_by_name: Mapping[str, str],
+    field_name: str,
+) -> None:
+    for period_name in period_names:
+        role = role_by_name.get(period_name)
+        if role in _REPORT_ONLY_PERIOD_ROLES:
+            raise ValueError(
+                f"{role} report-only period {period_name} cannot be used in {field_name}"
+            )
+
+
+def _reject_unknown_period_names(
+    period_names: tuple[str, ...],
+    *,
+    role_by_name: Mapping[str, str],
+    field_name: str,
+) -> None:
+    for period_name in period_names:
+        if period_name not in role_by_name:
+            raise ValueError(f"{field_name} period {period_name} is not declared")
+
+
+def _reject_forbidden_keys(value: Any) -> None:
+    if isinstance(value, dict):
+        for key, item in value.items():
+            key_text = str(key)
+            if key_text in _FORBIDDEN_WORKFLOW_KEYS:
+                raise ValueError(f"forbidden workflow key: {key_text}")
+            _reject_forbidden_keys(item)
+    elif isinstance(value, list):
+        for item in value:
+            _reject_forbidden_keys(item)
+
+
+def _validate_implementation_gate_payload(payload: Mapping[str, Any]) -> None:
+    module_names = _string_sequence(
+        payload.get("required_modules", ()),
+        field_name="required_modules",
+    )
+    required_strategy = payload.get("required_strategy")
+    if required_strategy is not None:
+        module_names += (_strategy_module_name(str(required_strategy)),)
+    for module_name in module_names:
+        _reject_internal_implementation_import(module_name)
+
+
+def _string_sequence(value: Any, *, field_name: str) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if not isinstance(value, list | tuple):
+        raise ValueError(f"{field_name} must be a sequence")
+    return tuple(str(item) for item in value)
+
+
+def _strategy_module_name(value: str) -> str:
+    if ":" not in value:
+        return value
+    return value.split(":", maxsplit=1)[0]
+
+
+def _reject_internal_implementation_import(module_name: str) -> None:
+    if module_name == "qts" or (
+        module_name.startswith("qts.")
+        and not any(
+            module_name == prefix or module_name.startswith(f"{prefix}.")
+            for prefix in _ALLOWED_IMPLEMENTATION_QTS_PREFIXES
+        )
+    ):
+        raise ValueError(f"implementation_gate cannot require internal module: {module_name}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -186,6 +610,7 @@ class ResearchWorkflowResult:
     workflow_id: str
     status: str
     steps: tuple[ResearchWorkflowStepResult, ...]
+    periods: tuple[dict[str, Any], ...] = ()
 
     @property
     def succeeded(self) -> bool:
@@ -196,11 +621,21 @@ class ResearchWorkflowResult:
     def to_payload(self) -> dict[str, Any]:
         """Return a JSON-ready workflow result payload."""
 
-        return {
+        payload = {
             "status": self.status,
             "steps": [step.to_payload() for step in self.steps],
             "workflow_id": self.workflow_id,
         }
+        if self.periods:
+            period_payloads = [
+                ResearchWorkflowRunner._declared_period_payload(period) for period in self.periods
+            ]
+            payload["periods"] = period_payloads
+            payload["report_only_periods"] = ResearchWorkflowRunner._report_only_period_names(
+                period_payloads
+            )
+            payload["selection_basis"] = ResearchWorkflowRunner._selection_basis(period_payloads)
+        return payload
 
 
 class ResearchWorkflowRunner:
@@ -237,6 +672,7 @@ class ResearchWorkflowRunner:
                     break
         return ResearchWorkflowResult(
             workflow_id=config.workflow_id,
+            periods=config.periods,
             status=overall_status,
             steps=tuple(results),
         )
@@ -496,6 +932,7 @@ class ResearchWorkflowRunner:
         report = ResearchWorkflowReport.from_result(
             ResearchWorkflowResult(
                 workflow_id=config.workflow_id,
+                periods=config.periods,
                 status="completed",
                 steps=steps,
             )
@@ -561,12 +998,24 @@ class ResearchWorkflowRunner:
         step: ResearchWorkflowStepConfig,
     ) -> ResearchWorkflowStepResult:
         payload = dict(step.payload)
+        scan_periods = self._string_tuple(payload.get("periods"))
+        period_roles = config.period_roles_for(scan_periods)
+        if period_roles:
+            payload["period_roles"] = period_roles
         payload["candidates"] = self._resolved_period_manifest_candidates(
             config,
             step,
             kind_name="portfolio_ensemble_scan",
         )
         result = scan_portfolio_ensemble_allocations(payload)
+        period_payloads = self._named_period_payloads(config, scan_periods)
+        report_only_periods = [
+            period for period, role in period_roles.items() if role in _REPORT_ONLY_PERIOD_ROLES
+        ]
+        summary_payload = dict(result)
+        if period_payloads:
+            summary_payload["periods"] = period_payloads
+            summary_payload["report_only_periods"] = report_only_periods
         summary_output = step.payload.get("summary_output")
         summary_path = (
             config.resolve_path(str(summary_output))
@@ -576,20 +1025,25 @@ class ResearchWorkflowRunner:
         )
         summary_path.parent.mkdir(parents=True, exist_ok=True)
         summary_path.write_text(
-            json.dumps(_json_ready(result), sort_keys=True, indent=2) + "\n",
+            json.dumps(_json_ready(summary_payload), sort_keys=True, indent=2) + "\n",
             encoding="utf-8",
         )
+        outputs: dict[str, Any] = {
+            "candidate_count": result["candidate_count"],
+            "evaluated_allocation_count": result["evaluated_allocation_count"],
+            "satisfying_allocation_count": result["satisfying_allocation_count"],
+            "summary_path": str(summary_path),
+        }
+        if period_payloads:
+            outputs["periods"] = period_payloads
+            outputs["report_only_periods"] = report_only_periods
+            outputs["score_periods"] = result["score_periods"]
         return ResearchWorkflowStepResult(
             step_id=step.step_id,
             kind=step.kind,
             status="passed",
             message="portfolio ensemble allocation scan written",
-            outputs={
-                "candidate_count": result["candidate_count"],
-                "evaluated_allocation_count": result["evaluated_allocation_count"],
-                "satisfying_allocation_count": result["satisfying_allocation_count"],
-                "summary_path": str(summary_path),
-            },
+            outputs=outputs,
         )
 
     def _portfolio_volatility_managed_scan(
@@ -598,12 +1052,24 @@ class ResearchWorkflowRunner:
         step: ResearchWorkflowStepConfig,
     ) -> ResearchWorkflowStepResult:
         payload = dict(step.payload)
+        scan_periods = self._string_tuple(payload.get("periods"))
+        period_roles = config.period_roles_for(scan_periods)
+        if period_roles:
+            payload["period_roles"] = period_roles
         payload["candidates"] = self._resolved_period_manifest_candidates(
             config,
             step,
             kind_name="portfolio_volatility_managed_scan",
         )
         result = scan_volatility_managed_allocations(payload)
+        period_payloads = self._named_period_payloads(config, scan_periods)
+        report_only_periods = [
+            period for period, role in period_roles.items() if role in _REPORT_ONLY_PERIOD_ROLES
+        ]
+        summary_payload = dict(result)
+        if period_payloads:
+            summary_payload["periods"] = period_payloads
+            summary_payload["report_only_periods"] = report_only_periods
         summary_output = step.payload.get("summary_output")
         summary_path = (
             config.resolve_path(str(summary_output))
@@ -613,20 +1079,25 @@ class ResearchWorkflowRunner:
         )
         summary_path.parent.mkdir(parents=True, exist_ok=True)
         summary_path.write_text(
-            json.dumps(_json_ready(result), sort_keys=True, indent=2) + "\n",
+            json.dumps(_json_ready(summary_payload), sort_keys=True, indent=2) + "\n",
             encoding="utf-8",
         )
+        outputs = {
+            "candidate_count": result["candidate_count"],
+            "evaluated_parameter_count": result["evaluated_parameter_count"],
+            "satisfying_allocation_count": result["satisfying_allocation_count"],
+            "summary_path": str(summary_path),
+        }
+        if period_payloads:
+            outputs["periods"] = period_payloads
+            outputs["report_only_periods"] = report_only_periods
+            outputs["selection_basis"] = result["selection_periods"]
         return ResearchWorkflowStepResult(
             step_id=step.step_id,
             kind=step.kind,
             status="passed",
             message="portfolio volatility managed allocation scan written",
-            outputs={
-                "candidate_count": result["candidate_count"],
-                "evaluated_parameter_count": result["evaluated_parameter_count"],
-                "satisfying_allocation_count": result["satisfying_allocation_count"],
-                "summary_path": str(summary_path),
-            },
+            outputs=outputs,
         )
 
     def _resolved_period_manifest_candidates(
@@ -653,6 +1124,29 @@ class ResearchWorkflowRunner:
             }
             resolved_candidates.append(candidate_payload)
         return resolved_candidates
+
+    @staticmethod
+    def _named_period_payloads(
+        config: ResearchWorkflowConfig,
+        period_names: tuple[str, ...],
+    ) -> list[dict[str, Any]]:
+        period_by_name = config._period_by_name()
+        return [
+            ResearchWorkflowRunner._declared_period_payload(period_by_name[period_name])
+            for period_name in period_names
+            if period_name in period_by_name
+        ]
+
+    @staticmethod
+    def _declared_period_payload(period: Mapping[str, Any]) -> dict[str, Any]:
+        end = period["end"]
+        start = period["start"]
+        return {
+            "end": None if end is None else end.isoformat(),
+            "name": str(period["name"]),
+            "role": str(period["role"]),
+            "start": start.isoformat(),
+        }
 
     def _factor_tearsheet(
         self,
@@ -735,7 +1229,10 @@ class ResearchWorkflowRunner:
         step: ResearchWorkflowStepConfig,
     ) -> ResearchWorkflowStepResult:
         output_root = config.resolve_path(_required_text(step.payload, "output_root"))
-        periods = self._matrix_periods(step.payload.get("periods"))
+        periods = self._matrix_periods(config, step.payload.get("periods"))
+        period_payloads = self._period_payloads(periods)
+        selection_basis = self._selection_basis(period_payloads)
+        report_only_periods = self._report_only_period_names(period_payloads)
         candidates = self._matrix_candidates(step.payload.get("candidates"))
         base_strategy_params = (
             self._optional_mapping(step.payload.get("base_strategy_params")) or {}
@@ -775,6 +1272,10 @@ class ResearchWorkflowRunner:
             "step_id": step.step_id,
             "workflow_id": config.workflow_id,
         }
+        if period_payloads:
+            summary_payload["periods"] = period_payloads
+            summary_payload["report_only_periods"] = report_only_periods
+            summary_payload["selection_basis"] = selection_basis
         summary_output = step.payload.get("summary_output")
         summary_path = (
             config.resolve_path(str(summary_output))
@@ -786,17 +1287,22 @@ class ResearchWorkflowRunner:
             json.dumps(_json_ready(summary_payload), sort_keys=True, indent=2) + "\n",
             encoding="utf-8",
         )
+        outputs: dict[str, Any] = {
+            "candidate_count": len(candidates),
+            "period_count": len(periods),
+            "run_count": len(rows),
+            "summary_path": str(summary_path),
+        }
+        if period_payloads:
+            outputs["periods"] = period_payloads
+            outputs["report_only_periods"] = report_only_periods
+            outputs["selection_basis"] = selection_basis
         return ResearchWorkflowStepResult(
             step_id=step.step_id,
             kind=step.kind,
             status="passed",
             message="backtest matrix completed",
-            outputs={
-                "candidate_count": len(candidates),
-                "period_count": len(periods),
-                "run_count": len(rows),
-                "summary_path": str(summary_path),
-            },
+            outputs=outputs,
         )
 
     def _optimize(
@@ -1129,22 +1635,76 @@ class ResearchWorkflowRunner:
             )
         return WalkForwardPlan(tuple(splits))
 
-    def _matrix_periods(self, value: Any) -> tuple[dict[str, Any], ...]:
+    def _matrix_periods(
+        self,
+        config: ResearchWorkflowConfig,
+        value: Any,
+    ) -> tuple[dict[str, Any], ...]:
         if not isinstance(value, list) or not value:
             raise ValueError("backtest_matrix.periods must be a non-empty list")
         periods: list[dict[str, Any]] = []
+        workflow_periods = config._period_by_name()
         for index, raw_period in enumerate(value):
+            if isinstance(raw_period, str):
+                declared = workflow_periods.get(raw_period)
+                if declared is None:
+                    raise ValueError(f"unknown workflow period: {raw_period}")
+                if declared["end"] is None:
+                    raise ValueError(f"backtest_matrix period {raw_period} requires end")
+                periods.append(
+                    {
+                        "end": declared["end"],
+                        "name": declared["name"],
+                        "role": declared["role"],
+                        "start": declared["start"],
+                    }
+                )
+                continue
             if not isinstance(raw_period, Mapping):
-                raise ValueError(f"backtest_matrix.periods[{index}] must be a mapping")
+                raise ValueError(
+                    f"backtest_matrix.periods[{index}] must be a mapping or period name"
+                )
             period = dict(raw_period)
+            name = self._safe_token(period, "name")
+            role = period.get("role", config.period_role(name))
+            if role is not None and str(role) not in _PERIOD_ROLES:
+                raise ValueError(f"unsupported period role: {role}")
             periods.append(
                 {
                     "end": self._iso_datetime(period["end"], "end"),
-                    "name": self._safe_token(period, "name"),
+                    "name": name,
+                    "role": None if role is None else str(role),
                     "start": self._iso_datetime(period["start"], "start"),
                 }
             )
         return tuple(periods)
+
+    @staticmethod
+    def _period_payloads(periods: tuple[dict[str, Any], ...]) -> list[dict[str, Any]]:
+        return [
+            {
+                "end": None if period.get("end") is None else period["end"].isoformat(),
+                "name": str(period["name"]),
+                "role": period.get("role"),
+                "start": period["start"].isoformat(),
+            }
+            for period in periods
+            if period.get("role") is not None
+        ]
+
+    @staticmethod
+    def _selection_basis(periods: list[dict[str, Any]]) -> list[str]:
+        return [
+            str(period["name"]) for period in periods if period.get("role") in _SCORING_PERIOD_ROLES
+        ]
+
+    @staticmethod
+    def _report_only_period_names(periods: list[dict[str, Any]]) -> list[str]:
+        return [
+            str(period["name"])
+            for period in periods
+            if period.get("role") in _REPORT_ONLY_PERIOD_ROLES
+        ]
 
     def _matrix_candidates(self, value: Any) -> tuple[dict[str, Any], ...]:
         if not isinstance(value, list) or not value:
@@ -1288,6 +1848,10 @@ def _json_ready(value: Any) -> Any:
         return str(value)
     if isinstance(value, Decimal):
         return str(value)
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
     if isinstance(value, dict):
         return {str(key): _json_ready(item) for key, item in value.items()}
     if isinstance(value, list | tuple):
@@ -1317,6 +1881,24 @@ _ALLOWED_STEP_KINDS = frozenset(
         "portfolio_ensemble_scan",
         "portfolio_volatility_managed_scan",
         "research_report",
+    }
+)
+_SCORING_PERIOD_ROLES = frozenset({"anchor", "selection", "validation"})
+_REPORT_ONLY_PERIOD_ROLES = frozenset({"holdout_report_only", "true_oos_report_only"})
+_PERIOD_ROLES = _SCORING_PERIOD_ROLES | _REPORT_ONLY_PERIOD_ROLES
+_SCORE_PERIOD_FIELDS = frozenset(
+    {
+        "baseline_period",
+        "objective_period",
+        "objective_periods",
+        "post_periods",
+        "post_selection_periods",
+        "ranking_period",
+        "ranking_periods",
+        "score_period",
+        "score_periods",
+        "selection_period",
+        "selection_periods",
     }
 )
 _HARD_STOP_STEP_KINDS = frozenset({"factor_review_gate", "implementation_gate"})

@@ -70,6 +70,29 @@ def scan_portfolio_ensemble_allocations(payload: Mapping[str, Any]) -> dict[str,
         payload.get("post_periods", periods[1:]),
         field_name="portfolio_ensemble_scan.post_periods",
     )
+    score_periods = _string_tuple(
+        payload.get("score_periods", periods),
+        field_name="portfolio_ensemble_scan.score_periods",
+    )
+    _validate_period_subset((baseline_period,), periods, field_name="baseline_period")
+    _validate_period_subset(post_periods, periods, field_name="post_periods")
+    _validate_period_subset(score_periods, periods, field_name="score_periods")
+    period_roles = _period_roles(payload.get("period_roles"))
+    _reject_report_only_score_periods(
+        (baseline_period,),
+        period_roles=period_roles,
+        field_name="baseline_period",
+    )
+    _reject_report_only_score_periods(
+        post_periods,
+        period_roles=period_roles,
+        field_name="post_periods",
+    )
+    _reject_report_only_score_periods(
+        score_periods,
+        period_roles=period_roles,
+        field_name="score_periods",
+    )
     constraints = _scan_constraints(payload.get("constraints"))
     loaded = _scan_loaded_periods(candidates, periods)
     period_matrices = _scan_period_matrices(candidates, loaded, periods, reporting_grid)
@@ -82,6 +105,7 @@ def scan_portfolio_ensemble_allocations(payload: Mapping[str, Any]) -> dict[str,
             weights,
             baseline_period=baseline_period,
             post_periods=post_periods,
+            score_periods=score_periods,
             constraints=constraints,
         )
         allocations.append(allocation)
@@ -97,6 +121,7 @@ def scan_portfolio_ensemble_allocations(payload: Mapping[str, Any]) -> dict[str,
         "post_periods": list(post_periods),
         "reporting_grid": reporting_grid,
         "research_only": True,
+        "score_periods": list(score_periods),
         "satisfying_allocation_count": sum(
             1 for allocation in allocations if allocation["meets_constraints"]
         ),
@@ -130,6 +155,22 @@ def scan_volatility_managed_allocations(payload: Mapping[str, Any]) -> dict[str,
     _validate_period_subset(
         post_selection_periods,
         selection_periods,
+        field_name="post_selection_periods",
+    )
+    period_roles = _period_roles(payload.get("period_roles"))
+    _reject_report_only_score_periods(
+        (baseline_period,),
+        period_roles=period_roles,
+        field_name="baseline_period",
+    )
+    _reject_report_only_score_periods(
+        selection_periods,
+        period_roles=period_roles,
+        field_name="selection_periods",
+    )
+    _reject_report_only_score_periods(
+        post_selection_periods,
+        period_roles=period_roles,
         field_name="post_selection_periods",
     )
     constraints = _volatility_managed_constraints(payload.get("constraints"))
@@ -242,6 +283,30 @@ def _volatility_managed_constraints(value: Any) -> dict[str, Decimal]:
             str(raw_constraints.get("min_selection_post_annual_return", "-1"))
         ),
     }
+
+
+def _period_roles(value: Any) -> dict[str, str]:
+    if value is None:
+        return {}
+    if not isinstance(value, Mapping):
+        raise ValueError("period_roles must be a mapping")
+    roles = {str(period): str(role) for period, role in value.items()}
+    unsupported = sorted(set(roles.values()) - _PERIOD_ROLES)
+    if unsupported:
+        raise ValueError(f"unsupported period roles: {unsupported}")
+    return roles
+
+
+def _reject_report_only_score_periods(
+    periods: tuple[str, ...],
+    *,
+    period_roles: Mapping[str, str],
+    field_name: str,
+) -> None:
+    for period in periods:
+        role = period_roles.get(period)
+        if role in _REPORT_ONLY_PERIOD_ROLES:
+            raise ValueError(f"{role} report-only period {period} cannot be used in {field_name}")
 
 
 def _volatility_managed_parameter_sets(value: Any) -> tuple[dict[str, Any], ...]:
@@ -426,6 +491,7 @@ def _scan_allocation(
     *,
     baseline_period: str,
     post_periods: tuple[str, ...],
+    score_periods: tuple[str, ...],
     constraints: Mapping[str, Decimal],
 ) -> dict[str, Any]:
     active = [(candidate, weight) for candidate, weight in zip(candidates, weights, strict=True)]
@@ -445,7 +511,7 @@ def _scan_allocation(
     min_post_return = min(period_metrics[period]["annual_return"] for period in post_periods)
     min_post_sharpe = min(period_metrics[period]["sharpe_ratio"] for period in post_periods)
     max_full_drawdown = max(
-        metrics["full_curve_max_drawdown"] for metrics in period_metrics.values()
+        period_metrics[period]["full_curve_max_drawdown"] for period in score_periods
     )
     meets_constraints = (
         baseline_return >= constraints["min_baseline_annual_return"]
@@ -909,3 +975,7 @@ __all__ = [
     "scan_portfolio_ensemble_allocations",
     "scan_volatility_managed_allocations",
 ]
+
+_SCORING_PERIOD_ROLES = frozenset({"anchor", "selection", "validation"})
+_REPORT_ONLY_PERIOD_ROLES = frozenset({"holdout_report_only", "true_oos_report_only"})
+_PERIOD_ROLES = _SCORING_PERIOD_ROLES | _REPORT_ONLY_PERIOD_ROLES

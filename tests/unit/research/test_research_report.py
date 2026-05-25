@@ -124,6 +124,53 @@ def test_workflow_report_renders_optimizer_capital_metrics() -> None:
     assert "top_return_on_margin_proxy: 0.0133333333" in body
 
 
+def test_research_report_prints_period_roles() -> None:
+    report = ResearchWorkflowReport.from_result(
+        ResearchWorkflowResult(
+            workflow_id="period-role-flow",
+            status="completed",
+            steps=(
+                _result_step(
+                    "backtest_matrix",
+                    "passed",
+                    {
+                        "periods": [
+                            {
+                                "end": "2022-01-01T00:00:00+00:00",
+                                "name": "selection_2020_2022",
+                                "role": "selection",
+                                "start": "2020-01-01T00:00:00+00:00",
+                            },
+                            {
+                                "end": "2026-01-01T00:00:00+00:00",
+                                "name": "holdout_2024_2026",
+                                "role": "holdout_report_only",
+                                "start": "2024-01-01T00:00:00+00:00",
+                            },
+                        ],
+                        "report_only_periods": ["holdout_2024_2026"],
+                        "selection_basis": ["selection_2020_2022"],
+                    },
+                ),
+            ),
+        )
+    )
+
+    body = report.to_markdown()
+
+    selection_row = (
+        "| selection_2020_2022 | 2020-01-01T00:00:00+00:00 | "
+        "2022-01-01T00:00:00+00:00 | selection | selection_basis |"
+    )
+    holdout_row = (
+        "| holdout_2024_2026 | 2024-01-01T00:00:00+00:00 | "
+        "2026-01-01T00:00:00+00:00 | holdout_report_only | report_only |"
+    )
+    assert "## Period Roles" in body
+    assert selection_row in body
+    assert holdout_row in body
+
+
 def test_workflow_report_writer_rejects_unsafe_output_path(tmp_path: Path) -> None:
     report = ResearchWorkflowReport(
         workflow_id="unsafe",
