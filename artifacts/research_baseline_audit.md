@@ -198,15 +198,6 @@ Canonical configs:
 ### Route B-R / Route Governance Surface
 
 - `configs/research/workflows/vwap_factor_search.yaml`
-- `docs/plan/2026-05-23_route_b_strategy_research_design.md`
-- `docs/plan/2026-05-23_route_b_strategy_research_implementation_plan.md`
-- `docs/plan/2026-05-24_route_c_vol_target_trend_design.md`
-- `docs/plan/2026-05-24_route_c_vol_target_trend_implementation_plan.md`
-- `docs/plan/2026-05-24_route_d_gc_si_relative_value_design.md`
-- `docs/plan/2026-05-24_route_d_gc_si_relative_value_implementation_plan.md`
-- `docs/plan/2026-05-24_route_e_carry_trend_design.md`
-- `docs/plan/2026-05-24_route_e_carry_trend_implementation_plan.md`
-- `docs/plan/qts_quant_research_os_subagent_plan.md`
 
 ### Production Strategy / Runtime Config Surface
 

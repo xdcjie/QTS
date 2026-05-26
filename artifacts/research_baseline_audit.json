@@ -86,7 +86,7 @@
     "non_research_instructions_dirty_state": 1,
     "obsolete_ad_hoc_scripts": 0,
     "production_strategy": 14,
-    "route_b_r_research": 10,
+    "route_b_r_research": 1,
     "tests": 45,
     "vwap_specific_research": 68
   },
@@ -200,16 +200,7 @@
       "strategies/production/vwap_production_pullback.py"
     ],
     "route_b_r_research": [
-      "configs/research/workflows/vwap_factor_search.yaml",
-      "docs/plan/2026-05-23_route_b_strategy_research_design.md",
-      "docs/plan/2026-05-23_route_b_strategy_research_implementation_plan.md",
-      "docs/plan/2026-05-24_route_c_vol_target_trend_design.md",
-      "docs/plan/2026-05-24_route_c_vol_target_trend_implementation_plan.md",
-      "docs/plan/2026-05-24_route_d_gc_si_relative_value_design.md",
-      "docs/plan/2026-05-24_route_d_gc_si_relative_value_implementation_plan.md",
-      "docs/plan/2026-05-24_route_e_carry_trend_design.md",
-      "docs/plan/2026-05-24_route_e_carry_trend_implementation_plan.md",
-      "docs/plan/qts_quant_research_os_subagent_plan.md"
+      "configs/research/workflows/vwap_factor_search.yaml"
     ],
     "tests": [
       "tests/anchor/test_broker_execution_report_fill_time.py",
