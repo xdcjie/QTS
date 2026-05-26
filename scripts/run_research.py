@@ -13,7 +13,6 @@ from typing import Any
 import yaml  # type: ignore[import-untyped]
 
 from qts.research import ResearchSession
-from qts.research.audit_log import ResearchAuditLog
 from qts.research.evidence_policy import (
     EvidenceCompletenessPolicy,
     PromotionEvidenceSpec,
@@ -338,11 +337,7 @@ def _run_promotion(args: argparse.Namespace) -> int:
                 result = validate_review_packet_payload(
                     _load_mapping(args.packet),
                     evidence_registry=EvidenceRegistry(args.evidence_registry_root),
-                    audit_log=(
-                        None
-                        if args.audit_log_root is None
-                        else ResearchAuditLog(args.audit_log_root)
-                    ),
+                    audit_log_root=args.audit_log_root,
                 )
             elif args.candidate is not None:
                 candidate = PromotionEvidenceSpec.from_payload(_load_mapping(args.candidate))
