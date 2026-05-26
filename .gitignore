@@ -43,6 +43,7 @@ evidence/
 runs/
 artifacts/analysis/**
 artifacts/verification/**
+artifacts/repo_hygiene_report.md
 
 # Local tool and test artifacts
 .benchmarks/

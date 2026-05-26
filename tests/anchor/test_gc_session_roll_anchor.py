@@ -1,3 +1,4 @@
+import hashlib
 import json
 from datetime import UTC, datetime, time
 from decimal import Decimal
@@ -12,7 +13,6 @@ from tests.support.historical_session_roll_anchor import (
     summarize_historical_session_rolls,
 )
 
-ANCHOR_PATH = Path("tests/fixtures/historical/gc_session_roll_anchor.json")
 GC_CSV_PATH = Path("historical/data/gc.csv")
 GC_CHAIN_PATH = Path("historical/chains/GC.json")
 GC_SESSION_WINDOW = RegularSessionWindow(
@@ -20,6 +20,7 @@ GC_SESSION_WINDOW = RegularSessionWindow(
     open_time=time(18, 0),
     close_time=time(17, 0),
 )
+EXPECTED_ROLL_SUMMARY_SHA = "6fa8f08a32b51a880d42e98deb8d537d6b9623e44370ddc9d2e848b2fd1e0637"
 
 
 def _decimal_to_anchor_text(value: Decimal) -> str:
@@ -55,7 +56,6 @@ def test_gc_session_id_uses_exchange_time_half_open_session() -> None:
 
 
 def test_gc_historical_session_roll_anchor_matches_full_csv() -> None:
-    expected = json.loads(ANCHOR_PATH.read_text(encoding="utf-8"))
     chain = HistoricalChain.load(GC_CHAIN_PATH)
 
     summary = summarize_historical_session_rolls(
@@ -66,9 +66,21 @@ def test_gc_historical_session_roll_anchor_matches_full_csv() -> None:
         session_window=GC_SESSION_WINDOW,
     )
     sessions = [_session_roll_anchor_payload(row) for row in summary.rows]
+    summary_payload = json.dumps(
+        {"sessions": sessions, "excluded": summary.stats.to_payload()},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    actual_sha = hashlib.sha256(summary_payload.encode("utf-8")).hexdigest()
 
-    assert sessions == expected["sessions"]
-    assert summary.stats.to_payload() == expected["excluded"]
+    assert actual_sha == EXPECTED_ROLL_SUMMARY_SHA
+    assert len(sessions) == 4105
+    assert summary.stats.to_payload() == {
+        "rows_seen": 15291573,
+        "spreads_excluded": 5147856,
+        "unsupported_contracts_excluded": 0,
+        "outside_session_rows_excluded": 24640,
+    }
     assert len(sessions) > 0
     assert sessions[0] == {
         "session_id": "2010-06-07",
@@ -76,6 +88,13 @@ def test_gc_historical_session_roll_anchor_matches_full_csv() -> None:
         "selected_instrument_id": "FUTURE.CME.GC.GCQ0",
         "selected_volume": "136281",
         "selected_bar_count": 1349,
+    }
+    assert sessions[-1] == {
+        "session_id": "2026-05-22",
+        "selected_symbol": "GCM6",
+        "selected_instrument_id": "FUTURE.CME.GC.GCM6",
+        "selected_volume": "76108",
+        "selected_bar_count": 1329,
     }
 
 
