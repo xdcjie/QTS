@@ -65,6 +65,4 @@ frontend/tests/routes/
 # Added by code-review-graph
 .code-review-graph/
 evidence/benchmarks/latest.json
-graphify-out/
-.graphify*
 .understand-anything/
