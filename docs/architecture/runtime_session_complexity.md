@@ -1,6 +1,6 @@
 # RuntimeSession Complexity Evidence
 
-Source backlog: `docs/plan/qts_runtime_readiness_deep_review_tasks.md`
+Source backlog: `docs/architecture/runtime_coordinator_decisions.md` and `docs/architecture/runtime_session_complexity.md` evidence notes.
 
 M5 guardrail evidence for `RuntimeSession` and runtime coordinator candidates.
 

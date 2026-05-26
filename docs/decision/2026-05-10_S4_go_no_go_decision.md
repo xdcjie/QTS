@@ -21,12 +21,12 @@ S4 is not approved for real production capital. Local readiness evidence exists,
 
 | Area | Evidence recorded | Source | Decision impact |
 |---|---|---|---|
-| Baseline verification | `make check` passed on 2026-05-10 with 133 unit, 20 integration, and 19 anchor tests after format, lint, and mypy | `docs/plan/status/S4_production_ready_status.md` | Supports G1 only |
-| Replay lane | S4 replay verification lane exists as `make test-replay` | `docs/plan/S4_final_readiness_report.md` | Supports local determinism evidence |
-| Reconciliation lane | S4 reconciliation verification lane exists as `make test-reconciliation` | `docs/plan/S4_final_readiness_report.md` | Necessary, but live broker reconciliation evidence is still required |
-| Soak lane | S4 soak documentation lane exists as `make test-soak` | `docs/plan/S4_final_readiness_report.md` | Necessary, but real paper or observation soak evidence is still required |
-| Live startup safety | Live startup guard and observation-mode order-submission block are recorded | `docs/plan/status/S4_production_ready_status.md` | Supports safety posture but does not approve live capital |
-| Broker capability modeling | Order type, time-in-force, fractional, and short capability model are recorded | `docs/plan/status/S4_production_ready_status.md` | Supports broker-boundary readiness |
+| Baseline verification | `make check` passed on 2026-05-10 with 133 unit, 20 integration, and 19 anchor tests after format, lint, and mypy | `docs/decision/2026-05-10_S4_go_no_go_decision.md` (Historical status table below) | Supports G1 only |
+| Replay lane | S4 replay verification lane exists as `make test-replay` | `docs/decision/2026-05-10_S4_go_no_go_decision.md` (historical evidence section) | Necessary, but local determinism evidence was not sufficient alone |
+| Reconciliation lane | S4 reconciliation verification lane exists as `make test-reconciliation` | `docs/decision/2026-05-10_S4_go_no_go_decision.md` (historical evidence section) | Necessary, but live broker reconciliation evidence is still required |
+| Soak lane | S4 soak documentation lane exists as `make test-soak` | `docs/decision/2026-05-10_S4_go_no_go_decision.md` (historical evidence section) | Necessary, but real paper or observation soak evidence is still required |
+| Live startup safety | Live startup guard and observation-mode order-submission block are recorded | `docs/decision/2026-05-10_S4_go_no_go_decision.md` | Supports safety posture but does not approve live capital |
+| Broker capability modeling | Order type, time-in-force, fractional, and short capability model are recorded | `docs/decision/2026-05-10_S4_go_no_go_decision.md` | Supports broker-boundary readiness |
 | Rollout checklist | Production rollout requires observation mode, paper-vs-live review, reconciliation review, risk approval, kill-switch drill, rollback review, and capital limits | `docs/operations/production_rollout_checklist.md` | Blocks G4 and G5 until complete |
 | Soak requirements | Production soak requires at least one full regular trading session and success metrics for event lag, stale data, broker status, rejected orders, memory growth, and drift | `docs/operations/production_soak_plan.md` | Blocks G2 until recorded |
 | Paper-vs-live comparison | Unexplained differences block production readiness | `docs/operations/paper_vs_live_comparison.md` | Blocks G4 and G5 until reviewed |

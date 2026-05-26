@@ -2,7 +2,7 @@
 
 Authoritative M5.2 keep / merge / delete audit for runtime coordinator candidates.
 
-Source backlog: `docs/plan/qts_final_platform_freeze_review_and_tasks.md`
+Source backlog: `docs/architecture/runtime_session_complexity.md`
 
 Guardrail: `RUNTIME_COORDINATOR_DECISION`
 
