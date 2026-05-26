@@ -27,6 +27,14 @@ RESEARCH_REPORT_DIR = Path("runs/research")
 RESEARCH_WORKFLOW_ROUTE_DIR = Path("configs/research/workflows/routes")
 RESEARCH_STRATEGY_DIR = Path("strategies/research")
 STALE_RESEARCH_STRATEGY_TEXT = "lives under examples"
+PAPER_READINESS_FIELDS = (
+    "evidence_bundle_verified",
+    "trade_diagnostics_available",
+    "validation_scorecard_available",
+    "cost_stress_available",
+    "no_research_import_in_production",
+    "no_examples_direct_promotion",
+)
 
 
 class EvidenceBundleRequiredForPromotionRule:
@@ -140,8 +148,9 @@ class TradeDiagnosticsRequiredForPaperRule:
                     line=1,
                     message=f"paper candidates require {missing_field} evidence",
                     remediation=(
-                        "Attach trade-level diagnostics, validation scorecard, and cost "
-                        "stress evidence before marking a candidate paper-ready."
+                        "Attach verified evidence bundle, trade-level diagnostics, validation "
+                        "scorecard, cost stress evidence, and import-boundary checks before "
+                        "marking a candidate paper-ready."
                     ),
                     symbol=str(payload.get("promotion_candidate_id", path.stem)),
                 )
@@ -387,11 +396,7 @@ def line_number(source: str, token: str) -> int | None:
 def _missing_paper_readiness_field(readiness: Any) -> str | None:
     if not isinstance(readiness, dict):
         return "paper_readiness"
-    for field_name in (
-        "trade_diagnostics_available",
-        "validation_scorecard_available",
-        "cost_stress_available",
-    ):
+    for field_name in PAPER_READINESS_FIELDS:
         if readiness.get(field_name) is not True:
             return field_name
     return None

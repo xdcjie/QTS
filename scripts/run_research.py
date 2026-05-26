@@ -5,12 +5,18 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from datetime import date
 from pathlib import Path
 from typing import Any
 
+import yaml  # type: ignore[import-untyped]
+
 from qts.research import ResearchSession
+from qts.research.evidence_policy import (
+    EvidenceCompletenessPolicy,
+    PromotionEvidenceSpec,
+)
 from qts.research.evidence_registry import EvidenceRegistry
 from qts.research.experiment_store import ExperimentStore
 from qts.research.idea_registry import IdeaRegistry
@@ -111,6 +117,26 @@ def _add_evidence_parser(subparsers: Any) -> None:
     verify.add_argument("bundle_id")
 
 
+def _add_promotion_parser(subparsers: Any) -> None:
+    parser = subparsers.add_parser(
+        "promotion",
+        help="Validate research-to-promotion review evidence",
+    )
+    promotion_subparsers = parser.add_subparsers(dest="promotion_command", required=True)
+
+    validate = promotion_subparsers.add_parser(
+        "validate",
+        help="Validate a promotion candidate against a research evidence bundle",
+    )
+    validate.add_argument("--candidate", type=Path, required=True)
+    validate.add_argument(
+        "--evidence-registry-root",
+        type=Path,
+        default=Path("runs/research/evidence"),
+        help="Evidence registry root directory",
+    )
+
+
 def _add_idea_parser(subparsers: Any) -> None:
     parser = subparsers.add_parser("idea", help="Manage research idea registry records")
     parser.add_argument(
@@ -176,6 +202,7 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_runs_parser(subparsers)
     _add_workflow_parser(subparsers)
     _add_evidence_parser(subparsers)
+    _add_promotion_parser(subparsers)
     _add_idea_parser(subparsers)
     _add_meta_parser(subparsers)
     return parser
@@ -295,6 +322,22 @@ def _run_evidence(args: argparse.Namespace) -> int:
     raise ValueError(f"unsupported evidence command: {args.evidence_command}")
 
 
+def _run_promotion(args: argparse.Namespace) -> int:
+    if args.promotion_command == "validate":
+        try:
+            candidate = PromotionEvidenceSpec.from_payload(_load_mapping(args.candidate))
+            result = EvidenceCompletenessPolicy.promotion_candidate().validate_candidate(
+                candidate,
+                evidence_registry=EvidenceRegistry(args.evidence_registry_root),
+            )
+        except (FileNotFoundError, ValueError) as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        print(json.dumps(result.to_payload(), sort_keys=True, indent=2))
+        return 0 if result.accepted else 1
+    raise ValueError(f"unsupported promotion command: {args.promotion_command}")
+
+
 def _run_idea(args: argparse.Namespace) -> int:
     registry = IdeaRegistry(args.registry_root)
     if args.idea_command == "add":
@@ -368,6 +411,16 @@ def _load_json_mapping(path: Path) -> dict[str, Any]:
     return payload
 
 
+def _load_mapping(path: Path) -> dict[str, Any]:
+    if path.suffix.lower() == ".json":
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    else:
+        payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, Mapping):
+        raise ValueError(f"{path} must contain a mapping")
+    return dict(payload)
+
+
 def _load_json_records(path: Path | None) -> tuple[dict[str, Any], ...]:
     if path is None:
         return ()
@@ -406,6 +459,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.error("a subcommand or --dry-run is required")
     if args.command == "evidence":
         return _run_evidence(args)
+    if args.command == "promotion":
+        return _run_promotion(args)
     if args.command == "idea":
         return _run_idea(args)
     if args.command == "meta":

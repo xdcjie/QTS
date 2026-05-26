@@ -8,6 +8,11 @@ from qts.research.ablation import (
     AblationRun,
     AblationVariantSummary,
 )
+from qts.research.evidence_policy import (
+    EvidenceCompletenessPolicy,
+    EvidenceCompletenessResult,
+    PromotionEvidenceSpec,
+)
 from qts.research.evidence_registry import (
     EvidenceRegistry,
     EvidenceVerificationResult,
@@ -151,6 +156,9 @@ __all__ = [
     "ResearchManifest",
     "ResearchMetrics",
     "REQUIRED_METRIC_GROUPS",
+    "EvidenceCompletenessPolicy",
+    "EvidenceCompletenessResult",
+    "PromotionEvidenceSpec",
     "EvidenceRegistry",
     "EvidenceVerificationResult",
     "ResearchEvidenceBundle",
