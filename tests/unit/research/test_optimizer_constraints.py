@@ -12,6 +12,7 @@ from qts.research.optimizer import (
     OptimizationResult,
     OptimizerValidationSummary,
     OptimizerValidationSummaryWriter,
+    ResearchValidationPolicy,
 )
 
 
@@ -172,6 +173,47 @@ def test_validation_summary_accepts_all_results_without_constraints(tmp_path: Pa
     assert summary.accepted_count == 1
     assert summary.rejected_count == 0
     assert summary.rejections == ()
+
+
+def test_validation_policy_blocks_low_robustness_score(tmp_path: Path) -> None:
+    result = _result_with_manifest(tmp_path, {"total_return": "0.01"})
+    summary = OptimizerValidationSummary.from_results((result,))
+    policy = ResearchValidationPolicy(min_robustness_score=Decimal("101"))
+
+    decision = policy.evaluate(summary)
+
+    assert decision["blocked"] is True
+    assert decision["reasons"] == ("min_robustness_score: 100 < 101",)
+
+
+def test_validation_policy_blocks_missing_walk_forward_when_required(tmp_path: Path) -> None:
+    result = _result_with_manifest(tmp_path, {"total_return": "0.01"})
+    summary = OptimizerValidationSummary.from_results((result,))
+
+    decision = ResearchValidationPolicy(require_walk_forward=True).evaluate(summary)
+
+    assert decision["blocked"] is True
+    assert decision["missing_evidence"] == ("walk_forward",)
+
+
+def test_validation_policy_blocks_missing_failure_window_when_required(tmp_path: Path) -> None:
+    result = _result_with_manifest(tmp_path, {"total_return": "0.01"})
+    summary = OptimizerValidationSummary.from_results((result,))
+
+    decision = ResearchValidationPolicy(require_failure_window=True).evaluate(summary)
+
+    assert decision["blocked"] is True
+    assert decision["missing_evidence"] == ("failure_window",)
+
+
+def test_validation_policy_blocks_missing_cost_stress_when_required(tmp_path: Path) -> None:
+    result = _result_with_manifest(tmp_path, {"total_return": "0.01"})
+    summary = OptimizerValidationSummary.from_results((result,))
+
+    decision = ResearchValidationPolicy(require_cost_stress=True).evaluate(summary)
+
+    assert decision["blocked"] is True
+    assert decision["missing_evidence"] == ("cost_stress",)
 
 
 def test_validation_summary_writer_serializes_decimal_parameters(tmp_path: Path) -> None:

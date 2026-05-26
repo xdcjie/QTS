@@ -60,15 +60,15 @@ class ResearchReviewDecision:
     def __post_init__(self) -> None:
         if self.status not in _ALLOWED_REVIEW_DECISIONS:
             raise ValueError(f"unsupported review decision status: {self.status}")
-        if self.status == "paper_candidate":
+        if self.status in _PROMOTION_READINESS_DECISIONS:
             if not self.evidence_bundle_id:
-                raise ValueError("paper_candidate requires evidence_bundle_id")
+                raise ValueError(f"{self.status} requires evidence_bundle_id")
             if not self.trade_diagnostics_available:
-                raise ValueError("paper_candidate requires trade diagnostics")
+                raise ValueError(f"{self.status} requires trade diagnostics")
             if not self.validation_scorecard_available:
-                raise ValueError("paper_candidate requires validation scorecard")
+                raise ValueError(f"{self.status} requires validation scorecard")
             if not self.cost_stress_available:
-                raise ValueError("paper_candidate requires cost stress evidence")
+                raise ValueError(f"{self.status} requires cost stress evidence")
 
     def to_payload(self) -> dict[str, Any]:
         """Return deterministic JSON/YAML-compatible decision payload."""
@@ -265,6 +265,7 @@ class ResearchWorkflowReport:
             "idea_id",
             "title",
             "edge_type",
+            "edge_types",
             "source",
             "status",
             "trial_count",
@@ -460,6 +461,8 @@ def _collect_evidence(steps: Sequence[Mapping[str, Any]]) -> list[tuple[str, lis
         scorecard_mapping = (
             validation_scorecard if isinstance(validation_scorecard, Mapping) else {}
         )
+        validation_policy = latest_step_output(optimize_steps, "validation_policy", {})
+        policy_mapping = validation_policy if isinstance(validation_policy, Mapping) else {}
         evidence.append(
             (
                 "Optimize",
@@ -490,6 +493,7 @@ def _collect_evidence(steps: Sequence[Mapping[str, Any]]) -> list[tuple[str, lis
                         f"{first_ranked_capital_metric(optimize_steps, 'return_on_margin_proxy')}"
                     ),
                     *_optimizer_rejection_lines(validation_mapping),
+                    *_optimizer_validation_policy_lines(policy_mapping),
                 ],
             )
         )
@@ -526,6 +530,27 @@ def _optimizer_rejection_lines(validation_summary: Mapping[str, Any]) -> list[st
                 lines.append(f"rejection_reason: {reason}")
         elif reasons:
             lines.append(f"rejection_reason: {reasons}")
+    return lines
+
+
+def _optimizer_validation_policy_lines(validation_policy: Mapping[str, Any]) -> list[str]:
+    """Return readable validation-policy hard-gate evidence lines."""
+
+    lines: list[str] = []
+    if not validation_policy:
+        return lines
+    if "blocked" in validation_policy:
+        lines.append(f"validation_policy_blocked: {validation_policy['blocked']}")
+    reasons = validation_policy.get("reasons", ())
+    if isinstance(reasons, Sequence) and not isinstance(reasons, str):
+        lines.extend(f"validation_policy_reason: {reason}" for reason in reasons)
+    elif reasons:
+        lines.append(f"validation_policy_reason: {reasons}")
+    missing = validation_policy.get("missing_evidence", ())
+    if isinstance(missing, Sequence) and not isinstance(missing, str):
+        lines.extend(f"missing_evidence: {item}" for item in missing)
+    elif missing:
+        lines.append(f"missing_evidence: {missing}")
     return lines
 
 
@@ -661,9 +686,10 @@ def _normalize_decision(value: Any) -> ResearchReviewDecision:
         return ResearchReviewDecision(
             status=str(value.get("status", "keep_researching")),
             reviewer=None if value.get("reviewer") is None else str(value["reviewer"]),
-            reason=tuple(str(item) for item in value.get("reason", ())),
-            required_next_evidence=tuple(
-                str(item) for item in value.get("required_next_evidence", ())
+            reason=_string_tuple_field(value.get("reason", ()), field_name="reason"),
+            required_next_evidence=_string_tuple_field(
+                value.get("required_next_evidence", ()),
+                field_name="required_next_evidence",
             ),
             evidence_bundle_id=(
                 None
@@ -687,6 +713,17 @@ def _string_set(value: Any) -> set[str]:
     if not isinstance(value, Sequence) or isinstance(value, str):
         return set()
     return {str(item) for item in value}
+
+
+def _string_tuple_field(value: Any, *, field_name: str) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        text = value.strip()
+        return () if not text else (text,)
+    if not isinstance(value, Sequence):
+        raise ValueError(f"decision {field_name} must be a string or sequence")
+    return tuple(str(item) for item in value)
 
 
 def first_ranked_result_value(steps: Sequence[Mapping[str, Any]], key: str) -> Any:
@@ -845,6 +882,7 @@ _ALLOWED_REVIEW_DECISIONS = frozenset(
         "small_live_candidate",
     }
 )
+_PROMOTION_READINESS_DECISIONS = frozenset({"paper_candidate", "small_live_candidate"})
 
 __all__ = [
     "ResearchReviewDecision",

@@ -750,6 +750,55 @@ def test_research_cli_evidence_bundle_list_show_verify(tmp_path: Path) -> None:
     assert json.loads(verified.stdout)["accepted"] is True
 
 
+def test_evidence_cli_idea_id_requires_registry_or_summary_metadata(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text('{"metrics": {}}\n', encoding="utf-8")
+    report_path = tmp_path / "workflow-report.md"
+    report_path.write_text("# Report\n", encoding="utf-8")
+    summary_path = tmp_path / "workflow-summary.json"
+    summary_path.write_text(
+        json.dumps(
+            {
+                "status": "completed",
+                "steps": [
+                    {
+                        "id": "tearsheet",
+                        "kind": "factor_tearsheet",
+                        "message": "done",
+                        "outputs": {"manifest_path": str(manifest_path)},
+                        "status": "passed",
+                    },
+                    {
+                        "id": "report",
+                        "kind": "research_report",
+                        "message": "done",
+                        "outputs": {"report_path": str(report_path)},
+                        "status": "passed",
+                    },
+                ],
+                "workflow_id": "evidence-cli-flow",
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    created = _run_cli(
+        "evidence",
+        "--registry-root",
+        str(tmp_path / "evidence"),
+        "bundle",
+        "--workflow-summary",
+        str(summary_path),
+        "--idea-id",
+        "idea-momentum",
+    )
+
+    assert created.returncode != 0
+    assert "idea_id requires" in created.stderr
+
+
 def test_research_cli_idea_record_trial_and_meta_summary(tmp_path: Path) -> None:
     registry_root = tmp_path / "ideas"
     idea_payload_path = tmp_path / "idea.json"
@@ -865,3 +914,43 @@ def test_research_cli_idea_record_trial_and_meta_summary(tmp_path: Path) -> None
         "total": 2,
     }
     assert meta_payload["summary"]["rejected_reason_distribution"] == {"no_oos_stability": 1}
+
+
+def test_meta_summary_all_history(tmp_path: Path) -> None:
+    registry_root = tmp_path / "ideas"
+    registry_root.mkdir()
+    records_path = tmp_path / "evidence-records.json"
+    records_path.write_text(
+        json.dumps(
+            [
+                {"accepted": True, "reviewed_at": "2026-05-10T00:00:00+00:00"},
+                {"accepted": False, "reviewed_at": "2026-04-10T00:00:00+00:00"},
+            ],
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    meta = _run_cli(
+        "meta",
+        "--output-dir",
+        str(tmp_path / "meta"),
+        "summary",
+        "--idea-registry-root",
+        str(registry_root),
+        "--evidence-records",
+        str(records_path),
+        "--period",
+        "monthly",
+        "--period-start",
+        "2026-05-01",
+        "--all-history",
+    )
+
+    assert meta.returncode == 0, meta.stderr
+    assert json.loads(meta.stdout)["summary"]["validation_pass_rate"] == {
+        "accepted": 1,
+        "rate": 0.5,
+        "total": 2,
+    }

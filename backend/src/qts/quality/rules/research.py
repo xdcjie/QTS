@@ -12,6 +12,7 @@ from qts.quality.guardrails import GuardrailViolation
 
 PROMOTION_CANDIDATE_STATUSES = frozenset({"candidate", "paper_candidate", "small_live_candidate"})
 PROMOTION_CONFIG_DIR = Path("configs/research/promotion")
+PROMOTION_TARGET_PREFIXES = ("strategies.production.",)
 PROMOTION_RESEARCH_ONLY_PARAMS = frozenset(
     {
         "ablation_id",
@@ -126,7 +127,7 @@ class TradeDiagnosticsRequiredForPaperRule:
         """Perform repository-wide check."""
         violations: list[GuardrailViolation] = []
         for path, payload in yaml_payloads(repo_root / PROMOTION_CONFIG_DIR):
-            if str(payload.get("status", "")) != "paper_candidate":
+            if str(payload.get("status", "")) not in {"paper_candidate", "small_live_candidate"}:
                 continue
             readiness = payload.get("paper_readiness")
             missing_field = _missing_paper_readiness_field(readiness)
@@ -171,6 +172,7 @@ class PromotionCandidateSpecBoundaryRule:
             source = path.read_text(encoding="utf-8")
             candidate_id = str(payload.get("promotion_candidate_id", path.stem))
             source_module = str(payload.get("source_module", ""))
+            target_module = str(payload.get("target_module", ""))
             if (
                 source_module.startswith("examples.")
                 and payload.get("examples_migration_reviewed") is not True
@@ -184,6 +186,20 @@ class PromotionCandidateSpecBoundaryRule:
                         remediation=(
                             "Move strategy code behind a reviewed production boundary or set "
                             "examples_migration_reviewed only after human migration review."
+                        ),
+                        symbol=candidate_id,
+                    )
+                )
+            if target_module and not target_module.startswith(PROMOTION_TARGET_PREFIXES):
+                violations.append(
+                    GuardrailViolation(
+                        code=self.code,
+                        path=str(path.relative_to(repo_root)),
+                        line=line_number(source, "target_module") or 1,
+                        message="promotion target_module must be production-owned",
+                        remediation=(
+                            "Use a reviewed strategies.production.* target module for "
+                            "promotion specs; research modules can only be sources."
                         ),
                         symbol=candidate_id,
                     )

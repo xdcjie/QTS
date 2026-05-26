@@ -79,19 +79,27 @@ class PromotionCandidateSpec:
             raise ValueError(f"unsupported promotion candidate status: {self.status}")
         if self.source_module == self.target_module:
             raise ValueError("source_module and target_module must be separate review boundaries")
+        if not self.target_module.startswith(_APPROVED_PROMOTION_TARGET_PREFIXES):
+            raise ValueError("target_module must be production-owned")
         if self.source_module.startswith("examples.") and not self.examples_migration_reviewed:
             raise ValueError("examples strategy requires migration review")
         _reject_research_only_params(self.production_params or {})
-        if self.status == "paper_candidate":
+        if self.status in _READINESS_REQUIRED_STATUSES:
             missing_items = self.paper_readiness.missing_items()
             if missing_items:
-                raise ValueError(f"paper_candidate missing readiness item: {missing_items[0]}")
+                raise ValueError(f"{self.status} missing readiness item: {missing_items[0]}")
+
+    def missing_items(self) -> tuple[str, ...]:
+        """Return readiness items still missing for promotion review."""
+
+        return self.paper_readiness.missing_items()
 
     def to_payload(self) -> dict[str, Any]:
         """Return deterministic JSON-ready promotion review payload."""
 
         return {
             "evidence_bundle_id": self.evidence_bundle_id,
+            "missing_items": list(self.missing_items()),
             "paper_readiness": self.paper_readiness.to_payload(),
             "production_params": dict(self.production_params or {}),
             "promotion_boundary": "human_review_required",
@@ -112,6 +120,8 @@ def _reject_research_only_params(params: Mapping[str, Any]) -> None:
 _PROMOTION_STATUSES = frozenset(
     {"review_required", "paper_candidate", "small_live_candidate", "rejected", "retired"}
 )
+_READINESS_REQUIRED_STATUSES = frozenset({"paper_candidate", "small_live_candidate"})
+_APPROVED_PROMOTION_TARGET_PREFIXES = ("strategies.production.",)
 _RESEARCH_ONLY_PARAMS = frozenset(
     {
         "ablation_id",

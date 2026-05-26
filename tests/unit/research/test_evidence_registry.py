@@ -175,7 +175,7 @@ def test_evidence_bundle_verifies_manifest_hashes(tmp_path: Path) -> None:
     verification = registry.verify(bundle.evidence_bundle_id)
 
     assert verification.accepted
-    assert verification.checked_paths == (str(manifest_path), str(report_path))
+    assert verification.checked_paths == (str(summary_path), str(manifest_path), str(report_path))
 
 
 def test_evidence_bundle_rejects_unverifiable_manifest_artifact_hash(tmp_path: Path) -> None:
@@ -231,6 +231,85 @@ def test_evidence_bundle_verifies_artifact_hashes(tmp_path: Path) -> None:
     )
 
 
+def test_evidence_bundle_resolves_manifest_relative_artifact_paths(tmp_path: Path) -> None:
+    artifact_path = tmp_path / "artifacts" / "metrics.json"
+    artifact_path.parent.mkdir()
+    artifact_path.write_text('{"sharpe": "1.0"}\n', encoding="utf-8")
+    artifact_hash = f"sha256:{hashlib.sha256(artifact_path.read_bytes()).hexdigest()}"
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "artifact_hashes": {artifact_path.name: artifact_hash},
+                "artifact_paths_by_hash": {artifact_hash: "artifacts/metrics.json"},
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    report_path = tmp_path / "workflow-report.md"
+    report_path.write_text("# Report\n", encoding="utf-8")
+    summary_path = _write_workflow_summary(tmp_path, manifest_path, report_path)
+    registry = EvidenceRegistry(tmp_path / "evidence")
+
+    bundle = registry.create_from_workflow_summary(summary_path)
+
+    assert bundle.artifact_paths == {str(artifact_path): artifact_hash}
+    assert registry.verify(bundle.evidence_bundle_id).accepted
+
+
+def test_evidence_bundle_records_workflow_summary_hash(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text('{"metrics": {}}\n', encoding="utf-8")
+    report_path = tmp_path / "workflow-report.md"
+    report_path.write_text("# Report\n", encoding="utf-8")
+    summary_path = _write_workflow_summary(tmp_path, manifest_path, report_path)
+    registry = EvidenceRegistry(tmp_path / "evidence")
+
+    bundle = registry.create_from_workflow_summary(summary_path)
+
+    assert bundle.workflow_summary_path == str(summary_path)
+    assert bundle.workflow_summary_hash == (
+        f"sha256:{hashlib.sha256(summary_path.read_bytes()).hexdigest()}"
+    )
+    assert ResearchEvidenceBundle.from_payload(bundle.to_payload()).workflow_summary_hash
+
+
+def test_evidence_bundle_collects_validation_and_summary_paths(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text('{"metrics": {}}\n', encoding="utf-8")
+    report_path = tmp_path / "workflow-report.md"
+    report_path.write_text("# Report\n", encoding="utf-8")
+    extra_paths = {
+        "summary_path": tmp_path / "trade-summary.json",
+        "validation_output": tmp_path / "validation.json",
+        "walk_forward_validation_output": tmp_path / "walk-forward.json",
+        "failure_window_veto_output": tmp_path / "failure-window.json",
+        "trades_path": tmp_path / "trades.jsonl",
+    }
+    for path in extra_paths.values():
+        path.write_text("{}\n", encoding="utf-8")
+    summary_path = _write_workflow_summary(tmp_path, manifest_path, report_path)
+    payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    payload["steps"].append(
+        {
+            "id": "validate",
+            "kind": "optimize",
+            "message": "done",
+            "outputs": {key: str(path) for key, path in extra_paths.items()},
+            "status": "passed",
+        }
+    )
+    summary_path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    registry = EvidenceRegistry(tmp_path / "evidence")
+
+    bundle = registry.create_from_workflow_summary(summary_path)
+
+    for path in extra_paths.values():
+        assert str(path) in (bundle.artifact_paths or {})
+
+
 def test_evidence_bundle_missing_artifact_fails(tmp_path: Path) -> None:
     manifest_path = tmp_path / "manifest.json"
     manifest_path.write_text('{"metrics": {}}\n', encoding="utf-8")
@@ -245,6 +324,24 @@ def test_evidence_bundle_missing_artifact_fails(tmp_path: Path) -> None:
 
     assert not verification.accepted
     assert any("missing referenced path" in reason for reason in verification.reasons)
+
+
+def test_evidence_verify_detects_workflow_summary_mutation(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text('{"metrics": {}}\n', encoding="utf-8")
+    report_path = tmp_path / "workflow-report.md"
+    report_path.write_text("# Report\n", encoding="utf-8")
+    summary_path = _write_workflow_summary(tmp_path, manifest_path, report_path)
+    registry = EvidenceRegistry(tmp_path / "evidence")
+    bundle = registry.create_from_workflow_summary(summary_path)
+
+    summary_path.write_text(summary_path.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+    verification = registry.verify(bundle.evidence_bundle_id)
+
+    assert not verification.accepted
+    assert any(
+        "hash mismatch" in reason and str(summary_path) in reason for reason in verification.reasons
+    )
 
 
 def test_evidence_bundle_never_sets_paper_live_production_status() -> None:

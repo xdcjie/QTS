@@ -29,6 +29,24 @@ decision. Report-only windows and out-of-sample windows may validate or reject a
 candidate; they must not tune the same candidate unless a new workflow record is
 opened.
 
+CLI examples:
+
+```bash
+PYTHONPATH=backend/src uv run python scripts/run_research.py \
+  evidence --registry-root runs/research/evidence bundle \
+  --workflow-summary runs/research/workflows/example/summary.json
+
+PYTHONPATH=backend/src uv run python scripts/run_research.py \
+  idea --registry-root runs/research/idea_registry list
+
+PYTHONPATH=backend/src uv run python scripts/run_research.py \
+  meta --output-dir runs/research/meta summary \
+  --idea-registry-root runs/research/idea_registry \
+  --evidence-registry-root runs/research/evidence \
+  --period monthly \
+  --period-start 2026-05-01
+```
+
 ## Idea Governance
 
 Ideas enter Research OS as non-executable `FactorSpec` drafts or research notes.
@@ -86,6 +104,17 @@ An ablation result should explain what part of the result survives when the
 favored assumption is removed. If performance depends on one narrow setting,
 that is evidence of fragility unless the mechanism explains why the setting is
 stable.
+
+Backtest-matrix summaries can feed ablation without rewriting completed runs:
+
+```yaml
+kind: ablation
+source_summary: matrix-summary.json
+baseline: baseline
+primary_metric: sharpe_ratio
+module_map:
+  candidate_a: [mom_filter]
+```
 
 ## Trade Diagnostics
 

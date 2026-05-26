@@ -12,13 +12,22 @@ from qts.core.time import require_aware_datetime
 ALLOWED_EDGE_TYPES = frozenset(
     {
         "carry",
+        "cross_sectional_momentum",
+        "event_driven",
+        "execution_alpha",
         "liquidity",
         "macro",
+        "macro_regime",
+        "mean_reversion",
+        "microstructure",
         "momentum",
         "quality",
+        "relative_value",
         "reversal",
         "seasonality",
         "sentiment",
+        "term_structure",
+        "time_series_momentum",
         "value",
         "volatility",
     }
@@ -28,10 +37,16 @@ ALLOWED_IDEA_STATUSES = frozenset(
     {
         "accepted",
         "draft",
+        "factor_candidate",
+        "frozen_forward",
+        "idea",
         "needs_work",
         "paper_candidate",
         "promotion_review",
         "rejected",
+        "retired",
+        "strategy_prototype",
+        "validated_research",
     }
 )
 
@@ -52,12 +67,14 @@ class IdeaSpec:
     status: str = "draft"
     trial_count: int = 0
     rejection_reason: str | None = None
+    edge_types: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         idea_id = self.idea_id.strip()
         title = self.title.strip()
         hypothesis = self.hypothesis.strip()
-        edge_type = self.edge_type.strip().lower()
+        edge_types = self._edge_types()
+        edge_type = edge_types[0]
         source = self.source.strip().lower()
         data_required = self._string_tuple(self.data_required, field_name="data_required")
         kill_criteria = self._string_tuple(self.kill_criteria, field_name="kill_criteria")
@@ -73,7 +90,8 @@ class IdeaSpec:
             raise ValueError("title is required")
         if not hypothesis:
             raise ValueError("hypothesis is required")
-        if edge_type not in ALLOWED_EDGE_TYPES:
+        unknown_edge_types = sorted(edge for edge in edge_types if edge not in ALLOWED_EDGE_TYPES)
+        if unknown_edge_types:
             allowed = ", ".join(sorted(ALLOWED_EDGE_TYPES))
             raise ValueError(f"edge_type must be one of: {allowed}")
         if not source:
@@ -91,6 +109,7 @@ class IdeaSpec:
         object.__setattr__(self, "title", title)
         object.__setattr__(self, "hypothesis", hypothesis)
         object.__setattr__(self, "edge_type", edge_type)
+        object.__setattr__(self, "edge_types", edge_types)
         object.__setattr__(self, "source", source)
         object.__setattr__(self, "data_required", data_required)
         object.__setattr__(self, "kill_criteria", kill_criteria)
@@ -103,11 +122,16 @@ class IdeaSpec:
         """Rehydrate an idea spec from YAML/JSON payload data."""
 
         created_at = datetime.fromisoformat(cls._required_text(payload, "created_at"))
+        raw_edge_types = cls._string_tuple(payload.get("edge_types"), field_name="edge_types")
         return cls(
             idea_id=cls._required_text(payload, "idea_id"),
             title=cls._required_text(payload, "title"),
             hypothesis=cls._required_text(payload, "hypothesis"),
-            edge_type=cls._required_text(payload, "edge_type"),
+            edge_type=(
+                cls._required_text(payload, "edge_type")
+                if not raw_edge_types
+                else raw_edge_types[0]
+            ),
             source=cls._required_text(payload, "source"),
             created_at=created_at,
             data_required=cls._string_tuple(
@@ -123,6 +147,7 @@ class IdeaSpec:
             status=str(payload.get("status", "draft")),
             trial_count=int(payload.get("trial_count", 0)),
             rejection_reason=cls._optional_text(payload.get("rejection_reason")),
+            edge_types=raw_edge_types,
         )
 
     def to_payload(self) -> dict[str, Any]:
@@ -132,6 +157,7 @@ class IdeaSpec:
             "created_at": self.created_at.isoformat(),
             "data_required": list(self.data_required),
             "edge_type": self.edge_type,
+            "edge_types": list(self.edge_types),
             "hypothesis": self.hypothesis,
             "idea_id": self.idea_id,
             "kill_criteria": list(self.kill_criteria),
@@ -149,6 +175,20 @@ class IdeaSpec:
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"{field_name} is required")
         return value
+
+    def _edge_types(self) -> tuple[str, ...]:
+        raw_edge_types = self.edge_types or (self.edge_type,)
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for raw_edge_type in raw_edge_types:
+            edge_type = str(raw_edge_type).strip().lower()
+            if not edge_type:
+                raise ValueError("edge_type is required")
+            if edge_type in seen:
+                continue
+            seen.add(edge_type)
+            normalized.append(edge_type)
+        return tuple(normalized)
 
     @staticmethod
     def _optional_text(value: Any) -> str | None:

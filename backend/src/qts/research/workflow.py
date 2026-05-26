@@ -34,7 +34,11 @@ from qts.research.portfolio_ensemble import (
     scan_portfolio_ensemble_allocations,
     scan_volatility_managed_allocations,
 )
-from qts.research.report import ResearchWorkflowReport, ResearchWorkflowReportWriter
+from qts.research.report import (
+    ResearchReviewDecision,
+    ResearchWorkflowReport,
+    ResearchWorkflowReportWriter,
+)
 from qts.research.trade_diagnostics import (
     TradeDiagnostic,
     TradeDiagnosticsArtifactWriter,
@@ -231,6 +235,12 @@ class ResearchRouteIndex:
             workflow_path = workflow if workflow.is_absolute() else index_path.parent / workflow
             if not workflow_path.exists():
                 raise FileNotFoundError(f"route workflow not found: {workflow_path}")
+            workflow_route_id = _route_id_from_workflow_yaml(workflow_path)
+            if workflow_route_id != route_id:
+                raise ValueError(
+                    f"route index id {route_id} does not match workflow route_id "
+                    f"{workflow_route_id}"
+                )
             routes.append({"route_id": route_id, "workflow": str(workflow_path)})
         return cls(routes=tuple(routes))
 
@@ -272,6 +282,8 @@ class ResearchWorkflowConfig:
         if version != 1:
             raise ValueError("research workflow version must be 1")
         workflow_id = cls._required_safe_token(raw, "workflow_id")
+        if workflow_path.parent.name == "routes" and raw.get("route") is None:
+            raise ValueError("route workflow configs must declare route metadata")
         periods = _periods_from_payload(raw.get("periods"))
         raw_steps = raw.get("steps")
         if not isinstance(raw_steps, list) or not raw_steps:
@@ -406,6 +418,16 @@ def _route_metadata_from_payload(value: Any) -> ResearchRouteMetadata | None:
     )
 
 
+def _route_id_from_workflow_yaml(path: Path) -> str:
+    payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, Mapping):
+        raise ValueError("route workflow config must be a YAML mapping")
+    route = payload.get("route")
+    if not isinstance(route, Mapping):
+        raise ValueError("indexed route workflow must declare route metadata")
+    return ResearchWorkflowConfig._required_safe_token(route, "route_id")
+
+
 def _idea_link_from_payload(value: Any, *, workflow_path: Path) -> ResearchIdeaLink | None:
     if value is None:
         return None
@@ -420,6 +442,30 @@ def _idea_link_from_payload(value: Any, *, workflow_path: Path) -> ResearchIdeaL
     return ResearchIdeaLink(
         idea_id=_required_text(value, "idea_id"),
         registry_root=registry_root,
+    )
+
+
+def _review_decision_from_payload(value: Any) -> ResearchReviewDecision | None:
+    if value is None:
+        return None
+    if isinstance(value, ResearchReviewDecision):
+        return value
+    if not isinstance(value, Mapping):
+        raise ValueError("research_report.decision must be a mapping")
+    return ResearchReviewDecision(
+        status=str(value.get("status", "keep_researching")),
+        reviewer=None if value.get("reviewer") is None else str(value["reviewer"]),
+        reason=_string_or_sequence_tuple(value.get("reason", ()), field_name="decision.reason"),
+        required_next_evidence=_string_or_sequence_tuple(
+            value.get("required_next_evidence", ()),
+            field_name="decision.required_next_evidence",
+        ),
+        evidence_bundle_id=(
+            None if value.get("evidence_bundle_id") is None else str(value["evidence_bundle_id"])
+        ),
+        trade_diagnostics_available=bool(value.get("trade_diagnostics_available", False)),
+        validation_scorecard_available=bool(value.get("validation_scorecard_available", False)),
+        cost_stress_available=bool(value.get("cost_stress_available", False)),
     )
 
 
@@ -806,6 +852,17 @@ def _string_sequence(value: Any, *, field_name: str) -> tuple[str, ...]:
     return tuple(str(item) for item in value)
 
 
+def _string_or_sequence_tuple(value: Any, *, field_name: str) -> tuple[str, ...]:
+    if value is None:
+        return ()
+    if isinstance(value, str):
+        text = value.strip()
+        return () if not text else (text,)
+    if not isinstance(value, Sequence):
+        raise ValueError(f"{field_name} must be a string or sequence")
+    return tuple(str(item) for item in value)
+
+
 def _strategy_module_name(value: str) -> str:
     if ":" not in value:
         return value
@@ -878,6 +935,8 @@ class ResearchWorkflowResult:
             payload["route"] = self.route.to_payload()
         if self.idea_metadata is not None:
             payload["idea_metadata"] = _json_ready(self.idea_metadata)
+        if self.decision is not None:
+            payload["decision"] = _json_ready(self.decision)
         if self.periods:
             period_payloads = [
                 ResearchWorkflowRunner._declared_period_payload(period) for period in self.periods
@@ -934,6 +993,7 @@ class ResearchWorkflowRunner:
         return ResearchWorkflowResult(
             workflow_id=config.workflow_id,
             periods=config.periods,
+            decision=self._result_decision(tuple(results)),
             idea_metadata=idea_metadata,
             run_context=run_context,
             route=config.route,
@@ -1003,6 +1063,18 @@ class ResearchWorkflowRunner:
         if config.idea is None:
             return None
         return config.idea.load().to_payload()
+
+    @staticmethod
+    def _result_decision(
+        steps: tuple[ResearchWorkflowStepResult, ...],
+    ) -> Mapping[str, Any] | None:
+        for step in reversed(steps):
+            if step.kind != "research_report":
+                continue
+            decision = step.outputs.get("decision")
+            if isinstance(decision, Mapping):
+                return decision
+        return None
 
     def _run_step(
         self,
@@ -1208,17 +1280,26 @@ class ResearchWorkflowRunner:
         higher_is_better = step.payload.get("higher_is_better", True)
         if not isinstance(higher_is_better, bool):
             raise ValueError("higher_is_better must be a boolean")
-        raw_runs = step.payload.get("runs")
-        if not isinstance(raw_runs, list) or not raw_runs:
-            raise ValueError("ablation runs must not be empty")
-        runs = tuple(
-            self._ablation_run(raw_run, index=index) for index, raw_run in enumerate(raw_runs)
-        )
-        plan = AblationPlan(
-            baseline=baseline,
-            modules=modules,
-            runs=runs,
-        )
+        source_summary = step.payload.get("source_summary")
+        if source_summary is not None:
+            source_payload = _load_json_mapping(config.resolve_path(str(source_summary)))
+            plan = AblationPlan.from_backtest_matrix_summary(
+                source_payload,
+                baseline=baseline,
+                module_map=self._module_map(step.payload.get("module_map")),
+            )
+        else:
+            raw_runs = step.payload.get("runs")
+            if not isinstance(raw_runs, list) or not raw_runs:
+                raise ValueError("ablation runs must not be empty")
+            runs = tuple(
+                self._ablation_run(raw_run, index=index) for index, raw_run in enumerate(raw_runs)
+            )
+            plan = AblationPlan(
+                baseline=baseline,
+                modules=modules,
+                runs=runs,
+            )
         report = AblationReport.from_plan(
             plan,
             primary_metric=primary_metric,
@@ -1307,6 +1388,7 @@ class ResearchWorkflowRunner:
             ResearchWorkflowResult(
                 workflow_id=config.workflow_id,
                 periods=config.periods,
+                decision=_review_decision_from_payload(step.payload.get("decision")),
                 run_context=run_context,
                 route=config.route,
                 idea_metadata=idea_metadata,
@@ -1320,7 +1402,7 @@ class ResearchWorkflowRunner:
             kind=step.kind,
             status="passed",
             message="research report written",
-            outputs={"report_path": str(report_path)},
+            outputs={"decision": report.decision.to_payload(), "report_path": str(report_path)},
         )
 
     def _portfolio_ensemble(
@@ -1710,7 +1792,6 @@ class ResearchWorkflowRunner:
             capital_metric_config=capital_metric_config,
         )
         validation_policy = self._research_validation_policy(step.payload)
-        validation_policy_payload = validation_policy.evaluate(validation_summary)
         validation_output = step.payload.get("validation_output")
         validation_output_path: Path | None = None
         if validation_output is not None:
@@ -1817,6 +1898,13 @@ class ResearchWorkflowRunner:
                 and isinstance(decision, Mapping)
                 and decision.get("accepted") is False
             )
+        validation_payload = self._optional_mapping(step.payload.get("validation")) or {}
+        validation_policy_payload = validation_policy.evaluate(
+            validation_summary,
+            walk_forward_present=walk_forward_summary_payload is not None,
+            failure_window_present=failure_veto_summary_payload is not None,
+            cost_stress_present=validation_payload.get("cost_stress") is not None,
+        )
         ranked_results = []
         for result in results:
             ranked_result = {
@@ -1841,7 +1929,7 @@ class ResearchWorkflowRunner:
             "validation_policy": validation_policy_payload,
             "validation_scorecard": self._validation_scorecard(
                 validation_policy_payload=validation_policy_payload,
-                validation=step.payload.get("validation"),
+                validation=validation_payload,
             ),
         }
         if walk_forward_summary_payload is not None:
@@ -1882,7 +1970,33 @@ class ResearchWorkflowRunner:
         )
         if not isinstance(raw_required, bool):
             raise ValueError("validation_policy.require_passing_candidate must be a boolean")
-        return ResearchValidationPolicy(require_passing_candidate=raw_required)
+        return ResearchValidationPolicy(
+            require_passing_candidate=raw_required,
+            min_accepted_count=self._optional_non_negative_int(
+                raw_policy.get("min_accepted_count"),
+                field_name="validation_policy.min_accepted_count",
+            ),
+            min_robustness_score=self._optional_decimal(
+                raw_policy.get("min_robustness_score"),
+                field_name="validation_policy.min_robustness_score",
+            ),
+            require_walk_forward=self._optional_bool(
+                raw_policy.get("require_walk_forward", False),
+                field_name="validation_policy.require_walk_forward",
+            ),
+            require_failure_window=self._optional_bool(
+                raw_policy.get("require_failure_window", False),
+                field_name="validation_policy.require_failure_window",
+            ),
+            require_cost_stress=self._optional_bool(
+                raw_policy.get("require_cost_stress", False),
+                field_name="validation_policy.require_cost_stress",
+            ),
+            max_rejected_count=self._optional_non_negative_int(
+                raw_policy.get("max_rejected_count"),
+                field_name="validation_policy.max_rejected_count",
+            ),
+        )
 
     def _validation_scorecard(
         self,
@@ -1903,6 +2017,10 @@ class ResearchWorkflowRunner:
                 else "not_configured"
             ),
             "rejection_reasons": list(validation_policy_payload.get("rejection_reasons", ())),
+            "validation_policy_missing_evidence": list(
+                validation_policy_payload.get("missing_evidence", ())
+            ),
+            "validation_policy_reasons": list(validation_policy_payload.get("reasons", ())),
             "robustness_score": validation_policy_payload.get("robustness_score", "0"),
             "walk_forward_status": (
                 "configured"
@@ -2218,6 +2336,14 @@ class ResearchWorkflowRunner:
         return dict(value)
 
     @classmethod
+    def _module_map(cls, value: Any) -> dict[str, tuple[str, ...]]:
+        if value is None:
+            return {}
+        if not isinstance(value, Mapping):
+            raise ValueError("module_map must be a mapping")
+        return {str(key): cls._string_tuple(item) for key, item in value.items()}
+
+    @classmethod
     def _ablation_run(cls, value: Any, *, index: int) -> AblationRun:
         if not isinstance(value, Mapping):
             raise ValueError(f"ablation runs[{index}] must be a mapping")
@@ -2292,10 +2418,26 @@ class ResearchWorkflowRunner:
         return int(value)
 
     @staticmethod
-    def _optional_decimal(value: Any) -> Decimal | None:
+    def _optional_bool(value: Any, *, field_name: str = "value") -> bool:
+        if not isinstance(value, bool):
+            raise ValueError(f"{field_name} must be a boolean")
+        return value
+
+    @classmethod
+    def _optional_non_negative_int(cls, value: Any, *, field_name: str = "value") -> int | None:
+        parsed = cls._optional_int(value)
+        if parsed is not None and parsed < 0:
+            raise ValueError(f"{field_name} must be non-negative")
+        return parsed
+
+    @staticmethod
+    def _optional_decimal(value: Any, *, field_name: str = "value") -> Decimal | None:
         if value is None:
             return None
-        return Decimal(str(value))
+        try:
+            return Decimal(str(value))
+        except Exception as exc:
+            raise ValueError(f"{field_name} must be a decimal") from exc
 
     @staticmethod
     def _optional_float(value: Any) -> float | None:
@@ -2344,6 +2486,13 @@ def _required_text(payload: Mapping[str, Any], field_name: str) -> str:
     return value.strip()
 
 
+def _load_json_mapping(path: Path) -> dict[str, Any]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{path} must contain a JSON object")
+    return payload
+
+
 def _json_ready(value: Any) -> Any:
     if isinstance(value, Path):
         return str(value)
@@ -2353,6 +2502,9 @@ def _json_ready(value: Any) -> Any:
         return value.isoformat()
     if isinstance(value, date):
         return value.isoformat()
+    to_payload = getattr(value, "to_payload", None)
+    if callable(to_payload):
+        return _json_ready(to_payload())
     if isinstance(value, dict):
         return {str(key): _json_ready(item) for key, item in value.items()}
     if isinstance(value, list | tuple):

@@ -863,11 +863,8 @@ class ResearchSession:
         missing = [field for field in required_fields if field not in snapshot]
         if missing:
             raise ValueError(f"factor snapshot protocol missing fields: {', '.join(missing)}")
-        return FactorSnapshotProtocol(
-            source_data_end=self._as_of(snapshot["source_data_end"]),
-            available_at=self._as_of(snapshot["available_at"]),
-            forward_return_start=self._as_of(snapshot["forward_return_start"]),
-            forward_return_end=self._as_of(snapshot["forward_return_end"]),
+        return FactorSnapshotProtocol.from_payload(
+            {field: snapshot[field] for field in required_fields}
         )
 
     @staticmethod

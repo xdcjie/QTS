@@ -149,6 +149,50 @@ steps:
     assert outputs["ablation_summary"]["variants"][1]["metric_deltas"]["sharpe"] == 0.2
 
 
+def test_ablation_workflow_step_loads_source_summary(tmp_path: Path) -> None:
+    summary_path = tmp_path / "matrix-summary.json"
+    summary_path.write_text(
+        json.dumps(
+            {
+                "metrics": ["sharpe_ratio"],
+                "rows": [
+                    {"candidate": "baseline", "period": "IS", "sharpe_ratio": 1.0},
+                    {"candidate": "candidate_a", "period": "IS", "sharpe_ratio": 1.2},
+                ],
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: ablation-source-flow
+steps:
+  - id: ablation
+    kind: ablation
+    baseline: baseline
+    primary_metric: sharpe_ratio
+    source_summary: matrix-summary.json
+    module_map:
+      candidate_a: [mom_filter]
+    output_root: ablation
+""",
+    )
+
+    result = ResearchWorkflowRunner().run(
+        _FakeSession(accepted_specs=()),
+        ResearchWorkflowConfig.from_yaml(workflow_path),
+    )
+
+    assert result.status == "completed"
+    summary = result.steps[0].outputs["ablation_summary"]
+    assert summary["variants"][1]["modules"] == ["mom_filter"]
+    assert summary["variants"][1]["metric_deltas"]["sharpe_ratio"] == 0.2
+
+
 def test_workflow_idea_link_populates_payload_and_report_warning(tmp_path: Path) -> None:
     registry = IdeaRegistry(tmp_path / "ideas")
     registry.save_idea(
@@ -242,6 +286,35 @@ steps:
     assert f"report_path: {tmp_path / 'diagnostics' / 'trade_diagnostics_report.md'}" in report_text
 
 
+def test_research_report_step_accepts_decision_payload(tmp_path: Path) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: decision-flow
+steps:
+  - id: report
+    kind: research_report
+    output_root: reports
+    decision:
+      status: keep_researching
+      reviewer: research@example.com
+      reason: Need more evidence.
+      required_next_evidence: walk_forward
+""",
+    )
+
+    result = ResearchWorkflowRunner().run(
+        _FakeSession(accepted_specs=()),
+        ResearchWorkflowConfig.from_yaml(workflow_path),
+    )
+
+    report_text = (tmp_path / "reports" / "workflow-report.md").read_text(encoding="utf-8")
+    assert result.to_payload()["decision"]["reason"] == ["Need more evidence."]
+    assert "reviewer: research@example.com" in report_text
+    assert "- walk_forward" in report_text
+
+
 def test_route_metadata_appears_in_workflow_payload_and_report(
     tmp_path: Path,
 ) -> None:
@@ -291,6 +364,7 @@ steps:
     assert "## Route Metadata" in report_text
     assert "- route_id: R1" in report_text
     assert "- status: exploration" in report_text
+    assert "- selection_policy:" in report_text
 
 
 def test_report_only_period_cannot_set_route_candidate_status(tmp_path: Path) -> None:
@@ -367,6 +441,37 @@ routes:
     )
 
     with pytest.raises(FileNotFoundError, match="route workflow not found"):
+        ResearchRouteIndex.from_yaml(index_path)
+
+
+def test_route_index_requires_matching_route_id(tmp_path: Path) -> None:
+    route_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: route-a
+route:
+  route_id: B
+  route_name: route_b
+  status: exploration
+  owner: research
+steps:
+  - id: report
+    kind: research_report
+""",
+    )
+    index_path = tmp_path / "research_routes_index.yaml"
+    index_path.write_text(
+        f"""
+version: 1
+routes:
+  - route_id: A
+    workflow: {route_path.name}
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="does not match workflow route_id"):
         ResearchRouteIndex.from_yaml(index_path)
 
 

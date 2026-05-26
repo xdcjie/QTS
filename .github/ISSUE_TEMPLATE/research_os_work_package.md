@@ -35,6 +35,12 @@ behavior.
   when applicable;
 - statement that paper/live/production behavior was not enabled unless this is
   an approved promotion package.
+- relevant Research OS docs reviewed:
+  `docs/research/evidence_registry.md`,
+  `docs/research/idea_registry.md`,
+  `docs/research/factor_protocol.md`,
+  `docs/research/trade_diagnostics.md`, and
+  `docs/research/promotion.md`.
 
 ## Acceptance Criteria
 
