@@ -44,10 +44,15 @@ runs/
 artifacts/analysis/**
 artifacts/verification/**
 
+# Local tool and test artifacts
+.benchmarks/
+
 # Frontend
 node_modules/
 dist/
 build/
+frontend/src/app/
+frontend/tests/routes/
 
 # IDE
 .DS_Store
