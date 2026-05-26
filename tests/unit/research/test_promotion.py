@@ -55,6 +55,62 @@ def test_paper_candidate_requires_validation_scorecard() -> None:
         )
 
 
+def test_small_live_candidate_requires_full_readiness() -> None:
+    with pytest.raises(ValueError, match="small_live_candidate missing readiness item"):
+        PromotionCandidateSpec(
+            promotion_candidate_id="pc_001",
+            strategy_id="vwap",
+            source_module="strategies.research.vwap_factor_research",
+            target_module="strategies.production.vwap_production_pullback",
+            evidence_bundle_id="evb_001",
+            status="small_live_candidate",
+        )
+
+
+def test_promotion_target_module_must_be_production_owned() -> None:
+    with pytest.raises(ValueError, match="target_module must be production-owned"):
+        PromotionCandidateSpec(
+            promotion_candidate_id="pc_001",
+            strategy_id="vwap",
+            source_module="strategies.research.vwap_factor_research",
+            target_module="strategies.research.vwap_factor_research_live",
+            evidence_bundle_id="evb_001",
+        )
+
+
+def test_research_source_to_production_target_allowed() -> None:
+    candidate = PromotionCandidateSpec(
+        promotion_candidate_id="pc_001",
+        strategy_id="vwap",
+        source_module="strategies.research.vwap_factor_research",
+        target_module="strategies.production.vwap_production_pullback",
+        evidence_bundle_id="evb_001",
+    )
+
+    assert candidate.source_module.startswith("strategies.research.")
+    assert candidate.target_module.startswith("strategies.production.")
+
+
+def test_promotion_spec_reports_missing_items() -> None:
+    candidate = PromotionCandidateSpec(
+        promotion_candidate_id="pc_001",
+        strategy_id="vwap",
+        source_module="strategies.research.vwap_factor_research",
+        target_module="strategies.production.vwap_production_pullback",
+        evidence_bundle_id="evb_001",
+    )
+
+    assert candidate.missing_items() == (
+        "evidence_bundle_verified",
+        "trade_diagnostics_available",
+        "validation_scorecard_available",
+        "cost_stress_available",
+        "no_research_import_in_production",
+        "no_examples_direct_promotion",
+    )
+    assert candidate.to_payload()["missing_items"] == list(candidate.missing_items())
+
+
 def test_examples_strategy_cannot_be_promotion_candidate_without_migration_review() -> None:
     with pytest.raises(ValueError, match="examples strategy requires migration review"):
         PromotionCandidateSpec(

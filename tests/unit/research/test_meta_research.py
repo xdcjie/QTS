@@ -13,6 +13,8 @@ def _idea(
     *,
     source: str,
     edge_type: str,
+    edge_types: tuple[str, ...] = (),
+    created_at: datetime = datetime(2026, 5, 5, tzinfo=UTC),
     status: str = "draft",
     trial_count: int = 0,
     rejection_reason: str | None = None,
@@ -22,8 +24,9 @@ def _idea(
         title=f"{idea_id} title",
         hypothesis=f"{idea_id} hypothesis",
         edge_type=edge_type,
+        edge_types=edge_types,
         source=source,
-        created_at=datetime(2026, 5, 5, tzinfo=UTC),
+        created_at=created_at,
         status=status,
         trial_count=trial_count,
         rejection_reason=rejection_reason,
@@ -106,6 +109,106 @@ def test_meta_research_groups_by_source_and_edge_type() -> None:
         "fixture": {"accepted": 1, "rate": 1.0, "total": 1},
         "openalex": {"accepted": 1, "rate": 0.5, "total": 2},
     }
+
+
+def test_meta_research_counts_all_idea_edge_types() -> None:
+    summary = MetaResearchSummary.from_registries(
+        ideas=(
+            _idea(
+                "idea-1",
+                source="openalex",
+                edge_type="carry",
+                edge_types=("carry", "term_structure"),
+            ),
+        ),
+        evidence_records=(),
+        experiment_records=(),
+        period="monthly",
+        period_start=date(2026, 5, 1),
+    )
+
+    assert summary.edge_type_distribution == {"carry": 1, "term_structure": 1}
+
+
+def test_meta_research_filters_ideas_by_created_at_month() -> None:
+    summary = MetaResearchSummary.from_registries(
+        ideas=(
+            _idea(
+                "idea-current",
+                source="openalex",
+                edge_type="carry",
+                created_at=datetime(2026, 5, 15, tzinfo=UTC),
+            ),
+            _idea(
+                "idea-old",
+                source="openalex",
+                edge_type="carry",
+                created_at=datetime(2026, 4, 30, 23, 59, tzinfo=UTC),
+            ),
+        ),
+        evidence_records=(),
+        experiment_records=(),
+        period="monthly",
+        period_start=date(2026, 5, 1),
+    )
+
+    assert summary.ideas_created == 1
+
+
+def test_meta_research_filters_experiment_records_by_recorded_at() -> None:
+    summary = MetaResearchSummary.from_registries(
+        ideas=(),
+        evidence_records=(),
+        experiment_records=(
+            {"accepted": True, "recorded_at": "2026-05-31T23:59:59+00:00"},
+            {"accepted": True, "recorded_at": "2026-06-01T00:00:00+00:00"},
+        ),
+        period="monthly",
+        period_start=date(2026, 5, 1),
+    )
+
+    assert summary.validation_pass_rate == {"accepted": 1, "rate": 1.0, "total": 1}
+
+
+def test_meta_research_filters_evidence_review_decisions_by_time() -> None:
+    summary = MetaResearchSummary.from_registries(
+        ideas=(),
+        evidence_records=(
+            {"accepted": True, "reviewed_at": "2026-05-02T00:00:00+00:00"},
+            {"accepted": True, "reviewed_at": "2026-06-02T00:00:00+00:00"},
+        ),
+        experiment_records=(),
+        period="monthly",
+        period_start=date(2026, 5, 1),
+    )
+
+    assert summary.validation_pass_rate == {"accepted": 1, "rate": 1.0, "total": 1}
+
+
+def test_meta_research_custom_period() -> None:
+    summary = MetaResearchSummary.from_registries(
+        ideas=(
+            _idea(
+                "idea-in",
+                source="openalex",
+                edge_type="carry",
+                created_at=datetime(2026, 5, 10, tzinfo=UTC),
+            ),
+            _idea(
+                "idea-out",
+                source="openalex",
+                edge_type="carry",
+                created_at=datetime(2026, 5, 20, tzinfo=UTC),
+            ),
+        ),
+        evidence_records=(),
+        experiment_records=(),
+        period="custom",
+        period_start=date(2026, 5, 1),
+        period_end=date(2026, 5, 15),
+    )
+
+    assert summary.ideas_created == 1
 
 
 def test_meta_research_flags_high_trial_count_candidates() -> None:

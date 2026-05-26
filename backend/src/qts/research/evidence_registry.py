@@ -52,7 +52,10 @@ class ResearchEvidenceBundle:
     manifest_hashes: Mapping[str, str] | None = None
     artifact_hashes: Mapping[str, str] | None = None
     artifact_paths: Mapping[str, str] | None = None
+    workflow_summary_path: str | None = None
+    workflow_summary_hash: str | None = None
     report_path: str | None = None
+    report_hash: str | None = None
     period_roles: Mapping[str, str] | None = None
     idea_id: str | None = None
     idea_metadata: Mapping[str, Any] | None = None
@@ -84,7 +87,18 @@ class ResearchEvidenceBundle:
             manifest_hashes=_string_mapping(payload.get("manifest_hashes", {})),
             artifact_hashes=_string_mapping(payload.get("artifact_hashes", {})),
             artifact_paths=_string_mapping(payload.get("artifact_paths", {})),
+            workflow_summary_path=(
+                None
+                if payload.get("workflow_summary_path") is None
+                else str(payload["workflow_summary_path"])
+            ),
+            workflow_summary_hash=(
+                None
+                if payload.get("workflow_summary_hash") is None
+                else str(payload["workflow_summary_hash"])
+            ),
             report_path=None if payload.get("report_path") is None else str(payload["report_path"]),
+            report_hash=None if payload.get("report_hash") is None else str(payload["report_hash"]),
             period_roles=_string_mapping(payload.get("period_roles", {})),
             idea_id=None if payload.get("idea_id") is None else str(payload["idea_id"]),
             idea_metadata=_optional_mapping(payload.get("idea_metadata")),
@@ -111,6 +125,7 @@ class ResearchEvidenceBundle:
             "manifest_paths": list(self.manifest_paths),
             "period_roles": dict(self.period_roles or {}),
             "promotion_eligibility": self.promotion_eligibility,
+            "report_hash": self.report_hash,
             "report_path": self.report_path,
             "research_config_hash": self.research_config_hash,
             "review_decisions": [dict(decision) for decision in self.review_decisions],
@@ -119,6 +134,8 @@ class ResearchEvidenceBundle:
             "trial_budget_warnings": [dict(warning) for warning in self.trial_budget_warnings],
             "workflow_config_hash": self.workflow_config_hash,
             "workflow_run_id": self.workflow_run_id,
+            "workflow_summary_hash": self.workflow_summary_hash,
+            "workflow_summary_path": self.workflow_summary_path,
         }
 
     def with_review_decision(self, decision: Mapping[str, Any]) -> ResearchEvidenceBundle:
@@ -175,9 +192,18 @@ class EvidenceRegistry:
         """Create and persist an evidence bundle from a workflow JSON payload."""
 
         payload = _load_json_mapping(workflow_summary_path)
+        summary_base_dir = workflow_summary_path.parent
+        workflow_summary_path_text = str(workflow_summary_path)
+        workflow_summary_hash = _sha256_path(workflow_summary_path)
         run_context = self._mapping(payload.get("run_context", {}))
-        manifest_paths = _collect_output_paths(payload, "manifest_path")
-        report_paths = _collect_output_paths(payload, "report_path")
+        manifest_paths = _resolve_path_texts(
+            _collect_output_paths_for_keys(payload, ("manifest_path", "manifest_paths")),
+            base_dir=summary_base_dir,
+        )
+        report_paths = _resolve_path_texts(
+            _collect_output_paths_for_keys(payload, ("report_path",)),
+            base_dir=summary_base_dir,
+        )
         period_roles = {
             str(period["name"]): str(period["role"])
             for period in payload.get("periods", ())
@@ -187,15 +213,22 @@ class EvidenceRegistry:
         manifest_artifact_hashes = _collect_manifest_artifact_hashes(manifest_paths)
         artifact_path_hashes = _collect_manifest_artifact_paths(manifest_paths)
         artifact_path_hashes.update(
-            _hash_existing_paths(_collect_output_paths(payload, "artifact_path"))
-        )
-        artifact_path_hashes.update(
-            _hash_existing_paths(_collect_output_paths(payload, "artifact_paths"))
+            _hash_existing_paths(
+                _resolve_path_texts(
+                    _collect_output_paths_for_keys(payload, _EVIDENCE_ARTIFACT_PATH_KEYS),
+                    base_dir=summary_base_dir,
+                )
+            )
         )
         report_path = report_paths[-1] if report_paths else None
+        report_hash = None if report_path is None else _sha256_path(Path(report_path))
         summary_idea = _idea_from_payload(payload.get("idea_metadata"))
         if idea is None:
             idea = summary_idea
+        if idea_id is not None and idea is None:
+            raise ValueError(
+                "idea_id requires --idea-registry-root or workflow summary idea_metadata"
+            )
         resolved_idea_id = idea_id
         idea_metadata: Mapping[str, Any] | None = None
         trial_budget_warnings: tuple[Mapping[str, Any], ...] = ()
@@ -209,8 +242,10 @@ class EvidenceRegistry:
             "artifact_paths": artifact_path_hashes,
             "idea_id": resolved_idea_id,
             "manifest_hashes": manifest_hashes,
+            "report_hash": report_hash,
             "report_path": report_path,
-            "summary_hash": _sha256_path(workflow_summary_path),
+            "workflow_summary_hash": workflow_summary_hash,
+            "workflow_summary_path": workflow_summary_path_text,
             "workflow_run_id": payload.get("workflow_id"),
         }
         bundle = ResearchEvidenceBundle(
@@ -228,7 +263,10 @@ class EvidenceRegistry:
                 **artifact_path_hashes,
             },
             artifact_paths=artifact_path_hashes,
+            workflow_summary_path=workflow_summary_path_text,
+            workflow_summary_hash=workflow_summary_hash,
             report_path=report_path,
+            report_hash=report_hash,
             period_roles=period_roles,
             idea_id=resolved_idea_id,
             idea_metadata=idea_metadata,
@@ -262,6 +300,18 @@ class EvidenceRegistry:
         bundle = self.show(evidence_bundle_id)
         checked: list[str] = []
         reasons: list[str] = []
+        if bundle.workflow_summary_path is not None:
+            checked.append(bundle.workflow_summary_path)
+            if not Path(bundle.workflow_summary_path).exists():
+                reasons.append(f"missing referenced path: {bundle.workflow_summary_path}")
+            elif bundle.workflow_summary_hash is not None:
+                actual_hash = _sha256_path(Path(bundle.workflow_summary_path))
+                if actual_hash != bundle.workflow_summary_hash:
+                    reasons.append(
+                        "hash mismatch for "
+                        f"{bundle.workflow_summary_path}: "
+                        f"{actual_hash} != {bundle.workflow_summary_hash}"
+                    )
         for path_text, expected_hash in (bundle.manifest_hashes or {}).items():
             checked.append(path_text)
             path = Path(path_text)
@@ -286,8 +336,16 @@ class EvidenceRegistry:
                 reasons.append(f"artifact hash has no path for recomputation: {artifact_name}")
         if bundle.report_path is not None:
             checked.append(bundle.report_path)
-            if not Path(bundle.report_path).exists():
+            report_path = Path(bundle.report_path)
+            if not report_path.exists():
                 reasons.append(f"missing referenced path: {bundle.report_path}")
+            elif bundle.report_hash is not None:
+                actual_hash = _sha256_path(report_path)
+                if actual_hash != bundle.report_hash:
+                    reasons.append(
+                        f"hash mismatch for {bundle.report_path}: "
+                        f"{actual_hash} != {bundle.report_hash}"
+                    )
         return EvidenceVerificationResult(
             accepted=not reasons,
             checked_paths=tuple(checked),
@@ -343,19 +401,38 @@ def _load_json_mapping(path: Path) -> dict[str, Any]:
     return payload
 
 
+_EVIDENCE_ARTIFACT_PATH_KEYS = (
+    "artifact_path",
+    "artifact_paths",
+    "summary_path",
+    "validation_output",
+    "walk_forward_validation_output",
+    "failure_window_veto_output",
+    "trades_path",
+)
+
+
 def _collect_output_paths(payload: Mapping[str, Any], key: str) -> tuple[str, ...]:
+    return _collect_output_paths_for_keys(payload, (key,))
+
+
+def _collect_output_paths_for_keys(
+    payload: Mapping[str, Any], keys: Sequence[str]
+) -> tuple[str, ...]:
     paths: list[str] = []
+    wanted = set(keys)
     for step in payload.get("steps", ()):
         if not isinstance(step, Mapping):
             continue
         outputs = step.get("outputs", {})
         if not isinstance(outputs, Mapping):
             continue
-        value = outputs.get(key)
-        if isinstance(value, str):
-            paths.append(value)
-        elif isinstance(value, Sequence) and not isinstance(value, str):
-            paths.extend(str(item) for item in value if isinstance(item, (str, Path)))
+        for key in wanted:
+            value = outputs.get(key)
+            if isinstance(value, str):
+                paths.append(value)
+            elif isinstance(value, Sequence) and not isinstance(value, str):
+                paths.extend(str(item) for item in value if isinstance(item, (str, Path)))
     return tuple(paths)
 
 
@@ -381,12 +458,31 @@ def _collect_manifest_artifact_paths(manifest_paths: Sequence[str]) -> dict[str,
         payload = _load_json_mapping(path)
         raw_paths = payload.get("artifact_paths_by_hash", {})
         if isinstance(raw_paths, Mapping):
-            artifact_paths.update({str(item): str(key) for key, item in raw_paths.items()})
+            for artifact_hash, artifact_path in raw_paths.items():
+                if not isinstance(artifact_path, str):
+                    continue
+                resolved_path = Path(artifact_path)
+                if not resolved_path.is_absolute():
+                    resolved_path = path.parent / resolved_path
+                artifact_paths[str(resolved_path)] = str(artifact_hash)
     return artifact_paths
 
 
 def _hash_existing_paths(paths: Sequence[str]) -> dict[str, str]:
     return {path: _sha256_path(Path(path)) for path in paths}
+
+
+def _resolve_path_texts(paths: Sequence[str], *, base_dir: Path) -> tuple[str, ...]:
+    resolved: list[str] = []
+    seen: set[str] = set()
+    for path_text in paths:
+        path = Path(path_text)
+        resolved_path = path if path.is_absolute() else base_dir / path
+        normalized = str(resolved_path)
+        if normalized not in seen:
+            seen.add(normalized)
+            resolved.append(normalized)
+    return tuple(resolved)
 
 
 def _string_tuple(value: Any) -> tuple[str, ...]:

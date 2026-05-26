@@ -733,3 +733,38 @@ def test_research_session_evaluate_factor_generates_artifacts_from_mixed_input_t
     assert payload["as_of"] == "2026-01-03"
     assert payload["metrics"]["scored_count"] == 3
     assert payload["metrics"]["return_count"] == 3
+
+
+def test_research_session_evaluate_factor_preserves_intraday_snapshot_protocol(
+    tmp_path: Path,
+) -> None:
+    config_path = _write_research_config(tmp_path, _minimal_research_yaml(tmp_path))
+    session = ResearchSession.from_yaml(config_path)
+    scores = tmp_path / "scores.csv"
+    scores.write_text("symbol,value\nAAPL,0.9\nMSFT,0.7\n", encoding="utf-8")
+    returns = tmp_path / "returns.csv"
+    returns.write_text("symbol,forward_return\nAAPL,0.04\nMSFT,0.01\n", encoding="utf-8")
+
+    results = session.evaluate_factor(
+        factor_name="momentum",
+        factor_version="1",
+        snapshots=(
+            {
+                "as_of": "2026-01-02",
+                "factor_scores": scores,
+                "forward_returns": returns,
+                "source_data_end": "2026-01-02T10:00:00Z",
+                "available_at": "2026-01-02T10:05:00+00:00",
+                "forward_return_start": "2026-01-02T10:05:00+00:00",
+                "forward_return_end": "2026-01-02T10:20:00+00:00",
+            },
+        ),
+        bucket_count=2,
+        output_dir=tmp_path / "factor-evaluations",
+    )
+
+    payload = json.loads(results[0].artifact_path.read_text(encoding="utf-8"))
+    protocol = payload["forward_return_protocol"]
+    assert protocol["source_data_end"] == "2026-01-02T10:00:00+00:00"
+    assert protocol["available_at"] == "2026-01-02T10:05:00+00:00"
+    assert protocol["forward_return_start"] == "2026-01-02T10:05:00+00:00"

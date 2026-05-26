@@ -72,6 +72,58 @@ def test_trade_diagnostics_groups_by_time_bucket() -> None:
     assert grouped["afternoon"].trade_count == 1
 
 
+def test_trade_diagnostics_time_bucket_supports_overnight_window() -> None:
+    report = TradeDiagnosticsReport(
+        trades=(
+            TradeDiagnostic(
+                r_pnl=1.0,
+                mae_r=-0.2,
+                mfe_r=1.4,
+                exit_reason="target",
+                exited_at=datetime(2024, 1, 2, 23, 30, tzinfo=UTC),
+            ),
+            TradeDiagnostic(
+                r_pnl=-0.5,
+                mae_r=-1.0,
+                mfe_r=0.3,
+                exit_reason="stop",
+                exited_at=datetime(2024, 1, 3, 1, 30, tzinfo=UTC),
+            ),
+        )
+    )
+
+    grouped = report.group_by_time_bucket({"asia_overnight": (20, 2)})
+
+    assert grouped["asia_overnight"].trade_count == 2
+
+
+def test_trade_diagnostics_rejects_unknown_direction() -> None:
+    with pytest.raises(ValueError, match="direction"):
+        TradeDiagnostic(
+            r_pnl=1.0,
+            mae_r=-0.2,
+            mfe_r=1.4,
+            exit_reason="target",
+            direction="flat",
+        )
+
+
+def test_trade_diagnostics_rejects_non_positive_quantity() -> None:
+    with pytest.raises(ValueError, match="quantity"):
+        TradeDiagnostic(r_pnl=1.0, mae_r=-0.2, mfe_r=1.4, exit_reason="target", quantity=0)
+
+
+def test_trade_diagnostics_rejects_negative_holding_bars() -> None:
+    with pytest.raises(ValueError, match="holding_bars"):
+        TradeDiagnostic(
+            r_pnl=1.0,
+            mae_r=-0.2,
+            mfe_r=1.4,
+            exit_reason="target",
+            holding_bars=-1,
+        )
+
+
 def test_trade_diagnostics_groups_by_quantity() -> None:
     report = TradeDiagnosticsReport(
         trades=(
@@ -116,6 +168,28 @@ def test_trade_diagnostics_groups_by_factor_buckets() -> None:
 
     assert grouped["negative"].trade_count == 1
     assert grouped["positive"].trade_count == 1
+
+
+def test_trade_diagnostics_factor_bucket_missing_and_unbucketed() -> None:
+    report = TradeDiagnosticsReport(
+        trades=(
+            TradeDiagnostic(r_pnl=1.0, mae_r=-0.2, mfe_r=1.4, exit_reason="target"),
+            TradeDiagnostic(
+                r_pnl=-0.5,
+                mae_r=-1.0,
+                mfe_r=0.3,
+                exit_reason="stop",
+                factor_values={"momentum": 5.0},
+            ),
+        )
+    )
+
+    grouped = report.group_by_factor_buckets(
+        FactorBucketSpec(factor_name="momentum", buckets=(("normal", -1.0, 1.0),))
+    )
+
+    assert grouped["<missing>"].trade_count == 1
+    assert grouped["<unbucketed>"].trade_count == 1
 
 
 def test_missing_trade_diagnostics_blocks_paper_candidate() -> None:

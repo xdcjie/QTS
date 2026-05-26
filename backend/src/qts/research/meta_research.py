@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, date, datetime, time
 from pathlib import Path
 from typing import Any
 
@@ -47,13 +47,38 @@ class MetaResearchSummary:
         experiment_records: Sequence[Mapping[str, Any]],
         period: str,
         period_start: date,
+        period_end: date | None = None,
+        all_history: bool = False,
         trial_count_outlier_threshold: int = 10,
     ) -> MetaResearchSummary:
         """Build a read-only summary from idea, evidence, and experiment records."""
 
-        idea_tuple = tuple(ideas)
-        evidence_tuple = tuple(dict(record) for record in evidence_records)
-        experiment_tuple = tuple(dict(record) for record in experiment_records)
+        resolved_period_end = _period_end(period, period_start, period_end)
+        idea_tuple = tuple(
+            ideas
+            if all_history
+            else (
+                idea
+                for idea in ideas
+                if _datetime_in_period(
+                    idea.created_at,
+                    period_start=period_start,
+                    period_end=resolved_period_end,
+                )
+            )
+        )
+        evidence_tuple = tuple(
+            record
+            for record in (dict(record) for record in evidence_records)
+            if all_history
+            or _record_in_period(record, period_start=period_start, period_end=resolved_period_end)
+        )
+        experiment_tuple = tuple(
+            record
+            for record in (dict(record) for record in experiment_records)
+            if all_history
+            or _record_in_period(record, period_start=period_start, period_end=resolved_period_end)
+        )
         validation_records = evidence_tuple + experiment_tuple
         return cls(
             period=period,
@@ -143,6 +168,9 @@ def _evidence_bundle_record(bundle: ResearchEvidenceBundle) -> dict[str, Any]:
     decision = bundle.review_decisions[-1] if bundle.review_decisions else {}
     if decision:
         status = str(decision.get("status", "")).strip()
+        reviewed_at = decision.get("reviewed_at")
+        if isinstance(reviewed_at, str) and reviewed_at.strip():
+            record["reviewed_at"] = reviewed_at.strip()
         if status in {"paper_candidate", "small_live_candidate"}:
             record["accepted"] = True
         elif status in {"reject", "rejected", "retire", "retired"}:
@@ -231,8 +259,72 @@ def _source_success_rate(
 def _edge_type_distribution(ideas: Sequence[IdeaSpec]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for idea in ideas:
-        counts[idea.edge_type] = counts.get(idea.edge_type, 0) + 1
+        edge_types = getattr(idea, "edge_types", ()) or (idea.edge_type,)
+        for edge_type in edge_types:
+            counts[str(edge_type)] = counts.get(str(edge_type), 0) + 1
     return dict(sorted(counts.items()))
+
+
+def _period_end(period: str, period_start: date, period_end: date | None) -> date:
+    if period == "monthly":
+        year = period_start.year + (1 if period_start.month == 12 else 0)
+        month = 1 if period_start.month == 12 else period_start.month + 1
+        return date(year, month, 1)
+    if period == "quarterly":
+        next_month = ((period_start.month - 1) // 3 + 1) * 3 + 1
+        year = period_start.year + (1 if next_month > 12 else 0)
+        month = next_month - 12 if next_month > 12 else next_month
+        return date(year, month, 1)
+    if period == "custom":
+        if period_end is None:
+            raise ValueError("custom meta-research period requires period_end")
+        if period_start >= period_end:
+            raise ValueError("period_start must be before period_end")
+        return period_end
+    raise ValueError("period must be monthly, quarterly, or custom")
+
+
+def _record_in_period(
+    record: Mapping[str, Any],
+    *,
+    period_start: date,
+    period_end: date,
+) -> bool:
+    record_time = _record_time(record)
+    if record_time is None:
+        return True
+    return _datetime_in_period(record_time, period_start=period_start, period_end=period_end)
+
+
+def _record_time(record: Mapping[str, Any]) -> datetime | None:
+    for key in ("recorded_at", "created_at", "reviewed_at"):
+        value = record.get(key)
+        if isinstance(value, datetime):
+            return value
+        if isinstance(value, str) and value.strip():
+            return _parse_datetime(value)
+    decision = record.get("decision")
+    if isinstance(decision, Mapping):
+        reviewed_at = decision.get("reviewed_at")
+        if isinstance(reviewed_at, str) and reviewed_at.strip():
+            return _parse_datetime(reviewed_at)
+    return None
+
+
+def _parse_datetime(value: str) -> datetime:
+    text = value.strip().replace("Z", "+00:00")
+    parsed = datetime.fromisoformat(text)
+    if isinstance(parsed, datetime):
+        return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
+    return datetime.combine(parsed, time.min, tzinfo=UTC)
+
+
+def _datetime_in_period(value: datetime, *, period_start: date, period_end: date) -> bool:
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=UTC)
+    start = datetime.combine(period_start, time.min, tzinfo=UTC)
+    end = datetime.combine(period_end, time.min, tzinfo=UTC)
+    return start <= value.astimezone(UTC) < end
 
 
 def _trial_count_outliers(

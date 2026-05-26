@@ -81,6 +81,63 @@ def test_ablation_plan_requires_each_declared_module_contribution() -> None:
         )
 
 
+def test_ablation_loads_runs_from_backtest_matrix_summary() -> None:
+    plan = AblationPlan.from_backtest_matrix_summary(
+        {
+            "metrics": ["sharpe_ratio", "total_trades"],
+            "rows": [
+                {
+                    "candidate": "baseline",
+                    "period": "IS",
+                    "sharpe_ratio": 1.0,
+                    "total_trades": 10,
+                },
+                {
+                    "candidate": "candidate_a",
+                    "period": "IS",
+                    "sharpe_ratio": 1.25,
+                    "total_trades": 8,
+                },
+            ],
+        },
+        baseline="baseline",
+        module_map={"candidate_a": ["mom_filter"]},
+    )
+
+    assert plan.modules == ("mom_filter",)
+    assert plan.runs[0].name == "baseline"
+    assert plan.runs[1].metrics["sharpe_ratio"] == pytest.approx(1.25)
+    assert plan.runs[1].trade_count == 8
+
+
+def test_ablation_rejects_missing_baseline_in_summary() -> None:
+    with pytest.raises(ValueError, match="baseline"):
+        AblationPlan.from_backtest_matrix_summary(
+            {
+                "metrics": ["sharpe_ratio"],
+                "rows": [{"candidate": "candidate_a", "sharpe_ratio": 1.1}],
+            },
+            baseline="baseline",
+            module_map={"candidate_a": ["mom_filter"]},
+        )
+
+
+def test_ablation_maps_candidate_modules() -> None:
+    plan = AblationPlan.from_backtest_matrix_summary(
+        {
+            "metrics": ["sharpe_ratio"],
+            "rows": [
+                {"candidate": "baseline", "period": "IS", "sharpe_ratio": 1.0},
+                {"candidate": "candidate_a", "period": "IS", "sharpe_ratio": 1.1},
+            ],
+        },
+        baseline="baseline",
+        module_map={"candidate_a": ["mom_filter"]},
+    )
+
+    assert plan.runs[1].modules == ("mom_filter",)
+
+
 def test_ablation_flags_is_only_improvement() -> None:
     report = AblationReport.from_plan(
         AblationPlan(

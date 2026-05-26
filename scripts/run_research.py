@@ -98,6 +98,7 @@ def _add_evidence_parser(subparsers: Any) -> None:
     )
     bundle.add_argument("--workflow-summary", type=Path, required=True)
     bundle.add_argument("--idea-id", default=None)
+    bundle.add_argument("--idea-registry-root", type=Path, default=None)
     bundle.add_argument("--strategy-id", default=None)
 
     evidence_subparsers.add_parser("list", help="List evidence bundles")
@@ -147,6 +148,12 @@ def _add_meta_parser(subparsers: Any) -> None:
     summary.add_argument("--experiment-records", type=Path, default=None)
     summary.add_argument("--period", required=True)
     summary.add_argument("--period-start", required=True)
+    summary.add_argument("--period-end", default=None)
+    summary.add_argument(
+        "--all-history",
+        action="store_true",
+        help="Include timestamped records outside the requested period",
+    )
     summary.add_argument("--trial-count-outlier-threshold", type=int, default=10)
 
 
@@ -250,8 +257,14 @@ def _run_workflow(args: argparse.Namespace, session: ResearchSession) -> int:
 def _run_evidence(args: argparse.Namespace) -> int:
     registry = EvidenceRegistry(args.registry_root)
     if args.evidence_command == "bundle":
+        idea = (
+            None
+            if args.idea_id is None or args.idea_registry_root is None
+            else IdeaRegistry(args.idea_registry_root).get(args.idea_id)
+        )
         bundle = registry.create_from_workflow_summary(
             args.workflow_summary,
+            idea=idea,
             idea_id=args.idea_id,
             strategy_id=args.strategy_id,
         )
@@ -322,6 +335,8 @@ def _run_meta(args: argparse.Namespace) -> int:
             experiment_records=experiment_records,
             period=args.period,
             period_start=date.fromisoformat(args.period_start),
+            period_end=(None if args.period_end is None else date.fromisoformat(args.period_end)),
+            all_history=args.all_history,
             trial_count_outlier_threshold=args.trial_count_outlier_threshold,
         )
         artifacts = MetaResearchSummaryWriter().write(args.output_dir, summary)

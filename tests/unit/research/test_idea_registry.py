@@ -58,6 +58,61 @@ def test_idea_registry_rejects_unknown_edge_type() -> None:
         _idea(edge_type="moon-phase")
 
 
+def test_idea_spec_accepts_multiple_edge_types() -> None:
+    idea = IdeaSpec(
+        idea_id="idea-multi",
+        title="multi edge",
+        hypothesis="Term structure and carry effects can persist after costs.",
+        edge_type="carry",
+        edge_types=("carry", "term_structure"),
+        source="openalex",
+        created_at=datetime(2026, 5, 20, 12, 30, tzinfo=UTC),
+    )
+
+    assert idea.edge_type == "carry"
+    assert idea.edge_types == ("carry", "term_structure")
+    assert idea.to_payload()["edge_types"] == ["carry", "term_structure"]
+
+
+def test_idea_spec_backwards_compatible_edge_type() -> None:
+    idea = IdeaSpec.from_payload(
+        {
+            "created_at": "2026-05-20T12:30:00+00:00",
+            "edge_type": "momentum",
+            "hypothesis": "Momentum persists.",
+            "idea_id": "idea-legacy",
+            "source": "openalex",
+            "title": "legacy edge",
+        }
+    )
+
+    assert idea.edge_type == "momentum"
+    assert idea.edge_types == ("momentum",)
+
+
+def test_idea_status_lifecycle_values() -> None:
+    for status in (
+        "idea",
+        "factor_candidate",
+        "strategy_prototype",
+        "validated_research",
+        "frozen_forward",
+        "paper_candidate",
+        "rejected",
+        "retired",
+    ):
+        idea = IdeaSpec(
+            idea_id=f"idea-{status}",
+            title=f"{status} title",
+            hypothesis="Lifecycle state is accepted by the governance schema.",
+            edge_type="carry",
+            source="openalex",
+            created_at=datetime(2026, 5, 20, 12, 30, tzinfo=UTC),
+            status=status,
+        )
+        assert idea.status == status
+
+
 def test_experiment_increments_idea_trial_count(tmp_path: Path) -> None:
     registry = IdeaRegistry(tmp_path)
     registry.save_idea(_idea())

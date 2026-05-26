@@ -26,3 +26,29 @@ def test_research_os_issue_template_requires_evidence_and_acceptance_criteria() 
     assert "## Acceptance Criteria" in template
     assert "research evidence != paper/live/production" in template
     assert "Final response reports `DONE`, `DONE_WITH_CONCERNS`, `BLOCKED`, or" in template
+
+
+def test_research_os_docs_reference_cli_examples() -> None:
+    doc = Path("docs/research/research_os.md").read_text(encoding="utf-8")
+
+    assert "scripts/run_research.py" in doc
+    assert "evidence --registry-root" in doc
+    assert "idea --registry-root" in doc
+    assert "meta --output-dir" in doc
+    assert "source_summary: matrix-summary.json" in doc
+
+
+def test_research_os_issue_template_links_required_docs() -> None:
+    template = Path(".github/ISSUE_TEMPLATE/research_os_work_package.md").read_text(
+        encoding="utf-8"
+    )
+
+    for doc_path in (
+        "docs/research/evidence_registry.md",
+        "docs/research/idea_registry.md",
+        "docs/research/factor_protocol.md",
+        "docs/research/trade_diagnostics.md",
+        "docs/research/promotion.md",
+    ):
+        assert doc_path in template
+        assert Path(doc_path).exists()

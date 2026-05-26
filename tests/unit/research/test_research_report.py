@@ -278,6 +278,63 @@ def test_report_decision_blocks_paper_without_required_evidence() -> None:
         )
 
 
+def test_small_live_candidate_requires_paper_evidence() -> None:
+    with pytest.raises(ValueError, match="small_live_candidate requires evidence_bundle_id"):
+        ResearchReviewDecision(status="small_live_candidate")
+
+
+def test_research_report_decision_string_reason_not_split_into_chars() -> None:
+    report = ResearchWorkflowReport.from_result(
+        ResearchWorkflowResult(
+            workflow_id="decision-flow",
+            status="completed",
+            steps=(),
+            decision={
+                "status": "keep_researching",
+                "reason": "Need one more frozen-forward month.",
+                "required_next_evidence": "trade diagnostics by factor bucket",
+            },
+        )
+    )
+
+    assert report.decision.reason == ("Need one more frozen-forward month.",)
+    assert report.decision.required_next_evidence == ("trade diagnostics by factor bucket",)
+
+
+def test_optimizer_report_shows_validation_policy_reasons() -> None:
+    report = ResearchWorkflowReport.from_result(
+        ResearchWorkflowResult(
+            workflow_id="policy-flow",
+            status="blocked",
+            steps=(
+                _result_step(
+                    "optimize",
+                    "blocked",
+                    {
+                        "ranked_results": [],
+                        "run_count": 1,
+                        "validation_policy": {
+                            "blocked": True,
+                            "missing_evidence": ["walk_forward"],
+                            "reasons": ["min_robustness_score: 0 < 30"],
+                        },
+                        "validation_summary": {
+                            "accepted_count": 0,
+                            "rejected_count": 1,
+                        },
+                    },
+                ),
+            ),
+        )
+    )
+
+    body = report.to_markdown()
+
+    assert "validation_policy_blocked: True" in body
+    assert "validation_policy_reason: min_robustness_score: 0 < 30" in body
+    assert "missing_evidence: walk_forward" in body
+
+
 def test_report_renders_machine_readable_decision_block() -> None:
     report = ResearchWorkflowReport.from_result(
         ResearchWorkflowResult(

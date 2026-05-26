@@ -72,6 +72,29 @@ class AblationPlan:
         object.__setattr__(self, "modules", module_tuple)
         object.__setattr__(self, "runs", run_tuple)
 
+    @classmethod
+    def from_backtest_matrix_summary(
+        cls,
+        payload: Mapping[str, Any],
+        *,
+        baseline: str,
+        module_map: Mapping[str, Sequence[str]] | None = None,
+    ) -> AblationPlan:
+        """Build an ablation plan from a completed backtest-matrix summary."""
+
+        runs_by_name = _matrix_runs_by_candidate(payload, module_map=module_map or {})
+        if baseline not in runs_by_name:
+            raise ValueError("ablation source_summary does not contain baseline")
+        ordered_names = [baseline] + sorted(
+            (name for name in runs_by_name if name != baseline),
+            key=lambda name: (len(runs_by_name[name].modules), name),
+        )
+        runs = tuple(runs_by_name[name] for name in ordered_names)
+        modules = tuple(
+            dict.fromkeys(module for run in runs for module in run.modules if run.name != baseline)
+        )
+        return cls(baseline=baseline, modules=modules, runs=runs)
+
     @staticmethod
     def _validate(baseline: str, modules: tuple[str, ...], runs: tuple[AblationRun, ...]) -> None:
         if not baseline:
@@ -322,6 +345,106 @@ class AblationReportWriter:
         if not target.is_relative_to(root):
             raise ValueError("output_path must remain inside ablation output root")
         return target
+
+
+def _matrix_runs_by_candidate(
+    payload: Mapping[str, Any],
+    *,
+    module_map: Mapping[str, Sequence[str]],
+) -> dict[str, AblationRun]:
+    raw_rows = payload.get("rows", payload.get("runs", ()))
+    if not isinstance(raw_rows, Sequence) or isinstance(raw_rows, str) or not raw_rows:
+        raise ValueError("ablation source_summary rows must not be empty")
+    metric_names = tuple(str(item) for item in payload.get("metrics", ()) if isinstance(item, str))
+    grouped: dict[str, list[Mapping[str, Any]]] = {}
+    for row in raw_rows:
+        if not isinstance(row, Mapping):
+            raise ValueError("ablation source_summary rows must be mappings")
+        candidate = row.get("candidate", row.get("name"))
+        if not isinstance(candidate, str) or not candidate:
+            raise ValueError("ablation source_summary row candidate is required")
+        grouped.setdefault(candidate, []).append(row)
+    return {
+        name: _matrix_candidate_run(
+            name,
+            rows=rows,
+            metric_names=metric_names,
+            modules=tuple(str(item) for item in module_map.get(name, ())),
+        )
+        for name, rows in grouped.items()
+    }
+
+
+def _matrix_candidate_run(
+    name: str,
+    *,
+    rows: Sequence[Mapping[str, Any]],
+    metric_names: Sequence[str],
+    modules: Sequence[str],
+) -> AblationRun:
+    return AblationRun(
+        name=name,
+        modules=modules,
+        metrics=_aggregate_matrix_metrics(rows, metric_names=metric_names),
+        split_metrics={
+            str(row["period"]): _row_metrics(row, metric_names=metric_names)
+            for row in rows
+            if isinstance(row.get("period"), str)
+        },
+        trade_count=_aggregate_trade_count(rows),
+    )
+
+
+def _aggregate_matrix_metrics(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    metric_names: Sequence[str],
+) -> dict[str, float]:
+    candidate_metrics: dict[str, list[float]] = {}
+    for row in rows:
+        for metric, value in _row_metrics(row, metric_names=metric_names).items():
+            candidate_metrics.setdefault(metric, []).append(value)
+    return {
+        metric: sum(values) / len(values)
+        for metric, values in sorted(candidate_metrics.items())
+        if values
+    }
+
+
+def _row_metrics(row: Mapping[str, Any], *, metric_names: Sequence[str]) -> dict[str, float]:
+    names = metric_names or tuple(
+        key
+        for key, value in row.items()
+        if key
+        not in {
+            "candidate",
+            "manifest_path",
+            "period",
+            "processed_bars",
+            "strategy_params",
+            "trading_bars",
+        }
+        and isinstance(value, int | float | str)
+    )
+    metrics: dict[str, float] = {}
+    for metric in names:
+        value = row.get(metric)
+        if value is None:
+            continue
+        metrics[str(metric)] = float(value)
+    return metrics
+
+
+def _aggregate_trade_count(rows: Sequence[Mapping[str, Any]]) -> int | None:
+    total = 0
+    found = False
+    for row in rows:
+        value = row.get("trade_count", row.get("total_trades"))
+        if value is None:
+            continue
+        total += int(float(value))
+        found = True
+    return total if found else None
 
 
 def _split_delta(

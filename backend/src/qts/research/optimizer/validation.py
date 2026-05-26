@@ -145,22 +145,80 @@ class ResearchValidationPolicy:
     """Hard-gate policy over optimizer validation evidence."""
 
     require_passing_candidate: bool = False
+    min_accepted_count: int | None = None
+    min_robustness_score: Decimal | None = None
+    require_walk_forward: bool = False
+    require_failure_window: bool = False
+    require_cost_stress: bool = False
+    max_rejected_count: int | None = None
 
-    def evaluate(self, summary: OptimizerValidationSummary) -> dict[str, Any]:
+    def __post_init__(self) -> None:
+        if self.min_accepted_count is not None and self.min_accepted_count < 0:
+            raise ValueError("min_accepted_count must be non-negative")
+        if self.max_rejected_count is not None and self.max_rejected_count < 0:
+            raise ValueError("max_rejected_count must be non-negative")
+
+    def evaluate(
+        self,
+        summary: OptimizerValidationSummary,
+        *,
+        walk_forward_present: bool = False,
+        failure_window_present: bool = False,
+        cost_stress_present: bool = False,
+    ) -> dict[str, Any]:
         """Return machine-readable gate status for optimizer candidate review."""
 
-        blocked = self.require_passing_candidate and summary.accepted_count == 0
+        reasons: list[str] = []
+        missing_evidence: list[str] = []
+        if self.require_passing_candidate and summary.accepted_count == 0:
+            reasons.append("require_passing_candidate: no accepted optimizer candidate")
+        if self.min_accepted_count is not None and summary.accepted_count < self.min_accepted_count:
+            reasons.append(
+                f"min_accepted_count: {summary.accepted_count} < {self.min_accepted_count}"
+            )
+        if (
+            self.min_robustness_score is not None
+            and summary.robustness_score < self.min_robustness_score
+        ):
+            reasons.append(
+                "min_robustness_score: "
+                f"{_decimal_text(summary.robustness_score)} < "
+                f"{_decimal_text(self.min_robustness_score)}"
+            )
+        if self.max_rejected_count is not None and summary.rejected_count > self.max_rejected_count:
+            reasons.append(
+                f"max_rejected_count: {summary.rejected_count} > {self.max_rejected_count}"
+            )
+        if self.require_walk_forward and not walk_forward_present:
+            missing_evidence.append("walk_forward")
+        if self.require_failure_window and not failure_window_present:
+            missing_evidence.append("failure_window")
+        if self.require_cost_stress and not cost_stress_present:
+            missing_evidence.append("cost_stress")
+        blocked = bool(reasons or missing_evidence)
         return {
             "accepted": not blocked,
             "accepted_count": summary.accepted_count,
             "blocked": blocked,
+            "max_rejected_count": self.max_rejected_count,
+            "min_accepted_count": self.min_accepted_count,
+            "min_robustness_score": (
+                None
+                if self.min_robustness_score is None
+                else _decimal_text(self.min_robustness_score)
+            ),
+            "missing_evidence": tuple(missing_evidence),
+            "reasons": tuple(reasons),
             "rejected_count": summary.rejected_count,
             "rejection_reasons": tuple(
                 reason
                 for rejection in summary.rejections
                 for reason in rejection.get("rejection_reasons", ())
             ),
+            "require_cost_stress": self.require_cost_stress,
+            "require_failure_window": self.require_failure_window,
             "require_passing_candidate": self.require_passing_candidate,
+            "require_walk_forward": self.require_walk_forward,
             "robustness_score": _decimal_text(summary.robustness_score),
         }
 

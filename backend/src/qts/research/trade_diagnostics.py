@@ -45,6 +45,12 @@ class TradeDiagnostic:
             raise ValueError("Trade diagnostics require MFE_R")
         if not self.exit_reason:
             raise ValueError("Trade diagnostics require exit_reason")
+        if self.direction is not None and self.direction not in _ALLOWED_TRADE_DIRECTIONS:
+            raise ValueError("Trade diagnostics direction must be long or short")
+        if self.quantity is not None and float(self.quantity) <= 0:
+            raise ValueError("Trade diagnostics quantity must be positive")
+        if self.holding_bars is not None and self.holding_bars < 0:
+            raise ValueError("Trade diagnostics holding_bars must be non-negative")
         exit_time = self.exit_time or self.exited_at
         factor_snapshot = dict(self.factor_snapshot or self.factor_values or {})
         object.__setattr__(self, "exit_time", exit_time)
@@ -208,7 +214,7 @@ class TradeDiagnosticsReport:
                 return "<missing>"
             hour = trade.exited_at.hour
             for label, (start_hour, end_hour) in buckets.items():
-                if start_hour <= hour < end_hour:
+                if _hour_in_bucket(hour, start_hour=start_hour, end_hour=end_hour):
                     return label
             return "<unbucketed>"
 
@@ -400,6 +406,17 @@ def _json_ready(value: Any) -> Any:
     return value
 
 
+def _hour_in_bucket(hour: int, *, start_hour: int, end_hour: int) -> bool:
+    if not 0 <= start_hour <= 24 or not 0 <= end_hour <= 24:
+        raise ValueError("time bucket hours must be between 0 and 24")
+    if start_hour == end_hour:
+        return False
+    if start_hour < end_hour:
+        return start_hour <= hour < end_hour
+    return hour >= start_hour or hour < end_hour
+
+
+_ALLOWED_TRADE_DIRECTIONS = frozenset({"long", "short"})
 _STANDARD_TRADE_DIAGNOSTIC_FIELDS = (
     "trade_id",
     "strategy_id",
