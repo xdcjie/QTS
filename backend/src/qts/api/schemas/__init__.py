@@ -15,6 +15,17 @@ from qts.api.schemas.operations import (
     RuntimeCommandResultResponse,
     RuntimeCommandResultResponseSchema,
 )
+from qts.api.schemas.research_schema import (
+    PromotionDecisionListSchema,
+    PromotionDecisionSchema,
+    ResearchReportListSchema,
+    ResearchReportSchema,
+    ResearchRunComparisonSchema,
+    ResearchRunListSchema,
+    ResearchRunSchema,
+    StrategyLifecycleListSchema,
+    StrategyLifecycleSchema,
+)
 
 __all__ = [
     "BacktestRequestSchema",
@@ -26,8 +37,17 @@ __all__ = [
     "KillSwitchResponse",
     "KillSwitchResponseSchema",
     "KillSwitchScopeSchema",
+    "PromotionDecisionListSchema",
+    "PromotionDecisionSchema",
+    "ResearchReportListSchema",
+    "ResearchReportSchema",
+    "ResearchRunComparisonSchema",
+    "ResearchRunListSchema",
+    "ResearchRunSchema",
     "RuntimeCommandResultResponse",
     "RuntimeCommandResultResponseSchema",
     "RuntimeCommandResponse",
     "RuntimeCommandResponseSchema",
+    "StrategyLifecycleListSchema",
+    "StrategyLifecycleSchema",
 ]

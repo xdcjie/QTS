@@ -214,6 +214,121 @@ exceptions:
     reason: workflow-level research idea registry link for evidence/report provenance
     owner: platform
     expiry: 2027-05-26
+  - class_name: ResearchCandidate
+    module: qts.research.manifest
+    reason: research OS deterministic candidate parameter evidence value object
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ResearchManifest
+    module: qts.research.manifest
+    reason: research OS normalized manifest owner for run, data, strategy, split, and promotion config
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ResearchMetrics
+    module: qts.research.metrics
+    reason: research OS stable comparable metric schema owner
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: PromotionGateResult
+    module: qts.research.promotion
+    reason: research OS machine-readable promotion gate result evidence value object
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ResearchPromotionDecision
+    module: qts.research.promotion
+    reason: research OS promotion decision evidence value object
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ResearchPromotionPolicy
+    module: qts.research.promotion
+    reason: research OS anti-overfit gate policy owner
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: PaperLiveReadinessEvidence
+    module: qts.research.readiness
+    reason: research OS paper/live readiness evidence value object
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: HumanApprovalRecord
+    module: qts.research.readiness
+    reason: research OS paper/live readiness human approval evidence value object
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: PaperLiveReadinessDecision
+    module: qts.research.readiness
+    reason: research OS readiness gate decision artifact owner
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ResearchRunRecord
+    module: qts.research.registry
+    reason: research OS manifest-driven run registry row value object
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ResearchRunRegistry
+    module: qts.research.registry
+    reason: research OS append-only JSONL run registry owner
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ResearchSystemReport
+    module: qts.research.report
+    reason: research OS deterministic Markdown report evidence value object
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ResearchSystemReportWriter
+    module: qts.research.report
+    reason: research OS deterministic report artifact writer owner
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ReproducibilitySnapshot
+    module: qts.research.reproducibility
+    reason: research OS git and interpreter reproducibility metadata value object
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ResearchSplit
+    module: qts.research.splits
+    reason: research OS immutable leakage-safe split window value object
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ResearchSplitPlan
+    module: qts.research.splits
+    reason: research OS leakage-safe split manifest owner
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: LifecycleStatus
+    module: qts.research.strategy_registry
+    reason: research OS strategy lifecycle status vocabulary
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: StrategyRecord
+    module: qts.research.strategy_registry
+    reason: research OS lifecycle-managed strategy registry value object
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: StrategyCard
+    module: qts.research.strategy_registry
+    reason: research OS strategy card front matter owner
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: PromotionDecision
+    module: qts.research.strategy_registry
+    reason: research OS explicit lifecycle transition decision evidence value object
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: StrategyRegistry
+    module: qts.research.strategy_registry
+    reason: research OS validated strategy lifecycle registry owner
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ResearchDryRunResult
+    module: qts.research.system_run
+    reason: research OS dry-run artifact result value object
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ResearchDryRunRunner
+    module: qts.research.system_run
+    reason: research OS manifest-driven dry-run artifact orchestration owner
+    owner: platform
+    expiry: 2027-05-26
   - class_name: TradeDiagnosticsArtifacts
     module: qts.research.trade_diagnostics
     reason: research trade diagnostics artifact path value object for promotion evidence review

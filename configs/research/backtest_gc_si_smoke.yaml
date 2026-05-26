@@ -1,0 +1,41 @@
+run:
+  id: gc-si-smoke-dry-run
+  question: Does a simple GC/SI momentum configuration have enough evidence to enter promotion review?
+strategy:
+  id: gc_si_momentum
+  entrypoint: examples.strategies.gc_si_momentum:GcSiMomentumStrategy
+  hypothesis: Gold and silver short-horizon momentum can be compared through a shared backtest evidence path.
+  default_config: ../strategies/gc_si_momentum.yaml
+data:
+  dataset_id: research_futures_gc_si_1m
+  config: ../data/historical.local.yaml
+  catalog: research_futures
+  roots: [GC, SI]
+  timeframe: 1m
+  start: "2010-06-06T22:00:00Z"
+  end: "2010-06-06T22:05:00Z"
+parameter_grid:
+  short_window: [1, 2]
+  long_window: [2, 3]
+random_search:
+  seed: 17
+  samples: 2
+  parameters:
+    short_window: [1, 2, 3]
+    long_window: [2, 3, 4]
+promotion_config: ../promotion/default.yaml
+output_root: artifacts/research
+splits:
+  windows:
+    - name: train
+      role: in_sample
+      start: "2010-06-06"
+      end: "2010-06-07"
+    - name: validation
+      role: validation
+      start: "2010-06-07"
+      end: "2010-06-08"
+    - name: oos
+      role: out_of_sample
+      start: "2010-06-08"
+      end: "2010-06-09"

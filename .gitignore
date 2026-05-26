@@ -44,6 +44,9 @@ runs/
 artifacts/analysis/**
 artifacts/verification/**
 artifacts/repo_hygiene_report.md
+artifacts/research/**
+artifacts/readiness/**
+evaluation-output/
 
 # Local tool and test artifacts
 .benchmarks/

@@ -3,6 +3,7 @@ from qts.api.routes.backtests import router as backtests_router
 from qts.api.routes.health import router as health_router
 from qts.api.routes.operations import router as operations_router
 from qts.api.routes.orders import router as orders_router
+from qts.api.routes.research import router as research_router
 from qts.api.routes.strategies import router as strategies_router
 
 __all__ = [
@@ -11,5 +12,6 @@ __all__ = [
     "health_router",
     "operations_router",
     "orders_router",
+    "research_router",
     "strategies_router",
 ]

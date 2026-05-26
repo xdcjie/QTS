@@ -57,22 +57,39 @@ from qts.research.idea_registry import (
     validate_promotion_candidate,
 )
 from qts.research.idea_spec import IdeaSpec
+from qts.research.manifest import ResearchCandidate, ResearchManifest
 from qts.research.meta_research import (
     MetaResearchArtifacts,
     MetaResearchSummary,
     MetaResearchSummaryWriter,
 )
+from qts.research.metrics import REQUIRED_METRIC_GROUPS, ResearchMetrics
 from qts.research.portfolio_ensemble import (
     evaluate_portfolio_ensemble,
     scan_portfolio_ensemble_allocations,
     scan_volatility_managed_allocations,
 )
-from qts.research.promotion import PaperReadinessChecklist, PromotionCandidateSpec
+from qts.research.promotion import (
+    PaperReadinessChecklist,
+    PromotionCandidateSpec,
+    PromotionGateResult,
+    ResearchPromotionDecision,
+    ResearchPromotionPolicy,
+)
+from qts.research.readiness import (
+    HumanApprovalRecord,
+    PaperLiveReadinessDecision,
+    PaperLiveReadinessEvidence,
+)
+from qts.research.registry import ResearchRunRecord, ResearchRunRegistry
 from qts.research.report import (
     ResearchReviewDecision,
+    ResearchSystemReport,
+    ResearchSystemReportWriter,
     ResearchWorkflowReport,
     ResearchWorkflowReportWriter,
 )
+from qts.research.reproducibility import ReproducibilitySnapshot
 from qts.research.research_book import (
     HistoryRequest,
     ResearchBook,
@@ -80,6 +97,15 @@ from qts.research.research_book import (
     ResearchHistoryFrame,
 )
 from qts.research.session import ResearchSession, ResearchSessionConfig
+from qts.research.splits import ResearchSplit, ResearchSplitPlan, walk_forward_split_plans
+from qts.research.strategy_registry import (
+    LifecycleStatus,
+    PromotionDecision,
+    StrategyCard,
+    StrategyRecord,
+    StrategyRegistry,
+)
+from qts.research.system_run import ResearchDryRunResult, ResearchDryRunRunner
 from qts.research.tearsheet import (
     FactorEvaluationTearsheet,
     FactorEvaluationTearsheetArtifactWriter,
@@ -121,6 +147,10 @@ __all__ = [
     "ResearchExperimentRecorderConfig",
     "ExperimentStore",
     "ExperimentStoreRecord",
+    "ResearchCandidate",
+    "ResearchManifest",
+    "ResearchMetrics",
+    "REQUIRED_METRIC_GROUPS",
     "EvidenceRegistry",
     "EvidenceVerificationResult",
     "ResearchEvidenceBundle",
@@ -151,6 +181,14 @@ __all__ = [
     "scan_volatility_managed_allocations",
     "PaperReadinessChecklist",
     "PromotionCandidateSpec",
+    "PromotionGateResult",
+    "ResearchPromotionDecision",
+    "ResearchPromotionPolicy",
+    "ResearchRunRecord",
+    "ResearchRunRegistry",
+    "HumanApprovalRecord",
+    "PaperLiveReadinessDecision",
+    "PaperLiveReadinessEvidence",
     "ResearchIdeaLink",
     "ResearchRouteIndex",
     "ResearchRouteMetadata",
@@ -161,8 +199,11 @@ __all__ = [
     "ResearchWorkflowStepConfig",
     "ResearchWorkflowStepResult",
     "ResearchReviewDecision",
+    "ResearchSystemReport",
+    "ResearchSystemReportWriter",
     "ResearchWorkflowReport",
     "ResearchWorkflowReportWriter",
+    "ReproducibilitySnapshot",
     "FactorSpec",
     "FactorSpecDrafter",
     "FactorSpecSourceRef",
@@ -185,6 +226,16 @@ __all__ = [
     "ResearchHistoryFrame",
     "ResearchSession",
     "ResearchSessionConfig",
+    "ResearchSplit",
+    "ResearchSplitPlan",
+    "walk_forward_split_plans",
+    "ResearchDryRunResult",
+    "ResearchDryRunRunner",
+    "LifecycleStatus",
+    "PromotionDecision",
+    "StrategyCard",
+    "StrategyRecord",
+    "StrategyRegistry",
     "TradeDiagnostic",
     "TradeDiagnosticsArtifactWriter",
     "TradeDiagnosticsArtifacts",

@@ -1,0 +1,257 @@
+"""Manifest-driven research-system dry runs."""
+
+from __future__ import annotations
+
+import csv
+import hashlib
+import shutil
+from collections.abc import Sequence
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+
+import yaml  # type: ignore[import-untyped]
+
+from qts.core.hashing import stable_json_dumps
+from qts.research.manifest import ResearchManifest, write_jsonl
+from qts.research.metrics import ResearchMetrics
+from qts.research.promotion import ResearchPromotionPolicy
+from qts.research.registry import ResearchRunRegistry, new_record
+from qts.research.report import ResearchSystemReport, ResearchSystemReportWriter
+from qts.research.reproducibility import ReproducibilitySnapshot
+from qts.research.splits import ResearchSplitPlan
+
+
+@dataclass(frozen=True, slots=True)
+class ResearchDryRunResult:
+    """Paths produced by a dry-run research-system execution."""
+
+    run_id: str
+    artifact_dir: Path
+    registry_path: Path
+    promotion_status: str
+
+    def to_payload(self) -> dict[str, Any]:
+        """Return a JSON-ready run result."""
+
+        return {
+            "artifact_dir": str(self.artifact_dir),
+            "promotion_status": self.promotion_status,
+            "registry_path": str(self.registry_path),
+            "run_id": self.run_id,
+        }
+
+
+class ResearchDryRunRunner:
+    """Produce complete research-system artifacts without running backtests."""
+
+    def __init__(self, *, repo_root: Path) -> None:
+        self._repo_root = repo_root
+
+    def run(self, config_path: Path, *, argv: Sequence[str]) -> ResearchDryRunResult:
+        """Run the manifest-driven dry-run path."""
+
+        manifest = ResearchManifest.from_yaml(config_path)
+        artifact_dir = manifest.output_root / manifest.run_id
+        artifact_dir.mkdir(parents=True, exist_ok=True)
+
+        manifest_copy = artifact_dir / "manifest.yaml"
+        shutil.copyfile(config_path, manifest_copy)
+
+        candidates = manifest.candidates()
+        resolved_manifest = manifest.to_payload()
+        reproducibility = ReproducibilitySnapshot.collect(
+            repo_root=self._repo_root,
+            manifest_hash=manifest.manifest_hash,
+        )
+        metrics = ResearchMetrics.dry_run(candidate_count=len(candidates))
+        policy = ResearchPromotionPolicy.from_yaml(manifest.promotion_config)
+        promotion_decision = policy.evaluate(
+            run_id=manifest.run_id,
+            strategy_id=manifest.strategy_id,
+            metrics=metrics.to_payload(),
+            reproducibility=reproducibility.to_payload(),
+        )
+        split_plan = ResearchSplitPlan.from_config(manifest.split_config)
+        data_snapshot = self._data_snapshot(manifest)
+        data_quality = self._data_quality_report(data_snapshot)
+
+        _write_json(artifact_dir / "resolved_manifest.json", resolved_manifest)
+        _write_json(artifact_dir / "reproducibility.json", reproducibility.to_payload())
+        _write_json(artifact_dir / "metrics.json", metrics.to_payload())
+        _write_json(artifact_dir / "promotion_decision.json", promotion_decision.to_payload())
+        _write_json(artifact_dir / "data_snapshot.json", data_snapshot)
+        _write_json(artifact_dir / "splits.json", split_plan.to_payload())
+        (artifact_dir / "data_quality_report.md").write_text(data_quality, encoding="utf-8")
+
+        write_jsonl(
+            artifact_dir / "candidate_parameters.jsonl",
+            [candidate.to_payload() for candidate in candidates],
+        )
+        write_jsonl(
+            artifact_dir / "candidate_results.jsonl",
+            [
+                {
+                    "candidate_id": candidate.candidate_id,
+                    "metrics": {},
+                    "parameters": dict(candidate.parameters),
+                    "search_type": candidate.search_type,
+                    "status": "dry_run_not_evaluated",
+                }
+                for candidate in candidates
+            ],
+        )
+        write_jsonl(artifact_dir / "failures.jsonl", ())
+        self._write_ranking(artifact_dir / "ranking.csv", candidates)
+        write_jsonl(
+            artifact_dir / "command_log.jsonl",
+            [
+                {
+                    "argv": list(argv),
+                    "command": "run_research",
+                    "mode": "dry_run",
+                }
+            ],
+        )
+        ResearchSystemReportWriter().write(
+            artifact_dir / "report.md",
+            ResearchSystemReport(
+                manifest=resolved_manifest,
+                metrics=metrics.to_payload(),
+                promotion_decision=promotion_decision.to_payload(),
+                reproducibility=reproducibility.to_payload(),
+            ),
+        )
+
+        registry = ResearchRunRegistry.from_root(manifest.output_root)
+        registry.append(
+            new_record(
+                run_id=manifest.run_id,
+                manifest_hash=manifest.manifest_hash,
+                artifact_dir=artifact_dir,
+                status="dry_run",
+                promotion_status=promotion_decision.status,
+            )
+        )
+        return ResearchDryRunResult(
+            run_id=manifest.run_id,
+            artifact_dir=artifact_dir,
+            registry_path=registry.index_path,
+            promotion_status=promotion_decision.status,
+        )
+
+    def _data_snapshot(self, manifest: ResearchManifest) -> dict[str, Any]:
+        data_config_hash = _file_sha256(manifest.data_config)
+        strategy_config_hash = _file_sha256(manifest.default_config)
+        dataset_files = self._dataset_files(manifest)
+        return {
+            "catalog": manifest.catalog,
+            "data_config": str(manifest.data_config),
+            "data_config_sha256": data_config_hash,
+            "dataset_files": dataset_files,
+            "dataset_id": manifest.dataset_id,
+            "freeze_rule": "dataset files and split windows are recorded before metrics",
+            "roots": list(manifest.roots),
+            "strategy_config": str(manifest.default_config),
+            "strategy_config_sha256": strategy_config_hash,
+            "timeframe": manifest.timeframe,
+        }
+
+    def _dataset_files(self, manifest: ResearchManifest) -> list[dict[str, Any]]:
+        payload = yaml.safe_load(manifest.data_config.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            return []
+        historical_data = payload.get("historical_data")
+        if not isinstance(historical_data, dict):
+            return []
+        stores = historical_data.get("stores")
+        catalogs = historical_data.get("catalogs")
+        if not isinstance(stores, dict) or not isinstance(catalogs, dict):
+            return []
+        catalog = catalogs.get(manifest.catalog)
+        if not isinstance(catalog, dict):
+            return []
+        store_name = catalog.get("store")
+        store = stores.get(store_name)
+        datasets = catalog.get("datasets")
+        if not isinstance(store, dict) or not isinstance(datasets, dict):
+            return []
+        root_dir = Path(str(store.get("root_dir", "")))
+        bars_dir = str(store.get("bars_dir", "data"))
+        result: list[dict[str, Any]] = []
+        for root in manifest.roots:
+            dataset = datasets.get(root)
+            if not isinstance(dataset, dict):
+                result.append({"exists": False, "root": root, "reason": "dataset missing"})
+                continue
+            for bar in dataset.get("bars", []):
+                if not isinstance(bar, dict):
+                    continue
+                path = root_dir / bars_dir / str(bar.get("file", ""))
+                result.append(
+                    {
+                        "exists": path.exists(),
+                        "path": str(path),
+                        "root": root,
+                        "sha256": _file_sha256(path) if path.exists() else None,
+                        "timeframe": str(bar.get("timeframe", "")),
+                    }
+                )
+        return result
+
+    @staticmethod
+    def _data_quality_report(data_snapshot: dict[str, Any]) -> str:
+        rows = data_snapshot.get("dataset_files", [])
+        missing = [row for row in rows if isinstance(row, dict) and row.get("exists") is not True]
+        lines = [
+            "# Data Quality Report",
+            "",
+            "## Timestamp and Session Checks",
+            "",
+            "Dry-run records dataset availability before reading labels or metrics.",
+            "Timestamp/session row validation is deferred to executable research runs.",
+            "",
+            "## Missing Files",
+            "",
+        ]
+        if not missing:
+            lines.append("- None")
+        else:
+            lines.extend(
+                f"- {row.get('root')}: {row.get('path', row.get('reason'))}" for row in missing
+            )
+        return "\n".join(lines) + "\n"
+
+    @staticmethod
+    def _write_ranking(path: Path, candidates: tuple[Any, ...]) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(
+                handle,
+                fieldnames=("rank", "candidate_id", "search_type", "objective_value", "status"),
+            )
+            writer.writeheader()
+            for rank, candidate in enumerate(candidates, start=1):
+                writer.writerow(
+                    {
+                        "candidate_id": candidate.candidate_id,
+                        "objective_value": "",
+                        "rank": rank,
+                        "search_type": candidate.search_type,
+                        "status": "dry_run_not_evaluated",
+                    }
+                )
+
+
+def _write_json(path: Path, payload: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(stable_json_dumps(payload) + "\n", encoding="utf-8")
+
+
+def _file_sha256(path: Path) -> str | None:
+    if not path.exists() or not path.is_file():
+        return None
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+__all__ = ["ResearchDryRunResult", "ResearchDryRunRunner"]

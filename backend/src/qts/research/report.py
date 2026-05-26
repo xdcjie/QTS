@@ -331,6 +331,84 @@ class ResearchWorkflowReportWriter:
         return target
 
 
+class ResearchSystemReport:
+    """Deterministic report for a manifest-driven research-system run."""
+
+    def __init__(
+        self,
+        *,
+        manifest: Mapping[str, Any],
+        metrics: Mapping[str, Any],
+        promotion_decision: Mapping[str, Any],
+        reproducibility: Mapping[str, Any],
+    ) -> None:
+        self._manifest = manifest
+        self._metrics = metrics
+        self._promotion_decision = promotion_decision
+        self._reproducibility = reproducibility
+
+    def to_markdown(self) -> str:
+        """Render a stable Markdown report."""
+
+        run = _as_mapping(self._manifest.get("run", {}))
+        strategy = _as_mapping(self._manifest.get("strategy", {}))
+        lines = [
+            f"# Research Run {run.get('id', '<unknown>')}",
+            "",
+            "## Question",
+            "",
+            str(run.get("question", "<none>")),
+            "",
+            "## Strategy",
+            "",
+            f"- Strategy ID: {strategy.get('id', '<unknown>')}",
+            f"- Entrypoint: {strategy.get('entrypoint', '<unknown>')}",
+            f"- Hypothesis: {strategy.get('hypothesis', '<none>')}",
+            "",
+            "## Promotion Decision",
+            "",
+            f"- Status: {self._promotion_decision.get('status', '<unknown>')}",
+            f"- Boundary: {self._promotion_decision.get('promotion_boundary', '<unknown>')}",
+            "",
+            "## Metric Summary",
+            "",
+            f"- Candidate count: {_nested(self._metrics, 'research', 'candidate_count')}",
+            f"- OOS months: {_nested(self._metrics, 'trading', 'oos_months')}",
+            f"- OOS trades: {_nested(self._metrics, 'trading', 'oos_trade_count')}",
+            f"- Sharpe: {_nested(self._metrics, 'quality', 'sharpe')}",
+            f"- Max drawdown: {_nested(self._metrics, 'risk', 'max_drawdown')}",
+            "",
+            "## Reproducibility",
+            "",
+            f"- Git SHA: {self._reproducibility.get('git_sha', '<unknown>')}",
+            f"- Git dirty: {self._reproducibility.get('git_dirty', '<unknown>')}",
+            f"- Python: {self._reproducibility.get('python_version', '<unknown>')}",
+            f"- Manifest hash: {self._reproducibility.get('manifest_hash', '<unknown>')}",
+            "",
+            "Research evidence does not approve paper/live trading.",
+        ]
+        return "\n".join(lines)
+
+
+class ResearchSystemReportWriter:
+    """Owns writing manifest-driven research reports."""
+
+    def write(self, output_path: str | Path, report: ResearchSystemReport) -> Path:
+        """Write a research-system report to disk."""
+
+        path = Path(output_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(report.to_markdown() + "\n", encoding="utf-8")
+        return path
+
+
+def _nested(payload: Mapping[str, Any], group: str, field_name: str) -> Any:
+    group_value = payload.get(group)
+    if not isinstance(group_value, Mapping):
+        return None
+    return group_value.get(field_name)
+
+
 def _collect_evidence(steps: Sequence[Mapping[str, Any]]) -> list[tuple[str, list[str]]]:
     """Collect user-facing evidence from well-known step kinds."""
 
@@ -886,6 +964,8 @@ _PROMOTION_READINESS_DECISIONS = frozenset({"paper_candidate", "small_live_candi
 
 __all__ = [
     "ResearchReviewDecision",
+    "ResearchSystemReport",
+    "ResearchSystemReportWriter",
     "ResearchWorkflowReport",
     "ResearchWorkflowReportWriter",
 ]

@@ -1,0 +1,21 @@
+strategies:
+  - id: gc_si_momentum
+    owner: research
+    status: candidate
+    hypothesis: Gold and silver short-horizon momentum can be compared through a shared backtest evidence path.
+    entrypoint: examples.strategies.gc_si_momentum:GcSiMomentumStrategy
+    default_config: configs/strategies/gc_si_momentum.yaml
+    failure_conditions:
+      - Default promotion gates reject the run because OOS metrics are missing.
+      - Dataset snapshot or split evidence is incomplete.
+      - No-lookahead or deterministic replay evidence is absent.
+  - id: vwap_pullback
+    owner: research
+    status: candidate
+    hypothesis: Intraday VWAP pullbacks revert after liquidity shocks when session regime and volume confirmation agree.
+    entrypoint: strategies.production.vwap_production_pullback:VwapProductionPullbackStrategy
+    default_config: configs/research/quickstart.yaml
+    failure_conditions:
+      - Paper reconciliation has unexplained cash, position, or order drift.
+      - Risk limit review rejects the configured quantity, stop, target, or capital envelope.
+      - Kill switch drill, monitoring checks, or alert routing cannot be evidenced for the promoted config.
