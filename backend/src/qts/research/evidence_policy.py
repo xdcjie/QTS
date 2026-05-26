@@ -10,10 +10,11 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from qts.core.hashing import stable_json_hash
-from qts.research.audit_log import ResearchAuditLog
+from qts.research.audit_log import append_audit_record
 from qts.research.data_check import ResearchDataCheck
 from qts.research.evidence_registry import EvidenceRegistry
 from qts.research.metrics_schema import ResearchMetricsSchema
@@ -293,7 +294,7 @@ def validate_review_packet_payload(
     packet: Mapping[str, Any],
     *,
     evidence_registry: EvidenceRegistry,
-    audit_log: ResearchAuditLog | None = None,
+    audit_log_root: Path | None = None,
     metrics_schema: ResearchMetricsSchema | None = None,
 ) -> dict[str, Any]:
     """Validate a schema_version=2 review packet payload."""
@@ -327,8 +328,9 @@ def validate_review_packet_payload(
     accepted = not reasons
     packet_hash = stable_json_hash(packet)
     audit_record_id = None
-    if audit_log is not None:
-        record = audit_log.append(
+    if audit_log_root is not None:
+        record = append_audit_record(
+            audit_log_root,
             record_type="review_packet_validation",
             payload={
                 "accepted": accepted,
@@ -337,7 +339,7 @@ def validate_review_packet_payload(
                 "reasons": reasons,
             },
         )
-        audit_record_id = record.record_id
+        audit_record_id = str(record["record_id"])
     return {
         "accepted": accepted,
         "audit_record_id": audit_record_id,
