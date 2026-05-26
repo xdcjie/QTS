@@ -94,6 +94,11 @@ class AblationPlan:
                 seen_single_modules.add(run.modules[0])
             if len(run.modules) > 1 and not set(run.modules).issubset(seen_single_modules):
                 raise ValueError("combined ablation runs must appear after their module runs")
+        missing_single_modules = known_modules - seen_single_modules
+        if missing_single_modules:
+            raise ValueError(
+                f"missing single-module ablation runs: {sorted(missing_single_modules)}"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -174,7 +179,7 @@ class AblationReport:
         higher_is_better: bool,
     ) -> AblationVariantSummary:
         metric_deltas = {
-            metric: value - baseline_run.metrics[metric]
+            metric: _round_delta(value - baseline_run.metrics[metric])
             for metric, value in run.metrics.items()
             if metric in baseline_run.metrics
         }
@@ -331,7 +336,7 @@ def _split_delta(
         return None
     if metric not in run_splits[split] or metric not in baseline_splits[split]:
         return None
-    return run_splits[split][metric] - baseline_splits[split][metric]
+    return _round_delta(run_splits[split][metric] - baseline_splits[split][metric])
 
 
 def _cost_stress_deltas(
@@ -345,7 +350,7 @@ def _cost_stress_deltas(
             baseline_run.metrics,
         )
         scenario_deltas = {
-            metric: value - baseline_metrics[metric]
+            metric: _round_delta(value - baseline_metrics[metric])
             for metric, value in metrics.items()
             if metric in baseline_metrics
         }
@@ -374,3 +379,7 @@ def _format_optional_number(value: float | None) -> str:
 
 def _format_number(value: float) -> str:
     return f"{value:.12g}"
+
+
+def _round_delta(value: float) -> float:
+    return round(value, 12)

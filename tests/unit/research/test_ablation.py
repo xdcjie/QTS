@@ -61,6 +61,26 @@ def test_ablation_report_shows_metric_deltas(tmp_path: Path) -> None:
     assert payload["variants"][1]["metric_deltas"]["sharpe"] == pytest.approx(0.25)
 
 
+def test_ablation_plan_requires_each_declared_module_contribution() -> None:
+    with pytest.raises(ValueError, match="missing single-module ablation runs"):
+        AblationPlan(
+            baseline="baseline",
+            modules=("entry_filter", "exit_rule"),
+            runs=(
+                AblationRun(
+                    name="baseline",
+                    modules=(),
+                    metrics={"sharpe": 1.0},
+                ),
+                AblationRun(
+                    name="entry_filter",
+                    modules=("entry_filter",),
+                    metrics={"sharpe": 1.1},
+                ),
+            ),
+        )
+
+
 def test_ablation_flags_is_only_improvement() -> None:
     report = AblationReport.from_plan(
         AblationPlan(

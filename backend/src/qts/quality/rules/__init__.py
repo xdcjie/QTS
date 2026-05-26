@@ -44,6 +44,7 @@ from qts.quality.rules.oop import (
 from qts.quality.rules.research import (
     EvidenceBundleRequiredForPromotionRule,
     IdeaRegistryRequiredForCandidateRule,
+    PromotionCandidateSpecBoundaryRule,
     ResearchReportDecisionRequiredRule,
     ResearchStrategyStaleDocstringRule,
     RouteMetadataRequiredRule,
@@ -81,6 +82,7 @@ __all__ = [
     "OOPHelperOwnershipRule",
     "OOPPublicFactoryRule",
     "PlatformFreezeRule",
+    "PromotionCandidateSpecBoundaryRule",
     "ProductSpecificRule",
     "ProductionStrategyImportRule",
     "ProductionNoFakeClassRule",

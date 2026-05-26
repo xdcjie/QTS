@@ -12,6 +12,7 @@ from typing import Any
 
 from qts.research import ResearchSession
 from qts.research.evidence_registry import EvidenceRegistry
+from qts.research.experiment_store import ExperimentStore
 from qts.research.idea_registry import IdeaRegistry
 from qts.research.idea_spec import IdeaSpec
 from qts.research.meta_research import MetaResearchSummary, MetaResearchSummaryWriter
@@ -140,6 +141,8 @@ def _add_meta_parser(subparsers: Any) -> None:
 
     summary = meta_subparsers.add_parser("summary", help="Write a meta-research summary")
     summary.add_argument("--idea-registry-root", type=Path, required=True)
+    summary.add_argument("--evidence-registry-root", type=Path, default=None)
+    summary.add_argument("--experiment-store-root", type=Path, default=None)
     summary.add_argument("--evidence-records", type=Path, default=None)
     summary.add_argument("--experiment-records", type=Path, default=None)
     summary.add_argument("--period", required=True)
@@ -299,8 +302,20 @@ def _run_idea(args: argparse.Namespace) -> int:
 def _run_meta(args: argparse.Namespace) -> int:
     if args.meta_command == "summary":
         ideas = IdeaRegistry(args.idea_registry_root).list_ideas()
-        evidence_records = _load_json_records(args.evidence_records)
-        experiment_records = _load_json_records(args.experiment_records)
+        evidence_records = list(_load_json_records(args.evidence_records))
+        if args.evidence_registry_root is not None:
+            evidence_records.extend(
+                MetaResearchSummary.evidence_records_from_registry(
+                    EvidenceRegistry(args.evidence_registry_root)
+                )
+            )
+        experiment_records = list(_load_json_records(args.experiment_records))
+        if args.experiment_store_root is not None:
+            experiment_records.extend(
+                MetaResearchSummary.experiment_records_from_store(
+                    ExperimentStore(args.experiment_store_root)
+                )
+            )
         summary = MetaResearchSummary.from_registries(
             ideas=ideas,
             evidence_records=evidence_records,

@@ -12,6 +12,16 @@ from qts.quality.guardrails import GuardrailViolation
 
 PROMOTION_CANDIDATE_STATUSES = frozenset({"candidate", "paper_candidate", "small_live_candidate"})
 PROMOTION_CONFIG_DIR = Path("configs/research/promotion")
+PROMOTION_RESEARCH_ONLY_PARAMS = frozenset(
+    {
+        "ablation_id",
+        "candidate_tags",
+        "factor_filters",
+        "idea_id",
+        "trial_budget",
+        "trial_count",
+    }
+)
 RESEARCH_REPORT_DIR = Path("runs/research")
 RESEARCH_WORKFLOW_ROUTE_DIR = Path("configs/research/workflows/routes")
 RESEARCH_STRATEGY_DIR = Path("strategies/research")
@@ -97,7 +107,7 @@ class IdeaRegistryRequiredForCandidateRule:
 
 
 class TradeDiagnosticsRequiredForPaperRule:
-    """Require paper candidates to include trade diagnostics evidence."""
+    """Require paper candidates to include required review evidence."""
 
     code = "TRADE_DIAGNOSTICS_REQUIRED_FOR_PAPER"
 
@@ -119,22 +129,87 @@ class TradeDiagnosticsRequiredForPaperRule:
             if str(payload.get("status", "")) != "paper_candidate":
                 continue
             readiness = payload.get("paper_readiness")
-            diagnostics_ready = (
-                isinstance(readiness, dict) and readiness.get("trade_diagnostics_available") is True
-            )
-            if diagnostics_ready:
+            missing_field = _missing_paper_readiness_field(readiness)
+            if missing_field is None:
                 continue
             violations.append(
                 GuardrailViolation(
                     code=self.code,
                     path=str(path.relative_to(repo_root)),
                     line=1,
-                    message="paper candidates require trade diagnostics evidence",
+                    message=f"paper candidates require {missing_field} evidence",
                     remediation=(
-                        "Attach trade-level diagnostics including R PnL, MAE/MFE, exit "
-                        "reason, factor bucket, validation scorecard, and cost stress."
+                        "Attach trade-level diagnostics, validation scorecard, and cost "
+                        "stress evidence before marking a candidate paper-ready."
                     ),
                     symbol=str(payload.get("promotion_candidate_id", path.stem)),
+                )
+            )
+        return violations
+
+
+class PromotionCandidateSpecBoundaryRule:
+    """Require promotion YAML to respect review and production parameter boundaries."""
+
+    code = "PROMOTION_CANDIDATE_SPEC_BOUNDARY"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform per-file check."""
+        del relative_path, qts_relative_path, tree
+        return []
+
+    def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
+        """Perform repository-wide check."""
+        violations: list[GuardrailViolation] = []
+        for path, payload in yaml_payloads(repo_root / PROMOTION_CONFIG_DIR):
+            source = path.read_text(encoding="utf-8")
+            candidate_id = str(payload.get("promotion_candidate_id", path.stem))
+            source_module = str(payload.get("source_module", ""))
+            if (
+                source_module.startswith("examples.")
+                and payload.get("examples_migration_reviewed") is not True
+            ):
+                violations.append(
+                    GuardrailViolation(
+                        code=self.code,
+                        path=str(path.relative_to(repo_root)),
+                        line=line_number(source, "source_module") or 1,
+                        message="examples source modules require explicit migration review",
+                        remediation=(
+                            "Move strategy code behind a reviewed production boundary or set "
+                            "examples_migration_reviewed only after human migration review."
+                        ),
+                        symbol=candidate_id,
+                    )
+                )
+            production_params = payload.get("production_params", {})
+            if not isinstance(production_params, dict):
+                continue
+            research_only_keys = sorted(
+                str(key) for key in production_params if str(key) in PROMOTION_RESEARCH_ONLY_PARAMS
+            )
+            if not research_only_keys:
+                continue
+            violations.append(
+                GuardrailViolation(
+                    code=self.code,
+                    path=str(path.relative_to(repo_root)),
+                    line=line_number(source, "production_params") or 1,
+                    message=(
+                        "promotion production_params contain research-only keys: "
+                        f"{', '.join(research_only_keys)}"
+                    ),
+                    remediation=(
+                        "Keep trial budgets, candidate filters, and idea registry metadata in "
+                        "research evidence; production params must contain only runtime inputs."
+                    ),
+                    symbol=candidate_id,
                 )
             )
         return violations
@@ -293,6 +368,19 @@ def line_number(source: str, token: str) -> int | None:
     return None
 
 
+def _missing_paper_readiness_field(readiness: Any) -> str | None:
+    if not isinstance(readiness, dict):
+        return "paper_readiness"
+    for field_name in (
+        "trade_diagnostics_available",
+        "validation_scorecard_available",
+        "cost_stress_available",
+    ):
+        if readiness.get(field_name) is not True:
+            return field_name
+    return None
+
+
 def is_gitignored_repository_path(repo_root: Path, relative_path: Path) -> bool:
     """Return whether a repository-root path is ignored by a simple .gitignore entry."""
     gitignore_path = repo_root / ".gitignore"
@@ -317,6 +405,7 @@ def is_gitignored_repository_path(repo_root: Path, relative_path: Path) -> bool:
 __all__ = [
     "EvidenceBundleRequiredForPromotionRule",
     "IdeaRegistryRequiredForCandidateRule",
+    "PromotionCandidateSpecBoundaryRule",
     "ResearchReportDecisionRequiredRule",
     "ResearchStrategyStaleDocstringRule",
     "RouteMetadataRequiredRule",

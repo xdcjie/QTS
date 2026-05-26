@@ -8,10 +8,18 @@ import subprocess
 import sys
 from datetime import date
 from decimal import Decimal
+from hashlib import sha256
 from pathlib import Path
 
 import pytest
-from qts.research import ExperimentStore, FactorSpecDrafter, ResearchSession
+from qts.research import (
+    ExperimentManifestConfig,
+    ExperimentManifestWriter,
+    ExperimentStore,
+    FactorSpecDrafter,
+    ResearchEvidenceBundle,
+    ResearchSession,
+)
 from qts.research.factor_discovery import FactorIdea
 from qts.research.factor_evaluation import (
     FactorEvaluationArtifactWriter,
@@ -641,8 +649,21 @@ steps:
 
 
 def test_research_cli_evidence_bundle_list_show_verify(tmp_path: Path) -> None:
+    metrics_path = tmp_path / "metrics.json"
+    metrics_path.write_text('{"sharpe": "1.0"}\n', encoding="utf-8")
+    metrics_hash = f"sha256:{sha256(metrics_path.read_bytes()).hexdigest()}"
     manifest_path = tmp_path / "manifest.json"
-    manifest_path.write_text('{"artifact_hashes": {"metrics.json": "sha256:abc"}}\n')
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "artifact_hashes": {"metrics.json": metrics_hash},
+                "artifact_paths_by_hash": {metrics_hash: str(metrics_path)},
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     report_path = tmp_path / "workflow-report.md"
     report_path.write_text("# Report\n", encoding="utf-8")
     summary_path = tmp_path / "workflow-summary.json"
@@ -661,6 +682,17 @@ def test_research_cli_evidence_bundle_list_show_verify(tmp_path: Path) -> None:
                     "research_config_path": "configs/research/quickstart.yaml",
                     "workflow_config_hash": "sha256:workflow",
                     "workflow_config_path": "configs/research/workflows/quickstart.yaml",
+                },
+                "idea_metadata": {
+                    "created_at": "2026-05-25T00:00:00+00:00",
+                    "edge_type": "momentum",
+                    "hypothesis": "Momentum persists after costs.",
+                    "idea_id": "idea-momentum",
+                    "source": "fixture",
+                    "status": "draft",
+                    "title": "Momentum",
+                    "trial_budget": {"max_strategy_trials": 1},
+                    "trial_count": 2,
                 },
                 "status": "completed",
                 "steps": [
@@ -701,6 +733,10 @@ def test_research_cli_evidence_bundle_list_show_verify(tmp_path: Path) -> None:
     created_payload = json.loads(created.stdout)
     bundle_id = created_payload["evidence_bundle_id"]
     assert created_payload["status"] == "research_evidence_only"
+    assert created_payload["idea_id"] == "idea-momentum"
+    assert created_payload["trial_budget_warnings"][0]["message"] == (
+        "idea-momentum trial_count 2 exceeds budget 1"
+    )
 
     listed = _run_cli("evidence", "--registry-root", str(registry_root), "list")
     shown = _run_cli("evidence", "--registry-root", str(registry_root), "show", bundle_id)
@@ -761,21 +797,44 @@ def test_research_cli_idea_record_trial_and_meta_summary(tmp_path: Path) -> None
     assert listed.returncode == 0, listed.stderr
     assert json.loads(listed.stdout)[0]["idea_id"] == "idea-momentum"
 
-    evidence_records_path = tmp_path / "evidence-records.json"
-    evidence_records_path.write_text(
-        json.dumps(
-            [{"accepted": True, "idea_id": "idea-momentum", "kind": "factor_candidate"}],
-            sort_keys=True,
+    evidence_registry_root = tmp_path / "evidence"
+    evidence_registry_root.mkdir(parents=True)
+    evidence_bundle = ResearchEvidenceBundle(
+        evidence_bundle_id="evb_001",
+        workflow_run_id="wf_001",
+        idea_id="idea-momentum",
+        strategy_id="strategy-prototype",
+        review_decisions=(
+            {
+                "reason": ["no_oos_stability"],
+                "status": "reject",
+            },
+        ),
+    )
+    evidence_payload = evidence_bundle.to_payload()
+    (evidence_registry_root / "evidence-bundle-evb_001.json").write_text(
+        json.dumps(evidence_payload, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (evidence_registry_root / "index.jsonl").write_text(
+        json.dumps(evidence_payload, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    experiment_store_root = tmp_path / "experiments"
+    manifest = ExperimentManifestWriter(tmp_path / "manifests").write_manifest(
+        ExperimentManifestConfig(
+            experiment_id="exp-001",
+            strategy_name="strategy-prototype",
+            strategy_version="1",
+            factor_versions={},
+            dataset_ids=[],
+            config={},
+            artifact_paths=[],
+            metrics={"accepted": True},
+            idea_id="idea-momentum",
         )
-        + "\n",
-        encoding="utf-8",
     )
-    experiment_records_path = tmp_path / "experiment-records.json"
-    experiment_records_path.write_text(
-        json.dumps([{"accepted": True, "experiment_id": "exp-001", "idea_id": "idea-momentum"}])
-        + "\n",
-        encoding="utf-8",
-    )
+    ExperimentStore(experiment_store_root).record_manifest(manifest.manifest_path)
     output_dir = tmp_path / "meta"
 
     meta = _run_cli(
@@ -785,10 +844,10 @@ def test_research_cli_idea_record_trial_and_meta_summary(tmp_path: Path) -> None
         "summary",
         "--idea-registry-root",
         str(registry_root),
-        "--evidence-records",
-        str(evidence_records_path),
-        "--experiment-records",
-        str(experiment_records_path),
+        "--evidence-registry-root",
+        str(evidence_registry_root),
+        "--experiment-store-root",
+        str(experiment_store_root),
         "--period",
         "monthly",
         "--period-start",
@@ -801,7 +860,8 @@ def test_research_cli_idea_record_trial_and_meta_summary(tmp_path: Path) -> None
     assert Path(meta_payload["markdown_path"]).exists()
     assert meta_payload["summary"]["ideas_created"] == 1
     assert meta_payload["summary"]["validation_pass_rate"] == {
-        "accepted": 2,
-        "rate": 1.0,
+        "accepted": 1,
+        "rate": 0.5,
         "total": 2,
     }
+    assert meta_payload["summary"]["rejected_reason_distribution"] == {"no_oos_stability": 1}

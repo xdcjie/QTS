@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -46,6 +46,9 @@ class IdeaSpec:
     edge_type: str
     source: str
     created_at: datetime
+    data_required: tuple[str, ...] = ()
+    kill_criteria: tuple[str, ...] = ()
+    trial_budget: Mapping[str, int] | None = None
     status: str = "draft"
     trial_count: int = 0
     rejection_reason: str | None = None
@@ -56,6 +59,9 @@ class IdeaSpec:
         hypothesis = self.hypothesis.strip()
         edge_type = self.edge_type.strip().lower()
         source = self.source.strip().lower()
+        data_required = self._string_tuple(self.data_required, field_name="data_required")
+        kill_criteria = self._string_tuple(self.kill_criteria, field_name="kill_criteria")
+        trial_budget = self._int_mapping(self.trial_budget or {}, field_name="trial_budget")
         status = self.status.strip()
         rejection_reason = (
             None if self.rejection_reason is None else self.rejection_reason.strip() or None
@@ -86,6 +92,9 @@ class IdeaSpec:
         object.__setattr__(self, "hypothesis", hypothesis)
         object.__setattr__(self, "edge_type", edge_type)
         object.__setattr__(self, "source", source)
+        object.__setattr__(self, "data_required", data_required)
+        object.__setattr__(self, "kill_criteria", kill_criteria)
+        object.__setattr__(self, "trial_budget", trial_budget)
         object.__setattr__(self, "status", status)
         object.__setattr__(self, "rejection_reason", rejection_reason)
 
@@ -101,6 +110,16 @@ class IdeaSpec:
             edge_type=cls._required_text(payload, "edge_type"),
             source=cls._required_text(payload, "source"),
             created_at=created_at,
+            data_required=cls._string_tuple(
+                payload.get("data_required", ()), field_name="data_required"
+            ),
+            kill_criteria=cls._string_tuple(
+                payload.get("kill_criteria", ()), field_name="kill_criteria"
+            ),
+            trial_budget=cls._int_mapping(
+                payload.get("trial_budget", {}),
+                field_name="trial_budget",
+            ),
             status=str(payload.get("status", "draft")),
             trial_count=int(payload.get("trial_count", 0)),
             rejection_reason=cls._optional_text(payload.get("rejection_reason")),
@@ -111,13 +130,16 @@ class IdeaSpec:
 
         return {
             "created_at": self.created_at.isoformat(),
+            "data_required": list(self.data_required),
             "edge_type": self.edge_type,
             "hypothesis": self.hypothesis,
             "idea_id": self.idea_id,
+            "kill_criteria": list(self.kill_criteria),
             "rejection_reason": self.rejection_reason,
             "source": self.source,
             "status": self.status,
             "title": self.title,
+            "trial_budget": dict(self.trial_budget or {}),
             "trial_count": self.trial_count,
         }
 
@@ -134,6 +156,36 @@ class IdeaSpec:
             return None
         text = str(value).strip()
         return text or None
+
+    @staticmethod
+    def _string_tuple(value: Any, *, field_name: str) -> tuple[str, ...]:
+        if value is None:
+            return ()
+        if not isinstance(value, Sequence) or isinstance(value, str):
+            raise ValueError(f"{field_name} must be a string sequence")
+        result: list[str] = []
+        for item in value:
+            if not isinstance(item, str) or not item.strip():
+                raise ValueError(f"{field_name} must be a string sequence")
+            result.append(item.strip())
+        return tuple(result)
+
+    @staticmethod
+    def _int_mapping(value: Any, *, field_name: str) -> dict[str, int]:
+        if value is None:
+            return {}
+        if not isinstance(value, Mapping):
+            raise ValueError(f"{field_name} must be an integer mapping")
+        result: dict[str, int] = {}
+        for key, item in value.items():
+            key_text = str(key).strip()
+            if not key_text:
+                raise ValueError(f"{field_name} keys must not be empty")
+            item_int = int(item)
+            if item_int < 0:
+                raise ValueError(f"{field_name}.{key_text} must be non-negative")
+            result[key_text] = item_int
+        return result
 
 
 __all__ = ["ALLOWED_EDGE_TYPES", "ALLOWED_IDEA_STATUSES", "IdeaSpec"]

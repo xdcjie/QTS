@@ -221,17 +221,25 @@ class IdeaRegistry:
             review_file.write(json.dumps(event, sort_keys=True) + "\n")
 
 
-def trial_budget_warning(idea: IdeaSpec, *, budget: int) -> TrialBudgetWarning | None:
-    """Return a warning when an idea's trial count exceeds a fixed budget."""
+def trial_budget_warning(
+    idea: IdeaSpec,
+    *,
+    budget: int | None = None,
+    budget_key: str = "max_strategy_trials",
+) -> TrialBudgetWarning | None:
+    """Return a warning when an idea's trial count exceeds its configured budget."""
 
-    if budget < 0:
+    resolved_budget = budget if budget is not None else (idea.trial_budget or {}).get(budget_key)
+    if resolved_budget is None:
+        return None
+    if resolved_budget < 0:
         raise ValueError("budget must be non-negative")
-    if idea.trial_count <= budget:
+    if idea.trial_count <= resolved_budget:
         return None
     return TrialBudgetWarning(
         idea_id=idea.idea_id,
         trial_count=idea.trial_count,
-        budget=budget,
+        budget=resolved_budget,
     )
 
 

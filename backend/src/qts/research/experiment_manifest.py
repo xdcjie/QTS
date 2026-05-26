@@ -25,29 +25,34 @@ class ExperimentManifestConfig:
     config: Mapping[str, Any]
     artifact_paths: Sequence[Path]
     metrics: Mapping[str, Any]
+    idea_id: str | None = None
 
     def __post_init__(self) -> None:
         self._require_non_empty("experiment_id", self.experiment_id)
         self._require_non_empty("strategy_name", self.strategy_name)
         self._require_non_empty("strategy_version", self.strategy_version)
+        if self.idea_id is not None:
+            self._require_non_empty("idea_id", self.idea_id)
+            object.__setattr__(self, "idea_id", self.idea_id.strip())
 
     @property
     def config_hash(self) -> str:
         """Return a deterministic hash for the experiment definition."""
 
-        return stable_json_hash(
-            {
-                "strategy_name": self.strategy_name,
-                "strategy_version": self.strategy_version,
-                "factor_versions": dict(self.factor_versions),
-                "dataset_ids": list(self.dataset_ids),
-                "config": self.config,
-            }
-        )
+        seed: dict[str, Any] = {
+            "strategy_name": self.strategy_name,
+            "strategy_version": self.strategy_version,
+            "factor_versions": dict(self.factor_versions),
+            "dataset_ids": list(self.dataset_ids),
+            "config": self.config,
+        }
+        if self.idea_id is not None:
+            seed["idea_id"] = self.idea_id
+        return stable_json_hash(seed)
 
     @staticmethod
     def _require_non_empty(field_name: str, value: str) -> None:
-        if not value:
+        if not value.strip():
             raise ValueError(f"{field_name} is required")
 
 
@@ -90,6 +95,8 @@ class ExperimentManifestWriter:
             "artifact_paths_by_hash": artifact_paths_by_hash,
             "metrics": dict(config.metrics),
         }
+        if config.idea_id is not None:
+            payload["idea_id"] = config.idea_id
         manifest_path = self._root_dir / config.experiment_id / "manifest.json"
         manifest_path.parent.mkdir(parents=True, exist_ok=True)
         manifest_path.write_text(

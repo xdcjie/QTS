@@ -58,3 +58,4 @@ build/
 evidence/benchmarks/latest.json
 graphify-out/
 .graphify*
+.understand-anything/

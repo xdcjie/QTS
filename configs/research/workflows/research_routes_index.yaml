@@ -1,0 +1,4 @@
+version: 1
+routes:
+  - route_id: quickstart
+    workflow: routes/quickstart.yaml

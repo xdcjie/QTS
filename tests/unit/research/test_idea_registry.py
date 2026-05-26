@@ -28,6 +28,9 @@ def _idea(
         edge_type=edge_type,
         source=source,
         created_at=datetime(2026, 5, 20, 12, 30, tzinfo=UTC),
+        data_required=("GC 15m OHLCV", "session VWAP"),
+        kill_criteria=("oos_net_sharpe_below_0_8",),
+        trial_budget={"max_strategy_trials": 3, "max_validation_variants": 2},
         trial_count=trial_count,
     )
 
@@ -102,6 +105,44 @@ def test_trial_budget_warning_when_exceeded() -> None:
     assert warning.budget == 3
     assert warning.message == "idea-momentum trial_count 4 exceeds budget 3"
     assert trial_budget_warning(_idea(trial_count=3), budget=3) is None
+    configured_warning = trial_budget_warning(_idea(trial_count=4))
+    assert configured_warning is not None
+    assert configured_warning.budget == 3
+
+
+def test_idea_spec_persists_data_requirements_kill_criteria_and_trial_budget() -> None:
+    idea = _idea()
+    payload = idea.to_payload()
+
+    assert payload["data_required"] == ["GC 15m OHLCV", "session VWAP"]
+    assert payload["kill_criteria"] == ["oos_net_sharpe_below_0_8"]
+    assert payload["trial_budget"] == {
+        "max_strategy_trials": 3,
+        "max_validation_variants": 2,
+    }
+    assert IdeaSpec.from_payload(payload).to_payload() == payload
+
+
+def test_workflow_report_emits_trial_budget_warning_for_idea_metadata() -> None:
+    from qts.research.report import ResearchWorkflowReport
+    from qts.research.workflow import ResearchWorkflowResult
+
+    idea = _idea(trial_count=4)
+    report = ResearchWorkflowReport.from_result(
+        ResearchWorkflowResult(
+            workflow_id="idea-flow",
+            status="completed",
+            steps=(),
+            idea_metadata=idea.to_payload(),
+        )
+    )
+
+    body = report.to_markdown()
+
+    assert "## Idea Metadata" in body
+    assert "- idea_id: idea-momentum" in body
+    assert "- edge_type: momentum" in body
+    assert "- trial_budget_warning: idea-momentum trial_count 4 exceeds budget 3" in body
 
 
 def test_promotion_candidate_requires_idea_id_helper_validation() -> None:

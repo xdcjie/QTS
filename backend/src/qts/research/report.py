@@ -40,6 +40,9 @@ class _WorkflowResult(Protocol):
     @property
     def steps(self) -> Sequence[_WorkflowStepResult]: ...
 
+    @property
+    def idea_metadata(self) -> Mapping[str, Any] | None: ...
+
 
 @dataclass(frozen=True, slots=True)
 class ResearchReviewDecision:
@@ -92,6 +95,7 @@ class ResearchWorkflowReport:
     periods: tuple[dict[str, str], ...] = ()
     run_context: Mapping[str, Any] = field(default_factory=dict)
     route: Mapping[str, Any] = field(default_factory=dict)
+    idea_metadata: Mapping[str, Any] = field(default_factory=dict)
     decision: ResearchReviewDecision = field(default_factory=ResearchReviewDecision)
 
     @classmethod
@@ -102,6 +106,7 @@ class ResearchWorkflowReport:
             periods=_normalize_periods(getattr(result, "periods", ())),
             run_context=_normalize_run_context(getattr(result, "run_context", None)),
             route=_normalize_route(getattr(result, "route", None)),
+            idea_metadata=_normalize_idea_metadata(getattr(result, "idea_metadata", None)),
             decision=_normalize_decision(getattr(result, "decision", None)),
             workflow_id=_required_text(result, "workflow_id"),
             workflow_status=_required_text(result, "status"),
@@ -114,9 +119,11 @@ class ResearchWorkflowReport:
         sections = [
             self._header(),
             self._evidence_header(),
-            self._summary(),
-            self._step_section(),
         ]
+        idea_section = self._idea_section()
+        if idea_section:
+            sections.append(idea_section)
+        sections.extend([self._summary(), self._step_section()])
         period_roles = self._period_roles_section()
         if period_roles:
             sections.append(period_roles)
@@ -174,7 +181,7 @@ class ResearchWorkflowReport:
     def _summary(self) -> str:
         """Render a compact count-style summary."""
 
-        statuses = (step.get("status", "unknown") for step in self.steps)
+        statuses = tuple(step.get("status", "unknown") for step in self.steps)
         step_counts = {
             "passed": sum(1 for status in statuses if status == "passed"),
             "failed": sum(1 for status in statuses if status == "failed"),
@@ -248,6 +255,30 @@ class ResearchWorkflowReport:
             lines.append(f"- allowed_period_roles: {self.route['allowed_period_roles']}")
         return "\n".join(lines)
 
+    def _idea_section(self) -> str:
+        """Render optional research idea metadata and process warnings."""
+
+        if not self.idea_metadata:
+            return ""
+        lines = ["## Idea Metadata"]
+        for key in (
+            "idea_id",
+            "title",
+            "edge_type",
+            "source",
+            "status",
+            "trial_count",
+            "data_required",
+            "kill_criteria",
+            "trial_budget",
+        ):
+            if key in self.idea_metadata:
+                lines.append(f"- {key}: {_json_ready(self.idea_metadata[key])}")
+        warning = _trial_budget_warning_line(self.idea_metadata)
+        if warning:
+            lines.append(f"- trial_budget_warning: {warning}")
+        return "\n".join(lines)
+
     def _decision_section(self) -> str:
         """Render the machine-readable review decision block."""
 
@@ -308,6 +339,8 @@ def _collect_evidence(steps: Sequence[Mapping[str, Any]]) -> list[tuple[str, lis
     impl_steps = [step for step in steps if step.get("kind") == "implementation_gate"]
     eval_steps = [step for step in steps if step.get("kind") == "factor_evaluation"]
     tearsheet_steps = [step for step in steps if step.get("kind") == "factor_tearsheet"]
+    ablation_steps = [step for step in steps if step.get("kind") == "ablation"]
+    diagnostics_steps = [step for step in steps if step.get("kind") == "trade_diagnostics"]
     backtest_steps = [step for step in steps if step.get("kind") == "backtest"]
     optimize_steps = [step for step in steps if step.get("kind") == "optimize"]
     report_steps = [step for step in steps if step.get("kind") == "research_report"]
@@ -379,6 +412,36 @@ def _collect_evidence(steps: Sequence[Mapping[str, Any]]) -> list[tuple[str, lis
                 ],
             )
         )
+    for index, ablation_step in enumerate(ablation_steps):
+        outputs = ablation_step.get("outputs", {})
+        summary = _as_mapping(outputs.get("ablation_summary", {}))
+        variants = summary.get("variants", ())
+        variant_count = len(variants) if isinstance(variants, Sequence) else 0
+        evidence.append(
+            (
+                f"Ablation #{index + 1}",
+                [
+                    f"baseline: {summary.get('baseline', '<none>')}",
+                    f"primary_metric: {summary.get('primary_metric', '<none>')}",
+                    f"variant_count: {variant_count}",
+                    f"artifact_path: {outputs.get('artifact_path', '<none>')}",
+                    f"report_path: {outputs.get('report_path', '<none>')}",
+                ],
+            )
+        )
+    for index, diagnostics_step in enumerate(diagnostics_steps):
+        outputs = diagnostics_step.get("outputs", {})
+        evidence.append(
+            (
+                f"Trade Diagnostics #{index + 1}",
+                [
+                    f"trade_count: {outputs.get('trade_count', 0)}",
+                    f"trades_path: {outputs.get('trades_path', '<none>')}",
+                    f"summary_path: {outputs.get('summary_path', '<none>')}",
+                    f"report_path: {outputs.get('report_path', '<none>')}",
+                ],
+            )
+        )
     if backtest_steps:
         evidence.append(
             (
@@ -393,6 +456,10 @@ def _collect_evidence(steps: Sequence[Mapping[str, Any]]) -> list[tuple[str, lis
     if optimize_steps:
         validation_summary = latest_step_output(optimize_steps, "validation_summary", {})
         validation_mapping = validation_summary if isinstance(validation_summary, Mapping) else {}
+        validation_scorecard = latest_step_output(optimize_steps, "validation_scorecard", {})
+        scorecard_mapping = (
+            validation_scorecard if isinstance(validation_scorecard, Mapping) else {}
+        )
         evidence.append(
             (
                 "Optimize",
@@ -400,6 +467,19 @@ def _collect_evidence(steps: Sequence[Mapping[str, Any]]) -> list[tuple[str, lis
                     f"run_count: {latest_step_output(optimize_steps, 'run_count', 0)}",
                     f"accepted_count: {validation_mapping.get('accepted_count', '<none>')}",
                     f"rejected_count: {validation_mapping.get('rejected_count', '<none>')}",
+                    (
+                        "cost_stress_status: "
+                        f"{scorecard_mapping.get('cost_stress_status', '<none>')}"
+                    ),
+                    (
+                        "walk_forward_status: "
+                        f"{scorecard_mapping.get('walk_forward_status', '<none>')}"
+                    ),
+                    (
+                        "failure_window_status: "
+                        f"{scorecard_mapping.get('failure_window_status', '<none>')}"
+                    ),
+                    f"robustness_score: {scorecard_mapping.get('robustness_score', '<none>')}",
                     (
                         "top_objective: "
                         f"{first_ranked_result_value(optimize_steps, 'objective_value')}"
@@ -409,6 +489,7 @@ def _collect_evidence(steps: Sequence[Mapping[str, Any]]) -> list[tuple[str, lis
                         "top_return_on_margin_proxy: "
                         f"{first_ranked_capital_metric(optimize_steps, 'return_on_margin_proxy')}"
                     ),
+                    *_optimizer_rejection_lines(validation_mapping),
                 ],
             )
         )
@@ -422,6 +503,30 @@ def _collect_evidence(steps: Sequence[Mapping[str, Any]]) -> list[tuple[str, lis
             )
         )
     return evidence
+
+
+def _optimizer_rejection_lines(validation_summary: Mapping[str, Any]) -> list[str]:
+    """Return readable optimizer rejection evidence lines."""
+
+    raw_rejections = validation_summary.get("rejections", ())
+    if not isinstance(raw_rejections, Sequence) or isinstance(raw_rejections, str):
+        return []
+
+    lines: list[str] = []
+    for index, raw_rejection in enumerate(raw_rejections, start=1):
+        if not isinstance(raw_rejection, Mapping):
+            continue
+        lines.append(f"Rejected Candidates #{index}:")
+        for key in ("manifest_path", "raw_rank", "accepted_rank", "objective_value"):
+            if key in raw_rejection:
+                lines.append(f"{key}: {_json_ready(raw_rejection[key])}")
+        reasons = raw_rejection.get("rejection_reasons", raw_rejection.get("reasons", ()))
+        if isinstance(reasons, Sequence) and not isinstance(reasons, str):
+            for reason in reasons:
+                lines.append(f"rejection_reason: {reason}")
+        elif reasons:
+            lines.append(f"rejection_reason: {reasons}")
+    return lines
 
 
 def _collect_period_roles(
@@ -532,6 +637,19 @@ def _normalize_route(value: Any) -> Mapping[str, Any]:
         if isinstance(payload, Mapping):
             return cast(Mapping[str, Any], _json_ready(payload))
     raise ValueError("route must be a mapping-like payload")
+
+
+def _normalize_idea_metadata(value: Any) -> Mapping[str, Any]:
+    if value is None:
+        return {}
+    if isinstance(value, Mapping):
+        return cast(Mapping[str, Any], _json_ready(value))
+    to_payload = getattr(value, "to_payload", None)
+    if callable(to_payload):
+        payload = to_payload()
+        if isinstance(payload, Mapping):
+            return cast(Mapping[str, Any], _json_ready(payload))
+    raise ValueError("idea_metadata must be a mapping-like payload")
 
 
 def _normalize_decision(value: Any) -> ResearchReviewDecision:
@@ -697,6 +815,24 @@ def _yaml_scalar(value: Any) -> str:
     if isinstance(value, bool):
         return "true" if value else "false"
     return str(value)
+
+
+def _trial_budget_warning_line(idea_metadata: Mapping[str, Any]) -> str | None:
+    trial_budget = idea_metadata.get("trial_budget")
+    if not isinstance(trial_budget, Mapping):
+        return None
+    budget = trial_budget.get("max_strategy_trials")
+    if budget is None:
+        return None
+    try:
+        budget_int = int(budget)
+        trial_count = int(idea_metadata.get("trial_count", 0))
+    except (TypeError, ValueError):
+        return None
+    if budget_int < 0 or trial_count <= budget_int:
+        return None
+    idea_id = str(idea_metadata.get("idea_id", "<unknown>"))
+    return f"{idea_id} trial_count {trial_count} exceeds budget {budget_int}"
 
 
 _ALLOWED_REVIEW_DECISIONS = frozenset(

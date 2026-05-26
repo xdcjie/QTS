@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 from qts.research import (
     FactorBucketSpec,
     PaperCandidateDiagnosticsGate,
     TradeDiagnostic,
+    TradeDiagnosticsArtifactWriter,
     TradeDiagnosticsReport,
 )
 
@@ -133,7 +136,93 @@ def test_missing_trade_diagnostics_blocks_paper_candidate() -> None:
     )
     assert PaperCandidateDiagnosticsGate().validate(invalid_report).blocks_paper_candidate is True
 
-    valid_report = TradeDiagnosticsReport(
+    incomplete_standard_report = TradeDiagnosticsReport(
         trades=(TradeDiagnostic(r_pnl=1.0, mae_r=-0.2, mfe_r=1.4, exit_reason="target"),)
     )
+    assert (
+        PaperCandidateDiagnosticsGate().validate(incomplete_standard_report).blocks_paper_candidate
+        is True
+    )
+
+    valid_report = TradeDiagnosticsReport(
+        trades=(
+            TradeDiagnostic(
+                trade_id="trade-001",
+                strategy_id="vwap-research",
+                idea_id="idea-vwap",
+                symbol="GC",
+                direction="long",
+                quantity=2,
+                entry_time=datetime(2024, 1, 2, 9, 0, tzinfo=UTC),
+                exit_time=datetime(2024, 1, 2, 11, 0, tzinfo=UTC),
+                entry_price=2050.0,
+                exit_price=2055.0,
+                r_pnl=1.0,
+                mae_r=-0.2,
+                mfe_r=1.4,
+                holding_bars=8,
+                exit_reason="target",
+                time_bucket="morning",
+                factor_snapshot={"momentum": 0.8},
+            ),
+        )
+    )
     assert PaperCandidateDiagnosticsGate().validate(valid_report).blocks_paper_candidate is False
+
+
+def test_trade_diagnostics_writer_outputs_standard_artifacts(tmp_path: Path) -> None:
+    report = TradeDiagnosticsReport(
+        trades=(
+            TradeDiagnostic(
+                trade_id="trade-001",
+                strategy_id="vwap-research",
+                idea_id="idea-vwap",
+                symbol="GC",
+                direction="long",
+                quantity=2,
+                entry_time=datetime(2024, 1, 2, 9, 0, tzinfo=UTC),
+                exit_time=datetime(2024, 1, 2, 11, 0, tzinfo=UTC),
+                entry_price=2050.0,
+                exit_price=2055.0,
+                r_pnl=1.0,
+                mae_r=-0.2,
+                mfe_r=1.4,
+                holding_bars=8,
+                exit_reason="target",
+                time_bucket="morning",
+                factor_snapshot={"momentum": 0.8},
+            ),
+        )
+    )
+
+    artifacts = TradeDiagnosticsArtifactWriter().write(tmp_path, report)
+
+    assert artifacts.trades_path.name == "trades.jsonl"
+    assert artifacts.summary_path.name == "trade_diagnostics_summary.json"
+    assert artifacts.markdown_path.name == "trade_diagnostics_report.md"
+    trade_payload = json.loads(artifacts.trades_path.read_text(encoding="utf-8"))
+    assert trade_payload["trade_id"] == "trade-001"
+    assert trade_payload["strategy_id"] == "vwap-research"
+    assert trade_payload["idea_id"] == "idea-vwap"
+    assert trade_payload["symbol"] == "GC"
+    assert trade_payload["entry_time"] == "2024-01-02T09:00:00+00:00"
+    assert trade_payload["exit_time"] == "2024-01-02T11:00:00+00:00"
+    summary = json.loads(artifacts.summary_path.read_text(encoding="utf-8"))
+    assert summary["trade_count"] == 1
+    assert summary["groups"]["exit_reason"]["target"]["trade_count"] == 1
+
+
+def test_trade_diagnostics_writer_requires_standard_artifact_fields(tmp_path: Path) -> None:
+    report = TradeDiagnosticsReport(
+        trades=(
+            TradeDiagnostic(
+                r_pnl=1.0,
+                mae_r=-0.2,
+                mfe_r=1.4,
+                exit_reason="target",
+            ),
+        )
+    )
+
+    with pytest.raises(ValueError, match="standard trade diagnostics fields"):
+        TradeDiagnosticsArtifactWriter().write(tmp_path, report)

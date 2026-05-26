@@ -1,0 +1,48 @@
+# Quickstart route workflow for research-route governance checks.
+#
+# Route metadata is research governance only. It never promotes a strategy into
+# paper/live runtime configuration.
+
+version: 1
+workflow_id: quickstart-route
+route:
+  route_id: quickstart
+  route_name: quickstart_momentum_review
+  status: exploration
+  owner: research
+  selection_policy:
+    selection_periods: []
+    validation_periods: []
+    report_only_periods: []
+  allowed_period_roles: []
+steps:
+  - id: discover
+    kind: factor_candidates
+    query: "commodity futures momentum carry volatility"
+    sources: [semantic_scholar, openalex, crossref, arxiv]
+    max_results: 5
+    from_year: 2015
+
+  - id: review
+    kind: factor_review_gate
+    status: accepted
+    min_count: 1
+    on_fail: stop
+
+  - id: implementation
+    kind: implementation_gate
+    required_strategy: examples.strategies.gc_si_momentum:GcSiMomentumStrategy
+    on_fail: stop
+
+  - id: backtest
+    kind: backtest
+    strategy_params:
+      short_window: 1
+      long_window: 2
+
+  - id: optimize
+    kind: optimize
+    objective_metric: sharpe_ratio
+    parameters:
+      short_window: [1, 2]
+      long_window: [2, 3]

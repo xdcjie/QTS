@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Any
 
 from qts.core.hashing import stable_json_hash
+from qts.research.idea_registry import trial_budget_warning
+from qts.research.idea_spec import IdeaSpec
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,9 +51,12 @@ class ResearchEvidenceBundle:
     manifest_paths: tuple[str, ...] = ()
     manifest_hashes: Mapping[str, str] | None = None
     artifact_hashes: Mapping[str, str] | None = None
+    artifact_paths: Mapping[str, str] | None = None
     report_path: str | None = None
     period_roles: Mapping[str, str] | None = None
     idea_id: str | None = None
+    idea_metadata: Mapping[str, Any] | None = None
+    trial_budget_warnings: tuple[Mapping[str, Any], ...] = ()
     strategy_id: str | None = None
     review_decisions: tuple[Mapping[str, Any], ...] = ()
     status: str = "research_evidence_only"
@@ -78,9 +83,12 @@ class ResearchEvidenceBundle:
             manifest_paths=_string_tuple(payload.get("manifest_paths", ())),
             manifest_hashes=_string_mapping(payload.get("manifest_hashes", {})),
             artifact_hashes=_string_mapping(payload.get("artifact_hashes", {})),
+            artifact_paths=_string_mapping(payload.get("artifact_paths", {})),
             report_path=None if payload.get("report_path") is None else str(payload["report_path"]),
             period_roles=_string_mapping(payload.get("period_roles", {})),
             idea_id=None if payload.get("idea_id") is None else str(payload["idea_id"]),
+            idea_metadata=_optional_mapping(payload.get("idea_metadata")),
+            trial_budget_warnings=cls._mapping_tuple(payload.get("trial_budget_warnings", ())),
             strategy_id=None if payload.get("strategy_id") is None else str(payload["strategy_id"]),
             review_decisions=cls._mapping_tuple(payload.get("review_decisions", ())),
             status=str(payload.get("status", "research_evidence_only")),
@@ -92,11 +100,13 @@ class ResearchEvidenceBundle:
 
         return {
             "artifact_hashes": dict(self.artifact_hashes or {}),
+            "artifact_paths": dict(self.artifact_paths or {}),
             "dataset_ids": list(self.dataset_ids),
             "evidence_bundle_id": self.evidence_bundle_id,
             "git_commit": self.git_commit,
             "git_dirty": self.git_dirty,
             "idea_id": self.idea_id,
+            "idea_metadata": dict(self.idea_metadata or {}),
             "manifest_hashes": dict(self.manifest_hashes or {}),
             "manifest_paths": list(self.manifest_paths),
             "period_roles": dict(self.period_roles or {}),
@@ -106,6 +116,7 @@ class ResearchEvidenceBundle:
             "review_decisions": [dict(decision) for decision in self.review_decisions],
             "status": self.status,
             "strategy_id": self.strategy_id,
+            "trial_budget_warnings": [dict(warning) for warning in self.trial_budget_warnings],
             "workflow_config_hash": self.workflow_config_hash,
             "workflow_run_id": self.workflow_run_id,
         }
@@ -157,6 +168,7 @@ class EvidenceRegistry:
         self,
         workflow_summary_path: Path,
         *,
+        idea: IdeaSpec | None = None,
         idea_id: str | None = None,
         strategy_id: str | None = None,
     ) -> ResearchEvidenceBundle:
@@ -172,8 +184,30 @@ class EvidenceRegistry:
             if isinstance(period, Mapping) and "name" in period and "role" in period
         }
         manifest_hashes = {path: _sha256_path(Path(path)) for path in manifest_paths}
+        manifest_artifact_hashes = _collect_manifest_artifact_hashes(manifest_paths)
+        artifact_path_hashes = _collect_manifest_artifact_paths(manifest_paths)
+        artifact_path_hashes.update(
+            _hash_existing_paths(_collect_output_paths(payload, "artifact_path"))
+        )
+        artifact_path_hashes.update(
+            _hash_existing_paths(_collect_output_paths(payload, "artifact_paths"))
+        )
         report_path = report_paths[-1] if report_paths else None
+        summary_idea = _idea_from_payload(payload.get("idea_metadata"))
+        if idea is None:
+            idea = summary_idea
+        resolved_idea_id = idea_id
+        idea_metadata: Mapping[str, Any] | None = None
+        trial_budget_warnings: tuple[Mapping[str, Any], ...] = ()
+        if idea is not None:
+            if idea_id is not None and idea_id != idea.idea_id:
+                raise ValueError("idea_id must match idea.idea_id")
+            resolved_idea_id = idea.idea_id
+            idea_metadata = idea.to_payload()
+            trial_budget_warnings = _trial_budget_warning_payloads(idea)
         bundle_seed = {
+            "artifact_paths": artifact_path_hashes,
+            "idea_id": resolved_idea_id,
             "manifest_hashes": manifest_hashes,
             "report_path": report_path,
             "summary_hash": _sha256_path(workflow_summary_path),
@@ -189,10 +223,16 @@ class EvidenceRegistry:
             dataset_ids=_string_tuple(run_context.get("dataset_ids", ())),
             manifest_paths=manifest_paths,
             manifest_hashes=manifest_hashes,
-            artifact_hashes=_collect_manifest_artifact_hashes(manifest_paths),
+            artifact_hashes={
+                **manifest_artifact_hashes,
+                **artifact_path_hashes,
+            },
+            artifact_paths=artifact_path_hashes,
             report_path=report_path,
             period_roles=period_roles,
-            idea_id=idea_id,
+            idea_id=resolved_idea_id,
+            idea_metadata=idea_metadata,
+            trial_budget_warnings=trial_budget_warnings,
             strategy_id=strategy_id,
         )
         self._write_bundle(bundle)
@@ -231,6 +271,19 @@ class EvidenceRegistry:
             actual_hash = _sha256_path(path)
             if actual_hash != expected_hash:
                 reasons.append(f"hash mismatch for {path_text}: {actual_hash} != {expected_hash}")
+        for path_text, expected_hash in (bundle.artifact_paths or {}).items():
+            checked.append(path_text)
+            path = Path(path_text)
+            if not path.exists():
+                reasons.append(f"missing referenced path: {path_text}")
+                continue
+            actual_hash = _sha256_path(path)
+            if actual_hash != expected_hash:
+                reasons.append(f"hash mismatch for {path_text}: {actual_hash} != {expected_hash}")
+        verified_artifact_hashes = set((bundle.artifact_paths or {}).values())
+        for artifact_name, expected_hash in (bundle.artifact_hashes or {}).items():
+            if expected_hash not in verified_artifact_hashes:
+                reasons.append(f"artifact hash has no path for recomputation: {artifact_name}")
         if bundle.report_path is not None:
             checked.append(bundle.report_path)
             if not Path(bundle.report_path).exists():
@@ -301,6 +354,8 @@ def _collect_output_paths(payload: Mapping[str, Any], key: str) -> tuple[str, ..
         value = outputs.get(key)
         if isinstance(value, str):
             paths.append(value)
+        elif isinstance(value, Sequence) and not isinstance(value, str):
+            paths.extend(str(item) for item in value if isinstance(item, (str, Path)))
     return tuple(paths)
 
 
@@ -315,6 +370,23 @@ def _collect_manifest_artifact_hashes(manifest_paths: Sequence[str]) -> dict[str
         if isinstance(raw_hashes, Mapping):
             artifact_hashes.update({str(key): str(value) for key, value in raw_hashes.items()})
     return artifact_hashes
+
+
+def _collect_manifest_artifact_paths(manifest_paths: Sequence[str]) -> dict[str, str]:
+    artifact_paths: dict[str, str] = {}
+    for manifest_path in manifest_paths:
+        path = Path(manifest_path)
+        if not path.exists():
+            continue
+        payload = _load_json_mapping(path)
+        raw_paths = payload.get("artifact_paths_by_hash", {})
+        if isinstance(raw_paths, Mapping):
+            artifact_paths.update({str(item): str(key) for key, item in raw_paths.items()})
+    return artifact_paths
+
+
+def _hash_existing_paths(paths: Sequence[str]) -> dict[str, str]:
+    return {path: _sha256_path(Path(path)) for path in paths}
 
 
 def _string_tuple(value: Any) -> tuple[str, ...]:
@@ -333,6 +405,36 @@ def _string_mapping(value: Any) -> dict[str, str]:
     if not isinstance(value, Mapping):
         raise ValueError("expected JSON string object")
     return {str(key): str(item) for key, item in value.items()}
+
+
+def _optional_mapping(value: Any) -> Mapping[str, Any] | None:
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise ValueError("expected JSON object")
+    return dict(value)
+
+
+def _idea_from_payload(value: Any) -> IdeaSpec | None:
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise ValueError("idea_metadata must be a JSON object")
+    return IdeaSpec.from_payload(value)
+
+
+def _trial_budget_warning_payloads(idea: IdeaSpec) -> tuple[Mapping[str, Any], ...]:
+    warning = trial_budget_warning(idea)
+    if warning is None:
+        return ()
+    return (
+        {
+            "budget": warning.budget,
+            "idea_id": warning.idea_id,
+            "message": warning.message,
+            "trial_count": warning.trial_count,
+        },
+    )
 
 
 def _sha256_path(path: Path) -> str:

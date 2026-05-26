@@ -90,10 +90,13 @@ from qts.research.trade_diagnostics import (
     PaperCandidateDiagnosticsGate,
     PaperCandidateDiagnosticsValidation,
     TradeDiagnostic,
+    TradeDiagnosticsArtifacts,
+    TradeDiagnosticsArtifactWriter,
     TradeDiagnosticsReport,
     TradeDiagnosticSummary,
 )
 from qts.research.workflow import (
+    ResearchIdeaLink,
     ResearchRouteIndex,
     ResearchRouteMetadata,
     ResearchWorkflowConfig,
@@ -148,6 +151,7 @@ __all__ = [
     "scan_volatility_managed_allocations",
     "PaperReadinessChecklist",
     "PromotionCandidateSpec",
+    "ResearchIdeaLink",
     "ResearchRouteIndex",
     "ResearchRouteMetadata",
     "ResearchWorkflowConfig",
@@ -182,6 +186,8 @@ __all__ = [
     "ResearchSession",
     "ResearchSessionConfig",
     "TradeDiagnostic",
+    "TradeDiagnosticsArtifactWriter",
+    "TradeDiagnosticsArtifacts",
     "TradeDiagnosticSummary",
     "TradeDiagnosticsReport",
 ]

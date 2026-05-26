@@ -209,6 +209,21 @@ exceptions:
     reason: research session facade orchestrating existing book pipeline optimizer and store boundaries
     owner: platform
     expiry: 2027-05-20
+  - class_name: ResearchIdeaLink
+    module: qts.research.workflow
+    reason: workflow-level research idea registry link for evidence/report provenance
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: TradeDiagnosticsArtifacts
+    module: qts.research.trade_diagnostics
+    reason: research trade diagnostics artifact path value object for promotion evidence review
+    owner: platform
+    expiry: 2027-05-24
+  - class_name: TradeDiagnosticsArtifactWriter
+    module: qts.research.trade_diagnostics
+    reason: research trade diagnostics deterministic artifact writer for JSONL summary and Markdown evidence
+    owner: platform
+    expiry: 2027-05-24
   - class_name: ConstraintDecision
     module: qts.research.optimizer.constraints
     reason: OPTV-1 optimizer constraint decision evidence value object
@@ -1744,6 +1759,11 @@ exceptions:
     reason: Architecture remediation enforces runtime→execution import boundary
     owner: platform
     expiry: 2027-05-17
+  - class_name: PromotionCandidateSpecBoundaryRule
+    module: qts.quality.rules.research
+    reason: Research OS promotion review enforces examples migration and research-only parameter boundaries
+    owner: platform
+    expiry: 2027-05-26
   - class_name: BrokerCommissionReport
     module: qts.execution.broker
     reason: Architecture remediation replaces IbkrCommissionReport with broker-generic commission type at the adapter boundary

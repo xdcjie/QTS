@@ -11,6 +11,7 @@ from typing import Any
 
 from qts.research.experiment_manifest import ExperimentManifestConfig, ExperimentManifestWriter
 from qts.research.experiment_store import ExperimentStore, ExperimentStoreRecord
+from qts.research.idea_registry import IdeaRegistry
 
 
 @dataclass(frozen=True, slots=True)
@@ -22,6 +23,8 @@ class ResearchExperimentRecorderConfig:
     strategy_version: str
     manifest_root: Path
     store: ExperimentStore
+    idea_id: str | None = None
+    idea_registry: IdeaRegistry | None = None
 
     def __post_init__(self) -> None:
         self._require_non_empty("experiment_id", self.experiment_id)
@@ -30,6 +33,11 @@ class ResearchExperimentRecorderConfig:
         object.__setattr__(self, "experiment_id", self.experiment_id.strip())
         object.__setattr__(self, "strategy_name", self.strategy_name.strip())
         object.__setattr__(self, "strategy_version", self.strategy_version.strip())
+        if self.idea_id is not None:
+            self._require_non_empty("idea_id", self.idea_id)
+            object.__setattr__(self, "idea_id", self.idea_id.strip())
+        elif self.idea_registry is not None:
+            raise ValueError("idea_id is required when idea_registry is set")
 
     @staticmethod
     def _require_non_empty(field_name: str, value: str) -> None:
@@ -95,6 +103,9 @@ class ResearchExperimentRecorder:
     def finalize(self, recorded_at: datetime | None = None) -> ExperimentStoreRecord:
         """Write the experiment manifest and index it in the experiment store."""
 
+        if self._config.idea_registry is not None and self._config.idea_id is not None:
+            self._config.idea_registry.get(self._config.idea_id)
+
         writer = ExperimentManifestWriter(self._config.manifest_root)
         result = writer.write_manifest(
             ExperimentManifestConfig(
@@ -106,12 +117,20 @@ class ResearchExperimentRecorder:
                 config=self._config_payload,
                 artifact_paths=self._artifact_paths,
                 metrics=self._metrics,
+                idea_id=self._config.idea_id,
             )
         )
-        return self._config.store.record_manifest(
+        record = self._config.store.record_manifest(
             result.manifest_path,
             recorded_at=recorded_at,
         )
+        if self._config.idea_registry is not None and self._config.idea_id is not None:
+            self._config.idea_registry.record_trial(
+                self._config.idea_id,
+                experiment_id=record.experiment_id,
+                recorded_at=record.recorded_at,
+            )
+        return record
 
     def __enter__(self) -> ResearchExperimentRecorder:
         """Return this recorder for context-managed experiment logging."""

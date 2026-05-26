@@ -27,6 +27,7 @@ class ExperimentStoreRecord:
     config_hash: str
     artifact_hashes: Mapping[str, str]
     metrics: Mapping[str, Any]
+    idea_id: str | None = None
 
     @classmethod
     def from_manifest(
@@ -55,6 +56,7 @@ class ExperimentStoreRecord:
             config_hash=cls._required_text(payload, "config_hash"),
             artifact_hashes=cls._string_mapping(payload, "artifact_hashes"),
             metrics=cls._mapping(payload, "metrics"),
+            idea_id=cls._optional_text(payload, "idea_id"),
         )
 
     @classmethod
@@ -75,12 +77,13 @@ class ExperimentStoreRecord:
             config_hash=cls._required_text(payload, "config_hash"),
             artifact_hashes=cls._string_mapping(payload, "artifact_hashes"),
             metrics=cls._mapping(payload, "metrics"),
+            idea_id=cls._optional_text(payload, "idea_id"),
         )
 
     def to_payload(self) -> dict[str, Any]:
         """Return a deterministic JSON-ready record payload."""
 
-        return {
+        payload = {
             "artifact_hashes": dict(self.artifact_hashes),
             "config_hash": self.config_hash,
             "dataset_ids": list(self.dataset_ids),
@@ -93,6 +96,9 @@ class ExperimentStoreRecord:
             "strategy_name": self.strategy_name,
             "strategy_version": self.strategy_version,
         }
+        if self.idea_id is not None:
+            payload["idea_id"] = self.idea_id
+        return payload
 
     @staticmethod
     def _required_text(payload: Mapping[str, Any], field_name: str) -> str:
@@ -100,6 +106,15 @@ class ExperimentStoreRecord:
         if not isinstance(value, str) or not value:
             raise ValueError(f"{field_name} is required")
         return value
+
+    @staticmethod
+    def _optional_text(payload: Mapping[str, Any], field_name: str) -> str | None:
+        value = payload.get(field_name)
+        if value is None:
+            return None
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{field_name} must be a non-empty string")
+        return value.strip()
 
     @staticmethod
     def _mapping(payload: Mapping[str, Any], field_name: str) -> dict[str, Any]:

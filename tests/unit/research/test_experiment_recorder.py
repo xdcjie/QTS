@@ -8,6 +8,8 @@ from pathlib import Path
 import pytest
 from qts.research.experiment_recorder import ResearchExperimentRecorderConfig
 from qts.research.experiment_store import ExperimentStore
+from qts.research.idea_registry import IdeaRegistry
+from qts.research.idea_spec import IdeaSpec
 
 
 def _store(tmp_path: Path) -> ExperimentStore:
@@ -53,6 +55,41 @@ def test_experiment_recorder_finalizes_manifest_and_store_record(tmp_path: Path)
     assert payload["artifact_hashes"] == {"equity_curve.csv": expected_artifact_hash}
     assert payload["artifact_paths_by_hash"] == {expected_artifact_hash: str(artifact_path)}
     assert _store(tmp_path).list_runs() == (record,)
+
+
+def test_experiment_recorder_links_idea_and_records_trial(tmp_path: Path) -> None:
+    from qts.research.experiment_recorder import ResearchExperimentRecorder
+
+    idea_registry = IdeaRegistry(tmp_path / "ideas")
+    idea_registry.save_idea(
+        IdeaSpec(
+            idea_id="idea-momentum",
+            title="Momentum",
+            hypothesis="Momentum persists after costs.",
+            edge_type="momentum",
+            source="fixture",
+            created_at=datetime(2026, 5, 20, tzinfo=UTC),
+        )
+    )
+    config = ResearchExperimentRecorderConfig(
+        experiment_id="exp-idea",
+        strategy_name="mean_reversion",
+        strategy_version="2026.05",
+        manifest_root=tmp_path / "artifacts" / "research",
+        store=_store(tmp_path),
+        idea_id="idea-momentum",
+        idea_registry=idea_registry,
+    )
+
+    record = ResearchExperimentRecorder(config).finalize(
+        recorded_at=datetime(2026, 5, 21, tzinfo=UTC)
+    )
+    payload = json.loads(record.manifest_path.read_text(encoding="utf-8"))
+
+    assert payload["idea_id"] == "idea-momentum"
+    assert record.idea_id == "idea-momentum"
+    assert _store(tmp_path).list_runs()[0].idea_id == "idea-momentum"
+    assert idea_registry.get("idea-momentum").trial_count == 1
 
 
 def test_experiment_recorder_context_manager_finalizes_on_clean_exit(tmp_path: Path) -> None:

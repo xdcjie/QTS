@@ -15,6 +15,9 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
+from qts.research.ablation import AblationPlan, AblationReport, AblationReportWriter, AblationRun
+from qts.research.idea_registry import IdeaRegistry
+from qts.research.idea_spec import IdeaSpec
 from qts.research.optimizer import (
     FailureWindow,
     MetricConstraint,
@@ -32,6 +35,11 @@ from qts.research.portfolio_ensemble import (
     scan_volatility_managed_allocations,
 )
 from qts.research.report import ResearchWorkflowReport, ResearchWorkflowReportWriter
+from qts.research.trade_diagnostics import (
+    TradeDiagnostic,
+    TradeDiagnosticsArtifactWriter,
+    TradeDiagnosticsReport,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -169,6 +177,33 @@ class ResearchRouteMetadata:
 
 
 @dataclass(frozen=True, slots=True)
+class ResearchIdeaLink:
+    """Workflow-level link to an idea registry entry."""
+
+    idea_id: str
+    registry_root: Path
+
+    def __post_init__(self) -> None:
+        idea_id = self.idea_id.strip()
+        if not idea_id:
+            raise ValueError("idea.idea_id is required")
+        object.__setattr__(self, "idea_id", idea_id)
+
+    def load(self) -> IdeaSpec:
+        """Load the linked idea from its registry."""
+
+        return IdeaRegistry(self.registry_root).get(self.idea_id)
+
+    def to_payload(self) -> dict[str, str]:
+        """Return JSON-ready idea link metadata."""
+
+        return {
+            "idea_id": self.idea_id,
+            "registry_root": str(self.registry_root),
+        }
+
+
+@dataclass(frozen=True, slots=True)
 class ResearchRouteIndex:
     """Resolved index of route workflow files."""
 
@@ -209,6 +244,7 @@ class ResearchWorkflowConfig:
     periods: tuple[dict[str, Any], ...]
     steps: tuple[ResearchWorkflowStepConfig, ...]
     route: ResearchRouteMetadata | None = None
+    idea: ResearchIdeaLink | None = None
 
     def __post_init__(self) -> None:
         """Enforce workflow invariants for direct in-memory construction too."""
@@ -247,6 +283,7 @@ class ResearchWorkflowConfig:
             workflow_config_path=workflow_path,
             workflow_id=workflow_id,
             periods=periods,
+            idea=_idea_link_from_payload(raw.get("idea"), workflow_path=workflow_path),
             route=_route_metadata_from_payload(raw.get("route")),
             steps=steps,
         )
@@ -366,6 +403,23 @@ def _route_metadata_from_payload(value: Any) -> ResearchRouteMetadata | None:
             else {}
         ),
         allowed_period_roles=tuple(str(role) for role in raw_allowed_roles),
+    )
+
+
+def _idea_link_from_payload(value: Any, *, workflow_path: Path) -> ResearchIdeaLink | None:
+    if value is None:
+        return None
+    if not isinstance(value, Mapping):
+        raise ValueError("research workflow idea metadata must be a mapping")
+    raw_registry_root = value.get("registry_root", "runs/research/idea_registry")
+    if not isinstance(raw_registry_root, str) or not raw_registry_root.strip():
+        raise ValueError("idea.registry_root must be a path")
+    registry_root = Path(raw_registry_root)
+    if not registry_root.is_absolute():
+        registry_root = workflow_path.parent / registry_root
+    return ResearchIdeaLink(
+        idea_id=_required_text(value, "idea_id"),
+        registry_root=registry_root,
     )
 
 
@@ -801,6 +855,7 @@ class ResearchWorkflowResult:
     periods: tuple[dict[str, Any], ...] = ()
     run_context: ResearchWorkflowRunContext | None = None
     route: ResearchRouteMetadata | None = None
+    idea_metadata: Mapping[str, Any] | None = None
     decision: Any | None = None
 
     @property
@@ -821,6 +876,8 @@ class ResearchWorkflowResult:
             payload["run_context"] = self.run_context.to_payload()
         if self.route is not None:
             payload["route"] = self.route.to_payload()
+        if self.idea_metadata is not None:
+            payload["idea_metadata"] = _json_ready(self.idea_metadata)
         if self.periods:
             period_payloads = [
                 ResearchWorkflowRunner._declared_period_payload(period) for period in self.periods
@@ -848,6 +905,7 @@ class ResearchWorkflowRunner:
         """Run a workflow until completion or a blocking gate."""
 
         run_context = ResearchWorkflowRunContext.from_session(session, config)
+        idea_metadata = self._idea_metadata(config)
         results: list[ResearchWorkflowStepResult] = []
         overall_status = "completed"
         for step in self._selected_steps(
@@ -862,6 +920,7 @@ class ResearchWorkflowRunner:
                 step,
                 steps=tuple(results),
                 run_context=run_context,
+                idea_metadata=idea_metadata,
             )
             results.append(result)
             if result.status != "passed":
@@ -875,6 +934,7 @@ class ResearchWorkflowRunner:
         return ResearchWorkflowResult(
             workflow_id=config.workflow_id,
             periods=config.periods,
+            idea_metadata=idea_metadata,
             run_context=run_context,
             route=config.route,
             status=overall_status,
@@ -938,6 +998,12 @@ class ResearchWorkflowRunner:
         except KeyError as exc:
             raise ValueError(f"workflow step not found: {step_id}") from exc
 
+    @staticmethod
+    def _idea_metadata(config: ResearchWorkflowConfig) -> Mapping[str, Any] | None:
+        if config.idea is None:
+            return None
+        return config.idea.load().to_payload()
+
     def _run_step(
         self,
         session: Any,
@@ -945,6 +1011,7 @@ class ResearchWorkflowRunner:
         step: ResearchWorkflowStepConfig,
         *,
         run_context: ResearchWorkflowRunContext,
+        idea_metadata: Mapping[str, Any] | None,
         steps: tuple[ResearchWorkflowStepResult, ...],
     ) -> ResearchWorkflowStepResult:
         try:
@@ -958,6 +1025,10 @@ class ResearchWorkflowRunner:
                 return self._factor_evaluation(session, config, step)
             if step.kind == "factor_tearsheet":
                 return self._factor_tearsheet(session, config, step)
+            if step.kind == "ablation":
+                return self._ablation(config, step)
+            if step.kind == "trade_diagnostics":
+                return self._trade_diagnostics(config, step)
             if step.kind == "backtest":
                 return self._backtest(session, config, step)
             if step.kind == "backtest_matrix":
@@ -971,7 +1042,13 @@ class ResearchWorkflowRunner:
             if step.kind == "portfolio_volatility_managed_scan":
                 return self._portfolio_volatility_managed_scan(config, step)
             if step.kind == "research_report":
-                return self._research_report(config, run_context, steps, step)
+                return self._research_report(
+                    config,
+                    run_context,
+                    steps,
+                    step,
+                    idea_metadata=idea_metadata,
+                )
         except Exception as exc:  # pragma: no cover - exercised by CLI integration.
             return ResearchWorkflowStepResult(
                 step_id=step.step_id,
@@ -1120,12 +1197,102 @@ class ResearchWorkflowRunner:
             outputs=outputs,
         )
 
+    def _ablation(
+        self,
+        config: ResearchWorkflowConfig,
+        step: ResearchWorkflowStepConfig,
+    ) -> ResearchWorkflowStepResult:
+        baseline = _required_text(step.payload, "baseline")
+        modules = self._string_tuple(step.payload.get("modules", ()))
+        primary_metric = _required_text(step.payload, "primary_metric")
+        higher_is_better = step.payload.get("higher_is_better", True)
+        if not isinstance(higher_is_better, bool):
+            raise ValueError("higher_is_better must be a boolean")
+        raw_runs = step.payload.get("runs")
+        if not isinstance(raw_runs, list) or not raw_runs:
+            raise ValueError("ablation runs must not be empty")
+        runs = tuple(
+            self._ablation_run(raw_run, index=index) for index, raw_run in enumerate(raw_runs)
+        )
+        plan = AblationPlan(
+            baseline=baseline,
+            modules=modules,
+            runs=runs,
+        )
+        report = AblationReport.from_plan(
+            plan,
+            primary_metric=primary_metric,
+            higher_is_better=higher_is_better,
+        )
+        output_root = step.payload.get("output_root", "ablation")
+        if not isinstance(output_root, (str, Path)):
+            raise ValueError("ablation output_root must be a path")
+        writer = AblationReportWriter(config.resolve_path(output_root))
+        paths = writer.write(
+            report,
+            json_path=str(step.payload.get("summary_output", "ablation-summary.json")),
+            markdown_path=str(step.payload.get("report_output", "ablation-report.md")),
+        )
+        return ResearchWorkflowStepResult(
+            step_id=step.step_id,
+            kind=step.kind,
+            status="passed",
+            message="ablation artifacts written",
+            outputs={
+                "ablation_summary": report.to_dict(),
+                "artifact_path": str(paths.json_path),
+                "artifact_paths": [str(paths.json_path), str(paths.markdown_path)],
+                "report_path": str(paths.markdown_path),
+            },
+        )
+
+    def _trade_diagnostics(
+        self,
+        config: ResearchWorkflowConfig,
+        step: ResearchWorkflowStepConfig,
+    ) -> ResearchWorkflowStepResult:
+        raw_trades = step.payload.get("trades")
+        if not isinstance(raw_trades, list) or not raw_trades:
+            raise ValueError("trade_diagnostics trades must not be empty")
+        trades = tuple(
+            self._trade_diagnostic(raw_trade, index=index)
+            for index, raw_trade in enumerate(raw_trades)
+        )
+        output_root = step.payload.get("output_root", "trade-diagnostics")
+        if not isinstance(output_root, (str, Path)):
+            raise ValueError("trade_diagnostics output_root must be a path")
+        report = TradeDiagnosticsReport(trades=trades)
+        artifacts = TradeDiagnosticsArtifactWriter().write(
+            config.resolve_path(output_root),
+            report,
+        )
+        return ResearchWorkflowStepResult(
+            step_id=step.step_id,
+            kind=step.kind,
+            status="passed",
+            message="trade diagnostics artifacts written",
+            outputs={
+                "artifact_path": str(artifacts.summary_path),
+                "artifact_paths": [
+                    str(artifacts.trades_path),
+                    str(artifacts.summary_path),
+                    str(artifacts.markdown_path),
+                ],
+                "report_path": str(artifacts.markdown_path),
+                "summary_path": str(artifacts.summary_path),
+                "trade_count": len(trades),
+                "trades_path": str(artifacts.trades_path),
+            },
+        )
+
     def _research_report(
         self,
         config: ResearchWorkflowConfig,
         run_context: ResearchWorkflowRunContext,
         steps: tuple[ResearchWorkflowStepResult, ...],
         step: ResearchWorkflowStepConfig,
+        *,
+        idea_metadata: Mapping[str, Any] | None = None,
     ) -> ResearchWorkflowStepResult:
         writer_root = (
             config.resolve_path(_required_text(step.payload, "output_root"))
@@ -1142,6 +1309,7 @@ class ResearchWorkflowRunner:
                 periods=config.periods,
                 run_context=run_context,
                 route=config.route,
+                idea_metadata=idea_metadata,
                 status="completed",
                 steps=steps,
             )
@@ -2049,6 +2217,74 @@ class ResearchWorkflowRunner:
             raise ValueError("value must be a mapping")
         return dict(value)
 
+    @classmethod
+    def _ablation_run(cls, value: Any, *, index: int) -> AblationRun:
+        if not isinstance(value, Mapping):
+            raise ValueError(f"ablation runs[{index}] must be a mapping")
+        return AblationRun(
+            name=_required_text(value, "name"),
+            modules=cls._string_tuple(value.get("modules", ())),
+            metrics=cls._float_mapping(value.get("metrics"), field_name=f"runs[{index}].metrics"),
+            split_metrics=cls._nested_float_mapping(
+                value.get("split_metrics"),
+                field_name=f"runs[{index}].split_metrics",
+            ),
+            trade_count=cls._optional_int(value.get("trade_count")),
+            cost_stress_metrics=cls._nested_float_mapping(
+                value.get("cost_stress_metrics"),
+                field_name=f"runs[{index}].cost_stress_metrics",
+            ),
+        )
+
+    @classmethod
+    def _trade_diagnostic(cls, value: Any, *, index: int) -> TradeDiagnostic:
+        if not isinstance(value, Mapping):
+            raise ValueError(f"trade_diagnostics.trades[{index}] must be a mapping")
+        return TradeDiagnostic(
+            trade_id=_required_text(value, "trade_id"),
+            strategy_id=_required_text(value, "strategy_id"),
+            idea_id=_required_text(value, "idea_id"),
+            symbol=_required_text(value, "symbol"),
+            direction=_required_text(value, "direction"),
+            quantity=value.get("quantity"),
+            entry_time=cls._iso_datetime(value.get("entry_time"), "entry_time"),
+            exit_time=cls._iso_datetime(value.get("exit_time"), "exit_time"),
+            entry_price=cls._optional_float(value.get("entry_price")),
+            exit_price=cls._optional_float(value.get("exit_price")),
+            r_pnl=cls._optional_float(value.get("r_pnl")),
+            mae_r=cls._optional_float(value.get("mae_r")),
+            mfe_r=cls._optional_float(value.get("mfe_r")),
+            holding_bars=cls._optional_int(value.get("holding_bars")),
+            exit_reason=_required_text(value, "exit_reason"),
+            time_bucket=_required_text(value, "time_bucket"),
+            factor_snapshot=cls._float_mapping(
+                value.get("factor_snapshot"),
+                field_name=f"trade_diagnostics.trades[{index}].factor_snapshot",
+            ),
+        )
+
+    @staticmethod
+    def _float_mapping(value: Any, *, field_name: str) -> dict[str, float]:
+        if not isinstance(value, Mapping) or not value:
+            raise ValueError(f"{field_name} must be a non-empty mapping")
+        return {str(key): float(item) for key, item in value.items()}
+
+    @classmethod
+    def _nested_float_mapping(
+        cls,
+        value: Any,
+        *,
+        field_name: str,
+    ) -> dict[str, dict[str, float]] | None:
+        if value is None:
+            return None
+        if not isinstance(value, Mapping):
+            raise ValueError(f"{field_name} must be a mapping")
+        return {
+            str(key): cls._float_mapping(item, field_name=f"{field_name}.{key}")
+            for key, item in value.items()
+        }
+
     @staticmethod
     def _optional_int(value: Any) -> int | None:
         if value is None:
@@ -2060,6 +2296,12 @@ class ResearchWorkflowRunner:
         if value is None:
             return None
         return Decimal(str(value))
+
+    @staticmethod
+    def _optional_float(value: Any) -> float | None:
+        if value is None:
+            return None
+        return float(value)
 
     @staticmethod
     def _string_tuple(value: Any) -> tuple[str, ...]:
@@ -2202,6 +2444,7 @@ def _dataset_ids(session_config: Any) -> tuple[str, ...]:
 
 
 __all__ = [
+    "ResearchIdeaLink",
     "ResearchRouteIndex",
     "ResearchRouteMetadata",
     "ResearchWorkflowConfig",
@@ -2214,6 +2457,7 @@ __all__ = [
 
 _ALLOWED_STEP_KINDS = frozenset(
     {
+        "ablation",
         "backtest",
         "backtest_matrix",
         "factor_candidates",
@@ -2226,6 +2470,7 @@ _ALLOWED_STEP_KINDS = frozenset(
         "portfolio_ensemble_scan",
         "portfolio_volatility_managed_scan",
         "research_report",
+        "trade_diagnostics",
     }
 )
 _SCORING_PERIOD_ROLES = frozenset({"anchor", "selection", "validation"})

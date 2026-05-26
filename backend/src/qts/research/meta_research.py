@@ -9,6 +9,8 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from qts.research.evidence_registry import EvidenceRegistry, ResearchEvidenceBundle
+from qts.research.experiment_store import ExperimentStore, ExperimentStoreRecord
 from qts.research.idea_spec import IdeaSpec
 
 
@@ -73,6 +75,22 @@ class MetaResearchSummary:
             ),
         )
 
+    @staticmethod
+    def evidence_records_from_registry(
+        registry: EvidenceRegistry,
+    ) -> tuple[dict[str, Any], ...]:
+        """Return meta-research records derived from persisted evidence bundles."""
+
+        return tuple(_evidence_bundle_record(bundle) for bundle in registry.list())
+
+    @staticmethod
+    def experiment_records_from_store(
+        store: ExperimentStore,
+    ) -> tuple[dict[str, Any], ...]:
+        """Return meta-research records derived from persisted experiment records."""
+
+        return tuple(_experiment_store_record(record) for record in store.list_runs())
+
     def to_payload(self) -> dict[str, Any]:
         """Return a deterministic JSON-ready payload."""
 
@@ -112,6 +130,44 @@ class MetaResearchSummaryWriter:
 
 def _count_kind(records: Sequence[Mapping[str, Any]], kind: str) -> int:
     return sum(1 for record in records if record.get("kind") == kind)
+
+
+def _evidence_bundle_record(bundle: ResearchEvidenceBundle) -> dict[str, Any]:
+    record: dict[str, Any] = {
+        "evidence_bundle_id": bundle.evidence_bundle_id,
+        "idea_id": bundle.idea_id,
+        "kind": "strategy_prototype" if bundle.strategy_id else "evidence_bundle",
+        "strategy_id": bundle.strategy_id,
+        "workflow_run_id": bundle.workflow_run_id,
+    }
+    decision = bundle.review_decisions[-1] if bundle.review_decisions else {}
+    if decision:
+        status = str(decision.get("status", "")).strip()
+        if status in {"paper_candidate", "small_live_candidate"}:
+            record["accepted"] = True
+        elif status in {"reject", "rejected", "retire", "retired"}:
+            record["accepted"] = False
+            record["rejection_reason"] = _decision_reason(decision) or status
+    return record
+
+
+def _experiment_store_record(record: ExperimentStoreRecord) -> dict[str, Any]:
+    payload = record.to_payload()
+    accepted = record.metrics.get("accepted")
+    if isinstance(accepted, bool):
+        payload["accepted"] = accepted
+    return payload
+
+
+def _decision_reason(decision: Mapping[str, Any]) -> str | None:
+    reason = decision.get("reason")
+    if isinstance(reason, str) and reason.strip():
+        return reason.strip()
+    if isinstance(reason, Sequence) and not isinstance(reason, str):
+        for item in reason:
+            if isinstance(item, str) and item.strip():
+                return item.strip()
+    return None
 
 
 def _pass_rate(records: Sequence[Mapping[str, Any]]) -> dict[str, float | int]:

@@ -1301,6 +1301,72 @@ def test_guardrail_rejects_paper_candidate_without_diagnostics(tmp_path: Path) -
     assert "TRADE_DIAGNOSTICS_REQUIRED_FOR_PAPER" in _codes(root)
 
 
+def test_guardrail_rejects_paper_candidate_without_validation_scorecard(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "configs/research/promotion/vwap.yaml",
+        "promotion_candidate_id: pc_001\nevidence_bundle_id: evb_001\nidea_id: idea_001\n"
+        "status: paper_candidate\npaper_readiness:\n"
+        "  trade_diagnostics_available: true\n"
+        "  cost_stress_available: true\n",
+    )
+
+    assert "TRADE_DIAGNOSTICS_REQUIRED_FOR_PAPER" in _codes(root)
+
+
+def test_guardrail_rejects_paper_candidate_without_cost_stress(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "configs/research/promotion/vwap.yaml",
+        "promotion_candidate_id: pc_001\nevidence_bundle_id: evb_001\nidea_id: idea_001\n"
+        "status: paper_candidate\npaper_readiness:\n"
+        "  trade_diagnostics_available: true\n"
+        "  validation_scorecard_available: true\n",
+    )
+
+    assert "TRADE_DIAGNOSTICS_REQUIRED_FOR_PAPER" in _codes(root)
+
+
+def test_guardrail_rejects_promotion_spec_with_unreviewed_examples_source(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "configs/research/promotion/example.yaml",
+        "promotion_candidate_id: pc_001\n"
+        "strategy_id: example\n"
+        "source_module: examples.strategies.gc_si_momentum\n"
+        "target_module: strategies.production.gc_si_momentum\n"
+        "evidence_bundle_id: evb_001\n"
+        "status: review_required\n",
+    )
+
+    assert "PROMOTION_CANDIDATE_SPEC_BOUNDARY" in _codes(root)
+
+
+def test_guardrail_rejects_promotion_spec_with_research_only_params(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "configs/research/promotion/vwap.yaml",
+        "promotion_candidate_id: pc_001\n"
+        "strategy_id: vwap\n"
+        "source_module: strategies.research.vwap_factor_research\n"
+        "target_module: strategies.production.vwap_production_pullback\n"
+        "evidence_bundle_id: evb_001\n"
+        "status: review_required\n"
+        "production_params:\n"
+        "  trial_budget: 30\n",
+    )
+
+    assert "PROMOTION_CANDIDATE_SPEC_BOUNDARY" in _codes(root)
+
+
 def test_guardrail_rejects_route_workflow_without_route_metadata(tmp_path: Path) -> None:
     root = tmp_path
     _write(

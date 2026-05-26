@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
 import pytest
 from qts.research.evidence_registry import EvidenceRegistry, ResearchEvidenceBundle
+from qts.research.idea_spec import IdeaSpec
 
 
 def _write_workflow_summary(tmp_path: Path, manifest_path: Path, report_path: Path) -> Path:
@@ -85,6 +87,82 @@ def test_evidence_bundle_created_from_workflow_summary(tmp_path: Path) -> None:
     assert (registry.root_dir / f"evidence-bundle-{bundle.evidence_bundle_id}.json").exists()
 
 
+def test_evidence_bundle_persists_idea_metadata_and_trial_budget_warning(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text('{"metrics": {}}\n', encoding="utf-8")
+    report_path = tmp_path / "workflow-report.md"
+    report_path.write_text("# Report\n", encoding="utf-8")
+    summary_path = _write_workflow_summary(tmp_path, manifest_path, report_path)
+    registry = EvidenceRegistry(tmp_path / "evidence")
+    idea = IdeaSpec.from_payload(
+        {
+            "created_at": "2026-05-25T00:00:00+00:00",
+            "data_required": ["GC 15m OHLCV"],
+            "edge_type": "momentum",
+            "hypothesis": "Momentum persists after costs.",
+            "idea_id": "idea-momentum",
+            "kill_criteria": ["oos_net_sharpe_below_0_8"],
+            "source": "fixture",
+            "status": "draft",
+            "title": "Momentum",
+            "trial_budget": {"max_strategy_trials": 3},
+            "trial_count": 4,
+        }
+    )
+
+    bundle = registry.create_from_workflow_summary(summary_path, idea=idea)
+    payload = bundle.to_payload()
+
+    assert payload["idea_id"] == "idea-momentum"
+    assert payload["idea_metadata"]["kill_criteria"] == ["oos_net_sharpe_below_0_8"]
+    assert payload["trial_budget_warnings"] == [
+        {
+            "budget": 3,
+            "idea_id": "idea-momentum",
+            "message": "idea-momentum trial_count 4 exceeds budget 3",
+            "trial_count": 4,
+        }
+    ]
+
+
+def test_evidence_bundle_uses_workflow_summary_idea_metadata(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text('{"metrics": {}}\n', encoding="utf-8")
+    report_path = tmp_path / "workflow-report.md"
+    report_path.write_text("# Report\n", encoding="utf-8")
+    summary_path = _write_workflow_summary(tmp_path, manifest_path, report_path)
+    payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    payload["idea_metadata"] = {
+        "created_at": "2026-05-25T00:00:00+00:00",
+        "data_required": ["GC 15m OHLCV"],
+        "edge_type": "momentum",
+        "hypothesis": "Momentum persists after costs.",
+        "idea_id": "idea-momentum",
+        "kill_criteria": ["oos_net_sharpe_below_0_8"],
+        "source": "fixture",
+        "status": "draft",
+        "title": "Momentum",
+        "trial_budget": {"max_strategy_trials": 3},
+        "trial_count": 4,
+    }
+    summary_path.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    registry = EvidenceRegistry(tmp_path / "evidence")
+
+    bundle = registry.create_from_workflow_summary(summary_path)
+
+    assert bundle.idea_id == "idea-momentum"
+    assert bundle.idea_metadata is not None
+    assert bundle.idea_metadata["edge_type"] == "momentum"
+    assert bundle.trial_budget_warnings == (
+        {
+            "budget": 3,
+            "idea_id": "idea-momentum",
+            "message": "idea-momentum trial_count 4 exceeds budget 3",
+            "trial_count": 4,
+        },
+    )
+
+
 def test_evidence_bundle_verifies_manifest_hashes(tmp_path: Path) -> None:
     manifest_path = tmp_path / "manifest.json"
     manifest_path.write_text('{"metrics": {"sharpe": "1.0"}}\n', encoding="utf-8")
@@ -98,6 +176,59 @@ def test_evidence_bundle_verifies_manifest_hashes(tmp_path: Path) -> None:
 
     assert verification.accepted
     assert verification.checked_paths == (str(manifest_path), str(report_path))
+
+
+def test_evidence_bundle_rejects_unverifiable_manifest_artifact_hash(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(
+        json.dumps({"artifact_hashes": {"metrics.json": "sha256:abc"}}, sort_keys=True),
+        encoding="utf-8",
+    )
+    report_path = tmp_path / "workflow-report.md"
+    report_path.write_text("# Report\n", encoding="utf-8")
+    summary_path = _write_workflow_summary(tmp_path, manifest_path, report_path)
+    registry = EvidenceRegistry(tmp_path / "evidence")
+    bundle = registry.create_from_workflow_summary(summary_path)
+
+    verification = registry.verify(bundle.evidence_bundle_id)
+
+    assert not verification.accepted
+    assert any(
+        "artifact hash has no path for recomputation: metrics.json" in reason
+        for reason in verification.reasons
+    )
+
+
+def test_evidence_bundle_verifies_artifact_hashes(tmp_path: Path) -> None:
+    artifact_path = tmp_path / "metrics.json"
+    artifact_path.write_text('{"sharpe": "1.0"}\n', encoding="utf-8")
+    artifact_hash = f"sha256:{hashlib.sha256(artifact_path.read_bytes()).hexdigest()}"
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "artifact_hashes": {artifact_path.name: artifact_hash},
+                "artifact_paths_by_hash": {artifact_hash: str(artifact_path)},
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    report_path = tmp_path / "workflow-report.md"
+    report_path.write_text("# Report\n", encoding="utf-8")
+    summary_path = _write_workflow_summary(tmp_path, manifest_path, report_path)
+    registry = EvidenceRegistry(tmp_path / "evidence")
+    bundle = registry.create_from_workflow_summary(summary_path)
+
+    artifact_path.write_text('{"sharpe": "99.0"}\n', encoding="utf-8")
+    verification = registry.verify(bundle.evidence_bundle_id)
+
+    assert not verification.accepted
+    assert any(
+        "hash mismatch" in reason and str(artifact_path) in reason
+        for reason in verification.reasons
+    )
 
 
 def test_evidence_bundle_missing_artifact_fails(tmp_path: Path) -> None:

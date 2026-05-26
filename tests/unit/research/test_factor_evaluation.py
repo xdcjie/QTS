@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal, localcontext
 from pathlib import Path
 from typing import Any
@@ -100,6 +100,34 @@ def test_factor_snapshot_rejects_forward_window_overlap() -> None:
                     forward_return_end=date(2026, 1, 3),
                 ),
             )
+        )
+
+
+def test_factor_snapshot_protocol_preserves_intraday_timestamps() -> None:
+    protocol = FactorSnapshotProtocol.from_payload(
+        {
+            "source_data_end": "2026-01-02T10:00:00+00:00",
+            "available_at": "2026-01-02T10:05:00+00:00",
+            "forward_return_start": "2026-01-02T10:15:00+00:00",
+            "forward_return_end": "2026-01-02T11:15:00+00:00",
+        }
+    )
+
+    assert protocol.to_payload() == {
+        "available_at": "2026-01-02T10:05:00+00:00",
+        "forward_return_end": "2026-01-02T11:15:00+00:00",
+        "forward_return_start": "2026-01-02T10:15:00+00:00",
+        "source_data_end": "2026-01-02T10:00:00+00:00",
+    }
+
+
+def test_factor_snapshot_rejects_intraday_available_after_forward_start() -> None:
+    with pytest.raises(ValueError, match="available_at must be <= forward_return_start"):
+        FactorSnapshotProtocol(
+            source_data_end=datetime(2026, 1, 2, 10, 0, tzinfo=UTC),
+            available_at=datetime(2026, 1, 2, 10, 30, tzinfo=UTC),
+            forward_return_start=datetime(2026, 1, 2, 10, 15, tzinfo=UTC),
+            forward_return_end=datetime(2026, 1, 2, 11, 15, tzinfo=UTC),
         )
 
 
@@ -590,6 +618,7 @@ def test_factor_artifact_records_snapshot_hash(tmp_path: Path) -> None:
     payload = json.loads(path.read_text(encoding="utf-8"))
 
     assert evaluation.snapshot_hash == protocol.snapshot_hash
+    assert evaluation.snapshot_hash.startswith("sha256:")
     assert payload["snapshot_hash"] == protocol.snapshot_hash
     assert payload["forward_return_protocol"] == {
         "available_at": "2026-01-02",

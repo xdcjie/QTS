@@ -126,6 +126,105 @@ def test_workflow_report_renders_optimizer_capital_metrics() -> None:
     assert "top_return_on_margin_proxy: 0.0133333333" in body
 
 
+def test_workflow_report_renders_optimizer_validation_scorecard() -> None:
+    report = ResearchWorkflowReport.from_result(
+        ResearchWorkflowResult(
+            workflow_id="vwap-flow",
+            status="completed",
+            steps=(
+                _result_step(
+                    "optimize",
+                    "passed",
+                    {
+                        "ranked_results": [],
+                        "run_count": 0,
+                        "validation_scorecard": {
+                            "cost_stress_status": "configured",
+                            "failure_window_status": "configured",
+                            "robustness_score": "61.5",
+                            "walk_forward_status": "configured",
+                        },
+                        "validation_summary": {
+                            "accepted_count": 0,
+                            "rejected_count": 0,
+                        },
+                    },
+                ),
+            ),
+        )
+    )
+
+    body = report.to_markdown()
+
+    assert "cost_stress_status: configured" in body
+    assert "walk_forward_status: configured" in body
+    assert "failure_window_status: configured" in body
+    assert "robustness_score: 61.5" in body
+
+
+def test_workflow_report_renders_optimizer_rejection_reasons() -> None:
+    report = ResearchWorkflowReport.from_result(
+        ResearchWorkflowResult(
+            workflow_id="vwap-flow",
+            status="completed",
+            steps=(
+                _result_step(
+                    "optimize",
+                    "passed",
+                    {
+                        "ranked_results": [],
+                        "run_count": 2,
+                        "validation_summary": {
+                            "accepted_count": 1,
+                            "rejected_count": 1,
+                            "rejections": [
+                                {
+                                    "manifest_path": "runs/research/rejected/manifest.json",
+                                    "raw_rank": 1,
+                                    "accepted_rank": None,
+                                    "objective_value": "0.42",
+                                    "rejection_reasons": [
+                                        "max_drawdown > 0.12",
+                                        "cost_stress_2x_net_pnl < 0",
+                                    ],
+                                }
+                            ],
+                        },
+                    },
+                ),
+            ),
+        )
+    )
+
+    body = report.to_markdown()
+
+    assert "Rejected Candidates" in body
+    assert "runs/research/rejected/manifest.json" in body
+    assert "raw_rank: 1" in body
+    assert "max_drawdown > 0.12" in body
+    assert "cost_stress_2x_net_pnl < 0" in body
+
+
+def test_workflow_report_counts_failed_and_blocked_steps() -> None:
+    report = ResearchWorkflowReport.from_result(
+        ResearchWorkflowResult(
+            workflow_id="failed-flow",
+            status="failed",
+            steps=(
+                _result_step("discover", "passed"),
+                _result_step("validate", "failed"),
+                _result_step("review", "blocked"),
+            ),
+        )
+    )
+
+    body = report.to_markdown()
+
+    assert "- passed: 1" in body
+    assert "- failed: 1" in body
+    assert "- blocked: 1" in body
+
+
 def test_research_report_contains_evidence_header() -> None:
     run_context = ResearchWorkflowRunContext(
         workflow_config_path="configs/research/workflows/quickstart.yaml",

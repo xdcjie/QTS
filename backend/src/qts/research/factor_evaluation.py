@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import ROUND_HALF_EVEN, Context, Decimal, localcontext
 from hashlib import sha256
 from pathlib import Path
@@ -18,17 +18,25 @@ from qts.factors import FactorResult
 class FactorSnapshotProtocol:
     """No-lookahead timing contract for factor snapshots and forward returns."""
 
-    source_data_end: date
-    available_at: date
-    forward_return_start: date
-    forward_return_end: date
+    source_data_end: date | datetime
+    available_at: date | datetime
+    forward_return_start: date | datetime
+    forward_return_end: date | datetime
 
     def __post_init__(self) -> None:
-        if self.source_data_end > self.available_at:
+        source_data_end = self._protocol_datetime(self.source_data_end)
+        available_at = self._protocol_datetime(self.available_at)
+        forward_return_start = self._protocol_datetime(self.forward_return_start)
+        forward_return_end = self._protocol_datetime(self.forward_return_end)
+        object.__setattr__(self, "source_data_end", source_data_end)
+        object.__setattr__(self, "available_at", available_at)
+        object.__setattr__(self, "forward_return_start", forward_return_start)
+        object.__setattr__(self, "forward_return_end", forward_return_end)
+        if source_data_end > available_at:
             raise ValueError("source_data_end must be <= available_at")
-        if self.available_at > self.forward_return_start:
+        if available_at > forward_return_start:
             raise ValueError("available_at must be <= forward_return_start")
-        if self.forward_return_start >= self.forward_return_end:
+        if forward_return_start >= forward_return_end:
             raise ValueError("forward_return_start must be < forward_return_end")
 
     @classmethod
@@ -62,34 +70,66 @@ class FactorSnapshotProtocol:
             sort_keys=True,
             separators=(",", ":"),
         )
-        return sha256(canonical_payload.encode("utf-8")).hexdigest()
+        return f"sha256:{sha256(canonical_payload.encode('utf-8')).hexdigest()}"
 
     def to_payload(self) -> dict[str, str]:
         """Return JSON-ready protocol metadata."""
 
         return {
-            "available_at": self.available_at.isoformat(),
-            "forward_return_end": self.forward_return_end.isoformat(),
-            "forward_return_start": self.forward_return_start.isoformat(),
-            "source_data_end": self.source_data_end.isoformat(),
+            "available_at": self._format_protocol_datetime(
+                self._protocol_datetime(self.available_at)
+            ),
+            "forward_return_end": self._format_protocol_datetime(
+                self._protocol_datetime(self.forward_return_end)
+            ),
+            "forward_return_start": self._format_protocol_datetime(
+                self._protocol_datetime(self.forward_return_start)
+            ),
+            "source_data_end": self._format_protocol_datetime(
+                self._protocol_datetime(self.source_data_end)
+            ),
         }
 
     @staticmethod
-    def _required_protocol_date(payload: Mapping[str, object], field_name: str) -> date:
+    def _required_protocol_date(payload: Mapping[str, object], field_name: str) -> datetime:
         value = payload.get(field_name)
         if not isinstance(value, str) or not value:
             raise ValueError(f"{field_name} is required")
-        return date.fromisoformat(value)
+        return FactorSnapshotProtocol._protocol_datetime(value)
+
+    @staticmethod
+    def _protocol_datetime(value: date | datetime | str) -> datetime:
+        if isinstance(value, datetime):
+            return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
+        if isinstance(value, date):
+            return datetime.combine(value, time.min, tzinfo=UTC)
+        text = value
+        if text.endswith("Z"):
+            text = f"{text[:-1]}+00:00"
+        if "T" not in text:
+            return datetime.combine(date.fromisoformat(text), time.min, tzinfo=UTC)
+        parsed = datetime.fromisoformat(text)
+        return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
+
+    @staticmethod
+    def _format_protocol_datetime(value: datetime) -> str:
+        if value.time() == time.min and value.utcoffset() == timedelta(0):
+            return value.date().isoformat()
+        return value.isoformat()
 
 
 def _validate_factor_snapshot_protocol(protocol: FactorSnapshotProtocol) -> None:
     """Force protocol construction/validation at call sites that accept Any."""
 
-    if protocol.source_data_end > protocol.available_at:
+    source_data_end = FactorSnapshotProtocol._protocol_datetime(protocol.source_data_end)
+    available_at = FactorSnapshotProtocol._protocol_datetime(protocol.available_at)
+    forward_return_start = FactorSnapshotProtocol._protocol_datetime(protocol.forward_return_start)
+    forward_return_end = FactorSnapshotProtocol._protocol_datetime(protocol.forward_return_end)
+    if source_data_end > available_at:
         raise ValueError("source_data_end must be <= available_at")
-    if protocol.available_at > protocol.forward_return_start:
+    if available_at > forward_return_start:
         raise ValueError("available_at must be <= forward_return_start")
-    if protocol.forward_return_start >= protocol.forward_return_end:
+    if forward_return_start >= forward_return_end:
         raise ValueError("forward_return_start must be < forward_return_end")
 
 

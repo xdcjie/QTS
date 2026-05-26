@@ -24,7 +24,46 @@ If implementation conflicts with docs, stop and propose either a design update o
 
 Important specs must become gates. For every durable boundary, invariant, or architecture rule touched by a task, identify at least one enforcement mechanism: `make guardrails`, unit/integration/anchor/regression tests, static checks, review checklist, or manual approval. Passing behavior tests alone is not enough if a boundary gate applies.
 
-## 1.1 Flow-first implementation gate
+## 1.1 Plan-execution closure gate
+
+For any task that asks to execute, complete, review against, or fix findings from
+a plan/spec/status matrix/work package document, the plan is the acceptance
+contract. Scale the process to the size of the plan, but do not replace the
+plan's target outcome with a partial implementation detail.
+
+Before editing, extract the relevant plan items into a short checklist:
+
+```text
+Plan item:
+Target behavior:
+Canonical entrypoint:
+Correct owner or boundary:
+Required evidence:
+Status: pending
+```
+
+Rules:
+
+- Account for each relevant requirement, acceptance criterion, and required
+  evidence item, or explicitly mark it out of scope with a reason.
+- "Implemented" means the behavior is reachable through the plan's intended
+  entrypoint, owner, artifact, or user-facing path. Sidecar modules, private
+  helpers, fixtures, and one-off scripts do not count unless the plan asks only
+  for that layer.
+- Turn durable requirements into gates: tests, guardrails, artifact/hash checks,
+  snapshots, anchor tests, or documented manual review gates.
+- Subagent output is advisory. Inspect the diff, verify behavior, run relevant
+  checks, and compare the result back to the plan before marking work complete.
+- Do not claim completion while generated-artifact residue, deleted-config
+  dependencies, stale references, or unverified acceptance gates remain.
+
+Before final response on plan work, re-open the plan and verify the checklist
+against fresh evidence. If a required item cannot be backed by evidence, say it
+is incomplete and keep working unless blocked. For milestone-level completion,
+run `make check` unless impossible, explain skipped checks, and run
+`graphify update .` after code changes.
+
+## 1.2 Flow-first implementation gate
 
 For every non-trivial implementation, choose the applicable Flow ID from
 `docs/architecture/system_flows.md` before editing code or configs. If multiple

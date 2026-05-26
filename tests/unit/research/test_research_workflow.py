@@ -9,6 +9,8 @@ from typing import Any
 
 import pytest
 import yaml  # type: ignore[import-untyped]
+from qts.research.idea_registry import IdeaRegistry
+from qts.research.idea_spec import IdeaSpec
 from qts.research.workflow import (
     ResearchRouteIndex,
     ResearchWorkflowConfig,
@@ -92,6 +94,152 @@ steps:
 
     with pytest.raises(ValueError, match="unsupported workflow step kind: live"):
         ResearchWorkflowConfig.from_yaml(workflow_path)
+
+
+def test_ablation_workflow_step_writes_evidence_artifacts(tmp_path: Path) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: ablation-flow
+steps:
+  - id: ablation
+    kind: ablation
+    baseline: baseline
+    modules: [entry_filter]
+    primary_metric: sharpe
+    output_root: ablation
+    summary_output: summary.json
+    report_output: report.md
+    runs:
+      - name: baseline
+        modules: []
+        metrics:
+          sharpe: 0.5
+        split_metrics:
+          IS:
+            sharpe: 0.5
+          OOS:
+            sharpe: 0.4
+        trade_count: 10
+      - name: entry_filter
+        modules: [entry_filter]
+        metrics:
+          sharpe: 0.7
+        split_metrics:
+          IS:
+            sharpe: 0.8
+          OOS:
+            sharpe: 0.6
+        trade_count: 8
+""",
+    )
+
+    result = ResearchWorkflowRunner().run(
+        _FakeSession(accepted_specs=()),
+        ResearchWorkflowConfig.from_yaml(workflow_path),
+    )
+
+    assert result.status == "completed"
+    outputs = result.steps[0].outputs
+    assert outputs["artifact_path"] == str(tmp_path / "ablation" / "summary.json")
+    assert outputs["report_path"] == str(tmp_path / "ablation" / "report.md")
+    assert Path(str(outputs["artifact_path"])).exists()
+    assert Path(str(outputs["report_path"])).exists()
+    assert outputs["ablation_summary"]["variants"][1]["metric_deltas"]["sharpe"] == 0.2
+
+
+def test_workflow_idea_link_populates_payload_and_report_warning(tmp_path: Path) -> None:
+    registry = IdeaRegistry(tmp_path / "ideas")
+    registry.save_idea(
+        IdeaSpec(
+            idea_id="idea-momentum",
+            title="Momentum",
+            hypothesis="Momentum persists after costs.",
+            edge_type="momentum",
+            source="fixture",
+            created_at=datetime(2026, 5, 25, tzinfo=UTC),
+            data_required=("GC 15m OHLCV",),
+            kill_criteria=("oos_net_sharpe_below_0_8",),
+            trial_budget={"max_strategy_trials": 3},
+            trial_count=4,
+        )
+    )
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: idea-linked-flow
+idea:
+  registry_root: ideas
+  idea_id: idea-momentum
+steps:
+  - id: report
+    kind: research_report
+    output_root: reports
+""",
+    )
+
+    result = ResearchWorkflowRunner().run(
+        _FakeSession(accepted_specs=()),
+        ResearchWorkflowConfig.from_yaml(workflow_path),
+    )
+
+    payload = result.to_payload()
+    report_text = (tmp_path / "reports" / "workflow-report.md").read_text(encoding="utf-8")
+    assert payload["idea_metadata"]["idea_id"] == "idea-momentum"
+    assert payload["idea_metadata"]["kill_criteria"] == ["oos_net_sharpe_below_0_8"]
+    assert "- trial_budget_warning: idea-momentum trial_count 4 exceeds budget 3" in report_text
+
+
+def test_trade_diagnostics_workflow_step_writes_standard_evidence(tmp_path: Path) -> None:
+    workflow_path = _write_workflow(
+        tmp_path,
+        """
+version: 1
+workflow_id: diagnostics-flow
+steps:
+  - id: diagnostics
+    kind: trade_diagnostics
+    output_root: diagnostics
+    trades:
+      - trade_id: trade-001
+        strategy_id: vwap-research
+        idea_id: idea-vwap
+        symbol: GC
+        direction: long
+        quantity: 2
+        entry_time: "2024-01-02T09:00:00+00:00"
+        exit_time: "2024-01-02T11:00:00+00:00"
+        entry_price: 2050.0
+        exit_price: 2055.0
+        r_pnl: 1.0
+        mae_r: -0.2
+        mfe_r: 1.4
+        holding_bars: 8
+        exit_reason: target
+        time_bucket: morning
+        factor_snapshot:
+          momentum: 0.8
+  - id: report
+    kind: research_report
+    output_root: reports
+""",
+    )
+
+    result = ResearchWorkflowRunner().run(
+        _FakeSession(accepted_specs=()),
+        ResearchWorkflowConfig.from_yaml(workflow_path),
+    )
+
+    outputs = result.steps[0].outputs
+    report_text = (tmp_path / "reports" / "workflow-report.md").read_text(encoding="utf-8")
+    assert result.status == "completed"
+    assert Path(str(outputs["trades_path"])).exists()
+    assert Path(str(outputs["summary_path"])).exists()
+    assert Path(str(outputs["report_path"])).exists()
+    assert "Trade Diagnostics #1" in report_text
+    assert f"report_path: {tmp_path / 'diagnostics' / 'trade_diagnostics_report.md'}" in report_text
 
 
 def test_route_metadata_appears_in_workflow_payload_and_report(
@@ -220,6 +368,24 @@ routes:
 
     with pytest.raises(FileNotFoundError, match="route workflow not found"):
         ResearchRouteIndex.from_yaml(index_path)
+
+
+def test_checked_in_research_route_index_resolves() -> None:
+    index = ResearchRouteIndex.from_yaml("configs/research/workflows/research_routes_index.yaml")
+
+    assert index.routes
+    assert any(route["route_id"] == "quickstart" for route in index.routes)
+
+
+def test_checked_in_research_route_order_snapshot() -> None:
+    index = ResearchRouteIndex.from_yaml("configs/research/workflows/research_routes_index.yaml")
+
+    assert index.routes == (
+        {
+            "route_id": "quickstart",
+            "workflow": "configs/research/workflows/routes/quickstart.yaml",
+        },
+    )
 
 
 def test_workflow_rejects_holdout_in_optimizer_objective(tmp_path: Path) -> None:
@@ -2101,6 +2267,8 @@ def test_no_legacy_vwap_optimizer_configs_remain() -> None:
 
 def test_period_sensitive_research_workflow_configs_declare_period_roles() -> None:
     for workflow_path in sorted(Path("configs/research/workflows").glob("*.yaml")):
+        if workflow_path.name == "research_routes_index.yaml":
+            continue
         payload = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
         if not isinstance(payload, dict):
             continue
