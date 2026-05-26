@@ -1,7 +1,7 @@
 # 2026-05-12 OOP Baseline (QTS)
 
 ## Scope
-- Task sequence start: `docs/plan/2026-05-12_qts_oop_architecture_review_and_refactor_plan.md`
+- Task sequence start: (plan removed after completion; historical summary retained)
 - Baseline date: 2026-05-12
 - Commit: current working tree before OOP-00 → OOP-01 execution.
 

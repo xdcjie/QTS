@@ -71,7 +71,7 @@ Priority: P0 (next sprint) > P1 (next quarter) > P2 (when capacity) > P3 (watch)
 - Files: `backend/src/qts/strategy_sdk/strategy.py:9-31`, `examples/strategies/vwap_pullback_v2.py`
 - Problem: `Strategy.initialize/on_bar/on_tick/on_timer/on_order_update/on_fill/finalize` declare every parameter as `object`. Strategy authors lose IDE completion and mypy coverage. The example strategy works around this with `Any`.
 - Proposal: switch to typed signatures using `StrategyContext`, `Bar`, `Tick`, `Timer`, `OrderUpdate`, `Fill`. Consider a `Protocol` to keep the SDK open for testing fakes. Bump example strategies to drop `Any`.
-- Acceptance: `examples/strategies/vwap_pullback_v2.py` mypy-clean without `Any`; `strategy_api.md` updated.
+- Acceptance: `examples/strategies/vwap_pullback_v2.py` mypy-clean without `Any`; `docs/strategy_sdk/strategy_api.md` updated.
 - ETA: 1 week
 - Depends on: nothing
 - Risk: low
@@ -209,22 +209,22 @@ Priority: P0 (next sprint) > P1 (next quarter) > P2 (when capacity) > P3 (watch)
 
 #### OPT-25 — Backtest statistics expansion
 - Status: DONE
-- Review status matrix: `docs/plan/2026-05-17_opt_25_to_29_platform_readiness_plan.md`
+- Review status matrix: `docs/plan/qts_final_platform_freeze_review_and_tasks.md`
 - Implemented: streaming statistics builder, manifest `statistics` payload/hash, statistics artifact, reporter metric cards.
 
 #### OPT-26 — Holdings / SecurityHolding model
 - Status: DONE
-- Review status matrix: `docs/plan/2026-05-17_opt_25_to_29_platform_readiness_plan.md`
+- Review status matrix: `docs/plan/qts_final_platform_freeze_review_and_tasks.md`
 - Implemented: average-cost `Holding`/`HoldingBook`, account snapshot holdings, SDK holding/PnL accessors, fill accounting migration.
 
 #### OPT-27 — Order type and TIF expansion
 - Status: DONE
-- Review status matrix: `docs/plan/2026-05-17_opt_25_to_29_platform_readiness_plan.md`
+- Review status matrix: `docs/plan/qts_final_platform_freeze_review_and_tasks.md`
 - Implemented: typed `OrderSpec`, expanded order type/TIF enums, SDK target spec propagation, risk request propagation, simulated/IBKR order boundary mapping.
 
 #### OPT-29 — API security baseline
 - Status: DONE
-- Review status matrix: `docs/plan/2026-05-17_opt_25_to_29_platform_readiness_plan.md`
+- Review status matrix: `docs/plan/qts_final_platform_freeze_review_and_tasks.md`
 - Implemented: Bearer auth, principal/scopes, CORS, in-memory per-principal rate limit, route scope matrix, JWT/static token backends.
 
 #### OPT-15 — Latency and queue-depth SLI metrics

@@ -3,7 +3,7 @@
 ## Updated inventory snapshot
 
 The cleanup after OOP refactors is based on:
-- `docs/plan/2026-05-12_qts_redundancy_deletion_candidates.md`
+- `docs/plan/2026-05-17_qts_vs_lean_platform_gap_and_optimization_backlog.md`
 - `git status` and cross-boundary checks from the finalization point
 - `make test-unit`, `make test-integration`, and `make test-anchor` for behavior and API safety
 
