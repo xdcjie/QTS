@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Any
 
 from qts.core.hashing import stable_json_hash
+from qts.research.artifact_graph import ResearchArtifactGraphWriter
+from qts.research.audit_log import ResearchAuditLog
 from qts.research.idea_registry import trial_budget_warning
 from qts.research.idea_spec import IdeaSpec
 
@@ -188,6 +190,8 @@ class EvidenceRegistry:
         idea: IdeaSpec | None = None,
         idea_id: str | None = None,
         strategy_id: str | None = None,
+        audit_log: ResearchAuditLog | None = None,
+        artifact_graph_writer: ResearchArtifactGraphWriter | None = None,
     ) -> ResearchEvidenceBundle:
         """Create and persist an evidence bundle from a workflow JSON payload."""
 
@@ -275,6 +279,22 @@ class EvidenceRegistry:
         )
         self._write_bundle(bundle)
         self._write_index(self._upsert(bundle))
+        if audit_log is not None:
+            audit_log.append(
+                "evidence_bundle_created",
+                {
+                    "bundle_hash": stable_json_hash(bundle.to_payload()),
+                    "evidence_bundle_id": bundle.evidence_bundle_id,
+                    "workflow_run_id": bundle.workflow_run_id,
+                    "workflow_summary_hash": bundle.workflow_summary_hash,
+                    "workflow_summary_path": bundle.workflow_summary_path,
+                },
+            )
+        if artifact_graph_writer is not None:
+            artifact_graph_writer.write_from_payloads(
+                evidence_bundles=(bundle.to_payload(),),
+                output_path=f"evidence-bundle-{bundle.evidence_bundle_id}-artifact-graph.json",
+            )
         return bundle
 
     def show(self, evidence_bundle_id: str) -> ResearchEvidenceBundle:
@@ -294,7 +314,12 @@ class EvidenceRegistry:
                 bundles.append(ResearchEvidenceBundle.from_payload(json.loads(line)))
         return tuple(sorted(bundles, key=lambda bundle: bundle.evidence_bundle_id))
 
-    def verify(self, evidence_bundle_id: str) -> EvidenceVerificationResult:
+    def verify(
+        self,
+        evidence_bundle_id: str,
+        *,
+        audit_log: ResearchAuditLog | None = None,
+    ) -> EvidenceVerificationResult:
         """Verify referenced manifests/reports still exist and match stored hashes."""
 
         bundle = self.show(evidence_bundle_id)
@@ -346,11 +371,24 @@ class EvidenceRegistry:
                         f"hash mismatch for {bundle.report_path}: "
                         f"{actual_hash} != {bundle.report_hash}"
                     )
-        return EvidenceVerificationResult(
+        result = EvidenceVerificationResult(
             accepted=not reasons,
             checked_paths=tuple(checked),
             reasons=tuple(reasons),
         )
+        if audit_log is not None:
+            audit_log.append(
+                "evidence_validated",
+                {
+                    "accepted": result.accepted,
+                    "checked_paths": list(result.checked_paths),
+                    "evidence_bundle_id": bundle.evidence_bundle_id,
+                    "reasons": list(result.reasons),
+                    "status": "accepted" if result.accepted else "rejected",
+                    "verification_hash": stable_json_hash(result.to_payload()),
+                },
+            )
+        return result
 
     def append_review_decision(
         self,

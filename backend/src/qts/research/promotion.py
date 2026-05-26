@@ -14,6 +14,49 @@ from typing import Any
 import yaml  # type: ignore[import-untyped]
 
 from qts.research.metrics import metric_value
+from qts.research.metrics_schema import ResearchMetricsSchema
+
+_DEFAULT_METRICS_SCHEMA_PATH = Path("configs/research/metrics/schema_v2.yaml")
+_PROMOTION_THRESHOLD_GATE_SPECS = (
+    ("min", "minimum_oos_months", "trading", "oos_months", "min_oos_months"),
+    ("min", "minimum_oos_trade_count", "trading", "oos_trade_count", "min_oos_trade_count"),
+    ("min", "oos_sharpe", "quality", "sharpe", "min_oos_sharpe"),
+    ("min", "profit_factor", "quality", "profit_factor", "min_profit_factor"),
+    ("max", "max_drawdown", "risk", "max_drawdown", "max_drawdown"),
+    ("max", "cost_impact", "execution", "cost_impact", "max_cost_impact"),
+    (
+        "max",
+        "slippage_stress",
+        "execution",
+        "slippage_sensitivity",
+        "max_slippage_sensitivity",
+    ),
+    (
+        "min",
+        "parameter_neighborhood_stability",
+        "stability",
+        "parameter_sensitivity",
+        "min_parameter_stability",
+    ),
+    (
+        "min",
+        "walk_forward_consistency",
+        "stability",
+        "walk_forward_consistency",
+        "min_walk_forward_consistency",
+    ),
+    (
+        "max",
+        "correlation_to_active_strategies",
+        "portfolio",
+        "correlation_to_active",
+        "max_correlation_to_active",
+    ),
+)
+_PROMOTION_BOOL_GATE_SPECS = (
+    ("deterministic_replay", "research", "deterministic_replay_passed"),
+    ("no_lookahead", "research", "no_lookahead_passed"),
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,6 +171,8 @@ class PromotionGateResult:
     metric_path: str | None = None
     unit: str | None = None
     direction: str | None = None
+    source_artifact_id: str | None = None
+    period_role: str | None = None
 
     def to_payload(self) -> dict[str, Any]:
         """Return a JSON-ready gate result."""
@@ -145,6 +190,10 @@ class PromotionGateResult:
             payload["unit"] = self.unit
         if self.direction is not None:
             payload["direction"] = self.direction
+        if self.source_artifact_id is not None:
+            payload["source_artifact_id"] = self.source_artifact_id
+        if self.period_role is not None:
+            payload["period_role"] = self.period_role
         return payload
 
 
@@ -185,6 +234,7 @@ class ResearchPromotionPolicy:
     min_parameter_stability: float
     min_walk_forward_consistency: float
     max_correlation_to_active: float
+    metrics_schema_path: Path | str = _DEFAULT_METRICS_SCHEMA_PATH
 
     @classmethod
     def from_yaml(cls, path: Path) -> ResearchPromotionPolicy:
@@ -196,6 +246,15 @@ class ResearchPromotionPolicy:
         gates = payload.get("research_gates", payload)
         if not isinstance(gates, dict):
             raise ValueError("research_gates must be a mapping")
+        raw_schema_path = payload.get("metrics_schema_path", gates.get("metrics_schema_path"))
+        metrics_schema_path: Path | str
+        if raw_schema_path is None:
+            metrics_schema_path = _DEFAULT_METRICS_SCHEMA_PATH
+        else:
+            configured_path = Path(str(raw_schema_path))
+            metrics_schema_path = (
+                configured_path if configured_path.is_absolute() else path.parent / configured_path
+            )
         return cls(
             min_oos_months=_float(gates, "min_oos_months"),
             min_oos_trade_count=_float(gates, "min_oos_trade_count"),
@@ -207,6 +266,7 @@ class ResearchPromotionPolicy:
             min_parameter_stability=_float(gates, "min_parameter_stability"),
             min_walk_forward_consistency=_float(gates, "min_walk_forward_consistency"),
             max_correlation_to_active=_float(gates, "max_correlation_to_active"),
+            metrics_schema_path=metrics_schema_path,
         )
 
     def evaluate(
@@ -219,76 +279,61 @@ class ResearchPromotionPolicy:
     ) -> ResearchPromotionDecision:
         """Evaluate research metrics without creating paper/live approval."""
 
-        gates = (
-            self._min_gate(
-                metrics,
-                "minimum_oos_months",
-                "trading",
-                "oos_months",
-                self.min_oos_months,
-            ),
-            self._min_gate(
-                metrics,
-                "minimum_oos_trade_count",
-                "trading",
-                "oos_trade_count",
-                self.min_oos_trade_count,
-            ),
-            self._min_gate(metrics, "oos_sharpe", "quality", "sharpe", self.min_oos_sharpe),
-            self._min_gate(
-                metrics,
-                "profit_factor",
-                "quality",
-                "profit_factor",
-                self.min_profit_factor,
-            ),
-            self._max_gate(metrics, "max_drawdown", "risk", "max_drawdown", self.max_drawdown),
-            self._max_gate(
-                metrics,
-                "cost_impact",
-                "execution",
-                "cost_impact",
-                self.max_cost_impact,
-            ),
-            self._max_gate(
-                metrics,
-                "slippage_stress",
-                "execution",
-                "slippage_sensitivity",
-                self.max_slippage_sensitivity,
-            ),
-            self._min_gate(
-                metrics,
-                "parameter_neighborhood_stability",
-                "stability",
-                "parameter_sensitivity",
-                self.min_parameter_stability,
-            ),
-            self._min_gate(
-                metrics,
-                "walk_forward_consistency",
-                "stability",
-                "walk_forward_consistency",
-                self.min_walk_forward_consistency,
-            ),
-            self._max_gate(
-                metrics,
-                "correlation_to_active_strategies",
-                "portfolio",
-                "correlation_to_active",
-                self.max_correlation_to_active,
-            ),
-            self._bool_gate(
-                metrics,
-                "deterministic_replay",
-                "research",
-                "deterministic_replay_passed",
-            ),
-            self._bool_gate(metrics, "no_lookahead", "research", "no_lookahead_passed"),
-        )
         warnings: tuple[str, ...] = ()
         if reproducibility.get("git_dirty") is True:
             warnings = ("git worktree was dirty during research run",)
+
+        metrics_schema = ResearchMetricsSchema.from_yaml(Path(self.metrics_schema_path))
+        schema_result = metrics_schema.validate(metrics, purpose="promotion")
+        if not schema_result.accepted:
+            schema_status = (
+                "missing"
+                if schema_result.reasons
+                and all(" missing for " in reason for reason in schema_result.reasons)
+                else "failed"
+            )
+            return ResearchPromotionDecision(
+                run_id=run_id,
+                strategy_id=strategy_id,
+                status="rejected",
+                gates=(
+                    PromotionGateResult(
+                        "metrics_schema",
+                        schema_status,
+                        schema_result.to_payload(),
+                        True,
+                        "metrics schema validation failed: " + "; ".join(schema_result.reasons),
+                    ),
+                ),
+                warnings=warnings,
+            )
+
+        gate_results: list[PromotionGateResult] = []
+        for gate_kind, name, group, field_name, threshold_attr in _PROMOTION_THRESHOLD_GATE_SPECS:
+            gate_fn = self._min_gate if gate_kind == "min" else self._max_gate
+            gate_results.append(
+                gate_fn(
+                    metrics,
+                    metrics_schema,
+                    name,
+                    group,
+                    field_name,
+                    float(getattr(self, threshold_attr)),
+                )
+            )
+        for name, group, field_name in _PROMOTION_BOOL_GATE_SPECS:
+            gate_results.append(self._bool_gate(metrics, metrics_schema, name, group, field_name))
+        if metric_value(metrics, "research", "promotion_eligible") is not None:
+            gate_results.append(
+                self._bool_gate(
+                    metrics,
+                    metrics_schema,
+                    "promotion_eligible",
+                    "research",
+                    "promotion_eligible",
+                )
+            )
+        gates = tuple(gate_results)
         status = "research_passed"
         failed = [gate for gate in gates if gate.status != "passed"]
         if failed:
@@ -311,11 +356,15 @@ class ResearchPromotionPolicy:
     def _min_gate(
         self,
         metrics: Mapping[str, Any],
+        metrics_schema: ResearchMetricsSchema,
         name: str,
         group: str,
         field_name: str,
         threshold: float,
     ) -> PromotionGateResult:
+        metric_path = f"{group}.{field_name}"
+        unit, direction = _metric_schema_metadata(metrics_schema, metric_path)
+        source_artifact_id, period_role = _metric_source_metadata(metrics, metric_path)
         observed = _optional_float(metric_value(metrics, group, field_name))
         if observed is None:
             return PromotionGateResult(
@@ -324,9 +373,11 @@ class ResearchPromotionPolicy:
                 None,
                 threshold,
                 f"{group}.{field_name} missing",
-                metric_path=f"{group}.{field_name}",
-                unit=_metric_unit(group, field_name),
-                direction=_metric_direction(group, field_name),
+                metric_path=metric_path,
+                unit=unit,
+                direction=direction,
+                source_artifact_id=source_artifact_id,
+                period_role=period_role,
             )
         passed = observed >= threshold
         return PromotionGateResult(
@@ -335,19 +386,25 @@ class ResearchPromotionPolicy:
             observed,
             threshold,
             f"{group}.{field_name} must be >= {threshold}",
-            metric_path=f"{group}.{field_name}",
-            unit=_metric_unit(group, field_name),
-            direction=_metric_direction(group, field_name),
+            metric_path=metric_path,
+            unit=unit,
+            direction=direction,
+            source_artifact_id=source_artifact_id,
+            period_role=period_role,
         )
 
     def _max_gate(
         self,
         metrics: Mapping[str, Any],
+        metrics_schema: ResearchMetricsSchema,
         name: str,
         group: str,
         field_name: str,
         threshold: float,
     ) -> PromotionGateResult:
+        metric_path = f"{group}.{field_name}"
+        unit, direction = _metric_schema_metadata(metrics_schema, metric_path)
+        source_artifact_id, period_role = _metric_source_metadata(metrics, metric_path)
         observed = _optional_float(metric_value(metrics, group, field_name))
         if observed is None:
             return PromotionGateResult(
@@ -356,9 +413,11 @@ class ResearchPromotionPolicy:
                 None,
                 threshold,
                 f"{group}.{field_name} missing",
-                metric_path=f"{group}.{field_name}",
-                unit=_metric_unit(group, field_name),
-                direction=_metric_direction(group, field_name),
+                metric_path=metric_path,
+                unit=unit,
+                direction=direction,
+                source_artifact_id=source_artifact_id,
+                period_role=period_role,
             )
         passed = observed <= threshold
         return PromotionGateResult(
@@ -367,18 +426,24 @@ class ResearchPromotionPolicy:
             observed,
             threshold,
             f"{group}.{field_name} must be <= {threshold}",
-            metric_path=f"{group}.{field_name}",
-            unit=_metric_unit(group, field_name),
-            direction=_metric_direction(group, field_name),
+            metric_path=metric_path,
+            unit=unit,
+            direction=direction,
+            source_artifact_id=source_artifact_id,
+            period_role=period_role,
         )
 
     @staticmethod
     def _bool_gate(
         metrics: Mapping[str, Any],
+        metrics_schema: ResearchMetricsSchema,
         name: str,
         group: str,
         field_name: str,
     ) -> PromotionGateResult:
+        metric_path = f"{group}.{field_name}"
+        unit, direction = _metric_schema_metadata(metrics_schema, metric_path)
+        source_artifact_id, period_role = _metric_source_metadata(metrics, metric_path)
         observed = metric_value(metrics, group, field_name)
         if observed is None:
             return PromotionGateResult(
@@ -387,9 +452,11 @@ class ResearchPromotionPolicy:
                 None,
                 True,
                 f"{group}.{field_name} missing",
-                metric_path=f"{group}.{field_name}",
-                unit=_metric_unit(group, field_name),
-                direction=_metric_direction(group, field_name),
+                metric_path=metric_path,
+                unit=unit,
+                direction=direction,
+                source_artifact_id=source_artifact_id,
+                period_role=period_role,
             )
         passed = observed is True
         return PromotionGateResult(
@@ -398,9 +465,11 @@ class ResearchPromotionPolicy:
             observed,
             True,
             f"{group}.{field_name} must be true",
-            metric_path=f"{group}.{field_name}",
-            unit=_metric_unit(group, field_name),
-            direction=_metric_direction(group, field_name),
+            metric_path=metric_path,
+            unit=unit,
+            direction=direction,
+            source_artifact_id=source_artifact_id,
+            period_role=period_role,
         )
 
 
@@ -423,18 +492,33 @@ def _optional_float(value: Any) -> float | None:
     return float(value)
 
 
-def _metric_unit(group: str, field_name: str) -> str | None:
-    metadata = _PROMOTION_METRIC_METADATA.get(f"{group}.{field_name}")
-    if metadata is None:
-        return None
-    return metadata["unit"]
+def _metric_schema_metadata(
+    metrics_schema: ResearchMetricsSchema, metric_path: str
+) -> tuple[str | None, str | None]:
+    definition = metrics_schema.definition_for(metric_path)
+    if definition is None:
+        return None, None
+    return definition.unit, definition.direction
 
 
-def _metric_direction(group: str, field_name: str) -> str | None:
-    metadata = _PROMOTION_METRIC_METADATA.get(f"{group}.{field_name}")
-    if metadata is None:
-        return None
-    return metadata["direction"]
+def _metric_source_metadata(
+    metrics: Mapping[str, Any], metric_path: str
+) -> tuple[str | None, str | None]:
+    metadata = metrics.get("_metadata")
+    if not isinstance(metadata, Mapping):
+        return None, None
+    metric_sources = metadata.get("metric_sources")
+    if not isinstance(metric_sources, Mapping):
+        return None, None
+    source = metric_sources.get(metric_path)
+    if not isinstance(source, Mapping):
+        return None, None
+    source_artifact_id = source.get("source_artifact_id")
+    period_role = source.get("period_role")
+    return (
+        source_artifact_id if isinstance(source_artifact_id, str) else None,
+        period_role if isinstance(period_role, str) else None,
+    )
 
 
 _PROMOTION_STATUSES = frozenset(
@@ -466,28 +550,6 @@ _RESEARCH_ONLY_PARAMS = frozenset(
         "trial_count",
     }
 )
-_PROMOTION_METRIC_METADATA = {
-    "execution.cost_impact": {"direction": "lower_is_better", "unit": "ratio"},
-    "execution.slippage_sensitivity": {"direction": "lower_is_better", "unit": "ratio"},
-    "portfolio.correlation_to_active": {
-        "direction": "lower_is_better",
-        "unit": "correlation",
-    },
-    "quality.profit_factor": {"direction": "higher_is_better", "unit": "ratio"},
-    "quality.sharpe": {"direction": "higher_is_better", "unit": "ratio"},
-    "research.deterministic_replay_passed": {"direction": "neutral", "unit": "boolean"},
-    "research.no_lookahead_passed": {"direction": "neutral", "unit": "boolean"},
-    "risk.max_drawdown": {"direction": "lower_is_better", "unit": "ratio"},
-    "stability.parameter_sensitivity": {"direction": "higher_is_better", "unit": "ratio"},
-    "stability.walk_forward_consistency": {
-        "direction": "higher_is_better",
-        "unit": "ratio",
-    },
-    "trading.oos_months": {"direction": "higher_is_better", "unit": "months"},
-    "trading.oos_trade_count": {"direction": "higher_is_better", "unit": "count"},
-}
-
-
 __all__ = [
     "PaperReadinessChecklist",
     "PromotionCandidateSpec",

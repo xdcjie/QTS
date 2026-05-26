@@ -49,6 +49,7 @@ class ResearchMetrics:
                 "research": {
                     "candidate_count": candidate_count,
                     "mode": "dry_run",
+                    "promotion_eligible": False,
                 },
                 "return": {
                     "cagr": None,

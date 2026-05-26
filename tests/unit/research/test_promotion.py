@@ -204,3 +204,126 @@ def test_promotion_gate_payload_includes_metric_metadata() -> None:
         "threshold": 0.25,
         "unit": "ratio",
     }
+
+
+def test_promotion_policy_rejects_metrics_schema_failures_before_gates() -> None:
+    policy = ResearchPromotionPolicy(
+        min_oos_months=6,
+        min_oos_trade_count=30,
+        min_oos_sharpe=1.0,
+        min_profit_factor=1.2,
+        max_drawdown=0.25,
+        max_cost_impact=0.02,
+        max_slippage_sensitivity=0.03,
+        min_parameter_stability=0.7,
+        min_walk_forward_consistency=0.7,
+        max_correlation_to_active=0.5,
+    )
+    metrics = _passing_metrics()
+    metrics["quality"]["sharpe"] = "1.1"
+
+    decision = policy.evaluate(
+        run_id="run-001",
+        strategy_id="vwap",
+        metrics=metrics,
+        reproducibility={},
+    )
+
+    assert decision.status == "rejected"
+    assert len(decision.gates) == 1
+    assert decision.gates[0].name == "metrics_schema"
+    assert decision.gates[0].status == "failed"
+    assert "quality.sharpe expected float" in decision.gates[0].reason
+
+
+def test_promotion_gate_payload_uses_schema_and_metric_source_metadata() -> None:
+    policy = ResearchPromotionPolicy(
+        min_oos_months=6,
+        min_oos_trade_count=30,
+        min_oos_sharpe=1.0,
+        min_profit_factor=1.2,
+        max_drawdown=0.25,
+        max_cost_impact=0.02,
+        max_slippage_sensitivity=0.03,
+        min_parameter_stability=0.7,
+        min_walk_forward_consistency=0.7,
+        max_correlation_to_active=0.5,
+    )
+    metrics = _passing_metrics()
+    metrics["_metadata"] = {
+        "metric_sources": {
+            "risk.max_drawdown": {
+                "period_role": "out_of_sample",
+                "source_artifact_id": "artifact-risk-oos",
+            }
+        }
+    }
+
+    decision = policy.evaluate(
+        run_id="run-001",
+        strategy_id="vwap",
+        metrics=metrics,
+        reproducibility={},
+    )
+
+    payloads = {gate["name"]: gate for gate in decision.to_payload()["gates"]}
+
+    assert payloads["max_drawdown"]["direction"] == "lower_is_better"
+    assert payloads["max_drawdown"]["unit"] == "ratio"
+    assert payloads["max_drawdown"]["period_role"] == "out_of_sample"
+    assert payloads["max_drawdown"]["source_artifact_id"] == "artifact-risk-oos"
+
+
+def test_promotion_policy_rejects_promotion_eligible_false() -> None:
+    policy = ResearchPromotionPolicy(
+        min_oos_months=6,
+        min_oos_trade_count=30,
+        min_oos_sharpe=1.0,
+        min_profit_factor=1.2,
+        max_drawdown=0.25,
+        max_cost_impact=0.02,
+        max_slippage_sensitivity=0.03,
+        min_parameter_stability=0.7,
+        min_walk_forward_consistency=0.7,
+        max_correlation_to_active=0.5,
+    )
+    metrics = _passing_metrics()
+    metrics["research"]["promotion_eligible"] = False
+
+    decision = policy.evaluate(
+        run_id="run-001",
+        strategy_id="vwap",
+        metrics=metrics,
+        reproducibility={},
+    )
+
+    payloads = {gate["name"]: gate for gate in decision.to_payload()["gates"]}
+
+    assert decision.status == "rejected"
+    assert payloads["promotion_eligible"]["status"] == "failed"
+    assert payloads["promotion_eligible"]["reason"] == "research.promotion_eligible must be true"
+
+
+def _passing_metrics() -> dict[str, dict[str, object]]:
+    return {
+        "execution": {
+            "cost_impact": 0.01,
+            "slippage_sensitivity": 0.02,
+        },
+        "portfolio": {"correlation_to_active": 0.4},
+        "quality": {"profit_factor": 1.3, "sharpe": 1.1},
+        "research": {
+            "deterministic_replay_passed": True,
+            "no_lookahead_passed": True,
+            "promotion_eligible": True,
+        },
+        "risk": {"max_drawdown": 0.1},
+        "stability": {
+            "parameter_sensitivity": 0.8,
+            "walk_forward_consistency": 0.75,
+        },
+        "trading": {
+            "oos_months": 12,
+            "oos_trade_count": 40,
+        },
+    }

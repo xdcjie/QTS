@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import pytest
 from qts.research.audit_log import ResearchAuditLog, ResearchAuditRecord
@@ -111,6 +112,65 @@ def test_audit_log_rejects_custom_record_id_that_breaks_chain(tmp_path: Path) ->
             created_at=datetime(2026, 5, 26, 15, 0, tzinfo=UTC),
             record_id="custom-record-id",
         )
+
+    assert audit_log.verify_hash_chain() == ()
+
+
+def test_audit_log_appends_human_review_decision(tmp_path: Path) -> None:
+    audit_log = ResearchAuditLog(tmp_path / "audit.jsonl")
+    reviewed_at = datetime(2026, 5, 26, 16, 30, tzinfo=UTC)
+
+    record = audit_log.append_human_review_decision(
+        reviewer=" risk ",
+        decision=" go ",
+        reviewed_at=reviewed_at,
+        evidence_bundle_id=" evb_001 ",
+        promotion_candidate_id=" pc_001 ",
+        notes=" ready for paper ",
+    )
+
+    assert record.record_type == "human_review_decided"
+    assert record.payload == {
+        "decision": "go",
+        "evidence_bundle_id": "evb_001",
+        "notes": "ready for paper",
+        "promotion_candidate_id": "pc_001",
+        "reviewed_at": reviewed_at.isoformat(),
+        "reviewer": "risk",
+    }
+    assert audit_log.list() == (record,)
+    assert audit_log.verify_hash_chain() == ()
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        ({"reviewer": ""}, "reviewer is required"),
+        ({"decision": ""}, "decision is required"),
+        ({"reviewed_at": datetime(2026, 5, 26, 16, 30)}, "reviewed_at must be timezone-aware"),
+        (
+            {"evidence_bundle_id": "", "promotion_candidate_id": None},
+            "evidence_bundle_id or promotion_candidate_id is required",
+        ),
+    ],
+)
+def test_audit_log_human_review_decision_validates_payload(
+    tmp_path: Path,
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    audit_log = ResearchAuditLog(tmp_path / "audit.jsonl")
+    payload: dict[str, Any] = {
+        "reviewer": "risk",
+        "decision": "go",
+        "reviewed_at": datetime(2026, 5, 26, 16, 30, tzinfo=UTC),
+        "evidence_bundle_id": "evb_001",
+        "promotion_candidate_id": None,
+    }
+    payload.update(kwargs)
+
+    with pytest.raises(ValueError, match=match):
+        audit_log.append_human_review_decision(**payload)
 
     assert audit_log.verify_hash_chain() == ()
 

@@ -8,6 +8,9 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, Protocol, cast
 
+from qts.core.hashing import stable_json_hash
+from qts.research.artifact_graph import ResearchArtifactGraphWriter
+
 
 class _WorkflowStepResult(Protocol):
     """Protocol for workflow step result read access."""
@@ -269,7 +272,11 @@ class ResearchWorkflowReport:
             return ""
         lines = [
             "## Projection References",
-            "This section is projection only and is not the source of truth for promotion.",
+            (
+                "This section is projection only; source-of-truth is "
+                "audit/packet/evidence/graph. This report is not the source of "
+                "truth for promotion."
+            ),
         ]
         for key in _PROJECTION_REF_KEYS:
             if key in refs:
@@ -302,10 +309,18 @@ class ResearchWorkflowReport:
         return "\n".join(lines)
 
     def _decision_section(self) -> str:
-        """Render the machine-readable review decision block."""
+        """Render the legacy review decision projection block."""
 
         payload = self.decision.to_payload()
-        lines = ["## Review Decision", "```yaml", "decision:"]
+        lines = [
+            "## Review Decision",
+            (
+                "This legacy projection only block is not source of truth for "
+                "promotion; source-of-truth is audit/packet/evidence/graph."
+            ),
+            "```yaml",
+            "decision:",
+        ]
         for key in sorted(payload):
             value = payload[key]
             if isinstance(value, list):
@@ -331,6 +346,12 @@ class ResearchWorkflowReportWriter:
         report: ResearchWorkflowReport,
         *,
         output_path: str | Path = "workflow-report.md",
+        artifact_graph_writer: ResearchArtifactGraphWriter | None = None,
+        graph_manifests: Sequence[Mapping[str, Any]] = (),
+        graph_evidence_bundles: Sequence[Mapping[str, Any]] = (),
+        graph_promotion_packets: Sequence[Mapping[str, Any]] = (),
+        graph_audit_records: Sequence[Mapping[str, Any]] = (),
+        graph_output_path: str | Path = "report-artifact-graph.json",
     ) -> Path:
         """Write a deterministic markdown report under the configured output root."""
 
@@ -348,7 +369,24 @@ class ResearchWorkflowReportWriter:
             raise ValueError("output_path must remain inside report output root")
 
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(report.to_markdown() + "\n", encoding="utf-8")
+        markdown = report.to_markdown()
+        target.write_text(markdown + "\n", encoding="utf-8")
+        if artifact_graph_writer is not None:
+            artifact_graph_writer.write_from_payloads(
+                manifests=graph_manifests,
+                evidence_bundles=graph_evidence_bundles,
+                promotion_packets=graph_promotion_packets,
+                audit_records=graph_audit_records,
+                reports=(
+                    {
+                        "report_id": str(target),
+                        "path": str(target),
+                        "payload_hash": stable_json_hash({"markdown": markdown}),
+                        "projection_refs": dict(report.projection_refs),
+                    },
+                ),
+                output_path=graph_output_path,
+            )
         return target
 
 
@@ -781,12 +819,13 @@ def _normalize_projection_refs(value: Any) -> Mapping[str, Any]:
         return {}
     if not isinstance(value, Mapping):
         raise ValueError("projection_refs must be a mapping-like payload")
+    has_projection_refs = any(item is not None for item in value.values())
     refs = {
         key: _json_ready(value[key])
         for key in _PROJECTION_REF_KEYS
         if key in value and value[key] is not None
     }
-    if refs:
+    if has_projection_refs:
         for required_key in _REQUIRED_PROJECTION_REF_KEYS:
             if required_key not in refs:
                 raise ValueError(f"projection_refs.{required_key} is required")
@@ -1004,11 +1043,18 @@ _PROJECTION_REF_KEYS = (
     "promotion_packet_id",
     "packet_hash",
     "audit_record_id",
+    "artifact_graph_hash",
     "metrics_schema_version",
     "reproducibility_snapshot_hash",
     "data_quality_artifact_hash",
 )
-_REQUIRED_PROJECTION_REF_KEYS = ("audit_record_id", "packet_hash")
+_REQUIRED_PROJECTION_REF_KEYS = (
+    "evidence_bundle_id",
+    "promotion_packet_id",
+    "packet_hash",
+    "audit_record_id",
+    "artifact_graph_hash",
+)
 
 __all__ = [
     "ResearchReviewDecision",

@@ -207,6 +207,43 @@ class ResearchAuditLog:
             handle.write(json.dumps(record.to_payload(), sort_keys=True) + "\n")
         return record
 
+    def append_human_review_decision(
+        self,
+        *,
+        reviewer: str,
+        decision: str,
+        reviewed_at: datetime,
+        evidence_bundle_id: str | None = None,
+        promotion_candidate_id: str | None = None,
+        notes: str | None = None,
+    ) -> ResearchAuditRecord:
+        """Append a validated human promotion-review decision record."""
+
+        if reviewed_at.tzinfo is None or reviewed_at.tzinfo.utcoffset(reviewed_at) is None:
+            raise ValueError("reviewed_at must be timezone-aware")
+        payload: dict[str, Any] = {
+            "decision": self._required_payload_text(decision, "decision"),
+            "reviewed_at": reviewed_at.isoformat(),
+            "reviewer": self._required_payload_text(reviewer, "reviewer"),
+        }
+        resolved_evidence_bundle_id = self._optional_payload_text(
+            evidence_bundle_id,
+            "evidence_bundle_id",
+        )
+        resolved_promotion_candidate_id = self._optional_payload_text(
+            promotion_candidate_id,
+            "promotion_candidate_id",
+        )
+        if resolved_evidence_bundle_id is None and resolved_promotion_candidate_id is None:
+            raise ValueError("evidence_bundle_id or promotion_candidate_id is required")
+        if resolved_evidence_bundle_id is not None:
+            payload["evidence_bundle_id"] = resolved_evidence_bundle_id
+        if resolved_promotion_candidate_id is not None:
+            payload["promotion_candidate_id"] = resolved_promotion_candidate_id
+        if notes is not None:
+            payload["notes"] = str(notes).strip()
+        return self.append("human_review_decided", payload)
+
     def list(self) -> tuple[ResearchAuditRecord, ...]:
         """Read all audit records in ledger file order."""
 
@@ -266,6 +303,22 @@ class ResearchAuditLog:
         except (json.JSONDecodeError, ValueError, TypeError) as exc:
             reasons.append(f"invalid audit record at line {line_number}: {exc}")
             return None
+
+    @staticmethod
+    def _required_payload_text(value: str, field_name: str) -> str:
+        resolved = str(value).strip()
+        if not resolved:
+            raise ValueError(f"{field_name} is required")
+        return resolved
+
+    @staticmethod
+    def _optional_payload_text(value: str | None, field_name: str) -> str | None:
+        if value is None:
+            return None
+        resolved = str(value).strip()
+        if not resolved:
+            return None
+        return resolved
 
 
 __all__ = ["ResearchAuditLog", "ResearchAuditRecord"]

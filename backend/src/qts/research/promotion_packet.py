@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, ClassVar
 
 from qts.core.hashing import stable_json_hash
+from qts.research.artifact_graph import ResearchArtifactGraphWriter
 from qts.research.audit_log import ResearchAuditLog
 from qts.research.data_quality import DataQualityArtifact
 from qts.research.evidence_policy import EvidenceCompletenessPolicy, PromotionEvidenceSpec
@@ -87,6 +88,18 @@ class PromotionPacketV2:
         "monitoring_plan",
         "alert_policy",
     )
+    _LIVE_ARTIFACT_REF_FIELDS: ClassVar[tuple[tuple[str, str], ...]] = (
+        ("runtime", "risk_profile_id"),
+        ("runtime", "kill_switch_profile"),
+        ("operations", "rollback_plan"),
+        ("operations", "monitoring_plan"),
+    )
+    _LIVE_EVIDENCE_ARTIFACT_REF_FIELDS: ClassVar[tuple[str, ...]] = (
+        "paper_soak_evidence",
+        "reconciliation_evidence",
+        "kill_switch_drill_evidence",
+        "capital_signoff",
+    )
     _METRICS_SCHEMA_PATH: ClassVar[Path] = (
         Path(__file__).resolve().parents[4] / "configs/research/metrics/schema_v2.yaml"
     )
@@ -118,8 +131,22 @@ class PromotionPacketV2:
         evidence_registry: EvidenceRegistry,
         audit_log: ResearchAuditLog,
         metrics_schema: ResearchMetricsSchema | None = None,
+        artifact_graph_writer: ResearchArtifactGraphWriter | None = None,
     ) -> PromotionPacketValidationResult:
         """Validate this packet and append an audit-log record."""
+
+        packet_hash = stable_json_hash(self.to_payload())
+        audit_chain_reasons = audit_log.verify_hash_chain()
+        if audit_chain_reasons:
+            return PromotionPacketValidationResult(
+                accepted=False,
+                status="rejected",
+                packet_hash=packet_hash,
+                audit_record_id="",
+                reasons=tuple(
+                    f"audit hash chain invalid: {reason}" for reason in audit_chain_reasons
+                ),
+            )
 
         reasons: list[str] = []
         warnings: list[str] = []
@@ -132,7 +159,6 @@ class PromotionPacketV2:
 
         accepted = not reasons
         status = "accepted" if accepted else "rejected"
-        packet_hash = stable_json_hash(self.to_payload())
         record = audit_log.append(
             "promotion_packet_validated",
             {
@@ -147,6 +173,19 @@ class PromotionPacketV2:
                 "warnings": warnings,
             },
         )
+        if accepted and artifact_graph_writer is not None:
+            artifact_graph_writer.write_from_payloads(
+                evidence_bundles=(evidence_registry.show(self.evidence_bundle_id).to_payload(),),
+                promotion_packets=(
+                    {
+                        **self.to_payload(),
+                        "promotion_packet_id": self.promotion_candidate_id,
+                        "packet_hash": packet_hash,
+                    },
+                ),
+                audit_records=(record.to_payload(),),
+                output_path=(f"promotion-packet-{self.promotion_candidate_id}-artifact-graph.json"),
+            )
         return PromotionPacketValidationResult(
             accepted=accepted,
             status=status,
@@ -279,6 +318,24 @@ class PromotionPacketV2:
         for field_name in self._LIVE_OPERATIONS_FIELDS:
             if not self._has_value(self.operations.get(field_name)):
                 reasons.append(f"operations.{field_name} is required for {self.target_mode}")
+        for section_name, field_name in self._LIVE_ARTIFACT_REF_FIELDS:
+            section = self.runtime if section_name == "runtime" else self.operations
+            if not self._has_value(section.get(field_name)):
+                continue
+            self._append_artifact_ref_reason(
+                f"{section_name}.{field_name}",
+                section.get(field_name),
+                reasons,
+            )
+        for field_name in self._LIVE_EVIDENCE_ARTIFACT_REF_FIELDS:
+            if not self._has_value(self.operations.get(field_name)):
+                reasons.append(f"operations.{field_name} is required for {self.target_mode}")
+                continue
+            self._append_artifact_ref_reason(
+                f"operations.{field_name}",
+                self.operations.get(field_name),
+                reasons,
+            )
 
     @classmethod
     def _append_research_safety_metric_reasons(
@@ -315,13 +372,35 @@ class PromotionPacketV2:
         reasons: list[str],
     ) -> None:
         expected_hash = section.get("payload_hash")
-        if expected_hash is None:
+        if not cls._has_value(expected_hash):
+            reasons.append(f"{section_name}.payload_hash is required")
             return
         actual_hash = stable_json_hash(payload)
         if expected_hash != actual_hash:
             reasons.append(
                 f"{section_name}.payload_hash mismatch: {actual_hash} != {expected_hash}"
             )
+
+    def _append_artifact_ref_reason(
+        self,
+        field_path: str,
+        value: Any,
+        reasons: list[str],
+    ) -> None:
+        if not isinstance(value, Mapping):
+            reasons.append(f"{field_path} must be an artifact ref for {self.target_mode}")
+            return
+        missing_required_field = False
+        for ref_field_name in ("artifact_id", "payload_hash", "payload"):
+            if ref_field_name not in value or not self._has_value(value.get(ref_field_name)):
+                reasons.append(f"{field_path}.{ref_field_name} is required")
+                missing_required_field = True
+        if missing_required_field:
+            return
+        actual_hash = stable_json_hash(value["payload"])
+        expected_hash = value["payload_hash"]
+        if expected_hash != actual_hash:
+            reasons.append(f"{field_path}.payload_hash mismatch: {actual_hash} != {expected_hash}")
 
     @staticmethod
     def _mapping_field(payload: Mapping[str, Any], field_name: str) -> Mapping[str, Any]:

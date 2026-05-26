@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -9,6 +10,7 @@ from qts.research import (
     ResearchWorkflowResult,
     ResearchWorkflowStepResult,
 )
+from qts.research.artifact_graph import ResearchArtifactGraph, ResearchArtifactGraphWriter
 from qts.research.report import ResearchReviewDecision
 from qts.research.workflow import ResearchWorkflowRunContext
 
@@ -352,6 +354,8 @@ def test_report_renders_machine_readable_decision_block() -> None:
     body = report.to_markdown()
 
     assert "## Review Decision" in body
+    assert "legacy projection only" in body
+    assert "not source of truth for promotion" in body
     assert "status: keep_researching" in body
     assert "required_next_evidence:" in body
     assert "- cost_stress_2x_3x" in body
@@ -364,6 +368,7 @@ def test_research_report_renders_projection_references_as_non_authoritative() ->
         steps=(),
         projection_refs={
             "audit_record_id": "audit_001",
+            "artifact_graph_hash": "sha256:graph",
             "data_quality_artifact_hash": "sha256:data-quality",
             "evidence_bundle_id": "evb_001",
             "metrics_schema_version": "research-metrics-v2",
@@ -384,8 +389,10 @@ def test_research_report_renders_projection_references_as_non_authoritative() ->
 
     assert "## Projection References" in body
     assert "projection only" in body
+    assert "source-of-truth is audit/packet/evidence/graph" in body
     assert "not the source of truth for promotion" in body
     assert "- audit_record_id: audit_001" in body
+    assert "- artifact_graph_hash: sha256:graph" in body
     assert "- packet_hash: sha256:packet" in body
     assert "- evidence_bundle_id: evb_001" in body
     assert "- promotion_packet_id: packet_001" in body
@@ -394,15 +401,20 @@ def test_research_report_renders_projection_references_as_non_authoritative() ->
     assert "- data_quality_artifact_hash: sha256:data-quality" in body
 
 
-def test_research_report_requires_packet_and_audit_refs_when_projection_refs_exist() -> None:
+def test_research_report_requires_artifact_graph_ref_when_projection_refs_exist() -> None:
     report = ResearchWorkflowReport(
         workflow_id="projection-flow",
         workflow_status="completed",
         steps=(),
-        projection_refs={"evidence_bundle_id": "evb_001"},
+        projection_refs={
+            "audit_record_id": "audit_001",
+            "evidence_bundle_id": "evb_001",
+            "packet_hash": "sha256:packet",
+            "promotion_packet_id": "packet_001",
+        },
     )
 
-    with pytest.raises(ValueError, match="projection_refs.audit_record_id is required"):
+    with pytest.raises(ValueError, match="projection_refs.artifact_graph_hash is required"):
         report.to_markdown()
 
 
@@ -463,3 +475,48 @@ def test_workflow_report_writer_rejects_unsafe_output_path(tmp_path: Path) -> No
 
     with pytest.raises(ValueError, match="output_path must be relative"):
         writer.write(report, output_path="/tmp/unsafe.md")
+
+
+def test_workflow_report_writer_writes_projection_artifact_graph(tmp_path: Path) -> None:
+    report = ResearchWorkflowReport(
+        workflow_id="report-flow",
+        workflow_status="completed",
+        steps=(),
+        projection_refs={
+            "audit_record_id": "audit-001",
+            "artifact_graph_hash": "sha256:previous-graph",
+            "evidence_bundle_id": "evb-001",
+            "packet_hash": "sha256:packet",
+            "promotion_packet_id": "packet-001",
+        },
+    )
+    writer = ResearchWorkflowReportWriter(tmp_path / "reports")
+    graph_writer = ResearchArtifactGraphWriter(tmp_path / "graphs")
+
+    path = writer.write(
+        report,
+        artifact_graph_writer=graph_writer,
+        graph_manifests=({"manifest_id": "manifest-001"},),
+        graph_evidence_bundles=(
+            {"evidence_bundle_id": "evb-001", "manifest_ids": ("manifest-001",)},
+        ),
+        graph_promotion_packets=(
+            {
+                "promotion_packet_id": "packet-001",
+                "evidence_bundle_id": "evb-001",
+                "packet_hash": "sha256:packet",
+            },
+        ),
+        graph_audit_records=({"record_id": "audit-001"},),
+    )
+
+    graph_path = tmp_path / "graphs" / "report-artifact-graph.json"
+    graph = ResearchArtifactGraph.from_payload(json.loads(graph_path.read_text(encoding="utf-8")))
+    graph.validate()
+    assert str(path) in {node.node_id for node in graph.nodes}
+    assert (str(path), "packet-001", "references") in {
+        (edge.source_id, edge.target_id, edge.relation) for edge in graph.edges
+    }
+    assert (str(path), "audit-001", "references") in {
+        (edge.source_id, edge.target_id, edge.relation) for edge in graph.edges
+    }

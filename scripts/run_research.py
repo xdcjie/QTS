@@ -12,7 +12,9 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 from qts.research import ResearchSession
+from qts.research.artifact_graph import ResearchArtifactGraph
 from qts.research.audit_log import ResearchAuditLog
+from qts.research.data_quality import DataQualityArtifactWriter, DataQualityRunner
 from qts.research.evidence_policy import (
     EvidenceCompletenessPolicy,
     PromotionEvidenceSpec,
@@ -117,6 +119,12 @@ def _add_evidence_parser(subparsers: Any) -> None:
     verify = evidence_subparsers.add_parser("verify", help="Verify one evidence bundle")
     verify.add_argument("bundle_id")
 
+    reproduce = evidence_subparsers.add_parser(
+        "reproduce",
+        help="Verify evidence bundle hashes before attempting reproduction",
+    )
+    reproduce.add_argument("--bundle-id", required=True)
+
 
 def _add_promotion_parser(subparsers: Any) -> None:
     parser = subparsers.add_parser(
@@ -143,6 +151,43 @@ def _add_promotion_parser(subparsers: Any) -> None:
         type=Path,
         default=Path("runs/research/audit"),
         help="Research audit log root directory",
+    )
+
+
+def _add_audit_parser(subparsers: Any) -> None:
+    parser = subparsers.add_parser("audit", help="Verify Research OS audit logs")
+    audit_subparsers = parser.add_subparsers(dest="audit_command", required=True)
+    verify = audit_subparsers.add_parser("verify", help="Verify an audit-log hash chain")
+    verify.add_argument(
+        "--audit-log-root",
+        type=Path,
+        default=Path("runs/research/audit"),
+        help="Research audit log root directory",
+    )
+
+
+def _add_graph_parser(subparsers: Any) -> None:
+    parser = subparsers.add_parser("graph", help="Verify Research OS artifact graphs")
+    graph_subparsers = parser.add_subparsers(dest="graph_command", required=True)
+    verify = graph_subparsers.add_parser("verify", help="Verify one artifact graph JSON file")
+    verify.add_argument("--graph", type=Path, required=True)
+
+
+def _add_data_quality_parser(subparsers: Any) -> None:
+    parser = subparsers.add_parser("data-quality", help="Generate data-quality artifacts")
+    data_quality_subparsers = parser.add_subparsers(
+        dest="data_quality_command",
+        required=True,
+    )
+    run = data_quality_subparsers.add_parser(
+        "run",
+        help="Run data-quality checks from a dataset snapshot JSON",
+    )
+    run.add_argument("--snapshot", type=Path, required=True)
+    run.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("runs/research/data_quality"),
     )
 
 
@@ -212,6 +257,9 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_workflow_parser(subparsers)
     _add_evidence_parser(subparsers)
     _add_promotion_parser(subparsers)
+    _add_audit_parser(subparsers)
+    _add_graph_parser(subparsers)
+    _add_data_quality_parser(subparsers)
     _add_idea_parser(subparsers)
     _add_meta_parser(subparsers)
     return parser
@@ -328,6 +376,15 @@ def _run_evidence(args: argparse.Namespace) -> int:
         verification = registry.verify(args.bundle_id)
         print(json.dumps(verification.to_payload(), sort_keys=True, indent=2))
         return 0 if verification.accepted else 1
+    if args.evidence_command == "reproduce":
+        verification = registry.verify(args.bundle_id)
+        payload = {
+            **verification.to_payload(),
+            "evidence_bundle_id": args.bundle_id,
+            "reproduction_boundary": "verify_hashes_before_reproduce",
+        }
+        print(json.dumps(payload, sort_keys=True, indent=2))
+        return 0 if verification.accepted else 1
     raise ValueError(f"unsupported evidence command: {args.evidence_command}")
 
 
@@ -356,6 +413,72 @@ def _run_promotion(args: argparse.Namespace) -> int:
             print(str(exc), file=sys.stderr)
             return 2
     raise ValueError(f"unsupported promotion command: {args.promotion_command}")
+
+
+def _run_audit(args: argparse.Namespace) -> int:
+    if args.audit_command == "verify":
+        reasons = ResearchAuditLog(args.audit_log_root).verify_hash_chain()
+        payload = {"accepted": not reasons, "reasons": list(reasons)}
+        print(json.dumps(payload, sort_keys=True, indent=2))
+        return 0 if not reasons else 1
+    raise ValueError(f"unsupported audit command: {args.audit_command}")
+
+
+def _run_graph(args: argparse.Namespace) -> int:
+    if args.graph_command == "verify":
+        try:
+            graph = ResearchArtifactGraph.from_payload(_load_json_mapping(args.graph))
+            graph.validate()
+        except (FileNotFoundError, ValueError) as exc:
+            print(json.dumps({"accepted": False, "reasons": [str(exc)]}, sort_keys=True, indent=2))
+            return 1
+        print(
+            json.dumps(
+                {
+                    "accepted": True,
+                    "artifact_graph_hash": graph.stable_hash(),
+                    "reasons": [],
+                },
+                sort_keys=True,
+                indent=2,
+            )
+        )
+        return 0
+    raise ValueError(f"unsupported graph command: {args.graph_command}")
+
+
+def _run_data_quality(args: argparse.Namespace) -> int:
+    if args.data_quality_command == "run":
+        try:
+            snapshot = _load_json_mapping(args.snapshot)
+            artifact = DataQualityRunner(
+                dataset_id=_required_mapping_text(snapshot, "dataset_id"),
+                timeframe=_required_mapping_text(snapshot, "timeframe"),
+                start=_optional_mapping_text(snapshot, "start"),
+                end=_optional_mapping_text(snapshot, "end"),
+                calendar=_optional_mapping_text(snapshot, "calendar"),
+            ).run(snapshot)
+            result = DataQualityArtifactWriter(args.output_dir).write(artifact)
+        except (FileNotFoundError, ValueError) as exc:
+            print(json.dumps({"accepted": False, "reasons": [str(exc)]}, sort_keys=True, indent=2))
+            return 1
+        print(
+            json.dumps(
+                {
+                    "accepted": artifact.accepted,
+                    "artifact": artifact.to_payload(),
+                    "artifact_hash": result.artifact_hash,
+                    "path": str(result.path),
+                    "reasons": [
+                        f"{item['code']}: {item['message']}" for item in artifact.blockers()
+                    ],
+                },
+                sort_keys=True,
+                indent=2,
+            )
+        )
+        return 0 if artifact.accepted else 1
+    raise ValueError(f"unsupported data-quality command: {args.data_quality_command}")
 
 
 def _run_idea(args: argparse.Namespace) -> int:
@@ -455,6 +578,22 @@ def _load_json_records(path: Path | None) -> tuple[dict[str, Any], ...]:
     return tuple(records)
 
 
+def _required_mapping_text(payload: Mapping[str, Any], field_name: str) -> str:
+    value = payload.get(field_name)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field_name} is required")
+    return value.strip()
+
+
+def _optional_mapping_text(payload: Mapping[str, Any], field_name: str) -> str | None:
+    value = payload.get(field_name)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(f"{field_name} must be text")
+    return value.strip() or None
+
+
 def _ensure_repo_root_on_path() -> None:
     repo_root = str(_REPO_ROOT)
     if repo_root not in sys.path:
@@ -481,6 +620,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_evidence(args)
     if args.command == "promotion":
         return _run_promotion(args)
+    if args.command == "audit":
+        return _run_audit(args)
+    if args.command == "graph":
+        return _run_graph(args)
+    if args.command == "data-quality":
+        return _run_data_quality(args)
     if args.command == "idea":
         return _run_idea(args)
     if args.command == "meta":

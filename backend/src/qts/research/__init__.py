@@ -11,6 +11,8 @@ from qts.research.ablation import (
 from qts.research.artifact_graph import (
     ResearchArtifactEdge,
     ResearchArtifactGraph,
+    ResearchArtifactGraphBuilder,
+    ResearchArtifactGraphWriter,
     ResearchArtifactNode,
 )
 from qts.research.audit_log import ResearchAuditLog, ResearchAuditRecord
@@ -164,6 +166,8 @@ __all__ = [
     "AblationVariantSummary",
     "ResearchArtifactEdge",
     "ResearchArtifactGraph",
+    "ResearchArtifactGraphBuilder",
+    "ResearchArtifactGraphWriter",
     "ResearchArtifactNode",
     "ResearchAuditLog",
     "ResearchAuditRecord",

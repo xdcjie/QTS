@@ -5,20 +5,21 @@ from __future__ import annotations
 import csv
 import hashlib
 import shutil
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 
-from qts.core.hashing import stable_json_dumps
-from qts.research.manifest import ResearchManifest, write_jsonl
+from qts.core.hashing import stable_json_dumps, stable_json_hash
+from qts.research.data_quality import DataQualityArtifact, DataQualityRunner
+from qts.research.manifest import ResearchManifest, ResearchManifestV2, write_jsonl
 from qts.research.metrics import ResearchMetrics
 from qts.research.promotion import ResearchPromotionPolicy
 from qts.research.registry import ResearchRunRegistry, new_record
 from qts.research.report import ResearchSystemReport, ResearchSystemReportWriter
-from qts.research.reproducibility import ReproducibilitySnapshot
+from qts.research.reproducibility import ReproducibilitySnapshot, ReproducibilitySnapshotV2
 from qts.research.splits import ResearchSplitPlan
 
 
@@ -51,7 +52,7 @@ class ResearchDryRunRunner:
     def run(self, config_path: Path, *, argv: Sequence[str]) -> ResearchDryRunResult:
         """Run the manifest-driven dry-run path."""
 
-        manifest = ResearchManifest.from_yaml(config_path)
+        manifest = _load_manifest(config_path)
         artifact_dir = manifest.output_root / manifest.run_id
         artifact_dir.mkdir(parents=True, exist_ok=True)
 
@@ -74,13 +75,31 @@ class ResearchDryRunRunner:
         )
         split_plan = ResearchSplitPlan.from_config(manifest.split_config)
         data_snapshot = self._data_snapshot(manifest)
-        data_quality = self._data_quality_report(data_snapshot)
+        data_quality_artifact = self._data_quality_artifact(manifest, data_snapshot)
+        data_quality_payload = _data_quality_payload_with_hash(data_quality_artifact)
+        data_quality = self._data_quality_report(data_snapshot, data_quality_artifact)
+        reproducibility_v2 = ReproducibilitySnapshotV2.collect(
+            repo_root=self._repo_root,
+            manifest_hash=manifest.manifest_hash,
+            dependency_hashes=self._dependency_hashes(),
+            config_hashes=self._config_hashes(
+                manifest=manifest,
+                config_path=config_path,
+                resolved_manifest=resolved_manifest,
+            ),
+            data_hashes=self._data_hashes(data_snapshot),
+            command_argv=tuple(argv),
+            random_seeds=self._random_seeds(manifest),
+            calendar_version=getattr(manifest, "calendar", "unknown"),
+        )
 
         _write_json(artifact_dir / "resolved_manifest.json", resolved_manifest)
         _write_json(artifact_dir / "reproducibility.json", reproducibility.to_payload())
+        _write_json(artifact_dir / "reproducibility_v2.json", reproducibility_v2.to_payload())
         _write_json(artifact_dir / "metrics.json", metrics.to_payload())
         _write_json(artifact_dir / "promotion_decision.json", promotion_decision.to_payload())
         _write_json(artifact_dir / "data_snapshot.json", data_snapshot)
+        _write_json(artifact_dir / "data_quality.json", data_quality_payload)
         _write_json(artifact_dir / "splits.json", split_plan.to_payload())
         (artifact_dir / "data_quality_report.md").write_text(data_quality, encoding="utf-8")
 
@@ -140,7 +159,7 @@ class ResearchDryRunRunner:
             promotion_status=promotion_decision.status,
         )
 
-    def _data_snapshot(self, manifest: ResearchManifest) -> dict[str, Any]:
+    def _data_snapshot(self, manifest: ResearchManifest | ResearchManifestV2) -> dict[str, Any]:
         data_config_hash = _file_sha256(manifest.data_config)
         strategy_config_hash = _file_sha256(manifest.default_config)
         dataset_files = self._dataset_files(manifest)
@@ -157,7 +176,9 @@ class ResearchDryRunRunner:
             "timeframe": manifest.timeframe,
         }
 
-    def _dataset_files(self, manifest: ResearchManifest) -> list[dict[str, Any]]:
+    def _dataset_files(
+        self, manifest: ResearchManifest | ResearchManifestV2
+    ) -> list[dict[str, Any]]:
         payload = yaml.safe_load(manifest.data_config.read_text(encoding="utf-8"))
         if not isinstance(payload, dict):
             return []
@@ -200,7 +221,10 @@ class ResearchDryRunRunner:
         return result
 
     @staticmethod
-    def _data_quality_report(data_snapshot: dict[str, Any]) -> str:
+    def _data_quality_report(
+        data_snapshot: dict[str, Any],
+        artifact: DataQualityArtifact,
+    ) -> str:
         rows = data_snapshot.get("dataset_files", [])
         missing = [row for row in rows if isinstance(row, dict) and row.get("exists") is not True]
         lines = [
@@ -220,7 +244,79 @@ class ResearchDryRunRunner:
             lines.extend(
                 f"- {row.get('root')}: {row.get('path', row.get('reason'))}" for row in missing
             )
+        lines.extend(
+            [
+                "",
+                "## Structured Artifact",
+                "",
+                f"- Accepted: {artifact.accepted}",
+                f"- Duplicate timestamps: {artifact.duplicate_timestamps}",
+                f"- Missing bars: {artifact.missing_bars}",
+                f"- Stale prices: {artifact.stale_prices}",
+            ]
+        )
         return "\n".join(lines) + "\n"
+
+    def _data_quality_artifact(
+        self,
+        manifest: ResearchManifest | ResearchManifestV2,
+        data_snapshot: Mapping[str, Any],
+    ) -> DataQualityArtifact:
+        return DataQualityRunner(
+            dataset_id=manifest.dataset_id,
+            timeframe=manifest.timeframe,
+            start=manifest.start,
+            end=manifest.end,
+            calendar=getattr(manifest, "calendar", None),
+        ).run(data_snapshot)
+
+    def _dependency_hashes(self) -> dict[str, str]:
+        hashes: dict[str, str] = {}
+        for name in ("pyproject.toml", "uv.lock"):
+            digest = _file_sha256(self._repo_root / name)
+            if digest is not None:
+                hashes[name] = digest
+        return hashes
+
+    @staticmethod
+    def _config_hashes(
+        *,
+        manifest: ResearchManifest | ResearchManifestV2,
+        config_path: Path,
+        resolved_manifest: Mapping[str, Any],
+    ) -> dict[str, str]:
+        hashes = {"resolved_manifest": stable_json_hash(resolved_manifest)}
+        for path in (
+            config_path,
+            manifest.data_config,
+            manifest.default_config,
+            manifest.promotion_config,
+        ):
+            digest = _file_sha256(path)
+            hashes[str(path)] = digest or "unknown"
+        return hashes
+
+    @staticmethod
+    def _data_hashes(data_snapshot: Mapping[str, Any]) -> dict[str, str]:
+        result: dict[str, str] = {}
+        for row in data_snapshot.get("dataset_files", ()):
+            if not isinstance(row, Mapping):
+                continue
+            path = row.get("path")
+            digest = row.get("sha256")
+            if isinstance(path, str):
+                result[path] = digest if isinstance(digest, str) and digest else "unknown"
+        if not result:
+            dataset_id = data_snapshot.get("dataset_id", "dataset")
+            result[f"dataset:{dataset_id}"] = "unknown"
+        return result
+
+    @staticmethod
+    def _random_seeds(manifest: ResearchManifest | ResearchManifestV2) -> dict[str, int]:
+        seed = manifest.random_search.get("seed")
+        if isinstance(seed, int):
+            return {"research_manifest_random_search": seed}
+        return {}
 
     @staticmethod
     def _write_ranking(path: Path, candidates: tuple[Any, ...]) -> None:
@@ -251,7 +347,22 @@ def _write_json(path: Path, payload: Any) -> None:
 def _file_sha256(path: Path) -> str | None:
     if not path.exists() or not path.is_file():
         return None
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    return f"sha256:{hashlib.sha256(path.read_bytes()).hexdigest()}"
+
+
+def _data_quality_payload_with_hash(artifact: DataQualityArtifact) -> dict[str, Any]:
+    payload = artifact.to_payload(include_artifact_hash=False)
+    return artifact.to_payload(
+        include_artifact_hash=True,
+        artifact_hash=stable_json_hash(payload),
+    )
+
+
+def _load_manifest(path: Path) -> ResearchManifest | ResearchManifestV2:
+    payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+    if isinstance(payload, Mapping) and payload.get("schema_version") == 2:
+        return ResearchManifestV2.from_yaml(path)
+    return ResearchManifest.from_yaml(path)
 
 
 __all__ = ["ResearchDryRunResult", "ResearchDryRunRunner"]

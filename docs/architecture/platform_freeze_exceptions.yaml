@@ -224,6 +224,11 @@ exceptions:
     reason: research OS normalized manifest owner for run, data, strategy, split, and promotion config
     owner: platform
     expiry: 2027-05-26
+  - class_name: ResearchManifestV2
+    module: qts.research.manifest
+    reason: research OS v2 manifest contract owner for schema, strategy entrypoint, calendar, artifact, and reproducibility gates
+    owner: platform
+    expiry: 2027-05-26
   - class_name: ResearchMetrics
     module: qts.research.metrics
     reason: research OS stable comparable metric schema owner
@@ -1974,6 +1979,11 @@ exceptions:
     reason: research OS deterministic data quality artifact writer for promotion review evidence
     owner: platform
     expiry: 2027-05-26
+  - class_name: DataQualityRunner
+    module: qts.research.data_quality
+    reason: research OS data quality runner owner for deterministic duplicate timestamp, missing bar, stale price, session, and label visibility evidence
+    owner: platform
+    expiry: 2027-05-26
   - class_name: PromotionPacketValidationResult
     module: qts.research.promotion_packet
     reason: research OS promotion packet validation result for machine-checkable paper and live review gates
@@ -1997,6 +2007,16 @@ exceptions:
   - class_name: ResearchArtifactGraph
     module: qts.research.artifact_graph
     reason: research OS artifact DAG owner linking manifest, metrics, data quality, reproducibility, evidence, promotion, audit, and report artifacts
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ResearchArtifactGraphBuilder
+    module: qts.research.artifact_graph
+    reason: research OS artifact graph builder owner for deterministic manifest, evidence, promotion, audit, and report relationship construction
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ResearchArtifactGraphWriter
+    module: qts.research.artifact_graph
+    reason: research OS deterministic artifact graph writer owner for persisted graph hash evidence
     owner: platform
     expiry: 2027-05-26
   - class_name: PromotionEvidenceSpec

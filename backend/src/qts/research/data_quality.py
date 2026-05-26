@@ -1,16 +1,19 @@
 """Structured research data-quality artifacts.
 
-The artifact records caller-supplied quality results and checked file paths. It
-does not parse source data or own calendar/session semantics.
+The artifact records quality results and checked file paths for promotion
+review. DataQualityRunner owns deterministic CSV snapshot checks; canonical
+calendar/session semantics remain outside this module.
 """
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -248,6 +251,192 @@ class DataQualityArtifact:
                 )
             )
         return tuple(issues)
+
+
+@dataclass(frozen=True, slots=True)
+class DataQualityRunner:
+    """Generate structured data-quality evidence from dataset file snapshots."""
+
+    dataset_id: str
+    timeframe: str
+    start: str | None = None
+    end: str | None = None
+    calendar: str | None = None
+    stale_price_max_repeats: int | None = None
+
+    def __post_init__(self) -> None:
+        if not self.dataset_id.strip():
+            raise ValueError("dataset_id is required")
+        if not self.timeframe.strip():
+            raise ValueError("timeframe is required")
+        if self.calendar is not None and not self.calendar.strip():
+            raise ValueError("calendar is required when provided")
+        if self.stale_price_max_repeats is not None and self.stale_price_max_repeats < 1:
+            raise ValueError("stale_price_max_repeats must be positive")
+
+    def run(self, snapshot: Mapping[str, Any]) -> DataQualityArtifact:
+        """Run deterministic file-level quality checks and return an artifact."""
+
+        checked_paths = self._checked_paths(snapshot)
+        existing_bar_paths = tuple(path for path in checked_paths if Path(path).exists())
+        duplicate_timestamps = 0
+        missing_bars = 0
+        stale_prices = 0
+        session_alignment = True
+        label_visibility = True
+        for path_text in existing_bar_paths:
+            rows = self._read_csv_rows(Path(path_text))
+            timestamps = self._timestamps(rows)
+            duplicate_timestamps += self._duplicate_count(timestamps)
+            missing_bars += self._missing_bar_count(timestamps)
+            stale_prices += self._stale_price_count(rows)
+            if not self._session_aligned(timestamps):
+                session_alignment = False
+        for label_path in self._label_paths(snapshot):
+            if not Path(label_path).exists():
+                continue
+            if not self._labels_visible(Path(label_path)):
+                label_visibility = False
+
+        halted_sessions = int(snapshot.get("halted_sessions", 0) or 0)
+        artifact = DataQualityArtifact(
+            dataset_id=self.dataset_id,
+            accepted=True,
+            checked_paths=checked_paths,
+            duplicate_timestamps=duplicate_timestamps,
+            missing_bars=missing_bars,
+            session_alignment=session_alignment,
+            stale_prices=stale_prices,
+            halted_sessions=halted_sessions,
+            label_visibility=label_visibility,
+        )
+        return DataQualityArtifact(
+            dataset_id=artifact.dataset_id,
+            accepted=not artifact.blockers(),
+            checked_paths=artifact.checked_paths,
+            duplicate_timestamps=artifact.duplicate_timestamps,
+            missing_bars=artifact.missing_bars,
+            session_alignment=artifact.session_alignment,
+            stale_prices=artifact.stale_prices,
+            halted_sessions=artifact.halted_sessions,
+            label_visibility=artifact.label_visibility,
+        )
+
+    def _checked_paths(self, snapshot: Mapping[str, Any]) -> tuple[str, ...]:
+        explicit = snapshot.get("checked_paths", snapshot.get("file_paths"))
+        if explicit is not None:
+            return _checked_paths({"checked_paths": explicit})
+        paths: list[str] = []
+        for row in snapshot.get("dataset_files", ()):
+            if isinstance(row, Mapping) and isinstance(row.get("path"), str):
+                paths.append(str(Path(str(row["path"]))))
+        paths.extend(self._label_paths(snapshot))
+        return tuple(dict.fromkeys(paths))
+
+    @staticmethod
+    def _label_paths(snapshot: Mapping[str, Any]) -> tuple[str, ...]:
+        value = snapshot.get("label_paths", ())
+        if not isinstance(value, Sequence) or isinstance(value, str):
+            return ()
+        return tuple(str(Path(path)) for path in value)
+
+    @staticmethod
+    def _read_csv_rows(path: Path) -> tuple[dict[str, str], ...]:
+        if path.suffix.lower() != ".csv":
+            return ()
+        with path.open("r", encoding="utf-8", newline="") as handle:
+            return tuple(dict(row) for row in csv.DictReader(handle))
+
+    @classmethod
+    def _timestamps(cls, rows: Sequence[Mapping[str, str]]) -> tuple[datetime, ...]:
+        timestamps: list[datetime] = []
+        for row in rows:
+            value = row.get("timestamp") or row.get("datetime")
+            if value:
+                timestamps.append(cls._parse_datetime(value))
+        return tuple(timestamps)
+
+    @staticmethod
+    def _duplicate_count(timestamps: Sequence[datetime]) -> int:
+        return len(timestamps) - len(set(timestamps))
+
+    def _missing_bar_count(self, timestamps: Sequence[datetime]) -> int:
+        step = self._timeframe_seconds()
+        if step is None:
+            return 0
+        missing = 0
+        unique = sorted(set(timestamps))
+        for left, right in zip(unique, unique[1:], strict=False):
+            seconds = int((right - left).total_seconds())
+            if seconds > step:
+                missing += max((seconds // step) - 1, 0)
+        return missing
+
+    def _stale_price_count(self, rows: Sequence[Mapping[str, str]]) -> int:
+        if self.stale_price_max_repeats is None:
+            return 0
+        stale = 0
+        previous: str | None = None
+        repeat_count = 0
+        for row in rows:
+            close = row.get("close")
+            if close is None:
+                previous = None
+                repeat_count = 0
+                continue
+            if close == previous:
+                repeat_count += 1
+                if repeat_count >= self.stale_price_max_repeats:
+                    stale += 1
+            else:
+                previous = close
+                repeat_count = 0
+        return stale
+
+    def _session_aligned(self, timestamps: Sequence[datetime]) -> bool:
+        start = None if self.start is None else self._parse_datetime(self.start)
+        end = None if self.end is None else self._parse_datetime(self.end)
+        for timestamp in timestamps:
+            if start is not None and timestamp < start:
+                return False
+            if end is not None and timestamp >= end:
+                return False
+        return True
+
+    @classmethod
+    def _labels_visible(cls, path: Path) -> bool:
+        for row in cls._read_csv_rows(path):
+            label_timestamp = row.get("label_timestamp")
+            if label_timestamp is None:
+                continue
+            visible_at = row.get("visible_at")
+            if not visible_at:
+                return False
+            if cls._parse_datetime(visible_at) < cls._parse_datetime(label_timestamp):
+                return False
+        return True
+
+    def _timeframe_seconds(self) -> int | None:
+        value = self.timeframe.strip().lower()
+        unit = value[-1:]
+        amount_text = value[:-1]
+        if not amount_text.isdigit():
+            return None
+        amount = int(amount_text)
+        if unit == "s":
+            return amount
+        if unit == "m":
+            return amount * 60
+        if unit == "h":
+            return amount * 60 * 60
+        return None
+
+    @staticmethod
+    def _parse_datetime(value: str) -> datetime:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        if parsed.tzinfo is None:
+            raise ValueError("data quality timestamps must be timezone-aware")
+        return parsed
 
 
 @dataclass(frozen=True, slots=True)

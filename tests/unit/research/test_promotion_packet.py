@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 from qts.core.hashing import stable_json_hash
+from qts.research.artifact_graph import ResearchArtifactGraph, ResearchArtifactGraphWriter
 from qts.research.audit_log import ResearchAuditLog
 from qts.research.evidence_registry import EvidenceRegistry
 from qts.research.idea_spec import IdeaSpec
@@ -158,6 +159,87 @@ def test_failed_data_quality_rejected(tmp_path: Path) -> None:
     assert any("missing bars detected: 3" in reason for reason in result.reasons)
 
 
+def test_payload_hash_required_for_payload_sections(tmp_path: Path) -> None:
+    registry, bundle_id = _write_verifiable_bundle(tmp_path)
+    payload = _packet_payload(bundle_id)
+    del payload["metrics"]["payload_hash"]
+    del payload["data_quality"]["payload_hash"]
+    del payload["reproducibility"]["payload_hash"]
+
+    result = PromotionPacketV2.from_payload(payload).validate(
+        evidence_registry=registry,
+        audit_log=ResearchAuditLog(tmp_path / "audit.jsonl"),
+    )
+
+    assert result.accepted is False
+    assert "metrics.payload_hash is required" in result.reasons
+    assert "data_quality.payload_hash is required" in result.reasons
+    assert "reproducibility.payload_hash is required" in result.reasons
+
+
+def test_complete_live_packet_requires_hashed_artifact_refs_and_is_accepted(
+    tmp_path: Path,
+) -> None:
+    registry, bundle_id = _write_verifiable_bundle(tmp_path)
+
+    result = PromotionPacketV2.from_payload(
+        _packet_payload(bundle_id, target_mode="live_canary")
+    ).validate(
+        evidence_registry=registry,
+        audit_log=ResearchAuditLog(tmp_path / "audit.jsonl"),
+    )
+
+    assert result.accepted is True
+    assert result.reasons == ()
+
+
+def test_live_packet_rejects_plain_runtime_and_operations_fields(tmp_path: Path) -> None:
+    registry, bundle_id = _write_verifiable_bundle(tmp_path)
+    payload = _packet_payload(bundle_id, target_mode="live")
+    payload["runtime"]["risk_profile_id"] = "risk-live"
+    payload["operations"]["rollback_plan"] = "disable live strategy"
+
+    result = PromotionPacketV2.from_payload(payload).validate(
+        evidence_registry=registry,
+        audit_log=ResearchAuditLog(tmp_path / "audit.jsonl"),
+    )
+
+    assert result.accepted is False
+    assert "runtime.risk_profile_id must be an artifact ref for live" in result.reasons
+    assert "operations.rollback_plan must be an artifact ref for live" in result.reasons
+
+
+def test_live_packet_rejects_artifact_ref_hash_mismatch(tmp_path: Path) -> None:
+    registry, bundle_id = _write_verifiable_bundle(tmp_path)
+    payload = _packet_payload(bundle_id, target_mode="live_observation")
+    payload["runtime"]["kill_switch_profile"]["payload_hash"] = "sha256:wrong"
+
+    result = PromotionPacketV2.from_payload(payload).validate(
+        evidence_registry=registry,
+        audit_log=ResearchAuditLog(tmp_path / "audit.jsonl"),
+    )
+
+    assert result.accepted is False
+    assert any(
+        reason.startswith("runtime.kill_switch_profile.payload_hash mismatch:")
+        for reason in result.reasons
+    )
+
+
+def test_live_packet_requires_operations_evidence_artifact_refs(tmp_path: Path) -> None:
+    registry, bundle_id = _write_verifiable_bundle(tmp_path)
+    payload = _packet_payload(bundle_id, target_mode="live_canary")
+    payload["operations"].pop("paper_soak_evidence")
+
+    result = PromotionPacketV2.from_payload(payload).validate(
+        evidence_registry=registry,
+        audit_log=ResearchAuditLog(tmp_path / "audit.jsonl"),
+    )
+
+    assert result.accepted is False
+    assert "operations.paper_soak_evidence is required for live_canary" in result.reasons
+
+
 def test_live_packet_missing_kill_switch_rejected(tmp_path: Path) -> None:
     registry, bundle_id = _write_verifiable_bundle(tmp_path)
     payload = _packet_payload(bundle_id, target_mode="live_canary")
@@ -170,6 +252,27 @@ def test_live_packet_missing_kill_switch_rejected(tmp_path: Path) -> None:
 
     assert result.accepted is False
     assert "runtime.kill_switch_profile is required for live_canary" in result.reasons
+
+
+def test_tampered_audit_chain_rejects_without_appending_record(tmp_path: Path) -> None:
+    registry, bundle_id = _write_verifiable_bundle(tmp_path)
+    audit_log = ResearchAuditLog(tmp_path / "audit.jsonl")
+    audit_log.append("promotion_packet_validated", {"status": "original"})
+    audit_log.path.write_text(
+        audit_log.path.read_text(encoding="utf-8").replace("original", "tampered"),
+        encoding="utf-8",
+    )
+
+    result = PromotionPacketV2.from_payload(_packet_payload(bundle_id)).validate(
+        evidence_registry=registry,
+        audit_log=audit_log,
+    )
+
+    assert result.accepted is False
+    assert result.status == "rejected"
+    assert result.audit_record_id == ""
+    assert any(reason.startswith("audit hash chain invalid:") for reason in result.reasons)
+    assert len(audit_log.path.read_text(encoding="utf-8").splitlines()) == 1
 
 
 def test_validation_writes_audit_record_and_chain_verifies(tmp_path: Path) -> None:
@@ -190,6 +293,27 @@ def test_validation_writes_audit_record_and_chain_verifies(tmp_path: Path) -> No
     assert audit_log.verify_hash_chain() == ()
 
 
+def test_validation_writes_artifact_graph_when_writer_is_supplied(tmp_path: Path) -> None:
+    registry, bundle_id = _write_verifiable_bundle(tmp_path)
+    audit_log = ResearchAuditLog(tmp_path / "audit.jsonl")
+    graph_writer = ResearchArtifactGraphWriter(tmp_path / "graphs")
+
+    result = PromotionPacketV2.from_payload(_packet_payload(bundle_id)).validate(
+        evidence_registry=registry,
+        audit_log=audit_log,
+        artifact_graph_writer=graph_writer,
+    )
+
+    assert result.accepted is True
+    graph_path = tmp_path / "graphs" / "promotion-packet-pc-vwap-artifact-graph.json"
+    graph = ResearchArtifactGraph.from_payload(json.loads(graph_path.read_text(encoding="utf-8")))
+    graph.validate()
+    assert ("pc-vwap", bundle_id, "references") in {
+        (edge.source_id, edge.target_id, edge.relation) for edge in graph.edges
+    }
+    assert result.audit_record_id in {node.node_id for node in graph.nodes}
+
+
 def _packet_payload(
     bundle_id: str,
     *,
@@ -201,6 +325,51 @@ def _packet_payload(
     metrics = metrics_payload or _valid_metrics()
     data_quality = data_quality_payload or _data_quality_payload()
     reproducibility = reproducibility_payload or _repro_payload()
+    runtime: dict[str, Any] = {
+        "account_id": "paper-account",
+        "risk_profile_id": "risk-paper",
+        "capital_limit": 100000,
+        "runtime_mode": target_mode,
+        "kill_switch_profile": "paper-kill-switch",
+    }
+    operations: dict[str, Any] = {
+        "rollback_plan": "disable promoted strategy module",
+        "monitoring_plan": "watch fills and reconciliation",
+        "alert_policy": "page operator on kill-switch trigger",
+    }
+    if target_mode in {"live_observation", "live_canary", "live"}:
+        runtime["risk_profile_id"] = _artifact_ref(
+            "risk-live",
+            {"limits": {"max_position_notional": 100000}, "profile": "live"},
+        )
+        runtime["kill_switch_profile"] = _artifact_ref(
+            "kill-switch-live",
+            {"actions": ["cancel_open_orders", "disable_strategy"], "profile": "live"},
+        )
+        operations["rollback_plan"] = _artifact_ref(
+            "rollback-live",
+            {"owner": "ops", "steps": ["disable strategy", "flatten positions"]},
+        )
+        operations["monitoring_plan"] = _artifact_ref(
+            "monitoring-live",
+            {"checks": ["fills", "reconciliation", "latency"], "owner": "ops"},
+        )
+        operations["paper_soak_evidence"] = _artifact_ref(
+            "paper-soak-evidence",
+            {"duration_hours": 72, "status": "passed"},
+        )
+        operations["reconciliation_evidence"] = _artifact_ref(
+            "reconciliation-evidence",
+            {"max_unexplained_drift": 0, "status": "passed"},
+        )
+        operations["kill_switch_drill_evidence"] = _artifact_ref(
+            "kill-switch-drill-evidence",
+            {"drill_completed": True, "status": "passed"},
+        )
+        operations["capital_signoff"] = _artifact_ref(
+            "capital-signoff",
+            {"approved_by": "risk", "capital_limit": 100000},
+        )
     return {
         "schema_version": 2,
         "promotion_candidate_id": "pc-vwap",
@@ -225,23 +394,21 @@ def _packet_payload(
             "payload_hash": stable_json_hash(reproducibility),
             "payload": reproducibility,
         },
-        "runtime": {
-            "account_id": "paper-account",
-            "risk_profile_id": "risk-paper",
-            "capital_limit": 100000,
-            "runtime_mode": target_mode,
-            "kill_switch_profile": "paper-kill-switch",
-        },
-        "operations": {
-            "rollback_plan": "disable promoted strategy module",
-            "monitoring_plan": "watch fills and reconciliation",
-            "alert_policy": "page operator on kill-switch trigger",
-        },
+        "runtime": runtime,
+        "operations": operations,
         "review": {
             "reviewer": "risk",
             "decision": "go",
             "reviewed_at": "2026-05-26T00:00:00+00:00",
         },
+    }
+
+
+def _artifact_ref(artifact_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "artifact_id": artifact_id,
+        "payload_hash": stable_json_hash(payload),
+        "payload": payload,
     }
 
 

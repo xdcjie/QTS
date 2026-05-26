@@ -92,6 +92,7 @@ def test_promotion_policy_accepts_complete_research_metrics() -> None:
     metrics["portfolio"]["correlation_to_active"] = 0.3
     metrics["research"]["deterministic_replay_passed"] = True
     metrics["research"]["no_lookahead_passed"] = True
+    metrics["research"]["promotion_eligible"] = True
 
     decision = policy.evaluate(
         run_id="run-001",
@@ -130,6 +131,7 @@ def test_dry_run_writes_complete_plan_artifacts(tmp_path: Path) -> None:
         "candidate_parameters.jsonl",
         "candidate_results.jsonl",
         "command_log.jsonl",
+        "data_quality.json",
         "data_quality_report.md",
         "data_snapshot.json",
         "failures.jsonl",
@@ -139,10 +141,23 @@ def test_dry_run_writes_complete_plan_artifacts(tmp_path: Path) -> None:
         "ranking.csv",
         "report.md",
         "reproducibility.json",
+        "reproducibility_v2.json",
         "resolved_manifest.json",
         "splits.json",
     }
     assert expected_files <= {path.name for path in artifact_dir.iterdir()}
+    metrics = json.loads((artifact_dir / "metrics.json").read_text(encoding="utf-8"))
+    assert metrics["research"]["promotion_eligible"] is False
+    reproducibility_v2 = json.loads(
+        (artifact_dir / "reproducibility_v2.json").read_text(encoding="utf-8")
+    )
+    assert reproducibility_v2["schema_version"] == 2
+    assert "pyproject.toml" in reproducibility_v2["dependency_hashes"]
+    assert "uv.lock" in reproducibility_v2["dependency_hashes"]
+    assert str(rewritten) in reproducibility_v2["config_hashes"]
+    data_quality = json.loads((artifact_dir / "data_quality.json").read_text(encoding="utf-8"))
+    assert data_quality["schema_version"] == 2
+    assert data_quality["dataset_id"] == config.dataset_id
     decision = json.loads((artifact_dir / "promotion_decision.json").read_text(encoding="utf-8"))
     assert decision["status"] == "rejected"
     assert ResearchRunRegistry(result.registry_path).list()[0].run_id == result.run_id

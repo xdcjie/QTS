@@ -2,9 +2,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
+from qts.research.artifact_graph import ResearchArtifactGraph, ResearchArtifactGraphWriter
+from qts.research.audit_log import ResearchAuditLog
 from qts.research.evidence_registry import EvidenceRegistry, ResearchEvidenceBundle
 from qts.research.idea_spec import IdeaSpec
 
@@ -85,6 +88,52 @@ def test_evidence_bundle_created_from_workflow_summary(tmp_path: Path) -> None:
     assert bundle.report_path == str(report_path)
     assert registry.index_path.exists()
     assert (registry.root_dir / f"evidence-bundle-{bundle.evidence_bundle_id}.json").exists()
+
+
+def test_evidence_bundle_creation_writes_audit_record(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text('{"metrics": {"sharpe": "1.0"}}\n', encoding="utf-8")
+    report_path = tmp_path / "workflow-report.md"
+    report_path.write_text("# Report\n", encoding="utf-8")
+    summary_path = _write_workflow_summary(tmp_path, manifest_path, report_path)
+    registry = EvidenceRegistry(tmp_path / "evidence")
+    audit_log = ResearchAuditLog(tmp_path / "audit.jsonl")
+
+    bundle = registry.create_from_workflow_summary(summary_path, audit_log=audit_log)
+
+    records = audit_log.list()
+    assert len(records) == 1
+    assert records[0].record_type == "evidence_bundle_created"
+    assert records[0].payload["evidence_bundle_id"] == bundle.evidence_bundle_id
+    assert records[0].payload["workflow_run_id"] == "evidence-flow"
+    assert records[0].payload["workflow_summary_hash"] == bundle.workflow_summary_hash
+    assert records[0].payload["bundle_hash"].startswith("sha256:")
+    assert audit_log.verify_hash_chain() == ()
+
+
+def test_evidence_bundle_creation_writes_artifact_graph(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text('{"metrics": {"sharpe": "1.0"}}\n', encoding="utf-8")
+    report_path = tmp_path / "workflow-report.md"
+    report_path.write_text("# Report\n", encoding="utf-8")
+    summary_path = _write_workflow_summary(tmp_path, manifest_path, report_path)
+    registry = EvidenceRegistry(tmp_path / "evidence")
+    graph_writer = ResearchArtifactGraphWriter(tmp_path / "graphs")
+
+    bundle = registry.create_from_workflow_summary(
+        summary_path,
+        artifact_graph_writer=graph_writer,
+    )
+
+    graph_path = (
+        tmp_path / "graphs" / f"evidence-bundle-{bundle.evidence_bundle_id}-artifact-graph.json"
+    )
+    graph = ResearchArtifactGraph.from_payload(json.loads(graph_path.read_text(encoding="utf-8")))
+    graph.validate()
+    assert {node.node_type for node in graph.nodes} == {"evidence_bundle", "manifest"}
+    assert (bundle.evidence_bundle_id, str(manifest_path), "references") in {
+        (edge.source_id, edge.target_id, edge.relation) for edge in graph.edges
+    }
 
 
 def test_evidence_bundle_persists_idea_metadata_and_trial_budget_warning(tmp_path: Path) -> None:
@@ -178,6 +227,37 @@ def test_evidence_bundle_verifies_manifest_hashes(tmp_path: Path) -> None:
     assert verification.checked_paths == (str(summary_path), str(manifest_path), str(report_path))
 
 
+def test_evidence_bundle_verify_writes_accepted_audit_record(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text('{"metrics": {"sharpe": "1.0"}}\n', encoding="utf-8")
+    report_path = tmp_path / "workflow-report.md"
+    report_path.write_text("# Report\n", encoding="utf-8")
+    summary_path = _write_workflow_summary(tmp_path, manifest_path, report_path)
+    registry = EvidenceRegistry(tmp_path / "evidence")
+    audit_log = ResearchAuditLog(tmp_path / "audit.jsonl")
+    bundle = registry.create_from_workflow_summary(summary_path, audit_log=audit_log)
+
+    verification = registry.verify(bundle.evidence_bundle_id, audit_log=audit_log)
+
+    assert verification.accepted
+    records = audit_log.list()
+    assert [record.record_type for record in records] == [
+        "evidence_bundle_created",
+        "evidence_validated",
+    ]
+    validation_record = records[-1]
+    assert validation_record.payload["evidence_bundle_id"] == bundle.evidence_bundle_id
+    assert validation_record.payload["accepted"] is True
+    assert validation_record.payload["status"] == "accepted"
+    assert validation_record.payload["reasons"] == []
+    assert validation_record.payload["checked_paths"] == [
+        str(summary_path),
+        str(manifest_path),
+        str(report_path),
+    ]
+    assert audit_log.verify_hash_chain() == ()
+
+
 def test_evidence_bundle_rejects_unverifiable_manifest_artifact_hash(tmp_path: Path) -> None:
     manifest_path = tmp_path / "manifest.json"
     manifest_path.write_text(
@@ -197,6 +277,57 @@ def test_evidence_bundle_rejects_unverifiable_manifest_artifact_hash(tmp_path: P
         "artifact hash has no path for recomputation: metrics.json" in reason
         for reason in verification.reasons
     )
+
+
+def test_evidence_bundle_verify_writes_rejected_audit_record(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(
+        json.dumps({"artifact_hashes": {"metrics.json": "sha256:abc"}}, sort_keys=True),
+        encoding="utf-8",
+    )
+    report_path = tmp_path / "workflow-report.md"
+    report_path.write_text("# Report\n", encoding="utf-8")
+    summary_path = _write_workflow_summary(tmp_path, manifest_path, report_path)
+    registry = EvidenceRegistry(tmp_path / "evidence")
+    audit_log = ResearchAuditLog(tmp_path / "audit.jsonl")
+    bundle = registry.create_from_workflow_summary(summary_path, audit_log=audit_log)
+
+    verification = registry.verify(bundle.evidence_bundle_id, audit_log=audit_log)
+
+    assert not verification.accepted
+    validation_record = audit_log.list()[-1]
+    assert validation_record.record_type == "evidence_validated"
+    assert validation_record.payload["evidence_bundle_id"] == bundle.evidence_bundle_id
+    assert validation_record.payload["accepted"] is False
+    assert validation_record.payload["status"] == "rejected"
+    assert validation_record.payload["reasons"] == list(verification.reasons)
+    assert audit_log.verify_hash_chain() == ()
+
+
+def test_evidence_create_verify_and_human_review_audit_chain_verifies(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text('{"metrics": {"sharpe": "1.0"}}\n', encoding="utf-8")
+    report_path = tmp_path / "workflow-report.md"
+    report_path.write_text("# Report\n", encoding="utf-8")
+    summary_path = _write_workflow_summary(tmp_path, manifest_path, report_path)
+    registry = EvidenceRegistry(tmp_path / "evidence")
+    audit_log = ResearchAuditLog(tmp_path / "audit.jsonl")
+    bundle = registry.create_from_workflow_summary(summary_path, audit_log=audit_log)
+
+    registry.verify(bundle.evidence_bundle_id, audit_log=audit_log)
+    audit_log.append_human_review_decision(
+        reviewer="risk",
+        decision="go",
+        reviewed_at=datetime(2026, 5, 26, 16, 0, tzinfo=UTC),
+        evidence_bundle_id=bundle.evidence_bundle_id,
+    )
+
+    assert [record.record_type for record in audit_log.list()] == [
+        "evidence_bundle_created",
+        "evidence_validated",
+        "human_review_decided",
+    ]
+    assert audit_log.verify_hash_chain() == ()
 
 
 def test_evidence_bundle_verifies_artifact_hashes(tmp_path: Path) -> None:
