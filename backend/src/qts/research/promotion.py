@@ -125,17 +125,27 @@ class PromotionGateResult:
     observed: Any
     threshold: Any
     reason: str
+    metric_path: str | None = None
+    unit: str | None = None
+    direction: str | None = None
 
     def to_payload(self) -> dict[str, Any]:
         """Return a JSON-ready gate result."""
 
-        return {
+        payload = {
             "name": self.name,
             "observed": self.observed,
             "reason": self.reason,
             "status": self.status,
             "threshold": self.threshold,
         }
+        if self.metric_path is not None:
+            payload["metric_path"] = self.metric_path
+        if self.unit is not None:
+            payload["unit"] = self.unit
+        if self.direction is not None:
+            payload["direction"] = self.direction
+        return payload
 
 
 @dataclass(frozen=True, slots=True)
@@ -314,6 +324,9 @@ class ResearchPromotionPolicy:
                 None,
                 threshold,
                 f"{group}.{field_name} missing",
+                metric_path=f"{group}.{field_name}",
+                unit=_metric_unit(group, field_name),
+                direction=_metric_direction(group, field_name),
             )
         passed = observed >= threshold
         return PromotionGateResult(
@@ -322,6 +335,9 @@ class ResearchPromotionPolicy:
             observed,
             threshold,
             f"{group}.{field_name} must be >= {threshold}",
+            metric_path=f"{group}.{field_name}",
+            unit=_metric_unit(group, field_name),
+            direction=_metric_direction(group, field_name),
         )
 
     def _max_gate(
@@ -340,6 +356,9 @@ class ResearchPromotionPolicy:
                 None,
                 threshold,
                 f"{group}.{field_name} missing",
+                metric_path=f"{group}.{field_name}",
+                unit=_metric_unit(group, field_name),
+                direction=_metric_direction(group, field_name),
             )
         passed = observed <= threshold
         return PromotionGateResult(
@@ -348,6 +367,9 @@ class ResearchPromotionPolicy:
             observed,
             threshold,
             f"{group}.{field_name} must be <= {threshold}",
+            metric_path=f"{group}.{field_name}",
+            unit=_metric_unit(group, field_name),
+            direction=_metric_direction(group, field_name),
         )
 
     @staticmethod
@@ -359,7 +381,16 @@ class ResearchPromotionPolicy:
     ) -> PromotionGateResult:
         observed = metric_value(metrics, group, field_name)
         if observed is None:
-            return PromotionGateResult(name, "missing", None, True, f"{group}.{field_name} missing")
+            return PromotionGateResult(
+                name,
+                "missing",
+                None,
+                True,
+                f"{group}.{field_name} missing",
+                metric_path=f"{group}.{field_name}",
+                unit=_metric_unit(group, field_name),
+                direction=_metric_direction(group, field_name),
+            )
         passed = observed is True
         return PromotionGateResult(
             name,
@@ -367,6 +398,9 @@ class ResearchPromotionPolicy:
             observed,
             True,
             f"{group}.{field_name} must be true",
+            metric_path=f"{group}.{field_name}",
+            unit=_metric_unit(group, field_name),
+            direction=_metric_direction(group, field_name),
         )
 
 
@@ -387,6 +421,20 @@ def _optional_float(value: Any) -> float | None:
     if value is None:
         return None
     return float(value)
+
+
+def _metric_unit(group: str, field_name: str) -> str | None:
+    metadata = _PROMOTION_METRIC_METADATA.get(f"{group}.{field_name}")
+    if metadata is None:
+        return None
+    return metadata["unit"]
+
+
+def _metric_direction(group: str, field_name: str) -> str | None:
+    metadata = _PROMOTION_METRIC_METADATA.get(f"{group}.{field_name}")
+    if metadata is None:
+        return None
+    return metadata["direction"]
 
 
 _PROMOTION_STATUSES = frozenset(
@@ -418,6 +466,26 @@ _RESEARCH_ONLY_PARAMS = frozenset(
         "trial_count",
     }
 )
+_PROMOTION_METRIC_METADATA = {
+    "execution.cost_impact": {"direction": "lower_is_better", "unit": "ratio"},
+    "execution.slippage_sensitivity": {"direction": "lower_is_better", "unit": "ratio"},
+    "portfolio.correlation_to_active": {
+        "direction": "lower_is_better",
+        "unit": "correlation",
+    },
+    "quality.profit_factor": {"direction": "higher_is_better", "unit": "ratio"},
+    "quality.sharpe": {"direction": "higher_is_better", "unit": "ratio"},
+    "research.deterministic_replay_passed": {"direction": "neutral", "unit": "boolean"},
+    "research.no_lookahead_passed": {"direction": "neutral", "unit": "boolean"},
+    "risk.max_drawdown": {"direction": "lower_is_better", "unit": "ratio"},
+    "stability.parameter_sensitivity": {"direction": "higher_is_better", "unit": "ratio"},
+    "stability.walk_forward_consistency": {
+        "direction": "higher_is_better",
+        "unit": "ratio",
+    },
+    "trading.oos_months": {"direction": "higher_is_better", "unit": "months"},
+    "trading.oos_trade_count": {"direction": "higher_is_better", "unit": "count"},
+}
 
 
 __all__ = [

@@ -357,6 +357,55 @@ def test_report_renders_machine_readable_decision_block() -> None:
     assert "- cost_stress_2x_3x" in body
 
 
+def test_research_report_renders_projection_references_as_non_authoritative() -> None:
+    report = ResearchWorkflowReport(
+        workflow_id="projection-flow",
+        workflow_status="completed",
+        steps=(),
+        projection_refs={
+            "audit_record_id": "audit_001",
+            "data_quality_artifact_hash": "sha256:data-quality",
+            "evidence_bundle_id": "evb_001",
+            "metrics_schema_version": "research-metrics-v2",
+            "packet_hash": "sha256:packet",
+            "promotion_packet_id": "packet_001",
+            "reproducibility_snapshot_hash": "sha256:repro",
+        },
+        decision=ResearchReviewDecision(
+            status="paper_candidate",
+            evidence_bundle_id="evb_001",
+            trade_diagnostics_available=True,
+            validation_scorecard_available=True,
+            cost_stress_available=True,
+        ),
+    )
+
+    body = report.to_markdown()
+
+    assert "## Projection References" in body
+    assert "projection only" in body
+    assert "not the source of truth for promotion" in body
+    assert "- audit_record_id: audit_001" in body
+    assert "- packet_hash: sha256:packet" in body
+    assert "- evidence_bundle_id: evb_001" in body
+    assert "- promotion_packet_id: packet_001" in body
+    assert "- metrics_schema_version: research-metrics-v2" in body
+    assert "- reproducibility_snapshot_hash: sha256:repro" in body
+    assert "- data_quality_artifact_hash: sha256:data-quality" in body
+
+
+def test_research_report_requires_packet_and_audit_refs_when_projection_refs_exist() -> None:
+    report = ResearchWorkflowReport(
+        workflow_id="projection-flow",
+        workflow_status="completed",
+        steps=(),
+        projection_refs={"evidence_bundle_id": "evb_001"},
+    )
+
+    with pytest.raises(ValueError, match="projection_refs.audit_record_id is required"):
+        report.to_markdown()
+
+
 def test_research_report_prints_period_roles() -> None:
     report = ResearchWorkflowReport.from_result(
         ResearchWorkflowResult(

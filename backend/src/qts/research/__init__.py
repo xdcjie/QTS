@@ -8,6 +8,17 @@ from qts.research.ablation import (
     AblationRun,
     AblationVariantSummary,
 )
+from qts.research.artifact_graph import (
+    ResearchArtifactEdge,
+    ResearchArtifactGraph,
+    ResearchArtifactNode,
+)
+from qts.research.audit_log import ResearchAuditLog, ResearchAuditRecord
+from qts.research.data_quality import (
+    DataQualityArtifact,
+    DataQualityArtifactWriter,
+    DataQualityIssue,
+)
 from qts.research.evidence_policy import (
     EvidenceCompletenessPolicy,
     EvidenceCompletenessResult,
@@ -69,6 +80,11 @@ from qts.research.meta_research import (
     MetaResearchSummaryWriter,
 )
 from qts.research.metrics import REQUIRED_METRIC_GROUPS, ResearchMetrics
+from qts.research.metrics_schema import (
+    MetricsValidationResult,
+    ResearchMetricDefinition,
+    ResearchMetricsSchema,
+)
 from qts.research.portfolio_ensemble import (
     evaluate_portfolio_ensemble,
     scan_portfolio_ensemble_allocations,
@@ -81,6 +97,7 @@ from qts.research.promotion import (
     ResearchPromotionDecision,
     ResearchPromotionPolicy,
 )
+from qts.research.promotion_packet import PromotionPacketV2, PromotionPacketValidationResult
 from qts.research.readiness import (
     HumanApprovalRecord,
     PaperLiveReadinessDecision,
@@ -94,7 +111,7 @@ from qts.research.report import (
     ResearchWorkflowReport,
     ResearchWorkflowReportWriter,
 )
-from qts.research.reproducibility import ReproducibilitySnapshot
+from qts.research.reproducibility import ReproducibilitySnapshot, ReproducibilitySnapshotV2
 from qts.research.research_book import (
     HistoryRequest,
     ResearchBook,
@@ -145,6 +162,14 @@ __all__ = [
     "AblationReportWriter",
     "AblationRun",
     "AblationVariantSummary",
+    "ResearchArtifactEdge",
+    "ResearchArtifactGraph",
+    "ResearchArtifactNode",
+    "ResearchAuditLog",
+    "ResearchAuditRecord",
+    "DataQualityArtifact",
+    "DataQualityArtifactWriter",
+    "DataQualityIssue",
     "ExperimentManifestConfig",
     "ExperimentManifestResult",
     "ExperimentManifestWriter",
@@ -156,6 +181,9 @@ __all__ = [
     "ResearchManifest",
     "ResearchMetrics",
     "REQUIRED_METRIC_GROUPS",
+    "MetricsValidationResult",
+    "ResearchMetricDefinition",
+    "ResearchMetricsSchema",
     "EvidenceCompletenessPolicy",
     "EvidenceCompletenessResult",
     "PromotionEvidenceSpec",
@@ -192,6 +220,8 @@ __all__ = [
     "PromotionGateResult",
     "ResearchPromotionDecision",
     "ResearchPromotionPolicy",
+    "PromotionPacketV2",
+    "PromotionPacketValidationResult",
     "ResearchRunRecord",
     "ResearchRunRegistry",
     "HumanApprovalRecord",
@@ -212,6 +242,7 @@ __all__ = [
     "ResearchWorkflowReport",
     "ResearchWorkflowReportWriter",
     "ReproducibilitySnapshot",
+    "ReproducibilitySnapshotV2",
     "FactorSpec",
     "FactorSpecDrafter",
     "FactorSpecSourceRef",

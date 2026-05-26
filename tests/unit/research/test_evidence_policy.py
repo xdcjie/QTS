@@ -127,6 +127,21 @@ def test_promotion_evidence_policy_accepts_verified_complete_bundle(tmp_path: Pa
     assert result.checked_paths
 
 
+def test_promotion_evidence_spec_from_payload_requires_id_fields() -> None:
+    try:
+        PromotionEvidenceSpec.from_payload(
+            {
+                "promotion_candidate_id": "",
+                "strategy_id": "vwap",
+                "evidence_bundle_id": "evb-001",
+            }
+        )
+    except ValueError as exc:
+        assert str(exc) == "promotion_candidate_id is required"
+    else:
+        raise AssertionError("expected promotion_candidate_id validation failure")
+
+
 def test_promotion_evidence_policy_rejects_dirty_git(tmp_path: Path) -> None:
     registry, bundle_id = _write_verifiable_bundle(tmp_path, git_dirty=True)
 
@@ -178,10 +193,7 @@ def test_promotion_evidence_policy_rejects_strategy_mismatch(tmp_path: Path) -> 
     )
 
     assert not result.accepted
-    assert (
-        "candidate strategy_id does not match evidence bundle: vwap != other"
-        in result.reasons
-    )
+    assert "candidate strategy_id does not match evidence bundle: vwap != other" in result.reasons
 
 
 def test_promotion_evidence_policy_requires_idea_for_candidates(tmp_path: Path) -> None:

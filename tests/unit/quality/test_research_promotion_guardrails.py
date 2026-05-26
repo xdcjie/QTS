@@ -33,9 +33,7 @@ paper_readiness:
 
     violations = TradeDiagnosticsRequiredForPaperRule().check_repository(tmp_path)
 
-    assert [violation.code for violation in violations] == [
-        "TRADE_DIAGNOSTICS_REQUIRED_FOR_PAPER"
-    ]
+    assert [violation.code for violation in violations] == ["TRADE_DIAGNOSTICS_REQUIRED_FOR_PAPER"]
     assert "evidence_bundle_verified" in violations[0].message
 
 

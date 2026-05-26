@@ -96,6 +96,7 @@ class ResearchWorkflowReport:
     run_context: Mapping[str, Any] = field(default_factory=dict)
     route: Mapping[str, Any] = field(default_factory=dict)
     idea_metadata: Mapping[str, Any] = field(default_factory=dict)
+    projection_refs: Mapping[str, Any] = field(default_factory=dict)
     decision: ResearchReviewDecision = field(default_factory=ResearchReviewDecision)
 
     @classmethod
@@ -107,6 +108,7 @@ class ResearchWorkflowReport:
             run_context=_normalize_run_context(getattr(result, "run_context", None)),
             route=_normalize_route(getattr(result, "route", None)),
             idea_metadata=_normalize_idea_metadata(getattr(result, "idea_metadata", None)),
+            projection_refs=_normalize_projection_refs(getattr(result, "projection_refs", None)),
             decision=_normalize_decision(getattr(result, "decision", None)),
             workflow_id=_required_text(result, "workflow_id"),
             workflow_status=_required_text(result, "status"),
@@ -130,7 +132,11 @@ class ResearchWorkflowReport:
         route_section = self._route_section()
         if route_section:
             sections.append(route_section)
-        sections.extend([self._evidence_section(), self._decision_section(), self._footer()])
+        sections.append(self._evidence_section())
+        projection_section = self._projection_refs_section()
+        if projection_section:
+            sections.append(projection_section)
+        sections.extend([self._decision_section(), self._footer()])
         return "\n\n".join(sections).strip()
 
     def _evidence_section(self) -> str:
@@ -253,6 +259,21 @@ class ResearchWorkflowReport:
             lines.append(f"- selection_policy: {_json_ready(self.route['selection_policy'])}")
         if "allowed_period_roles" in self.route:
             lines.append(f"- allowed_period_roles: {self.route['allowed_period_roles']}")
+        return "\n".join(lines)
+
+    def _projection_refs_section(self) -> str:
+        """Render report projection references without making them authoritative."""
+
+        refs = _normalize_projection_refs(self.projection_refs)
+        if not refs:
+            return ""
+        lines = [
+            "## Projection References",
+            "This section is projection only and is not the source of truth for promotion.",
+        ]
+        for key in _PROJECTION_REF_KEYS:
+            if key in refs:
+                lines.append(f"- {key}: {_json_ready(refs[key])}")
         return "\n".join(lines)
 
     def _idea_section(self) -> str:
@@ -755,6 +776,23 @@ def _normalize_idea_metadata(value: Any) -> Mapping[str, Any]:
     raise ValueError("idea_metadata must be a mapping-like payload")
 
 
+def _normalize_projection_refs(value: Any) -> Mapping[str, Any]:
+    if value is None:
+        return {}
+    if not isinstance(value, Mapping):
+        raise ValueError("projection_refs must be a mapping-like payload")
+    refs = {
+        key: _json_ready(value[key])
+        for key in _PROJECTION_REF_KEYS
+        if key in value and value[key] is not None
+    }
+    if refs:
+        for required_key in _REQUIRED_PROJECTION_REF_KEYS:
+            if required_key not in refs:
+                raise ValueError(f"projection_refs.{required_key} is required")
+    return refs
+
+
 def _normalize_decision(value: Any) -> ResearchReviewDecision:
     if value is None:
         return ResearchReviewDecision()
@@ -961,6 +999,16 @@ _ALLOWED_REVIEW_DECISIONS = frozenset(
     }
 )
 _PROMOTION_READINESS_DECISIONS = frozenset({"paper_candidate", "small_live_candidate"})
+_PROJECTION_REF_KEYS = (
+    "evidence_bundle_id",
+    "promotion_packet_id",
+    "packet_hash",
+    "audit_record_id",
+    "metrics_schema_version",
+    "reproducibility_snapshot_hash",
+    "data_quality_artifact_hash",
+)
+_REQUIRED_PROJECTION_REF_KEYS = ("audit_record_id", "packet_hash")
 
 __all__ = [
     "ResearchReviewDecision",

@@ -4,9 +4,15 @@ import json
 from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
+from typing import Any
 
+import pytest
+import yaml  # type: ignore[import-untyped]
+from qts.core.hashing import stable_json_hash
+from qts.research.audit_log import ResearchAuditLog
 from qts.research.evidence_registry import EvidenceRegistry
 from qts.research.idea_spec import IdeaSpec
+
 from scripts import run_research
 
 
@@ -116,9 +122,115 @@ idea_id: idea-vwap
     return candidate_path
 
 
+def _packet_payload(bundle_id: str) -> dict[str, Any]:
+    metrics = {
+        "execution": {
+            "cost_impact": 0.01,
+            "slippage_sensitivity": 0.02,
+        },
+        "portfolio": {"correlation_to_active": 0.3},
+        "quality": {
+            "profit_factor": 1.4,
+            "sharpe": 1.1,
+        },
+        "research": {
+            "deterministic_replay_passed": True,
+            "no_lookahead_passed": True,
+        },
+        "risk": {"max_drawdown": 0.2},
+        "stability": {
+            "parameter_sensitivity": 0.8,
+            "walk_forward_consistency": 0.75,
+        },
+        "trading": {
+            "oos_months": 12.0,
+            "oos_trade_count": 40,
+        },
+    }
+    data_quality = {
+        "schema_version": 2,
+        "dataset_id": "dataset-001",
+        "accepted": True,
+        "checked_paths": [],
+        "issues": [],
+        "duplicate_timestamps": 0,
+        "missing_bars": 0,
+        "session_alignment": True,
+        "stale_prices": 0,
+        "halted_sessions": 0,
+        "label_visibility": True,
+    }
+    reproducibility = {
+        "schema_version": 2,
+        "git_sha": "abc123",
+        "git_dirty": False,
+        "python_version": "3.13.0",
+        "platform": "macOS",
+        "manifest_hash": "sha256:manifest",
+        "dependency_hashes": {"uv.lock": "sha256:deps"},
+        "config_hashes": {"research.yaml": "sha256:config"},
+        "data_hashes": {"dataset.parquet": "sha256:data"},
+        "command_argv": ["--config", "research.yaml"],
+        "random_seeds": {"python": 7},
+        "calendar_version": "XNYS-2026a",
+        "container_digest": None,
+    }
+    return {
+        "schema_version": 2,
+        "promotion_candidate_id": "pc-vwap",
+        "target_mode": "paper_simulated",
+        "strategy_id": "vwap",
+        "source_module": "strategies.research.vwap",
+        "target_module": "strategies.production.vwap",
+        "idea_id": "idea-vwap",
+        "evidence_bundle_id": bundle_id,
+        "metrics": {
+            "metrics_schema_id": "schema_v2",
+            "payload_hash": stable_json_hash(metrics),
+            "payload": metrics,
+        },
+        "data_quality": {
+            "artifact_id": "dq-dataset-001",
+            "payload_hash": stable_json_hash(data_quality),
+            "payload": data_quality,
+        },
+        "reproducibility": {
+            "snapshot_id": "repro-001",
+            "payload_hash": stable_json_hash(reproducibility),
+            "payload": reproducibility,
+        },
+        "runtime": {
+            "account_id": "paper-account",
+            "risk_profile_id": "risk-paper",
+            "capital_limit": 100000,
+            "runtime_mode": "paper_simulated",
+            "kill_switch_profile": "paper-kill-switch",
+        },
+        "operations": {
+            "rollback_plan": "disable promoted strategy module",
+            "monitoring_plan": "watch fills and reconciliation",
+            "alert_policy": "page operator on kill-switch trigger",
+        },
+        "review": {
+            "reviewer": "risk",
+            "decision": "go",
+            "reviewed_at": "2026-05-26T00:00:00+00:00",
+        },
+    }
+
+
+def _write_packet(tmp_path: Path, bundle_id: str, *, valid: bool = True) -> tuple[Path, str]:
+    payload = _packet_payload(bundle_id)
+    if not valid:
+        payload["target_module"] = "strategies.production_evil.vwap"
+    packet_path = tmp_path / "packet.yaml"
+    packet_path.write_text(yaml.safe_dump(payload, sort_keys=True), encoding="utf-8")
+    return packet_path, stable_json_hash(payload)
+
+
 def test_run_research_promotion_validate_accepts_complete_bundle(
     tmp_path: Path,
-    capsys,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     registry_root, bundle_id = _write_bundle(tmp_path)
     candidate_path = _write_candidate(tmp_path, bundle_id)
@@ -143,7 +255,7 @@ def test_run_research_promotion_validate_accepts_complete_bundle(
 
 def test_run_research_promotion_validate_rejects_dirty_bundle(
     tmp_path: Path,
-    capsys,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     registry_root, bundle_id = _write_bundle(tmp_path, git_dirty=True)
     candidate_path = _write_candidate(tmp_path, bundle_id)
@@ -163,3 +275,94 @@ def test_run_research_promotion_validate_rejects_dirty_bundle(
     payload = json.loads(capsys.readouterr().out)
     assert payload["accepted"] is False
     assert "git_dirty must be false, got True" in payload["reasons"]
+
+
+def test_run_research_promotion_validate_accepts_packet_and_writes_audit_log(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    registry_root, bundle_id = _write_bundle(tmp_path)
+    packet_path, packet_hash = _write_packet(tmp_path, bundle_id)
+    audit_log_root = tmp_path / "audit"
+
+    exit_code = run_research.main(
+        [
+            "promotion",
+            "validate",
+            "--packet",
+            str(packet_path),
+            "--evidence-registry-root",
+            str(registry_root),
+            "--audit-log-root",
+            str(audit_log_root),
+        ]
+    )
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["accepted"] is True
+    assert payload["status"] == "accepted"
+    assert payload["packet_hash"] == packet_hash
+    assert payload["audit_record_id"]
+    assert payload["reasons"] == []
+    assert payload["warnings"] == []
+    audit_log = ResearchAuditLog(audit_log_root)
+    assert audit_log.path.exists()
+    assert audit_log.verify_hash_chain() == ()
+
+
+def test_run_research_promotion_validate_rejects_invalid_packet(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    registry_root, bundle_id = _write_bundle(tmp_path)
+    packet_path, _packet_hash = _write_packet(tmp_path, bundle_id, valid=False)
+
+    exit_code = run_research.main(
+        [
+            "promotion",
+            "validate",
+            "--packet",
+            str(packet_path),
+            "--evidence-registry-root",
+            str(registry_root),
+            "--audit-log-root",
+            str(tmp_path / "audit"),
+        ]
+    )
+
+    assert exit_code == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["accepted"] is False
+    assert "target_module must start with strategies.production." in payload["reasons"]
+
+
+def test_run_research_promotion_validate_requires_candidate_or_packet() -> None:
+    with pytest.raises(SystemExit) as excinfo:
+        run_research.main(["promotion", "validate"])
+
+    assert excinfo.value.code == 2
+
+
+def test_run_research_promotion_validate_rejects_candidate_and_packet(
+    tmp_path: Path,
+) -> None:
+    registry_root, bundle_id = _write_bundle(tmp_path)
+    candidate_path = _write_candidate(tmp_path, bundle_id)
+    packet_path, _packet_hash = _write_packet(tmp_path, bundle_id)
+
+    with pytest.raises(SystemExit) as excinfo:
+        run_research.main(
+            [
+                "promotion",
+                "validate",
+                "--candidate",
+                str(candidate_path),
+                "--packet",
+                str(packet_path),
+                "--evidence-registry-root",
+                str(registry_root),
+            ]
+        )
+
+    assert excinfo.value.code == 2

@@ -1929,3 +1929,88 @@ exceptions:
     reason: Actor tell() command message enforces actor isolation for streaming compaction
     owner: platform
     expiry: 2027-05-17
+  - class_name: ResearchAuditRecord
+    module: qts.research.audit_log
+    reason: research OS append-only audit ledger record for evidence validation, promotion packet validation, and human review decision records
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ResearchAuditLog
+    module: qts.research.audit_log
+    reason: research OS append-only audit ledger owner for evidence validation, promotion packet validation, and human review decision records
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ResearchMetricDefinition
+    module: qts.research.metrics_schema
+    reason: research OS field-level metric definition owner for promotion evidence validation
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ResearchMetricsSchema
+    module: qts.research.metrics_schema
+    reason: research OS metrics schema owner for field-level promotion evidence validation
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: MetricsValidationResult
+    module: qts.research.metrics_schema
+    reason: research OS metrics validation result for machine-checkable promotion packet gates
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ReproducibilitySnapshotV2
+    module: qts.research.reproducibility
+    reason: research OS promotion-grade reproducibility snapshot with dependency, config, data, seed, and command evidence
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: DataQualityIssue
+    module: qts.research.data_quality
+    reason: research OS structured data quality issue for promotion-grade blocker evidence
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: DataQualityArtifact
+    module: qts.research.data_quality
+    reason: research OS structured data quality artifact owner for promotion packet hard gates
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: DataQualityArtifactWriter
+    module: qts.research.data_quality
+    reason: research OS deterministic data quality artifact writer for promotion review evidence
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: PromotionPacketValidationResult
+    module: qts.research.promotion_packet
+    reason: research OS promotion packet validation result for machine-checkable paper and live review gates
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: PromotionPacketV2
+    module: qts.research.promotion_packet
+    reason: research OS promotion packet owner aggregating evidence, metrics, data quality, reproducibility, runtime controls, and audit records
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ResearchArtifactNode
+    module: qts.research.artifact_graph
+    reason: research OS artifact graph node for deterministic evidence relationship tracking
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ResearchArtifactEdge
+    module: qts.research.artifact_graph
+    reason: research OS artifact graph edge for deterministic evidence relationship tracking
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: ResearchArtifactGraph
+    module: qts.research.artifact_graph
+    reason: research OS artifact DAG owner linking manifest, metrics, data quality, reproducibility, evidence, promotion, audit, and report artifacts
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: PromotionEvidenceSpec
+    module: qts.research.evidence_policy
+    reason: research OS evidence completeness input value object for promotion review candidates
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: EvidenceCompletenessResult
+    module: qts.research.evidence_policy
+    reason: research OS machine-readable evidence completeness result for promotion review gates
+    owner: platform
+    expiry: 2027-05-26
+  - class_name: EvidenceCompletenessPolicy
+    module: qts.research.evidence_policy
+    reason: research OS evidence completeness policy owner enforcing verifiable provenance before promotion packet review
+    owner: platform
+    expiry: 2027-05-26

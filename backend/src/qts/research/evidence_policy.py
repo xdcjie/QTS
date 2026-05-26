@@ -75,12 +75,19 @@ class PromotionEvidenceSpec:
         """Build an evidence spec from a YAML/JSON promotion candidate payload."""
 
         return cls(
-            promotion_candidate_id=_required_text(payload, "promotion_candidate_id"),
-            strategy_id=_required_text(payload, "strategy_id"),
-            evidence_bundle_id=_required_text(payload, "evidence_bundle_id"),
+            promotion_candidate_id=cls._required_text(payload, "promotion_candidate_id"),
+            strategy_id=cls._required_text(payload, "strategy_id"),
+            evidence_bundle_id=cls._required_text(payload, "evidence_bundle_id"),
             status=str(payload.get("status", "review_required")),
             idea_id=_optional_text(payload.get("idea_id")),
         )
+
+    @staticmethod
+    def _required_text(payload: Mapping[str, Any], field_name: str) -> str:
+        value = payload.get(field_name)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{field_name} is required")
+        return value.strip()
 
 
 @dataclass(frozen=True, slots=True)
@@ -282,13 +289,6 @@ class EvidenceCompletenessPolicy:
             reasons=reasons,
             warnings=warnings,
         )
-
-
-def _required_text(payload: Mapping[str, Any], field_name: str) -> str:
-    value = payload.get(field_name)
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{field_name} is required")
-    return value.strip()
 
 
 def _optional_text(value: Any) -> str | None:

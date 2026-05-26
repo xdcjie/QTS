@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import pytest
-from qts.research.promotion import PaperReadinessChecklist, PromotionCandidateSpec
+from qts.research.promotion import (
+    PaperReadinessChecklist,
+    PromotionCandidateSpec,
+    ResearchPromotionPolicy,
+)
 
 
 def test_promotion_candidate_requires_evidence_bundle() -> None:
@@ -145,3 +149,58 @@ def test_research_artifact_cannot_auto_promote() -> None:
 
     assert candidate.status == "review_required"
     assert candidate.to_payload()["promotion_boundary"] == "human_review_required"
+
+
+def test_promotion_gate_payload_includes_metric_metadata() -> None:
+    policy = ResearchPromotionPolicy(
+        min_oos_months=6,
+        min_oos_trade_count=30,
+        min_oos_sharpe=1.0,
+        min_profit_factor=1.2,
+        max_drawdown=0.25,
+        max_cost_impact=0.02,
+        max_slippage_sensitivity=0.03,
+        min_parameter_stability=0.7,
+        min_walk_forward_consistency=0.7,
+        max_correlation_to_active=0.5,
+    )
+
+    decision = policy.evaluate(
+        run_id="run-001",
+        strategy_id="vwap",
+        metrics={
+            "execution": {
+                "cost_impact": 0.01,
+                "slippage_sensitivity": 0.02,
+            },
+            "portfolio": {"correlation_to_active": 0.4},
+            "quality": {"profit_factor": 1.3, "sharpe": 1.1},
+            "research": {
+                "deterministic_replay_passed": True,
+                "no_lookahead_passed": True,
+            },
+            "risk": {"max_drawdown": 0.1},
+            "stability": {
+                "parameter_sensitivity": 0.8,
+                "walk_forward_consistency": 0.75,
+            },
+            "trading": {
+                "oos_months": 12,
+                "oos_trade_count": 40,
+            },
+        },
+        reproducibility={},
+    )
+
+    payloads = {gate["name"]: gate for gate in decision.to_payload()["gates"]}
+
+    assert payloads["max_drawdown"] == {
+        "direction": "lower_is_better",
+        "metric_path": "risk.max_drawdown",
+        "name": "max_drawdown",
+        "observed": 0.1,
+        "reason": "risk.max_drawdown must be <= 0.25",
+        "status": "passed",
+        "threshold": 0.25,
+        "unit": "ratio",
+    }

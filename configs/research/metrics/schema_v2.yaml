@@ -1,0 +1,68 @@
+schema_version: 2
+metrics:
+  - path: trading.oos_months
+    type: float
+    unit: months
+    direction: higher_is_better
+    required_for: [promotion]
+    minimum: 0.0
+  - path: trading.oos_trade_count
+    type: int
+    unit: count
+    direction: higher_is_better
+    required_for: [promotion]
+    minimum: 0
+  - path: quality.sharpe
+    type: float
+    unit: ratio
+    direction: higher_is_better
+    required_for: [promotion]
+  - path: quality.profit_factor
+    type: float
+    unit: ratio
+    direction: higher_is_better
+    required_for: [promotion]
+  - path: risk.max_drawdown
+    type: float
+    unit: ratio
+    direction: lower_is_better
+    required_for: [promotion]
+    minimum: 0.0
+    maximum: 1.0
+  - path: execution.cost_impact
+    type: float
+    unit: ratio
+    direction: lower_is_better
+    required_for: [promotion]
+    minimum: 0.0
+  - path: execution.slippage_sensitivity
+    type: float
+    unit: ratio
+    direction: lower_is_better
+    required_for: [promotion]
+    minimum: 0.0
+  - path: stability.parameter_sensitivity
+    type: float
+    unit: ratio
+    direction: higher_is_better
+    required_for: [promotion]
+  - path: stability.walk_forward_consistency
+    type: float
+    unit: ratio
+    direction: higher_is_better
+    required_for: [promotion]
+  - path: portfolio.correlation_to_active
+    type: float
+    unit: correlation
+    direction: lower_is_better
+    required_for: [promotion]
+  - path: research.deterministic_replay_passed
+    type: bool
+    unit: boolean
+    direction: neutral
+    required_for: [promotion]
+  - path: research.no_lookahead_passed
+    type: bool
+    unit: boolean
+    direction: neutral
+    required_for: [promotion]
