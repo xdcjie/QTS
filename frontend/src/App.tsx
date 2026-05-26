@@ -13,6 +13,7 @@ import {
   X,
   ClipboardList,
   SlidersHorizontal,
+  FlaskConical,
 } from 'lucide-react'
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
@@ -21,6 +22,7 @@ import { AccountManagement } from './components/AccountManagement'
 import { Portfolio } from './components/Portfolio'
 import { MarketData } from './components/MarketData'
 import { BacktestLab } from './components/BacktestLab'
+import { ResearchDashboard } from './components/ResearchDashboard'
 import { RiskControl } from './components/RiskControl'
 import { Orders } from './components/Orders'
 import { Operations } from './components/Operations'
@@ -55,6 +57,7 @@ export default function App() {
     { id: 'orders', label: 'Orders', icon: ClipboardList },
     { id: 'market', label: 'Market Data', icon: Activity },
     { id: 'backtest', label: 'Backtest Lab', icon: History },
+    { id: 'research', label: 'Research', icon: FlaskConical },
     { id: 'risk', label: 'Risk Control', icon: ShieldCheck },
     { id: 'operations', label: 'Operations', icon: SlidersHorizontal },
   ]
@@ -192,6 +195,7 @@ export default function App() {
           {activeTab === 'orders' && <Orders />}
           {activeTab === 'market' && <MarketData />}
           {activeTab === 'backtest' && <BacktestLab />}
+          {activeTab === 'research' && <ResearchDashboard />}
           {activeTab === 'risk' && <RiskControl />}
           {activeTab === 'operations' && <Operations />}
           {activeTab === 'settings' && <SettingsView />}

@@ -36,7 +36,6 @@ Recommended markers:
 ## Audit commands
 
 ```bash
-python scripts/audit_repo_hygiene.py
 pytest --collect-only -q
 pytest -q --durations=20
 ```

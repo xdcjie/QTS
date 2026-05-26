@@ -16,6 +16,7 @@ from qts.research.experiment_store import ExperimentStore
 from qts.research.idea_registry import IdeaRegistry
 from qts.research.idea_spec import IdeaSpec
 from qts.research.meta_research import MetaResearchSummary, MetaResearchSummaryWriter
+from qts.research.system_run import ResearchDryRunRunner
 from qts.research.workflow import (
     ResearchWorkflowConfig,
     ResearchWorkflowRunner,
@@ -165,7 +166,12 @@ def _build_parser() -> argparse.ArgumentParser:
         default=Path("configs/research/quickstart.yaml"),
         help="Research session YAML config",
     )
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Produce manifest-driven research artifacts without executing backtests",
+    )
+    subparsers = parser.add_subparsers(dest="command")
     _add_factor_tearsheet_parser(subparsers)
     _add_runs_parser(subparsers)
     _add_workflow_parser(subparsers)
@@ -387,6 +393,17 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     parser = _build_parser()
     args = parser.parse_args(argv)
+    if args.dry_run:
+        if args.command is not None:
+            parser.error("--dry-run cannot be combined with a subcommand")
+        result = ResearchDryRunRunner(repo_root=_REPO_ROOT).run(
+            args.config,
+            argv=sys.argv[1:] if argv is None else list(argv),
+        )
+        print(json.dumps(result.to_payload(), sort_keys=True, indent=2))
+        return 0
+    if args.command is None:
+        parser.error("a subcommand or --dry-run is required")
     if args.command == "evidence":
         return _run_evidence(args)
     if args.command == "idea":

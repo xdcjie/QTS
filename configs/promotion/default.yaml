@@ -1,0 +1,11 @@
+research_gates:
+  min_oos_months: 6
+  min_oos_trade_count: 30
+  min_oos_sharpe: 1.0
+  min_profit_factor: 1.1
+  max_drawdown: 0.2
+  max_cost_impact: 0.05
+  max_slippage_sensitivity: 0.05
+  min_parameter_stability: 0.6
+  min_walk_forward_consistency: 0.6
+  max_correlation_to_active: 0.8

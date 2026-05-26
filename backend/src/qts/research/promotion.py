@@ -8,7 +8,12 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
+
+import yaml  # type: ignore[import-untyped]
+
+from qts.research.metrics import metric_value
 
 
 @dataclass(frozen=True, slots=True)
@@ -111,16 +116,297 @@ class PromotionCandidateSpec:
         }
 
 
+@dataclass(frozen=True, slots=True)
+class PromotionGateResult:
+    """One machine-readable research promotion gate result."""
+
+    name: str
+    status: str
+    observed: Any
+    threshold: Any
+    reason: str
+
+    def to_payload(self) -> dict[str, Any]:
+        """Return a JSON-ready gate result."""
+
+        return {
+            "name": self.name,
+            "observed": self.observed,
+            "reason": self.reason,
+            "status": self.status,
+            "threshold": self.threshold,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class ResearchPromotionDecision:
+    """Research-system promotion decision for one run."""
+
+    run_id: str
+    strategy_id: str
+    status: str
+    gates: tuple[PromotionGateResult, ...]
+    warnings: tuple[str, ...] = ()
+
+    def to_payload(self) -> dict[str, Any]:
+        """Return a deterministic JSON-ready promotion decision."""
+
+        return {
+            "gates": [gate.to_payload() for gate in self.gates],
+            "promotion_boundary": "research_evidence_only",
+            "run_id": self.run_id,
+            "status": self.status,
+            "strategy_id": self.strategy_id,
+            "warnings": list(self.warnings),
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class ResearchPromotionPolicy:
+    """Evaluate anti-overfit controls for research promotion evidence."""
+
+    min_oos_months: float
+    min_oos_trade_count: float
+    min_oos_sharpe: float
+    min_profit_factor: float
+    max_drawdown: float
+    max_cost_impact: float
+    max_slippage_sensitivity: float
+    min_parameter_stability: float
+    min_walk_forward_consistency: float
+    max_correlation_to_active: float
+
+    @classmethod
+    def from_yaml(cls, path: Path) -> ResearchPromotionPolicy:
+        """Load a promotion policy YAML file."""
+
+        payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError("promotion config must be a YAML mapping")
+        gates = payload.get("research_gates", payload)
+        if not isinstance(gates, dict):
+            raise ValueError("research_gates must be a mapping")
+        return cls(
+            min_oos_months=_float(gates, "min_oos_months"),
+            min_oos_trade_count=_float(gates, "min_oos_trade_count"),
+            min_oos_sharpe=_float(gates, "min_oos_sharpe"),
+            min_profit_factor=_float(gates, "min_profit_factor"),
+            max_drawdown=_float(gates, "max_drawdown"),
+            max_cost_impact=_float(gates, "max_cost_impact"),
+            max_slippage_sensitivity=_float(gates, "max_slippage_sensitivity"),
+            min_parameter_stability=_float(gates, "min_parameter_stability"),
+            min_walk_forward_consistency=_float(gates, "min_walk_forward_consistency"),
+            max_correlation_to_active=_float(gates, "max_correlation_to_active"),
+        )
+
+    def evaluate(
+        self,
+        *,
+        run_id: str,
+        strategy_id: str,
+        metrics: Mapping[str, Any],
+        reproducibility: Mapping[str, Any],
+    ) -> ResearchPromotionDecision:
+        """Evaluate research metrics without creating paper/live approval."""
+
+        gates = (
+            self._min_gate(
+                metrics,
+                "minimum_oos_months",
+                "trading",
+                "oos_months",
+                self.min_oos_months,
+            ),
+            self._min_gate(
+                metrics,
+                "minimum_oos_trade_count",
+                "trading",
+                "oos_trade_count",
+                self.min_oos_trade_count,
+            ),
+            self._min_gate(metrics, "oos_sharpe", "quality", "sharpe", self.min_oos_sharpe),
+            self._min_gate(
+                metrics,
+                "profit_factor",
+                "quality",
+                "profit_factor",
+                self.min_profit_factor,
+            ),
+            self._max_gate(metrics, "max_drawdown", "risk", "max_drawdown", self.max_drawdown),
+            self._max_gate(
+                metrics,
+                "cost_impact",
+                "execution",
+                "cost_impact",
+                self.max_cost_impact,
+            ),
+            self._max_gate(
+                metrics,
+                "slippage_stress",
+                "execution",
+                "slippage_sensitivity",
+                self.max_slippage_sensitivity,
+            ),
+            self._min_gate(
+                metrics,
+                "parameter_neighborhood_stability",
+                "stability",
+                "parameter_sensitivity",
+                self.min_parameter_stability,
+            ),
+            self._min_gate(
+                metrics,
+                "walk_forward_consistency",
+                "stability",
+                "walk_forward_consistency",
+                self.min_walk_forward_consistency,
+            ),
+            self._max_gate(
+                metrics,
+                "correlation_to_active_strategies",
+                "portfolio",
+                "correlation_to_active",
+                self.max_correlation_to_active,
+            ),
+            self._bool_gate(
+                metrics,
+                "deterministic_replay",
+                "research",
+                "deterministic_replay_passed",
+            ),
+            self._bool_gate(metrics, "no_lookahead", "research", "no_lookahead_passed"),
+        )
+        warnings: tuple[str, ...] = ()
+        if reproducibility.get("git_dirty") is True:
+            warnings = ("git worktree was dirty during research run",)
+        status = "research_passed"
+        failed = [gate for gate in gates if gate.status != "passed"]
+        if failed:
+            status = (
+                "quarantined"
+                if any(
+                    gate.name == "deterministic_replay" and gate.status == "failed"
+                    for gate in failed
+                )
+                else "rejected"
+            )
+        return ResearchPromotionDecision(
+            run_id=run_id,
+            strategy_id=strategy_id,
+            status=status,
+            gates=gates,
+            warnings=warnings,
+        )
+
+    def _min_gate(
+        self,
+        metrics: Mapping[str, Any],
+        name: str,
+        group: str,
+        field_name: str,
+        threshold: float,
+    ) -> PromotionGateResult:
+        observed = _optional_float(metric_value(metrics, group, field_name))
+        if observed is None:
+            return PromotionGateResult(
+                name,
+                "missing",
+                None,
+                threshold,
+                f"{group}.{field_name} missing",
+            )
+        passed = observed >= threshold
+        return PromotionGateResult(
+            name,
+            "passed" if passed else "failed",
+            observed,
+            threshold,
+            f"{group}.{field_name} must be >= {threshold}",
+        )
+
+    def _max_gate(
+        self,
+        metrics: Mapping[str, Any],
+        name: str,
+        group: str,
+        field_name: str,
+        threshold: float,
+    ) -> PromotionGateResult:
+        observed = _optional_float(metric_value(metrics, group, field_name))
+        if observed is None:
+            return PromotionGateResult(
+                name,
+                "missing",
+                None,
+                threshold,
+                f"{group}.{field_name} missing",
+            )
+        passed = observed <= threshold
+        return PromotionGateResult(
+            name,
+            "passed" if passed else "failed",
+            observed,
+            threshold,
+            f"{group}.{field_name} must be <= {threshold}",
+        )
+
+    @staticmethod
+    def _bool_gate(
+        metrics: Mapping[str, Any],
+        name: str,
+        group: str,
+        field_name: str,
+    ) -> PromotionGateResult:
+        observed = metric_value(metrics, group, field_name)
+        if observed is None:
+            return PromotionGateResult(name, "missing", None, True, f"{group}.{field_name} missing")
+        passed = observed is True
+        return PromotionGateResult(
+            name,
+            "passed" if passed else "failed",
+            observed,
+            True,
+            f"{group}.{field_name} must be true",
+        )
+
+
 def _reject_research_only_params(params: Mapping[str, Any]) -> None:
     for key in params:
         if str(key) in _RESEARCH_ONLY_PARAMS:
             raise ValueError(f"research-only parameter is not allowed in promotion spec: {key}")
 
 
+def _float(payload: Mapping[str, Any], field_name: str) -> float:
+    value = payload.get(field_name)
+    if value is None:
+        raise ValueError(f"{field_name} is required")
+    return float(value)
+
+
+def _optional_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    return float(value)
+
+
 _PROMOTION_STATUSES = frozenset(
-    {"review_required", "paper_candidate", "small_live_candidate", "rejected", "retired"}
+    {
+        "candidate",
+        "live_approved",
+        "live_candidate",
+        "paper_candidate",
+        "paper_passed",
+        "quarantined",
+        "rejected",
+        "research_passed",
+        "retired",
+        "review_required",
+        "small_live_candidate",
+    }
 )
-_READINESS_REQUIRED_STATUSES = frozenset({"paper_candidate", "small_live_candidate"})
+_READINESS_REQUIRED_STATUSES = frozenset(
+    {"live_approved", "live_candidate", "paper_candidate", "paper_passed", "small_live_candidate"}
+)
 _APPROVED_PROMOTION_TARGET_PREFIXES = ("strategies.production.",)
 _RESEARCH_ONLY_PARAMS = frozenset(
     {
@@ -134,4 +420,10 @@ _RESEARCH_ONLY_PARAMS = frozenset(
 )
 
 
-__all__ = ["PaperReadinessChecklist", "PromotionCandidateSpec"]
+__all__ = [
+    "PaperReadinessChecklist",
+    "PromotionCandidateSpec",
+    "PromotionGateResult",
+    "ResearchPromotionDecision",
+    "ResearchPromotionPolicy",
+]
