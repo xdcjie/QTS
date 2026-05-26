@@ -8,12 +8,17 @@ review can treat it as paper/live-ready evidence.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from qts.core.hashing import stable_json_hash
+from qts.research.audit_log import ResearchAuditLog
+from qts.research.data_check import ResearchDataCheck
 from qts.research.evidence_registry import EvidenceRegistry
+from qts.research.metrics_schema import ResearchMetricsSchema
 from qts.research.promotion import PromotionCandidateSpec
+from qts.research.reproducibility import ReproducibilitySnapshotV2
 
 _UNKNOWN_TEXT_VALUES = frozenset({"", "none", "null", "unknown"})
 _IDEA_REQUIRED_STATUSES = frozenset(
@@ -284,6 +289,109 @@ class EvidenceCompletenessPolicy:
         )
 
 
+def validate_review_packet_payload(
+    packet: Mapping[str, Any],
+    *,
+    evidence_registry: EvidenceRegistry,
+    audit_log: ResearchAuditLog | None = None,
+    metrics_schema: ResearchMetricsSchema | None = None,
+) -> dict[str, Any]:
+    """Validate a schema_version=2 review packet payload."""
+
+    if int(packet.get("schema_version", 0)) != 2:
+        raise ValueError("schema_version must be 2")
+    for field_name in (
+        "promotion_candidate_id",
+        "strategy_id",
+        "evidence_bundle_id",
+        "idea_id",
+    ):
+        _required_text(packet, field_name)
+    reasons: list[str] = []
+    evidence_result = EvidenceCompletenessPolicy.promotion_candidate().validate_candidate(
+        PromotionEvidenceSpec(
+            promotion_candidate_id=_required_text(packet, "promotion_candidate_id"),
+            strategy_id=_required_text(packet, "strategy_id"),
+            evidence_bundle_id=_required_text(packet, "evidence_bundle_id"),
+            status=str(packet.get("status", "paper_candidate")),
+            idea_id=_required_text(packet, "idea_id"),
+        ),
+        evidence_registry=evidence_registry,
+    )
+    reasons.extend(evidence_result.reasons)
+    reasons.extend(_metrics_blockers(packet, metrics_schema))
+    reasons.extend(_reproducibility_blockers(packet))
+    reasons.extend(_data_check_blockers(packet))
+    reasons.extend(_required_mapping_blockers(packet, "runtime", "required_runtime_fields"))
+    reasons.extend(_required_mapping_blockers(packet, "operations", "required_operations_fields"))
+    accepted = not reasons
+    packet_hash = stable_json_hash(packet)
+    audit_record_id = None
+    if audit_log is not None:
+        record = audit_log.append(
+            record_type="review_packet_validation",
+            payload={
+                "accepted": accepted,
+                "packet_hash": packet_hash,
+                "packet_id": packet["promotion_candidate_id"],
+                "reasons": reasons,
+            },
+        )
+        audit_record_id = record.record_id
+    return {
+        "accepted": accepted,
+        "audit_record_id": audit_record_id,
+        "packet_hash": packet_hash,
+        "packet_id": packet["promotion_candidate_id"],
+        "reasons": reasons,
+        "status": "accepted" if accepted else "rejected",
+    }
+
+
+def _metrics_blockers(
+    packet: Mapping[str, Any],
+    metrics_schema: ResearchMetricsSchema | None,
+) -> tuple[str, ...]:
+    metrics = packet.get("metrics")
+    if not isinstance(metrics, Mapping):
+        return ("metrics are required",)
+    return (metrics_schema or ResearchMetricsSchema.default_v2()).validate(metrics)
+
+
+def _reproducibility_blockers(packet: Mapping[str, Any]) -> tuple[str, ...]:
+    value = packet.get("reproducibility")
+    if not isinstance(value, Mapping):
+        return ("reproducibility is required",)
+    return ReproducibilitySnapshotV2.from_payload(value).promotion_blockers()
+
+
+def _data_check_blockers(packet: Mapping[str, Any]) -> tuple[str, ...]:
+    value = packet.get("data_check")
+    if not isinstance(value, Mapping):
+        return ("data_check is required",)
+    return ResearchDataCheck.from_payload(value).blockers()
+
+
+def _required_mapping_blockers(
+    packet: Mapping[str, Any],
+    mapping_name: str,
+    required_fields_name: str,
+) -> tuple[str, ...]:
+    raw_required = packet.get(required_fields_name, ())
+    if not isinstance(raw_required, Sequence) or isinstance(raw_required, str):
+        return (f"{required_fields_name} must be a sequence",)
+    if not raw_required:
+        return ()
+    mapping = packet.get(mapping_name)
+    if not isinstance(mapping, Mapping):
+        return (f"{mapping_name} is required",)
+    reasons: list[str] = []
+    for field_name in raw_required:
+        if not str(mapping.get(str(field_name), "")).strip():
+            reasons.append(f"{mapping_name}.{field_name} is required")
+    return tuple(reasons)
+
+
 def _required_text(payload: Mapping[str, Any], field_name: str) -> str:
     value = payload.get(field_name)
     if not isinstance(value, str) or not value.strip():
@@ -310,4 +418,5 @@ __all__ = [
     "EvidenceCompletenessPolicy",
     "EvidenceCompletenessResult",
     "PromotionEvidenceSpec",
+    "validate_review_packet_payload",
 ]
