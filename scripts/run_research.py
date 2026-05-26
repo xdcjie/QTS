@@ -13,9 +13,11 @@ from typing import Any
 import yaml  # type: ignore[import-untyped]
 
 from qts.research import ResearchSession
+from qts.research.audit_log import ResearchAuditLog
 from qts.research.evidence_policy import (
     EvidenceCompletenessPolicy,
     PromotionEvidenceSpec,
+    validate_review_packet_payload,
 )
 from qts.research.evidence_registry import EvidenceRegistry
 from qts.research.experiment_store import ExperimentStore
@@ -126,9 +128,16 @@ def _add_promotion_parser(subparsers: Any) -> None:
 
     validate = promotion_subparsers.add_parser(
         "validate",
-        help="Validate a promotion candidate against a research evidence bundle",
+        help="Validate a promotion candidate or v2 review packet",
     )
-    validate.add_argument("--candidate", type=Path, required=True)
+    validate.add_argument("--candidate", type=Path, default=None)
+    validate.add_argument("--packet", type=Path, default=None)
+    validate.add_argument(
+        "--audit-log-root",
+        type=Path,
+        default=None,
+        help="Optional audit-log root for packet validation records",
+    )
     validate.add_argument(
         "--evidence-registry-root",
         type=Path,
@@ -325,16 +334,29 @@ def _run_evidence(args: argparse.Namespace) -> int:
 def _run_promotion(args: argparse.Namespace) -> int:
     if args.promotion_command == "validate":
         try:
-            candidate = PromotionEvidenceSpec.from_payload(_load_mapping(args.candidate))
-            result = EvidenceCompletenessPolicy.promotion_candidate().validate_candidate(
-                candidate,
-                evidence_registry=EvidenceRegistry(args.evidence_registry_root),
-            )
+            if args.packet is not None:
+                result = validate_review_packet_payload(
+                    _load_mapping(args.packet),
+                    evidence_registry=EvidenceRegistry(args.evidence_registry_root),
+                    audit_log=(
+                        None
+                        if args.audit_log_root is None
+                        else ResearchAuditLog(args.audit_log_root)
+                    ),
+                )
+            elif args.candidate is not None:
+                candidate = PromotionEvidenceSpec.from_payload(_load_mapping(args.candidate))
+                result = EvidenceCompletenessPolicy.promotion_candidate().validate_candidate(
+                    candidate,
+                    evidence_registry=EvidenceRegistry(args.evidence_registry_root),
+                ).to_payload()
+            else:
+                raise ValueError("--candidate or --packet is required")
         except (FileNotFoundError, ValueError) as exc:
             print(str(exc), file=sys.stderr)
             return 2
-        print(json.dumps(result.to_payload(), sort_keys=True, indent=2))
-        return 0 if result.accepted else 1
+        print(json.dumps(result, sort_keys=True, indent=2))
+        return 0 if bool(result["accepted"]) else 1
     raise ValueError(f"unsupported promotion command: {args.promotion_command}")
 
 
