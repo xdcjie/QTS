@@ -210,7 +210,7 @@ class FitnessAnalytics:
                     tail_drawdown=tail_drawdown,
                     cost_sensitivity=cost_sensitivity,
                     risk_adjusted_score=risk_adjusted_score,
-                    evidence_refs=tuple(point.point_hash for point in family_points),
+                    evidence_refs=tuple(cls._point_ref(point) for point in family_points),
                 )
             )
         return tuple(
@@ -249,7 +249,7 @@ class FitnessAnalytics:
                     median_train_sharpe=median_train,
                     median_oos_sharpe=median_oos,
                     overfit=overfit,
-                    evidence_refs=tuple(point.point_hash for point in region_points),
+                    evidence_refs=tuple(cls._point_ref(point) for point in region_points),
                 )
             )
         return tuple(sorted(summaries, key=lambda summary: summary.parameter_hash))
@@ -277,7 +277,7 @@ class FitnessAnalytics:
                     median_oos_sharpe=median_oos,
                     tail_drawdown=tail_drawdown,
                     regime_stability=regime_stability,
-                    evidence_refs=tuple(point.point_hash for point in regime_points),
+                    evidence_refs=tuple(cls._point_ref(point) for point in regime_points),
                 )
             )
         return tuple(
@@ -300,7 +300,7 @@ class FitnessAnalytics:
                 reason=reason,
                 count=len(cluster_points),
                 trial_ids=tuple(point.trial_id for point in cluster_points),
-                evidence_refs=tuple(point.point_hash for point in cluster_points),
+                evidence_refs=tuple(FitnessAnalytics._point_ref(point) for point in cluster_points),
             )
             for reason, cluster_points in groups.items()
         )
@@ -312,6 +312,10 @@ class FitnessAnalytics:
         if not values:
             return 0.0
         return float(statistics.median(values))
+
+    @staticmethod
+    def _point_ref(point: FitnessLandscapePoint) -> str:
+        return f"{point.campaign_id}:{point.generation_id}:{point.trial_id}"
 
     @staticmethod
     def _group_points(

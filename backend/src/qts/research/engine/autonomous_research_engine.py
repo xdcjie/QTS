@@ -6,7 +6,7 @@ import hashlib
 import json
 import shutil
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
@@ -26,10 +26,15 @@ from qts.research.factory.factor_definition import FactorDefinition
 from qts.research.factory.strategy_template import StrategyTemplate, StrategyVariantFactory
 from qts.research.idea_spec import IdeaSpec
 from qts.research.landscape import FitnessAnalytics, FitnessLandscapePoint, FitnessLandscapeStore
+from qts.research.orchestrator import (
+    ExperimentQueue,
+    ExperimentRetryPolicy,
+    ExperimentScheduler,
+    ExperimentWorker,
+)
 from qts.research.orchestrator.experiment_runner import (
     ResearchExperimentJob,
     ResearchExperimentResult,
-    ResearchExperimentRunner,
     ResearchTrialResult,
 )
 from qts.research.planner import (
@@ -250,6 +255,7 @@ class AutonomousResearchEngine:
         approval_reasons: tuple[str, ...] = ()
 
         for generation_index in range(run.max_generations):
+            active_proposal: NextGenerationProposal | None = None
             if generation_index > 0:
                 if next_proposal is None:
                     raise RuntimeError("next-generation proposal missing")
@@ -264,9 +270,11 @@ class AutonomousResearchEngine:
                     stop_status = "pending_human_approval"
                     approval_reasons = tuple(str(reason) for reason in approval_payload["reasons"])
                     break
+                active_proposal = next_proposal
             generation = self._run_generation(
                 run=run,
                 generation_index=generation_index,
+                proposal=active_proposal,
                 data_paths=data_paths,
                 audit_log=audit_log,
                 evidence_registry=evidence_registry,
@@ -293,6 +301,10 @@ class AutonomousResearchEngine:
             self._write_json(next_generation_proposal_path, {})
         else:
             self._write_next_generation_proposal(next_generation_proposal_path, next_proposal)
+        self._write_jsonl(
+            root / "candidate_parameters.jsonl",
+            self._candidate_parameter_rows_from_landscape(all_landscape_rows),
+        )
 
         report_path = root / "report.md"
         self._write_report(
@@ -343,6 +355,7 @@ class AutonomousResearchEngine:
         *,
         run: AutonomousResearchRun,
         generation_index: int,
+        proposal: NextGenerationProposal | None,
         data_paths: Mapping[str, Path],
         audit_log: ResearchAuditLog,
         evidence_registry: EvidenceRegistry,
@@ -352,12 +365,19 @@ class AutonomousResearchEngine:
         generation_id = f"generation-{generation_index:03d}"
         generation_dir = run.output_root / generation_id
         generation_dir.mkdir(parents=True, exist_ok=True)
+        budget_rejected_rows: list[dict[str, Any]] = []
         trials = self._trials(
             run,
             generation_id,
             generation_index,
+            proposal=proposal,
             budget_manager=budget_manager,
             audit_log=audit_log,
+            budget_rejected_rows=budget_rejected_rows,
+        )
+        self._write_jsonl(
+            generation_dir / "candidate_parameters.jsonl",
+            self._candidate_parameter_rows_from_trials(trials),
         )
         checked_paths = tuple(str(path) for path in data_paths.values())
         job = ResearchExperimentJob(
@@ -367,7 +387,7 @@ class AutonomousResearchEngine:
             output_root=run.output_root,
             trials=trials,
         )
-        experiment_result = ResearchExperimentRunner(repo_root=self._repo_root).run(job)
+        experiment_result = self._run_experiment_job(job, audit_log=audit_log)
         landscape_rows = self._landscape_rows(
             run=run,
             generation_id=generation_id,
@@ -379,7 +399,7 @@ class AutonomousResearchEngine:
             generation_index=generation_index,
             landscape_rows=landscape_rows,
         )
-        selected_rows, rejected_rows = self._select_generation_candidates(
+        selected_rows, execution_rejected_rows = self._select_generation_candidates(
             run=run,
             generation_id=generation_id,
             trials=trials,
@@ -388,10 +408,11 @@ class AutonomousResearchEngine:
             evidence_registry=evidence_registry,
             audit_log=audit_log,
         )
+        rejected_rows = [*execution_rejected_rows, *budget_rejected_rows]
         self._append_landscape_points(
             run=run,
             landscape_store=landscape_store,
-            rows=(*selected_rows, *rejected_rows),
+            rows=(*selected_rows, *execution_rejected_rows),
         )
         landscape_path = generation_dir / "fitness_landscape.jsonl"
         proposal_path = generation_dir / "next_generation_proposal.json"
@@ -427,20 +448,49 @@ class AutonomousResearchEngine:
             "selected_rows": selected_rows,
         }
 
+    def _run_experiment_job(
+        self,
+        job: ResearchExperimentJob,
+        *,
+        audit_log: ResearchAuditLog,
+    ) -> ResearchExperimentResult:
+        queue = ExperimentQueue(jobs=(job,))
+        schedule = ExperimentScheduler(
+            queue=queue,
+            worker=ExperimentWorker(repo_root=self._repo_root),
+            retry_policy=ExperimentRetryPolicy(max_attempts=1),
+        ).run(audit_log=audit_log)
+        if schedule.status != "completed":
+            raise RuntimeError(f"experiment scheduler failed: {schedule.to_payload()}")
+        if schedule.completed_job_ids != (job.job_id,):
+            raise RuntimeError(f"unexpected completed experiment jobs: {schedule.to_payload()}")
+        completed = {
+            str(row["job_id"]): row["payload"]
+            for row in queue.to_payload()["completed"]
+            if isinstance(row, Mapping) and isinstance(row.get("payload"), Mapping)
+        }
+        result_payload = completed.get(job.job_id)
+        if result_payload is None:
+            raise RuntimeError(f"completed experiment result missing: {job.job_id}")
+        return ResearchExperimentResult.from_payload(result_payload)
+
     def _trials(
         self,
         run: AutonomousResearchRun,
         generation_id: str,
         generation_index: int,
         *,
+        proposal: NextGenerationProposal | None,
         budget_manager: TrialBudgetManager,
         audit_log: ResearchAuditLog,
+        budget_rejected_rows: list[dict[str, Any]],
     ) -> tuple[Mapping[str, Any], ...]:
         trials: list[Mapping[str, Any]] = []
         for generated_trial in self._generated_trials(
             run,
             generation_id,
             generation_index,
+            proposal=proposal,
         ):
             trial_id = str(generated_trial["trial_id"])
             decision = budget_manager.request_trial(
@@ -462,6 +512,15 @@ class AutonomousResearchEngine:
                 created_at=record.created_at,
             )
             if not decision.accepted:
+                budget_rejected_rows.append(
+                    self._budget_rejected_row(
+                        run=run,
+                        generation_id=generation_id,
+                        trial=generated_trial,
+                        budget_record_id=record.record_id,
+                        decision_reason=decision.reason,
+                    )
+                )
                 continue
             trials.append(generated_trial)
             if len(trials) >= run.trials_per_generation:
@@ -473,46 +532,241 @@ class AutonomousResearchEngine:
         run: AutonomousResearchRun,
         generation_id: str,
         generation_index: int,
+        *,
+        proposal: NextGenerationProposal | None,
     ) -> tuple[Mapping[str, Any], ...]:
-        generated: list[Mapping[str, Any]] = []
-        family_specs = self._family_specs(run)
-        candidate_budget = max(run.trials_per_generation, 1)
-        for family in family_specs:
+        candidate_budget = self._candidate_generation_budget(run, proposal)
+        family_candidates: list[tuple[Mapping[str, Any], tuple[Any, ...]]] = []
+        for family in self._ordered_family_specs(self._family_specs(run), proposal):
             generator = CandidateGenerator(family["search_space"])
-            candidates = generator.grid(budget=candidate_budget + generation_index)
+            candidates = generator.grid(
+                budget=self._family_candidate_budget(
+                    family_id=str(family["family_id"]),
+                    base_budget=candidate_budget + generation_index,
+                    proposal=proposal,
+                )
+            )
             if generation_index:
                 candidates = candidates[generation_index:] or candidates
-            factory = StrategyVariantFactory(family["template"])
-            for candidate in candidates:
-                parameters = dict(candidate.parameters)
-                variant = factory.create_variant(parameters, allowed_roots=run.universe)
-                ordinal = len(generated)
-                trial_id = f"{generation_id}-trial-{ordinal:03d}"
-                root = str(parameters.get("root", run.universe[0]))
-                generated.append(
-                    {
-                        "backtest_pipeline": self._backtest_pipeline_payload(
-                            run=run,
-                            trial_id=trial_id,
-                            root=root,
-                            parameters=parameters,
-                            strategy_entrypoint=variant.strategy_entrypoint,
-                        ),
-                        "candidate_id": candidate.candidate_id,
-                        "candidate_space_hash": candidate.candidate_space_hash,
-                        "factor_family": variant.family,
-                        "factor_hash": variant.factor_hash,
-                        "family": family["family_id"],
-                        "idea_id": f"idea-{run.campaign_id}-{family['family_id']}",
-                        "manifest_patch": variant.to_manifest_patch(),
-                        "parameters": parameters,
-                        "strategy_variant_hash": variant.variant_hash,
-                        "strategy_variant_id": variant.variant_id,
-                        "trial_id": trial_id,
-                        "validation": self._validation_evidence(parameters),
-                    }
-                )
+            family_candidates.append((family, candidates))
+        generated: list[Mapping[str, Any]] = []
+        for family, candidate in self._round_robin_candidates(family_candidates):
+            parameters = dict(candidate.parameters)
+            template = self._proposal_adjusted_template(
+                cast(StrategyTemplate, family["template"]),
+                proposal,
+            )
+            variant = StrategyVariantFactory(template).create_variant(
+                parameters,
+                allowed_roots=run.universe,
+            )
+            ordinal = len(generated)
+            trial_id = f"{generation_id}-trial-{ordinal:03d}"
+            root = str(parameters.get("root", run.universe[0]))
+            generated.append(
+                {
+                    "backtest_pipeline": self._backtest_pipeline_payload(
+                        run=run,
+                        trial_id=trial_id,
+                        root=root,
+                        parameters=parameters,
+                        strategy_entrypoint=variant.strategy_entrypoint,
+                    ),
+                    "candidate_id": candidate.candidate_id,
+                    "candidate_space_hash": candidate.candidate_space_hash,
+                    "factor_family": variant.family,
+                    "factor_hash": variant.factor_hash,
+                    "family": family["family_id"],
+                    "idea_id": self._idea_id(run, str(family["family_id"]), proposal),
+                    "manifest_patch": self._proposal_manifest_patch(
+                        variant.to_manifest_patch(),
+                        proposal,
+                    ),
+                    "parameters": parameters,
+                    "proposal_application": self._proposal_application_payload(proposal),
+                    "strategy_variant_hash": variant.variant_hash,
+                    "strategy_variant_id": variant.variant_id,
+                    "trial_id": trial_id,
+                    "validation": self._validation_evidence(parameters),
+                }
+            )
         return tuple(generated)
+
+    def _candidate_generation_budget(
+        self,
+        run: AutonomousResearchRun,
+        proposal: NextGenerationProposal | None,
+    ) -> int:
+        if proposal is None:
+            return max(run.trials_per_generation, 1)
+        return max(proposal.trial_budget, 0)
+
+    def _ordered_family_specs(
+        self,
+        family_specs: Sequence[Mapping[str, Any]],
+        proposal: NextGenerationProposal | None,
+    ) -> tuple[Mapping[str, Any], ...]:
+        focus_order = self._focused_family_order(proposal)
+        return tuple(
+            sorted(
+                family_specs,
+                key=lambda family: (
+                    focus_order.index(str(family["family_id"]))
+                    if str(family["family_id"]) in focus_order
+                    else len(focus_order),
+                    str(family["family_id"]),
+                ),
+            )
+        )
+
+    def _family_candidate_budget(
+        self,
+        *,
+        family_id: str,
+        base_budget: int,
+        proposal: NextGenerationProposal | None,
+    ) -> int:
+        budget = max(base_budget, 0)
+        if proposal is None:
+            return budget
+        for mutation in proposal.mutations:
+            if (
+                getattr(mutation, "mutation_type", "") == "family_budget"
+                and mutation.action == "reduce_family_budget"
+                and mutation.target == family_id
+            ):
+                budget = min(budget, max(1, budget // 2))
+        return budget
+
+    def _round_robin_candidates(
+        self,
+        family_candidates: Sequence[tuple[Mapping[str, Any], tuple[Any, ...]]],
+    ) -> tuple[tuple[Mapping[str, Any], Any], ...]:
+        rows: list[tuple[Mapping[str, Any], Any]] = []
+        max_length = max((len(candidates) for _, candidates in family_candidates), default=0)
+        for index in range(max_length):
+            for family, candidates in family_candidates:
+                if index < len(candidates):
+                    rows.append((family, candidates[index]))
+        return tuple(rows)
+
+    def _focused_family_order(self, proposal: NextGenerationProposal | None) -> tuple[str, ...]:
+        if proposal is None:
+            return ()
+        focused: list[str] = []
+        for mutation in proposal.mutations:
+            if (
+                getattr(mutation, "mutation_type", "") != "search_space"
+                or mutation.action != "focus_best_family"
+            ):
+                continue
+            payload_family = mutation.payload.get("strategy_family")
+            family_id = str(payload_family or mutation.target.split(".", maxsplit=1)[0])
+            if family_id and family_id not in focused:
+                focused.append(family_id)
+        return tuple(focused)
+
+    def _proposal_adjusted_template(
+        self,
+        template: StrategyTemplate,
+        proposal: NextGenerationProposal | None,
+    ) -> StrategyTemplate:
+        if proposal is None:
+            return template
+        risk_assumptions = dict(template.risk_assumptions)
+        execution_assumptions = dict(template.execution_assumptions)
+        changed = False
+        for mutation in proposal.mutations:
+            if getattr(mutation, "mutation_type", "") != "strategy_variant":
+                continue
+            if mutation.action == "add_stop_or_vol_target":
+                risk_assumptions["proposal_risk_control"] = mutation.mutation_id
+                risk_assumptions["volatility_target_required"] = True
+                changed = True
+            elif mutation.action == "increase_min_hold_bars":
+                execution_assumptions["proposal_execution_control"] = mutation.mutation_id
+                execution_assumptions["min_hold_bars"] = max(
+                    2,
+                    int(execution_assumptions.get("min_hold_bars", 1)),
+                )
+                changed = True
+        if not changed:
+            return template
+        return replace(
+            template,
+            risk_assumptions=risk_assumptions,
+            execution_assumptions=execution_assumptions,
+        )
+
+    def _proposal_manifest_patch(
+        self,
+        manifest_patch: Mapping[str, Any],
+        proposal: NextGenerationProposal | None,
+    ) -> dict[str, Any]:
+        patch = dict(manifest_patch)
+        application = self._proposal_application_payload(proposal)
+        if not application:
+            return patch
+        research_factory = self._mapping(patch.get("research_factory", {}), "research_factory")
+        patch["research_factory"] = {
+            **research_factory,
+            "proposal_application": application,
+        }
+        return patch
+
+    def _idea_id(
+        self,
+        run: AutonomousResearchRun,
+        family_id: str,
+        proposal: NextGenerationProposal | None,
+    ) -> str:
+        if proposal is None:
+            return f"idea-{run.campaign_id}-{family_id}"
+        return f"idea-{run.campaign_id}-{family_id}-{proposal.next_generation_id}"
+
+    def _proposal_application_payload(
+        self,
+        proposal: NextGenerationProposal | None,
+    ) -> dict[str, Any]:
+        if proposal is None:
+            return {}
+        return {
+            "applied": True,
+            "mutation_ids": [mutation.mutation_id for mutation in proposal.mutations],
+            "proposal_hash": proposal.proposal_hash,
+            "proposal_id": proposal.proposal_id,
+            "source_generation_id": proposal.previous_generation_id,
+        }
+
+    def _budget_rejected_row(
+        self,
+        *,
+        run: AutonomousResearchRun,
+        generation_id: str,
+        trial: Mapping[str, Any],
+        budget_record_id: str,
+        decision_reason: str,
+    ) -> dict[str, Any]:
+        return {
+            "budget_record_id": budget_record_id,
+            "budget_rejected": True,
+            "campaign_id": run.campaign_id,
+            "candidate_id": str(trial["candidate_id"]),
+            "candidate_space_hash": str(trial["candidate_space_hash"]),
+            "family": str(trial["family"]),
+            "factor_family": str(trial["factor_family"]),
+            "generation_id": generation_id,
+            "parameters": dict(self._mapping(trial["parameters"], "parameters")),
+            "proposal_application": dict(
+                self._mapping(trial.get("proposal_application", {}), "proposal_application")
+            ),
+            "reasons": [decision_reason],
+            "stage": "trial_budget",
+            "status": "rejected",
+            "strategy_variant_hash": str(trial["strategy_variant_hash"]),
+            "strategy_variant_id": str(trial["strategy_variant_id"]),
+            "trial_id": str(trial["trial_id"]),
+        }
 
     def _family_specs(self, run: AutonomousResearchRun) -> tuple[Mapping[str, Any], ...]:
         if run.campaign_config is None:
@@ -575,10 +829,18 @@ class AutonomousResearchEngine:
 
     def _parameter_space_payload(self, search_space: SearchSpaceSpec) -> dict[str, Any]:
         payload: dict[str, Any] = {}
+        conditional_parameters = {
+            constraint.parameter
+            for constraint in search_space.constraints
+            if constraint.constraint_type == "conditional" and constraint.parameter is not None
+        }
         for parameter in search_space.parameters:
             values = parameter.finite_values()
             if values is not None:
-                payload[parameter.name] = {"values": list(values)}
+                field_payload: dict[str, Any] = {"values": list(values)}
+                if parameter.name in conditional_parameters:
+                    field_payload["optional"] = True
+                payload[parameter.name] = field_payload
         return payload
 
     def _validation_evidence(self, parameters: Mapping[str, Any]) -> dict[str, Any]:
@@ -624,7 +886,7 @@ class AutonomousResearchEngine:
         parameters: Mapping[str, Any],
         strategy_entrypoint: str,
     ) -> dict[str, Any]:
-        backtest_config_path = self._write_backtest_config(
+        backtest_config_path, data_quality_path = self._write_backtest_config(
             run=run,
             trial_id=trial_id,
             root=root,
@@ -644,6 +906,7 @@ class AutonomousResearchEngine:
             strategy_parameter_map["threshold"] = "long_window"
         return {
             "backtest_config_path": str(backtest_config_path),
+            "data_quality_paths": [str(data_quality_path)],
             "objective_metric": "sharpe_ratio",
             "strategy_parameter_defaults": strategy_parameter_defaults,
             "strategy_parameter_map": strategy_parameter_map,
@@ -656,9 +919,9 @@ class AutonomousResearchEngine:
         trial_id: str,
         root: str,
         strategy_entrypoint: str,
-    ) -> Path:
+    ) -> tuple[Path, Path]:
         data_paths = self._required_data_paths(run)
-        data_config_path = self._write_backtest_data_config(
+        data_config_path, data_quality_path = self._write_backtest_data_config(
             run=run,
             trial_id=trial_id,
             root=root,
@@ -686,7 +949,7 @@ class AutonomousResearchEngine:
         }
         config_path.parent.mkdir(parents=True, exist_ok=True)
         config_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
-        return config_path
+        return config_path, data_quality_path
 
     def _write_backtest_data_config(
         self,
@@ -695,7 +958,7 @@ class AutonomousResearchEngine:
         trial_id: str,
         root: str,
         data_path: Path,
-    ) -> Path:
+    ) -> tuple[Path, Path]:
         data_root = run.output_root / "backtest_data" / trial_id
         bars_dir = data_root / "data"
         bars_dir.mkdir(parents=True, exist_ok=True)
@@ -726,7 +989,7 @@ class AutonomousResearchEngine:
             }
         }
         config_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
-        return config_path
+        return config_path, target_csv
 
     def _materialize_backtest_csv(
         self, source_path: Path, target_path: Path, *, symbol: str
@@ -746,6 +1009,7 @@ class AutonomousResearchEngine:
                 "ts_event,rtype,publisher_id,instrument_id,open,high,low,close,volume,symbol\n"
             )
             emitted = 0
+            seen_timestamps: set[str] = set()
             if "ts_event" in header:
                 timestamp_index = header.index("ts_event")
                 open_index = header.index("open")
@@ -759,13 +1023,17 @@ class AutonomousResearchEngine:
                     if not line.strip():
                         continue
                     values = line.strip().split(",")
+                    timestamp = values[timestamp_index]
+                    if timestamp in seen_timestamps:
+                        continue
                     close = values[close_index]
                     if close.startswith("-"):
                         continue
+                    seen_timestamps.add(timestamp)
                     target.write(
                         ",".join(
                             (
-                                values[timestamp_index],
+                                timestamp,
                                 "33",
                                 "1",
                                 str(source_index),
@@ -797,6 +1065,7 @@ class AutonomousResearchEngine:
 
     def _data_window(self, source_path: Path) -> tuple[str, str]:
         timestamps: list[str] = []
+        seen_timestamps: set[str] = set()
         with source_path.open("r", encoding="utf-8") as source:
             header = source.readline().strip().split(",")
             if not header:
@@ -809,7 +1078,11 @@ class AutonomousResearchEngine:
                 values = line.strip().split(",")
                 if "ts_event" in header and values[close_index].startswith("-"):
                     continue
-                timestamps.append(values[timestamp_index])
+                timestamp = values[timestamp_index]
+                if timestamp in seen_timestamps:
+                    continue
+                seen_timestamps.add(timestamp)
+                timestamps.append(timestamp)
                 if len(timestamps) >= 50:
                     break
         if not timestamps:
@@ -897,6 +1170,12 @@ class AutonomousResearchEngine:
                     "metrics_path": str(result.metrics_path),
                     "objective_value": quality["sharpe"],
                     "parameters": dict(self._mapping(trial["parameters"], "parameters")),
+                    "proposal_application": dict(
+                        self._mapping(
+                            trial.get("proposal_application", {}),
+                            "proposal_application",
+                        )
+                    ),
                     "strategy_variant_hash": str(trial["strategy_variant_hash"]),
                     "strategy_variant_id": str(trial["strategy_variant_id"]),
                     "status": result.status,
@@ -956,6 +1235,7 @@ class AutonomousResearchEngine:
         selection = CandidateSelector(self._selection_policy(run)).select(selector_inputs)
         selection_dir = run.output_root / generation_id / "selection"
         selection.write_artifacts(selection_dir)
+        self._write_jsonl(selection_dir / "candidate_results.jsonl", selector_inputs)
         audit_log.append(
             "selection_completed",
             selection.to_payload(),
@@ -1060,6 +1340,47 @@ class AutonomousResearchEngine:
             raise ValueError(f"trial metrics artifact must be a JSON object: {result.metrics_path}")
         return dict(payload)
 
+    def _candidate_parameter_rows_from_trials(
+        self,
+        trials: Sequence[Mapping[str, Any]],
+    ) -> tuple[dict[str, Any], ...]:
+        return tuple(
+            {
+                "candidate_id": str(trial["candidate_id"]),
+                "candidate_space_hash": str(trial["candidate_space_hash"]),
+                "family": str(trial["family"]),
+                "parameters": dict(self._mapping(trial["parameters"], "parameters")),
+                "proposal_application": dict(
+                    self._mapping(trial.get("proposal_application", {}), "proposal_application")
+                ),
+                "strategy_variant_hash": str(trial["strategy_variant_hash"]),
+                "strategy_variant_id": str(trial["strategy_variant_id"]),
+                "trial_id": str(trial["trial_id"]),
+            }
+            for trial in trials
+        )
+
+    def _candidate_parameter_rows_from_landscape(
+        self,
+        rows: Sequence[Mapping[str, Any]],
+    ) -> tuple[dict[str, Any], ...]:
+        return tuple(
+            {
+                "candidate_id": str(row["candidate_id"]),
+                "candidate_space_hash": str(row["candidate_space_hash"]),
+                "family": str(row["family"]),
+                "generation_id": str(row["generation_id"]),
+                "parameters": dict(self._mapping(row["parameters"], "parameters")),
+                "proposal_application": dict(
+                    self._mapping(row.get("proposal_application", {}), "proposal_application")
+                ),
+                "strategy_variant_hash": str(row["strategy_variant_hash"]),
+                "strategy_variant_id": str(row["strategy_variant_id"]),
+                "trial_id": str(row["trial_id"]),
+            }
+            for row in rows
+        )
+
     def _selection_policy(self, run: AutonomousResearchRun) -> SelectionPolicy:
         constraints = self._constraint_payload(run)
         return SelectionPolicy(
@@ -1067,10 +1388,10 @@ class AutonomousResearchEngine:
             min_oos_trade_count=int(constraints.get("min_oos_trade_count", 30)),
             max_selected=1,
             total_return_metric="performance.total_return",
-            oos_sharpe_metric="quality.sharpe",
-            max_drawdown_metric="risk.max_drawdown",
+            oos_sharpe_metric="performance.oos_sharpe",
+            max_drawdown_metric="performance.max_drawdown",
             oos_trade_count_metric="trading.oos_trade_count",
-            cost_sensitivity_metric="execution.cost_impact",
+            cost_sensitivity_metric="costs.cost_sensitivity",
         )
 
     def _validation_gauntlet(self, run: AutonomousResearchRun) -> ValidationGauntlet:
@@ -1100,6 +1421,9 @@ class AutonomousResearchEngine:
             parameters = self._mapping(row["parameters"], "parameters")
             metrics = self._planner_metrics(self._mapping(row["metrics"], "metrics"))
             accepted = "promotion_candidate_id" in row
+            evidence_bundle_id = str(row.get("evidence_bundle_id") or "")
+            if not evidence_bundle_id:
+                raise ValueError(f"landscape row missing evidence_bundle_id: {row['trial_id']}")
             landscape_store.append(
                 FitnessLandscapePoint(
                     trial_id=str(row["trial_id"]),
@@ -1118,8 +1442,8 @@ class AutonomousResearchEngine:
                     constraints=self._constraint_payload(run),
                     accepted=accepted,
                     rejected_reasons=tuple(str(reason) for reason in row.get("reasons", ())),
-                    evidence_bundle_id=str(row["trial_id"]),
-                    promotion_packet_id=str(row["trial_id"]) if accepted else None,
+                    evidence_bundle_id=evidence_bundle_id,
+                    promotion_packet_id=(str(row["promotion_candidate_id"]) if accepted else None),
                     artifact_graph_hash=stable_json_hash(
                         {
                             "parameter_hash": stable_json_hash(parameters),
@@ -1166,6 +1490,7 @@ class AutonomousResearchEngine:
             campaign_trial_limit=budget.max_total_trials,
             strategy_family_trial_limit=budget.max_family_trials,
             factor_family_trial_limit=budget.max_family_trials,
+            compute_budget_limit=budget.compute_budget_limit,
         )
 
     def _next_generation_proposal(
@@ -1353,6 +1678,8 @@ class AutonomousResearchEngine:
             report_path=report_path,
             reproducibility_hash=str(packet_payload["reproducibility"]["payload_hash"]),
             reproducibility_path=reproducibility_path,
+            strategy_variant_hash=str(selected["strategy_variant_hash"]),
+            strategy_variant_id=str(selected["strategy_variant_id"]),
         )
         graph = self._artifact_graph(
             artifact_graph_hash=graph.stable_hash(),
@@ -1372,6 +1699,8 @@ class AutonomousResearchEngine:
             report_path=report_path,
             reproducibility_hash=str(packet_payload["reproducibility"]["payload_hash"]),
             reproducibility_path=reproducibility_path,
+            strategy_variant_hash=str(selected["strategy_variant_hash"]),
+            strategy_variant_id=str(selected["strategy_variant_id"]),
         )
         graph.validate_full_chain()
         self._write_json(graph_path, graph.to_payload())
@@ -1405,6 +1734,11 @@ class AutonomousResearchEngine:
                 "generation_id": proposal.next_generation_id,
                 "requires_human_approval": True,
                 "status": "pending_human_approval",
+                "trial_budget_state": {
+                    "max_trials": proposal.max_trial_budget,
+                    "remaining_trials": proposal.max_trial_budget,
+                    "requested_trials": proposal.trial_budget,
+                },
             },
         )
 
@@ -1428,6 +1762,8 @@ class AutonomousResearchEngine:
         report_path: Path,
         reproducibility_hash: str,
         reproducibility_path: str,
+        strategy_variant_hash: str,
+        strategy_variant_id: str,
     ) -> ResearchArtifactGraph:
         evidence_bundle_id = str(bundle_payload["evidence_bundle_id"])
         workflow_run_id = str(bundle_payload["workflow_run_id"])
@@ -1442,6 +1778,12 @@ class AutonomousResearchEngine:
                 evidence_bundle_id,
                 "evidence_bundle",
                 stable_json_hash(bundle_payload),
+            ),
+            ResearchArtifactNode(
+                strategy_variant_id,
+                "strategy_variant",
+                strategy_variant_hash,
+                metadata={"promotion_candidate_id": promotion_candidate_id},
             ),
             ResearchArtifactNode(metrics_path, "metrics", metrics_hash),
             ResearchArtifactNode(data_quality_path, "data_quality", data_quality_hash),
@@ -1458,6 +1800,7 @@ class AutonomousResearchEngine:
             ResearchArtifactEdge(evidence_bundle_id, data_quality_path, "references"),
             ResearchArtifactEdge(evidence_bundle_id, reproducibility_path, "references"),
             ResearchArtifactEdge(promotion_candidate_id, evidence_bundle_id, "references"),
+            ResearchArtifactEdge(promotion_candidate_id, strategy_variant_id, "references"),
             ResearchArtifactEdge(promotion_candidate_id, metrics_path, "references"),
             ResearchArtifactEdge(promotion_candidate_id, data_quality_path, "references"),
             ResearchArtifactEdge(promotion_candidate_id, reproducibility_path, "references"),

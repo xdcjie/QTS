@@ -43,6 +43,7 @@ def write_campaign(
     max_trials_per_generation: int = 3,
     max_total_trials: int = 6,
     max_family_trials: int | None = None,
+    compute_budget_limit: int | None = None,
     active_correlation: float = 0.30,
 ) -> Path:
     config_dir = tmp_path / "campaign_inputs"
@@ -146,6 +147,11 @@ def write_campaign(
                 f"  max_total_trials: {max_total_trials}",
                 f"  max_family_trials: {resolved_max_family_trials}",
                 "  wall_clock_limit_minutes: 30",
+                *(
+                    []
+                    if compute_budget_limit is None
+                    else [f"  compute_budget_limit: {compute_budget_limit}"]
+                ),
                 "",
             ]
         ),

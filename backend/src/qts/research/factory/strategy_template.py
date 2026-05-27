@@ -340,9 +340,15 @@ class StrategyVariantFactory:
 
     def _require_parameters_in_space(self, parameters: Mapping[str, Any]) -> None:
         expected_names = set(self.template.parameter_space)
+        optional_names = {
+            name
+            for name, value in self.template.parameter_space.items()
+            if isinstance(value, Mapping) and value.get("optional") is True
+        }
+        required_names = expected_names - optional_names
         actual_names = set(parameters)
-        if actual_names != expected_names:
-            missing = sorted(expected_names - actual_names)
+        if not required_names.issubset(actual_names) or not actual_names.issubset(expected_names):
+            missing = sorted(required_names - actual_names)
             extra = sorted(actual_names - expected_names)
             details: list[str] = []
             if missing:

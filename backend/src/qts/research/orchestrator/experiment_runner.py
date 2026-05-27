@@ -146,6 +146,31 @@ class ResearchTrialResult:
             "trial_id": self.trial_id,
         }
 
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, Any]) -> ResearchTrialResult:
+        """Restore a trial result from queue state."""
+
+        failures_path = payload.get("failures_path")
+        evidence_bundle_id = payload.get("evidence_bundle_id")
+        return cls(
+            trial_id=cls._text(payload, "trial_id"),
+            status=cls._text(payload, "status"),
+            manifest_hash=cls._text(payload, "manifest_hash"),
+            manifest_path=Path(cls._text(payload, "manifest_path")),
+            data_quality_path=Path(cls._text(payload, "data_quality_path")),
+            reproducibility_path=Path(cls._text(payload, "reproducibility_path")),
+            metrics_path=Path(cls._text(payload, "metrics_path")),
+            failures_path=None if failures_path is None else Path(str(failures_path)),
+            evidence_bundle_id=(None if evidence_bundle_id is None else str(evidence_bundle_id)),
+        )
+
+    @staticmethod
+    def _text(payload: Mapping[str, Any], field_name: str) -> str:
+        value = payload.get(field_name)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{field_name} is required")
+        return value.strip()
+
 
 @dataclass(frozen=True, slots=True)
 class ResearchExperimentResult:
@@ -181,6 +206,43 @@ class ResearchExperimentResult:
             "trials": [trial.to_payload() for trial in self.trials],
             "workflow_summary_path": str(self.workflow_summary_path),
         }
+
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, Any]) -> ResearchExperimentResult:
+        """Restore an experiment result from queue state."""
+
+        trials = payload.get("trials")
+        if not isinstance(trials, Sequence) or isinstance(trials, str):
+            raise ValueError("trials must be a sequence")
+        return cls(
+            job_id=cls._text(payload, "job_id"),
+            generation_id=cls._text(payload, "generation_id"),
+            status=cls._text(payload, "status"),
+            output_dir=Path(cls._text(payload, "output_dir")),
+            workflow_summary_path=Path(cls._text(payload, "workflow_summary_path")),
+            candidate_results_path=Path(cls._text(payload, "candidate_results_path")),
+            failures_path=Path(cls._text(payload, "failures_path")),
+            metrics_path=Path(cls._text(payload, "metrics_path")),
+            data_quality_path=Path(cls._text(payload, "data_quality_path")),
+            reproducibility_path=Path(cls._text(payload, "reproducibility_path")),
+            audit_log_path=Path(cls._text(payload, "audit_log_path")),
+            trials=tuple(
+                ResearchTrialResult.from_payload(cls._mapping(trial, "trial")) for trial in trials
+            ),
+        )
+
+    @staticmethod
+    def _text(payload: Mapping[str, Any], field_name: str) -> str:
+        value = payload.get(field_name)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{field_name} is required")
+        return value.strip()
+
+    @staticmethod
+    def _mapping(value: Any, field_name: str) -> Mapping[str, Any]:
+        if not isinstance(value, Mapping):
+            raise ValueError(f"{field_name} must be a mapping")
+        return dict(value)
 
 
 @dataclass(frozen=True, slots=True)
@@ -320,7 +382,7 @@ class ResearchExperimentRunner:
         }
 
         metrics_payload = dict(execution_artifacts.metrics_payload)
-        data_quality_payload = self._data_quality_payload(job, trial_dir, manifest_hash)
+        data_quality_payload = self._data_quality_payload(job, trial, trial_dir, manifest_hash)
         reproducibility_payload = self._reproducibility_payload(
             job=job,
             manifest_hash=manifest_hash,
@@ -351,7 +413,7 @@ class ResearchExperimentRunner:
             },
         }
         self._write_json(manifest_path, manifest_payload)
-        result_manifest_path = execution_artifacts.manifest_path or manifest_path
+        result_manifest_path = manifest_path
 
         audit_log.append(
             "manifest_loaded",
@@ -436,14 +498,45 @@ class ResearchExperimentRunner:
         job: ResearchExperimentJob,
         trial: Mapping[str, Any],
     ) -> dict[str, Any]:
-        return {
+        manifest_patch = trial.get("manifest_patch")
+        if manifest_patch is not None and not isinstance(manifest_patch, Mapping):
+            raise ValueError("trial manifest_patch must be a mapping")
+        resolved_manifest = self._merged_manifest(
+            job.manifest_payload,
+            {} if manifest_patch is None else manifest_patch,
+        )
+        payload: dict[str, Any] = {
             "attempt": job.attempt,
             "generation_id": job.generation_id,
             "job_id": job.job_id,
-            "manifest": dict(job.manifest_payload),
+            "manifest": resolved_manifest,
             "parameters": dict(self._mapping(trial.get("parameters", {}), "parameters")),
             "trial_id": self._text(trial.get("trial_id"), "trial_id"),
         }
+        if manifest_patch is not None:
+            payload["manifest_patch"] = dict(manifest_patch)
+            payload["manifest_patch_hash"] = stable_json_hash(dict(manifest_patch))
+        strategy_variant_id = trial.get("strategy_variant_id")
+        strategy_variant_hash = trial.get("strategy_variant_hash")
+        if strategy_variant_id is not None:
+            payload["strategy_variant_id"] = str(strategy_variant_id)
+        if strategy_variant_hash is not None:
+            payload["strategy_variant_hash"] = str(strategy_variant_hash)
+        return payload
+
+    def _merged_manifest(
+        self,
+        base: Mapping[str, Any],
+        patch: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        result = dict(base)
+        for key, value in patch.items():
+            current = result.get(key)
+            if isinstance(current, Mapping) and isinstance(value, Mapping):
+                result[str(key)] = self._merged_manifest(current, value)
+            else:
+                result[str(key)] = value
+        return {key: value for key, value in json.loads(stable_json_dumps(result)).items()}
 
     def _execute_trial(
         self,
@@ -692,17 +785,19 @@ class ResearchExperimentRunner:
     def _data_quality_payload(
         self,
         job: ResearchExperimentJob,
+        trial: Mapping[str, Any],
         trial_dir: Path,
         manifest_hash: str,
     ) -> dict[str, Any]:
         data = self._mapping(job.manifest_payload.get("data", {}), "data")
+        checked_paths = self._data_quality_checked_paths(job, trial)
         artifact = DataQualityRunner(
             dataset_id=str(data.get("dataset_id", job.job_id)),
             timeframe=str(data.get("timeframe", "1m")),
             start=None if data.get("start") is None else str(data["start"]),
             end=None if data.get("end") is None else str(data["end"]),
             calendar=None if data.get("calendar") is None else str(data["calendar"]),
-        ).run({"checked_paths": tuple(str(path) for path in data.get("checked_paths", ()))})
+        ).run({"checked_paths": checked_paths})
         result = DataQualityArtifactWriter(trial_dir).write(artifact)
         payload = json.loads(result.path.read_text(encoding="utf-8"))
         return {
@@ -711,6 +806,22 @@ class ResearchExperimentRunner:
             "path": str(result.path),
             "payload_hash": stable_json_hash(artifact.to_payload()),
         }
+
+    def _data_quality_checked_paths(
+        self,
+        job: ResearchExperimentJob,
+        trial: Mapping[str, Any],
+    ) -> tuple[str, ...]:
+        trial_paths = trial.get("data_quality_paths")
+        if isinstance(trial_paths, Sequence) and not isinstance(trial_paths, str):
+            return tuple(str(path) for path in trial_paths)
+        pipeline_config = trial.get("backtest_pipeline")
+        if isinstance(pipeline_config, Mapping):
+            pipeline_paths = pipeline_config.get("data_quality_paths")
+            if isinstance(pipeline_paths, Sequence) and not isinstance(pipeline_paths, str):
+                return tuple(str(path) for path in pipeline_paths)
+        data = self._mapping(job.manifest_payload.get("data", {}), "data")
+        return tuple(str(path) for path in data.get("checked_paths", ()))
 
     def _reproducibility_payload(
         self,

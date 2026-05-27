@@ -67,7 +67,18 @@ def test_backtest_pipeline_mode_derives_metrics_from_backtest_manifest(
         trials=(
             {
                 "family": "momentum",
+                "manifest_patch": {
+                    "research_factory": {"template_id": "momentum_template"},
+                    "risk": {"assumptions": {"max_position_notional": 100000}},
+                    "strategy": {
+                        "entrypoint": "examples.strategies.gc_si_momentum:GcSiMomentumStrategy",
+                        "id": "momentum_variant_001",
+                        "parameters": {"lookback": 5, "threshold": "0.2"},
+                    },
+                },
                 "parameters": {"lookback": 5, "threshold": "0.2"},
+                "strategy_variant_hash": "sha256:variant-hash",
+                "strategy_variant_id": "momentum_variant_001",
                 "trial_id": "trial-real",
             },
         ),
@@ -82,12 +93,15 @@ def test_backtest_pipeline_mode_derives_metrics_from_backtest_manifest(
     assert pipeline_job.objective_metric == "sharpe_ratio"
 
     trial = result.trials[0]
+    trial_manifest_path = (
+        tmp_path / "runner-output/generation-000/job-001/trials/trial-real/manifest.json"
+    )
     backtest_manifest_path = (
         tmp_path
         / "runner-output/generation-000/job-001/trials/trial-real/backtest/run-0000/manifest.json"
     )
     assert trial.manifest_hash == "sha256:real-backtest-manifest"
-    assert trial.manifest_path == backtest_manifest_path
+    assert trial.manifest_path == trial_manifest_path
     metrics = json.loads(trial.metrics_path.read_text(encoding="utf-8"))
     assert metrics["backtest"] == {
         "manifest_hash": "sha256:real-backtest-manifest",
@@ -100,14 +114,14 @@ def test_backtest_pipeline_mode_derives_metrics_from_backtest_manifest(
     assert metrics["risk"]["max_drawdown"] == 0.04
     assert metrics["trading"]["oos_trade_count"] == 11
     assert metrics["research"]["metrics_source"] == "backtest_pipeline"
-    manifest = json.loads(
-        (
-            tmp_path / "runner-output/generation-000/job-001/trials/trial-real/manifest.json"
-        ).read_text(encoding="utf-8")
-    )
+    manifest = json.loads(trial_manifest_path.read_text(encoding="utf-8"))
     backtest_hash = manifest["artifact_hashes"]["backtest_manifest"]
     assert manifest["backtest_manifest_path"] == metrics["backtest"]["manifest_path"]
     assert manifest["artifact_paths_by_hash"][backtest_hash] == metrics["backtest"]["manifest_path"]
+    assert manifest["manifest"]["strategy"]["id"] == "momentum_variant_001"
+    assert manifest["manifest"]["strategy"]["parameters"] == {"lookback": 5, "threshold": "0.2"}
+    assert manifest["manifest_patch_hash"].startswith("sha256:")
+    assert manifest["strategy_variant_hash"] == "sha256:variant-hash"
 
 
 def test_backtest_pipeline_mode_rejects_payload_supplied_metrics(tmp_path: Path) -> None:

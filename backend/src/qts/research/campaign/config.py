@@ -75,6 +75,7 @@ class ResearchCampaignBudget:
     max_total_trials: int
     max_family_trials: int
     wall_clock_limit_minutes: int
+    compute_budget_limit: int | None = None
 
     def __post_init__(self) -> None:
         max_generations = self._positive_int(
@@ -97,6 +98,11 @@ class ResearchCampaignBudget:
             self.wall_clock_limit_minutes,
             "budget.wall_clock_limit_minutes",
         )
+        compute_budget_limit = (
+            None
+            if self.compute_budget_limit is None
+            else self._positive_int(self.compute_budget_limit, "budget.compute_budget_limit")
+        )
         if max_trials_per_generation > max_total_trials:
             raise ValueError(
                 "budget.max_trials_per_generation must not exceed budget.max_total_trials"
@@ -108,6 +114,7 @@ class ResearchCampaignBudget:
         object.__setattr__(self, "max_total_trials", max_total_trials)
         object.__setattr__(self, "max_family_trials", max_family_trials)
         object.__setattr__(self, "wall_clock_limit_minutes", wall_clock_limit_minutes)
+        object.__setattr__(self, "compute_budget_limit", compute_budget_limit)
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> Self:
@@ -125,18 +132,26 @@ class ResearchCampaignBudget:
                 payload,
                 "wall_clock_limit_minutes",
             ),
+            compute_budget_limit=(
+                None
+                if payload.get("compute_budget_limit") is None
+                else cls._required_positive_int(payload, "compute_budget_limit")
+            ),
         )
 
     def to_payload(self) -> dict[str, int]:
         """Return a JSON-ready budget payload."""
 
-        return {
+        payload = {
             "max_family_trials": self.max_family_trials,
             "max_generations": self.max_generations,
             "max_total_trials": self.max_total_trials,
             "max_trials_per_generation": self.max_trials_per_generation,
             "wall_clock_limit_minutes": self.wall_clock_limit_minutes,
         }
+        if self.compute_budget_limit is not None:
+            payload["compute_budget_limit"] = self.compute_budget_limit
+        return payload
 
     @classmethod
     def _required_positive_int(cls, payload: Mapping[str, Any], field_name: str) -> int:

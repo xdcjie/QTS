@@ -17,7 +17,7 @@ def test_gc_si_autonomous_real_pipeline_acceptance_cli(
 ) -> None:
     config_path = Path("configs/research/campaigns/gc_si_autonomous_v1.yaml")
     output_root = tmp_path / "gc_si_autonomous_v1"
-    data_paths = _write_data_paths(tmp_path)
+    data_paths = _historical_data_paths(tmp_path)
 
     config_payload = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     assert config_payload["execution"]["default_mode"] == "backtest_pipeline"
@@ -83,6 +83,11 @@ def test_gc_si_autonomous_real_pipeline_acceptance_cli(
     validation_summary = json.loads((output_root / "validation_summary.json").read_text())
     assert validation_summary["real_path_markers"]["metrics_source"] == "backtest_artifacts"
     assert validation_summary["paper_live_launches"] == []
+    campaign_config = json.loads((output_root / "campaign_config.json").read_text())
+    assert campaign_config["data_paths"] == {
+        "GC": str(data_paths["GC"]),
+        "SI": str(data_paths["SI"]),
+    }
 
     graph = ResearchArtifactGraph.from_payload(
         json.loads((output_root / "artifact_graph" / "artifact_graph.json").read_text())
@@ -95,25 +100,53 @@ def _jsonl(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
 
 
-def _write_data_paths(tmp_path: Path) -> dict[str, Path]:
-    data_dir = tmp_path / "input_data"
-    data_dir.mkdir()
+def _historical_data_paths(tmp_path: Path) -> dict[str, Path]:
+    source_paths = {
+        "GC": Path("historical/data/gc.csv"),
+        "SI": Path("historical/data/si.csv"),
+    }
+    missing = [str(path) for path in source_paths.values() if not path.exists()]
+    if missing:
+        raise AssertionError(f"real GC/SI historical CSV files are required: {missing}")
+    slice_dir = tmp_path / "real_historical_slice"
+    slice_dir.mkdir()
     return {
-        "GC": _write_bars(data_dir / "gc.csv", base=100),
-        "SI": _write_bars(data_dir / "si.csv", base=101),
+        root: _copy_real_historical_slice(
+            source_path,
+            slice_dir / f"{root.lower()}.csv",
+        )
+        for root, source_path in source_paths.items()
     }
 
 
-def _write_bars(path: Path, *, base: int) -> Path:
-    path.write_text(
-        "\n".join(
-            ["timestamp,close"]
-            + [
-                f"2026-01-02T00:{minute:02d}:00+00:00,{base + (minute * 0.5):.1f}"
-                for minute in range(20)
-            ]
-            + [""]
-        ),
-        encoding="utf-8",
-    )
-    return path
+def _copy_real_historical_slice(source_path: Path, target_path: Path) -> Path:
+    expected = {f"2010-11-12T05:{minute:02d}:00.000000000Z" for minute in range(15, 60)} | {
+        f"2010-11-12T06:{minute:02d}:00.000000000Z" for minute in range(5)
+    }
+    with (
+        source_path.open("r", encoding="utf-8", newline="") as source,
+        target_path.open("w", encoding="utf-8", newline="") as target,
+    ):
+        header = source.readline()
+        target.write(header)
+        columns = header.strip().split(",")
+        timestamp_index = columns.index("ts_event")
+        close_index = columns.index("close")
+        emitted: set[str] = set()
+        for line in source:
+            values = line.strip().split(",")
+            timestamp = values[timestamp_index]
+            if (
+                timestamp not in expected
+                or timestamp in emitted
+                or values[close_index].startswith("-")
+            ):
+                continue
+            target.write(line)
+            emitted.add(timestamp)
+            if len(emitted) == len(expected):
+                break
+    if len(emitted) != len(expected):
+        missing = sorted(expected - emitted)
+        raise AssertionError(f"historical slice missing real source rows: {missing[:5]}")
+    return target_path

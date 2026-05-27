@@ -377,7 +377,7 @@ class DataQualityRunner:
     def _timestamps(cls, rows: Sequence[Mapping[str, str]]) -> tuple[datetime, ...]:
         timestamps: list[datetime] = []
         for row in rows:
-            value = row.get("timestamp") or row.get("datetime")
+            value = row.get("timestamp") or row.get("datetime") or row.get("ts_event")
             if value:
                 timestamps.append(cls._parse_datetime(value))
         return tuple(timestamps)
