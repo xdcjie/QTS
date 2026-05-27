@@ -24,7 +24,7 @@ Recommended reading order:
 - `plan/implementation_plan.md` defines the phase-by-phase build order.
 - `plan/milestones_and_acceptance.md` defines deliverables, checks, and acceptance criteria for each milestone.
 
-Legacy monolithic docs are intentionally not used. This folder is organized by architecture layer.
+Historical monolithic docs are intentionally not used. This folder is organized by architecture layer.
 
 ## Directory boundaries
 

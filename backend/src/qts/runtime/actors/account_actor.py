@@ -127,16 +127,6 @@ class AccountActor(Actor):
         actor._fill_ids = FillIdempotencyStore.restore(snapshot.seen_fill_ids)
         return actor
 
-    @property
-    def position_closed_events(self) -> tuple[PositionClosed, ...]:
-        """Return close events emitted by this actor (read-only).
-
-        Prefer :meth:`drain_position_closed_events` from the runtime
-        coordinator; this property is kept for legacy snapshot tests that
-        inspect the buffer without consuming it.
-        """
-        return tuple(self._position_closed_events)
-
     def drain_position_closed_events(self) -> tuple[PositionClosed, ...]:
         """Return and clear the buffered PositionClosed events.
 

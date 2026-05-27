@@ -20,9 +20,10 @@ from qts.research.manifest import ResearchManifestV2, write_jsonl
 from qts.research.metrics import ResearchMetrics
 from qts.research.promotion import ResearchPromotionPolicy
 from qts.research.registry import ResearchRunRegistry, new_record
-from qts.research.report import ResearchSystemReport, ResearchSystemReportWriter
+from qts.research.report import ResearchWorkflowReport, ResearchWorkflowReportWriter
 from qts.research.reproducibility import ReproducibilitySnapshot, ReproducibilitySnapshotV2
 from qts.research.splits import ResearchSplitPlan
+from qts.research.workflow import ResearchWorkflowResult, ResearchWorkflowStepResult
 
 
 @dataclass(frozen=True, slots=True)
@@ -141,14 +142,53 @@ class ResearchDryRunRunner:
                 }
             ],
         )
-        ResearchSystemReportWriter().write(
-            artifact_dir / "report.md",
-            ResearchSystemReport(
-                manifest=resolved_manifest,
-                metrics=metrics.to_payload(),
-                promotion_decision=promotion_decision.to_payload(),
-                reproducibility=reproducibility.to_payload(),
+        ResearchWorkflowReportWriter(artifact_dir).write(
+            ResearchWorkflowReport.from_result(
+                ResearchWorkflowResult(
+                    workflow_id=manifest.run_id,
+                    status="completed",
+                    steps=(
+                        ResearchWorkflowStepResult(
+                            step_id="manifest",
+                            kind="manifest",
+                            status="passed",
+                            message="manifest validated",
+                            outputs={
+                                "manifest_path": str(config_path),
+                                "manifest_hash": manifest.manifest_hash,
+                            },
+                        ),
+                        ResearchWorkflowStepResult(
+                            step_id="reproducibility",
+                            kind="reproducibility",
+                            status="passed",
+                            message="reproducibility captured",
+                            outputs={"reproducibility_path": str(artifact_dir / "reproducibility_v2.json")},
+                        ),
+                        ResearchWorkflowStepResult(
+                            step_id="metrics",
+                            kind="metrics",
+                            status="passed",
+                            message="dry-run metrics prepared",
+                            outputs={
+                                "metrics_path": str(artifact_dir / "metrics.json"),
+                                "status": promotion_decision.status,
+                            },
+                        ),
+                    ),
+                    run_context={
+                        "dataset_ids": (manifest.dataset_id,),
+                        "git_commit": reproducibility.git_sha,
+                        "git_dirty": reproducibility.git_dirty,
+                        "research_config_path": str(config_path),
+                        "research_config_hash": stable_json_hash(resolved_manifest),
+                        "workflow_config_path": str(config_path),
+                        "workflow_config_hash": manifest.manifest_hash,
+                    },
+                    decision={"status": promotion_decision.status},
+                )
             ),
+            output_path="report.md",
         )
 
         registry = ResearchRunRegistry.from_root(manifest.output_root)

@@ -7,7 +7,6 @@ from qts.runtime.config.models import (
     BacktestRiskConfig,
     BacktestRuntimeConfig,
     BacktestStrategyConfig,
-    CostModelConfig,
     RollPolicyConfig,
 )
 
@@ -17,7 +16,6 @@ __all__ = [
     "BacktestMarketDataReference",
     "BacktestRuntimeConfig",
     "BacktestStrategyConfig",
-    "CostModelConfig",
     "BacktestRiskConfig",
     "RollPolicyConfig",
 ]

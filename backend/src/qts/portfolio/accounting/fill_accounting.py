@@ -10,8 +10,6 @@ from qts.domain.orders import OrderSide
 from qts.portfolio.cash_book import CashBook
 from qts.portfolio.holdings import HoldingBook
 
-TradeSide = OrderSide
-
 
 @dataclass(frozen=True, slots=True)
 class AccountingFill:
@@ -60,4 +58,4 @@ class FillAccounting:
         cash_book.apply_delta(fill.currency, cash_delta)
 
 
-__all__ = ["AccountingFill", "FillAccounting", "TradeSide"]
+__all__ = ["AccountingFill", "FillAccounting"]

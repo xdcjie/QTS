@@ -6,7 +6,7 @@ from pathlib import Path
 import yaml  # type: ignore[import-untyped]
 
 
-def test_legacy_vwap_pullback_module_is_removed() -> None:
+def test_removed_vwap_pullback_module_is_not_available() -> None:
     assert not Path("examples/strategies/vwap_pullback.py").exists()
     assert importlib.util.find_spec("examples.strategies.vwap_pullback") is None
 

@@ -11,14 +11,11 @@ from qts.runtime.config import BacktestRuntimeConfig, ConfigMigration
 from qts.runtime.config_loader import BacktestConfigLoader
 
 
-def test_cost_model_config_is_backtest_cost_model_compatibility_alias() -> None:
-    from qts.runtime.config import BacktestCostModel, BacktestRuntimeConfig, CostModelConfig
+def test_backtest_cost_model_config_is_stable_model_type() -> None:
+    from qts.runtime.config import BacktestCostModel, BacktestRuntimeConfig
 
-    assert CostModelConfig is BacktestCostModel
-    assert isinstance(
-        BacktestRuntimeConfig.from_yaml(Path("configs/backtest.gc_si.example.yaml")).cost_model,
-        BacktestCostModel,
-    )
+    config = BacktestRuntimeConfig.from_yaml(Path("configs/backtest.gc_si.example.yaml"))
+    assert isinstance(config.cost_model, BacktestCostModel)
 
 
 def test_backtest_run_config_loads_example_yaml_with_stable_hash() -> None:

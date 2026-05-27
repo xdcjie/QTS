@@ -36,7 +36,7 @@ def canonical_runtime_event_migrations() -> SchemaMigrationRegistry:
 
 
 def _account_position_closed_v0_to_v1(payload: dict[str, Any]) -> dict[str, Any]:
-    """Tag legacy v0 ``account.position_closed`` payloads with a schema audit field.
+    """Tag pre-canonical v0 ``account.position_closed`` payloads with a schema audit field.
 
     v0 (pre-OPT-26.1) had no schema version header attached to the event
     payload. v1 (current) adds the ``schema_audit`` marker so downstream

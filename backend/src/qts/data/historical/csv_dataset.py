@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import io
 from collections.abc import Iterator
 from dataclasses import dataclass, replace
 from datetime import date, datetime
@@ -18,6 +19,7 @@ from qts.data.historical.csv_format import (
     parse_historical_ts_event,
     validate_historical_csv_columns,
 )
+from qts.data.historical.csv_index import indexed_start_offset
 from qts.data.historical.csv_row_mapper import HistoricalCsvRowMapper
 from qts.data.historical.symbols import HistoricalFutureChainSymbolResolver
 from qts.data.historical.validation import (
@@ -80,16 +82,38 @@ class HistoricalBarStream:
         self.roll_selections: list[FutureRollSelection] = []
 
     def __iter__(self) -> Iterator[Bar]:
-        with self._csv_path.open(encoding="utf-8", newline="") as handle:
-            reader = csv.DictReader(handle)
-            validate_historical_csv_columns(
-                tuple(reader.fieldnames or ()),
-                schema=self._configured_schema,
-            )
+        with self._csv_path.open("rb") as handle:
+            header_line = handle.readline()
+            columns = _csv_header_columns(header_line)
+            validate_historical_csv_columns(columns, schema=self._configured_schema)
+            seek_offset = self._seek_offset(columns=columns, header_offset=handle.tell())
+            handle.seek(seek_offset)
+            text_handle = io.TextIOWrapper(handle, encoding="utf-8", newline="")
+            reader = csv.DictReader(text_handle, fieldnames=columns)
             if self._contract_selector is None:
-                yield from self._iter_all_supported_rows(reader)
+                try:
+                    yield from self._iter_all_supported_rows(reader)
+                finally:
+                    _detach_text_handle(text_handle)
             else:
-                yield from self._iter_selected_contract_rows(reader)
+                try:
+                    yield from self._iter_selected_contract_rows(reader)
+                finally:
+                    _detach_text_handle(text_handle)
+
+    def _seek_offset(self, *, columns: tuple[str, ...], header_offset: int) -> int:
+        timestamp_column = self._schema.resolve_column("timestamp")
+        if timestamp_column not in columns:
+            return header_offset
+        offset = indexed_start_offset(
+            self._csv_path,
+            start=self._start,
+            timestamp_column=timestamp_column,
+            header_offset=header_offset,
+        )
+        if offset is None:
+            return header_offset
+        return offset
 
     def _iter_all_supported_rows(self, reader: csv.DictReader[str]) -> Iterator[Bar]:
         for row in reader:
@@ -283,6 +307,25 @@ def describe_csv_dataset(
         source_hash_policy="not computed unless explicitly requested",
         row_count=row_count,
     )
+
+
+def _csv_header_columns(header_line: bytes) -> tuple[str, ...]:
+    if not header_line:
+        raise ValueError("historical CSV must include a header row")
+    try:
+        rows = list(csv.reader([header_line.decode("utf-8").rstrip("\r\n")]))
+    except UnicodeDecodeError as exc:
+        raise ValueError("historical CSV header is not valid UTF-8") from exc
+    if len(rows) != 1:
+        raise ValueError("historical CSV header must be a single row")
+    return tuple(rows[0])
+
+
+def _detach_text_handle(text_handle: io.TextIOWrapper) -> None:
+    try:
+        text_handle.detach()
+    except ValueError:
+        pass
 
 
 def iter_historical_bars(

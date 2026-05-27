@@ -39,7 +39,7 @@ class SchemaMigrationRegistry:
     every registered hop until no further migration matches the current
     version. The final version becomes the event's ``payload_schema_version``.
 
-    Unknown legacy versions raise :class:`SchemaMigrationMissing`; events
+    Unknown historical versions raise :class:`SchemaMigrationMissing`; events
     already at the current version pass through unchanged.
     """
 
@@ -84,7 +84,7 @@ class SchemaMigrationRegistry:
 
         This lets chained migrations terminate naturally at the final
         version even if it overshoots the current constant, while still
-        catching legacy events whose schema has no migration path at all.
+        catching historical events whose schema has no migration path at all.
         """
         current = event
         seen_versions: set[str] = set()

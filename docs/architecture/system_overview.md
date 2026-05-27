@@ -42,7 +42,7 @@ PYTHONPATH=backend/src uv run python scripts/run_research.py \
   workflow <workflow-config>
 ```
 
-Legacy VWAP ad hoc runners and VWAP-specific `configs/optimizer` entries are
+Deprecated VWAP ad hoc runners and VWAP-specific `configs/optimizer` entries are
 not valid alternate entrypoints and must not remain or be reintroduced.
 
 ## Primary runtime flow

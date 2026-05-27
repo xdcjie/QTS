@@ -1,8 +1,7 @@
 # Research Idea Registry
 
 The idea registry tracks hypotheses, economic mechanisms, edge taxonomy, trial
-budgets, and lifecycle status. An idea can have multiple `edge_types`; the
-legacy `edge_type` field remains a compatibility alias for the first edge.
+budgets, and lifecycle status. `edge_types` is the canonical edge taxonomy field.
 
 Copy-paste examples:
 

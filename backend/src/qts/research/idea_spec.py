@@ -123,15 +123,13 @@ class IdeaSpec:
 
         created_at = datetime.fromisoformat(cls._required_text(payload, "created_at"))
         raw_edge_types = cls._string_tuple(payload.get("edge_types"), field_name="edge_types")
+        if not raw_edge_types:
+            raise ValueError("edge_types is required")
         return cls(
             idea_id=cls._required_text(payload, "idea_id"),
             title=cls._required_text(payload, "title"),
             hypothesis=cls._required_text(payload, "hypothesis"),
-            edge_type=(
-                cls._required_text(payload, "edge_type")
-                if not raw_edge_types
-                else raw_edge_types[0]
-            ),
+            edge_type=raw_edge_types[0],
             source=cls._required_text(payload, "source"),
             created_at=created_at,
             data_required=cls._string_tuple(

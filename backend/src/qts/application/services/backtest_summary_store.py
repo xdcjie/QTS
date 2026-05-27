@@ -48,7 +48,7 @@ class BacktestSummaryStore:
             return BacktestRunDTO(
                 run_id=run_id,
                 config_path="",
-                status="legacy_summary",
+                status="invalid_summary",
                 summary_path=str(path),
                 manifest_path=self._string_field(payload, "manifest_path"),
                 report_hash=self._string_field(payload, "report_hash"),

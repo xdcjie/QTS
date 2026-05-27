@@ -16,7 +16,7 @@ from qts.runtime.config import (
     BacktestRiskConfig,
     BacktestRuntimeConfig,
     BacktestStrategyConfig,
-    CostModelConfig,
+    BacktestCostModel,
     RollPolicyConfig,
 )
 
@@ -116,7 +116,7 @@ class BacktestConfigLoader:
                 str(symbol): InstrumentId(str(instrument_id))
                 for symbol, instrument_id in instrument_ids_payload.items()
             },
-            cost_model=CostModelConfig(
+            cost_model=BacktestCostModel(
                 fixed_commission_per_contract=Decimal(
                     str(cost_payload.get("fixed_commission_per_contract", "0"))
                 ),

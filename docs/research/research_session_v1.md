@@ -275,7 +275,7 @@ The checked-in quickstart workflow at `configs/research/workflows/quickstart.yam
 runs source-backed factor discovery, review and implementation gates, a baseline
 backtest, an optimizer step, validation summaries, and a Markdown research
 report. Deleted VWAP workflow files are not workflow dependencies. Historical
-scripts under the retired ad hoc research folder were removed with the legacy
+scripts under the retired ad hoc research folder were removed with old
 optimizer YAMLs; new VWAP research directions should extend reviewed workflow
 configs instead.
 The VWAP research strategy uses entry-price anchored ATR/R exits:

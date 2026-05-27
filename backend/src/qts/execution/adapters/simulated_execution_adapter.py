@@ -96,7 +96,7 @@ class SimulatedExecutionAdapter:
         """Execute one order against a single bar's price range.
 
         The adapter requires ``bar_high`` and ``bar_low`` for non-MARKET orders;
-        when callers omit them (legacy market-only paths), the market price is
+        when callers omit them in market-only paths, the market price is
         treated as a single-tick bar. LIMIT/STOP variants emit an ACCEPTED
         no-fill report when the bar's range did not cross the trigger price.
         Order types that need persistent state (trailing stop, MOO/MOC,

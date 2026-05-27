@@ -455,10 +455,10 @@ def test_fractional_quantity_rejected_when_not_supported() -> None:
     from qts.domain.orders import OrderIntent, OrderSide
     from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
     from qts.execution.broker import BrokerCapabilities
-    from qts.runtime.config import CostModelConfig
+    from qts.runtime.config import BacktestCostModel
 
     adapter = SimulatedExecutionAdapter(
-        cost_model=CostModelConfig(),
+        cost_model=BacktestCostModel(),
         capabilities=BrokerCapabilities(
             broker_id=BrokerId("broker"),
             supports_fractional=False,

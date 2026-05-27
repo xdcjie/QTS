@@ -10,7 +10,6 @@ from qts.runtime.config.models import (
     BrokerRuntimeConfig,
     ConfigMigration,
     ConfigMigrationResult,
-    CostModelConfig,
     RollPolicyConfig,
     TradingRuntimeConfig,
 )
@@ -26,7 +25,6 @@ __all__ = [
     "BacktestStrategyConfig",
     "ConfigMigration",
     "ConfigMigrationResult",
-    "CostModelConfig",
     "BrokerRuntimeConfig",
     "PaperSimulatedRuntimeConfig",
     "BacktestRiskConfig",

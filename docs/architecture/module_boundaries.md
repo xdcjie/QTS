@@ -67,7 +67,7 @@ PYTHONPATH=backend/src uv run python scripts/run_research.py \
   workflow <workflow-config>
 ```
 
-Legacy VWAP ad hoc runners under `scripts/research/run_vwap_*.py` and
+Deprecated VWAP ad hoc runners under `scripts/research/run_vwap_*.py` and
 VWAP-specific optimizer configs under `configs/optimizer` are forbidden
 shortcuts. They are not compatibility boundaries and must not remain or be
 reintroduced. Deleted VWAP workflow files are not valid workflow dependencies.

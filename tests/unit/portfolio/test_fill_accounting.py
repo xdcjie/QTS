@@ -3,16 +3,17 @@ from __future__ import annotations
 from decimal import Decimal
 
 
-def test_trade_side_is_domain_order_side_compatibility_alias() -> None:
+def test_accounting_fill_side_uses_domain_order_side() -> None:
     from qts.domain.orders import OrderSide
-    from qts.portfolio.accounting.fill_accounting import TradeSide
+    from qts.portfolio.accounting.fill_accounting import AccountingFill
 
-    assert TradeSide is OrderSide
+    assert AccountingFill.__annotations__["side"] in {"OrderSide", OrderSide}
 
 
 def test_equity_buy_fill_updates_position_and_cash() -> None:
     from qts.core.ids import InstrumentId, OrderId
-    from qts.portfolio.accounting.fill_accounting import AccountingFill, FillAccounting, TradeSide
+    from qts.domain.orders import OrderSide
+    from qts.portfolio.accounting.fill_accounting import AccountingFill, FillAccounting
     from qts.portfolio.cash_book import CashBook
     from qts.portfolio.holdings import HoldingBook
 
@@ -21,7 +22,7 @@ def test_equity_buy_fill_updates_position_and_cash() -> None:
     fill = AccountingFill(
         fill_id=OrderId("fill-001"),
         instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
-        side=TradeSide.BUY,
+        side=OrderSide.BUY,
         quantity=Decimal("10"),
         price=Decimal("100"),
         currency="USD",
@@ -36,7 +37,8 @@ def test_equity_buy_fill_updates_position_and_cash() -> None:
 
 def test_sell_fill_updates_position_and_cash() -> None:
     from qts.core.ids import InstrumentId, OrderId
-    from qts.portfolio.accounting.fill_accounting import AccountingFill, FillAccounting, TradeSide
+    from qts.domain.orders import OrderSide
+    from qts.portfolio.accounting.fill_accounting import AccountingFill, FillAccounting
     from qts.portfolio.cash_book import CashBook
     from qts.portfolio.holdings import HoldingBook
 
@@ -45,7 +47,7 @@ def test_sell_fill_updates_position_and_cash() -> None:
     fill = AccountingFill(
         fill_id=OrderId("fill-002"),
         instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
-        side=TradeSide.SELL,
+        side=OrderSide.SELL,
         quantity=Decimal("3"),
         price=Decimal("50"),
         currency="USD",

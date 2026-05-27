@@ -187,7 +187,7 @@ def test_evidence_bundle_persists_idea_metadata_and_trial_budget_warning(tmp_pat
         {
             "created_at": "2026-05-25T00:00:00+00:00",
             "data_required": ["GC 15m OHLCV"],
-            "edge_type": "momentum",
+            "edge_types": ["momentum"],
             "hypothesis": "Momentum persists after costs.",
             "idea_id": "idea-momentum",
             "kill_criteria": ["oos_net_sharpe_below_0_8"],
@@ -224,7 +224,7 @@ def test_evidence_bundle_uses_workflow_summary_idea_metadata(tmp_path: Path) -> 
     payload["idea_metadata"] = {
         "created_at": "2026-05-25T00:00:00+00:00",
         "data_required": ["GC 15m OHLCV"],
-        "edge_type": "momentum",
+        "edge_types": ["momentum"],
         "hypothesis": "Momentum persists after costs.",
         "idea_id": "idea-momentum",
         "kill_criteria": ["oos_net_sharpe_below_0_8"],

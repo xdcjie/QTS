@@ -437,6 +437,8 @@ _EVIDENCE_ARTIFACT_PATH_KEYS = (
     "artifact_path",
     "artifact_paths",
     "summary_path",
+    "reproducibility_path",
+    "reproducibility_v2_path",
     "validation_output",
     "walk_forward_validation_output",
     "failure_window_veto_output",

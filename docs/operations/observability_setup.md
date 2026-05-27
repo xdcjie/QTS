@@ -9,10 +9,9 @@ How to wire an external Prometheus / k8s setup to a QTS deployment.
 | `GET /health/liveness` | none | restart-the-pod signal (process responsive) |
 | `GET /health/readiness` | none | remove-from-LB signal (`200` if `HealthService.status == "ok"`, else `503`) |
 | `GET /health/startup` | none | initial-boot grace period |
-| `GET /health` | none | legacy alias of liveness |
 | `GET /metrics` | none | Prometheus text-format scrape (OPT-15 / OPT-57) |
 
-All five are whitelisted by `ApiSecurityMiddleware` (no bearer token
+All four are whitelisted by `ApiSecurityMiddleware` (no bearer token
 needed). Everything else under the API requires an authenticated principal
 with the right scope.
 

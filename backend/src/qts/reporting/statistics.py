@@ -160,14 +160,12 @@ class StatisticsBuilder:
         trading_bars: int,
         bars_per_year: Decimal | None = None,
         benchmark_returns: tuple[Decimal, ...] | None = None,
-        benchmark_series: object | None = None,
     ) -> StatisticsPayload:
         """Return final statistics payload.
 
         ``benchmark_returns`` must be aligned bar-for-bar with the strategy's
         per-period return series (i.e. one element per equity point after the
-        first). ``benchmark_series`` is accepted for backward compatibility
-        and ignored unless it is a tuple of ``Decimal``.
+        first).
         """
         if self._first is None or self._last is None:
             raise ValueError("equity curve must not be empty")
@@ -216,7 +214,7 @@ class StatisticsBuilder:
             "commission_per_trade": _ratio(self._total_commission, Decimal(total_trades)),
             "slippage_per_trade": _ratio(self._total_slippage, Decimal(total_trades)),
         }
-        bench = self._benchmark_returns_or_none(benchmark_returns, benchmark_series)
+        bench = self._benchmark_returns_or_none(benchmark_returns)
         if bench is not None:
             payload.update(_benchmark_metrics(self._returns, bench, annualization))
         if self._holdings_snapshots:
@@ -226,14 +224,9 @@ class StatisticsBuilder:
     def _benchmark_returns_or_none(
         self,
         benchmark_returns: tuple[Decimal, ...] | None,
-        benchmark_series: object | None,
     ) -> tuple[Decimal, ...] | None:
         if benchmark_returns is not None:
             return benchmark_returns
-        if isinstance(benchmark_series, tuple) and all(
-            isinstance(item, Decimal) for item in benchmark_series
-        ):
-            return benchmark_series
         return None
 
     def _derive_annualization(self) -> Decimal:

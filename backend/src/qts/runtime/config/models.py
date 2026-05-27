@@ -198,9 +198,6 @@ class BacktestEngineConfig:
         return payload
 
 
-CostModelConfig = BacktestCostModel
-
-
 @dataclass(frozen=True, slots=True)
 class BacktestRiskConfig:
     """Backtest risk settings."""
@@ -805,7 +802,6 @@ __all__ = [
     "BacktestEngineConfig",
     "BacktestCostModel",
     "BacktestStrategyConfig",
-    "CostModelConfig",
     "BacktestRiskConfig",
     "RollPolicyConfig",
 ]

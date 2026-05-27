@@ -39,7 +39,8 @@ def test_gc_and_si_futures_pnl_use_contract_multipliers() -> None:
 
 def test_fill_accounting_anchor_uses_contract_multiplier_for_futures_and_options() -> None:
     from qts.core.ids import InstrumentId, OrderId
-    from qts.portfolio.accounting.fill_accounting import AccountingFill, FillAccounting, TradeSide
+    from qts.domain.orders import OrderSide
+    from qts.portfolio.accounting.fill_accounting import AccountingFill, FillAccounting
     from qts.portfolio.cash_book import CashBook
     from qts.portfolio.holdings import HoldingBook
 
@@ -48,7 +49,7 @@ def test_fill_accounting_anchor_uses_contract_multiplier_for_futures_and_options
     future_fill = AccountingFill(
         fill_id=OrderId("fill-future-001"),
         instrument_id=InstrumentId("FUTURE.US.COMEX.GC.202606"),
-        side=TradeSide.BUY,
+        side=OrderSide.BUY,
         quantity=Decimal("2"),
         price=Decimal("2350.10"),
         currency="USD",
@@ -65,7 +66,7 @@ def test_fill_accounting_anchor_uses_contract_multiplier_for_futures_and_options
     option_fill = AccountingFill(
         fill_id=OrderId("fill-option-001"),
         instrument_id=InstrumentId("OPTION.US.OPRA.AAPL.20260619.C.200"),
-        side=TradeSide.BUY,
+        side=OrderSide.BUY,
         quantity=Decimal("3"),
         price=Decimal("4.25"),
         currency="USD",

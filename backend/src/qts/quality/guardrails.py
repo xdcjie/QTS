@@ -266,7 +266,7 @@ RUNTIME_COORDINATOR_KEEP_EVIDENCE = (
 )
 PLATFORM_FREEZE_EXCEPTIONS_PATH = Path("docs/architecture/platform_freeze_exceptions.yaml")
 CLASS_INVENTORY_BASELINE_PATH = Path("artifacts/quality/class_inventory_baseline.json")
-# Legacy final freeze plan hook is retained for bootstrap tolerance; it points to the
+# Final freeze plan hook is retained for bootstrap tolerance; it points to the
 # durable implementation plan in place of removed historical freeze-planning docs.
 FINAL_PLATFORM_FREEZE_PLAN_PATH = Path("docs/plan/implementation_plan.md")
 _PLATFORM_FREEZE_MAX_HORIZON = timedelta(days=365)

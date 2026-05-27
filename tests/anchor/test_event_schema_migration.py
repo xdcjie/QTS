@@ -39,13 +39,13 @@ def test_registered_migration_runs_during_replay() -> None:
     )
 
     store = InMemoryEventStore(migration_registry=registry)
-    legacy_event = RuntimeEvent(
+    historical_event = RuntimeEvent(
         kind="account.position_closed",
         payload={"instrument_id": "EQUITY.US.NASDAQ.AAPL"},
         correlation_id=None,
         payload_schema_version="0",
     )
-    store.append(legacy_event)
+    store.append(historical_event)
 
     replayed = store.replay()
 
@@ -59,17 +59,17 @@ def test_registered_migration_runs_during_replay() -> None:
 def test_unknown_version_raises_schema_migration_missing() -> None:
     registry = SchemaMigrationRegistry()
     store = InMemoryEventStore(migration_registry=registry)
-    legacy_event = RuntimeEvent(
-        kind="unknown.legacy_kind",
+    historical_event = RuntimeEvent(
+        kind="unknown.archived_kind",
         payload={"instrument_id": "EQUITY.US.NASDAQ.AAPL"},
         correlation_id=None,
         payload_schema_version="0",
     )
-    store.append(legacy_event)
+    store.append(historical_event)
 
     with pytest.raises(SchemaMigrationMissing) as info:
         store.replay()
-    assert "unknown.legacy_kind" in str(info.value)
+    assert "unknown.archived_kind" in str(info.value)
 
 
 def test_current_version_events_pass_through_unchanged() -> None:
@@ -109,12 +109,12 @@ def test_chained_migrations_advance_through_intermediate_versions() -> None:
     )
 
     store = InMemoryEventStore(migration_registry=registry)
-    legacy = RuntimeEvent(
+    historical = RuntimeEvent(
         kind="account.position_closed",
         payload={"instrument_id": "X"},
         payload_schema_version="0",
     )
-    store.append(legacy)
+    store.append(historical)
 
     replayed = store.replay()
     head = replayed[0]

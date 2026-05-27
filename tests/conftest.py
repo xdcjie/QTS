@@ -11,7 +11,7 @@ def _enable_dev_auth_tokens() -> Iterator[None]:
     """Opt the test session into built-in dev tokens unless already configured.
 
     Production deployments must never set ``QTS_API_DEV_TOKENS``. Tests opt in
-    here so the default-deny `StaticTokenAuthBackend` does not break legacy
+    here so the default-deny `StaticTokenAuthBackend` does not break compatibility
     fixtures that issue ``Authorization: Bearer dev-token``.
     """
     if (

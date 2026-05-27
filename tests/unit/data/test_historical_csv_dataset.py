@@ -15,6 +15,7 @@ from qts.data.historical.csv_dataset import (
     validate_historical_sample,
 )
 from qts.data.historical.csv_format import HistoricalCsvSchema
+from qts.data.historical.csv_index import write_historical_csv_index
 from qts.data.sessions import RegularSessionWindow
 from qts.data.validation_report import DataValidationIssueCode, DataValidationSeverity
 from qts.registry.future_roll import HighestVolumeFutureContractSelector
@@ -50,6 +51,29 @@ def _row(
         "volume": volume,
         "symbol": symbol,
     }
+
+
+def _row_at(
+    symbol: str,
+    timestamp: str,
+    *,
+    open_: str = "2000.0",
+    high: str = "2000.0",
+    low: str = "2000.0",
+    close: str = "2000.0",
+    volume: str = "2",
+) -> dict[str, str]:
+    row = _row(
+        symbol,
+        30,
+        open_=open_,
+        high=high,
+        low=low,
+        close=close,
+        volume=volume,
+    )
+    row["ts_event"] = timestamp
+    return row
 
 
 def test_describe_csv_dataset_reads_header_without_counting_rows() -> None:
@@ -158,6 +182,37 @@ def test_iter_historical_bars_uses_configured_csv_schema_mapping(tmp_path: Path)
     assert bars[0].open == Decimal("100")
     assert bars[0].close == Decimal("100.5")
     assert bars[0].volume == Decimal("42")
+
+
+def test_iter_historical_bars_uses_daily_index_to_seek_start_day(tmp_path: Path) -> None:
+    path = tmp_path / "equity.csv"
+    _write_rows(
+        path,
+        [
+            _row_at("AAPL", "2026-01-01T14:30:00.000000000Z"),
+            _row_at("AAPL", "2026-01-02T14:30:00.000000000Z"),
+            _row_at("AAPL", "2026-01-03T14:30:00.000000000Z"),
+            _row_at("AAPL", "2026-01-03T14:31:00.000000000Z"),
+            _row_at("AAPL", "2026-01-04T14:30:00.000000000Z"),
+        ],
+    )
+    write_historical_csv_index(path)
+    resolver = StaticSymbolResolver({"AAPL": InstrumentId("EQUITY.US.NASDAQ.AAPL")})
+
+    stream = iter_historical_bars(
+        path,
+        resolver,
+        timeframe="1m",
+        start=datetime(2026, 1, 3, tzinfo=UTC),
+        end=datetime(2026, 1, 4, tzinfo=UTC),
+    )
+    bars = tuple(stream)
+
+    assert [bar.end_time for bar in bars] == [
+        datetime(2026, 1, 3, 14, 31, tzinfo=UTC),
+        datetime(2026, 1, 3, 14, 32, tzinfo=UTC),
+    ]
+    assert stream.stats.rows_seen == 3
 
 
 def test_iter_historical_bars_maps_daily_source_rows_to_session_interval(

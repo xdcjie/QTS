@@ -274,16 +274,6 @@ exceptions:
     reason: research OS append-only JSONL run registry owner
     owner: platform
     expiry: 2027-05-26
-  - class_name: ResearchSystemReport
-    module: qts.research.report
-    reason: research OS deterministic Markdown report evidence value object
-    owner: platform
-    expiry: 2027-05-26
-  - class_name: ResearchSystemReportWriter
-    module: qts.research.report
-    reason: research OS deterministic report artifact writer owner
-    owner: platform
-    expiry: 2027-05-26
   - class_name: ReproducibilitySnapshot
     module: qts.research.reproducibility
     reason: research OS git and interpreter reproducibility metadata value object
@@ -1601,7 +1591,7 @@ exceptions:
     expiry: 2026-12-31
   - class_name: BacktestRunResultSchema
     module: qts.api.schemas.backtest_schema
-    reason: M6 HTTP backtest submission returns the research manifest/artifact contract without legacy status fields
+    reason: M6 HTTP backtest submission returns the research manifest/artifact contract without archived status fields
     owner: research
     expiry: 2026-12-31
   - class_name: FactorAsset

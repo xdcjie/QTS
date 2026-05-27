@@ -41,7 +41,7 @@ class FactorSnapshotProtocol:
 
     @classmethod
     def from_as_of(cls, as_of: date) -> FactorSnapshotProtocol:
-        """Return a conservative compatibility protocol for legacy dated inputs."""
+        """Return a conservative compatibility protocol for dated inputs."""
 
         return cls(
             source_data_end=as_of,

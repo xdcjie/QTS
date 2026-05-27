@@ -19,9 +19,9 @@ def test_promotion_validate_rejects_candidate_argument(
     candidate_path = tmp_path / "candidate.yaml"
     candidate_path.write_text(
         """
-promotion_candidate_id: pc-legacy
-strategy_id: legacy
-evidence_bundle_id: evb_legacy
+promotion_candidate_id: pc-compat
+strategy_id: compat
+evidence_bundle_id: evb-compat
 """,
         encoding="utf-8",
     )
@@ -114,12 +114,12 @@ def test_promotion_candidate_spec_is_not_public_canonical_boundary() -> None:
     assert "PaperReadinessChecklist" not in promotion.__all__
 
 
-def test_evidence_bundle_rejects_legacy_review_decisions_payload() -> None:
+def test_evidence_bundle_rejects_compat_review_decisions_payload() -> None:
     with pytest.raises(ValueError, match="review_decisions moved to ResearchAuditLog"):
         ResearchEvidenceBundle.from_payload(
             {
-                "evidence_bundle_id": "evb_legacy",
-                "workflow_run_id": "run-legacy",
+                "evidence_bundle_id": "evb-compat",
+                "workflow_run_id": "run-compat",
                 "review_decisions": [{"decision": "go"}],
             }
         )

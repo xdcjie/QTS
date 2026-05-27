@@ -65,7 +65,7 @@ class _ResearchRunScriptRule:
 
 
 class _VwapOptimizerConfigRule:
-    """Reject legacy VWAP optimizer configs outside research workflow gates."""
+    """Reject VWAP optimizer configs outside research workflow gates."""
 
     code = "VWAP_OPTIMIZER_CONFIG"
 

@@ -32,7 +32,8 @@ Stop the foreground process with `Ctrl-C`.
 
 ## Inspect
 
-Use `/health`, `/strategies`, `/accounts/{account_id}`, `/orders/{order_id}`, and `/ws/events`.
+Use `/health/liveness`, `/health/readiness`, `/health/startup`, `/strategies`,
+`/accounts/{account_id}`, `/orders/{order_id}`, and `/ws/events`.
 
 ## Recovery
 

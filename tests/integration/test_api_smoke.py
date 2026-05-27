@@ -7,7 +7,7 @@ def test_api_health_endpoint_works() -> None:
 
     client = TestClient(create_app())
 
-    response = client.get("/health")
+    response = client.get("/health/liveness")
 
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    assert response.json() == {"status": "live"}

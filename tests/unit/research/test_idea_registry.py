@@ -74,22 +74,6 @@ def test_idea_spec_accepts_multiple_edge_types() -> None:
     assert idea.to_payload()["edge_types"] == ["carry", "term_structure"]
 
 
-def test_idea_spec_backwards_compatible_edge_type() -> None:
-    idea = IdeaSpec.from_payload(
-        {
-            "created_at": "2026-05-20T12:30:00+00:00",
-            "edge_type": "momentum",
-            "hypothesis": "Momentum persists.",
-            "idea_id": "idea-legacy",
-            "source": "openalex",
-            "title": "legacy edge",
-        }
-    )
-
-    assert idea.edge_type == "momentum"
-    assert idea.edge_types == ("momentum",)
-
-
 def test_idea_status_lifecycle_values() -> None:
     for status in (
         "idea",
@@ -196,7 +180,7 @@ def test_workflow_report_emits_trial_budget_warning_for_idea_metadata() -> None:
 
     assert "## Idea Metadata" in body
     assert "- idea_id: idea-momentum" in body
-    assert "- edge_type: momentum" in body
+    assert "- edge_types: ['momentum']" in body
     assert "- trial_budget_warning: idea-momentum trial_count 4 exceeds budget 3" in body
 
 

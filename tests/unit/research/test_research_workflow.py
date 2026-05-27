@@ -2366,7 +2366,7 @@ def test_vwap_research_backtests_use_costed_100k_margin_sized_capital(
     )
 
 
-def test_no_legacy_vwap_optimizer_configs_remain() -> None:
+def test_no_deprecated_vwap_optimizer_configs_remain() -> None:
     assert sorted(path.name for path in Path("configs/optimizer").glob("vwap*.yaml")) == []
 
 

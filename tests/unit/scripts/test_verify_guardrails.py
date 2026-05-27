@@ -24,7 +24,7 @@ run_guardrails = cast(Any, _load_guardrails_module().run_guardrails)
 
 
 def _without_platform_freeze(violations: list[object]) -> set[str]:
-    """Hide platform freeze in legacy-focused guardrail unit tests."""
+    """Hide platform freeze in guardrail tests focused on this boundary."""
     codes = {violation.code for violation in violations if hasattr(violation, "code")}
     return {code for code in codes if code != "PLATFORM_FREEZE"}
 
@@ -921,7 +921,7 @@ def test_guardrails_reject_removed_m1_runtime_naming_imports(
     guardrails = _load_guardrails_module()
     _write(
         root,
-        "backend/src/qts/runtime/legacy_m1_consumer.py",
+        "backend/src/qts/runtime/removed_m1_consumer.py",
         "from qts.runtime.config import LiveRuntimeConfig\n"
         "from qts.runtime.config.paper import PaperBrokerRuntimeConfig\n"
         "from qts.runtime.permissions import LiveOrderPermission\n"
@@ -1162,7 +1162,7 @@ def test_guardrails_reject_nested_vwap_research_runner_scripts(tmp_path: Path) -
     root = tmp_path
     _write(
         root,
-        "scripts/research/legacy/run_vwap_smoke.py",
+        "scripts/research/archive/run_vwap_smoke.py",
         '"""Nested one-off VWAP research runner shortcut."""\n',
     )
 

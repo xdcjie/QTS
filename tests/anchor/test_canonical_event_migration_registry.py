@@ -27,12 +27,12 @@ def test_canonical_registry_has_at_least_one_real_migration() -> None:
 
 def test_default_in_memory_event_store_uses_canonical_registry() -> None:
     store = InMemoryEventStore()
-    legacy_event = RuntimeEvent(
+    historical_event = RuntimeEvent(
         kind="account.position_closed",
         payload={"instrument_id": "EQUITY.US.NASDAQ.AAPL"},
         payload_schema_version="0",
     )
-    store.append(legacy_event)
+    store.append(historical_event)
 
     replayed = store.replay()
     assert len(replayed) == 1
@@ -42,16 +42,16 @@ def test_default_in_memory_event_store_uses_canonical_registry() -> None:
     assert head.payload["schema_audit"] == "migrated_v0_to_v1"
 
 
-def test_event_with_unknown_legacy_version_still_raises() -> None:
+def test_event_with_unknown_historical_version_still_raises() -> None:
     import pytest
     from qts.runtime.event_store import SchemaMigrationMissing
 
     store = InMemoryEventStore()
-    legacy = RuntimeEvent(
+    historical = RuntimeEvent(
         kind="runtime.unknown_event_kind",
         payload={},
         payload_schema_version="0",
     )
-    store.append(legacy)
+    store.append(historical)
     with pytest.raises(SchemaMigrationMissing):
         store.replay()

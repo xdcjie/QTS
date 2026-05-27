@@ -18,7 +18,7 @@ from qts.runtime.config import (
     BacktestMarketDataReference,
     BacktestRiskConfig,
     BacktestRuntimeConfig,
-    CostModelConfig,
+    BacktestCostModel,
 )
 from qts.strategy_sdk import Strategy
 
@@ -39,7 +39,7 @@ def _config(*, warmup_bars: int = 0) -> BacktestRuntimeConfig:
         initial_cash=Decimal("1000000"),
         strategy_class="tests.integration.test_backtest_gc_si:BuyOneGcStrategy",
         strategy_params={},
-        cost_model=CostModelConfig(),
+        cost_model=BacktestCostModel(),
         risk_config=BacktestRiskConfig(max_notional=Decimal("100000000")),
         warmup_bars=warmup_bars,
     )

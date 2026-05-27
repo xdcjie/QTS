@@ -689,7 +689,7 @@ def test_research_cli_evidence_bundle_list_show_verify(tmp_path: Path) -> None:
                 },
                 "idea_metadata": {
                     "created_at": "2026-05-25T00:00:00+00:00",
-                    "edge_type": "momentum",
+                    "edge_types": ["momentum"],
                     "hypothesis": "Momentum persists after costs.",
                     "idea_id": "idea-momentum",
                     "source": "fixture",
@@ -810,7 +810,7 @@ def test_research_cli_idea_record_trial_and_meta_summary(tmp_path: Path) -> None
         json.dumps(
             {
                 "created_at": "2026-05-25T00:00:00+00:00",
-                "edge_type": "momentum",
+                "edge_types": ["momentum"],
                 "hypothesis": "Session momentum persists after costs.",
                 "idea_id": "idea-momentum",
                 "source": "fixture",

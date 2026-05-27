@@ -185,8 +185,8 @@ def test_meta_research_filters_evidence_review_decisions_by_time() -> None:
     assert summary.validation_pass_rate == {"accepted": 1, "rate": 1.0, "total": 1}
 
 
-def test_meta_research_evidence_bundle_record_ignores_legacy_review_decisions() -> None:
-    class LegacyBundle:
+def test_meta_research_evidence_bundle_record_ignores_historical_review_decisions() -> None:
+    class CompatibilityBundle:
         evidence_bundle_id = "evb-001"
         idea_id = "idea-001"
         strategy_id = "strategy-001"
@@ -203,7 +203,7 @@ def test_meta_research_evidence_bundle_record_ignores_legacy_review_decisions() 
         type(
             "Registry",
             (),
-            {"list": lambda self: (LegacyBundle(),)},
+            {"list": lambda self: (CompatibilityBundle(),)},
         )()
     )
 

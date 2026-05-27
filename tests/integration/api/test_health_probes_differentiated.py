@@ -5,9 +5,7 @@ vs readiness vs startup. Collapsing them under one endpoint forces the
 orchestrator to choose poorly between "restart the pod" and "remove from
 load balancer".
 
-Owner: ``qts.api.routes.health`` exposes three endpoints; existing
-``/health`` is kept as a documented alias of ``/health/liveness`` so
-existing callers do not break.
+Owner: ``qts.api.routes.health`` exposes three endpoints.
 
 Forbidden shortcut: returning identical state from all three probes;
 gating any probe behind auth (Prometheus convention, same as /metrics).
@@ -44,12 +42,6 @@ def test_health_startup_returns_200_in_backtest_mode() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "started"
-
-
-def test_existing_health_endpoint_still_works() -> None:
-    client = TestClient(create_app())
-    response = client.get("/health")
-    assert response.status_code == 200
 
 
 def test_health_probes_bypass_authentication() -> None:
