@@ -1359,7 +1359,7 @@ def test_guardrail_rejects_promotion_spec_with_unreviewed_examples_source(
         "status: review_required\n",
     )
 
-    assert "PROMOTION_CANDIDATE_SPEC_BOUNDARY" in _codes(root)
+    assert "PROMOTION_CONFIG_BOUNDARY" in _codes(root)
 
 
 def test_guardrail_rejects_promotion_target_outside_production_namespace(
@@ -1377,7 +1377,7 @@ def test_guardrail_rejects_promotion_target_outside_production_namespace(
         "status: review_required\n",
     )
 
-    assert "PROMOTION_CANDIDATE_SPEC_BOUNDARY" in _codes(root)
+    assert "PROMOTION_CONFIG_BOUNDARY" in _codes(root)
 
 
 def test_guardrail_rejects_promotion_spec_with_research_only_params(
@@ -1397,7 +1397,7 @@ def test_guardrail_rejects_promotion_spec_with_research_only_params(
         "  trial_budget: 30\n",
     )
 
-    assert "PROMOTION_CANDIDATE_SPEC_BOUNDARY" in _codes(root)
+    assert "PROMOTION_CONFIG_BOUNDARY" in _codes(root)
 
 
 def test_guardrail_rejects_route_workflow_without_route_metadata(tmp_path: Path) -> None:

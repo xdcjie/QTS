@@ -63,7 +63,6 @@ class ResearchEvidenceBundle:
     idea_metadata: Mapping[str, Any] | None = None
     trial_budget_warnings: tuple[Mapping[str, Any], ...] = ()
     strategy_id: str | None = None
-    review_decisions: tuple[Mapping[str, Any], ...] = ()
     status: str = "research_evidence_only"
     promotion_eligibility: str = "not_reviewed"
 
@@ -77,6 +76,8 @@ class ResearchEvidenceBundle:
     def from_payload(cls, payload: Mapping[str, Any]) -> ResearchEvidenceBundle:
         """Rehydrate a bundle from deterministic JSON payload."""
 
+        if payload.get("review_decisions") not in (None, (), []):
+            raise ValueError("review_decisions moved to ResearchAuditLog")
         return cls(
             evidence_bundle_id=cls._required_text(payload, "evidence_bundle_id"),
             workflow_run_id=cls._required_text(payload, "workflow_run_id"),
@@ -106,7 +107,6 @@ class ResearchEvidenceBundle:
             idea_metadata=_optional_mapping(payload.get("idea_metadata")),
             trial_budget_warnings=cls._mapping_tuple(payload.get("trial_budget_warnings", ())),
             strategy_id=None if payload.get("strategy_id") is None else str(payload["strategy_id"]),
-            review_decisions=cls._mapping_tuple(payload.get("review_decisions", ())),
             status=str(payload.get("status", "research_evidence_only")),
             promotion_eligibility=str(payload.get("promotion_eligibility", "not_reviewed")),
         )
@@ -130,7 +130,6 @@ class ResearchEvidenceBundle:
             "report_hash": self.report_hash,
             "report_path": self.report_path,
             "research_config_hash": self.research_config_hash,
-            "review_decisions": [dict(decision) for decision in self.review_decisions],
             "status": self.status,
             "strategy_id": self.strategy_id,
             "trial_budget_warnings": [dict(warning) for warning in self.trial_budget_warnings],
@@ -143,12 +142,7 @@ class ResearchEvidenceBundle:
     def with_review_decision(self, decision: Mapping[str, Any]) -> ResearchEvidenceBundle:
         """Return a new bundle with an appended review decision."""
 
-        return ResearchEvidenceBundle.from_payload(
-            {
-                **self.to_payload(),
-                "review_decisions": [*self.review_decisions, dict(decision)],
-            }
-        )
+        raise ValueError("human review decisions must be written to ResearchAuditLog")
 
     @staticmethod
     def _required_text(payload: Mapping[str, Any], field_name: str) -> str:
@@ -296,6 +290,7 @@ class EvidenceRegistry:
                 evidence_bundles=(bundle.to_payload(),),
                 audit_records=(() if audit_record is None else (audit_record.to_payload(),)),
                 output_path=f"evidence-bundle-{bundle.evidence_bundle_id}-artifact-graph.json",
+                audit_log=audit_log,
             )
         return bundle
 
@@ -399,10 +394,7 @@ class EvidenceRegistry:
     ) -> ResearchEvidenceBundle:
         """Append a reviewer decision without rewriting hashes or prior decisions."""
 
-        bundle = self.show(evidence_bundle_id).with_review_decision(decision)
-        self._write_bundle(bundle)
-        self._write_index(self._upsert(bundle))
-        return bundle
+        raise ValueError("human review decisions must be written to ResearchAuditLog")
 
     def _write_bundle(self, bundle: ResearchEvidenceBundle) -> None:
         self.root_dir.mkdir(parents=True, exist_ok=True)
@@ -461,6 +453,12 @@ def _collect_output_paths_for_keys(
 ) -> tuple[str, ...]:
     paths: list[str] = []
     wanted = set(keys)
+    for key in wanted:
+        value = payload.get(key)
+        if isinstance(value, str):
+            paths.append(value)
+        elif isinstance(value, Sequence) and not isinstance(value, str):
+            paths.extend(str(item) for item in value if isinstance(item, (str, Path)))
     for step in payload.get("steps", ()):
         if not isinstance(step, Mapping):
             continue

@@ -71,22 +71,6 @@ def list_promotion_decisions(request: Request) -> tuple[Any, ...]:
     """List research promotion decisions and candidate/readiness evidence."""
 
     decisions: list[Any] = []
-    for bundle in _evidence_registry(request).list():
-        for index, decision in enumerate(bundle.review_decisions):
-            status = str(decision.get("decision", decision.get("status", "reviewed")))
-            decisions.append(
-                {
-                    "decision_id": f"{bundle.evidence_bundle_id}:{index}",
-                    "strategy_id": bundle.strategy_id,
-                    "evidence_bundle_id": bundle.evidence_bundle_id,
-                    "status": status,
-                    "source": "evidence_review",
-                    "decided_at": _optional_text(
-                        decision.get("reviewed_at", decision.get("decided_at"))
-                    ),
-                    "payload": dict(decision),
-                }
-            )
     for path, payload in _promotion_candidate_payloads(_promotion_root(request)):
         decisions.append(
             {
@@ -369,7 +353,6 @@ def _report_schema(
         "report_hash": bundle.report_hash,
         "status": bundle.status,
         "promotion_eligibility": bundle.promotion_eligibility,
-        "review_decisions": tuple(dict(decision) for decision in bundle.review_decisions),
         "report_preview": _report_preview(bundle.report_path) if include_preview else None,
     }
 

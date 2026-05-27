@@ -48,6 +48,31 @@ def test_missing_checked_path_creates_blocker_issue(tmp_path: Path) -> None:
     assert artifact.accepted is False
     assert artifact.blockers() == (
         {"code": "missing_checked_path", "message": f"checked path does not exist: {missing_path}"},
+        {"code": "accepted", "message": "data quality artifact is not accepted"},
+    )
+
+
+def test_empty_checked_paths_and_manual_rejection_create_blockers() -> None:
+    artifact = DataQualityArtifact.from_payload(
+        {
+            "schema_version": 2,
+            "dataset_id": "dataset-001",
+            "accepted": False,
+            "checked_paths": [],
+            "issues": [],
+            "duplicate_timestamps": 0,
+            "missing_bars": 0,
+            "session_alignment": True,
+            "stale_prices": 0,
+            "halted_sessions": 0,
+            "label_visibility": True,
+        }
+    )
+
+    assert artifact.accepted is False
+    assert artifact.blockers() == (
+        {"code": "checked_paths", "message": "checked_paths must not be empty"},
+        {"code": "accepted", "message": "data quality artifact is not accepted"},
     )
 
 
@@ -67,6 +92,7 @@ def test_critical_quality_flags_create_blockers(tmp_path: Path) -> None:
 
     assert artifact.accepted is False
     assert artifact.blockers() == (
+        {"code": "accepted", "message": "data quality artifact is not accepted"},
         {"code": "duplicate_timestamps", "message": "duplicate timestamps detected: 2"},
         {"code": "session_alignment", "message": "session alignment check failed"},
         {"code": "label_visibility", "message": "label visibility check failed"},
@@ -105,6 +131,7 @@ def test_payload_round_trips_json_safe_values(tmp_path: Path) -> None:
             "code": "manual_review_required",
             "message": "review split boundary before promotion",
         },
+        {"code": "accepted", "message": "data quality artifact is not accepted"},
         {"code": "missing_bars", "message": "missing bars detected: 3"},
     )
 
@@ -138,18 +165,20 @@ def test_from_payload_derives_accepted_from_blockers() -> None:
             "code": "manual_review_required",
             "message": "review split boundary before promotion",
         },
+        {"code": "checked_paths", "message": "checked_paths must not be empty"},
+        {"code": "accepted", "message": "data quality artifact is not accepted"},
         {"code": "duplicate_timestamps", "message": "duplicate timestamps detected: 1"},
         {"code": "session_alignment", "message": "session alignment check failed"},
     )
 
 
-def test_from_payload_preserves_manual_rejection_without_blockers() -> None:
+def test_from_payload_preserves_manual_rejection_as_blocker() -> None:
     restored = DataQualityArtifact.from_payload(
         {
             "schema_version": 2,
             "dataset_id": "dataset-001",
             "accepted": False,
-            "checked_paths": [],
+            "checked_paths": ["datasets/dataset-001/bars.csv"],
             "issues": [],
             "duplicate_timestamps": 0,
             "missing_bars": 0,
@@ -161,7 +190,9 @@ def test_from_payload_preserves_manual_rejection_without_blockers() -> None:
     )
 
     assert restored.accepted is False
-    assert restored.blockers() == ()
+    assert restored.blockers() == (
+        {"code": "accepted", "message": "data quality artifact is not accepted"},
+    )
 
 
 def test_data_quality_boolean_fields_must_be_real_booleans() -> None:

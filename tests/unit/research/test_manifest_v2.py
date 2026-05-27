@@ -16,19 +16,26 @@ def test_manifest_v2_accepts_complete_contract_and_stable_candidates(tmp_path: P
     assert manifest.schema_version == 2
     assert manifest.run_id == "research-os-v2"
     assert manifest.owner == "research"
+    assert manifest.run_created_at == "2026-05-27T00:00:00+00:00"
     assert manifest.calendar == "CME"
+    assert manifest.strategy_hypothesis == "GC/SI momentum persists after costs."
     assert manifest.metrics_schema_id == "schema_v2"
+    assert manifest.metrics_schema_path.name == "schema_v2.yaml"
     assert manifest.promotion_policy_id == "default_research_policy"
     assert manifest.required_artifacts == (
-        "metrics",
+        "artifact_graph",
         "data_quality",
+        "evidence_bundle",
+        "metrics",
         "reproducibility",
-        "promotion_packet",
     )
     assert [candidate.candidate_id for candidate in manifest.candidates()] == [
         candidate.candidate_id for candidate in second.candidates()
     ]
     assert manifest.to_payload()["schema_version"] == 2
+    assert manifest.to_payload()["run"]["created_at"] == "2026-05-27T00:00:00+00:00"
+    assert manifest.to_payload()["strategy"]["hypothesis"] == "GC/SI momentum persists after costs."
+    assert manifest.to_payload()["metrics_schema"]["path"].endswith("schema_v2.yaml")
 
 
 def test_manifest_v2_rejects_wrong_schema_version(tmp_path: Path) -> None:
@@ -65,6 +72,60 @@ def test_manifest_v2_rejects_missing_calendar(tmp_path: Path) -> None:
         ResearchManifestV2.from_yaml(manifest_path)
 
 
+def test_manifest_v2_rejects_non_v2_metrics_schema(tmp_path: Path) -> None:
+    manifest_path = _write_manifest_v2(tmp_path, {"metrics_schema": {"version": 1}})
+
+    with pytest.raises(ValueError, match="metrics_schema.version must be 2"):
+        ResearchManifestV2.from_yaml(manifest_path)
+
+
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    (
+        ({"run": {"created_at": ""}}, "run.created_at is required"),
+        ({"run": {"created_at": "2026-05-27T00:00:00"}}, "run.created_at must be timezone-aware"),
+        ({"strategy": {"hypothesis": ""}}, "strategy.hypothesis is required"),
+        ({"metrics_schema": {"path": ""}}, "metrics_schema.path is required"),
+    ),
+)
+def test_manifest_v2_rejects_missing_required_contract_fields(
+    tmp_path: Path,
+    overrides: dict[str, object],
+    message: str,
+) -> None:
+    manifest_path = _write_manifest_v2(tmp_path, overrides)
+
+    with pytest.raises(ValueError, match=message):
+        ResearchManifestV2.from_yaml(manifest_path)
+
+
+def test_manifest_v2_rejects_missing_required_artifact(tmp_path: Path) -> None:
+    manifest_path = _write_manifest_v2(
+        tmp_path,
+        {
+            "artifacts": {
+                "required": ["metrics", "data_quality", "reproducibility", "artifact_graph"]
+            }
+        },
+    )
+
+    with pytest.raises(ValueError, match="artifacts.required missing required artifact"):
+        ResearchManifestV2.from_yaml(manifest_path)
+
+
+def test_manifest_v2_rejects_missing_required_hash_group(tmp_path: Path) -> None:
+    manifest_path = _write_manifest_v2(
+        tmp_path,
+        {"reproducibility": {"required_hash_groups": ["dependency_hashes", "config_hashes"]}},
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="reproducibility.required_hash_groups missing required group",
+    ):
+        ResearchManifestV2.from_yaml(manifest_path)
+
+
 def test_manifest_v2_rejects_unresolvable_strategy_entrypoint(tmp_path: Path) -> None:
     manifest_path = _write_manifest_v2(
         tmp_path,
@@ -88,6 +149,20 @@ def test_manifest_v2_is_public_package_export() -> None:
     assert research.ResearchManifestV2 is ResearchManifestV2
 
 
+def test_manifest_v2_canonical_config_fixture_loads() -> None:
+    manifest = ResearchManifestV2.from_yaml("configs/research/manifests/gc_si_smoke_v2.yaml")
+
+    assert manifest.schema_version == 2
+    assert manifest.run_id == "gc-si-smoke-v2"
+    assert manifest.required_artifacts == (
+        "artifact_graph",
+        "data_quality",
+        "evidence_bundle",
+        "metrics",
+        "reproducibility",
+    )
+
+
 def _write_manifest_v2(tmp_path: Path, overrides: dict[str, object] | None = None) -> Path:
     payload: dict[str, object] = {
         "schema_version": 2,
@@ -95,12 +170,14 @@ def _write_manifest_v2(tmp_path: Path, overrides: dict[str, object] | None = Non
             "id": "research-os-v2",
             "question": "Can a v2 manifest drive deterministic research evidence?",
             "owner": "research",
+            "created_at": "2026-05-27T00:00:00+00:00",
         },
         "strategy": {
             "id": "gc_si_momentum",
             "source_module": "examples.strategies.gc_si_momentum",
             "entrypoint": "GcSiMomentumStrategy",
             "default_config": "configs/strategies/gc_si_momentum.yaml",
+            "hypothesis": "GC/SI momentum persists after costs.",
         },
         "data": {
             "dataset_id": "research_futures_gc_si_1m",
@@ -112,14 +189,24 @@ def _write_manifest_v2(tmp_path: Path, overrides: dict[str, object] | None = Non
             "end": "2010-06-06T22:05:00Z",
             "calendar": "CME",
         },
-        "metrics_schema": {"id": "schema_v2", "version": 2},
+        "metrics_schema": {
+            "id": "schema_v2",
+            "version": 2,
+            "path": "configs/research/metrics/schema_v2.yaml",
+        },
         "promotion_policy": {
             "id": "default_research_policy",
             "version": 1,
-            "config": "configs/promotion/default.yaml",
+            "path": "configs/promotion/default.yaml",
         },
         "artifacts": {
-            "required": ["metrics", "data_quality", "reproducibility", "promotion_packet"]
+            "required": [
+                "artifact_graph",
+                "data_quality",
+                "evidence_bundle",
+                "metrics",
+                "reproducibility",
+            ]
         },
         "reproducibility": {
             "require_clean_git": True,

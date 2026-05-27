@@ -11,7 +11,7 @@ def test_research_strategy_boundary_doc_covers_migration_path() -> None:
     assert "examples/strategies/" in doc
     assert "Production strategies must not import from `strategies.research`" in doc
     assert "Research evidence is not paper/live/production approval" in doc
-    assert "PromotionCandidateSpec" in doc
+    assert "PromotionPacketV2" in doc
     assert "evidence_bundle_id" in doc
     assert "FLOW-PROMOTION" in doc
 

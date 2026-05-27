@@ -195,13 +195,6 @@ def test_research_dashboard_routes_expose_reports_decisions_and_lifecycle(
         "report_hash": "report-hash",
         "report_path": str(report_path),
         "research_config_hash": "research-cfg",
-        "review_decisions": [
-            {
-                "decision": "Needs More Evidence",
-                "reviewed_at": "2026-05-26T10:00:00+00:00",
-                "reviewer": "risk",
-            }
-        ],
         "status": "research_evidence_only",
         "strategy_id": "vwap_pullback",
         "trial_budget_warnings": [],
@@ -275,13 +268,13 @@ paper_readiness:
 
     assert report.status_code == 200
     assert report.json()["report_preview"].startswith("# Research Workflow Report")
-    assert report.json()["review_decisions"][0]["decision"] == "Needs More Evidence"
+    assert "review_decisions" not in report.json()
     assert decisions.status_code == 200
     assert {item["source"] for item in decisions.json()} == {
-        "evidence_review",
         "promotion_candidate",
         "readiness_gate",
     }
+    assert all(item["source"] != "evidence_review" for item in decisions.json())
     assert lifecycle.status_code == 200
     assert lifecycle.json() == [
         {

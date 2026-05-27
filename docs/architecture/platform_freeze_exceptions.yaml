@@ -1879,7 +1879,7 @@ exceptions:
     reason: Architecture remediation enforces runtime→execution import boundary
     owner: platform
     expiry: 2027-05-17
-  - class_name: PromotionCandidateSpecBoundaryRule
+  - class_name: PromotionConfigBoundaryRule
     module: qts.quality.rules.research
     reason: Research OS promotion review enforces examples migration and research-only parameter boundaries
     owner: platform

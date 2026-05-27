@@ -14,7 +14,6 @@ from typing import Any
 
 from qts.research.audit_log import ResearchAuditLog
 from qts.research.evidence_registry import EvidenceRegistry
-from qts.research.promotion import PromotionCandidateSpec
 
 _UNKNOWN_TEXT_VALUES = frozenset({"", "none", "null", "unknown"})
 _IDEA_REQUIRED_STATUSES = frozenset(
@@ -54,20 +53,14 @@ class PromotionEvidenceSpec:
             idea_id = self.idea_id.strip()
             object.__setattr__(self, "idea_id", idea_id or None)
 
-    @classmethod
-    def from_candidate(
-        cls,
-        candidate: PromotionCandidateSpec,
-        *,
-        idea_id: str | None = None,
-    ) -> PromotionEvidenceSpec:
-        """Build an evidence spec from a validated promotion candidate."""
+    def with_idea_id(self, idea_id: str | None) -> PromotionEvidenceSpec:
+        """Return a copy carrying an explicit idea id."""
 
-        return cls(
-            promotion_candidate_id=candidate.promotion_candidate_id,
-            strategy_id=candidate.strategy_id,
-            evidence_bundle_id=candidate.evidence_bundle_id,
-            status=candidate.status,
+        return PromotionEvidenceSpec(
+            promotion_candidate_id=self.promotion_candidate_id,
+            strategy_id=self.strategy_id,
+            evidence_bundle_id=self.evidence_bundle_id,
+            status=self.status,
             idea_id=idea_id,
         )
 
@@ -144,7 +137,7 @@ class EvidenceCompletenessPolicy:
 
     def validate_candidate(
         self,
-        candidate: PromotionCandidateSpec | PromotionEvidenceSpec,
+        candidate: PromotionEvidenceSpec,
         *,
         evidence_registry: EvidenceRegistry,
         idea_id: str | None = None,
@@ -152,11 +145,9 @@ class EvidenceCompletenessPolicy:
     ) -> EvidenceCompletenessResult:
         """Validate one promotion candidate against its cited evidence bundle."""
 
-        spec = (
-            candidate
-            if isinstance(candidate, PromotionEvidenceSpec)
-            else PromotionEvidenceSpec.from_candidate(candidate, idea_id=idea_id)
-        )
+        if not isinstance(candidate, PromotionEvidenceSpec):
+            raise TypeError("promotion evidence validation requires PromotionEvidenceSpec")
+        spec = candidate if idea_id is None else candidate.with_idea_id(idea_id)
         reasons: list[str] = []
         warnings: list[str] = []
         checked_paths: list[str] = []

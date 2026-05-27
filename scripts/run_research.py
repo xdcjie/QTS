@@ -11,18 +11,16 @@ from pathlib import Path
 from typing import Any
 
 import yaml  # type: ignore[import-untyped]
+from qts.core.hashing import stable_json_hash
 from qts.research import ResearchSession
 from qts.research.artifact_graph import ResearchArtifactGraph, ResearchArtifactGraphWriter
 from qts.research.audit_log import ResearchAuditLog
 from qts.research.data_quality import DataQualityArtifactWriter, DataQualityRunner
-from qts.research.evidence_policy import (
-    EvidenceCompletenessPolicy,
-    PromotionEvidenceSpec,
-)
 from qts.research.evidence_registry import EvidenceRegistry
 from qts.research.experiment_store import ExperimentStore
 from qts.research.idea_registry import IdeaRegistry
 from qts.research.idea_spec import IdeaSpec
+from qts.research.manifest import ResearchManifestV2
 from qts.research.meta_research import MetaResearchSummary, MetaResearchSummaryWriter
 from qts.research.promotion_packet import PromotionPacketV2
 from qts.research.system_run import ResearchDryRunRunner
@@ -90,6 +88,30 @@ def _add_workflow_parser(subparsers: Any) -> None:
         default="json",
         help="Workflow result output format",
     )
+    parser.add_argument(
+        "--manifest",
+        type=Path,
+        default=None,
+        help="Canonical ResearchManifestV2 that owns this workflow run",
+    )
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="Write workflow_summary.json to this path",
+    )
+    parser.add_argument(
+        "--audit-log-root",
+        type=Path,
+        default=None,
+        help="Research OS audit log root for workflow lifecycle records",
+    )
+    parser.add_argument(
+        "--artifact-graph-root",
+        type=Path,
+        default=None,
+        help="Artifact graph output root for workflow lifecycle records",
+    )
 
 
 def _add_evidence_parser(subparsers: Any) -> None:
@@ -103,14 +125,14 @@ def _add_evidence_parser(subparsers: Any) -> None:
     parser.add_argument(
         "--audit-log-root",
         type=Path,
-        default=None,
-        help="Optional Research OS audit log root for evidence lifecycle records",
+        default=Path("runs/research/audit"),
+        help="Research OS audit log root for evidence lifecycle records",
     )
     parser.add_argument(
         "--artifact-graph-root",
         type=Path,
-        default=None,
-        help="Optional artifact graph output root for evidence lifecycle records",
+        default=Path("runs/research/artifact_graph"),
+        help="Artifact graph output root for evidence lifecycle records",
     )
     evidence_subparsers = parser.add_subparsers(dest="evidence_command", required=True)
 
@@ -147,11 +169,9 @@ def _add_promotion_parser(subparsers: Any) -> None:
 
     validate = promotion_subparsers.add_parser(
         "validate",
-        help="Validate a promotion candidate against a research evidence bundle",
+        help="Validate a PromotionPacketV2 against a research evidence bundle",
     )
-    validate_source = validate.add_mutually_exclusive_group(required=True)
-    validate_source.add_argument("--candidate", type=Path)
-    validate_source.add_argument("--packet", type=Path)
+    validate.add_argument("--packet", type=Path, required=True)
     validate.add_argument(
         "--evidence-registry-root",
         type=Path,
@@ -184,11 +204,40 @@ def _add_audit_parser(subparsers: Any) -> None:
     )
 
 
+def _add_manifest_parser(subparsers: Any) -> None:
+    parser = subparsers.add_parser("manifest", help="Validate Research OS manifests")
+    manifest_subparsers = parser.add_subparsers(dest="manifest_command", required=True)
+    validate = manifest_subparsers.add_parser(
+        "validate",
+        help="Validate a canonical ResearchManifestV2 YAML file",
+    )
+    validate.add_argument("--manifest", type=Path, required=True)
+    validate.add_argument(
+        "--audit-log-root",
+        type=Path,
+        default=Path("runs/research/audit"),
+        help="Research OS audit log root for manifest_loaded records",
+    )
+    validate.add_argument(
+        "--artifact-graph-root",
+        type=Path,
+        default=None,
+        help="Optional artifact graph output root for manifest records",
+    )
+
+
 def _add_graph_parser(subparsers: Any) -> None:
     parser = subparsers.add_parser("graph", help="Verify Research OS artifact graphs")
     graph_subparsers = parser.add_subparsers(dest="graph_command", required=True)
     verify = graph_subparsers.add_parser("verify", help="Verify one artifact graph JSON file")
     verify.add_argument("--graph", type=Path, required=True)
+    verify.add_argument("--expected-hash", default=None)
+    verify.add_argument(
+        "--audit-log-root",
+        type=Path,
+        default=Path("runs/research/audit"),
+        help="Research OS audit log root for artifact_graph_verified records",
+    )
 
 
 def _add_data_quality_parser(subparsers: Any) -> None:
@@ -206,6 +255,13 @@ def _add_data_quality_parser(subparsers: Any) -> None:
         "--output-dir",
         type=Path,
         default=Path("runs/research/data_quality"),
+    )
+    run.add_argument("--output", type=Path, default=None)
+    run.add_argument(
+        "--audit-log-root",
+        type=Path,
+        default=Path("runs/research/audit"),
+        help="Research OS audit log root for data_quality_validated records",
     )
 
 
@@ -275,6 +331,7 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_workflow_parser(subparsers)
     _add_evidence_parser(subparsers)
     _add_promotion_parser(subparsers)
+    _add_manifest_parser(subparsers)
     _add_audit_parser(subparsers)
     _add_graph_parser(subparsers)
     _add_data_quality_parser(subparsers)
@@ -342,6 +399,11 @@ def _list_runs(args: argparse.Namespace, session: ResearchSession) -> int:
 def _run_workflow(args: argparse.Namespace, session: ResearchSession) -> int:
     _ensure_repo_root_on_path()
     try:
+        if args.manifest is None:
+            raise ValueError("workflow requires --manifest schema_version=2")
+        if args.artifact_graph_root is not None and args.audit_log_root is None:
+            raise ValueError("artifact graph writes require --audit-log-root")
+        manifest = ResearchManifestV2.from_yaml(args.manifest)
         result = ResearchWorkflowRunner().run(
             session,
             ResearchWorkflowConfig.from_yaml(args.workflow_config),
@@ -349,11 +411,55 @@ def _run_workflow(args: argparse.Namespace, session: ResearchSession) -> int:
             from_step_id=args.from_step_id,
             to_step_id=args.to_step_id,
         )
-    except ValueError as exc:
+    except (FileNotFoundError, ValueError) as exc:
         print(str(exc), file=sys.stderr)
         return 2
+    payload = result.to_payload()
+    payload["manifest_hash"] = manifest.manifest_hash
+    payload["manifest_path"] = str(args.manifest)
+    payload["schema_version"] = manifest.schema_version
+    workflow_summary_hash = stable_json_hash(payload)
+    if args.output is not None:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(
+            json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8"
+        )
+    audit_log = None
+    if args.audit_log_root is not None:
+        audit_log = ResearchAuditLog(args.audit_log_root)
+        audit_log.append(
+            "research_run_completed",
+            {
+                "accepted": result.succeeded,
+                "manifest_hash": manifest.manifest_hash,
+                "manifest_path": str(args.manifest),
+                "status": result.status,
+                "workflow_id": result.workflow_id,
+                "workflow_summary_hash": workflow_summary_hash,
+                "workflow_summary_path": None if args.output is None else str(args.output),
+            },
+        )
+    if args.artifact_graph_root is not None:
+        ResearchArtifactGraphWriter(args.artifact_graph_root).write_from_payloads(
+            manifests=(
+                {
+                    "manifest_id": str(args.manifest),
+                    "manifest_hash": manifest.manifest_hash,
+                    "path": str(args.manifest),
+                },
+            ),
+            workflow_runs=(
+                {
+                    "manifest_id": str(args.manifest),
+                    "payload_hash": workflow_summary_hash,
+                    "workflow_run_id": result.workflow_id,
+                },
+            ),
+            output_path=f"workflow-{_artifact_safe_name(result.workflow_id)}-artifact-graph.json",
+            audit_log=audit_log,
+        )
     if args.format == "json":
-        print(json.dumps(result.to_payload(), sort_keys=True, indent=2))
+        print(json.dumps(payload, sort_keys=True, indent=2))
     else:
         print(f"workflow_id={result.workflow_id}")
         print(f"status={result.status}")
@@ -364,12 +470,8 @@ def _run_workflow(args: argparse.Namespace, session: ResearchSession) -> int:
 
 def _run_evidence(args: argparse.Namespace) -> int:
     registry = EvidenceRegistry(args.registry_root)
-    audit_log = None if args.audit_log_root is None else ResearchAuditLog(args.audit_log_root)
-    artifact_graph_writer = (
-        None
-        if args.artifact_graph_root is None
-        else ResearchArtifactGraphWriter(args.artifact_graph_root)
-    )
+    audit_log = ResearchAuditLog(args.audit_log_root)
+    artifact_graph_writer = ResearchArtifactGraphWriter(args.artifact_graph_root)
     if args.evidence_command == "bundle":
         idea = (
             None
@@ -418,33 +520,81 @@ def _run_promotion(args: argparse.Namespace) -> int:
     if args.promotion_command == "validate":
         try:
             evidence_registry = EvidenceRegistry(args.evidence_registry_root)
-            if args.packet is not None:
-                packet_result = PromotionPacketV2.from_payload(_load_mapping(args.packet)).validate(
-                    evidence_registry=evidence_registry,
-                    audit_log=ResearchAuditLog(args.audit_log_root),
-                    artifact_graph_writer=(
-                        None
-                        if args.artifact_graph_root is None
-                        else ResearchArtifactGraphWriter(args.artifact_graph_root)
-                    ),
-                )
-                print(json.dumps(packet_result.to_payload(), sort_keys=True, indent=2))
-                return 0 if packet_result.accepted else 1
-            else:
-                candidate = PromotionEvidenceSpec.from_payload(_load_mapping(args.candidate))
-                candidate_result = (
-                    EvidenceCompletenessPolicy.promotion_candidate().validate_candidate(
-                        candidate,
-                        evidence_registry=evidence_registry,
-                        audit_log=ResearchAuditLog(args.audit_log_root),
-                    )
-                )
-                print(json.dumps(candidate_result.to_payload(), sort_keys=True, indent=2))
-                return 0 if candidate_result.accepted else 1
+            packet_result = PromotionPacketV2.from_payload(_load_mapping(args.packet)).validate(
+                evidence_registry=evidence_registry,
+                audit_log=ResearchAuditLog(args.audit_log_root),
+                artifact_graph_writer=(
+                    None
+                    if args.artifact_graph_root is None
+                    else ResearchArtifactGraphWriter(args.artifact_graph_root)
+                ),
+            )
+            print(json.dumps(packet_result.to_payload(), sort_keys=True, indent=2))
+            return 0 if packet_result.accepted else 1
         except (FileNotFoundError, ValueError) as exc:
             print(str(exc), file=sys.stderr)
             return 2
     raise ValueError(f"unsupported promotion command: {args.promotion_command}")
+
+
+def _run_manifest(args: argparse.Namespace) -> int:
+    if args.manifest_command == "validate":
+        try:
+            _ensure_repo_root_on_path()
+            if args.artifact_graph_root is not None and args.audit_log_root is None:
+                raise ValueError("artifact graph writes require --audit-log-root")
+            manifest = ResearchManifestV2.from_yaml(args.manifest)
+        except (FileNotFoundError, ValueError) as exc:
+            message = str(exc)
+            if message != "artifact graph writes require --audit-log-root":
+                message = f"canonical Research OS v1.0 manifest requires schema_version=2: {exc}"
+            print(message, file=sys.stderr)
+            return 2
+        manifest_hash = manifest.manifest_hash
+        audit_record_id = None
+        audit_log = None
+        if args.audit_log_root is not None:
+            audit_log = ResearchAuditLog(args.audit_log_root)
+            record = audit_log.append(
+                "manifest_loaded",
+                {
+                    "manifest_hash": manifest_hash,
+                    "manifest_path": str(args.manifest),
+                    "run_id": manifest.run_id,
+                    "schema_version": manifest.schema_version,
+                },
+            )
+            audit_record_id = record.record_id
+        artifact_graph_hash = None
+        if args.artifact_graph_root is not None:
+            result = ResearchArtifactGraphWriter(args.artifact_graph_root).write_from_payloads(
+                manifests=(
+                    {
+                        "manifest_id": str(args.manifest),
+                        "manifest_hash": manifest_hash,
+                        "path": str(args.manifest),
+                    },
+                ),
+                output_path=f"manifest-{manifest.run_id}-artifact-graph.json",
+                audit_log=audit_log,
+            )
+            artifact_graph_hash = result.artifact_graph_hash
+        print(
+            json.dumps(
+                {
+                    "accepted": True,
+                    "audit_record_id": audit_record_id,
+                    "artifact_graph_hash": artifact_graph_hash,
+                    "manifest_hash": manifest_hash,
+                    "run_id": manifest.run_id,
+                    "schema_version": manifest.schema_version,
+                },
+                sort_keys=True,
+                indent=2,
+            )
+        )
+        return 0
+    raise ValueError(f"unsupported manifest command: {args.manifest_command}")
 
 
 def _run_audit(args: argparse.Namespace) -> int:
@@ -460,15 +610,29 @@ def _run_graph(args: argparse.Namespace) -> int:
     if args.graph_command == "verify":
         try:
             graph = ResearchArtifactGraph.from_payload(_load_json_mapping(args.graph))
-            graph.validate()
+            graph.validate_full_chain()
+            artifact_graph_hash = graph.stable_hash()
+            if args.expected_hash is not None and args.expected_hash != artifact_graph_hash:
+                raise ValueError(
+                    f"artifact graph hash mismatch: {artifact_graph_hash} != {args.expected_hash}"
+                )
         except (FileNotFoundError, ValueError) as exc:
             print(json.dumps({"accepted": False, "reasons": [str(exc)]}, sort_keys=True, indent=2))
             return 1
+        audit_record = ResearchAuditLog(args.audit_log_root).append(
+            "artifact_graph_verified",
+            {
+                "accepted": True,
+                "artifact_graph_hash": artifact_graph_hash,
+                "artifact_graph_path": str(args.graph),
+            },
+        )
         print(
             json.dumps(
                 {
                     "accepted": True,
-                    "artifact_graph_hash": graph.stable_hash(),
+                    "artifact_graph_hash": artifact_graph_hash,
+                    "audit_record_id": audit_record.record_id,
                     "reasons": [],
                 },
                 sort_keys=True,
@@ -490,20 +654,37 @@ def _run_data_quality(args: argparse.Namespace) -> int:
                 end=_optional_mapping_text(snapshot, "end"),
                 calendar=_optional_mapping_text(snapshot, "calendar"),
             ).run(snapshot)
-            result = DataQualityArtifactWriter(args.output_dir).write(artifact)
+            output_root = args.output.parent if args.output is not None else args.output_dir
+            result = DataQualityArtifactWriter(output_root).write(artifact)
+            output_path = result.path
+            if args.output is not None and result.path != args.output:
+                args.output.parent.mkdir(parents=True, exist_ok=True)
+                args.output.write_text(result.path.read_text(encoding="utf-8"), encoding="utf-8")
+                result.path.unlink()
+                output_path = args.output
         except (FileNotFoundError, ValueError) as exc:
             print(json.dumps({"accepted": False, "reasons": [str(exc)]}, sort_keys=True, indent=2))
             return 1
+        blockers = [f"{item['code']}: {item['message']}" for item in artifact.blockers()]
+        audit_record = ResearchAuditLog(args.audit_log_root).append(
+            "data_quality_validated",
+            {
+                "accepted": artifact.accepted,
+                "artifact_hash": result.artifact_hash,
+                "dataset_id": artifact.dataset_id,
+                "data_quality_path": str(output_path),
+                "reasons": blockers,
+            },
+        )
         print(
             json.dumps(
                 {
                     "accepted": artifact.accepted,
                     "artifact": artifact.to_payload(),
                     "artifact_hash": result.artifact_hash,
-                    "path": str(result.path),
-                    "reasons": [
-                        f"{item['code']}: {item['message']}" for item in artifact.blockers()
-                    ],
+                    "audit_record_id": audit_record.record_id,
+                    "path": str(output_path),
+                    "reasons": blockers,
                 },
                 sort_keys=True,
                 indent=2,
@@ -626,6 +807,11 @@ def _optional_mapping_text(payload: Mapping[str, Any], field_name: str) -> str |
     return value.strip() or None
 
 
+def _artifact_safe_name(value: str) -> str:
+    safe = "".join(char if char.isalnum() or char in "._-" else "_" for char in value)
+    return safe.strip("._-") or "artifact"
+
+
 def _ensure_repo_root_on_path() -> None:
     repo_root = str(_REPO_ROOT)
     if repo_root not in sys.path:
@@ -640,6 +826,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.dry_run:
         if args.command is not None:
             parser.error("--dry-run cannot be combined with a subcommand")
+        _ensure_repo_root_on_path()
         result = ResearchDryRunRunner(repo_root=_REPO_ROOT).run(
             args.config,
             argv=sys.argv[1:] if argv is None else list(argv),
@@ -652,6 +839,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_evidence(args)
     if args.command == "promotion":
         return _run_promotion(args)
+    if args.command == "manifest":
+        return _run_manifest(args)
     if args.command == "audit":
         return _run_audit(args)
     if args.command == "graph":

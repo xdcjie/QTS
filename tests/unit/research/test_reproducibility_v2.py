@@ -93,6 +93,29 @@ def test_reproducibility_snapshot_v2_reports_promotion_blockers() -> None:
     )
 
 
+def test_reproducibility_snapshot_v2_requires_seed_for_stochastic_search() -> None:
+    snapshot = ReproducibilitySnapshotV2.from_payload(
+        {
+            "schema_version": 2,
+            "git_sha": "abc123",
+            "git_dirty": False,
+            "python_version": "3.13.0",
+            "platform": "macOS",
+            "manifest_hash": "sha256:manifest",
+            "dependency_hashes": {"uv.lock": "sha256:deps"},
+            "config_hashes": {"research.yaml": "sha256:config"},
+            "data_hashes": {"dataset.parquet": "sha256:data"},
+            "command_argv": ["--config", "research.yaml"],
+            "random_seeds": {},
+            "calendar_version": "XNYS-2026a",
+            "container_digest": None,
+            "metadata": {"stochastic_search_required": True},
+        }
+    )
+
+    assert snapshot.promotion_blockers() == ("random_seeds are required for stochastic search",)
+
+
 def test_reproducibility_snapshot_v2_rejects_wrong_schema_version() -> None:
     payload = {
         "schema_version": 1,

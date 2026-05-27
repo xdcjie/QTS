@@ -108,21 +108,6 @@ def _write_bundle(tmp_path: Path, *, git_dirty: bool = False) -> tuple[Path, str
     return registry_root, bundle.evidence_bundle_id
 
 
-def _write_candidate(tmp_path: Path, bundle_id: str) -> Path:
-    candidate_path = tmp_path / "candidate.yaml"
-    candidate_path.write_text(
-        f"""
-promotion_candidate_id: pc-vwap
-strategy_id: vwap
-evidence_bundle_id: {bundle_id}
-status: paper_candidate
-idea_id: idea-vwap
-""",
-        encoding="utf-8",
-    )
-    return candidate_path
-
-
 def _packet_payload(bundle_id: str) -> dict[str, Any]:
     metrics = {
         "execution": {
@@ -153,7 +138,7 @@ def _packet_payload(bundle_id: str) -> dict[str, Any]:
         "schema_version": 2,
         "dataset_id": "dataset-001",
         "accepted": True,
-        "checked_paths": [],
+        "checked_paths": ["dataset.parquet"],
         "issues": [],
         "duplicate_timestamps": 0,
         "missing_bars": 0,
@@ -230,55 +215,6 @@ def _write_packet(tmp_path: Path, bundle_id: str, *, valid: bool = True) -> tupl
     return packet_path, stable_json_hash(payload)
 
 
-def test_run_research_promotion_validate_accepts_complete_bundle(
-    tmp_path: Path,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    registry_root, bundle_id = _write_bundle(tmp_path)
-    candidate_path = _write_candidate(tmp_path, bundle_id)
-
-    exit_code = run_research.main(
-        [
-            "promotion",
-            "validate",
-            "--candidate",
-            str(candidate_path),
-            "--evidence-registry-root",
-            str(registry_root),
-        ]
-    )
-
-    assert exit_code == 0
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["accepted"] is True
-    assert payload["status"] == "accepted"
-    assert payload["reasons"] == []
-
-
-def test_run_research_promotion_validate_rejects_dirty_bundle(
-    tmp_path: Path,
-    capsys: pytest.CaptureFixture[str],
-) -> None:
-    registry_root, bundle_id = _write_bundle(tmp_path, git_dirty=True)
-    candidate_path = _write_candidate(tmp_path, bundle_id)
-
-    exit_code = run_research.main(
-        [
-            "promotion",
-            "validate",
-            "--candidate",
-            str(candidate_path),
-            "--evidence-registry-root",
-            str(registry_root),
-        ]
-    )
-
-    assert exit_code == 1
-    payload = json.loads(capsys.readouterr().out)
-    assert payload["accepted"] is False
-    assert "git_dirty must be false, got True" in payload["reasons"]
-
-
 def test_run_research_promotion_validate_accepts_packet_and_writes_audit_log(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -319,6 +255,7 @@ def test_run_research_promotion_validate_packet_writes_artifact_graph(
 ) -> None:
     registry_root, bundle_id = _write_bundle(tmp_path)
     packet_path, _packet_hash = _write_packet(tmp_path, bundle_id)
+    audit_root = tmp_path / "audit"
     graph_root = tmp_path / "graphs"
 
     exit_code = run_research.main(
@@ -330,7 +267,7 @@ def test_run_research_promotion_validate_packet_writes_artifact_graph(
             "--evidence-registry-root",
             str(registry_root),
             "--audit-log-root",
-            str(tmp_path / "audit"),
+            str(audit_root),
             "--artifact-graph-root",
             str(graph_root),
         ]
@@ -343,6 +280,9 @@ def test_run_research_promotion_validate_packet_writes_artifact_graph(
     graph = ResearchArtifactGraph.from_payload(json.loads(graph_path.read_text(encoding="utf-8")))
     graph.validate()
     assert payload["audit_record_id"] in {node.node_id for node in graph.nodes}
+    assert [record.record_type for record in ResearchAuditLog(audit_root).list()][-1] == (
+        "artifact_graph_written"
+    )
 
 
 def test_run_research_promotion_validate_rejects_invalid_packet(
@@ -371,31 +311,23 @@ def test_run_research_promotion_validate_rejects_invalid_packet(
     assert "target_module must start with strategies.production." in payload["reasons"]
 
 
-def test_run_research_promotion_validate_requires_candidate_or_packet() -> None:
+def test_run_research_promotion_validate_requires_packet() -> None:
     with pytest.raises(SystemExit) as excinfo:
         run_research.main(["promotion", "validate"])
 
     assert excinfo.value.code == 2
 
 
-def test_run_research_promotion_validate_rejects_candidate_and_packet(
+def test_run_research_promotion_validate_rejects_candidate_argument(
     tmp_path: Path,
 ) -> None:
-    registry_root, bundle_id = _write_bundle(tmp_path)
-    candidate_path = _write_candidate(tmp_path, bundle_id)
-    packet_path, _packet_hash = _write_packet(tmp_path, bundle_id)
-
     with pytest.raises(SystemExit) as excinfo:
         run_research.main(
             [
                 "promotion",
                 "validate",
                 "--candidate",
-                str(candidate_path),
-                "--packet",
-                str(packet_path),
-                "--evidence-registry-root",
-                str(registry_root),
+                str(tmp_path / "candidate.yaml"),
             ]
         )
 

@@ -173,6 +173,42 @@ def test_failed_data_quality_rejected(tmp_path: Path) -> None:
     assert any("missing bars detected: 3" in reason for reason in result.reasons)
 
 
+def test_empty_data_quality_checked_paths_rejected(tmp_path: Path) -> None:
+    registry, bundle_id = _write_verifiable_bundle(tmp_path)
+    data_quality = _data_quality_payload()
+    data_quality["checked_paths"] = []
+
+    result = PromotionPacketV2.from_payload(
+        _packet_payload(bundle_id, data_quality_payload=data_quality)
+    ).validate(
+        evidence_registry=registry,
+        audit_log=ResearchAuditLog(tmp_path / "audit.jsonl"),
+    )
+
+    assert result.accepted is False
+    assert any("checked_paths must not be empty" in reason for reason in result.reasons)
+
+
+def test_markdown_only_data_quality_rejected(tmp_path: Path) -> None:
+    registry, bundle_id = _write_verifiable_bundle(tmp_path)
+    markdown_path = tmp_path / "data-quality.md"
+    markdown_path.write_text("# Data Quality\naccepted: true\n", encoding="utf-8")
+    payload = _packet_payload(bundle_id)
+    payload["data_quality"] = {
+        "artifact_id": "dq-markdown",
+        "payload_hash": stable_json_hash({"path": str(markdown_path)}),
+        "payload": {"path": str(markdown_path)},
+    }
+
+    result = PromotionPacketV2.from_payload(payload).validate(
+        evidence_registry=registry,
+        audit_log=ResearchAuditLog(tmp_path / "audit.jsonl"),
+    )
+
+    assert result.accepted is False
+    assert any("data_quality validation failed:" in reason for reason in result.reasons)
+
+
 def test_payload_hash_required_for_payload_sections(tmp_path: Path) -> None:
     registry, bundle_id = _write_verifiable_bundle(tmp_path)
     payload = _packet_payload(bundle_id)
@@ -313,18 +349,25 @@ def test_validation_writes_audit_record_and_chain_verifies(tmp_path: Path) -> No
     )
 
     records = audit_log.list()
-    assert len(records) == 2
-    assert records[0].record_type == "human_review_decided"
-    assert records[0].payload["reviewer"] == "risk"
-    assert records[0].payload["decision"] == "go"
-    assert records[0].payload["reviewed_at"] == "2026-05-26T00:00:00+00:00"
-    assert records[0].payload["evidence_bundle_id"] == bundle_id
-    assert records[0].payload["promotion_candidate_id"] == "pc-vwap"
-    assert records[1].record_id == result.audit_record_id
-    assert records[1].record_type == "promotion_packet_validated"
-    assert records[1].payload["packet_hash"] == result.packet_hash
+    assert [record.record_type for record in records] == [
+        "metrics_validated",
+        "data_quality_validated",
+        "reproducibility_validated",
+        "human_review_decided",
+        "promotion_packet_validated",
+    ]
+    assert records[0].payload["accepted"] is True
     assert records[1].payload["accepted"] is True
-    assert records[1].payload["human_review_record_id"] == records[0].record_id
+    assert records[2].payload["accepted"] is True
+    assert records[3].payload["reviewer"] == "risk"
+    assert records[3].payload["decision"] == "go"
+    assert records[3].payload["reviewed_at"] == "2026-05-26T00:00:00+00:00"
+    assert records[3].payload["evidence_bundle_id"] == bundle_id
+    assert records[3].payload["promotion_candidate_id"] == "pc-vwap"
+    assert records[4].record_id == result.audit_record_id
+    assert records[4].payload["packet_hash"] == result.packet_hash
+    assert records[4].payload["accepted"] is True
+    assert records[4].payload["human_review_record_id"] == records[3].record_id
     assert audit_log.verify_hash_chain() == ()
 
 
@@ -341,7 +384,12 @@ def test_validation_rejects_reviewed_at_without_timezone(tmp_path: Path) -> None
 
     assert result.accepted is False
     assert "review.reviewed_at must be timezone-aware" in result.reasons
-    assert [record.record_type for record in audit_log.list()] == ["promotion_packet_validated"]
+    assert [record.record_type for record in audit_log.list()] == [
+        "metrics_validated",
+        "data_quality_validated",
+        "reproducibility_validated",
+        "promotion_packet_validated",
+    ]
 
 
 def test_validation_writes_artifact_graph_when_writer_is_supplied(tmp_path: Path) -> None:
@@ -514,7 +562,7 @@ def _data_quality_payload() -> dict[str, Any]:
         "schema_version": 2,
         "dataset_id": "dataset-001",
         "accepted": True,
-        "checked_paths": [],
+        "checked_paths": ["datasets/dataset-001/bars.csv"],
         "issues": [],
         "duplicate_timestamps": 0,
         "missing_bars": 0,

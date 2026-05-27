@@ -3,11 +3,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import yaml  # type: ignore[import-untyped]
 from qts.research import (
     ReproducibilitySnapshot,
     ResearchArtifactGraph,
     ResearchDryRunRunner,
     ResearchManifest,
+    ResearchManifestV2,
     ResearchMetrics,
     ResearchPromotionPolicy,
     ResearchRunRegistry,
@@ -119,8 +121,8 @@ def test_reproducibility_snapshot_round_trips_manifest_hash() -> None:
 
 
 def test_dry_run_writes_complete_plan_artifacts(tmp_path: Path) -> None:
-    config = ResearchManifest.from_yaml("configs/research/backtest_gc_si_smoke.yaml")
-    rewritten = _write_tmp_manifest(tmp_path, config)
+    rewritten = _write_tmp_manifest_v2(tmp_path)
+    manifest = ResearchManifestV2.from_yaml(rewritten)
 
     result = ResearchDryRunRunner(repo_root=Path.cwd()).run(
         rewritten,
@@ -133,7 +135,6 @@ def test_dry_run_writes_complete_plan_artifacts(tmp_path: Path) -> None:
         "candidate_results.jsonl",
         "command_log.jsonl",
         "data_quality.json",
-        "data_quality_report.md",
         "data_snapshot.json",
         "artifact_graph.json",
         "failures.jsonl",
@@ -159,7 +160,7 @@ def test_dry_run_writes_complete_plan_artifacts(tmp_path: Path) -> None:
     assert str(rewritten) in reproducibility_v2["config_hashes"]
     data_quality = json.loads((artifact_dir / "data_quality.json").read_text(encoding="utf-8"))
     assert data_quality["schema_version"] == 2
-    assert data_quality["dataset_id"] == config.dataset_id
+    assert data_quality["dataset_id"] == manifest.dataset_id
     graph = ResearchArtifactGraph.from_payload(
         json.loads((artifact_dir / "artifact_graph.json").read_text(encoding="utf-8"))
     )
@@ -171,45 +172,91 @@ def test_dry_run_writes_complete_plan_artifacts(tmp_path: Path) -> None:
     assert ResearchRunRegistry(result.registry_path).list()[0].run_id == result.run_id
 
 
-def _write_tmp_manifest(tmp_path: Path, config: ResearchManifest) -> Path:
+def _write_tmp_manifest_v2(tmp_path: Path) -> Path:
     path = tmp_path / "research.yaml"
-    payload = config.to_payload()
-    payload["output_root"] = str(tmp_path / "artifacts" / "research")
-    # Keep a fixed, valid split plan but isolate generated artifacts under tmp_path.
     path.write_text(
-        "\n".join(
-            [
-                "run:",
-                f"  id: {payload['run']['id']}",
-                f"  question: {payload['run']['question']}",
-                "strategy:",
-                f"  id: {payload['strategy']['id']}",
-                f"  entrypoint: {payload['strategy']['entrypoint']}",
-                f"  hypothesis: {payload['strategy']['hypothesis']}",
-                f"  default_config: {payload['strategy']['default_config']}",
-                "data:",
-                f"  dataset_id: {payload['data']['dataset_id']}",
-                f"  config: {payload['data']['config']}",
-                f"  catalog: {payload['data']['catalog']}",
-                "  roots: [GC, SI]",
-                f"  timeframe: {payload['data']['timeframe']}",
-                f'  start: "{payload["data"]["start"]}"',
-                f'  end: "{payload["data"]["end"]}"',
-                "parameter_grid:",
-                "  short_window: [1, 2]",
-                "  long_window: [2, 3]",
-                f"promotion_config: {payload['promotion_config']}",
-                f"output_root: {payload['output_root']}",
-                "splits:",
-                "  windows:",
-                "    - {name: train, role: in_sample, start: '2010-06-06', end: '2010-06-07'}",
-                "    - name: validation",
-                "      role: validation",
-                "      start: '2010-06-07'",
-                "      end: '2010-06-08'",
-                "    - {name: oos, role: out_of_sample, start: '2010-06-08', end: '2010-06-09'}",
-                "",
-            ]
+        yaml.safe_dump(
+            {
+                "schema_version": 2,
+                "run": {
+                    "id": "gc-si-smoke-dry-run-v2",
+                    "question": "Does GC/SI momentum have enough canonical evidence?",
+                    "owner": "research",
+                    "created_at": "2026-05-27T00:00:00+00:00",
+                },
+                "strategy": {
+                    "id": "gc_si_momentum",
+                    "source_module": "examples.strategies.gc_si_momentum",
+                    "entrypoint": "GcSiMomentumStrategy",
+                    "default_config": "configs/strategies/gc_si_momentum.yaml",
+                    "hypothesis": "GC/SI momentum persists after costs.",
+                },
+                "data": {
+                    "dataset_id": "research_futures_gc_si_1m",
+                    "config": "configs/data/historical.local.yaml",
+                    "catalog": "research_futures",
+                    "roots": ["GC", "SI"],
+                    "timeframe": "1m",
+                    "start": "2010-06-06T22:00:00+00:00",
+                    "end": "2010-06-06T22:05:00+00:00",
+                    "calendar": "CME",
+                },
+                "metrics_schema": {
+                    "id": "schema_v2",
+                    "version": 2,
+                    "path": "configs/research/metrics/schema_v2.yaml",
+                },
+                "promotion_policy": {
+                    "id": "default_research_policy",
+                    "version": 1,
+                    "path": "configs/promotion/default.yaml",
+                },
+                "artifacts": {
+                    "required": [
+                        "metrics",
+                        "data_quality",
+                        "reproducibility",
+                        "evidence_bundle",
+                        "artifact_graph",
+                    ]
+                },
+                "reproducibility": {
+                    "require_clean_git": True,
+                    "required_hash_groups": [
+                        "dependency_hashes",
+                        "config_hashes",
+                        "data_hashes",
+                    ],
+                },
+                "parameter_grid": {
+                    "short_window": [1, 2],
+                    "long_window": [2, 3],
+                },
+                "output_root": str(tmp_path / "artifacts" / "research"),
+                "splits": {
+                    "windows": [
+                        {
+                            "name": "train",
+                            "role": "in_sample",
+                            "start": "2010-06-06",
+                            "end": "2010-06-07",
+                        },
+                        {
+                            "name": "validation",
+                            "role": "validation",
+                            "start": "2010-06-07",
+                            "end": "2010-06-08",
+                        },
+                        {
+                            "name": "oos",
+                            "role": "out_of_sample",
+                            "start": "2010-06-08",
+                            "end": "2010-06-09",
+                        },
+                    ]
+                },
+            },
+            sort_keys=True,
         ),
         encoding="utf-8",
     )

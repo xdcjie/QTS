@@ -13,10 +13,18 @@ from qts.core.hashing import stable_json_dumps, stable_json_hash
 
 _SUPPORTED_RECORD_TYPES = frozenset(
     {
+        "manifest_loaded",
+        "research_run_completed",
         "evidence_bundle_created",
         "evidence_validated",
+        "metrics_validated",
+        "data_quality_validated",
+        "reproducibility_validated",
         "promotion_packet_validated",
+        "artifact_graph_verified",
         "human_review_decided",
+        "artifact_graph_written",
+        "report_projected",
     }
 )
 

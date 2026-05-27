@@ -27,8 +27,9 @@ packet:
    budget.
 2. Run research through the canonical `FLOW-RESEARCH` entrypoint and produce
    deterministic manifests, reports, diagnostics, and evidence bundle records.
-3. Create or update a `PromotionCandidateSpec` that cites `evidence_bundle_id`,
-   `source_module`, `target_module`, and paper-readiness evidence.
+3. Create a `PromotionPacketV2` that cites `evidence_bundle_id`,
+   `source_module`, `target_module`, structured metrics/data-quality/
+   reproducibility evidence, and paper-readiness review records.
 4. Move only the reviewed implementation boundary into `strategies/production/`.
    Do not reuse a research module as production code by importing it directly.
 5. Run `FLOW-PROMOTION` human review for the exact build, config hash, account,

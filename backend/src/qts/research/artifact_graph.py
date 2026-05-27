@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from qts.core.hashing import stable_json_dumps, stable_json_hash
+from qts.research.audit_log import ResearchAuditLog
 
 
 @dataclass(frozen=True, slots=True)
@@ -136,7 +137,7 @@ class ResearchArtifactGraph:
         )
 
     def validate(self) -> None:
-        """Validate graph references, acyclicity, and required artifact links."""
+        """Validate graph references, acyclicity, and present-node artifact links."""
 
         nodes_by_id = self._nodes_by_id()
         for edge in self.edges:
@@ -147,10 +148,17 @@ class ResearchArtifactGraph:
         self._validate_required_edges(nodes_by_id)
         self._validate_acyclic(nodes_by_id)
 
-    def stable_hash(self) -> str:
-        """Return an order-independent stable hash for this graph."""
+    def validate_full_chain(self) -> None:
+        """Validate the complete Research OS v1.0 promotion evidence graph."""
 
-        return stable_json_hash(self.to_payload())
+        self.validate()
+        self._validate_payload_hashes()
+        self._validate_required_node_types()
+
+    def stable_hash(self) -> str:
+        """Return the order-independent hash for this graph's evidence relationships."""
+
+        return stable_json_hash(self._stable_payload())
 
     def to_payload(self) -> dict[str, Any]:
         """Return a deterministic JSON-ready graph payload."""
@@ -159,6 +167,18 @@ class ResearchArtifactGraph:
             "edges": [edge.to_payload() for edge in self.edges],
             "nodes": [node.to_payload() for node in self.nodes],
         }
+
+    def _stable_payload(self) -> dict[str, Any]:
+        return {
+            "edges": [edge.to_payload() for edge in self.edges],
+            "nodes": [self._stable_node_payload(node) for node in self.nodes],
+        }
+
+    def _stable_node_payload(self, node: ResearchArtifactNode) -> dict[str, Any]:
+        payload = node.to_payload()
+        if node.node_type in _SELF_REFERENTIAL_NODE_TYPES:
+            payload["payload_hash"] = f"self-referential:{node.node_type}"
+        return payload
 
     @staticmethod
     def _sequence(value: Any, field_name: str) -> Sequence[Mapping[str, Any]]:
@@ -177,8 +197,24 @@ class ResearchArtifactGraph:
             nodes_by_id[node.node_id] = node
         return nodes_by_id
 
+    def _validate_required_node_types(self) -> None:
+        node_types = {node.node_type for node in self.nodes}
+        for node_type in sorted(_REQUIRED_NODE_TYPES):
+            if node_type not in node_types:
+                raise ValueError(f"artifact graph missing required node_type: {node_type}")
+
+    def _validate_payload_hashes(self) -> None:
+        for node in self.nodes:
+            if not node.payload_hash:
+                raise ValueError(
+                    f"artifact graph node missing payload_hash: {node.node_type}:{node.node_id}"
+                )
+
     def _validate_required_edges(self, nodes_by_id: Mapping[str, ResearchArtifactNode]) -> None:
+        node_types = {node.node_type for node in self.nodes}
         for source_type, target_type, message in _REQUIRED_REFERENCES:
+            if target_type not in node_types:
+                continue
             for source in self.nodes:
                 if source.node_type != source_type:
                     continue
@@ -227,10 +263,15 @@ class ResearchArtifactGraphBuilder:
         self,
         *,
         manifests: Sequence[Mapping[str, Any]] = (),
+        workflow_runs: Sequence[Mapping[str, Any]] = (),
         evidence_bundles: Sequence[Mapping[str, Any]] = (),
+        metrics: Sequence[Mapping[str, Any]] = (),
+        data_quality_artifacts: Sequence[Mapping[str, Any]] = (),
+        reproducibility_snapshots: Sequence[Mapping[str, Any]] = (),
         promotion_packets: Sequence[Mapping[str, Any]] = (),
         audit_records: Sequence[Mapping[str, Any]] = (),
         reports: Sequence[Mapping[str, Any]] = (),
+        artifact_graphs: Sequence[Mapping[str, Any]] = (),
     ) -> ResearchArtifactGraph:
         """Build and validate a deterministic artifact relationship graph."""
 
@@ -243,6 +284,14 @@ class ResearchArtifactGraphBuilder:
             self._add_node(nodes_by_id, node)
             if node.payload_hash is not None:
                 manifest_hashes[node.node_id] = node.payload_hash
+
+        for workflow_run in workflow_runs:
+            workflow_node = self._node(workflow_run, "workflow_run", self._workflow_run_id)
+            self._add_node(nodes_by_id, workflow_node)
+            for manifest_ref in self._manifest_refs(workflow_run):
+                manifest_node = self._manifest_node_from_ref(manifest_ref, manifest_hashes)
+                self._add_node(nodes_by_id, manifest_node)
+                self._add_edge(edges, workflow_node.node_id, manifest_node.node_id)
 
         for evidence_bundle in evidence_bundles:
             evidence_node = self._node(
@@ -269,6 +318,22 @@ class ResearchArtifactGraphBuilder:
                     )
                 )
 
+        for metric in metrics:
+            self._add_node(nodes_by_id, self._node(metric, "metrics", self._metrics_id))
+
+        for data_quality in data_quality_artifacts:
+            self._add_node(
+                nodes_by_id,
+                self._node(data_quality, "data_quality", self._data_quality_id),
+            )
+
+        for reproducibility in reproducibility_snapshots:
+            self._add_node(
+                nodes_by_id,
+                self._node(reproducibility, "reproducibility", self._reproducibility_id),
+            )
+
+        section_refs_by_evidence_bundle: dict[str, list[str]] = {}
         for promotion_packet in promotion_packets:
             packet_node = self._node(
                 promotion_packet,
@@ -276,13 +341,30 @@ class ResearchArtifactGraphBuilder:
                 self._promotion_packet_id,
             )
             self._add_node(nodes_by_id, packet_node)
-            edges.append(
-                ResearchArtifactEdge(
-                    source_id=packet_node.node_id,
-                    target_id=self._required_text(promotion_packet, "evidence_bundle_id"),
-                    relation="references",
+            evidence_bundle_id = self._required_text(promotion_packet, "evidence_bundle_id")
+            self._add_edge(edges, packet_node.node_id, evidence_bundle_id)
+            for section_name, node_type, resolver in _PACKET_SECTION_TYPES:
+                section_node = self._section_node(
+                    promotion_packet,
+                    section_name,
+                    node_type,
+                    resolver,
+                    packet_node.node_id,
                 )
+                self._add_node(nodes_by_id, section_node)
+                self._add_edge(edges, packet_node.node_id, section_node.node_id)
+                section_refs_by_evidence_bundle.setdefault(evidence_bundle_id, []).append(
+                    section_node.node_id
+                )
+            self._add_edge(
+                edges,
+                packet_node.node_id,
+                self._required_text(promotion_packet, "audit_record_id"),
             )
+
+        for evidence_bundle_id, section_node_ids in section_refs_by_evidence_bundle.items():
+            for section_node_id in section_node_ids:
+                self._add_edge(edges, evidence_bundle_id, section_node_id)
 
         for audit_record in audit_records:
             self._add_node(
@@ -290,24 +372,29 @@ class ResearchArtifactGraphBuilder:
                 self._node(audit_record, "audit_record", self._audit_record_id),
             )
 
+        for artifact_graph in artifact_graphs:
+            self._add_node(
+                nodes_by_id,
+                self._node(artifact_graph, "artifact_graph", self._artifact_graph_id),
+            )
+
         for report in reports:
             report_node = self._node(report, "report", self._report_id)
             report_refs = self._report_refs(report)
             self._add_node(nodes_by_id, report_node)
-            edges.append(
-                ResearchArtifactEdge(
-                    source_id=report_node.node_id,
-                    target_id=self._required_text(report_refs, "promotion_packet_id"),
-                    relation="references",
-                )
+            self._add_edge(
+                edges,
+                report_node.node_id,
+                self._required_text(report_refs, "promotion_packet_id"),
             )
-            edges.append(
-                ResearchArtifactEdge(
-                    source_id=report_node.node_id,
-                    target_id=self._required_text(report_refs, "audit_record_id"),
-                    relation="references",
-                )
+            self._add_edge(
+                edges,
+                report_node.node_id,
+                self._required_text(report_refs, "audit_record_id"),
             )
+            artifact_graph_node = self._artifact_graph_node_from_ref(report_refs)
+            self._add_node(nodes_by_id, artifact_graph_node)
+            self._add_edge(edges, report_node.node_id, artifact_graph_node.node_id)
 
         graph = ResearchArtifactGraph(nodes=tuple(nodes_by_id.values()), edges=tuple(edges))
         graph.validate()
@@ -331,6 +418,20 @@ class ResearchArtifactGraphBuilder:
         if existing.payload_hash is None and node.payload_hash is not None:
             nodes_by_id[node.node_id] = node
 
+    def _add_edge(
+        self,
+        edges: list[ResearchArtifactEdge],
+        source_id: str,
+        target_id: str,
+    ) -> None:
+        edge = ResearchArtifactEdge(
+            source_id=source_id,
+            target_id=target_id,
+            relation="references",
+        )
+        if edge not in edges:
+            edges.append(edge)
+
     def _node(
         self,
         payload: Mapping[str, Any],
@@ -342,6 +443,28 @@ class ResearchArtifactGraphBuilder:
             node_type=node_type,
             payload_hash=self._payload_hash(payload),
             metadata=self._metadata(payload),
+        )
+
+    def _section_node(
+        self,
+        payload: Mapping[str, Any],
+        section_name: str,
+        node_type: str,
+        node_id_resolver: Any,
+        packet_id: str,
+    ) -> ResearchArtifactNode:
+        section = payload.get(section_name)
+        if not isinstance(section, Mapping):
+            raise ValueError(f"promotion_packet {section_name} section is required")
+        node_id = self._optional_first_text(section, _SECTION_ID_FIELDS[section_name])
+        return ResearchArtifactNode(
+            node_id=node_id or f"{packet_id}:{section_name}",
+            node_type=node_type,
+            payload_hash=self._payload_hash(section),
+            metadata={
+                **dict(self._metadata(section)),
+                "packet_section": section_name,
+            },
         )
 
     def _manifest_node_from_ref(
@@ -379,6 +502,32 @@ class ResearchArtifactGraphBuilder:
             return tuple(sorted(manifest_hashes))
         raise ValueError("evidence_bundle must reference at least one manifest")
 
+    def _artifact_graph_node_from_ref(
+        self,
+        payload: Mapping[str, Any],
+    ) -> ResearchArtifactNode:
+        artifact_graph_hash = payload.get("artifact_graph_hash")
+        for field_name in ("artifact_graph_id", "artifact_graph_path", "path"):
+            value = payload.get(field_name)
+            if value is not None:
+                if artifact_graph_hash is None:
+                    raise ValueError("artifact_graph_hash is required")
+                return ResearchArtifactNode(
+                    node_id=self._text(value, field_name),
+                    node_type="artifact_graph",
+                    payload_hash=self._text(artifact_graph_hash, "artifact_graph_hash"),
+                    metadata={},
+                )
+        if artifact_graph_hash is None:
+            raise ValueError("artifact_graph_id is required")
+        graph_hash = self._text(artifact_graph_hash, "artifact_graph_hash")
+        return ResearchArtifactNode(
+            node_id=graph_hash,
+            node_type="artifact_graph",
+            payload_hash=graph_hash,
+            metadata={},
+        )
+
     def _report_refs(self, payload: Mapping[str, Any]) -> Mapping[str, Any]:
         projection_refs = payload.get("projection_refs")
         if projection_refs is None:
@@ -406,8 +555,20 @@ class ResearchArtifactGraphBuilder:
     def _manifest_id(self, payload: Mapping[str, Any]) -> str:
         return self._first_text(payload, ("manifest_id", "node_id", "path", "manifest_path"))
 
+    def _workflow_run_id(self, payload: Mapping[str, Any]) -> str:
+        return self._first_text(payload, ("workflow_run_id", "run_id", "node_id", "path"))
+
     def _evidence_bundle_id(self, payload: Mapping[str, Any]) -> str:
         return self._first_text(payload, ("evidence_bundle_id", "node_id"))
+
+    def _metrics_id(self, payload: Mapping[str, Any]) -> str:
+        return self._first_text(payload, _SECTION_ID_FIELDS["metrics"])
+
+    def _data_quality_id(self, payload: Mapping[str, Any]) -> str:
+        return self._first_text(payload, _SECTION_ID_FIELDS["data_quality"])
+
+    def _reproducibility_id(self, payload: Mapping[str, Any]) -> str:
+        return self._first_text(payload, _SECTION_ID_FIELDS["reproducibility"])
 
     def _promotion_packet_id(self, payload: Mapping[str, Any]) -> str:
         return self._first_text(
@@ -421,6 +582,12 @@ class ResearchArtifactGraphBuilder:
     def _report_id(self, payload: Mapping[str, Any]) -> str:
         return self._first_text(payload, ("report_id", "workflow_id", "node_id", "path"))
 
+    def _artifact_graph_id(self, payload: Mapping[str, Any]) -> str:
+        return self._first_text(
+            payload,
+            ("artifact_graph_id", "node_id", "path", "artifact_graph_path", "artifact_graph_hash"),
+        )
+
     def _first_text(self, payload: Mapping[str, Any], field_names: Sequence[str]) -> str:
         for field_name in field_names:
             value = payload.get(field_name)
@@ -428,9 +595,25 @@ class ResearchArtifactGraphBuilder:
                 return self._text(value, field_name)
         raise ValueError(f"{field_names[0]} is required")
 
+    def _optional_first_text(
+        self,
+        payload: Mapping[str, Any],
+        field_names: Sequence[str],
+    ) -> str | None:
+        for field_name in field_names:
+            value = payload.get(field_name)
+            if value is not None:
+                return self._text(value, field_name)
+        return None
+
     def _required_text(self, payload: Mapping[str, Any], field_name: str) -> str:
         if field_name == "promotion_packet_id":
             return self._first_text(payload, ("promotion_packet_id", "packet_id"))
+        if field_name == "audit_record_id":
+            return self._first_text(
+                payload,
+                ("audit_record_id", "human_review_record_id", "record_id"),
+            )
         return self._text(payload.get(field_name), field_name)
 
     def _text(self, value: Any, field_name: str) -> str:
@@ -489,39 +672,55 @@ class ResearchArtifactGraphWriter:
         graph: ResearchArtifactGraph,
         *,
         output_path: str | Path = "artifact-graph.json",
+        audit_log: ResearchAuditLog | None = None,
     ) -> WriteResult:
         """Validate and write a deterministic JSON artifact graph payload."""
 
+        if audit_log is None:
+            raise ValueError("artifact graph writes require ResearchAuditLog")
         graph.validate()
         target = self._resolve_output_path(output_path)
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(stable_json_dumps(graph.to_payload()) + "\n", encoding="utf-8")
-        return self.WriteResult(
+        result = self.WriteResult(
             path=target,
             artifact_graph_hash=graph.stable_hash(),
             graph=graph,
         )
+        self._append_written_record(audit_log, result)
+        return result
 
     def write_from_payloads(
         self,
         *,
         manifests: Sequence[Mapping[str, Any]] = (),
+        workflow_runs: Sequence[Mapping[str, Any]] = (),
         evidence_bundles: Sequence[Mapping[str, Any]] = (),
+        metrics: Sequence[Mapping[str, Any]] = (),
+        data_quality_artifacts: Sequence[Mapping[str, Any]] = (),
+        reproducibility_snapshots: Sequence[Mapping[str, Any]] = (),
         promotion_packets: Sequence[Mapping[str, Any]] = (),
         audit_records: Sequence[Mapping[str, Any]] = (),
         reports: Sequence[Mapping[str, Any]] = (),
+        artifact_graphs: Sequence[Mapping[str, Any]] = (),
         output_path: str | Path = "artifact-graph.json",
+        audit_log: ResearchAuditLog | None = None,
     ) -> WriteResult:
         """Build, validate, and persist a graph from artifact payloads."""
 
         graph = ResearchArtifactGraphBuilder().build(
             manifests=manifests,
+            workflow_runs=workflow_runs,
             evidence_bundles=evidence_bundles,
+            metrics=metrics,
+            data_quality_artifacts=data_quality_artifacts,
+            reproducibility_snapshots=reproducibility_snapshots,
             promotion_packets=promotion_packets,
             audit_records=audit_records,
             reports=reports,
+            artifact_graphs=artifact_graphs,
         )
-        return self.write(graph, output_path=output_path)
+        return self.write(graph, output_path=output_path, audit_log=audit_log)
 
     def write_dry_run_artifacts(
         self,
@@ -533,6 +732,7 @@ class ResearchArtifactGraphWriter:
         data_quality_payload: Mapping[str, Any],
         reproducibility_payload: Mapping[str, Any],
         output_path: str | Path = "artifact_graph.json",
+        audit_log: ResearchAuditLog | None = None,
     ) -> WriteResult:
         """Write the graph linking dry-run evidence artifacts to the manifest."""
 
@@ -571,7 +771,22 @@ class ResearchArtifactGraphWriter:
                 if node.node_id != manifest_node_id
             ),
         )
-        return self.write(graph, output_path=output_path)
+        return self.write(graph, output_path=output_path, audit_log=audit_log)
+
+    def _append_written_record(
+        self,
+        audit_log: ResearchAuditLog,
+        result: WriteResult,
+    ) -> None:
+        audit_log.append(
+            "artifact_graph_written",
+            {
+                "artifact_graph_hash": result.artifact_graph_hash,
+                "artifact_graph_path": str(result.path),
+                "edge_count": len(result.graph.edges),
+                "node_count": len(result.graph.nodes),
+            },
+        )
 
     def _resolve_output_path(self, output_path: str | Path) -> Path:
         path = Path(output_path)
@@ -602,18 +817,81 @@ _NODE_TYPES = frozenset(
         "promotion_packet",
         "audit_record",
         "report",
+        "artifact_graph",
     }
 )
 
+_REQUIRED_NODE_TYPES = frozenset(
+    {
+        "manifest",
+        "workflow_run",
+        "evidence_bundle",
+        "metrics",
+        "data_quality",
+        "reproducibility",
+        "promotion_packet",
+        "audit_record",
+        "report",
+        "artifact_graph",
+    }
+)
+
+_SELF_REFERENTIAL_NODE_TYPES = frozenset({"artifact_graph", "evidence_bundle", "report"})
+
 _REQUIRED_REFERENCES = (
+    ("workflow_run", "manifest", "workflow_run must reference manifest"),
+    ("evidence_bundle", "manifest", "evidence_bundle must reference manifest"),
+    ("evidence_bundle", "metrics", "evidence_bundle must reference metrics"),
+    ("evidence_bundle", "data_quality", "evidence_bundle must reference data_quality"),
+    (
+        "evidence_bundle",
+        "reproducibility",
+        "evidence_bundle must reference reproducibility",
+    ),
     (
         "promotion_packet",
         "evidence_bundle",
         "promotion_packet must reference evidence_bundle",
     ),
-    ("evidence_bundle", "manifest", "evidence_bundle must reference manifest"),
+    ("promotion_packet", "metrics", "promotion_packet must reference metrics"),
+    ("promotion_packet", "data_quality", "promotion_packet must reference data_quality"),
+    (
+        "promotion_packet",
+        "reproducibility",
+        "promotion_packet must reference reproducibility",
+    ),
+    ("promotion_packet", "audit_record", "promotion_packet must reference audit_record"),
     ("report", "promotion_packet", "report must reference promotion_packet"),
     ("report", "audit_record", "report must reference audit_record"),
+    ("report", "artifact_graph", "report must reference artifact_graph"),
+)
+
+_SECTION_ID_FIELDS = {
+    "metrics": ("metrics_id", "artifact_id", "node_id", "path", "metrics_path"),
+    "data_quality": (
+        "data_quality_id",
+        "artifact_id",
+        "node_id",
+        "path",
+        "data_quality_path",
+    ),
+    "reproducibility": (
+        "reproducibility_id",
+        "artifact_id",
+        "node_id",
+        "path",
+        "reproducibility_path",
+    ),
+}
+
+_PACKET_SECTION_TYPES = (
+    ("metrics", "metrics", ResearchArtifactGraphBuilder._metrics_id),
+    ("data_quality", "data_quality", ResearchArtifactGraphBuilder._data_quality_id),
+    (
+        "reproducibility",
+        "reproducibility",
+        ResearchArtifactGraphBuilder._reproducibility_id,
+    ),
 )
 
 __all__ = [

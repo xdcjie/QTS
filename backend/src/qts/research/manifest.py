@@ -192,9 +192,11 @@ class ResearchManifestV2:
     run_id: str
     question: str
     owner: str
+    run_created_at: str
     strategy_id: str
     strategy_source_module: str
     strategy_entrypoint: str
+    strategy_hypothesis: str
     default_config: Path
     dataset_id: str
     data_config: Path
@@ -206,6 +208,7 @@ class ResearchManifestV2:
     calendar: str
     metrics_schema_id: str
     metrics_schema_version: int
+    metrics_schema_path: Path
     promotion_policy_id: str
     promotion_policy_version: int
     promotion_config: Path
@@ -221,6 +224,19 @@ class ResearchManifestV2:
     def __post_init__(self) -> None:
         if self.schema_version != 2:
             raise ValueError("schema_version must be 2")
+        if self.metrics_schema_version != 2:
+            raise ValueError("metrics_schema.version must be 2")
+        missing_artifacts = sorted(_REQUIRED_V2_ARTIFACTS.difference(self.required_artifacts))
+        if missing_artifacts:
+            raise ValueError(
+                "artifacts.required missing required artifact(s): " + ", ".join(missing_artifacts)
+            )
+        missing_hash_groups = sorted(_REQUIRED_V2_HASH_GROUPS.difference(self.required_hash_groups))
+        if missing_hash_groups:
+            raise ValueError(
+                "reproducibility.required_hash_groups missing required group(s): "
+                + ", ".join(missing_hash_groups)
+            )
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> ResearchManifestV2:
@@ -248,18 +264,23 @@ class ResearchManifestV2:
         start = _required_section_text(data, "data", "start")
         end = _required_section_text(data, "data", "end")
         _validate_v2_time_range(start, end)
+        run_created_at = _required_section_text(run, "run", "created_at")
+        _validate_aware_datetime_text(run_created_at, "run.created_at")
         source_module = _required_section_text(strategy, "strategy", "source_module")
         entrypoint_name = _required_section_text(strategy, "strategy", "entrypoint")
         strategy_entrypoint = _resolve_strategy_entrypoint(source_module, entrypoint_name)
+        promotion_policy_path = _required_section_text(promotion_policy, "promotion_policy", "path")
 
         return cls(
             schema_version=2,
             run_id=_required_section_text(run, "run", "id"),
             question=_required_section_text(run, "run", "question"),
             owner=_required_section_text(run, "run", "owner"),
+            run_created_at=run_created_at,
             strategy_id=_required_section_text(strategy, "strategy", "id"),
             strategy_source_module=source_module,
             strategy_entrypoint=strategy_entrypoint,
+            strategy_hypothesis=_required_section_text(strategy, "strategy", "hypothesis"),
             default_config=_resolve_path(
                 manifest_path,
                 _required_section_text(strategy, "strategy", "default_config"),
@@ -281,6 +302,10 @@ class ResearchManifestV2:
                 "metrics_schema",
                 "version",
             ),
+            metrics_schema_path=_resolve_path(
+                manifest_path,
+                _required_section_text(metrics_schema, "metrics_schema", "path"),
+            ),
             promotion_policy_id=_required_section_text(promotion_policy, "promotion_policy", "id"),
             promotion_policy_version=_required_section_int(
                 promotion_policy,
@@ -289,11 +314,7 @@ class ResearchManifestV2:
             ),
             promotion_config=_resolve_path(
                 manifest_path,
-                str(
-                    promotion_policy.get(
-                        "config", payload.get("promotion_config", "configs/promotion/default.yaml")
-                    )
-                ),
+                promotion_policy_path,
             ),
             required_artifacts=_string_tuple(artifacts.get("required"), "artifacts.required"),
             require_clean_git=_required_section_bool(
@@ -382,13 +403,14 @@ class ResearchManifestV2:
             },
             "metrics_schema": {
                 "id": self.metrics_schema_id,
+                "path": str(self.metrics_schema_path),
                 "version": self.metrics_schema_version,
             },
             "output_root": str(self.output_root),
             "parameter_grid": {name: list(values) for name, values in self.parameter_grid.items()},
             "promotion_policy": {
-                "config": str(self.promotion_config),
                 "id": self.promotion_policy_id,
+                "path": str(self.promotion_config),
                 "version": self.promotion_policy_version,
             },
             "random_search": _random_search_payload(self.random_search),
@@ -397,6 +419,7 @@ class ResearchManifestV2:
                 "required_hash_groups": list(self.required_hash_groups),
             },
             "run": {
+                "created_at": self.run_created_at,
                 "id": self.run_id,
                 "owner": self.owner,
                 "question": self.question,
@@ -405,6 +428,7 @@ class ResearchManifestV2:
             "strategy": {
                 "default_config": str(self.default_config),
                 "entrypoint": self.strategy_entrypoint,
+                "hypothesis": self.strategy_hypothesis,
                 "id": self.strategy_id,
                 "source_module": self.strategy_source_module,
             },
@@ -469,6 +493,10 @@ def _validate_v2_time_range(start: str, end: str) -> None:
     end_dt = _parse_aware_datetime(end, "data.end")
     if start_dt >= end_dt:
         raise ValueError("data.start must be before data.end")
+
+
+def _validate_aware_datetime_text(value: str, field_name: str) -> None:
+    _parse_aware_datetime(value, field_name)
 
 
 def _parse_aware_datetime(value: str, field_name: str) -> datetime:
@@ -641,6 +669,24 @@ def _json_ready(value: Any) -> Any:
     if isinstance(value, list):
         return [_json_ready(item) for item in value]
     return value
+
+
+_REQUIRED_V2_ARTIFACTS = frozenset(
+    {
+        "artifact_graph",
+        "data_quality",
+        "evidence_bundle",
+        "metrics",
+        "reproducibility",
+    }
+)
+_REQUIRED_V2_HASH_GROUPS = frozenset(
+    {
+        "config_hashes",
+        "data_hashes",
+        "dependency_hashes",
+    }
+)
 
 
 __all__ = ["ResearchCandidate", "ResearchManifest", "ResearchManifestV2", "write_jsonl"]

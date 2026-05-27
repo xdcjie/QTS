@@ -158,25 +158,13 @@ def _count_kind(records: Sequence[Mapping[str, Any]], kind: str) -> int:
 
 
 def _evidence_bundle_record(bundle: ResearchEvidenceBundle) -> dict[str, Any]:
-    record: dict[str, Any] = {
+    return {
         "evidence_bundle_id": bundle.evidence_bundle_id,
         "idea_id": bundle.idea_id,
         "kind": "strategy_prototype" if bundle.strategy_id else "evidence_bundle",
         "strategy_id": bundle.strategy_id,
         "workflow_run_id": bundle.workflow_run_id,
     }
-    decision = bundle.review_decisions[-1] if bundle.review_decisions else {}
-    if decision:
-        status = str(decision.get("status", "")).strip()
-        reviewed_at = decision.get("reviewed_at")
-        if isinstance(reviewed_at, str) and reviewed_at.strip():
-            record["reviewed_at"] = reviewed_at.strip()
-        if status in {"paper_candidate", "small_live_candidate"}:
-            record["accepted"] = True
-        elif status in {"reject", "rejected", "retire", "retired"}:
-            record["accepted"] = False
-            record["rejection_reason"] = _decision_reason(decision) or status
-    return record
 
 
 def _experiment_store_record(record: ExperimentStoreRecord) -> dict[str, Any]:
@@ -185,17 +173,6 @@ def _experiment_store_record(record: ExperimentStoreRecord) -> dict[str, Any]:
     if isinstance(accepted, bool):
         payload["accepted"] = accepted
     return payload
-
-
-def _decision_reason(decision: Mapping[str, Any]) -> str | None:
-    reason = decision.get("reason")
-    if isinstance(reason, str) and reason.strip():
-        return reason.strip()
-    if isinstance(reason, Sequence) and not isinstance(reason, str):
-        for item in reason:
-            if isinstance(item, str) and item.strip():
-                return item.strip()
-    return None
 
 
 def _pass_rate(records: Sequence[Mapping[str, Any]]) -> dict[str, float | int]:

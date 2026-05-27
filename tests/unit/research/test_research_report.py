@@ -11,6 +11,7 @@ from qts.research import (
     ResearchWorkflowStepResult,
 )
 from qts.research.artifact_graph import ResearchArtifactGraph, ResearchArtifactGraphWriter
+from qts.research.audit_log import ResearchAuditLog
 from qts.research.report import ResearchReviewDecision
 from qts.research.workflow import ResearchWorkflowRunContext
 
@@ -354,7 +355,6 @@ def test_report_renders_machine_readable_decision_block() -> None:
     body = report.to_markdown()
 
     assert "## Review Decision" in body
-    assert "legacy projection only" in body
     assert "not source of truth for promotion" in body
     assert "status: keep_researching" in body
     assert "required_next_evidence:" in body
@@ -371,7 +371,8 @@ def test_research_report_renders_projection_references_as_non_authoritative() ->
             "artifact_graph_hash": "sha256:graph",
             "data_quality_artifact_hash": "sha256:data-quality",
             "evidence_bundle_id": "evb_001",
-            "metrics_schema_version": "research-metrics-v2",
+            "metrics_schema_id": "research-metrics",
+            "metrics_schema_version": 2,
             "packet_hash": "sha256:packet",
             "promotion_packet_id": "packet_001",
             "reproducibility_snapshot_hash": "sha256:repro",
@@ -396,25 +397,47 @@ def test_research_report_renders_projection_references_as_non_authoritative() ->
     assert "- packet_hash: sha256:packet" in body
     assert "- evidence_bundle_id: evb_001" in body
     assert "- promotion_packet_id: packet_001" in body
-    assert "- metrics_schema_version: research-metrics-v2" in body
+    assert "- metrics_schema_id: research-metrics" in body
+    assert "- metrics_schema_version: 2" in body
     assert "- reproducibility_snapshot_hash: sha256:repro" in body
     assert "- data_quality_artifact_hash: sha256:data-quality" in body
 
 
-def test_research_report_requires_artifact_graph_ref_when_projection_refs_exist() -> None:
+@pytest.mark.parametrize(
+    "missing_key",
+    [
+        "evidence_bundle_id",
+        "promotion_packet_id",
+        "packet_hash",
+        "audit_record_id",
+        "artifact_graph_hash",
+        "metrics_schema_id",
+        "metrics_schema_version",
+        "data_quality_artifact_hash",
+        "reproducibility_snapshot_hash",
+    ],
+)
+def test_research_report_requires_all_promotion_projection_refs(missing_key: str) -> None:
+    projection_refs = {
+        "audit_record_id": "audit_001",
+        "artifact_graph_hash": "sha256:graph",
+        "data_quality_artifact_hash": "sha256:data-quality",
+        "evidence_bundle_id": "evb_001",
+        "metrics_schema_id": "research-metrics",
+        "metrics_schema_version": 2,
+        "packet_hash": "sha256:packet",
+        "promotion_packet_id": "packet_001",
+        "reproducibility_snapshot_hash": "sha256:repro",
+    }
+    projection_refs.pop(missing_key)
     report = ResearchWorkflowReport(
         workflow_id="projection-flow",
         workflow_status="completed",
         steps=(),
-        projection_refs={
-            "audit_record_id": "audit_001",
-            "evidence_bundle_id": "evb_001",
-            "packet_hash": "sha256:packet",
-            "promotion_packet_id": "packet_001",
-        },
+        projection_refs=projection_refs,
     )
 
-    with pytest.raises(ValueError, match="projection_refs.artifact_graph_hash is required"):
+    with pytest.raises(ValueError, match=f"projection_refs.{missing_key} is required"):
         report.to_markdown()
 
 
@@ -485,26 +508,39 @@ def test_workflow_report_writer_writes_projection_artifact_graph(tmp_path: Path)
         projection_refs={
             "audit_record_id": "audit-001",
             "artifact_graph_hash": "sha256:previous-graph",
+            "data_quality_artifact_hash": "sha256:data-quality",
             "evidence_bundle_id": "evb-001",
+            "metrics_schema_id": "schema_v2",
+            "metrics_schema_version": 2,
             "packet_hash": "sha256:packet",
             "promotion_packet_id": "packet-001",
+            "reproducibility_snapshot_hash": "sha256:repro",
         },
     )
     writer = ResearchWorkflowReportWriter(tmp_path / "reports")
+    audit_log = ResearchAuditLog(tmp_path / "audit")
     graph_writer = ResearchArtifactGraphWriter(tmp_path / "graphs")
 
     path = writer.write(
         report,
+        audit_log=audit_log,
         artifact_graph_writer=graph_writer,
         graph_manifests=({"manifest_id": "manifest-001"},),
+        graph_workflow_runs=(
+            {"workflow_run_id": "workflow-001", "manifest_ids": ("manifest-001",)},
+        ),
         graph_evidence_bundles=(
             {"evidence_bundle_id": "evb-001", "manifest_ids": ("manifest-001",)},
         ),
         graph_promotion_packets=(
             {
-                "promotion_packet_id": "packet-001",
+                "audit_record_id": "audit-001",
+                "data_quality": {"data_quality_id": "dq-001"},
                 "evidence_bundle_id": "evb-001",
+                "metrics": {"metrics_id": "metrics-001"},
                 "packet_hash": "sha256:packet",
+                "promotion_packet_id": "packet-001",
+                "reproducibility": {"reproducibility_id": "repro-001"},
             },
         ),
         graph_audit_records=({"record_id": "audit-001"},),
@@ -520,3 +556,34 @@ def test_workflow_report_writer_writes_projection_artifact_graph(tmp_path: Path)
     assert (str(path), "audit-001", "references") in {
         (edge.source_id, edge.target_id, edge.relation) for edge in graph.edges
     }
+
+
+def test_workflow_report_writer_writes_report_projected_audit_record(tmp_path: Path) -> None:
+    report = ResearchWorkflowReport(
+        workflow_id="report-flow",
+        workflow_status="completed",
+        steps=(),
+        projection_refs={
+            "audit_record_id": "audit-001",
+            "artifact_graph_hash": "sha256:graph",
+            "data_quality_artifact_hash": "sha256:data-quality",
+            "evidence_bundle_id": "evb-001",
+            "metrics_schema_id": "schema_v2",
+            "metrics_schema_version": 2,
+            "packet_hash": "sha256:packet",
+            "promotion_packet_id": "packet-001",
+            "reproducibility_snapshot_hash": "sha256:repro",
+        },
+    )
+    audit_log = ResearchAuditLog(tmp_path / "audit")
+
+    path = ResearchWorkflowReportWriter(tmp_path / "reports").write(
+        report,
+        audit_log=audit_log,
+    )
+
+    records = audit_log.list()
+    assert [record.record_type for record in records] == ["report_projected"]
+    assert records[0].payload["report_path"] == str(path)
+    assert records[0].payload["workflow_id"] == "report-flow"
+    assert records[0].payload["projection_refs"]["promotion_packet_id"] == "packet-001"

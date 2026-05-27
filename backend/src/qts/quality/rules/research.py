@@ -158,10 +158,10 @@ class TradeDiagnosticsRequiredForPaperRule:
         return violations
 
 
-class PromotionCandidateSpecBoundaryRule:
+class PromotionConfigBoundaryRule:
     """Require promotion YAML to respect review and production parameter boundaries."""
 
-    code = "PROMOTION_CANDIDATE_SPEC_BOUNDARY"
+    code = "PROMOTION_CONFIG_BOUNDARY"
 
     def check(
         self,
@@ -426,7 +426,7 @@ def is_gitignored_repository_path(repo_root: Path, relative_path: Path) -> bool:
 __all__ = [
     "EvidenceBundleRequiredForPromotionRule",
     "IdeaRegistryRequiredForCandidateRule",
-    "PromotionCandidateSpecBoundaryRule",
+    "PromotionConfigBoundaryRule",
     "ResearchReportDecisionRequiredRule",
     "ResearchStrategyStaleDocstringRule",
     "RouteMetadataRequiredRule",

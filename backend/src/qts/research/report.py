@@ -10,6 +10,7 @@ from typing import Any, Protocol, cast
 
 from qts.core.hashing import stable_json_hash
 from qts.research.artifact_graph import ResearchArtifactGraphWriter
+from qts.research.audit_log import ResearchAuditLog
 
 
 class _WorkflowStepResult(Protocol):
@@ -309,13 +310,13 @@ class ResearchWorkflowReport:
         return "\n".join(lines)
 
     def _decision_section(self) -> str:
-        """Render the legacy review decision projection block."""
+        """Render the review decision projection block."""
 
         payload = self.decision.to_payload()
         lines = [
             "## Review Decision",
             (
-                "This legacy projection only block is not source of truth for "
+                "This projection block is not source of truth for "
                 "promotion; source-of-truth is audit/packet/evidence/graph."
             ),
             "```yaml",
@@ -348,10 +349,12 @@ class ResearchWorkflowReportWriter:
         output_path: str | Path = "workflow-report.md",
         artifact_graph_writer: ResearchArtifactGraphWriter | None = None,
         graph_manifests: Sequence[Mapping[str, Any]] = (),
+        graph_workflow_runs: Sequence[Mapping[str, Any]] = (),
         graph_evidence_bundles: Sequence[Mapping[str, Any]] = (),
         graph_promotion_packets: Sequence[Mapping[str, Any]] = (),
         graph_audit_records: Sequence[Mapping[str, Any]] = (),
         graph_output_path: str | Path = "report-artifact-graph.json",
+        audit_log: ResearchAuditLog | None = None,
     ) -> Path:
         """Write a deterministic markdown report under the configured output root."""
 
@@ -371,9 +374,21 @@ class ResearchWorkflowReportWriter:
         target.parent.mkdir(parents=True, exist_ok=True)
         markdown = report.to_markdown()
         target.write_text(markdown + "\n", encoding="utf-8")
+        if audit_log is not None:
+            audit_log.append(
+                "report_projected",
+                {
+                    "projection_refs": dict(_normalize_projection_refs(report.projection_refs)),
+                    "report_hash": stable_json_hash({"markdown": markdown}),
+                    "report_path": str(target),
+                    "workflow_id": report.workflow_id,
+                    "workflow_status": report.workflow_status,
+                },
+            )
         if artifact_graph_writer is not None:
             artifact_graph_writer.write_from_payloads(
                 manifests=graph_manifests,
+                workflow_runs=graph_workflow_runs,
                 evidence_bundles=graph_evidence_bundles,
                 promotion_packets=graph_promotion_packets,
                 audit_records=graph_audit_records,
@@ -386,6 +401,7 @@ class ResearchWorkflowReportWriter:
                     },
                 ),
                 output_path=graph_output_path,
+                audit_log=audit_log,
             )
         return target
 
@@ -1043,7 +1059,9 @@ _PROJECTION_REF_KEYS = (
     "promotion_packet_id",
     "packet_hash",
     "audit_record_id",
+    "artifact_graph_path",
     "artifact_graph_hash",
+    "metrics_schema_id",
     "metrics_schema_version",
     "reproducibility_snapshot_hash",
     "data_quality_artifact_hash",
@@ -1054,6 +1072,10 @@ _REQUIRED_PROJECTION_REF_KEYS = (
     "packet_hash",
     "audit_record_id",
     "artifact_graph_hash",
+    "metrics_schema_id",
+    "metrics_schema_version",
+    "data_quality_artifact_hash",
+    "reproducibility_snapshot_hash",
 )
 
 __all__ = [

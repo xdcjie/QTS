@@ -179,6 +179,7 @@ class DataQualityArtifact:
         for issue in self._critical_flag_issues():
             if issue.code not in seen_codes:
                 blockers.append({"code": issue.code, "message": issue.message})
+                seen_codes.add(issue.code)
         return tuple(blockers)
 
     def to_payload(
@@ -208,6 +209,20 @@ class DataQualityArtifact:
 
     def _critical_flag_issues(self) -> tuple[DataQualityIssue, ...]:
         issues: list[DataQualityIssue] = []
+        if not self.checked_paths:
+            issues.append(
+                DataQualityIssue(
+                    code="checked_paths",
+                    message="checked_paths must not be empty",
+                )
+            )
+        if not self.accepted:
+            issues.append(
+                DataQualityIssue(
+                    code="accepted",
+                    message="data quality artifact is not accepted",
+                )
+            )
         if self.duplicate_timestamps:
             issues.append(
                 DataQualityIssue(
@@ -377,6 +392,18 @@ class DataQualityRunner:
             return 0
         missing = 0
         unique = sorted(set(timestamps))
+        start = None if self.start is None else self._parse_datetime(self.start)
+        end = None if self.end is None else self._parse_datetime(self.end)
+        if not unique:
+            if start is not None and end is not None and end > start:
+                return int((end - start).total_seconds()) // step
+            return 0
+        if start is not None and unique[0] > start:
+            missing += int((unique[0] - start).total_seconds()) // step
+        if end is not None and unique[-1] < end:
+            seconds_to_end = int((end - unique[-1]).total_seconds())
+            if seconds_to_end > step:
+                missing += max((seconds_to_end // step) - 1, 0)
         for left, right in zip(unique, unique[1:], strict=False):
             seconds = int((right - left).total_seconds())
             if seconds > step:

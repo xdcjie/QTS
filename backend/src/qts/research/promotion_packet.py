@@ -154,11 +154,53 @@ class PromotionPacketV2:
         self._append_packet_structure_reasons(reasons)
         self._append_review_reasons(reasons)
         self._append_evidence_reasons(evidence_registry, reasons, warnings)
-        self._append_metrics_reasons(metrics_schema, reasons, warnings)
-        self._append_reproducibility_reasons(reasons)
-        self._append_data_quality_reasons(reasons)
+        metrics_reasons: list[str] = []
+        metrics_warnings: list[str] = []
+        reproducibility_reasons: list[str] = []
+        data_quality_reasons: list[str] = []
+        self._append_metrics_reasons(metrics_schema, metrics_reasons, metrics_warnings)
+        self._append_reproducibility_reasons(reproducibility_reasons)
+        self._append_data_quality_reasons(data_quality_reasons)
+        reasons.extend(metrics_reasons)
+        reasons.extend(reproducibility_reasons)
+        reasons.extend(data_quality_reasons)
+        warnings.extend(metrics_warnings)
         self._append_runtime_operations_reasons(reasons)
 
+        metrics_record = audit_log.append(
+            "metrics_validated",
+            {
+                "accepted": not metrics_reasons,
+                "metrics_schema_id": self.metrics.get("metrics_schema_id"),
+                "payload_hash": self.metrics.get("payload_hash"),
+                "promotion_candidate_id": self.promotion_candidate_id,
+                "reasons": metrics_reasons,
+                "status": "accepted" if not metrics_reasons else "rejected",
+                "warnings": metrics_warnings,
+            },
+        )
+        data_quality_record = audit_log.append(
+            "data_quality_validated",
+            {
+                "accepted": not data_quality_reasons,
+                "artifact_id": self.data_quality.get("artifact_id"),
+                "payload_hash": self.data_quality.get("payload_hash"),
+                "promotion_candidate_id": self.promotion_candidate_id,
+                "reasons": data_quality_reasons,
+                "status": "accepted" if not data_quality_reasons else "rejected",
+            },
+        )
+        reproducibility_record = audit_log.append(
+            "reproducibility_validated",
+            {
+                "accepted": not reproducibility_reasons,
+                "payload_hash": self.reproducibility.get("payload_hash"),
+                "promotion_candidate_id": self.promotion_candidate_id,
+                "reasons": reproducibility_reasons,
+                "snapshot_id": self.reproducibility.get("snapshot_id"),
+                "status": "accepted" if not reproducibility_reasons else "rejected",
+            },
+        )
         accepted = not reasons
         status = "accepted" if accepted else "rejected"
         human_review_record_id: str | None = None
@@ -192,7 +234,12 @@ class PromotionPacketV2:
             validation_payload,
         )
         if accepted and artifact_graph_writer is not None:
-            audit_records = [record.to_payload()]
+            audit_records = [
+                metrics_record.to_payload(),
+                data_quality_record.to_payload(),
+                reproducibility_record.to_payload(),
+                record.to_payload(),
+            ]
             if human_review_record_id is not None:
                 audit_records.insert(0, human_review_record.to_payload())
             artifact_graph_writer.write_from_payloads(
@@ -200,12 +247,14 @@ class PromotionPacketV2:
                 promotion_packets=(
                     {
                         **self.to_payload(),
+                        "audit_record_id": record.record_id,
                         "promotion_packet_id": self.promotion_candidate_id,
                         "packet_hash": packet_hash,
                     },
                 ),
                 audit_records=tuple(audit_records),
                 output_path=(f"promotion-packet-{self.promotion_candidate_id}-artifact-graph.json"),
+                audit_log=audit_log,
             )
         return PromotionPacketValidationResult(
             accepted=accepted,

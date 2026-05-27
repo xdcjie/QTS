@@ -14,8 +14,9 @@ import yaml  # type: ignore[import-untyped]
 
 from qts.core.hashing import stable_json_dumps, stable_json_hash
 from qts.research.artifact_graph import ResearchArtifactGraphWriter
+from qts.research.audit_log import ResearchAuditLog
 from qts.research.data_quality import DataQualityArtifact, DataQualityRunner
-from qts.research.manifest import ResearchManifest, ResearchManifestV2, write_jsonl
+from qts.research.manifest import ResearchManifestV2, write_jsonl
 from qts.research.metrics import ResearchMetrics
 from qts.research.promotion import ResearchPromotionPolicy
 from qts.research.registry import ResearchRunRegistry, new_record
@@ -78,7 +79,6 @@ class ResearchDryRunRunner:
         data_snapshot = self._data_snapshot(manifest)
         data_quality_artifact = self._data_quality_artifact(manifest, data_snapshot)
         data_quality_payload = _data_quality_payload_with_hash(data_quality_artifact)
-        data_quality = self._data_quality_report(data_snapshot, data_quality_artifact)
         reproducibility_v2 = ReproducibilitySnapshotV2.collect(
             repo_root=self._repo_root,
             manifest_hash=manifest.manifest_hash,
@@ -102,7 +102,6 @@ class ResearchDryRunRunner:
         _write_json(artifact_dir / "data_snapshot.json", data_snapshot)
         _write_json(artifact_dir / "data_quality.json", data_quality_payload)
         _write_json(artifact_dir / "splits.json", split_plan.to_payload())
-        (artifact_dir / "data_quality_report.md").write_text(data_quality, encoding="utf-8")
         ResearchArtifactGraphWriter(artifact_dir).write_dry_run_artifacts(
             artifact_dir=artifact_dir,
             manifest_path=manifest_copy,
@@ -110,6 +109,7 @@ class ResearchDryRunRunner:
             metrics_payload=metrics.to_payload(),
             data_quality_payload=data_quality_payload,
             reproducibility_payload=reproducibility_v2.to_payload(),
+            audit_log=ResearchAuditLog(artifact_dir),
         )
 
         write_jsonl(
@@ -168,7 +168,7 @@ class ResearchDryRunRunner:
             promotion_status=promotion_decision.status,
         )
 
-    def _data_snapshot(self, manifest: ResearchManifest | ResearchManifestV2) -> dict[str, Any]:
+    def _data_snapshot(self, manifest: ResearchManifestV2) -> dict[str, Any]:
         data_config_hash = _file_sha256(manifest.data_config)
         strategy_config_hash = _file_sha256(manifest.default_config)
         dataset_files = self._dataset_files(manifest)
@@ -185,9 +185,7 @@ class ResearchDryRunRunner:
             "timeframe": manifest.timeframe,
         }
 
-    def _dataset_files(
-        self, manifest: ResearchManifest | ResearchManifestV2
-    ) -> list[dict[str, Any]]:
+    def _dataset_files(self, manifest: ResearchManifestV2) -> list[dict[str, Any]]:
         payload = yaml.safe_load(manifest.data_config.read_text(encoding="utf-8"))
         if not isinstance(payload, dict):
             return []
@@ -229,46 +227,9 @@ class ResearchDryRunRunner:
                 )
         return result
 
-    @staticmethod
-    def _data_quality_report(
-        data_snapshot: dict[str, Any],
-        artifact: DataQualityArtifact,
-    ) -> str:
-        rows = data_snapshot.get("dataset_files", [])
-        missing = [row for row in rows if isinstance(row, dict) and row.get("exists") is not True]
-        lines = [
-            "# Data Quality Report",
-            "",
-            "## Timestamp and Session Checks",
-            "",
-            "Dry-run records dataset availability before reading labels or metrics.",
-            "Timestamp/session row validation is deferred to executable research runs.",
-            "",
-            "## Missing Files",
-            "",
-        ]
-        if not missing:
-            lines.append("- None")
-        else:
-            lines.extend(
-                f"- {row.get('root')}: {row.get('path', row.get('reason'))}" for row in missing
-            )
-        lines.extend(
-            [
-                "",
-                "## Structured Artifact",
-                "",
-                f"- Accepted: {artifact.accepted}",
-                f"- Duplicate timestamps: {artifact.duplicate_timestamps}",
-                f"- Missing bars: {artifact.missing_bars}",
-                f"- Stale prices: {artifact.stale_prices}",
-            ]
-        )
-        return "\n".join(lines) + "\n"
-
     def _data_quality_artifact(
         self,
-        manifest: ResearchManifest | ResearchManifestV2,
+        manifest: ResearchManifestV2,
         data_snapshot: Mapping[str, Any],
     ) -> DataQualityArtifact:
         return DataQualityRunner(
@@ -290,7 +251,7 @@ class ResearchDryRunRunner:
     @staticmethod
     def _config_hashes(
         *,
-        manifest: ResearchManifest | ResearchManifestV2,
+        manifest: ResearchManifestV2,
         config_path: Path,
         resolved_manifest: Mapping[str, Any],
     ) -> dict[str, str]:
@@ -321,7 +282,7 @@ class ResearchDryRunRunner:
         return result
 
     @staticmethod
-    def _random_seeds(manifest: ResearchManifest | ResearchManifestV2) -> dict[str, int]:
+    def _random_seeds(manifest: ResearchManifestV2) -> dict[str, int]:
         seed = manifest.random_search.get("seed")
         if isinstance(seed, int):
             return {"research_manifest_random_search": seed}
@@ -367,11 +328,11 @@ def _write_ranking(path: Path, candidates: tuple[Any, ...]) -> None:
             )
 
 
-def _load_manifest(path: Path) -> ResearchManifest | ResearchManifestV2:
+def _load_manifest(path: Path) -> ResearchManifestV2:
     payload = yaml.safe_load(path.read_text(encoding="utf-8"))
     if isinstance(payload, Mapping) and payload.get("schema_version") == 2:
         return ResearchManifestV2.from_yaml(path)
-    return ResearchManifest.from_yaml(path)
+    raise ValueError("Research OS v1.0 requires schema_version=2")
 
 
 __all__ = ["ResearchDryRunResult", "ResearchDryRunRunner"]

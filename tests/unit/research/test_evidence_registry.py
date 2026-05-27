@@ -118,19 +118,29 @@ def test_evidence_bundle_creation_writes_artifact_graph(tmp_path: Path) -> None:
     report_path.write_text("# Report\n", encoding="utf-8")
     summary_path = _write_workflow_summary(tmp_path, manifest_path, report_path)
     registry = EvidenceRegistry(tmp_path / "evidence")
+    audit_log = ResearchAuditLog(tmp_path / "audit.jsonl")
     graph_writer = ResearchArtifactGraphWriter(tmp_path / "graphs")
 
     bundle = registry.create_from_workflow_summary(
         summary_path,
+        audit_log=audit_log,
         artifact_graph_writer=graph_writer,
     )
 
+    assert [record.record_type for record in audit_log.list()] == [
+        "evidence_bundle_created",
+        "artifact_graph_written",
+    ]
     graph_path = (
         tmp_path / "graphs" / f"evidence-bundle-{bundle.evidence_bundle_id}-artifact-graph.json"
     )
     graph = ResearchArtifactGraph.from_payload(json.loads(graph_path.read_text(encoding="utf-8")))
     graph.validate()
-    assert {node.node_type for node in graph.nodes} == {"evidence_bundle", "manifest"}
+    assert {node.node_type for node in graph.nodes} == {
+        "audit_record",
+        "evidence_bundle",
+        "manifest",
+    }
     assert (bundle.evidence_bundle_id, str(manifest_path), "references") in {
         (edge.source_id, edge.target_id, edge.relation) for edge in graph.edges
     }
@@ -517,7 +527,7 @@ def test_evidence_bundle_never_sets_paper_live_production_status() -> None:
         ResearchEvidenceBundle.from_payload(payload)
 
 
-def test_evidence_review_decision_is_append_only(tmp_path: Path) -> None:
+def test_evidence_review_decision_hard_fails_in_favor_of_audit_log(tmp_path: Path) -> None:
     manifest_path = tmp_path / "manifest.json"
     manifest_path.write_text('{"metrics": {}}\n', encoding="utf-8")
     report_path = tmp_path / "workflow-report.md"
@@ -526,17 +536,10 @@ def test_evidence_review_decision_is_append_only(tmp_path: Path) -> None:
     registry = EvidenceRegistry(tmp_path / "evidence")
     bundle = registry.create_from_workflow_summary(summary_path)
 
-    first = registry.append_review_decision(
-        bundle.evidence_bundle_id,
-        {"status": "keep_researching", "reviewer": "alice"},
-    )
-    second = registry.append_review_decision(
-        bundle.evidence_bundle_id,
-        {"status": "reject", "reviewer": "bob"},
-    )
-
-    assert [decision["status"] for decision in second.review_decisions] == [
-        "keep_researching",
-        "reject",
-    ]
-    assert first.manifest_hashes == second.manifest_hashes
+    with pytest.raises(
+        ValueError, match="human review decisions must be written to ResearchAuditLog"
+    ):
+        registry.append_review_decision(
+            bundle.evidence_bundle_id,
+            {"status": "keep_researching", "reviewer": "alice"},
+        )

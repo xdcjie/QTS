@@ -94,6 +94,7 @@ class ReproducibilitySnapshotV2:
     random_seeds: Mapping[str, int]
     calendar_version: str
     container_digest: str | None = None
+    stochastic_search_required: bool = False
 
     def __post_init__(self) -> None:
         if self.schema_version != 2:
@@ -112,6 +113,7 @@ class ReproducibilitySnapshotV2:
         calendar_version: str,
         manifest_hash: str | None = None,
         container_digest: str | None = None,
+        stochastic_search_required: bool = False,
     ) -> ReproducibilitySnapshotV2:
         """Collect reproducibility metadata from explicit run evidence."""
 
@@ -129,6 +131,7 @@ class ReproducibilitySnapshotV2:
             random_seeds=dict(random_seeds),
             calendar_version=calendar_version,
             container_digest=container_digest,
+            stochastic_search_required=stochastic_search_required,
         )
 
     @classmethod
@@ -153,6 +156,7 @@ class ReproducibilitySnapshotV2:
             random_seeds=cls._int_mapping(payload, "random_seeds"),
             calendar_version=cls._required_text(payload, "calendar_version"),
             container_digest=cls._optional_text(payload, "container_digest"),
+            stochastic_search_required=cls._stochastic_search_required(payload),
         )
 
     def to_payload(self) -> dict[str, Any]:
@@ -172,6 +176,7 @@ class ReproducibilitySnapshotV2:
             "random_seeds": dict(self.random_seeds),
             "calendar_version": self.calendar_version,
             "container_digest": self.container_digest,
+            "stochastic_search_required": self.stochastic_search_required,
         }
 
     def promotion_blockers(self) -> tuple[str, ...]:
@@ -196,6 +201,8 @@ class ReproducibilitySnapshotV2:
             ("data_hashes", self.data_hashes),
         ):
             blockers.extend(self._hash_blockers(field_name, hashes))
+        if self.stochastic_search_required and not self.random_seeds:
+            blockers.append("random_seeds are required for stochastic search")
 
         return tuple(blockers)
 
@@ -265,6 +272,23 @@ class ReproducibilitySnapshotV2:
         if not all(isinstance(item, str) for item in value):
             raise ValueError(f"{field_name} must contain only text")
         return tuple(value)
+
+    @classmethod
+    def _stochastic_search_required(cls, payload: Mapping[str, Any]) -> bool:
+        value = payload.get("stochastic_search_required")
+        if value is not None:
+            if not isinstance(value, bool):
+                raise ValueError("stochastic_search_required must be bool")
+            return value
+        metadata = payload.get("metadata")
+        if metadata is None:
+            return False
+        if not isinstance(metadata, Mapping):
+            raise ValueError("metadata must be a mapping")
+        value = metadata.get("stochastic_search_required", False)
+        if not isinstance(value, bool):
+            raise ValueError("metadata.stochastic_search_required must be bool")
+        return value
 
     @classmethod
     def _hash_blockers(cls, field_name: str, hashes: Mapping[str, str]) -> tuple[str, ...]:

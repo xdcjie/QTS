@@ -94,8 +94,6 @@ from qts.research.portfolio_ensemble import (
     scan_volatility_managed_allocations,
 )
 from qts.research.promotion import (
-    PaperReadinessChecklist,
-    PromotionCandidateSpec,
     PromotionGateResult,
     ResearchPromotionDecision,
     ResearchPromotionPolicy,
@@ -222,8 +220,6 @@ __all__ = [
     "evaluate_portfolio_ensemble",
     "scan_portfolio_ensemble_allocations",
     "scan_volatility_managed_allocations",
-    "PaperReadinessChecklist",
-    "PromotionCandidateSpec",
     "PromotionGateResult",
     "ResearchPromotionDecision",
     "ResearchPromotionPolicy",

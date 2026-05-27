@@ -29,6 +29,8 @@ from qts.research.factor_evaluation import (
 
 from tests.integration.test_research_session_facade import _write_research_session_config
 
+_CANONICAL_MANIFEST = "configs/research/manifests/gc_si_smoke_v2.yaml"
+
 
 def _write_evaluation(
     writer: FactorEvaluationArtifactWriter,
@@ -67,6 +69,22 @@ def _run_cli(*args: str) -> subprocess.CompletedProcess[str]:
             "QTS_API_DEV_TOKENS": "1",
             "PATH": os.environ.get("PATH", ""),
         },
+    )
+
+
+def _run_workflow_cli(
+    config_path: str | Path,
+    workflow_path: Path,
+    *extra_args: str,
+) -> subprocess.CompletedProcess[str]:
+    return _run_cli(
+        "--config",
+        str(config_path),
+        "workflow",
+        str(workflow_path),
+        "--manifest",
+        _CANONICAL_MANIFEST,
+        *extra_args,
     )
 
 
@@ -239,7 +257,7 @@ steps:
 """,
     )
 
-    result = _run_cli("--config", str(config_path), "workflow", str(workflow_path))
+    result = _run_workflow_cli(config_path, workflow_path)
 
     assert result.returncode == 1, result.stderr
     payload = json.loads(result.stdout)
@@ -268,14 +286,7 @@ steps:
 """,
     )
 
-    result = _run_cli(
-        "--config",
-        str(config_path),
-        "workflow",
-        str(workflow_path),
-        "--step",
-        "implementation",
-    )
+    result = _run_workflow_cli(config_path, workflow_path, "--step", "implementation")
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
@@ -301,11 +312,9 @@ steps:
 """,
     )
 
-    result = _run_cli(
-        "--config",
-        str(config_path),
-        "workflow",
-        str(workflow_path),
+    result = _run_workflow_cli(
+        config_path,
+        workflow_path,
         "--step",
         "implementation",
         "--from-step",
@@ -357,7 +366,7 @@ steps:
 """,
     )
 
-    result = _run_cli("--config", str(config_path), "workflow", str(workflow_path))
+    result = _run_workflow_cli(config_path, workflow_path)
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
@@ -403,7 +412,7 @@ steps:
 """,
     )
 
-    result = _run_cli("--config", str(config_path), "workflow", str(workflow_path))
+    result = _run_workflow_cli(config_path, workflow_path)
     direct_results = ResearchSession.from_yaml(config_path).optimize(
         parameters={
             "entry_bar": [1, 2],
@@ -465,12 +474,7 @@ steps:
 """,
     )
 
-    result = _run_cli(
-        "--config",
-        "configs/research/vwap.yaml",
-        "workflow",
-        str(workflow_path),
-    )
+    result = _run_workflow_cli("configs/research/vwap.yaml", workflow_path)
     direct_results = ResearchSession.from_yaml(Path("configs/research/vwap.yaml")).optimize(
         parameters={
             "time_window": ["evening_18_22"],
@@ -577,7 +581,7 @@ steps:
 """,
     )
 
-    result = _run_cli("--config", str(config_path), "workflow", str(workflow_path))
+    result = _run_workflow_cli(config_path, workflow_path)
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
@@ -638,7 +642,7 @@ steps:
 """,
     )
 
-    result = _run_cli("--config", str(config_path), "workflow", str(workflow_path))
+    result = _run_workflow_cli(config_path, workflow_path)
 
     assert result.returncode == 1, result.stderr
     payload = json.loads(result.stdout)
@@ -853,12 +857,6 @@ def test_research_cli_idea_record_trial_and_meta_summary(tmp_path: Path) -> None
         workflow_run_id="wf_001",
         idea_id="idea-momentum",
         strategy_id="strategy-prototype",
-        review_decisions=(
-            {
-                "reason": ["no_oos_stability"],
-                "status": "reject",
-            },
-        ),
     )
     evidence_payload = evidence_bundle.to_payload()
     (evidence_registry_root / "evidence-bundle-evb_001.json").write_text(
@@ -884,6 +882,22 @@ def test_research_cli_idea_record_trial_and_meta_summary(tmp_path: Path) -> None
         )
     )
     ExperimentStore(experiment_store_root).record_manifest(manifest.manifest_path)
+    evidence_records_path = tmp_path / "evidence-records.json"
+    evidence_records_path.write_text(
+        json.dumps(
+            [
+                {
+                    "accepted": False,
+                    "idea_id": "idea-momentum",
+                    "rejection_reason": "no_oos_stability",
+                    "reviewed_at": "2026-05-10T00:00:00+00:00",
+                }
+            ],
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     output_dir = tmp_path / "meta"
 
     meta = _run_cli(
@@ -893,6 +907,8 @@ def test_research_cli_idea_record_trial_and_meta_summary(tmp_path: Path) -> None
         "summary",
         "--idea-registry-root",
         str(registry_root),
+        "--evidence-records",
+        str(evidence_records_path),
         "--evidence-registry-root",
         str(evidence_registry_root),
         "--experiment-store-root",
