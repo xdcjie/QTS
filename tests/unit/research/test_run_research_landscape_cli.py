@@ -21,6 +21,8 @@ def test_landscape_summarize_reports_family_success_and_rejections(
     payload = json.loads(capsys.readouterr().out)
     assert payload["analytics"]["best_family"]["strategy_family"] == "momentum"
     assert payload["analytics"]["best_family"]["family_success_rate"] == 1.0
+    assert payload["family_success_rate"] == {"momentum/momentum": 1.0, "breakout/breakout": 0.0}
+    assert payload["rejection_distribution"] == {"max_drawdown": 1}
     assert payload["rejection_reason_counts"] == {"max_drawdown": 1}
 
 
@@ -73,6 +75,7 @@ def test_landscape_export_writes_deterministic_json(
     stdout_payload = json.loads(capsys.readouterr().out)
     file_payload = json.loads(output.read_text(encoding="utf-8"))
     assert stdout_payload == file_payload
+    assert file_payload["analytics"]["best_family"]["strategy_family"] == "momentum"
     assert file_payload["trial_count"] == 2
 
 

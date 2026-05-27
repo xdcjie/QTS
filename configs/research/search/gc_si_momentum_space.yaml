@@ -1,0 +1,12 @@
+parameters:
+  - name: root
+    parameter_type: categorical
+    values: [GC, SI]
+  - name: lookback
+    parameter_type: int_range
+    minimum: 2
+    maximum: 4
+    step: 1
+  - name: active_correlation
+    parameter_type: categorical
+    values: [0.20, 0.90]

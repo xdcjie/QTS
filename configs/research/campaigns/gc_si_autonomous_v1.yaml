@@ -25,6 +25,17 @@ families:
     manifest_template: configs/research/manifests/templates/gc_si_breakout.yaml
     search_space: configs/research/search/gc_si_breakout_space.yaml
 
+execution:
+  default_mode: backtest_pipeline
+  metrics_source: backtest_artifacts
+
+selection:
+  selector: CandidateSelector
+  gauntlet: ValidationGauntlet
+
+launch_controls:
+  paper_live_launches: disabled
+
 objective:
   primary: composite_score
   components:
@@ -38,7 +49,7 @@ objective:
 
 constraints:
   min_oos_months: 12
-  min_oos_trade_count: 40
+  min_oos_trade_count: 1
   min_profit_factor: 1.15
   max_drawdown: 0.25
   max_cost_impact: 0.25

@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
+
+import yaml  # type: ignore[import-untyped]
 
 from qts.core.hashing import stable_json_hash
 from qts.research.artifact_graph import ResearchArtifactNode
@@ -76,6 +79,53 @@ class StrategyTemplate:
         object.__setattr__(self, "risk_assumptions", dict(self.risk_assumptions))
         object.__setattr__(self, "execution_assumptions", dict(self.execution_assumptions))
         object.__setattr__(self, "manifest_template", dict(self.manifest_template))
+
+    @classmethod
+    def from_yaml(cls, path: str | Path) -> StrategyTemplate:
+        """Load a strategy template from YAML."""
+
+        payload = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+        if not isinstance(payload, Mapping):
+            raise ValueError("strategy template YAML must contain a mapping")
+        return cls.from_payload(payload)
+
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, Any]) -> StrategyTemplate:
+        """Create a strategy template from a JSON/YAML mapping."""
+
+        factor_definition = payload.get("factor_definition")
+        if not isinstance(factor_definition, Mapping):
+            raise ValueError("strategy template factor_definition must be a mapping")
+        allowed_imports = payload.get("allowed_imports", ())
+        if not isinstance(allowed_imports, Sequence) or isinstance(allowed_imports, str):
+            raise ValueError("strategy template allowed_imports must be a sequence")
+        parameter_space = payload.get("parameter_space", {})
+        if not isinstance(parameter_space, Mapping):
+            raise ValueError("strategy template parameter_space must be a mapping")
+        risk_assumptions = payload.get("risk_assumptions", {})
+        if not isinstance(risk_assumptions, Mapping):
+            raise ValueError("strategy template risk_assumptions must be a mapping")
+        execution_assumptions = payload.get("execution_assumptions", {})
+        if not isinstance(execution_assumptions, Mapping):
+            raise ValueError("strategy template execution_assumptions must be a mapping")
+        manifest_template = payload.get("manifest_template", {})
+        if not isinstance(manifest_template, Mapping):
+            raise ValueError("strategy template manifest_template must be a mapping")
+        return cls(
+            template_id=str(payload.get("template_id", "")),
+            family=str(payload.get("family", "")),
+            factor_definition=FactorDefinition.from_payload(factor_definition),
+            strategy_entrypoint=str(payload.get("strategy_entrypoint", "")),
+            allowed_imports=tuple(str(item) for item in allowed_imports),
+            parameter_space=parameter_space,
+            risk_assumptions=risk_assumptions,
+            execution_assumptions=execution_assumptions,
+            template_kind=str(payload.get("template_kind", "static")),
+            trial_budget=(
+                None if payload.get("trial_budget") is None else int(payload["trial_budget"])
+            ),
+            manifest_template=manifest_template,
+        )
 
     def validate(
         self,
@@ -318,6 +368,7 @@ class StrategyVariantFactory:
 
     def _manifest_patch(self, variant_id: str, parameters: Mapping[str, Any]) -> dict[str, Any]:
         return {
+            **dict(self.template.manifest_template),
             "execution": {
                 "assumptions": dict(self.template.execution_assumptions),
             },

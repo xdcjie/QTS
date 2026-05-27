@@ -12,6 +12,8 @@ from itertools import product
 from pathlib import Path
 from typing import Any, ClassVar, Literal, cast
 
+import yaml  # type: ignore[import-untyped]
+
 from qts.core.hashing import stable_json_dumps, stable_json_hash
 
 SearchParameterType = Literal[
@@ -58,6 +60,26 @@ class SearchParameter:
             self._validate_log_float_range()
         else:
             raise ValueError(f"unsupported search parameter type: {self.parameter_type!r}")
+
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, Any]) -> SearchParameter:
+        """Create a search parameter from a JSON/YAML mapping."""
+
+        parameter_type = str(payload.get("parameter_type", payload.get("type", "")))
+        values = payload.get("values", ())
+        if not isinstance(values, Sequence) or isinstance(values, str):
+            values = ()
+        minimum = payload.get("minimum")
+        maximum = payload.get("maximum")
+        step = payload.get("step")
+        return cls(
+            name=str(payload.get("name", "")),
+            parameter_type=cast(SearchParameterType, parameter_type),
+            values=tuple(values),
+            minimum=None if minimum is None else cls._decimal(cast(Any, minimum)),
+            maximum=None if maximum is None else cls._decimal(cast(Any, maximum)),
+            step=None if step is None else cls._decimal(cast(Any, step)),
+        )
 
     @classmethod
     def categorical(cls, name: str, values: Sequence[Any]) -> SearchParameter:
@@ -321,6 +343,24 @@ class SearchConstraint:
             raise ValueError(f"unsupported search constraint type: {self.constraint_type!r}")
 
     @classmethod
+    def from_payload(cls, payload: Mapping[str, Any]) -> SearchConstraint:
+        """Create a search constraint from a JSON/YAML mapping."""
+
+        constraint_type = str(payload.get("constraint_type", payload.get("type", "")))
+        if constraint_type == "conditional":
+            when = payload.get("when", {})
+            return cls.conditional(
+                str(payload.get("parameter", "")),
+                when=when if isinstance(when, Mapping) else {},
+            )
+        if constraint_type == "forbidden_combination":
+            values = payload.get("values", {})
+            return cls.forbidden_combination(
+                values=values if isinstance(values, Mapping) else {},
+            )
+        return cls(constraint_type=cast(SearchConstraintType, constraint_type))
+
+    @classmethod
     def conditional(cls, parameter: str, *, when: Mapping[str, Any]) -> SearchConstraint:
         """Create a rule that includes ``parameter`` only when predicates match."""
 
@@ -432,6 +472,38 @@ class SearchSpaceSpec:
         if len(set(names)) != len(names):
             raise ValueError("duplicate search parameter names are not allowed")
         self._validate_constraints(frozenset(names))
+
+    @classmethod
+    def from_yaml(cls, path: str | Path) -> SearchSpaceSpec:
+        """Load a search-space spec from YAML."""
+
+        payload = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+        if not isinstance(payload, Mapping):
+            raise ValueError("search-space YAML must contain a mapping")
+        return cls.from_payload(payload)
+
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, Any]) -> SearchSpaceSpec:
+        """Create a search-space spec from a JSON/YAML mapping."""
+
+        parameters = payload.get("parameters")
+        if not isinstance(parameters, Sequence) or isinstance(parameters, str):
+            raise ValueError("search-space parameters must be a sequence")
+        constraints = payload.get("constraints", ())
+        if not isinstance(constraints, Sequence) or isinstance(constraints, str):
+            raise ValueError("search-space constraints must be a sequence")
+        return cls(
+            parameters=tuple(
+                SearchParameter.from_payload(item)
+                for item in parameters
+                if isinstance(item, Mapping)
+            ),
+            constraints=tuple(
+                SearchConstraint.from_payload(item)
+                for item in constraints
+                if isinstance(item, Mapping)
+            ),
+        )
 
     @property
     def candidate_space_hash(self) -> str:

@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import json
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+import pytest
+import qts.research.orchestrator.experiment_runner as experiment_runner
 from qts.research.audit_log import ResearchAuditLog
+from qts.research.optimizer.result import OptimizationResult
 from qts.research.orchestrator.experiment_runner import ResearchExperimentJob
 from qts.research.orchestrator.queue import (
     ExperimentQueue,
@@ -69,7 +74,11 @@ def test_failed_jobs_are_retried_with_audit_payload(tmp_path: Path) -> None:
     assert audit_log.verify_hash_chain() == ()
 
 
-def test_experiment_worker_runs_job_through_runner(tmp_path: Path) -> None:
+def test_experiment_worker_runs_job_through_runner(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _patch_backtest_pipeline_runner(monkeypatch)
     job = _job(tmp_path, "job-worker")
     result = ExperimentWorker(repo_root=Path.cwd()).run(job)
 
@@ -101,30 +110,32 @@ def _job(tmp_path: Path, job_id: str) -> ResearchExperimentJob:
         "timestamp,close\n2026-01-02T00:00:00+00:00,100\n",
         encoding="utf-8",
     )
+    backtest_config_path = tmp_path / f"{job_id}-backtest.yaml"
+    backtest_config_path.write_text("mode: backtest\n", encoding="utf-8")
     return ResearchExperimentJob(
         job_id=job_id,
         generation_id="generation-000",
         manifest_payload={
             "data": {
-                "calendar": "fixture-calendar",
+                "calendar": "research-calendar",
                 "checked_paths": [str(data_path)],
-                "dataset_id": "fixture-metals",
+                "dataset_id": "research-metals",
                 "end": "2026-01-02T00:01:00+00:00",
                 "start": "2026-01-02T00:00:00+00:00",
                 "timeframe": "1m",
             },
-            "run": {"id": job_id, "question": "fixture"},
+            "run": {"id": job_id, "question": "research queue acceptance"},
             "strategy": {
-                "id": "metals_fixture",
-                "source_module": "strategies.research.metals_fixture",
-                "target_module": "strategies.production.metals_fixture",
+                "id": "metals_research",
+                "source_module": "strategies.research.metals_research",
+                "target_module": "strategies.production.metals_research",
             },
+            "backtest_pipeline": {"backtest_config_path": str(backtest_config_path)},
         },
         output_root=tmp_path / "runs",
         trials=(
             {
                 "family": "momentum",
-                "metrics": _metrics(),
                 "parameters": {"lookback": 3},
                 "trial_id": f"{job_id}-trial",
             },
@@ -132,17 +143,38 @@ def _job(tmp_path: Path, job_id: str) -> ResearchExperimentJob:
     )
 
 
-def _metrics() -> dict[str, dict[str, object]]:
-    return {
-        "execution": {"cost_impact": 0.01, "slippage_sensitivity": 0.02},
-        "portfolio": {"correlation_to_active": 0.3},
-        "quality": {"profit_factor": 1.4, "sharpe": 1.1},
-        "research": {
-            "deterministic_replay_passed": True,
-            "no_lookahead_passed": True,
-            "promotion_eligible": True,
-        },
-        "risk": {"max_drawdown": 0.2},
-        "stability": {"parameter_sensitivity": 0.8, "walk_forward_consistency": 0.75},
-        "trading": {"oos_months": 12.0, "oos_trade_count": 40},
-    }
+def _patch_backtest_pipeline_runner(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeBacktestPipelineRunner:
+        def run(self, job: Any) -> tuple[OptimizationResult, ...]:
+            run_dir = job.output_root / "run-0000"
+            run_dir.mkdir(parents=True)
+            manifest_path = run_dir / "manifest.json"
+            manifest_path.write_text(
+                json.dumps(
+                    {
+                        "artifacts": {
+                            "fills": {"rows": 7},
+                            "trade_ledger": {"rows": 7},
+                        },
+                        "manifest_hash": "sha256:queue-backtest-manifest",
+                        "metrics": {},
+                        "statistics": {
+                            "max_drawdown": "0.08",
+                            "profit_factor": "1.30",
+                            "sharpe_ratio": "1.10",
+                            "total_return": "0.07",
+                        },
+                    }
+                ),
+                encoding="utf-8",
+            )
+            return (
+                OptimizationResult(
+                    parameters=dict(next(iter(job.parameter_grid))),
+                    manifest_path=manifest_path,
+                    manifest_hash="sha256:queue-backtest-manifest",
+                    objective_value=Decimal("1.10"),
+                ),
+            )
+
+    monkeypatch.setattr(experiment_runner, "BacktestPipelineRunner", FakeBacktestPipelineRunner)

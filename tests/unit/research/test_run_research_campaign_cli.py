@@ -59,7 +59,7 @@ def test_campaign_validate_rejects_invalid_campaign(
     assert "universe must be a mapping" in capsys.readouterr().err
 
 
-def test_campaign_run_status_stop_resume_and_approval(
+def test_campaign_run_status_approve_and_resume_generation(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
@@ -83,12 +83,16 @@ def test_campaign_run_status_stop_resume_and_approval(
 
     assert exit_code == 0
     run_payload = json.loads(capsys.readouterr().out)
-    assert run_payload["status"] == "accepted"
+    assert run_payload["accepted"] is True
+    assert run_payload["status"] == "pending_human_approval"
+    assert run_payload["completed_generation_count"] == 1
+    assert run_payload["pending_generation_id"] == "generation-001"
 
     status_exit = run_research.main(["campaign", "status", "--output-root", str(output_root)])
     assert status_exit == 0
     status_payload = json.loads(capsys.readouterr().out)
-    assert status_payload["status"] == "accepted"
+    assert status_payload["status"] == "pending_human_approval"
+    assert status_payload["state"]["proposal_hash"] == run_payload["proposal_hash"]
 
     proposal = json.loads((output_root / "next_generation_proposal.json").read_text())
     approval_exit = run_research.main(
@@ -99,6 +103,8 @@ def test_campaign_run_status_stop_resume_and_approval(
             str(output_root / "next_generation_proposal.json"),
             "--expected-proposal-hash",
             proposal["proposal_hash"],
+            "--output-root",
+            str(output_root),
             "--decision",
             "approved",
             "--reviewer",
@@ -112,21 +118,8 @@ def test_campaign_run_status_stop_resume_and_approval(
     assert approval_exit == 0
     approval_payload = json.loads(capsys.readouterr().out)
     assert approval_payload["accepted"] is True
+    assert approval_payload["status"] == "approved_next_generation"
 
-    assert (
-        run_research.main(
-            [
-                "campaign",
-                "stop",
-                "--output-root",
-                str(output_root),
-                "--audit-log-root",
-                str(tmp_path / "state-audit"),
-            ]
-        )
-        == 0
-    )
-    assert json.loads(capsys.readouterr().out)["status"] == "stopped"
     assert (
         run_research.main(
             [
@@ -140,7 +133,27 @@ def test_campaign_run_status_stop_resume_and_approval(
         )
         == 0
     )
-    assert json.loads(capsys.readouterr().out)["status"] == "running"
+    resume_payload = json.loads(capsys.readouterr().out)
+    assert resume_payload["status"] == "accepted"
+    assert resume_payload["resumed_from_generation_id"] == "generation-001"
+    assert (output_root / "generation-001").exists()
+
+
+def test_campaign_resume_requires_approved_generation(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    output_root = tmp_path / "campaign"
+    output_root.mkdir()
+    (output_root / "campaign_state.json").write_text(
+        json.dumps({"status": "pending_human_approval"}),
+        encoding="utf-8",
+    )
+
+    exit_code = run_research.main(["campaign", "resume", "--output-root", str(output_root)])
+
+    assert exit_code == 2
+    assert "campaign resume requires an approved next-generation state" in capsys.readouterr().err
 
 
 def test_campaign_approval_rejects_changed_proposal_hash(
@@ -186,13 +199,12 @@ def _write_data_paths(tmp_path: Path) -> dict[str, Path]:
 def _write_bars(path: Path, base: int) -> Path:
     path.write_text(
         "\n".join(
-            [
-                "timestamp,close",
-                f"2026-01-02T00:00:00+00:00,{base}.0",
-                f"2026-01-02T00:01:00+00:00,{base}.5",
-                f"2026-01-02T00:02:00+00:00,{base + 1}.0",
-                "",
+            ["timestamp,close"]
+            + [
+                f"2026-01-02T00:{minute:02d}:00+00:00,{base + (minute * 0.5):.1f}"
+                for minute in range(20)
             ]
+            + [""]
         ),
         encoding="utf-8",
     )

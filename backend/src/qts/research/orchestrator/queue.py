@@ -227,6 +227,7 @@ class ExperimentRetryPolicy:
             output_root=job.output_root,
             trials=job.trials,
             attempt=attempt,
+            execution_mode=job.execution_mode,
             parent_job_id=parent_job_id,
         )
         if audit_log is not None:

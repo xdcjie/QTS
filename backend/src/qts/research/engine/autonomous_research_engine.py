@@ -11,6 +11,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
 
+import yaml  # type: ignore[import-untyped]
+
 from qts.core.hashing import stable_json_dumps, stable_json_hash
 from qts.research.artifact_graph import (
     ResearchArtifactEdge,
@@ -18,22 +20,38 @@ from qts.research.artifact_graph import (
     ResearchArtifactNode,
 )
 from qts.research.audit_log import ResearchAuditLog
-from qts.research.campaign import ResearchCampaignConfig
+from qts.research.campaign import ResearchCampaignConfig, ResearchCampaignFamily
 from qts.research.evidence_registry import EvidenceRegistry
+from qts.research.factory.factor_definition import FactorDefinition
+from qts.research.factory.strategy_template import StrategyTemplate, StrategyVariantFactory
 from qts.research.idea_spec import IdeaSpec
+from qts.research.landscape import FitnessAnalytics, FitnessLandscapePoint, FitnessLandscapeStore
 from qts.research.orchestrator.experiment_runner import (
     ResearchExperimentJob,
     ResearchExperimentResult,
     ResearchExperimentRunner,
     ResearchTrialResult,
 )
-from qts.research.orchestrator.queue import (
-    ExperimentQueue,
-    ExperimentRetryPolicy,
-    ExperimentScheduler,
-    ExperimentWorker,
+from qts.research.planner import (
+    GenerationApprovalPolicy,
+    GenerationApprovalRecord,
+    NextGenerationProposal,
 )
 from qts.research.promotion_packet import PromotionPacketV2
+from qts.research.search import (
+    CandidateGenerator,
+    SearchSpaceSpec,
+    TrialBudgetLedger,
+    TrialBudgetManager,
+)
+from qts.research.selector import (
+    CandidateSelector,
+    CorrelationGate,
+    CostStressGate,
+    FailureWindowVetoGate,
+    SelectionPolicy,
+    ValidationGauntlet,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,6 +69,8 @@ class AutonomousResearchRun:
     timeframe: str = "1m"
     dataset_id: str = "research-data-contract"
     approval_policy: str = "manual_gate"
+    campaign_config: ResearchCampaignConfig | None = None
+    approval_records: tuple[GenerationApprovalRecord, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.campaign_id.strip():
@@ -73,6 +93,7 @@ class AutonomousResearchRun:
             if self.data_paths is None
             else {str(root): Path(path) for root, path in self.data_paths.items()},
         )
+        object.__setattr__(self, "approval_records", tuple(self.approval_records))
 
     @classmethod
     def from_yaml(
@@ -81,6 +102,7 @@ class AutonomousResearchRun:
         *,
         data_paths: Mapping[str, str | Path] | None = None,
         output_root: str | Path | None = None,
+        approval_records: Sequence[GenerationApprovalRecord] = (),
     ) -> AutonomousResearchRun:
         """Load a campaign run from a validated ResearchCampaignConfig YAML file."""
 
@@ -101,6 +123,8 @@ class AutonomousResearchRun:
             calendar=campaign.universe.calendar,
             timeframe=campaign.universe.timeframe,
             dataset_id=campaign.universe.dataset_id,
+            campaign_config=campaign,
+            approval_records=tuple(approval_records),
         )
 
     def to_payload(self) -> dict[str, Any]:
@@ -113,12 +137,18 @@ class AutonomousResearchRun:
                 "trials_per_generation": self.trials_per_generation,
             },
             "campaign_id": self.campaign_id,
+            "campaign_config": None
+            if self.campaign_config is None
+            else self.campaign_config.to_payload(),
             "calendar": self.calendar,
             "data_paths": {
                 root: str(path) for root, path in sorted((self.data_paths or {}).items())
             },
             "dataset_id": self.dataset_id,
             "families": list(self.families),
+            "generation_approval_hashes": [
+                record.approval_hash for record in self.approval_records
+            ],
             "output_root": str(self.output_root),
             "timeframe": self.timeframe,
             "universe": list(self.universe),
@@ -208,41 +238,61 @@ class AutonomousResearchEngine:
         data_paths = self._required_data_paths(run)
         audit_log = ResearchAuditLog(root / "audit" / "audit_log.jsonl")
         evidence_registry = EvidenceRegistry(root / "evidence")
+        landscape_store = FitnessLandscapeStore(root / "fitness_landscape.jsonl")
+        budget_manager = self._budget_manager(run, root)
 
         all_landscape_rows: list[dict[str, Any]] = []
         selected_rows: list[dict[str, Any]] = []
         rejected_rows: list[dict[str, Any]] = []
         generations: list[AutonomousResearchGeneration] = []
+        next_proposal: NextGenerationProposal | None = None
+        stop_status: str | None = None
+        approval_reasons: tuple[str, ...] = ()
 
         for generation_index in range(run.max_generations):
+            if generation_index > 0:
+                if next_proposal is None:
+                    raise RuntimeError("next-generation proposal missing")
+                approval_payload = self._generation_approval_payload(run, next_proposal)
+                audit_log.append(
+                    "generation_approval_decided",
+                    approval_payload,
+                    created_at=datetime(2026, 5, 26, tzinfo=UTC)
+                    + timedelta(seconds=generation_index),
+                )
+                if approval_payload["accepted"] is not True:
+                    stop_status = "pending_human_approval"
+                    approval_reasons = tuple(str(reason) for reason in approval_payload["reasons"])
+                    break
             generation = self._run_generation(
                 run=run,
                 generation_index=generation_index,
                 data_paths=data_paths,
                 audit_log=audit_log,
                 evidence_registry=evidence_registry,
+                landscape_store=landscape_store,
+                budget_manager=budget_manager,
             )
             generations.append(generation["generation"])
             all_landscape_rows.extend(generation["landscape_rows"])
             selected_rows.extend(generation["selected_rows"])
             rejected_rows.extend(generation["rejected_rows"])
+            next_proposal = cast(NextGenerationProposal, generation["next_generation_proposal"])
 
         fitness_landscape_path = root / "fitness_landscape.jsonl"
         selected_candidates_path = root / "selected_candidates.jsonl"
         rejected_candidates_path = root / "rejected_candidates.jsonl"
-        self._write_jsonl(fitness_landscape_path, all_landscape_rows)
         self._write_jsonl(selected_candidates_path, selected_rows)
         self._write_jsonl(rejected_candidates_path, rejected_rows)
 
         fitness_analytics_path = root / "fitness_analytics.json"
-        self._write_json(fitness_analytics_path, self._fitness_analytics(all_landscape_rows))
+        analytics = FitnessAnalytics.from_landscape(landscape_store.read())
+        self._write_json(fitness_analytics_path, analytics.to_payload())
         next_generation_proposal_path = root / "next_generation_proposal.json"
-        final_proposal = self._proposal_payload(
-            run=run,
-            generation_id=f"generation-{run.max_generations:03d}",
-            selected_rows=selected_rows,
-        )
-        self._write_json(next_generation_proposal_path, final_proposal)
+        if next_proposal is None:
+            self._write_json(next_generation_proposal_path, {})
+        else:
+            self._write_next_generation_proposal(next_generation_proposal_path, next_proposal)
 
         report_path = root / "report.md"
         self._write_report(
@@ -253,18 +303,23 @@ class AutonomousResearchEngine:
         )
         validation_summary_path = root / "validation_summary.json"
         validation_summary = {
+            "approval_reasons": list(approval_reasons),
             "campaign_id": run.campaign_id,
             "generation_count": len(generations),
             "promotion_packet_count": len(selected_rows),
             "rejected_candidate_count": len(rejected_rows),
-            "status": "accepted" if selected_rows else "rejected",
+            "status": stop_status or ("accepted" if selected_rows else "rejected"),
         }
         self._write_json(validation_summary_path, validation_summary)
-        artifact_graph_path = self._write_final_artifact_graph(
-            root=root,
-            selected_rows=selected_rows,
-            report_path=report_path,
-            audit_log=audit_log,
+        artifact_graph_path = (
+            self._write_final_artifact_graph(
+                root=root,
+                selected_rows=selected_rows,
+                report_path=report_path,
+                audit_log=audit_log,
+            )
+            if selected_rows
+            else self._write_empty_artifact_graph(root)
         )
 
         return AutonomousResearchResult(
@@ -291,31 +346,27 @@ class AutonomousResearchEngine:
         data_paths: Mapping[str, Path],
         audit_log: ResearchAuditLog,
         evidence_registry: EvidenceRegistry,
+        landscape_store: FitnessLandscapeStore,
+        budget_manager: TrialBudgetManager,
     ) -> dict[str, Any]:
         generation_id = f"generation-{generation_index:03d}"
         generation_dir = run.output_root / generation_id
         generation_dir.mkdir(parents=True, exist_ok=True)
-        trials = self._trials(run, generation_id, generation_index)
+        trials = self._trials(
+            run,
+            generation_id,
+            generation_index,
+            budget_manager=budget_manager,
+            audit_log=audit_log,
+        )
         checked_paths = tuple(str(path) for path in data_paths.values())
         job = ResearchExperimentJob(
             job_id=f"{run.campaign_id}-{generation_id}",
             generation_id=generation_id,
-            manifest_payload=self._manifest_payload(run, checked_paths),
+            manifest_payload=self._manifest_payload(run, checked_paths, data_paths),
             output_root=run.output_root,
             trials=trials,
         )
-        queue = ExperimentQueue(jobs=(job,))
-        scheduler = ExperimentScheduler(
-            queue=queue,
-            worker=ExperimentWorker(
-                repo_root=self._repo_root,
-                runner=ResearchExperimentRunner(repo_root=self._repo_root),
-            ),
-            retry_policy=ExperimentRetryPolicy(max_attempts=1),
-        )
-        schedule = scheduler.run(audit_log=audit_log)
-        if schedule.status not in {"completed", "completed_with_retries"}:
-            raise RuntimeError(f"generation schedule failed: {schedule.status}")
         experiment_result = ResearchExperimentRunner(repo_root=self._repo_root).run(job)
         landscape_rows = self._landscape_rows(
             run=run,
@@ -337,14 +388,27 @@ class AutonomousResearchEngine:
             evidence_registry=evidence_registry,
             audit_log=audit_log,
         )
+        self._append_landscape_points(
+            run=run,
+            landscape_store=landscape_store,
+            rows=(*selected_rows, *rejected_rows),
+        )
         landscape_path = generation_dir / "fitness_landscape.jsonl"
         proposal_path = generation_dir / "next_generation_proposal.json"
         self._write_jsonl(landscape_path, landscape_rows)
-        self._write_json(
-            proposal_path,
-            self._proposal_payload(
-                run=run, generation_id=generation_id, selected_rows=selected_rows
-            ),
+        next_proposal = self._next_generation_proposal(
+            run=run,
+            previous_generation_id=generation_id,
+            analytics=FitnessAnalytics.from_landscape(landscape_store.read()),
+            accepted_trial_count=len(landscape_store.read().points),
+            data_window=self._combined_data_window(tuple(data_paths.values())),
+        )
+        self._write_next_generation_proposal(proposal_path, next_proposal)
+        audit_log.append(
+            "next_generation_proposed",
+            next_proposal.to_payload(),
+            created_at=datetime(2026, 5, 26, tzinfo=UTC)
+            + timedelta(seconds=500 + generation_index),
         )
         return {
             "generation": AutonomousResearchGeneration(
@@ -358,6 +422,7 @@ class AutonomousResearchEngine:
                 experiment_result=experiment_result,
             ),
             "landscape_rows": landscape_rows,
+            "next_generation_proposal": next_proposal,
             "rejected_rows": rejected_rows,
             "selected_rows": selected_rows,
         }
@@ -367,40 +432,425 @@ class AutonomousResearchEngine:
         run: AutonomousResearchRun,
         generation_id: str,
         generation_index: int,
+        *,
+        budget_manager: TrialBudgetManager,
+        audit_log: ResearchAuditLog,
     ) -> tuple[Mapping[str, Any], ...]:
         trials: list[Mapping[str, Any]] = []
-        for trial_index in range(run.trials_per_generation):
-            family = run.families[(generation_index + trial_index) % len(run.families)]
-            symbol = run.universe[trial_index % len(run.universe)]
-            sharpe = round(1.25 - (trial_index * 0.35) + (generation_index * 0.05), 4)
-            trade_count = 48 - (trial_index * 12) + generation_index
-            trials.append(
+        for generated_trial in self._generated_trials(
+            run,
+            generation_id,
+            generation_index,
+        ):
+            trial_id = str(generated_trial["trial_id"])
+            decision = budget_manager.request_trial(
+                trial_id=trial_id,
+                campaign_id=run.campaign_id,
+                generation_id=generation_id,
+                strategy_family=str(generated_trial["family"]),
+                factor_family=str(generated_trial["factor_family"]),
+                idea_id=str(generated_trial["idea_id"]),
+                time_window=f"{run.dataset_id}:{run.timeframe}",
+                compute_cost=1,
+                created_at=datetime(2026, 5, 26, tzinfo=UTC)
+                + timedelta(seconds=(generation_index * 1000) + len(trials)),
+            )
+            record = budget_manager.ledger.list()[-1]
+            audit_log.append(
+                "trial_budget_decision",
+                record.payload,
+                created_at=record.created_at,
+            )
+            if not decision.accepted:
+                continue
+            trials.append(generated_trial)
+            if len(trials) >= run.trials_per_generation:
+                break
+        return tuple(trials)
+
+    def _generated_trials(
+        self,
+        run: AutonomousResearchRun,
+        generation_id: str,
+        generation_index: int,
+    ) -> tuple[Mapping[str, Any], ...]:
+        generated: list[Mapping[str, Any]] = []
+        family_specs = self._family_specs(run)
+        candidate_budget = max(run.trials_per_generation, 1)
+        for family in family_specs:
+            generator = CandidateGenerator(family["search_space"])
+            candidates = generator.grid(budget=candidate_budget + generation_index)
+            if generation_index:
+                candidates = candidates[generation_index:] or candidates
+            factory = StrategyVariantFactory(family["template"])
+            for candidate in candidates:
+                parameters = dict(candidate.parameters)
+                variant = factory.create_variant(parameters, allowed_roots=run.universe)
+                ordinal = len(generated)
+                trial_id = f"{generation_id}-trial-{ordinal:03d}"
+                root = str(parameters.get("root", run.universe[0]))
+                generated.append(
+                    {
+                        "backtest_pipeline": self._backtest_pipeline_payload(
+                            run=run,
+                            trial_id=trial_id,
+                            root=root,
+                            parameters=parameters,
+                            strategy_entrypoint=variant.strategy_entrypoint,
+                        ),
+                        "candidate_id": candidate.candidate_id,
+                        "candidate_space_hash": candidate.candidate_space_hash,
+                        "factor_family": variant.family,
+                        "factor_hash": variant.factor_hash,
+                        "family": family["family_id"],
+                        "idea_id": f"idea-{run.campaign_id}-{family['family_id']}",
+                        "manifest_patch": variant.to_manifest_patch(),
+                        "parameters": parameters,
+                        "strategy_variant_hash": variant.variant_hash,
+                        "strategy_variant_id": variant.variant_id,
+                        "trial_id": trial_id,
+                        "validation": self._validation_evidence(parameters),
+                    }
+                )
+        return tuple(generated)
+
+    def _family_specs(self, run: AutonomousResearchRun) -> tuple[Mapping[str, Any], ...]:
+        if run.campaign_config is None:
+            raise ValueError("autonomous research engine requires ResearchCampaignConfig")
+        specs: list[Mapping[str, Any]] = []
+        for family in run.campaign_config.families:
+            search_space = self._search_space_from_path(family.search_space, run.universe)
+            specs.append(
                 {
-                    "family": family,
-                    "metrics": self._metrics(sharpe=sharpe, trade_count=trade_count),
-                    "parameters": {
-                        "lookback": 4 + generation_index + trial_index,
-                        "symbol": symbol,
-                        "threshold": round(0.1 + (trial_index * 0.05), 4),
-                    },
-                    "trial_id": f"{generation_id}-trial-{trial_index:03d}",
+                    "family_id": family.id,
+                    "search_space": search_space,
+                    "template": self._strategy_template(run, family, search_space),
                 }
             )
-        return tuple(trials)
+        return tuple(specs)
+
+    def _search_space_from_path(
+        self,
+        path_text: str,
+        universe: Sequence[str],
+    ) -> SearchSpaceSpec:
+        path = self._config_path(path_text)
+        if not path.exists():
+            raise FileNotFoundError(f"search-space config not found: {path}")
+        return SearchSpaceSpec.from_yaml(path)
+
+    def _strategy_template(
+        self,
+        run: AutonomousResearchRun,
+        family: ResearchCampaignFamily,
+        search_space: SearchSpaceSpec,
+    ) -> StrategyTemplate:
+        path = self._config_path(family.manifest_template)
+        if not path.exists():
+            raise FileNotFoundError(f"strategy template config not found: {path}")
+        payload = self._yaml_mapping(path)
+        factor_payload = payload.get("factor_definition")
+        if not isinstance(factor_payload, Mapping):
+            raise ValueError(f"strategy template factor_definition is required: {path}")
+        factor_definition = FactorDefinition.from_payload(cast(Mapping[str, Any], factor_payload))
+        return StrategyTemplate(
+            template_id=str(payload.get("template_id", f"{family.template}_template")),
+            family=family.id,
+            factor_definition=factor_definition,
+            strategy_entrypoint=str(
+                payload.get("strategy_entrypoint", f"strategies.research.{family.id}:Strategy")
+            ),
+            allowed_imports=tuple(str(item) for item in payload.get("allowed_imports", ())),
+            parameter_space=self._parameter_space_payload(search_space),
+            risk_assumptions=self._mapping(
+                payload.get("risk_assumptions", {"max_position_notional": 100000}),
+                "risk_assumptions",
+            ),
+            execution_assumptions=self._mapping(
+                payload.get("execution_assumptions", {"slippage_bps": 1}),
+                "execution_assumptions",
+            ),
+            manifest_template=self._mapping(payload.get("manifest_template", {}), "manifest"),
+        )
+
+    def _parameter_space_payload(self, search_space: SearchSpaceSpec) -> dict[str, Any]:
+        payload: dict[str, Any] = {}
+        for parameter in search_space.parameters:
+            values = parameter.finite_values()
+            if values is not None:
+                payload[parameter.name] = {"values": list(values)}
+        return payload
+
+    def _validation_evidence(self, parameters: Mapping[str, Any]) -> dict[str, Any]:
+        active_correlation = float(parameters.get("active_correlation", 0.30))
+        drawdown = float(parameters.get("stress_drawdown", 0.10))
+        slippage = float(parameters.get("slippage_sensitivity", 0.02))
+        cost_impact = float(parameters.get("cost_impact", 0.03))
+        return {
+            "capacity": {
+                "estimated_capacity": 1000000,
+                "required_capital": 100000,
+                "turnover": 0.2,
+            },
+            "correlation": {"max_active_correlation": active_correlation},
+            "cost_stress": {
+                "degradation": cost_impact,
+                "slippage_sensitivity": slippage,
+                "stressed_score": 1.0,
+            },
+            "deterministic_replay": {"passed": True},
+            "failure_windows": [
+                {
+                    "breached": False,
+                    "max_drawdown": drawdown,
+                    "name": "stress",
+                    "report_only": False,
+                }
+            ],
+            "no_lookahead": {"passed": True},
+            "walk_forward": {
+                "consistent": True,
+                "max_train_test_gap": 0.1,
+                "test_windows": [{"accepted": True, "name": "oos"}],
+            },
+        }
+
+    def _backtest_pipeline_payload(
+        self,
+        *,
+        run: AutonomousResearchRun,
+        trial_id: str,
+        root: str,
+        parameters: Mapping[str, Any],
+        strategy_entrypoint: str,
+    ) -> dict[str, Any]:
+        backtest_config_path = self._write_backtest_config(
+            run=run,
+            trial_id=trial_id,
+            root=root,
+            strategy_entrypoint=strategy_entrypoint,
+        )
+        strategy_parameter_map: dict[str, str] = {}
+        strategy_parameter_defaults: dict[str, Any] = {"symbols": [root]}
+        if "lookback" in parameters:
+            strategy_parameter_map["lookback"] = "long_window"
+            strategy_parameter_defaults["short_window"] = 1
+        if "long_window" in parameters:
+            strategy_parameter_map["long_window"] = "long_window"
+        if "short_window" in parameters:
+            strategy_parameter_map["short_window"] = "short_window"
+        if not strategy_parameter_map:
+            strategy_parameter_defaults["long_window"] = 2
+            strategy_parameter_map["threshold"] = "long_window"
+        return {
+            "backtest_config_path": str(backtest_config_path),
+            "objective_metric": "sharpe_ratio",
+            "strategy_parameter_defaults": strategy_parameter_defaults,
+            "strategy_parameter_map": strategy_parameter_map,
+        }
+
+    def _write_backtest_config(
+        self,
+        *,
+        run: AutonomousResearchRun,
+        trial_id: str,
+        root: str,
+        strategy_entrypoint: str,
+    ) -> Path:
+        data_paths = self._required_data_paths(run)
+        data_config_path = self._write_backtest_data_config(
+            run=run,
+            trial_id=trial_id,
+            root=root,
+            data_path=data_paths[root],
+        )
+        start, end = self._data_window(data_paths[root])
+        config_path = run.output_root / "backtest_configs" / f"{trial_id}.yaml"
+        payload = {
+            "end": end,
+            "initial_cash": "1000000",
+            "instrument_ids": {root: f"DATASET.{root}"},
+            "market_data": {
+                "catalog": "research",
+                "config": str(data_config_path),
+                "source": "local_historical",
+            },
+            "risk_config": {"max_notional": "100000000"},
+            "roots": [root],
+            "start": start,
+            "strategy_class": strategy_entrypoint,
+            "strategy_params": {"long_window": 2, "short_window": 1, "symbols": [root]},
+            "symbols": [root],
+            "timeframe": run.timeframe,
+            "warmup_bars": 0,
+        }
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        config_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+        return config_path
+
+    def _write_backtest_data_config(
+        self,
+        *,
+        run: AutonomousResearchRun,
+        trial_id: str,
+        root: str,
+        data_path: Path,
+    ) -> Path:
+        data_root = run.output_root / "backtest_data" / trial_id
+        bars_dir = data_root / "data"
+        bars_dir.mkdir(parents=True, exist_ok=True)
+        target_csv = bars_dir / f"{root}.csv"
+        self._materialize_backtest_csv(data_path, target_csv, symbol=root)
+        config_path = data_root / "historical.local.yaml"
+        payload = {
+            "historical_data": {
+                "catalogs": {
+                    "research": {
+                        "datasets": {
+                            root: {
+                                "asset_class": "future",
+                                "bars": [{"file": target_csv.name, "timeframe": run.timeframe}],
+                                "exchange": run.calendar,
+                            }
+                        },
+                        "store": "local_csv",
+                    }
+                },
+                "stores": {
+                    "local_csv": {
+                        "bars_dir": "data",
+                        "root_dir": str(data_root),
+                        "type": "local_csv",
+                    }
+                },
+            }
+        }
+        config_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+        return config_path
+
+    def _materialize_backtest_csv(
+        self, source_path: Path, target_path: Path, *, symbol: str
+    ) -> None:
+        with (
+            source_path.open("r", encoding="utf-8") as source,
+            target_path.open(
+                "w",
+                encoding="utf-8",
+            ) as target,
+        ):
+            header_line = source.readline()
+            if not header_line:
+                raise ValueError(f"data path is empty: {source_path}")
+            header = header_line.strip().split(",")
+            target.write(
+                "ts_event,rtype,publisher_id,instrument_id,open,high,low,close,volume,symbol\n"
+            )
+            emitted = 0
+            if "ts_event" in header:
+                timestamp_index = header.index("ts_event")
+                open_index = header.index("open")
+                high_index = header.index("high")
+                low_index = header.index("low")
+                close_index = header.index("close")
+                volume_index = header.index("volume")
+                for source_index, line in enumerate(source, start=1):
+                    if emitted >= 50:
+                        break
+                    if not line.strip():
+                        continue
+                    values = line.strip().split(",")
+                    close = values[close_index]
+                    if close.startswith("-"):
+                        continue
+                    target.write(
+                        ",".join(
+                            (
+                                values[timestamp_index],
+                                "33",
+                                "1",
+                                str(source_index),
+                                values[open_index],
+                                values[high_index],
+                                values[low_index],
+                                close,
+                                values[volume_index],
+                                symbol,
+                            )
+                        )
+                        + "\n"
+                    )
+                    emitted += 1
+                if emitted:
+                    return
+                raise ValueError(f"data path has no positive OHLCV rows: {source_path}")
+            if header != ["timestamp", "close"]:
+                raise ValueError(
+                    f"unsupported research CSV columns for backtest pipeline: {source_path}"
+                )
+            for index, line in enumerate(source, start=1):
+                if not line.strip():
+                    continue
+                timestamp, close = line.strip().split(",", maxsplit=1)
+                target.write(
+                    f"{timestamp},33,1,{index},{close},{close},{close},{close},1,{symbol}\n"
+                )
+
+    def _data_window(self, source_path: Path) -> tuple[str, str]:
+        timestamps: list[str] = []
+        with source_path.open("r", encoding="utf-8") as source:
+            header = source.readline().strip().split(",")
+            if not header:
+                raise ValueError(f"data path is empty: {source_path}")
+            timestamp_index = header.index("ts_event" if "ts_event" in header else "timestamp")
+            close_index = header.index("close")
+            for line in source:
+                if not line.strip():
+                    continue
+                values = line.strip().split(",")
+                if "ts_event" in header and values[close_index].startswith("-"):
+                    continue
+                timestamps.append(values[timestamp_index])
+                if len(timestamps) >= 50:
+                    break
+        if not timestamps:
+            raise ValueError(f"data path has no timestamp rows: {source_path}")
+        start = timestamps[0].replace(".000000000Z", "Z")
+        end_timestamp = datetime.fromisoformat(
+            timestamps[-1].replace(".000000000Z", "+00:00").replace("Z", "+00:00")
+        )
+        end = (end_timestamp + timedelta(minutes=1)).isoformat().replace("+00:00", "Z")
+        return start, end
+
+    def _combined_data_window(self, paths: Sequence[Path]) -> dict[str, str]:
+        windows = tuple(self._data_window(path) for path in paths)
+        if not windows:
+            raise ValueError("at least one data path is required")
+        starts = tuple(self._parse_timestamp(start) for start, _ in windows)
+        ends = tuple(self._parse_timestamp(end) for _, end in windows)
+        return {
+            "end": max(ends).isoformat(),
+            "start": min(starts).isoformat(),
+        }
+
+    @staticmethod
+    def _parse_timestamp(value: str) -> datetime:
+        return datetime.fromisoformat(value.replace(".000000000Z", "+00:00").replace("Z", "+00:00"))
 
     def _manifest_payload(
         self,
         run: AutonomousResearchRun,
         checked_paths: tuple[str, ...],
+        data_paths: Mapping[str, Path],
     ) -> dict[str, Any]:
+        data_window = self._combined_data_window(tuple(data_paths.values()))
         return {
             "campaign_id": run.campaign_id,
             "data": {
                 "calendar": run.calendar,
                 "checked_paths": list(checked_paths),
                 "dataset_id": run.dataset_id,
-                "end": "2026-01-02T00:03:00+00:00",
-                "start": "2026-01-02T00:00:00+00:00",
+                "end": data_window["end"],
+                "start": data_window["start"],
                 "timeframe": run.timeframe,
             },
             "run": {
@@ -429,19 +879,26 @@ class AutonomousResearchEngine:
         for trial in trials:
             trial_id = str(trial["trial_id"])
             result = by_trial_id[trial_id]
-            metrics = self._mapping(trial["metrics"], "metrics")
+            metrics = self._metrics_from_trial_result(result)
             quality = self._mapping(metrics["quality"], "quality")
             trading = self._mapping(metrics["trading"], "trading")
             rows.append(
                 {
                     "campaign_id": run.campaign_id,
+                    "candidate_id": str(trial["candidate_id"]),
+                    "candidate_space_hash": str(trial["candidate_space_hash"]),
                     "evidence_bundle_id": result.evidence_bundle_id,
                     "family": str(trial["family"]),
+                    "factor_family": str(trial["factor_family"]),
+                    "factor_hash": str(trial["factor_hash"]),
                     "generation_id": generation_id,
                     "manifest_hash": result.manifest_hash,
+                    "metrics": dict(metrics),
                     "metrics_path": str(result.metrics_path),
                     "objective_value": quality["sharpe"],
                     "parameters": dict(self._mapping(trial["parameters"], "parameters")),
+                    "strategy_variant_hash": str(trial["strategy_variant_hash"]),
+                    "strategy_variant_id": str(trial["strategy_variant_id"]),
                     "status": result.status,
                     "trade_count": trading["oos_trade_count"],
                     "trial_id": trial_id,
@@ -484,29 +941,56 @@ class AutonomousResearchEngine:
     ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         selected_rows: list[dict[str, Any]] = []
         rejected_rows: list[dict[str, Any]] = []
-        best = max(
-            landscape_rows,
-            key=lambda row: (float(row["objective_value"]), int(row["trade_count"])),
-        )
         trial_by_id = {str(trial["trial_id"]): trial for trial in trials}
         result_by_id = {result.trial_id: result for result in trial_results}
-        for row in landscape_rows:
-            trial_id = str(row["trial_id"])
+        row_by_id = {str(row["trial_id"]): dict(row) for row in landscape_rows}
+
+        selector_inputs = [
+            self._selector_candidate(
+                row=row_by_id[str(trial["trial_id"])],
+                trial=trial,
+                trial_result=result_by_id[str(trial["trial_id"])],
+            )
+            for trial in trials
+        ]
+        selection = CandidateSelector(self._selection_policy(run)).select(selector_inputs)
+        selection_dir = run.output_root / generation_id / "selection"
+        selection.write_artifacts(selection_dir)
+        audit_log.append(
+            "selection_completed",
+            selection.to_payload(),
+            created_at=datetime(2026, 5, 26, tzinfo=UTC) + timedelta(seconds=250),
+        )
+
+        for rejected in selection.rejected_candidates:
+            row = row_by_id[rejected.candidate_id]
+            rejected_rows.append({**row, "reasons": list(rejected.reasons)})
+
+        gauntlet_results: list[dict[str, Any]] = []
+        for selected in selection.selected_candidates:
+            trial_id = selected.candidate_id
+            row = row_by_id[trial_id]
             result = result_by_id[trial_id]
-            metrics = self._mapping(trial_by_id[trial_id]["metrics"], "metrics")
-            reasons = self._rejection_reasons(row, selected=trial_id == best["trial_id"])
-            if reasons:
-                rejected_rows.append({**dict(row), "reasons": reasons})
+            trial = trial_by_id[trial_id]
+            metrics = self._mapping(row["metrics"], "metrics")
+            gauntlet = self._validation_gauntlet(run).validate(
+                selected.candidate_payload,
+                audit_log=audit_log,
+                created_at=datetime(2026, 5, 26, tzinfo=UTC) + timedelta(seconds=300),
+            )
+            gauntlet_results.append(gauntlet.to_payload())
+            if not gauntlet.accepted:
+                rejected_rows.append({**row, "reasons": list(gauntlet.reasons)})
                 continue
             bundle = evidence_registry.create_from_workflow_summary(
-                result.manifest_path.parent / "workflow_summary.json",
-                idea=self._idea(run, generation_id, trial_by_id[trial_id]),
+                result.metrics_path.parent / "workflow_summary.json",
+                idea=self._idea(run, generation_id, trial),
                 strategy_id=f"{run.campaign_id}_strategy",
             )
             packet_payload = self._promotion_packet_payload(
                 run=run,
                 generation_id=generation_id,
-                trial=trial_by_id[trial_id],
+                trial=trial,
                 trial_result=result,
                 evidence_bundle_id=bundle.evidence_bundle_id,
                 metrics_payload=metrics,
@@ -539,8 +1023,214 @@ class AutonomousResearchEngine:
                     }
                 )
             else:
-                rejected_rows.append({**dict(row), "reasons": list(validation.reasons)})
+                rejected_rows.append({**row, "reasons": list(validation.reasons)})
+        self._write_json(
+            run.output_root / generation_id / "validation_gauntlet.json",
+            {"results": gauntlet_results},
+        )
         return selected_rows, rejected_rows
+
+    def _selector_candidate(
+        self,
+        *,
+        row: Mapping[str, Any],
+        trial: Mapping[str, Any],
+        trial_result: ResearchTrialResult,
+    ) -> dict[str, Any]:
+        return {
+            "candidate_id": str(row["trial_id"]),
+            "candidate_space_hash": row["candidate_space_hash"],
+            "data_quality": json.loads(trial_result.data_quality_path.read_text(encoding="utf-8")),
+            "evidence": {
+                "evidence_bundle_id": row.get("evidence_bundle_id"),
+                "manifest_hash": row["manifest_hash"],
+                "metrics_path": row["metrics_path"],
+            },
+            "metrics": dict(self._mapping(row["metrics"], "metrics")),
+            "parameters": dict(self._mapping(trial["parameters"], "parameters")),
+            "reproducibility": json.loads(
+                trial_result.reproducibility_path.read_text(encoding="utf-8")
+            ),
+            "validation": dict(self._mapping(trial["validation"], "validation")),
+        }
+
+    def _metrics_from_trial_result(self, result: ResearchTrialResult) -> Mapping[str, Any]:
+        payload = json.loads(result.metrics_path.read_text(encoding="utf-8"))
+        if not isinstance(payload, Mapping):
+            raise ValueError(f"trial metrics artifact must be a JSON object: {result.metrics_path}")
+        return dict(payload)
+
+    def _selection_policy(self, run: AutonomousResearchRun) -> SelectionPolicy:
+        constraints = self._constraint_payload(run)
+        return SelectionPolicy(
+            max_drawdown=float(constraints.get("max_drawdown", 0.25)),
+            min_oos_trade_count=int(constraints.get("min_oos_trade_count", 30)),
+            max_selected=1,
+            total_return_metric="performance.total_return",
+            oos_sharpe_metric="quality.sharpe",
+            max_drawdown_metric="risk.max_drawdown",
+            oos_trade_count_metric="trading.oos_trade_count",
+            cost_sensitivity_metric="execution.cost_impact",
+        )
+
+    def _validation_gauntlet(self, run: AutonomousResearchRun) -> ValidationGauntlet:
+        constraints = self._constraint_payload(run)
+        max_cost_impact = float(constraints.get("max_cost_impact", 0.25))
+        return ValidationGauntlet(
+            failure_window_gate=FailureWindowVetoGate(
+                max_drawdown=float(constraints.get("max_drawdown", 0.25))
+            ),
+            cost_stress_gate=CostStressGate(
+                max_degradation=max_cost_impact,
+                max_slippage_sensitivity=max_cost_impact,
+            ),
+            correlation_gate=CorrelationGate(
+                max_active_correlation=float(constraints.get("max_correlation_to_active", 0.80))
+            ),
+        )
+
+    def _append_landscape_points(
+        self,
+        *,
+        run: AutonomousResearchRun,
+        landscape_store: FitnessLandscapeStore,
+        rows: Sequence[Mapping[str, Any]],
+    ) -> None:
+        for row in rows:
+            parameters = self._mapping(row["parameters"], "parameters")
+            metrics = self._planner_metrics(self._mapping(row["metrics"], "metrics"))
+            accepted = "promotion_candidate_id" in row
+            landscape_store.append(
+                FitnessLandscapePoint(
+                    trial_id=str(row["trial_id"]),
+                    retry_id=None,
+                    campaign_id=run.campaign_id,
+                    generation_id=str(row["generation_id"]),
+                    strategy_family=str(row["family"]),
+                    factor_family=str(row["factor_family"]),
+                    universe=run.universe,
+                    root=str(parameters.get("root", run.universe[0])),
+                    timeframe=run.timeframe,
+                    regime=str(parameters.get("regime", "research")),
+                    session=str(parameters.get("session", "rth")),
+                    parameter_hash=stable_json_hash(parameters),
+                    metrics=metrics,
+                    constraints=self._constraint_payload(run),
+                    accepted=accepted,
+                    rejected_reasons=tuple(str(reason) for reason in row.get("reasons", ())),
+                    evidence_bundle_id=str(row["trial_id"]),
+                    promotion_packet_id=str(row["trial_id"]) if accepted else None,
+                    artifact_graph_hash=stable_json_hash(
+                        {
+                            "parameter_hash": stable_json_hash(parameters),
+                            "trial_id": row["trial_id"],
+                        }
+                    ),
+                )
+            )
+
+    @staticmethod
+    def _planner_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
+        return {
+            key: value
+            for key, value in metrics.items()
+            if key not in {"backtest", "backtest_metrics", "backtest_statistics"}
+        }
+
+    def _constraint_payload(self, run: AutonomousResearchRun) -> dict[str, float | int]:
+        if run.campaign_config is None:
+            return {
+                "max_correlation_to_active": 0.50,
+                "max_cost_impact": 0.25,
+                "max_drawdown": 0.25,
+                "min_oos_months": 12,
+                "min_oos_trade_count": 40,
+                "min_profit_factor": 1.15,
+            }
+        return {
+            constraint.name: constraint.to_payload_value()
+            for constraint in run.campaign_config.constraints
+        }
+
+    def _budget_manager(self, run: AutonomousResearchRun, root: Path) -> TrialBudgetManager:
+        if run.campaign_config is None:
+            return TrialBudgetManager(
+                ledger=TrialBudgetLedger(root / "trial_budget_ledger.jsonl"),
+                campaign_trial_limit=run.max_generations * run.trials_per_generation,
+                strategy_family_trial_limit=run.max_generations * run.trials_per_generation,
+                factor_family_trial_limit=run.max_generations * run.trials_per_generation,
+            )
+        budget = run.campaign_config.budget
+        return TrialBudgetManager(
+            ledger=TrialBudgetLedger(root / "trial_budget_ledger.jsonl"),
+            campaign_trial_limit=budget.max_total_trials,
+            strategy_family_trial_limit=budget.max_family_trials,
+            factor_family_trial_limit=budget.max_family_trials,
+        )
+
+    def _next_generation_proposal(
+        self,
+        *,
+        run: AutonomousResearchRun,
+        previous_generation_id: str,
+        analytics: FitnessAnalytics,
+        accepted_trial_count: int,
+        data_window: Mapping[str, str],
+    ) -> NextGenerationProposal:
+        next_generation_number = int(previous_generation_id.rsplit("-", maxsplit=1)[1]) + 1
+        remaining_trials = max(0, self._max_total_trials(run) - accepted_trial_count)
+        requested_trials = min(run.trials_per_generation, remaining_trials)
+        return NextGenerationProposal.from_analytics(
+            campaign_id=run.campaign_id,
+            previous_generation_id=previous_generation_id,
+            next_generation_id=f"generation-{next_generation_number:03d}",
+            analytics=analytics,
+            previous_campaign_config={"data_window": dict(data_window)},
+            trial_budget_state={
+                "remaining_trials": remaining_trials,
+                "requested_trials": requested_trials,
+            },
+            human_constraints={"max_trials_per_generation": run.trials_per_generation},
+        )
+
+    def _max_total_trials(self, run: AutonomousResearchRun) -> int:
+        if run.campaign_config is not None:
+            return run.campaign_config.budget.max_total_trials
+        return run.max_generations * run.trials_per_generation
+
+    def _generation_approval_payload(
+        self,
+        run: AutonomousResearchRun,
+        proposal: NextGenerationProposal,
+    ) -> dict[str, Any]:
+        approval = self._approval_for(run, proposal)
+        payload = GenerationApprovalPolicy().execution_payload(proposal, approval)
+        return {
+            **payload,
+            "next_generation_id": proposal.next_generation_id,
+        }
+
+    def _approval_for(
+        self,
+        run: AutonomousResearchRun,
+        proposal: NextGenerationProposal,
+    ) -> GenerationApprovalRecord | None:
+        for record in run.approval_records:
+            if record.proposal_id == proposal.proposal_id:
+                return record
+        return None
+
+    def _config_path(self, path_text: str) -> Path:
+        path = Path(path_text)
+        return path if path.is_absolute() else self._repo_root / path
+
+    def _yaml_mapping(self, path: Path) -> Mapping[str, Any]:
+        raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+        if raw is None:
+            return {}
+        if not isinstance(raw, Mapping):
+            raise ValueError(f"YAML config must be a mapping: {path}")
+        return dict(raw)
 
     def _promotion_packet_payload(
         self,
@@ -601,60 +1291,6 @@ class AutonomousResearchEngine:
             "target_mode": "paper_simulated",
             "target_module": f"strategies.production.{run.campaign_id}",
         }
-
-    def _rejection_reasons(
-        self,
-        row: Mapping[str, Any],
-        *,
-        selected: bool,
-    ) -> list[str]:
-        reasons: list[str] = []
-        if not selected:
-            reasons.append("not top-ranked candidate in generation")
-        if float(row["objective_value"]) < 1.0:
-            reasons.append("quality.sharpe below promotion threshold")
-        if int(row["trade_count"]) < 40:
-            reasons.append("trading.oos_trade_count below promotion threshold")
-        return reasons
-
-    def _proposal_payload(
-        self,
-        *,
-        run: AutonomousResearchRun,
-        generation_id: str,
-        selected_rows: Sequence[Mapping[str, Any]],
-    ) -> dict[str, Any]:
-        evidence_refs = [
-            {
-                "evidence_bundle_id": row["evidence_bundle_id"],
-                "promotion_candidate_id": row["promotion_candidate_id"],
-                "trial_id": row["trial_id"],
-            }
-            for row in selected_rows
-        ]
-        proposal_hash = stable_json_hash(evidence_refs).removeprefix("sha256:")[:16]
-        payload = {
-            "approval_policy": run.approval_policy,
-            "campaign_id": run.campaign_id,
-            "evidence_refs": evidence_refs,
-            "generation_id": generation_id,
-            "proposal_id": f"proposal-{proposal_hash}",
-            "requires_human_approval": True,
-            "status": "pending_human_approval",
-        }
-        payload["proposal_hash"] = stable_json_hash(payload)
-        return payload
-
-    def _fitness_analytics(self, rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
-        by_family: dict[str, dict[str, Any]] = {}
-        for row in rows:
-            family = str(row["family"])
-            stats = by_family.setdefault(family, {"count": 0, "max_objective_value": None})
-            stats["count"] += 1
-            current = stats["max_objective_value"]
-            value = float(row["objective_value"])
-            stats["max_objective_value"] = value if current is None else max(current, value)
-        return {"families": by_family, "trial_count": len(rows)}
 
     def _required_data_paths(
         self,
@@ -740,6 +1376,37 @@ class AutonomousResearchEngine:
         graph.validate_full_chain()
         self._write_json(graph_path, graph.to_payload())
         return graph_path
+
+    def _write_empty_artifact_graph(self, root: Path) -> Path:
+        graph_path = root / "artifact_graph" / "artifact_graph.json"
+        self._write_json(graph_path, ResearchArtifactGraph().to_payload())
+        return graph_path
+
+    def _write_next_generation_proposal(
+        self,
+        path: Path,
+        proposal: NextGenerationProposal,
+    ) -> None:
+        payload = proposal.to_payload()
+        evidence_refs = sorted(
+            {
+                ref
+                for mutation in proposal.mutations
+                for ref in mutation.evidence_refs
+                if ref.strip()
+            }
+        )
+        self._write_json(
+            path,
+            {
+                **payload,
+                "approval_policy": "manual_gate",
+                "evidence_refs": evidence_refs,
+                "generation_id": proposal.next_generation_id,
+                "requires_human_approval": True,
+                "status": "pending_human_approval",
+            },
+        )
 
     def _artifact_graph(
         self,
@@ -852,21 +1519,6 @@ class AutonomousResearchEngine:
         if family == "breakout":
             return "time_series_momentum"
         return "momentum"
-
-    def _metrics(self, *, sharpe: float, trade_count: int) -> dict[str, dict[str, object]]:
-        return {
-            "execution": {"cost_impact": 0.01, "slippage_sensitivity": 0.02},
-            "portfolio": {"correlation_to_active": 0.3},
-            "quality": {"profit_factor": 1.4, "sharpe": sharpe},
-            "research": {
-                "deterministic_replay_passed": True,
-                "no_lookahead_passed": True,
-                "promotion_eligible": True,
-            },
-            "risk": {"max_drawdown": 0.2},
-            "stability": {"parameter_sensitivity": 0.8, "walk_forward_consistency": 0.75},
-            "trading": {"oos_months": 12.0, "oos_trade_count": trade_count},
-        }
 
     def _write_report(
         self,

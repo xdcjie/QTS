@@ -38,6 +38,8 @@ def test_selector_replay_reproduces_selection_result(
     payload = json.loads(capsys.readouterr().out)
     assert payload["accepted"] is True
     assert payload["reasons"] == []
+    assert payload["selected_candidates"][0]["candidate_id"] == "good"
+    assert payload["rejected_candidates"][0]["candidate_id"] == "drawdown"
 
 
 def test_selector_replay_detects_changed_metrics(

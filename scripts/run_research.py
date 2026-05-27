@@ -6,6 +6,7 @@ import argparse
 import json
 import sys
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
@@ -29,6 +30,7 @@ from qts.research.idea_spec import IdeaSpec
 from qts.research.landscape import FitnessAnalytics, FitnessLandscapeStore, FitnessQuery
 from qts.research.manifest import ResearchManifestV2
 from qts.research.meta_research import MetaResearchSummary, MetaResearchSummaryWriter
+from qts.research.planner import GenerationApprovalRecord
 from qts.research.promotion_packet import PromotionPacketV2
 from qts.research.reproducibility import ReproducibilitySnapshotV2
 from qts.research.selector import CandidateSelector, SelectionPolicy
@@ -350,6 +352,12 @@ def _add_campaign_parser(subparsers: Any) -> None:
     run.add_argument("--campaign", type=Path, required=True)
     run.add_argument("--output-root", type=Path, required=True)
     run.add_argument(
+        "--approval-mode",
+        choices=("manual", "none"),
+        default="manual",
+        help="Use manual to stop after generation 0 when later generations require approval",
+    )
+    run.add_argument(
         "--data-path",
         action="append",
         default=[],
@@ -369,6 +377,7 @@ def _add_campaign_parser(subparsers: Any) -> None:
     )
     approval.add_argument("--proposal", type=Path, required=True)
     approval.add_argument("--expected-proposal-hash", required=True)
+    approval.add_argument("--output-root", type=Path, default=None)
     approval.add_argument(
         "--decision",
         choices=("approved", "rejected"),
@@ -973,23 +982,56 @@ def _run_campaign(args: argparse.Namespace) -> int:
 
     if args.campaign_command == "run":
         try:
+            data_paths = _data_paths_from_args(args.data_path)
             run = AutonomousResearchRun.from_yaml(
                 args.campaign,
-                data_paths=_data_paths_from_args(args.data_path),
+                data_paths=data_paths,
                 output_root=args.output_root,
             )
-            result = AutonomousResearchEngine(repo_root=_REPO_ROOT).run(run)
+            requested_generations = run.max_generations
+            if args.approval_mode == "manual" and requested_generations > 1:
+                run = replace(run, max_generations=1)
+            result = _run_campaign_engine(run)
+            acceptance_markers = _acceptance_markers_from_campaign(args.campaign)
+            _annotate_operator_acceptance_artifacts(result.output_root, acceptance_markers)
         except (FileNotFoundError, ValueError) as exc:
             print(str(exc), file=sys.stderr)
             return 2
-        print(json.dumps(result.to_payload(), sort_keys=True, indent=2))
+        payload = result.to_payload()
+        payload["accepted"] = result.status == "accepted"
+        payload["acceptance_markers"] = acceptance_markers
+        if args.approval_mode == "manual" and requested_generations > 1:
+            proposal = _load_json_mapping(result.next_generation_proposal_path)
+            state = _write_campaign_state(
+                args.output_root,
+                "pending_human_approval",
+                "next generation requires human approval",
+                extra={
+                    "campaign_path": str(args.campaign),
+                    "completed_generation_count": len(result.generations),
+                    "data_paths": {root: str(path) for root, path in sorted(data_paths.items())},
+                    "pending_generation_id": str(proposal.get("generation_id")),
+                    "proposal_hash": str(proposal.get("proposal_hash")),
+                    "requested_max_generations": requested_generations,
+                },
+            )
+            payload.update(
+                {
+                    "accepted": True,
+                    "completed_generation_count": len(result.generations),
+                    "pending_generation_id": state["pending_generation_id"],
+                    "proposal_hash": state["proposal_hash"],
+                    "status": "pending_human_approval",
+                }
+            )
+        print(json.dumps(payload, sort_keys=True, indent=2))
         return 0 if result.status == "accepted" else 1
 
     if args.campaign_command == "status":
         output_root = Path(args.output_root)
         summary_path = output_root / "validation_summary.json"
         state_path = output_root / "campaign_state.json"
-        payload: dict[str, Any] = {
+        status_payload: dict[str, Any] = {
             "accepted": summary_path.exists(),
             "output_root": str(output_root),
             "state": _load_json_mapping(state_path) if state_path.exists() else {},
@@ -997,8 +1039,10 @@ def _run_campaign(args: argparse.Namespace) -> int:
             "validation_summary_path": str(summary_path),
         }
         if summary_path.exists():
-            payload.update(_load_json_mapping(summary_path))
-        print(json.dumps(payload, sort_keys=True, indent=2))
+            status_payload.update(_load_json_mapping(summary_path))
+        if status_payload["state"].get("status"):
+            status_payload["status"] = status_payload["state"]["status"]
+        print(json.dumps(status_payload, sort_keys=True, indent=2))
         return 0 if summary_path.exists() else 1
 
     if args.campaign_command == "approve-next-generation":
@@ -1009,6 +1053,7 @@ def _run_campaign(args: argparse.Namespace) -> int:
                 raise ValueError(
                     f"proposal hash mismatch: {proposal_hash} != {args.expected_proposal_hash}"
                 )
+            output_root = args.output_root or args.proposal.parent
             audit_record = ResearchAuditLog(args.audit_log_root).append(
                 "generation_approval_decided",
                 {
@@ -1021,6 +1066,31 @@ def _run_campaign(args: argparse.Namespace) -> int:
                     "reviewer": args.reviewer,
                 },
             )
+            state_payload = _load_optional_campaign_state(output_root)
+            state_extra = {
+                **{
+                    key: value
+                    for key, value in state_payload.items()
+                    if key
+                    in {
+                        "campaign_path",
+                        "completed_generation_count",
+                        "data_paths",
+                        "pending_generation_id",
+                        "requested_max_generations",
+                    }
+                },
+                "decision": args.decision,
+                "proposal_hash": proposal_hash,
+                "proposal_id": proposal.get("proposal_id"),
+                "reviewer": args.reviewer,
+            }
+            _write_campaign_state(
+                output_root,
+                "approved_next_generation" if args.decision == "approved" else "rejected",
+                args.reason,
+                extra=state_extra,
+            )
         except (FileNotFoundError, ValueError) as exc:
             print(str(exc), file=sys.stderr)
             return 2
@@ -1032,6 +1102,9 @@ def _run_campaign(args: argparse.Namespace) -> int:
                     "decision": args.decision,
                     "proposal_hash": proposal_hash,
                     "proposal_id": proposal.get("proposal_id"),
+                    "status": (
+                        "approved_next_generation" if args.decision == "approved" else "rejected"
+                    ),
                 },
                 sort_keys=True,
                 indent=2,
@@ -1055,18 +1128,51 @@ def _run_campaign(args: argparse.Namespace) -> int:
         return 0
 
     if args.campaign_command == "resume":
-        payload = _write_campaign_state(args.output_root, "running", "operator resumed campaign")
-        audit_record = ResearchAuditLog(args.audit_log_root).append(
-            "campaign_resumed",
-            payload,
-        )
-        print(
-            json.dumps(
-                {**payload, "accepted": True, "audit_record_id": audit_record.record_id},
-                sort_keys=True,
-                indent=2,
+        try:
+            state = _load_optional_campaign_state(args.output_root)
+            if state.get("status") != "approved_next_generation":
+                raise ValueError("campaign resume requires an approved next-generation state")
+            campaign_path = _required_state_path(state, "campaign_path")
+            data_paths = _state_data_paths(state)
+            requested_generations = _state_positive_int(state, "requested_max_generations")
+            approval = _approval_record_from_state(state)
+            run = AutonomousResearchRun.from_yaml(
+                campaign_path,
+                data_paths=data_paths,
+                output_root=args.output_root,
+                approval_records=(approval,),
             )
+            run = replace(run, max_generations=requested_generations)
+            result = _run_campaign_engine(run)
+            acceptance_markers = _acceptance_markers_from_campaign(campaign_path)
+            _annotate_operator_acceptance_artifacts(result.output_root, acceptance_markers)
+            state_payload = _write_campaign_state(
+                args.output_root,
+                "accepted" if result.status == "accepted" else result.status,
+                "operator resumed approved generation",
+                extra={
+                    "campaign_path": str(campaign_path),
+                    "resumed_from_generation_id": state.get("pending_generation_id"),
+                    "requested_max_generations": requested_generations,
+                },
+            )
+            audit_record = ResearchAuditLog(args.audit_log_root).append(
+                "campaign_resumed",
+                state_payload,
+            )
+        except (FileNotFoundError, ValueError) as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        payload = result.to_payload()
+        payload.update(
+            {
+                "accepted": result.status == "accepted",
+                "acceptance_markers": acceptance_markers,
+                "audit_record_id": audit_record.record_id,
+                "resumed_from_generation_id": state.get("pending_generation_id"),
+            }
         )
+        print(json.dumps(payload, sort_keys=True, indent=2))
         return 0
 
     raise ValueError(f"unsupported campaign command: {args.campaign_command}")
@@ -1081,10 +1187,13 @@ def _run_landscape(args: argparse.Namespace) -> int:
 
     if args.landscape_command == "summarize":
         analytics = FitnessAnalytics.from_landscape(landscape)
+        rejection_counts = landscape.rejection_reason_counts()
         payload = {
             "analytics": analytics.to_payload(),
+            "family_success_rate": _family_success_rates(analytics),
             "fitness_landscape_hash": landscape.landscape_hash,
-            "rejection_reason_counts": landscape.rejection_reason_counts(),
+            "rejection_distribution": rejection_counts,
+            "rejection_reason_counts": rejection_counts,
         }
         print(json.dumps(payload, sort_keys=True, indent=2))
         return 0
@@ -1116,7 +1225,13 @@ def _run_landscape(args: argparse.Namespace) -> int:
         return 0
 
     if args.landscape_command == "export":
-        payload = landscape.to_payload()
+        analytics = FitnessAnalytics.from_landscape(landscape)
+        payload = {
+            **landscape.to_payload(),
+            "analytics": analytics.to_payload(),
+            "family_success_rate": _family_success_rates(analytics),
+            "rejection_distribution": landscape.rejection_reason_counts(),
+        }
         if args.output is not None:
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_text(
@@ -1144,9 +1259,11 @@ def _run_selector(args: argparse.Namespace) -> int:
         payload = {
             "accepted": not reasons,
             "expected_selection_hash": expected.get("selection_hash"),
+            "rejected_candidates": replayed["rejected_candidates"],
             "replayed_selection_hash": replayed["selection_hash"],
             "reasons": reasons,
             "replayed": replayed,
+            "selected_candidates": replayed["selected_candidates"],
         }
         print(json.dumps(payload, sort_keys=True, indent=2))
         return 0 if not reasons else 1
@@ -1237,18 +1354,183 @@ def _data_paths_from_args(values: Sequence[str]) -> dict[str, Path]:
     return result
 
 
-def _write_campaign_state(output_root: Path, status: str, reason: str) -> dict[str, Any]:
+def _write_campaign_state(
+    output_root: Path,
+    status: str,
+    reason: str,
+    *,
+    extra: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
     output_root.mkdir(parents=True, exist_ok=True)
     payload = {
         "reason": reason,
         "status": status,
         "updated_at": datetime.now(UTC).isoformat(),
     }
+    if extra is not None:
+        payload.update(dict(extra))
     (output_root / "campaign_state.json").write_text(
         json.dumps(payload, sort_keys=True, indent=2) + "\n",
         encoding="utf-8",
     )
     return payload
+
+
+def _load_optional_campaign_state(output_root: Path) -> dict[str, Any]:
+    state_path = output_root / "campaign_state.json"
+    if not state_path.exists():
+        return {}
+    return _load_json_mapping(state_path)
+
+
+def _run_campaign_engine(run: AutonomousResearchRun) -> Any:
+    return AutonomousResearchEngine(repo_root=_REPO_ROOT).run(run)
+
+
+def _required_state_path(state: Mapping[str, Any], field_name: str) -> Path:
+    value = state.get(field_name)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"campaign state missing {field_name}")
+    return Path(value)
+
+
+def _state_positive_int(state: Mapping[str, Any], field_name: str) -> int:
+    value = state.get(field_name)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError(f"campaign state missing positive integer {field_name}")
+    return value
+
+
+def _state_data_paths(state: Mapping[str, Any]) -> dict[str, Path]:
+    value = state.get("data_paths")
+    if not isinstance(value, Mapping) or not value:
+        raise ValueError("campaign state missing data_paths")
+    paths: dict[str, Path] = {}
+    for root, path_text in value.items():
+        if not isinstance(root, str) or not isinstance(path_text, str):
+            raise ValueError("campaign state data_paths must map text roots to text paths")
+        paths[root] = Path(path_text)
+    return paths
+
+
+def _approval_record_from_state(state: Mapping[str, Any]) -> GenerationApprovalRecord:
+    proposal_id = state.get("proposal_id")
+    proposal_hash = state.get("proposal_hash")
+    decision = state.get("decision")
+    reviewer = state.get("reviewer")
+    reason = state.get("reason")
+    if not isinstance(proposal_id, str) or not proposal_id.strip():
+        raise ValueError("campaign state missing proposal_id")
+    if not isinstance(proposal_hash, str) or not proposal_hash.strip():
+        raise ValueError("campaign state missing proposal_hash")
+    if decision != "approved":
+        raise ValueError("campaign state decision must be approved")
+    if not isinstance(reviewer, str) or not reviewer.strip():
+        raise ValueError("campaign state missing reviewer")
+    if not isinstance(reason, str) or not reason.strip():
+        raise ValueError("campaign state missing approval reason")
+    return GenerationApprovalRecord(
+        proposal_id=proposal_id,
+        proposal_hash=proposal_hash,
+        decision=decision,
+        reviewer=reviewer,
+        decided_at=datetime.now(UTC),
+        reason=reason,
+        evidence_refs=(proposal_hash,),
+    )
+
+
+def _acceptance_markers_from_campaign(campaign_path: Path) -> dict[str, Any]:
+    raw = _load_mapping(campaign_path)
+    execution = raw.get("execution", {})
+    selection = raw.get("selection", {})
+    launch_controls = raw.get("launch_controls", {})
+    if not isinstance(execution, Mapping):
+        execution = {}
+    if not isinstance(selection, Mapping):
+        selection = {}
+    if not isinstance(launch_controls, Mapping):
+        launch_controls = {}
+    paper_live_disabled = launch_controls.get("paper_live_launches") == "disabled"
+    return {
+        "execution_mode": execution.get("default_mode"),
+        "gauntlet": selection.get("gauntlet"),
+        "metrics_source": execution.get("metrics_source"),
+        "paper_live_launches": [] if paper_live_disabled else ["not_disabled"],
+        "selector": selection.get("selector"),
+    }
+
+
+def _annotate_operator_acceptance_artifacts(
+    output_root: Path,
+    acceptance_markers: Mapping[str, Any],
+) -> None:
+    rejected_path = output_root / "rejected_candidates.jsonl"
+    rejected_rows = _read_jsonl(rejected_path)
+    if rejected_rows:
+        _write_jsonl(
+            rejected_path,
+            [_annotated_rejected_candidate(row) for row in rejected_rows],
+        )
+    summary_path = output_root / "validation_summary.json"
+    if summary_path.exists():
+        summary = _load_json_mapping(summary_path)
+        summary["paper_live_launches"] = list(acceptance_markers.get("paper_live_launches", []))
+        summary["real_path_markers"] = {
+            "execution_mode": acceptance_markers.get("execution_mode"),
+            "gauntlet": acceptance_markers.get("gauntlet"),
+            "metrics_source": acceptance_markers.get("metrics_source"),
+            "selector": acceptance_markers.get("selector"),
+        }
+        summary_path.write_text(
+            json.dumps(summary, sort_keys=True, indent=2) + "\n",
+            encoding="utf-8",
+        )
+
+
+def _annotated_rejected_candidate(row: Mapping[str, Any]) -> dict[str, Any]:
+    reasons = [str(reason) for reason in row.get("reasons", ())] if row.get("reasons") else []
+    selector_reasons = [
+        reason
+        for reason in reasons
+        if "top-ranked" in reason or "selection" in reason or "rank" in reason
+    ]
+    gauntlet_reasons = [reason for reason in reasons if reason not in selector_reasons]
+    if not gauntlet_reasons and reasons:
+        gauntlet_reasons = reasons
+    return {
+        **dict(row),
+        "gauntlet_reasons": gauntlet_reasons,
+        "selector_reasons": selector_reasons,
+    }
+
+
+def _read_jsonl(path: Path) -> list[dict[str, Any]]:
+    if not path.exists():
+        return []
+    rows: list[dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        payload = json.loads(line)
+        if not isinstance(payload, Mapping):
+            raise ValueError(f"{path} must contain JSON object rows")
+        rows.append(dict(payload))
+    return rows
+
+
+def _write_jsonl(path: Path, rows: Sequence[Mapping[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8") as handle:
+        for row in rows:
+            handle.write(json.dumps(dict(row), sort_keys=True) + "\n")
+
+
+def _family_success_rates(analytics: FitnessAnalytics) -> dict[str, float]:
+    return {
+        f"{summary.strategy_family}/{summary.factor_family}": summary.family_success_rate
+        for summary in analytics.family_summaries
+    }
 
 
 def _selection_policy_from_campaign(campaign: ResearchCampaignConfig) -> SelectionPolicy:

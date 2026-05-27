@@ -1,0 +1,23 @@
+template_id: gc_si_momentum_template
+family: momentum
+strategy_entrypoint: examples.strategies.gc_si_momentum:GcSiMomentumStrategy
+allowed_imports: [qts.strategy_sdk]
+risk_assumptions:
+  max_position_notional: 100000
+execution_assumptions:
+  slippage_bps: 1
+factor_definition:
+  factor_id: gc_si_momentum_factor
+  family: momentum
+  inputs:
+    - root: GC
+      field: close
+    - root: SI
+      field: close
+  transforms:
+    - type: returns
+      lookback: 2
+  label_policy:
+    horizon_bars: 2
+    visible_after: bar_close
+    no_lookahead: true

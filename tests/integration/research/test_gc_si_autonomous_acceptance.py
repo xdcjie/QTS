@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 from qts.research.artifact_graph import ResearchArtifactGraph
@@ -9,14 +10,32 @@ from qts.research.engine.autonomous_research_engine import (
     AutonomousResearchEngine,
     AutonomousResearchRun,
 )
+from qts.research.planner import GenerationApprovalRecord
 
 
 def test_gc_si_autonomous_acceptance_campaign(tmp_path: Path) -> None:
     config_path = Path("configs/research/campaigns/gc_si_autonomous_v1.yaml")
+    first_run = AutonomousResearchRun.from_yaml(
+        config_path,
+        data_paths=_write_data_paths(tmp_path),
+        output_root=tmp_path / "gc_si_autonomous_v1",
+    )
+    first_result = AutonomousResearchEngine(repo_root=Path.cwd()).run(first_run)
+    proposal = json.loads(first_result.next_generation_proposal_path.read_text(encoding="utf-8"))
+    approval = GenerationApprovalRecord(
+        proposal_id=str(proposal["proposal_id"]),
+        proposal_hash=str(proposal["proposal_hash"]),
+        decision="approved",
+        reviewer="research-lead",
+        decided_at=datetime(2026, 5, 27, tzinfo=UTC),
+        reason="bounded next generation reviewed",
+        evidence_refs=(str(proposal["proposal_hash"]),),
+    )
     run = AutonomousResearchRun.from_yaml(
         config_path,
         data_paths=_write_data_paths(tmp_path),
         output_root=tmp_path / "gc_si_autonomous_v1",
+        approval_records=(approval,),
     )
 
     result = AutonomousResearchEngine(repo_root=Path.cwd()).run(run)
@@ -57,8 +76,8 @@ def test_gc_si_autonomous_acceptance_campaign(tmp_path: Path) -> None:
     assert all(row["reasons"] for row in rejected_rows)
 
     proposal = json.loads(result.next_generation_proposal_path.read_text(encoding="utf-8"))
-    assert proposal["evidence_refs"]
-    assert proposal["requires_human_approval"] is True
+    assert proposal["mutations"]
+    assert proposal["proposal_hash"].startswith("sha256:")
 
     graph = ResearchArtifactGraph.from_payload(
         json.loads(result.artifact_graph_path.read_text(encoding="utf-8"))
@@ -74,7 +93,7 @@ def _jsonl(path: Path) -> list[dict[str, object]]:
 
 def _write_data_paths(tmp_path: Path) -> dict[str, Path]:
     data_dir = tmp_path / "input_data"
-    data_dir.mkdir()
+    data_dir.mkdir(exist_ok=True)
     return {
         "GC": _write_bars(data_dir / "gc.csv", base=100),
         "SI": _write_bars(data_dir / "si.csv", base=101),
@@ -84,13 +103,12 @@ def _write_data_paths(tmp_path: Path) -> dict[str, Path]:
 def _write_bars(path: Path, *, base: int) -> Path:
     path.write_text(
         "\n".join(
-            [
-                "timestamp,close",
-                f"2026-01-02T00:00:00+00:00,{base}.0",
-                f"2026-01-02T00:01:00+00:00,{base}.5",
-                f"2026-01-02T00:02:00+00:00,{base + 1}.0",
-                "",
+            ["timestamp,close"]
+            + [
+                f"2026-01-02T00:{minute:02d}:00+00:00,{base + (minute * 0.5):.1f}"
+                for minute in range(20)
             ]
+            + [""]
         ),
         encoding="utf-8",
     )
