@@ -504,6 +504,68 @@ def test_run_research_evidence_reproduce_accepts_verified_bundle(
     assert payload["evidence_bundle_id"] == bundle_id
 
 
+def test_run_research_evidence_reproduce_rejects_missing_reproducibility_v2_artifact(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    registry_root, bundle_id, _artifact_path = _write_evidence_bundle(
+        tmp_path,
+        include_reproducibility_v2=False,
+    )
+
+    exit_code = run_research.main(
+        [
+            "evidence",
+            "--registry-root",
+            str(registry_root),
+            "reproduce",
+            "--bundle-id",
+            bundle_id,
+        ]
+    )
+
+    assert exit_code == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["accepted"] is False
+    assert payload["reproducibility_path"] is None
+    assert any(
+        reason.startswith("missing reproducibility_v2 artifact path")
+        for reason in payload["reasons"]
+    )
+
+
+def test_run_research_evidence_reproduce_rejects_invalid_reproducibility_v2(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    registry_root, bundle_id, reproducibility_path = _write_evidence_bundle(
+        tmp_path,
+        return_reproducibility=True,
+    )
+    reproducibility_path.write_text("{", encoding="utf-8")
+
+    exit_code = run_research.main(
+        [
+            "evidence",
+            "--registry-root",
+            str(registry_root),
+            "reproduce",
+            "--bundle-id",
+            bundle_id,
+        ]
+    )
+
+    assert exit_code == 1
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["accepted"] is False
+    assert payload["reproducibility_path"] == str(reproducibility_path)
+    assert any(
+        "reproducibility validation blocker: reproducibility_v2 is not readable or invalid JSON"
+        in reason
+        for reason in payload["reasons"]
+    )
+
+
 def _valid_graph() -> ResearchArtifactGraph:
     return ResearchArtifactGraph(
         nodes=(
@@ -536,7 +598,12 @@ def _valid_graph() -> ResearchArtifactGraph:
     )
 
 
-def _write_evidence_bundle(tmp_path: Path) -> tuple[Path, str, Path]:
+def _write_evidence_bundle(
+    tmp_path: Path,
+    *,
+    include_reproducibility_v2: bool = True,
+    return_reproducibility: bool = False,
+) -> tuple[Path, str, Path]:
     artifact_path = tmp_path / "metrics.json"
     artifact_path.write_text('{"sharpe": "1.2"}\n', encoding="utf-8")
     artifact_hash = f"sha256:{sha256(artifact_path.read_bytes()).hexdigest()}"
@@ -554,6 +621,35 @@ def _write_evidence_bundle(tmp_path: Path) -> tuple[Path, str, Path]:
     )
     report_path = tmp_path / "workflow-report.md"
     report_path.write_text("# Research Workflow Report\n", encoding="utf-8")
+    steps: list[dict[str, object]] = [
+        {
+            "id": "manifest",
+            "kind": "manifest",
+            "outputs": {"manifest_path": str(manifest_path)},
+            "status": "passed",
+        },
+        {
+            "id": "report",
+            "kind": "report",
+            "outputs": {"report_path": str(report_path)},
+            "status": "passed",
+        },
+    ]
+    reproducibility_path: Path | None = None
+    if include_reproducibility_v2:
+        reproducibility_path = tmp_path / "reproducibility_v2.json"
+        reproducibility_path.write_text(
+            json.dumps(_reproducibility_v2_payload(), sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        steps.append(
+            {
+                "id": "reproducibility",
+                "kind": "reproducibility",
+                "outputs": {"reproducibility_v2_path": str(reproducibility_path)},
+                "status": "passed",
+            }
+        )
     summary_path = tmp_path / "workflow-summary.json"
     summary_path.write_text(
         json.dumps(
@@ -565,20 +661,7 @@ def _write_evidence_bundle(tmp_path: Path) -> tuple[Path, str, Path]:
                     "research_config_hash": "sha256:research",
                     "workflow_config_hash": "sha256:workflow",
                 },
-                "steps": [
-                    {
-                        "id": "manifest",
-                        "kind": "manifest",
-                        "outputs": {"manifest_path": str(manifest_path)},
-                        "status": "passed",
-                    },
-                    {
-                        "id": "report",
-                        "kind": "report",
-                        "outputs": {"report_path": str(report_path)},
-                        "status": "passed",
-                    },
-                ],
+                "steps": steps,
                 "workflow_id": "repro-flow",
             },
             sort_keys=True,
@@ -588,7 +671,30 @@ def _write_evidence_bundle(tmp_path: Path) -> tuple[Path, str, Path]:
     )
     registry_root = tmp_path / "evidence"
     bundle = EvidenceRegistry(registry_root).create_from_workflow_summary(summary_path)
-    return registry_root, bundle.evidence_bundle_id, artifact_path
+    return_path = artifact_path
+    if return_reproducibility:
+        assert reproducibility_path is not None
+        return_path = reproducibility_path
+    return registry_root, bundle.evidence_bundle_id, return_path
+
+
+def _reproducibility_v2_payload() -> dict[str, object]:
+    return {
+        "calendar_version": "trade_calendar/v1",
+        "command_argv": ["run_research", "workflow"],
+        "config_hashes": {"configs/research/quickstart.yaml": "sha256:config"},
+        "container_digest": None,
+        "data_hashes": {"fixtures/data/gc.csv": "sha256:data"},
+        "dependency_hashes": {"pyproject.toml": "sha256:deps"},
+        "git_dirty": False,
+        "git_sha": "f".ljust(40, "1"),
+        "manifest_hash": "sha256:manifest",
+        "platform": "Linux-6.5.0",
+        "python_version": "3.13.0",
+        "random_seeds": {"seed": 42},
+        "schema_version": 2,
+        "stochastic_search_required": False,
+    }
 
 
 def _write_workflow_summary(tmp_path: Path) -> Path:

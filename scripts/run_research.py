@@ -16,13 +16,14 @@ from qts.research import ResearchSession
 from qts.research.artifact_graph import ResearchArtifactGraph, ResearchArtifactGraphWriter
 from qts.research.audit_log import ResearchAuditLog
 from qts.research.data_quality import DataQualityArtifactWriter, DataQualityRunner
-from qts.research.evidence_registry import EvidenceRegistry
+from qts.research.evidence_registry import EvidenceRegistry, ResearchEvidenceBundle
 from qts.research.experiment_store import ExperimentStore
 from qts.research.idea_registry import IdeaRegistry
 from qts.research.idea_spec import IdeaSpec
 from qts.research.manifest import ResearchManifestV2
 from qts.research.meta_research import MetaResearchSummary, MetaResearchSummaryWriter
 from qts.research.promotion_packet import PromotionPacketV2
+from qts.research.reproducibility import ReproducibilitySnapshotV2
 from qts.research.system_run import ResearchDryRunRunner
 from qts.research.workflow import (
     ResearchWorkflowConfig,
@@ -155,7 +156,7 @@ def _add_evidence_parser(subparsers: Any) -> None:
 
     reproduce = evidence_subparsers.add_parser(
         "reproduce",
-        help="Verify evidence bundle hashes before attempting reproduction",
+        help="Verify evidence bundle hashes and reproducibility_v2 blockers",
     )
     reproduce.add_argument("--bundle-id", required=True)
 
@@ -506,13 +507,34 @@ def _run_evidence(args: argparse.Namespace) -> int:
         return 0 if verification.accepted else 1
     if args.evidence_command == "reproduce":
         verification = registry.verify(args.bundle_id)
+        reproduce_reasons: list[str] = list(verification.reasons)
+        checked_paths = list(verification.checked_paths)
+        reproducibility_blockers: list[str] = []
+        reproducibility_path = _find_reproducibility_v2_path(registry.show(args.bundle_id))
+        if reproducibility_path is None:
+            reproduce_reasons.append("missing reproducibility_v2 artifact path in evidence bundle")
+        else:
+            checked_paths.append(reproducibility_path)
+            reproducibility_blockers = list(
+                _reproducibility_v2_blockers(Path(reproducibility_path))
+            )
+            reproduce_reasons.extend(
+                f"reproducibility validation blocker: {reason}"
+                for reason in reproducibility_blockers
+            )
+
+        accepted = verification.accepted and len(reproduce_reasons) == 0
         payload = {
-            **verification.to_payload(),
+            "accepted": accepted,
+            "checked_paths": list(dict.fromkeys(checked_paths)),
             "evidence_bundle_id": args.bundle_id,
-            "reproduction_boundary": "verify_hashes_before_reproduce",
+            "reproducibility_blockers": reproducibility_blockers,
+            "reproducibility_path": reproducibility_path,
+            "reasons": reproduce_reasons,
+            "reproduction_boundary": "verify_hashes_and_reproducibility_v2_before_reproduce",
         }
         print(json.dumps(payload, sort_keys=True, indent=2))
-        return 0 if verification.accepted else 1
+        return 0 if accepted else 1
     raise ValueError(f"unsupported evidence command: {args.evidence_command}")
 
 
@@ -796,6 +818,26 @@ def _required_mapping_text(payload: Mapping[str, Any], field_name: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field_name} is required")
     return value.strip()
+
+
+def _find_reproducibility_v2_path(bundle: ResearchEvidenceBundle) -> str | None:
+    if bundle.artifact_paths:
+        for path_text in bundle.artifact_paths.keys():
+            if path_text.endswith("reproducibility_v2.json"):
+                return path_text
+    return None
+
+
+def _reproducibility_v2_blockers(path: Path) -> tuple[str, ...]:
+    try:
+        payload = _load_json_mapping(path)
+    except (OSError, ValueError) as exc:
+        return (f"reproducibility_v2 is not readable or invalid JSON: {exc}",)
+    try:
+        snapshot = ReproducibilitySnapshotV2.from_payload(payload)
+    except (TypeError, ValueError) as exc:
+        return (f"reproducibility_v2 is invalid: {exc}",)
+    return snapshot.promotion_blockers()
 
 
 def _optional_mapping_text(payload: Mapping[str, Any], field_name: str) -> str | None:
