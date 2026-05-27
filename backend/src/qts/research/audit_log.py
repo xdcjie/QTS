@@ -25,6 +25,19 @@ _SUPPORTED_RECORD_TYPES = frozenset(
         "human_review_decided",
         "artifact_graph_written",
         "report_projected",
+        "campaign_loaded",
+        "campaign_run_completed",
+        "campaign_resumed",
+        "campaign_stopped",
+        "trial_budget_decision",
+        "experiment_trial_completed",
+        "experiment_trial_failed",
+        "experiment_retry_scheduled",
+        "selection_completed",
+        "validation_gauntlet_completed",
+        "fitness_landscape_updated",
+        "next_generation_proposed",
+        "generation_approval_decided",
     }
 )
 
