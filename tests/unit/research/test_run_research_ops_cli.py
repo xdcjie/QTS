@@ -172,6 +172,88 @@ def test_run_research_evidence_reproduce_rejects_bundle_hash_mismatch(
     assert any("hash mismatch" in reason for reason in payload["reasons"])
 
 
+def test_run_research_evidence_bundle_and_verify_write_audit_and_graph(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    summary_path = _write_workflow_summary(tmp_path)
+    registry_root = tmp_path / "evidence"
+    audit_root = tmp_path / "audit"
+    graph_root = tmp_path / "graphs"
+
+    bundle_exit_code = run_research.main(
+        [
+            "evidence",
+            "--registry-root",
+            str(registry_root),
+            "--audit-log-root",
+            str(audit_root),
+            "--artifact-graph-root",
+            str(graph_root),
+            "bundle",
+            "--workflow-summary",
+            str(summary_path),
+            "--strategy-id",
+            "vwap",
+        ]
+    )
+
+    assert bundle_exit_code == 0
+    bundle_payload = json.loads(capsys.readouterr().out)
+    bundle_id = bundle_payload["evidence_bundle_id"]
+    audit_log = ResearchAuditLog(audit_root)
+    assert [record.record_type for record in audit_log.list()] == ["evidence_bundle_created"]
+    graph_path = graph_root / f"evidence-bundle-{bundle_id}-artifact-graph.json"
+    assert graph_path.exists()
+    ResearchArtifactGraph.from_payload(
+        json.loads(graph_path.read_text(encoding="utf-8"))
+    ).validate()
+
+    verify_exit_code = run_research.main(
+        [
+            "evidence",
+            "--registry-root",
+            str(registry_root),
+            "--audit-log-root",
+            str(audit_root),
+            "verify",
+            bundle_id,
+        ]
+    )
+
+    assert verify_exit_code == 0
+    verify_payload = json.loads(capsys.readouterr().out)
+    assert verify_payload["accepted"] is True
+    assert [record.record_type for record in audit_log.list()] == [
+        "evidence_bundle_created",
+        "evidence_validated",
+    ]
+    assert audit_log.verify_hash_chain() == ()
+
+
+def test_run_research_evidence_reproduce_accepts_verified_bundle(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    registry_root, bundle_id, _artifact_path = _write_evidence_bundle(tmp_path)
+
+    exit_code = run_research.main(
+        [
+            "evidence",
+            "--registry-root",
+            str(registry_root),
+            "reproduce",
+            "--bundle-id",
+            bundle_id,
+        ]
+    )
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["accepted"] is True
+    assert payload["evidence_bundle_id"] == bundle_id
+
+
 def _valid_graph() -> ResearchArtifactGraph:
     return ResearchArtifactGraph(
         nodes=(
@@ -243,3 +325,64 @@ def _write_evidence_bundle(tmp_path: Path) -> tuple[Path, str, Path]:
     registry_root = tmp_path / "evidence"
     bundle = EvidenceRegistry(registry_root).create_from_workflow_summary(summary_path)
     return registry_root, bundle.evidence_bundle_id, artifact_path
+
+
+def _write_workflow_summary(tmp_path: Path) -> Path:
+    artifact_path = tmp_path / "metrics.json"
+    artifact_path.write_text('{"sharpe": "1.2"}\n', encoding="utf-8")
+    artifact_hash = f"sha256:{sha256(artifact_path.read_bytes()).hexdigest()}"
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(
+        json.dumps(
+            {
+                "artifact_hashes": {artifact_path.name: artifact_hash},
+                "artifact_paths_by_hash": {artifact_hash: str(artifact_path)},
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    report_path = tmp_path / "workflow-report.md"
+    report_path.write_text("# Research Workflow Report\n", encoding="utf-8")
+    summary_path = tmp_path / "workflow-summary.json"
+    summary_path.write_text(
+        json.dumps(
+            {
+                "run_context": {
+                    "dataset_ids": ["fixture:GC:15m"],
+                    "git_commit": "abc123",
+                    "git_dirty": False,
+                    "research_config_hash": "sha256:research",
+                    "workflow_config_hash": "sha256:workflow",
+                },
+                "periods": [
+                    {
+                        "end": "2022-01-01T00:00:00+00:00",
+                        "name": "selection",
+                        "role": "selection",
+                        "start": "2020-01-01T00:00:00+00:00",
+                    }
+                ],
+                "steps": [
+                    {
+                        "id": "manifest",
+                        "kind": "manifest",
+                        "outputs": {"manifest_path": str(manifest_path)},
+                        "status": "passed",
+                    },
+                    {
+                        "id": "report",
+                        "kind": "report",
+                        "outputs": {"report_path": str(report_path)},
+                        "status": "passed",
+                    },
+                ],
+                "workflow_id": "evidence-cli-flow",
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return summary_path

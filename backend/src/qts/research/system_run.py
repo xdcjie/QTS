@@ -13,6 +13,7 @@ from typing import Any
 import yaml  # type: ignore[import-untyped]
 
 from qts.core.hashing import stable_json_dumps, stable_json_hash
+from qts.research.artifact_graph import ResearchArtifactGraphWriter
 from qts.research.data_quality import DataQualityArtifact, DataQualityRunner
 from qts.research.manifest import ResearchManifest, ResearchManifestV2, write_jsonl
 from qts.research.metrics import ResearchMetrics
@@ -102,6 +103,14 @@ class ResearchDryRunRunner:
         _write_json(artifact_dir / "data_quality.json", data_quality_payload)
         _write_json(artifact_dir / "splits.json", split_plan.to_payload())
         (artifact_dir / "data_quality_report.md").write_text(data_quality, encoding="utf-8")
+        ResearchArtifactGraphWriter(artifact_dir).write_dry_run_artifacts(
+            artifact_dir=artifact_dir,
+            manifest_path=manifest_copy,
+            resolved_manifest=resolved_manifest,
+            metrics_payload=metrics.to_payload(),
+            data_quality_payload=data_quality_payload,
+            reproducibility_payload=reproducibility_v2.to_payload(),
+        )
 
         write_jsonl(
             artifact_dir / "candidate_parameters.jsonl",
@@ -121,7 +130,7 @@ class ResearchDryRunRunner:
             ],
         )
         write_jsonl(artifact_dir / "failures.jsonl", ())
-        self._write_ranking(artifact_dir / "ranking.csv", candidates)
+        _write_ranking(artifact_dir / "ranking.csv", candidates)
         write_jsonl(
             artifact_dir / "command_log.jsonl",
             [
@@ -318,26 +327,6 @@ class ResearchDryRunRunner:
             return {"research_manifest_random_search": seed}
         return {}
 
-    @staticmethod
-    def _write_ranking(path: Path, candidates: tuple[Any, ...]) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with path.open("w", encoding="utf-8", newline="") as handle:
-            writer = csv.DictWriter(
-                handle,
-                fieldnames=("rank", "candidate_id", "search_type", "objective_value", "status"),
-            )
-            writer.writeheader()
-            for rank, candidate in enumerate(candidates, start=1):
-                writer.writerow(
-                    {
-                        "candidate_id": candidate.candidate_id,
-                        "objective_value": "",
-                        "rank": rank,
-                        "search_type": candidate.search_type,
-                        "status": "dry_run_not_evaluated",
-                    }
-                )
-
 
 def _write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -356,6 +345,26 @@ def _data_quality_payload_with_hash(artifact: DataQualityArtifact) -> dict[str, 
         include_artifact_hash=True,
         artifact_hash=stable_json_hash(payload),
     )
+
+
+def _write_ranking(path: Path, candidates: tuple[Any, ...]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(
+            handle,
+            fieldnames=("rank", "candidate_id", "search_type", "objective_value", "status"),
+        )
+        writer.writeheader()
+        for rank, candidate in enumerate(candidates, start=1):
+            writer.writerow(
+                {
+                    "candidate_id": candidate.candidate_id,
+                    "objective_value": "",
+                    "rank": rank,
+                    "search_type": candidate.search_type,
+                    "status": "dry_run_not_evaluated",
+                }
+            )
 
 
 def _load_manifest(path: Path) -> ResearchManifest | ResearchManifestV2:

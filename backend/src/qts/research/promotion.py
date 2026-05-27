@@ -234,6 +234,7 @@ class ResearchPromotionPolicy:
     min_parameter_stability: float
     min_walk_forward_consistency: float
     max_correlation_to_active: float
+    metrics_schema_id: str = "schema_v2"
     metrics_schema_path: Path | str = _DEFAULT_METRICS_SCHEMA_PATH
 
     @classmethod
@@ -246,14 +247,23 @@ class ResearchPromotionPolicy:
         gates = payload.get("research_gates", payload)
         if not isinstance(gates, dict):
             raise ValueError("research_gates must be a mapping")
+        raw_schema_id = payload.get("metrics_schema_id", gates.get("metrics_schema_id"))
+        if not isinstance(raw_schema_id, str) or not raw_schema_id.strip():
+            raise ValueError("metrics_schema_id is required")
         raw_schema_path = payload.get("metrics_schema_path", gates.get("metrics_schema_path"))
         metrics_schema_path: Path | str
         if raw_schema_path is None:
-            metrics_schema_path = _DEFAULT_METRICS_SCHEMA_PATH
+            raise ValueError("metrics_schema_path is required")
         else:
             configured_path = Path(str(raw_schema_path))
             metrics_schema_path = (
                 configured_path if configured_path.is_absolute() else path.parent / configured_path
+            )
+        metrics_schema = ResearchMetricsSchema.from_yaml(Path(metrics_schema_path))
+        metrics_schema_id = raw_schema_id.strip()
+        if metrics_schema.schema_id != metrics_schema_id:
+            raise ValueError(
+                f"metrics_schema_id mismatch: {metrics_schema_id} != {metrics_schema.schema_id}"
             )
         return cls(
             min_oos_months=_float(gates, "min_oos_months"),
@@ -266,6 +276,7 @@ class ResearchPromotionPolicy:
             min_parameter_stability=_float(gates, "min_parameter_stability"),
             min_walk_forward_consistency=_float(gates, "min_walk_forward_consistency"),
             max_correlation_to_active=_float(gates, "max_correlation_to_active"),
+            metrics_schema_id=metrics_schema_id,
             metrics_schema_path=metrics_schema_path,
         )
 
@@ -284,6 +295,28 @@ class ResearchPromotionPolicy:
             warnings = ("git worktree was dirty during research run",)
 
         metrics_schema = ResearchMetricsSchema.from_yaml(Path(self.metrics_schema_path))
+        schema_id_reason = _metrics_schema_id_mismatch_reason(metrics, self.metrics_schema_id)
+        if schema_id_reason is None and metrics_schema.schema_id != self.metrics_schema_id:
+            schema_id_reason = (
+                "metrics schema id mismatch: "
+                f"{self.metrics_schema_id} != {metrics_schema.schema_id}"
+            )
+        if schema_id_reason is not None:
+            return ResearchPromotionDecision(
+                run_id=run_id,
+                strategy_id=strategy_id,
+                status="rejected",
+                gates=(
+                    PromotionGateResult(
+                        "metrics_schema",
+                        "failed",
+                        self.metrics_schema_id,
+                        metrics_schema.schema_id,
+                        schema_id_reason,
+                    ),
+                ),
+                warnings=warnings,
+            )
         schema_result = metrics_schema.validate(metrics, purpose="promotion")
         if not schema_result.accepted:
             schema_status = (
@@ -519,6 +552,22 @@ def _metric_source_metadata(
         source_artifact_id if isinstance(source_artifact_id, str) else None,
         period_role if isinstance(period_role, str) else None,
     )
+
+
+def _metrics_schema_id_mismatch_reason(
+    metrics: Mapping[str, Any],
+    expected_schema_id: str,
+) -> str | None:
+    observed = metrics.get("metrics_schema_id")
+    if observed is None:
+        metadata = metrics.get("_metadata")
+        if isinstance(metadata, Mapping):
+            observed = metadata.get("metrics_schema_id")
+    if observed is None:
+        return None
+    if observed != expected_schema_id:
+        return f"metrics schema id mismatch: {observed} != {expected_schema_id}"
+    return None
 
 
 _PROMOTION_STATUSES = frozenset(

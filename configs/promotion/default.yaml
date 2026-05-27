@@ -1,3 +1,4 @@
+metrics_schema_id: schema_v2
 metrics_schema_path: ../research/metrics/schema_v2.yaml
 research_gates:
   min_oos_months: 6

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -151,6 +152,7 @@ class PromotionPacketV2:
         reasons: list[str] = []
         warnings: list[str] = []
         self._append_packet_structure_reasons(reasons)
+        self._append_review_reasons(reasons)
         self._append_evidence_reasons(evidence_registry, reasons, warnings)
         self._append_metrics_reasons(metrics_schema, reasons, warnings)
         self._append_reproducibility_reasons(reasons)
@@ -159,21 +161,40 @@ class PromotionPacketV2:
 
         accepted = not reasons
         status = "accepted" if accepted else "rejected"
+        human_review_record_id: str | None = None
+        if accepted:
+            human_review_record = audit_log.append_human_review_decision(
+                reviewer=str(self.review["reviewer"]),
+                decision=str(self.review["decision"]),
+                reviewed_at=datetime.fromisoformat(str(self.review["reviewed_at"])),
+                evidence_bundle_id=self.evidence_bundle_id,
+                promotion_candidate_id=self.promotion_candidate_id,
+                notes=str(self.review["notes"])
+                if self._has_value(self.review.get("notes"))
+                else None,
+            )
+            human_review_record_id = human_review_record.record_id
+        validation_payload: dict[str, Any] = {
+            "accepted": accepted,
+            "evidence_bundle_id": self.evidence_bundle_id,
+            "packet_hash": packet_hash,
+            "promotion_candidate_id": self.promotion_candidate_id,
+            "reasons": reasons,
+            "status": status,
+            "strategy_id": self.strategy_id,
+            "target_mode": self.target_mode,
+            "warnings": warnings,
+        }
+        if human_review_record_id is not None:
+            validation_payload["human_review_record_id"] = human_review_record_id
         record = audit_log.append(
             "promotion_packet_validated",
-            {
-                "accepted": accepted,
-                "evidence_bundle_id": self.evidence_bundle_id,
-                "packet_hash": packet_hash,
-                "promotion_candidate_id": self.promotion_candidate_id,
-                "reasons": reasons,
-                "status": status,
-                "strategy_id": self.strategy_id,
-                "target_mode": self.target_mode,
-                "warnings": warnings,
-            },
+            validation_payload,
         )
         if accepted and artifact_graph_writer is not None:
+            audit_records = [record.to_payload()]
+            if human_review_record_id is not None:
+                audit_records.insert(0, human_review_record.to_payload())
             artifact_graph_writer.write_from_payloads(
                 evidence_bundles=(evidence_registry.show(self.evidence_bundle_id).to_payload(),),
                 promotion_packets=(
@@ -183,7 +204,7 @@ class PromotionPacketV2:
                         "packet_hash": packet_hash,
                     },
                 ),
-                audit_records=(record.to_payload(),),
+                audit_records=tuple(audit_records),
                 output_path=(f"promotion-packet-{self.promotion_candidate_id}-artifact-graph.json"),
             )
         return PromotionPacketValidationResult(
@@ -238,6 +259,18 @@ class PromotionPacketV2:
             if not self._has_value(self.review.get(field_name)):
                 reasons.append(f"review.{field_name} is required")
 
+    def _append_review_reasons(self, reasons: list[str]) -> None:
+        reviewed_at = self.review.get("reviewed_at")
+        if not self._has_value(reviewed_at):
+            return
+        try:
+            parsed = datetime.fromisoformat(str(reviewed_at))
+        except ValueError:
+            reasons.append("review.reviewed_at must be an ISO 8601 datetime")
+            return
+        if parsed.tzinfo is None or parsed.tzinfo.utcoffset(parsed) is None:
+            reasons.append("review.reviewed_at must be timezone-aware")
+
     def _append_evidence_reasons(
         self,
         evidence_registry: EvidenceRegistry,
@@ -274,6 +307,7 @@ class PromotionPacketV2:
         self._append_payload_hash_reason("metrics", self.metrics, payload, reasons)
         try:
             schema = metrics_schema or ResearchMetricsSchema.from_yaml(self._METRICS_SCHEMA_PATH)
+            self._append_metrics_schema_id_reason(schema, payload, reasons)
             result = schema.validate(payload, purpose="promotion")
         except (OSError, ValueError) as exc:
             reasons.append(f"metrics validation failed: {exc}")
@@ -395,12 +429,45 @@ class PromotionPacketV2:
             if ref_field_name not in value or not self._has_value(value.get(ref_field_name)):
                 reasons.append(f"{field_path}.{ref_field_name} is required")
                 missing_required_field = True
+        path_value = value.get("path")
+        if not isinstance(path_value, str) or not path_value.strip():
+            reasons.append(f"{field_path}.path is required")
+            missing_required_field = True
+        elif not Path(path_value).exists():
+            reasons.append(f"{field_path}.path does not exist")
+            missing_required_field = True
         if missing_required_field:
             return
         actual_hash = stable_json_hash(value["payload"])
         expected_hash = value["payload_hash"]
         if expected_hash != actual_hash:
             reasons.append(f"{field_path}.payload_hash mismatch: {actual_hash} != {expected_hash}")
+
+    def _append_metrics_schema_id_reason(
+        self,
+        schema: ResearchMetricsSchema,
+        payload: Mapping[str, Any],
+        reasons: list[str],
+    ) -> None:
+        for field_path, observed in (
+            ("metrics.metrics_schema_id", self.metrics.get("metrics_schema_id")),
+            ("metrics.payload.metrics_schema_id", payload.get("metrics_schema_id")),
+            (
+                "metrics.payload._metadata.metrics_schema_id",
+                self._metadata_metrics_schema_id(payload),
+            ),
+        ):
+            if observed is None:
+                continue
+            if observed != schema.schema_id:
+                reasons.append(f"{field_path} mismatch: {observed} != {schema.schema_id}")
+
+    @staticmethod
+    def _metadata_metrics_schema_id(payload: Mapping[str, Any]) -> Any:
+        metadata = payload.get("_metadata")
+        if not isinstance(metadata, Mapping):
+            return None
+        return metadata.get("metrics_schema_id")
 
     @staticmethod
     def _mapping_field(payload: Mapping[str, Any], field_name: str) -> Mapping[str, Any]:

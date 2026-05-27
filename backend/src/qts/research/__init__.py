@@ -20,6 +20,7 @@ from qts.research.data_quality import (
     DataQualityArtifact,
     DataQualityArtifactWriter,
     DataQualityIssue,
+    DataQualityRunner,
 )
 from qts.research.evidence_policy import (
     EvidenceCompletenessPolicy,
@@ -75,7 +76,7 @@ from qts.research.idea_registry import (
     validate_promotion_candidate,
 )
 from qts.research.idea_spec import IdeaSpec
-from qts.research.manifest import ResearchCandidate, ResearchManifest
+from qts.research.manifest import ResearchCandidate, ResearchManifest, ResearchManifestV2
 from qts.research.meta_research import (
     MetaResearchArtifacts,
     MetaResearchSummary,
@@ -174,6 +175,7 @@ __all__ = [
     "DataQualityArtifact",
     "DataQualityArtifactWriter",
     "DataQualityIssue",
+    "DataQualityRunner",
     "ExperimentManifestConfig",
     "ExperimentManifestResult",
     "ExperimentManifestWriter",
@@ -183,6 +185,7 @@ __all__ = [
     "ExperimentStoreRecord",
     "ResearchCandidate",
     "ResearchManifest",
+    "ResearchManifestV2",
     "ResearchMetrics",
     "REQUIRED_METRIC_GROUPS",
     "MetricsValidationResult",

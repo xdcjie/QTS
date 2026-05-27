@@ -12,7 +12,7 @@ from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 from qts.research import ResearchSession
-from qts.research.artifact_graph import ResearchArtifactGraph
+from qts.research.artifact_graph import ResearchArtifactGraph, ResearchArtifactGraphWriter
 from qts.research.audit_log import ResearchAuditLog
 from qts.research.data_quality import DataQualityArtifactWriter, DataQualityRunner
 from qts.research.evidence_policy import (
@@ -100,6 +100,18 @@ def _add_evidence_parser(subparsers: Any) -> None:
         default=Path("runs/research/evidence"),
         help="Evidence registry root directory",
     )
+    parser.add_argument(
+        "--audit-log-root",
+        type=Path,
+        default=None,
+        help="Optional Research OS audit log root for evidence lifecycle records",
+    )
+    parser.add_argument(
+        "--artifact-graph-root",
+        type=Path,
+        default=None,
+        help="Optional artifact graph output root for evidence lifecycle records",
+    )
     evidence_subparsers = parser.add_subparsers(dest="evidence_command", required=True)
 
     bundle = evidence_subparsers.add_parser(
@@ -151,6 +163,12 @@ def _add_promotion_parser(subparsers: Any) -> None:
         type=Path,
         default=Path("runs/research/audit"),
         help="Research audit log root directory",
+    )
+    validate.add_argument(
+        "--artifact-graph-root",
+        type=Path,
+        default=None,
+        help="Optional artifact graph output root for packet validation records",
     )
 
 
@@ -346,6 +364,12 @@ def _run_workflow(args: argparse.Namespace, session: ResearchSession) -> int:
 
 def _run_evidence(args: argparse.Namespace) -> int:
     registry = EvidenceRegistry(args.registry_root)
+    audit_log = None if args.audit_log_root is None else ResearchAuditLog(args.audit_log_root)
+    artifact_graph_writer = (
+        None
+        if args.artifact_graph_root is None
+        else ResearchArtifactGraphWriter(args.artifact_graph_root)
+    )
     if args.evidence_command == "bundle":
         idea = (
             None
@@ -357,6 +381,8 @@ def _run_evidence(args: argparse.Namespace) -> int:
             idea=idea,
             idea_id=args.idea_id,
             strategy_id=args.strategy_id,
+            audit_log=audit_log,
+            artifact_graph_writer=artifact_graph_writer,
         )
         print(json.dumps(bundle.to_payload(), sort_keys=True, indent=2))
         return 0
@@ -373,7 +399,7 @@ def _run_evidence(args: argparse.Namespace) -> int:
         print(json.dumps(registry.show(args.bundle_id).to_payload(), sort_keys=True, indent=2))
         return 0
     if args.evidence_command == "verify":
-        verification = registry.verify(args.bundle_id)
+        verification = registry.verify(args.bundle_id, audit_log=audit_log)
         print(json.dumps(verification.to_payload(), sort_keys=True, indent=2))
         return 0 if verification.accepted else 1
     if args.evidence_command == "reproduce":
@@ -396,6 +422,11 @@ def _run_promotion(args: argparse.Namespace) -> int:
                 packet_result = PromotionPacketV2.from_payload(_load_mapping(args.packet)).validate(
                     evidence_registry=evidence_registry,
                     audit_log=ResearchAuditLog(args.audit_log_root),
+                    artifact_graph_writer=(
+                        None
+                        if args.artifact_graph_root is None
+                        else ResearchArtifactGraphWriter(args.artifact_graph_root)
+                    ),
                 )
                 print(json.dumps(packet_result.to_payload(), sort_keys=True, indent=2))
                 return 0 if packet_result.accepted else 1
@@ -405,6 +436,7 @@ def _run_promotion(args: argparse.Namespace) -> int:
                     EvidenceCompletenessPolicy.promotion_candidate().validate_candidate(
                         candidate,
                         evidence_registry=evidence_registry,
+                        audit_log=ResearchAuditLog(args.audit_log_root),
                     )
                 )
                 print(json.dumps(candidate_result.to_payload(), sort_keys=True, indent=2))

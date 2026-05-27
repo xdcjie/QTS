@@ -5,6 +5,7 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
+from qts.research.audit_log import ResearchAuditLog
 from qts.research.evidence_policy import EvidenceCompletenessPolicy, PromotionEvidenceSpec
 from qts.research.evidence_registry import EvidenceRegistry
 from qts.research.idea_spec import IdeaSpec
@@ -230,3 +231,27 @@ def test_promotion_evidence_policy_rejects_mutated_artifact(tmp_path: Path) -> N
 
     assert not result.accepted
     assert any("hash mismatch" in reason for reason in result.reasons)
+
+
+def test_promotion_evidence_policy_verification_writes_audit_record(tmp_path: Path) -> None:
+    registry, bundle_id = _write_verifiable_bundle(tmp_path)
+    audit_log = ResearchAuditLog(tmp_path / "audit.jsonl")
+
+    result = EvidenceCompletenessPolicy.promotion_candidate().validate_candidate(
+        PromotionEvidenceSpec(
+            promotion_candidate_id="pc-vwap",
+            strategy_id="vwap",
+            evidence_bundle_id=bundle_id,
+            status="paper_candidate",
+            idea_id="idea-vwap",
+        ),
+        evidence_registry=registry,
+        audit_log=audit_log,
+    )
+
+    assert result.accepted
+    records = audit_log.list()
+    assert [record.record_type for record in records] == ["evidence_validated"]
+    assert records[0].payload["evidence_bundle_id"] == bundle_id
+    assert records[0].payload["accepted"] is True
+    assert audit_log.verify_hash_chain() == ()

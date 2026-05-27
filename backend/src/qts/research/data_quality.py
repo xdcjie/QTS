@@ -284,6 +284,15 @@ class DataQualityRunner:
         stale_prices = 0
         session_alignment = True
         label_visibility = True
+        issues: list[DataQualityIssue] = []
+        for path_text in checked_paths:
+            if not Path(path_text).exists():
+                issues.append(
+                    DataQualityIssue(
+                        code="missing_checked_path",
+                        message=f"checked path does not exist: {path_text}",
+                    )
+                )
         for path_text in existing_bar_paths:
             rows = self._read_csv_rows(Path(path_text))
             timestamps = self._timestamps(rows)
@@ -303,6 +312,7 @@ class DataQualityRunner:
             dataset_id=self.dataset_id,
             accepted=True,
             checked_paths=checked_paths,
+            issues=tuple(issues),
             duplicate_timestamps=duplicate_timestamps,
             missing_bars=missing_bars,
             session_alignment=session_alignment,
@@ -314,6 +324,7 @@ class DataQualityRunner:
             dataset_id=artifact.dataset_id,
             accepted=not artifact.blockers(),
             checked_paths=artifact.checked_paths,
+            issues=artifact.issues,
             duplicate_timestamps=artifact.duplicate_timestamps,
             missing_bars=artifact.missing_bars,
             session_alignment=artifact.session_alignment,

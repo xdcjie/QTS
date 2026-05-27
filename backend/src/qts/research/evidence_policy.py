@@ -12,6 +12,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from qts.research.audit_log import ResearchAuditLog
 from qts.research.evidence_registry import EvidenceRegistry
 from qts.research.promotion import PromotionCandidateSpec
 
@@ -147,6 +148,7 @@ class EvidenceCompletenessPolicy:
         *,
         evidence_registry: EvidenceRegistry,
         idea_id: str | None = None,
+        audit_log: ResearchAuditLog | None = None,
     ) -> EvidenceCompletenessResult:
         """Validate one promotion candidate against its cited evidence bundle."""
 
@@ -177,7 +179,7 @@ class EvidenceCompletenessPolicy:
             )
 
         if self.require_verified_bundle:
-            verification = evidence_registry.verify(spec.evidence_bundle_id)
+            verification = evidence_registry.verify(spec.evidence_bundle_id, audit_log=audit_log)
             checked_paths.extend(verification.checked_paths)
             if not verification.accepted:
                 reasons.extend(verification.reasons)

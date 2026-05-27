@@ -102,9 +102,13 @@ class ResearchMetricsSchema:
     """Research metrics schema with field-level validation rules."""
 
     definitions: tuple[ResearchMetricDefinition, ...]
+    schema_id: str
     schema_version: int = 2
 
     def __post_init__(self) -> None:
+        schema_id = self.schema_id.strip()
+        if not schema_id:
+            raise ValueError("metrics schema_id is required")
         if self.schema_version != 2:
             raise ValueError("metrics schema_version must be 2")
         paths: set[str] = set()
@@ -112,6 +116,7 @@ class ResearchMetricsSchema:
             if definition.path in paths:
                 raise ValueError(f"duplicate metric definition: {definition.path}")
             paths.add(definition.path)
+        object.__setattr__(self, "schema_id", schema_id)
 
     @classmethod
     def from_yaml(cls, path: Path) -> ResearchMetricsSchema:
@@ -137,7 +142,11 @@ class ResearchMetricsSchema:
         )
         if len(definitions) != len(raw_metrics):
             raise ValueError("metric definitions must be mappings")
-        return cls(definitions=definitions, schema_version=schema_version)
+        return cls(
+            definitions=definitions,
+            schema_id=str(payload.get("schema_id", "")),
+            schema_version=schema_version,
+        )
 
     def validate(self, metrics: Mapping[str, Any], *, purpose: str) -> MetricsValidationResult:
         """Validate metrics for a declared purpose."""

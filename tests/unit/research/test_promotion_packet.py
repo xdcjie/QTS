@@ -97,6 +97,20 @@ def test_metrics_missing_required_field_rejected(tmp_path: Path) -> None:
     assert "quality.sharpe missing for promotion" in result.reasons
 
 
+def test_metrics_schema_id_mismatch_rejected(tmp_path: Path) -> None:
+    registry, bundle_id = _write_verifiable_bundle(tmp_path)
+    payload = _packet_payload(bundle_id)
+    payload["metrics"]["metrics_schema_id"] = "schema_v1"
+
+    result = PromotionPacketV2.from_payload(payload).validate(
+        evidence_registry=registry,
+        audit_log=ResearchAuditLog(tmp_path / "audit.jsonl"),
+    )
+
+    assert result.accepted is False
+    assert "metrics.metrics_schema_id mismatch: schema_v1 != schema_v2" in result.reasons
+
+
 def test_failed_research_safety_metric_rejected(tmp_path: Path) -> None:
     registry, bundle_id = _write_verifiable_bundle(tmp_path)
     metrics = _valid_metrics()
@@ -183,7 +197,7 @@ def test_complete_live_packet_requires_hashed_artifact_refs_and_is_accepted(
     registry, bundle_id = _write_verifiable_bundle(tmp_path)
 
     result = PromotionPacketV2.from_payload(
-        _packet_payload(bundle_id, target_mode="live_canary")
+        _packet_payload(bundle_id, target_mode="live_canary", artifact_root=tmp_path)
     ).validate(
         evidence_registry=registry,
         audit_log=ResearchAuditLog(tmp_path / "audit.jsonl"),
@@ -195,7 +209,7 @@ def test_complete_live_packet_requires_hashed_artifact_refs_and_is_accepted(
 
 def test_live_packet_rejects_plain_runtime_and_operations_fields(tmp_path: Path) -> None:
     registry, bundle_id = _write_verifiable_bundle(tmp_path)
-    payload = _packet_payload(bundle_id, target_mode="live")
+    payload = _packet_payload(bundle_id, target_mode="live", artifact_root=tmp_path)
     payload["runtime"]["risk_profile_id"] = "risk-live"
     payload["operations"]["rollback_plan"] = "disable live strategy"
 
@@ -211,7 +225,7 @@ def test_live_packet_rejects_plain_runtime_and_operations_fields(tmp_path: Path)
 
 def test_live_packet_rejects_artifact_ref_hash_mismatch(tmp_path: Path) -> None:
     registry, bundle_id = _write_verifiable_bundle(tmp_path)
-    payload = _packet_payload(bundle_id, target_mode="live_observation")
+    payload = _packet_payload(bundle_id, target_mode="live_observation", artifact_root=tmp_path)
     payload["runtime"]["kill_switch_profile"]["payload_hash"] = "sha256:wrong"
 
     result = PromotionPacketV2.from_payload(payload).validate(
@@ -226,9 +240,23 @@ def test_live_packet_rejects_artifact_ref_hash_mismatch(tmp_path: Path) -> None:
     )
 
 
+def test_live_packet_rejects_missing_artifact_ref_path(tmp_path: Path) -> None:
+    registry, bundle_id = _write_verifiable_bundle(tmp_path)
+    payload = _packet_payload(bundle_id, target_mode="live_observation", artifact_root=tmp_path)
+    payload["runtime"]["risk_profile_id"]["path"] = str(tmp_path / "missing-risk.json")
+
+    result = PromotionPacketV2.from_payload(payload).validate(
+        evidence_registry=registry,
+        audit_log=ResearchAuditLog(tmp_path / "audit.jsonl"),
+    )
+
+    assert result.accepted is False
+    assert "runtime.risk_profile_id.path does not exist" in result.reasons
+
+
 def test_live_packet_requires_operations_evidence_artifact_refs(tmp_path: Path) -> None:
     registry, bundle_id = _write_verifiable_bundle(tmp_path)
-    payload = _packet_payload(bundle_id, target_mode="live_canary")
+    payload = _packet_payload(bundle_id, target_mode="live_canary", artifact_root=tmp_path)
     payload["operations"].pop("paper_soak_evidence")
 
     result = PromotionPacketV2.from_payload(payload).validate(
@@ -242,7 +270,7 @@ def test_live_packet_requires_operations_evidence_artifact_refs(tmp_path: Path) 
 
 def test_live_packet_missing_kill_switch_rejected(tmp_path: Path) -> None:
     registry, bundle_id = _write_verifiable_bundle(tmp_path)
-    payload = _packet_payload(bundle_id, target_mode="live_canary")
+    payload = _packet_payload(bundle_id, target_mode="live_canary", artifact_root=tmp_path)
     payload["runtime"].pop("kill_switch_profile")
 
     result = PromotionPacketV2.from_payload(payload).validate(
@@ -285,12 +313,35 @@ def test_validation_writes_audit_record_and_chain_verifies(tmp_path: Path) -> No
     )
 
     records = audit_log.list()
-    assert len(records) == 1
-    assert records[0].record_id == result.audit_record_id
-    assert records[0].record_type == "promotion_packet_validated"
-    assert records[0].payload["packet_hash"] == result.packet_hash
-    assert records[0].payload["accepted"] is True
+    assert len(records) == 2
+    assert records[0].record_type == "human_review_decided"
+    assert records[0].payload["reviewer"] == "risk"
+    assert records[0].payload["decision"] == "go"
+    assert records[0].payload["reviewed_at"] == "2026-05-26T00:00:00+00:00"
+    assert records[0].payload["evidence_bundle_id"] == bundle_id
+    assert records[0].payload["promotion_candidate_id"] == "pc-vwap"
+    assert records[1].record_id == result.audit_record_id
+    assert records[1].record_type == "promotion_packet_validated"
+    assert records[1].payload["packet_hash"] == result.packet_hash
+    assert records[1].payload["accepted"] is True
+    assert records[1].payload["human_review_record_id"] == records[0].record_id
     assert audit_log.verify_hash_chain() == ()
+
+
+def test_validation_rejects_reviewed_at_without_timezone(tmp_path: Path) -> None:
+    registry, bundle_id = _write_verifiable_bundle(tmp_path)
+    audit_log = ResearchAuditLog(tmp_path / "audit.jsonl")
+    payload = _packet_payload(bundle_id)
+    payload["review"]["reviewed_at"] = "2026-05-26T00:00:00"
+
+    result = PromotionPacketV2.from_payload(payload).validate(
+        evidence_registry=registry,
+        audit_log=audit_log,
+    )
+
+    assert result.accepted is False
+    assert "review.reviewed_at must be timezone-aware" in result.reasons
+    assert [record.record_type for record in audit_log.list()] == ["promotion_packet_validated"]
 
 
 def test_validation_writes_artifact_graph_when_writer_is_supplied(tmp_path: Path) -> None:
@@ -321,6 +372,7 @@ def _packet_payload(
     metrics_payload: dict[str, dict[str, object]] | None = None,
     data_quality_payload: dict[str, Any] | None = None,
     reproducibility_payload: dict[str, Any] | None = None,
+    artifact_root: Path | None = None,
 ) -> dict[str, Any]:
     metrics = metrics_payload or _valid_metrics()
     data_quality = data_quality_payload or _data_quality_payload()
@@ -341,34 +393,42 @@ def _packet_payload(
         runtime["risk_profile_id"] = _artifact_ref(
             "risk-live",
             {"limits": {"max_position_notional": 100000}, "profile": "live"},
+            artifact_root,
         )
         runtime["kill_switch_profile"] = _artifact_ref(
             "kill-switch-live",
             {"actions": ["cancel_open_orders", "disable_strategy"], "profile": "live"},
+            artifact_root,
         )
         operations["rollback_plan"] = _artifact_ref(
             "rollback-live",
             {"owner": "ops", "steps": ["disable strategy", "flatten positions"]},
+            artifact_root,
         )
         operations["monitoring_plan"] = _artifact_ref(
             "monitoring-live",
             {"checks": ["fills", "reconciliation", "latency"], "owner": "ops"},
+            artifact_root,
         )
         operations["paper_soak_evidence"] = _artifact_ref(
             "paper-soak-evidence",
             {"duration_hours": 72, "status": "passed"},
+            artifact_root,
         )
         operations["reconciliation_evidence"] = _artifact_ref(
             "reconciliation-evidence",
             {"max_unexplained_drift": 0, "status": "passed"},
+            artifact_root,
         )
         operations["kill_switch_drill_evidence"] = _artifact_ref(
             "kill-switch-drill-evidence",
             {"drill_completed": True, "status": "passed"},
+            artifact_root,
         )
         operations["capital_signoff"] = _artifact_ref(
             "capital-signoff",
             {"approved_by": "risk", "capital_limit": 100000},
+            artifact_root,
         )
     return {
         "schema_version": 2,
@@ -404,12 +464,21 @@ def _packet_payload(
     }
 
 
-def _artifact_ref(artifact_id: str, payload: dict[str, Any]) -> dict[str, Any]:
-    return {
+def _artifact_ref(
+    artifact_id: str,
+    payload: dict[str, Any],
+    artifact_root: Path | None = None,
+) -> dict[str, Any]:
+    ref = {
         "artifact_id": artifact_id,
         "payload_hash": stable_json_hash(payload),
         "payload": payload,
     }
+    if artifact_root is not None:
+        path = artifact_root / f"{artifact_id}.json"
+        path.write_text(json.dumps(payload, sort_keys=True) + "\n", encoding="utf-8")
+        ref["path"] = str(path)
+    return ref
 
 
 def _valid_metrics() -> dict[str, dict[str, object]]:
@@ -426,6 +495,7 @@ def _valid_metrics() -> dict[str, dict[str, object]]:
         "research": {
             "deterministic_replay_passed": True,
             "no_lookahead_passed": True,
+            "promotion_eligible": True,
         },
         "risk": {"max_drawdown": 0.2},
         "stability": {

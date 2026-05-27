@@ -5,6 +5,7 @@ from pathlib import Path
 
 from qts.research import (
     ReproducibilitySnapshot,
+    ResearchArtifactGraph,
     ResearchDryRunRunner,
     ResearchManifest,
     ResearchMetrics,
@@ -134,6 +135,7 @@ def test_dry_run_writes_complete_plan_artifacts(tmp_path: Path) -> None:
         "data_quality.json",
         "data_quality_report.md",
         "data_snapshot.json",
+        "artifact_graph.json",
         "failures.jsonl",
         "manifest.yaml",
         "metrics.json",
@@ -158,6 +160,12 @@ def test_dry_run_writes_complete_plan_artifacts(tmp_path: Path) -> None:
     data_quality = json.loads((artifact_dir / "data_quality.json").read_text(encoding="utf-8"))
     assert data_quality["schema_version"] == 2
     assert data_quality["dataset_id"] == config.dataset_id
+    graph = ResearchArtifactGraph.from_payload(
+        json.loads((artifact_dir / "artifact_graph.json").read_text(encoding="utf-8"))
+    )
+    graph.validate()
+    node_types = {node.node_type for node in graph.nodes}
+    assert {"manifest", "metrics", "data_quality", "reproducibility"} <= node_types
     decision = json.loads((artifact_dir / "promotion_decision.json").read_text(encoding="utf-8"))
     assert decision["status"] == "rejected"
     assert ResearchRunRegistry(result.registry_path).list()[0].run_id == result.run_id

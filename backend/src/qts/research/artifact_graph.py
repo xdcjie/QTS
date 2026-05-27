@@ -523,6 +523,56 @@ class ResearchArtifactGraphWriter:
         )
         return self.write(graph, output_path=output_path)
 
+    def write_dry_run_artifacts(
+        self,
+        *,
+        artifact_dir: Path,
+        manifest_path: Path,
+        resolved_manifest: Mapping[str, Any],
+        metrics_payload: Mapping[str, Any],
+        data_quality_payload: Mapping[str, Any],
+        reproducibility_payload: Mapping[str, Any],
+        output_path: str | Path = "artifact_graph.json",
+    ) -> WriteResult:
+        """Write the graph linking dry-run evidence artifacts to the manifest."""
+
+        manifest_node_id = str(manifest_path)
+        artifact_nodes = (
+            ResearchArtifactNode(
+                node_id=manifest_node_id,
+                node_type="manifest",
+                payload_hash=stable_json_hash(resolved_manifest),
+            ),
+            ResearchArtifactNode(
+                node_id=str(artifact_dir / "metrics.json"),
+                node_type="metrics",
+                payload_hash=stable_json_hash(metrics_payload),
+            ),
+            ResearchArtifactNode(
+                node_id=str(artifact_dir / "data_quality.json"),
+                node_type="data_quality",
+                payload_hash=str(data_quality_payload.get("artifact_hash", "")) or None,
+            ),
+            ResearchArtifactNode(
+                node_id=str(artifact_dir / "reproducibility_v2.json"),
+                node_type="reproducibility",
+                payload_hash=stable_json_hash(reproducibility_payload),
+            ),
+        )
+        graph = ResearchArtifactGraph(
+            nodes=artifact_nodes,
+            edges=tuple(
+                ResearchArtifactEdge(
+                    source_id=node.node_id,
+                    target_id=manifest_node_id,
+                    relation="references",
+                )
+                for node in artifact_nodes
+                if node.node_id != manifest_node_id
+            ),
+        )
+        return self.write(graph, output_path=output_path)
+
     def _resolve_output_path(self, output_path: str | Path) -> Path:
         path = Path(output_path)
         if path.is_absolute():

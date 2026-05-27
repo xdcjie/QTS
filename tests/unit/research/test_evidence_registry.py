@@ -136,6 +136,36 @@ def test_evidence_bundle_creation_writes_artifact_graph(tmp_path: Path) -> None:
     }
 
 
+def test_evidence_bundle_creation_graph_includes_created_audit_record(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text('{"metrics": {"sharpe": "1.0"}}\n', encoding="utf-8")
+    report_path = tmp_path / "workflow-report.md"
+    report_path.write_text("# Report\n", encoding="utf-8")
+    summary_path = _write_workflow_summary(tmp_path, manifest_path, report_path)
+    registry = EvidenceRegistry(tmp_path / "evidence")
+    audit_log = ResearchAuditLog(tmp_path / "audit.jsonl")
+    graph_writer = ResearchArtifactGraphWriter(tmp_path / "graphs")
+
+    bundle = registry.create_from_workflow_summary(
+        summary_path,
+        audit_log=audit_log,
+        artifact_graph_writer=graph_writer,
+    )
+
+    record = audit_log.list()[0]
+    graph_path = (
+        tmp_path / "graphs" / f"evidence-bundle-{bundle.evidence_bundle_id}-artifact-graph.json"
+    )
+    graph = ResearchArtifactGraph.from_payload(json.loads(graph_path.read_text(encoding="utf-8")))
+    graph.validate()
+    assert record.record_id in {node.node_id for node in graph.nodes}
+    assert {node.node_type for node in graph.nodes} == {
+        "audit_record",
+        "evidence_bundle",
+        "manifest",
+    }
+
+
 def test_evidence_bundle_persists_idea_metadata_and_trial_budget_warning(tmp_path: Path) -> None:
     manifest_path = tmp_path / "manifest.json"
     manifest_path.write_text('{"metrics": {}}\n', encoding="utf-8")

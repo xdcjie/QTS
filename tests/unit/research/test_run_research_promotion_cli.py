@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 import yaml  # type: ignore[import-untyped]
 from qts.core.hashing import stable_json_hash
+from qts.research.artifact_graph import ResearchArtifactGraph
 from qts.research.audit_log import ResearchAuditLog
 from qts.research.evidence_registry import EvidenceRegistry
 from qts.research.idea_spec import IdeaSpec
@@ -136,6 +137,7 @@ def _packet_payload(bundle_id: str) -> dict[str, Any]:
         "research": {
             "deterministic_replay_passed": True,
             "no_lookahead_passed": True,
+            "promotion_eligible": True,
         },
         "risk": {"max_drawdown": 0.2},
         "stability": {
@@ -309,6 +311,38 @@ def test_run_research_promotion_validate_accepts_packet_and_writes_audit_log(
     audit_log = ResearchAuditLog(audit_log_root)
     assert audit_log.path.exists()
     assert audit_log.verify_hash_chain() == ()
+
+
+def test_run_research_promotion_validate_packet_writes_artifact_graph(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    registry_root, bundle_id = _write_bundle(tmp_path)
+    packet_path, _packet_hash = _write_packet(tmp_path, bundle_id)
+    graph_root = tmp_path / "graphs"
+
+    exit_code = run_research.main(
+        [
+            "promotion",
+            "validate",
+            "--packet",
+            str(packet_path),
+            "--evidence-registry-root",
+            str(registry_root),
+            "--audit-log-root",
+            str(tmp_path / "audit"),
+            "--artifact-graph-root",
+            str(graph_root),
+        ]
+    )
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    graph_path = graph_root / "promotion-packet-pc-vwap-artifact-graph.json"
+    assert graph_path.exists()
+    graph = ResearchArtifactGraph.from_payload(json.loads(graph_path.read_text(encoding="utf-8")))
+    graph.validate()
+    assert payload["audit_record_id"] in {node.node_id for node in graph.nodes}
 
 
 def test_run_research_promotion_validate_rejects_invalid_packet(

@@ -1,3 +1,4 @@
+schema_id: schema_v2
 schema_version: 2
 metrics:
   - path: trading.oos_months
@@ -62,6 +63,11 @@ metrics:
     direction: neutral
     required_for: [promotion]
   - path: research.no_lookahead_passed
+    type: bool
+    unit: boolean
+    direction: neutral
+    required_for: [promotion]
+  - path: research.promotion_eligible
     type: bool
     unit: boolean
     direction: neutral

@@ -279,8 +279,9 @@ class EvidenceRegistry:
         )
         self._write_bundle(bundle)
         self._write_index(self._upsert(bundle))
+        audit_record = None
         if audit_log is not None:
-            audit_log.append(
+            audit_record = audit_log.append(
                 "evidence_bundle_created",
                 {
                     "bundle_hash": stable_json_hash(bundle.to_payload()),
@@ -293,6 +294,7 @@ class EvidenceRegistry:
         if artifact_graph_writer is not None:
             artifact_graph_writer.write_from_payloads(
                 evidence_bundles=(bundle.to_payload(),),
+                audit_records=(() if audit_record is None else (audit_record.to_payload(),)),
                 output_path=f"evidence-bundle-{bundle.evidence_bundle_id}-artifact-graph.json",
             )
         return bundle

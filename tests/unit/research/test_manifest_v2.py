@@ -82,6 +82,12 @@ def test_manifest_v1_loader_remains_compatible() -> None:
     assert manifest.to_payload()["run"]["id"] == "gc-si-smoke-dry-run"
 
 
+def test_manifest_v2_is_public_package_export() -> None:
+    import qts.research as research
+
+    assert research.ResearchManifestV2 is ResearchManifestV2
+
+
 def _write_manifest_v2(tmp_path: Path, overrides: dict[str, object] | None = None) -> Path:
     payload: dict[str, object] = {
         "schema_version": 2,

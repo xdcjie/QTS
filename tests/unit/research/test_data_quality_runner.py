@@ -5,6 +5,12 @@ from pathlib import Path
 from qts.research.data_quality import DataQualityRunner
 
 
+def test_data_quality_runner_is_public_package_export() -> None:
+    import qts.research as research
+
+    assert research.DataQualityRunner is DataQualityRunner
+
+
 def test_data_quality_runner_accepts_clean_bar_fixture(tmp_path: Path) -> None:
     bars_path = tmp_path / "bars.csv"
     bars_path.write_text(
@@ -118,3 +124,22 @@ def test_data_quality_runner_detects_label_visibility_failure(tmp_path: Path) ->
     assert {"code": "label_visibility", "message": "label visibility check failed"} in (
         artifact.blockers()
     )
+
+
+def test_data_quality_runner_rejects_missing_dataset_file(tmp_path: Path) -> None:
+    missing_path = tmp_path / "missing-bars.csv"
+
+    artifact = DataQualityRunner(
+        dataset_id="dataset-001",
+        timeframe="1m",
+        start="2026-01-02T14:30:00Z",
+        end="2026-01-02T14:31:00Z",
+        calendar="TEST",
+    ).run({"dataset_files": [{"path": str(missing_path), "exists": False}]})
+
+    assert artifact.accepted is False
+    assert artifact.checked_paths == (str(missing_path),)
+    assert {
+        "code": "missing_checked_path",
+        "message": f"checked path does not exist: {missing_path}",
+    } in artifact.blockers()

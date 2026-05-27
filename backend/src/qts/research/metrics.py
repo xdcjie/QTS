@@ -6,6 +6,8 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from qts.research.metrics_schema import ResearchMetricsSchema
+
 REQUIRED_METRIC_GROUPS = (
     "return",
     "risk",
@@ -83,13 +85,26 @@ class ResearchMetrics:
         )
 
     @classmethod
-    def from_payload(cls, payload: Mapping[str, Any]) -> ResearchMetrics:
+    def from_payload(
+        cls,
+        payload: Mapping[str, Any],
+        *,
+        metrics_schema: ResearchMetricsSchema | None = None,
+        purpose: str | None = None,
+    ) -> ResearchMetrics:
         """Validate and return a metrics object."""
 
         missing = [group for group in REQUIRED_METRIC_GROUPS if group not in payload]
         if missing:
             raise ValueError(f"metrics missing group: {missing[0]}")
-        return cls(dict(payload))
+        resolved_payload = dict(payload)
+        if metrics_schema is not None:
+            if purpose is None:
+                raise ValueError("purpose is required when metrics_schema is provided")
+            result = metrics_schema.validate(resolved_payload, purpose=purpose)
+            if not result.accepted:
+                raise ValueError("; ".join(result.reasons))
+        return cls(resolved_payload)
 
     def to_payload(self) -> dict[str, Any]:
         """Return a JSON-ready metrics payload."""

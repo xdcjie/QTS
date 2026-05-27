@@ -3,7 +3,21 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
+import pytest
+from qts.research.metrics import ResearchMetrics
 from qts.research.metrics_schema import ResearchMetricsSchema
+
+
+def test_schema_v2_declares_schema_identity() -> None:
+    schema = ResearchMetricsSchema.from_yaml(Path("configs/research/metrics/schema_v2.yaml"))
+    promotion_eligible = schema.definition_for("research.promotion_eligible")
+
+    assert schema.schema_id == "schema_v2"
+    assert promotion_eligible is not None
+    assert promotion_eligible.type == "bool"
+    assert promotion_eligible.unit == "boolean"
+    assert promotion_eligible.direction == "neutral"
+    assert "promotion" in promotion_eligible.required_for
 
 
 def test_schema_v2_accepts_valid_promotion_metrics() -> None:
@@ -40,6 +54,7 @@ def test_schema_v2_fails_when_purpose_required_metric_is_missing() -> None:
 def test_schema_v2_fails_wrong_type_and_rejects_bool_as_number() -> None:
     schema = ResearchMetricsSchema.from_payload(
         {
+            "schema_id": "schema_v2",
             "schema_version": 2,
             "metrics": [
                 {
@@ -72,6 +87,20 @@ def test_schema_v2_fails_wrong_type_and_rejects_bool_as_number() -> None:
     assert result.passed is False
     assert "quality.sharpe expected float" in result.reasons
     assert "trading.oos_trade_count expected int" in result.reasons
+
+
+def test_research_metrics_from_payload_preserves_group_only_validation() -> None:
+    metrics = ResearchMetrics.from_payload(ResearchMetrics.dry_run(candidate_count=3).to_payload())
+
+    assert metrics.to_payload()["research"]["candidate_count"] == 3
+
+
+def test_research_metrics_from_payload_can_validate_with_schema_for_purpose() -> None:
+    schema = ResearchMetricsSchema.from_yaml(Path("configs/research/metrics/schema_v2.yaml"))
+    payload = ResearchMetrics.dry_run(candidate_count=3).to_payload()
+
+    with pytest.raises(ValueError, match="trading.oos_months missing for promotion"):
+        ResearchMetrics.from_payload(payload, metrics_schema=schema, purpose="promotion")
 
 
 def test_schema_v2_fails_max_drawdown_outside_unit_interval() -> None:
@@ -127,6 +156,7 @@ def _valid_metrics() -> dict[str, dict[str, object]]:
         "research": {
             "deterministic_replay_passed": True,
             "no_lookahead_passed": True,
+            "promotion_eligible": True,
         },
         "risk": {"max_drawdown": 0.2},
         "stability": {
