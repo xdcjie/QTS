@@ -23,7 +23,11 @@ from qts.research.registry import ResearchRunRegistry, new_record
 from qts.research.report import ResearchWorkflowReport, ResearchWorkflowReportWriter
 from qts.research.reproducibility import ReproducibilitySnapshot, ReproducibilitySnapshotV2
 from qts.research.splits import ResearchSplitPlan
-from qts.research.workflow import ResearchWorkflowResult, ResearchWorkflowStepResult
+from qts.research.workflow import (
+    ResearchWorkflowResult,
+    ResearchWorkflowRunContext,
+    ResearchWorkflowStepResult,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -163,7 +167,11 @@ class ResearchDryRunRunner:
                             kind="reproducibility",
                             status="passed",
                             message="reproducibility captured",
-                            outputs={"reproducibility_path": str(artifact_dir / "reproducibility_v2.json")},
+                            outputs={
+                                "reproducibility_path": str(
+                                    artifact_dir / "reproducibility_v2.json"
+                                )
+                            },
                         ),
                         ResearchWorkflowStepResult(
                             step_id="metrics",
@@ -176,16 +184,27 @@ class ResearchDryRunRunner:
                             },
                         ),
                     ),
-                    run_context={
-                        "dataset_ids": (manifest.dataset_id,),
-                        "git_commit": reproducibility.git_sha,
-                        "git_dirty": reproducibility.git_dirty,
-                        "research_config_path": str(config_path),
-                        "research_config_hash": stable_json_hash(resolved_manifest),
-                        "workflow_config_path": str(config_path),
-                        "workflow_config_hash": manifest.manifest_hash,
+                    run_context=ResearchWorkflowRunContext(
+                        dataset_ids=(manifest.dataset_id,),
+                        git_commit=reproducibility.git_sha,
+                        git_dirty=reproducibility.git_dirty,
+                        research_config_path=str(config_path),
+                        research_config_hash=stable_json_hash(resolved_manifest),
+                        workflow_config_path=str(config_path),
+                        workflow_config_hash=manifest.manifest_hash,
+                    ),
+                    decision={
+                        "reason": tuple(
+                            gate.reason
+                            for gate in promotion_decision.gates
+                            if gate.status != "passed"
+                        ),
+                        "status": (
+                            "reject"
+                            if promotion_decision.status == "rejected"
+                            else "keep_researching"
+                        ),
                     },
-                    decision={"status": promotion_decision.status},
                 )
             ),
             output_path="report.md",

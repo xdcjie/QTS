@@ -16,6 +16,14 @@ from qts.research.artifact_graph import (
     ResearchArtifactNode,
 )
 from qts.research.audit_log import ResearchAuditLog, ResearchAuditRecord
+from qts.research.campaign import (
+    ResearchCampaignBudget,
+    ResearchCampaignConfig,
+    ResearchCampaignConstraint,
+    ResearchCampaignFamily,
+    ResearchCampaignObjective,
+    ResearchCampaignUniverse,
+)
 from qts.research.data_quality import (
     DataQualityArtifact,
     DataQualityArtifactWriter,
@@ -168,6 +176,12 @@ __all__ = [
     "ResearchArtifactNode",
     "ResearchAuditLog",
     "ResearchAuditRecord",
+    "ResearchCampaignBudget",
+    "ResearchCampaignConfig",
+    "ResearchCampaignConstraint",
+    "ResearchCampaignFamily",
+    "ResearchCampaignObjective",
+    "ResearchCampaignUniverse",
     "DataQualityArtifact",
     "DataQualityArtifactWriter",
     "DataQualityIssue",

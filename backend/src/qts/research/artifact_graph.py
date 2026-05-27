@@ -807,6 +807,18 @@ class ResearchArtifactGraphWriter:
 _NODE_TYPES = frozenset(
     {
         "idea",
+        "campaign",
+        "factor_definition",
+        "strategy_variant",
+        "search_space",
+        "trial_budget",
+        "candidate_result",
+        "selection_result",
+        "validation_result",
+        "fitness_landscape",
+        "fitness_analytics",
+        "next_generation_proposal",
+        "generation_approval",
         "manifest",
         "workflow_run",
         "experiment_manifest",

@@ -15,10 +15,10 @@ from qts.core.ids import InstrumentId
 from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
 from qts.domain.market_data import Bar
 from qts.runtime.config import (
+    BacktestCostModel,
     BacktestMarketDataReference,
     BacktestRiskConfig,
     BacktestRuntimeConfig,
-    BacktestCostModel,
 )
 from qts.strategy_sdk import Strategy
 

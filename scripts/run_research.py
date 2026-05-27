@@ -6,24 +6,32 @@ import argparse
 import json
 import sys
 from collections.abc import Mapping, Sequence
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
 import yaml  # type: ignore[import-untyped]
 from qts.core.hashing import stable_json_hash
 from qts.research import ResearchSession
-from qts.research.artifact_graph import ResearchArtifactGraph, ResearchArtifactGraphWriter
+from qts.research.artifact_graph import (
+    ResearchArtifactGraph,
+    ResearchArtifactGraphWriter,
+    ResearchArtifactNode,
+)
 from qts.research.audit_log import ResearchAuditLog
+from qts.research.campaign import ResearchCampaignConfig
 from qts.research.data_quality import DataQualityArtifactWriter, DataQualityRunner
+from qts.research.engine import AutonomousResearchEngine, AutonomousResearchRun
 from qts.research.evidence_registry import EvidenceRegistry, ResearchEvidenceBundle
 from qts.research.experiment_store import ExperimentStore
 from qts.research.idea_registry import IdeaRegistry
 from qts.research.idea_spec import IdeaSpec
+from qts.research.landscape import FitnessAnalytics, FitnessLandscapeStore, FitnessQuery
 from qts.research.manifest import ResearchManifestV2
 from qts.research.meta_research import MetaResearchSummary, MetaResearchSummaryWriter
 from qts.research.promotion_packet import PromotionPacketV2
 from qts.research.reproducibility import ReproducibilitySnapshotV2
+from qts.research.selector import CandidateSelector, SelectionPolicy
 from qts.research.system_run import ResearchDryRunRunner
 from qts.research.workflow import (
     ResearchWorkflowConfig,
@@ -313,6 +321,129 @@ def _add_meta_parser(subparsers: Any) -> None:
     summary.add_argument("--trial-count-outlier-threshold", type=int, default=10)
 
 
+def _add_campaign_parser(subparsers: Any) -> None:
+    parser = subparsers.add_parser("campaign", help="Operate autonomous research campaigns")
+    campaign_subparsers = parser.add_subparsers(dest="campaign_command", required=True)
+
+    validate = campaign_subparsers.add_parser(
+        "validate",
+        help="Validate a ResearchCampaignConfig YAML file",
+    )
+    validate.add_argument("--campaign", type=Path, required=True)
+    validate.add_argument(
+        "--audit-log-root",
+        type=Path,
+        default=Path("runs/research/audit"),
+        help="Research OS audit log root for campaign_loaded records",
+    )
+    validate.add_argument(
+        "--artifact-graph-root",
+        type=Path,
+        default=None,
+        help="Optional artifact graph output root for the campaign node",
+    )
+
+    run = campaign_subparsers.add_parser(
+        "run",
+        help="Run a bounded autonomous research campaign",
+    )
+    run.add_argument("--campaign", type=Path, required=True)
+    run.add_argument("--output-root", type=Path, required=True)
+    run.add_argument(
+        "--data-path",
+        action="append",
+        default=[],
+        metavar="ROOT=PATH",
+        help="CSV data contract path for one universe root; may be repeated",
+    )
+
+    status = campaign_subparsers.add_parser(
+        "status",
+        help="Return machine-readable campaign status",
+    )
+    status.add_argument("--output-root", type=Path, required=True)
+
+    approval = campaign_subparsers.add_parser(
+        "approve-next-generation",
+        help="Record a human decision for a next-generation proposal",
+    )
+    approval.add_argument("--proposal", type=Path, required=True)
+    approval.add_argument("--expected-proposal-hash", required=True)
+    approval.add_argument(
+        "--decision",
+        choices=("approved", "rejected"),
+        required=True,
+    )
+    approval.add_argument("--reviewer", required=True)
+    approval.add_argument("--reason", required=True)
+    approval.add_argument(
+        "--audit-log-root",
+        type=Path,
+        default=Path("runs/research/audit"),
+        help="Research OS audit log root for generation approval records",
+    )
+
+    stop = campaign_subparsers.add_parser("stop", help="Persist a stopped campaign state")
+    stop.add_argument("--output-root", type=Path, required=True)
+    stop.add_argument("--reason", default="operator requested stop")
+    stop.add_argument(
+        "--audit-log-root",
+        type=Path,
+        default=Path("runs/research/audit"),
+    )
+
+    resume = campaign_subparsers.add_parser("resume", help="Clear a stopped campaign state")
+    resume.add_argument("--output-root", type=Path, required=True)
+    resume.add_argument(
+        "--audit-log-root",
+        type=Path,
+        default=Path("runs/research/audit"),
+    )
+
+
+def _add_landscape_parser(subparsers: Any) -> None:
+    parser = subparsers.add_parser("landscape", help="Query fitness landscape artifacts")
+    parser.add_argument(
+        "--landscape",
+        type=Path,
+        default=Path("runs/research/fitness_landscape.jsonl"),
+        help="Fitness landscape JSONL path or containing directory",
+    )
+    landscape_subparsers = parser.add_subparsers(dest="landscape_command", required=True)
+
+    landscape_subparsers.add_parser(
+        "summarize",
+        help="Summarize family performance and rejection clusters",
+    )
+
+    query = landscape_subparsers.add_parser("query", help="Query landscape points")
+    query.add_argument("--campaign-id", default=None)
+    query.add_argument("--generation-id", default=None)
+    query.add_argument("--trial-id", default=None)
+    query.add_argument("--strategy-family", default=None)
+    query.add_argument("--factor-family", default=None)
+    query.add_argument("--root", default=None)
+    query.add_argument("--regime", default=None)
+    query.add_argument("--session", default=None)
+
+    export = landscape_subparsers.add_parser("export", help="Export landscape rows as JSON")
+    export.add_argument("--output", type=Path, default=None)
+
+
+def _add_selector_parser(subparsers: Any) -> None:
+    parser = subparsers.add_parser("selector", help="Replay selector decisions")
+    selector_subparsers = parser.add_subparsers(dest="selector_command", required=True)
+    replay = selector_subparsers.add_parser("replay", help="Reproduce a selector artifact")
+    replay.add_argument("--selection-result", type=Path, required=True)
+    replay.add_argument("--campaign", type=Path, required=True)
+    replay.add_argument(
+        "--candidate-results",
+        type=Path,
+        required=True,
+        help="Candidate result JSON array, JSON object, or JSONL rows used by the selector",
+    )
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -338,6 +469,9 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_data_quality_parser(subparsers)
     _add_idea_parser(subparsers)
     _add_meta_parser(subparsers)
+    _add_campaign_parser(subparsers)
+    _add_landscape_parser(subparsers)
+    _add_selector_parser(subparsers)
     return parser
 
 
@@ -782,11 +916,260 @@ def _run_meta(args: argparse.Namespace) -> int:
     raise ValueError(f"unsupported meta command: {args.meta_command}")
 
 
+def _run_campaign(args: argparse.Namespace) -> int:
+    if args.campaign_command == "validate":
+        try:
+            if args.artifact_graph_root is not None and args.audit_log_root is None:
+                raise ValueError("artifact graph writes require --audit-log-root")
+            campaign = ResearchCampaignConfig.from_yaml(args.campaign)
+        except (FileNotFoundError, ValueError) as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+
+        audit_log = ResearchAuditLog(args.audit_log_root)
+        audit_record = audit_log.append(
+            "campaign_loaded",
+            {
+                "campaign_hash": campaign.campaign_hash,
+                "campaign_id": campaign.campaign_id,
+                "campaign_path": str(args.campaign),
+                "universe_roots": list(campaign.universe.roots),
+            },
+        )
+        artifact_graph_hash = None
+        artifact_graph_path = None
+        if args.artifact_graph_root is not None:
+            graph_result = ResearchArtifactGraphWriter(args.artifact_graph_root).write(
+                ResearchArtifactGraph(
+                    nodes=(
+                        ResearchArtifactNode(
+                            node_id=campaign.campaign_id,
+                            node_type="campaign",
+                            payload_hash=campaign.campaign_hash,
+                            metadata={"path": str(args.campaign)},
+                        ),
+                    )
+                ),
+                output_path=f"campaign-{_artifact_safe_name(campaign.campaign_id)}.json",
+                audit_log=audit_log,
+            )
+            artifact_graph_hash = graph_result.artifact_graph_hash
+            artifact_graph_path = str(graph_result.path)
+        print(
+            json.dumps(
+                {
+                    "accepted": True,
+                    "artifact_graph_hash": artifact_graph_hash,
+                    "artifact_graph_path": artifact_graph_path,
+                    "audit_record_id": audit_record.record_id,
+                    "campaign_hash": campaign.campaign_hash,
+                    "campaign_id": campaign.campaign_id,
+                },
+                sort_keys=True,
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.campaign_command == "run":
+        try:
+            run = AutonomousResearchRun.from_yaml(
+                args.campaign,
+                data_paths=_data_paths_from_args(args.data_path),
+                output_root=args.output_root,
+            )
+            result = AutonomousResearchEngine(repo_root=_REPO_ROOT).run(run)
+        except (FileNotFoundError, ValueError) as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        print(json.dumps(result.to_payload(), sort_keys=True, indent=2))
+        return 0 if result.status == "accepted" else 1
+
+    if args.campaign_command == "status":
+        output_root = Path(args.output_root)
+        summary_path = output_root / "validation_summary.json"
+        state_path = output_root / "campaign_state.json"
+        payload: dict[str, Any] = {
+            "accepted": summary_path.exists(),
+            "output_root": str(output_root),
+            "state": _load_json_mapping(state_path) if state_path.exists() else {},
+            "status": "not_started",
+            "validation_summary_path": str(summary_path),
+        }
+        if summary_path.exists():
+            payload.update(_load_json_mapping(summary_path))
+        print(json.dumps(payload, sort_keys=True, indent=2))
+        return 0 if summary_path.exists() else 1
+
+    if args.campaign_command == "approve-next-generation":
+        try:
+            proposal = _load_json_mapping(args.proposal)
+            proposal_hash = str(proposal.get("proposal_hash") or stable_json_hash(proposal))
+            if proposal_hash != args.expected_proposal_hash:
+                raise ValueError(
+                    f"proposal hash mismatch: {proposal_hash} != {args.expected_proposal_hash}"
+                )
+            audit_record = ResearchAuditLog(args.audit_log_root).append(
+                "generation_approval_decided",
+                {
+                    "decision": args.decision,
+                    "proposal_hash": proposal_hash,
+                    "proposal_id": proposal.get("proposal_id"),
+                    "proposal_path": str(args.proposal),
+                    "reason": args.reason,
+                    "reviewed_at": datetime.now(UTC).isoformat(),
+                    "reviewer": args.reviewer,
+                },
+            )
+        except (FileNotFoundError, ValueError) as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        print(
+            json.dumps(
+                {
+                    "accepted": args.decision == "approved",
+                    "audit_record_id": audit_record.record_id,
+                    "decision": args.decision,
+                    "proposal_hash": proposal_hash,
+                    "proposal_id": proposal.get("proposal_id"),
+                },
+                sort_keys=True,
+                indent=2,
+            )
+        )
+        return 0 if args.decision == "approved" else 1
+
+    if args.campaign_command == "stop":
+        payload = _write_campaign_state(args.output_root, "stopped", args.reason)
+        audit_record = ResearchAuditLog(args.audit_log_root).append(
+            "campaign_stopped",
+            payload,
+        )
+        print(
+            json.dumps(
+                {**payload, "accepted": True, "audit_record_id": audit_record.record_id},
+                sort_keys=True,
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.campaign_command == "resume":
+        payload = _write_campaign_state(args.output_root, "running", "operator resumed campaign")
+        audit_record = ResearchAuditLog(args.audit_log_root).append(
+            "campaign_resumed",
+            payload,
+        )
+        print(
+            json.dumps(
+                {**payload, "accepted": True, "audit_record_id": audit_record.record_id},
+                sort_keys=True,
+                indent=2,
+            )
+        )
+        return 0
+
+    raise ValueError(f"unsupported campaign command: {args.campaign_command}")
+
+
+def _run_landscape(args: argparse.Namespace) -> int:
+    try:
+        landscape = FitnessLandscapeStore(args.landscape).read()
+    except (FileNotFoundError, ValueError) as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    if args.landscape_command == "summarize":
+        analytics = FitnessAnalytics.from_landscape(landscape)
+        payload = {
+            "analytics": analytics.to_payload(),
+            "fitness_landscape_hash": landscape.landscape_hash,
+            "rejection_reason_counts": landscape.rejection_reason_counts(),
+        }
+        print(json.dumps(payload, sort_keys=True, indent=2))
+        return 0
+
+    if args.landscape_command == "query":
+        points = landscape.query(
+            FitnessQuery(
+                campaign_id=args.campaign_id,
+                generation_id=args.generation_id,
+                trial_id=args.trial_id,
+                strategy_family=args.strategy_family,
+                factor_family=args.factor_family,
+                root=args.root,
+                regime=args.regime,
+                session=args.session,
+            )
+        )
+        print(
+            json.dumps(
+                {
+                    "fitness_landscape_hash": landscape.landscape_hash,
+                    "points": [point.to_payload() for point in points],
+                    "query_count": len(points),
+                },
+                sort_keys=True,
+                indent=2,
+            )
+        )
+        return 0
+
+    if args.landscape_command == "export":
+        payload = landscape.to_payload()
+        if args.output is not None:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(
+                json.dumps(payload, sort_keys=True, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        print(json.dumps(payload, sort_keys=True, indent=2))
+        return 0
+
+    raise ValueError(f"unsupported landscape command: {args.landscape_command}")
+
+
+def _run_selector(args: argparse.Namespace) -> int:
+    if args.selector_command == "replay":
+        try:
+            campaign = ResearchCampaignConfig.from_yaml(args.campaign)
+            expected = _load_selection_result(args.selection_result)
+            candidates = _load_json_or_jsonl_records(args.candidate_results)
+            result = CandidateSelector(_selection_policy_from_campaign(campaign)).select(candidates)
+        except (FileNotFoundError, ValueError) as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        replayed = result.to_payload()
+        reasons = _selector_replay_reasons(expected, replayed)
+        payload = {
+            "accepted": not reasons,
+            "expected_selection_hash": expected.get("selection_hash"),
+            "replayed_selection_hash": replayed["selection_hash"],
+            "reasons": reasons,
+            "replayed": replayed,
+        }
+        print(json.dumps(payload, sort_keys=True, indent=2))
+        return 0 if not reasons else 1
+    raise ValueError(f"unsupported selector command: {args.selector_command}")
+
+
 def _load_json_mapping(path: Path) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ValueError(f"{path} must contain a JSON object")
     return payload
+
+
+def _load_selection_result(path: Path) -> dict[str, Any]:
+    if path.suffix.lower() != ".jsonl":
+        return _load_json_mapping(path)
+    sibling = path.with_name("selection_result.json")
+    if not sibling.exists():
+        raise ValueError(
+            "selector replay requires selection_result.json when "
+            f"--selection-result points at JSONL rows: {path}"
+        )
+    return _load_json_mapping(sibling)
 
 
 def _load_mapping(path: Path) -> dict[str, Any]:
@@ -811,6 +1194,95 @@ def _load_json_records(path: Path | None) -> tuple[dict[str, Any], ...]:
             raise ValueError(f"{path} must contain only JSON objects")
         records.append(dict(item))
     return tuple(records)
+
+
+def _load_json_or_jsonl_records(path: Path) -> tuple[dict[str, Any], ...]:
+    text = path.read_text(encoding="utf-8")
+    rows: Any
+    if path.suffix.lower() == ".jsonl":
+        rows = [json.loads(line) for line in text.splitlines() if line.strip()]
+    else:
+        payload = json.loads(text)
+        if isinstance(payload, Mapping):
+            rows = payload.get("candidate_results", payload.get("candidates", ()))
+            if not rows and "candidate_id" in payload:
+                rows = (payload,)
+        else:
+            rows = payload
+    if not isinstance(rows, Sequence) or isinstance(rows, str):
+        raise ValueError(f"{path} must contain candidate result rows")
+    records: list[dict[str, Any]] = []
+    for item in rows:
+        if not isinstance(item, Mapping):
+            raise ValueError(f"{path} must contain only candidate result objects")
+        records.append(dict(item))
+    return tuple(records)
+
+
+def _data_paths_from_args(values: Sequence[str]) -> dict[str, Path]:
+    result: dict[str, Path] = {}
+    for value in values:
+        if "=" not in value:
+            raise ValueError(f"--data-path must use ROOT=PATH: {value}")
+        root, path_text = value.split("=", 1)
+        root = root.strip()
+        if not root:
+            raise ValueError("--data-path root must not be empty")
+        if root in result:
+            raise ValueError(f"duplicate --data-path root: {root}")
+        path = Path(path_text).expanduser()
+        if not path.exists():
+            raise ValueError(f"data path does not exist for {root}: {path}")
+        result[root] = path
+    return result
+
+
+def _write_campaign_state(output_root: Path, status: str, reason: str) -> dict[str, Any]:
+    output_root.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "reason": reason,
+        "status": status,
+        "updated_at": datetime.now(UTC).isoformat(),
+    }
+    (output_root / "campaign_state.json").write_text(
+        json.dumps(payload, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return payload
+
+
+def _selection_policy_from_campaign(campaign: ResearchCampaignConfig) -> SelectionPolicy:
+    constraints = {constraint.name: constraint.value for constraint in campaign.constraints}
+    return SelectionPolicy(
+        max_drawdown=constraints.get("max_drawdown", 0.25),
+        min_oos_trade_count=int(constraints.get("min_oos_trade_count", 30)),
+        max_selected=1,
+        total_return_metric="performance.total_return",
+        oos_sharpe_metric="performance.oos_sharpe",
+        max_drawdown_metric="performance.max_drawdown",
+        oos_trade_count_metric="trading.oos_trade_count",
+        cost_sensitivity_metric="costs.cost_sensitivity",
+    )
+
+
+def _selector_replay_reasons(
+    expected: Mapping[str, Any],
+    replayed: Mapping[str, Any],
+) -> list[str]:
+    reasons: list[str] = []
+    if expected.get("selection_hash") != replayed.get("selection_hash"):
+        reasons.append("selector replay mismatch: selection_hash changed")
+    if expected.get("policy") != replayed.get("policy"):
+        reasons.append("selector replay mismatch: constraints changed")
+    expected_selected = expected.get("selected_candidates")
+    replayed_selected = replayed.get("selected_candidates")
+    if expected_selected != replayed_selected:
+        reasons.append("selector replay mismatch: selected candidates changed")
+    expected_rejected = expected.get("rejected_candidates")
+    replayed_rejected = replayed.get("rejected_candidates")
+    if expected_rejected != replayed_rejected:
+        reasons.append("selector replay mismatch: rejected candidates changed")
+    return reasons
 
 
 def _required_mapping_text(payload: Mapping[str, Any], field_name: str) -> str:
@@ -893,6 +1365,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_idea(args)
     if args.command == "meta":
         return _run_meta(args)
+    if args.command == "campaign":
+        return _run_campaign(args)
+    if args.command == "landscape":
+        return _run_landscape(args)
+    if args.command == "selector":
+        return _run_selector(args)
     session = ResearchSession.from_yaml(args.config)
     if args.command == "factor-tearsheet":
         return _record_factor_tearsheet(args, session)
