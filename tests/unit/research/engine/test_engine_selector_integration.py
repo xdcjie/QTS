@@ -3,17 +3,25 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from qts.research.engine.autonomous_research_engine import (
     AutonomousResearchEngine,
     AutonomousResearchRun,
 )
 
-from .test_autonomous_engine_trial_generation import read_jsonl, write_campaign, write_data_paths
+from .test_autonomous_engine_trial_generation import (
+    force_clean_reproducibility,
+    read_jsonl,
+    write_campaign,
+    write_data_paths,
+)
 
 
 def test_engine_writes_candidate_selector_artifacts_and_selector_rejections(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    force_clean_reproducibility(monkeypatch)
     campaign_path = write_campaign(
         tmp_path,
         families=("momentum",),

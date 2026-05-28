@@ -22,6 +22,7 @@ class DataValidationIssueCode(StrEnum):
     UNEXPECTED_GAP = "unexpected_gap"
     EXCLUDED_SYMBOL = "excluded_symbol"
     EXCLUDED_SPREAD = "excluded_spread"
+    UNDECLARED_FUTURES_OUTRIGHT_SYMBOL = "undeclared_futures_outright_symbol"
 
 
 class DataValidationSeverity(StrEnum):

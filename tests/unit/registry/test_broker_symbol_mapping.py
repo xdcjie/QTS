@@ -33,6 +33,20 @@ def test_broker_symbol_mapping_errors_are_explicit() -> None:
         mapping.to_instrument_id("GCM6")
 
 
+def test_broker_symbol_mapping_rejects_multiple_symbols_for_one_instrument() -> None:
+    from qts.core.ids import BrokerId, InstrumentId
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    mapping = BrokerSymbolMapping(BrokerId("ibkr"))
+    instrument_id = InstrumentId("FUTURE.COMEX.GC.GCM6")
+
+    mapping.register(instrument_id, "GCM6")
+    mapping.register(instrument_id, "GCM6")
+
+    with pytest.raises(ValueError, match="instrument already mapped"):
+        mapping.register(instrument_id, "GCH6")
+
+
 def test_broker_symbol_mapping_keeps_symbol_normalization_inside_the_mapping() -> None:
     tree = ast.parse(
         Path("backend/src/qts/registry/broker_symbol_mapping.py").read_text(encoding="utf-8")

@@ -48,6 +48,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             sample_rows=sample_rows,
             timeframe=dataset.source_timeframe or "1m",
             schema=dataset.csv_schema,
+            allow_futures_outright_symbols=dataset.chain is not None,
         )
         datasets[root] = {
             "csv_path": str(dataset.csv_path),

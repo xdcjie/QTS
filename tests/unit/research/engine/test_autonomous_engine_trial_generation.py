@@ -1,14 +1,21 @@
 from __future__ import annotations
 
 import json
+from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
 import pytest
 import yaml  # type: ignore[import-untyped]
+from qts.backtest.pipeline import BacktestPipeline
+from qts.core.ids import InstrumentId
 from qts.research.engine.autonomous_research_engine import (
     AutonomousResearchEngine,
     AutonomousResearchRun,
+)
+
+from tests.support.research_provenance import (
+    force_clean_reproducibility as force_clean_reproducibility,
 )
 
 
@@ -225,6 +232,68 @@ def test_generated_trials_use_template_backtest_pipeline_mapping(tmp_path: Path)
     assert config_payload["strategy_params"] == {"symbol": "GC", "target_quantity": "1"}
 
 
+def test_autonomous_future_backtest_config_preserves_chain_and_contract_symbols(
+    tmp_path: Path,
+) -> None:
+    campaign_path = write_campaign(
+        tmp_path,
+        data_mode="full",
+        max_rows=None,
+        template_extra_lines=(
+            "backtest_pipeline:",
+            "  root_strategy_parameter: symbol",
+            "  strategy_parameter_defaults:",
+            '    target_quantity: "1"',
+            "  strategy_parameter_map:",
+            "    lookback: vwap_slope_lookback",
+        ),
+    )
+    data_paths = write_future_ohlcv_data_paths(tmp_path)
+    run = AutonomousResearchRun.from_yaml(
+        campaign_path,
+        data_paths=data_paths,
+        output_root=tmp_path / "run",
+    )
+    engine = AutonomousResearchEngine(repo_root=Path.cwd())
+
+    payload = engine._backtest_pipeline_payload(
+        run=run,
+        trial_id="generation-000-trial-000",
+        root="GC",
+        parameters={"root": "GC", "lookback": 5},
+        strategy_entrypoint="strategies.research.vwap_factor_research:VwapFactorResearchStrategy",
+        manifest_patch={
+            "backtest_pipeline": {
+                "root_strategy_parameter": "symbol",
+                "strategy_parameter_defaults": {"target_quantity": "1"},
+                "strategy_parameter_map": {"lookback": "vwap_slope_lookback"},
+            }
+        },
+    )
+
+    backtest_config = yaml.safe_load(
+        Path(payload["backtest_config_path"]).read_text(encoding="utf-8")
+    )
+    data_config_path = Path(backtest_config["market_data"]["config"])
+    data_config = yaml.safe_load(data_config_path.read_text(encoding="utf-8"))
+    materialized_csv = data_config_path.parent / "data" / "GC.csv"
+    first_data_row = materialized_csv.read_text(encoding="utf-8").splitlines()[1]
+    _first_timestamp, *_fields, materialized_symbol = first_data_row.split(",")
+
+    assert "instrument_ids" not in backtest_config
+    assert backtest_config["roll_policy"] == {"enabled": True}
+    assert (
+        data_config["historical_data"]["catalogs"]["research"]["datasets"]["GC"]["chain_file"]
+        == "GC.json"
+    )
+    assert (data_config_path.parent / "chains" / "GC.json").is_file()
+    assert materialized_symbol == "GCQ0"
+
+    pipeline = BacktestPipeline.from_yaml(Path(payload["backtest_config_path"]))
+    _engine, inputs = pipeline.build_engine()
+    assert inputs.contract_multipliers[InstrumentId("FUTURE.CME.GC.GCQ0")] == Decimal("100.0")
+
+
 def write_campaign(
     tmp_path: Path,
     *,
@@ -369,6 +438,22 @@ def write_data_paths(tmp_path: Path) -> dict[str, Path]:
                 for minute, price in enumerate(_profit_factor_fixture_prices(100))
             ]
             + [""]
+        ),
+        encoding="utf-8",
+    )
+    return {"GC": data_path}
+
+
+def write_future_ohlcv_data_paths(tmp_path: Path) -> dict[str, Path]:
+    data_path = tmp_path / "gc_ohlcv.csv"
+    data_path.write_text(
+        "\n".join(
+            [
+                "ts_event,rtype,publisher_id,instrument_id,open,high,low,close,volume,symbol",
+                "2010-06-06T22:00:00.000000000Z,33,1,104313,1221.1,1221.8,1221.1,1221.6,74,GCQ0",
+                "2010-06-06T22:01:00.000000000Z,33,1,104314,1221.6,1221.9,1221.4,1221.7,80,GCQ0",
+                "",
+            ]
         ),
         encoding="utf-8",
     )

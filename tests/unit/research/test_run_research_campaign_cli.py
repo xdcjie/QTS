@@ -8,6 +8,9 @@ from qts.research.artifact_graph import ResearchArtifactGraph
 from qts.research.audit_log import ResearchAuditLog
 
 from scripts import run_research
+from tests.unit.research.engine.test_autonomous_engine_trial_generation import (
+    force_clean_reproducibility,
+)
 
 
 def test_campaign_validate_writes_audit_and_artifact_graph(
@@ -62,7 +65,9 @@ def test_campaign_validate_rejects_invalid_campaign(
 def test_campaign_run_status_approve_and_resume_generation(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    force_clean_reproducibility(monkeypatch)
     output_root = tmp_path / "campaign"
     data_paths = _write_data_paths(tmp_path)
 

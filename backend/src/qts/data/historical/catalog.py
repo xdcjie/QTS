@@ -8,10 +8,18 @@ from pathlib import Path
 
 from qts.core.ids import InstrumentId
 from qts.data.historical.chains import HistoricalChain
-from qts.data.historical.config import HistoricalDatasetConfig, HistoricalMarketDataConfig
+from qts.data.historical.config import (
+    HistoricalDatasetConfig,
+    HistoricalDatasetLocation,
+    HistoricalMarketDataConfig,
+)
 from qts.data.historical.csv_dataset import CsvDatasetDescription, describe_csv_dataset
 from qts.data.historical.csv_format import DEFAULT_HISTORICAL_CSV_SCHEMA, HistoricalCsvSchema
 from qts.data.historical.symbols import HistoricalFutureChainSymbolResolver
+from qts.data.historical.validation import (
+    find_futures_outright_symbols,
+    is_futures_outright_symbol,
+)
 from qts.data.sessions import RegularSessionWindow
 from qts.registry.symbol_resolution import SourceSymbolResolver, StaticSymbolResolver
 
@@ -94,12 +102,20 @@ class HistoricalCatalog:
             chain_path = location.chain_path
             chain: HistoricalChain | None = None
             resolver = resolvers.get(root)
-            if resolver is None:
+            if location.dataset.requires_chain:
                 if chain_path is None:
                     raise FileNotFoundError(f"required historical chain file is missing: {root}")
                 cls._require_file(chain_path, store.root_dir)
                 chain = HistoricalChain.load(chain_path)
                 resolver = HistoricalFutureChainSymbolResolver(chain)
+            elif resolver is None:
+                raise FileNotFoundError(f"required historical symbol resolver is missing: {root}")
+            else:
+                cls._reject_undeclared_futures_outright_symbols(
+                    location.csv_path,
+                    location,
+                    resolver,
+                )
             dataset = describe_csv_dataset(
                 location.csv_path,
                 root=root,
@@ -140,12 +156,29 @@ class HistoricalCatalog:
         return {
             root: StaticSymbolResolver(config.instrument_ids)
             for root in config.roots
-            if not cls._chain_path_exists(
+            if not cls._dataset_requires_chain(
+                config,
+                root,
+                historical_data_config=historical_data_config,
+            )
+            and not cls._chain_path_exists(
                 config,
                 root,
                 historical_data_config=historical_data_config,
             )
         }
+
+    @staticmethod
+    def _dataset_requires_chain(
+        config: HistoricalCatalogLoadConfig,
+        root: str,
+        *,
+        historical_data_config: HistoricalMarketDataConfig,
+    ) -> bool:
+        normalized_root = HistoricalDatasetConfig.normalize_root(root)
+        return historical_data_config.catalog(config.catalog_name).datasets[
+            normalized_root
+        ].requires_chain
 
     @staticmethod
     def _chain_path_exists(
@@ -167,6 +200,33 @@ class HistoricalCatalog:
             except ValueError:
                 display = path
             raise FileNotFoundError(f"required historical file is missing: {display}")
+
+    @staticmethod
+    def _reject_undeclared_futures_outright_symbols(
+        csv_path: Path,
+        location: HistoricalDatasetLocation,
+        resolver: SourceSymbolResolver,
+    ) -> None:
+        symbols = (
+            tuple(
+                sorted(
+                    symbol.strip().upper()
+                    for symbol, instrument_id in resolver.instrument_ids.items()
+                    if is_futures_outright_symbol(symbol)
+                    or str(instrument_id).upper().startswith("FUTURE.")
+                )
+            )
+            if isinstance(resolver, StaticSymbolResolver)
+            else find_futures_outright_symbols(csv_path, schema=location.csv_schema)
+        )
+        if not symbols:
+            return
+        examples = ", ".join(symbols)
+        raise ValueError(
+            "historical dataset contains futures outright symbols or futures "
+            "instrument identities but asset_class is "
+            f"{location.dataset.asset_class!r} and no chain metadata is configured: {examples}"
+        )
 
 
 @dataclass(frozen=True, slots=True)

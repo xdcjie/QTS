@@ -8,12 +8,20 @@ import shutil
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, cast
 
 import yaml  # type: ignore[import-untyped]
 
 from qts.core.hashing import stable_json_dumps, stable_json_hash
+from qts.data.historical.chains import HistoricalChain
+from qts.registry.future_roll import (
+    FirstNoticeDateFutureContractSelector,
+    FutureContractCandidate,
+    FutureContractRollSpec,
+)
+from qts.registry.providers.exchange_calendar_provider import ExchangeCalendarProvider
 from qts.research.artifact_graph import (
     ResearchArtifactEdge,
     ResearchArtifactGraph,
@@ -1050,7 +1058,6 @@ class AutonomousResearchEngine:
         payload = {
             "end": end,
             "initial_cash": "1000000",
-            "instrument_ids": {root: f"DATASET.{root}"},
             "market_data": {
                 "catalog": "research",
                 "config": str(data_config_path),
@@ -1058,6 +1065,7 @@ class AutonomousResearchEngine:
             },
             "risk_config": {"max_notional": "100000000"},
             "roots": [root],
+            "roll_policy": {"enabled": True},
             "start": start,
             "strategy_class": strategy_entrypoint,
             "strategy_params": dict(strategy_params),
@@ -1083,6 +1091,16 @@ class AutonomousResearchEngine:
             if max_rows is None
             else run.output_root / "backtest_data" / trial_id
         )
+        start, _end = self._backtest_window(run, data_path)
+        chain_path, chain = self._install_future_chain(
+            root=root,
+            source_data_path=data_path,
+            data_root=data_root,
+        )
+        materialized_symbol = self._default_materialized_contract_symbol(
+            chain,
+            as_of=self._parse_timestamp(start),
+        )
         bars_dir = data_root / "data"
         bars_dir.mkdir(parents=True, exist_ok=True)
         target_csv = bars_dir / f"{root}.csv"
@@ -1092,7 +1110,7 @@ class AutonomousResearchEngine:
             self._ensure_full_backtest_csv(
                 data_path,
                 target_csv,
-                symbol=root,
+                symbol=materialized_symbol,
                 window=window,
                 windows=windows,
             )
@@ -1100,7 +1118,7 @@ class AutonomousResearchEngine:
             self._materialize_backtest_csv(
                 data_path,
                 target_csv,
-                symbol=root,
+                symbol=materialized_symbol,
                 max_rows=max_rows,
                 window=window,
                 windows=windows,
@@ -1114,6 +1132,7 @@ class AutonomousResearchEngine:
                             root: {
                                 "asset_class": "future",
                                 "bars": [{"file": target_csv.name, "timeframe": run.timeframe}],
+                                "chain_file": chain_path.name,
                                 "exchange": run.calendar,
                             }
                         },
@@ -1123,6 +1142,7 @@ class AutonomousResearchEngine:
                 "stores": {
                     "local_csv": {
                         "bars_dir": "data",
+                        "chains_dir": "chains",
                         "root_dir": str(data_root),
                         "type": "local_csv",
                     }
@@ -1131,6 +1151,74 @@ class AutonomousResearchEngine:
         }
         config_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
         return config_path, target_csv
+
+    def _install_future_chain(
+        self,
+        *,
+        root: str,
+        source_data_path: Path,
+        data_root: Path,
+    ) -> tuple[Path, HistoricalChain]:
+        source_chain_path = self._required_source_chain_path(
+            root=root,
+            source_data_path=source_data_path,
+        )
+        chains_dir = data_root / "chains"
+        chains_dir.mkdir(parents=True, exist_ok=True)
+        target_chain_path = chains_dir / f"{root}.json"
+        shutil.copyfile(source_chain_path, target_chain_path)
+        return target_chain_path, HistoricalChain.load(target_chain_path)
+
+    def _required_source_chain_path(self, *, root: str, source_data_path: Path) -> Path:
+        root = root.strip().upper()
+        candidates = tuple(
+            dict.fromkeys(
+                (
+                    source_data_path.parent.parent / "chains" / f"{root}.json",
+                    self._repo_root / "historical" / "chains" / f"{root}.json",
+                )
+            )
+        )
+        for candidate in candidates:
+            if candidate.is_file():
+                return candidate
+        searched = ", ".join(str(path) for path in candidates)
+        raise FileNotFoundError(
+            f"required future chain metadata is missing for {root}; searched: {searched}"
+        )
+
+    @staticmethod
+    def _default_materialized_contract_symbol(
+        chain: HistoricalChain,
+        *,
+        as_of: datetime,
+    ) -> str:
+        selector = FirstNoticeDateFutureContractSelector(
+            contracts=tuple(
+                FutureContractRollSpec(
+                    symbol=contract.symbol,
+                    instrument_id=chain.instrument_id_for_symbol(contract.symbol),
+                    first_notice_day=contract.first_notice_day,
+                    expiry=contract.expiry,
+                )
+                for contract in chain.contracts
+            ),
+            session_offset=ExchangeCalendarProvider(chain.trading_calendar).session_offset,
+            active_months=chain.active_months,
+        )
+        candidates = tuple(
+            FutureContractCandidate(
+                root_symbol=chain.root,
+                symbol=contract.symbol,
+                instrument_id=chain.instrument_id_for_symbol(contract.symbol),
+                as_of=as_of,
+                close=Decimal("1"),
+                volume=Decimal("1"),
+                session_date=as_of.date(),
+            )
+            for contract in chain.contracts
+        )
+        return selector.select(candidates).symbol
 
     def _ensure_full_backtest_csv(
         self,
@@ -1204,6 +1292,7 @@ class AutonomousResearchEngine:
                 low_index = header.index("low")
                 close_index = header.index("close")
                 volume_index = header.index("volume")
+                symbol_index = header.index("symbol") if "symbol" in header else None
                 for source_index, line in enumerate(source, start=1):
                     if max_rows is not None and emitted >= max_rows:
                         break
@@ -1226,6 +1315,11 @@ class AutonomousResearchEngine:
                     close = values[close_index]
                     if close.startswith("-"):
                         continue
+                    output_symbol = (
+                        values[symbol_index].strip()
+                        if symbol_index is not None and values[symbol_index].strip()
+                        else symbol
+                    )
                     seen_timestamps.add(timestamp)
                     target.write(
                         ",".join(
@@ -1239,7 +1333,7 @@ class AutonomousResearchEngine:
                                 values[low_index],
                                 close,
                                 values[volume_index],
-                                symbol,
+                                output_symbol,
                             )
                         )
                         + "\n"
