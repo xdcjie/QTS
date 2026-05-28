@@ -90,6 +90,34 @@ def test_evidence_bundle_created_from_workflow_summary(tmp_path: Path) -> None:
     assert (registry.root_dir / f"evidence-bundle-{bundle.evidence_bundle_id}.json").exists()
 
 
+def test_evidence_bundle_preserves_existing_repo_relative_summary_paths(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    trial_dir = tmp_path / "runs" / "research" / "campaign" / "trial-000"
+    trial_dir.mkdir(parents=True)
+    manifest_path = trial_dir / "manifest.json"
+    manifest_path.write_text(
+        json.dumps({"artifact_hashes": {"metrics.json": "sha256:abc"}}, sort_keys=True),
+        encoding="utf-8",
+    )
+    report_path = trial_dir / "workflow-report.md"
+    report_path.write_text("# Report\n", encoding="utf-8")
+    summary_path = _write_workflow_summary(tmp_path, manifest_path, report_path)
+    payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    payload["steps"][0]["outputs"]["manifest_path"] = str(manifest_path.relative_to(tmp_path))
+    payload["steps"][1]["outputs"]["report_path"] = str(report_path.relative_to(tmp_path))
+    summary_path = trial_dir / "workflow_summary.json"
+    summary_path.write_text(json.dumps(payload, sort_keys=True, indent=2), encoding="utf-8")
+    registry = EvidenceRegistry(tmp_path / "evidence")
+    monkeypatch.chdir(tmp_path)
+
+    bundle = registry.create_from_workflow_summary(summary_path)
+
+    assert bundle.manifest_paths == (str(manifest_path.relative_to(tmp_path)),)
+    assert bundle.report_path == str(report_path.relative_to(tmp_path))
+
+
 def test_evidence_bundle_creation_writes_audit_record(tmp_path: Path) -> None:
     manifest_path = tmp_path / "manifest.json"
     manifest_path.write_text('{"metrics": {"sharpe": "1.0"}}\n', encoding="utf-8")
