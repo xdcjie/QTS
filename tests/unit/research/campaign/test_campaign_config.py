@@ -309,6 +309,38 @@ def test_gc_vwap_trend_robust_scan_searches_gc_grid_across_clean_windows() -> No
     assert campaign.budget.max_trials_per_generation >= len(candidates)
 
 
+def test_gc_vwap_trend_position_size_scan_varies_position_on_robust_winner() -> None:
+    campaign = ResearchCampaignConfig.from_yaml(
+        "configs/research/campaigns/gc_vwap_trend_position_size_scan_v1.yaml"
+    )
+    assert campaign.campaign_id == "gc_vwap_trend_position_size_scan_v1"
+    assert campaign.universe.roots == ("GC", "SI")
+    assert [family.id for family in campaign.families] == ["gc_vwap_trend_position_size_scan"]
+    assert campaign.families[0].manifest_template == (
+        "configs/research/manifests/templates/gc_si_vwap_trend_position_sized.yaml"
+    )
+    assert campaign.execution.data_mode == "full"
+    assert len(campaign.execution.windows) == 25
+
+    search_space = SearchSpaceSpec.from_yaml(campaign.families[0].search_space)
+    candidates = CandidateGenerator(search_space).grid()
+    assert len(candidates) == 6
+    assert {candidate.parameters["root"] for candidate in candidates} == {"GC"}
+    assert {candidate.parameters["time_window"] for candidate in candidates} == {"evening_18_22"}
+    assert {candidate.parameters["vwap_slope_lookback"] for candidate in candidates} == {5}
+    assert {candidate.parameters["min_volume_ratio"] for candidate in candidates} == {"1.2"}
+    assert {candidate.parameters["target_r_multiple"] for candidate in candidates} == {"2.0"}
+    assert {candidate.parameters["target_quantity"] for candidate in candidates} == {
+        "1",
+        "4",
+        "8",
+        "16",
+        "32",
+        "64",
+    }
+    assert campaign.budget.max_total_trials == len(candidates)
+
+
 def test_campaign_config_rejects_invalid_budget(tmp_path: Path) -> None:
     campaign_path = _write_campaign(tmp_path, {"budget": {"max_total_trials": 0}})
 
