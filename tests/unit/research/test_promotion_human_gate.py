@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from qts.core.hashing import stable_json_hash
 from qts.research.audit_log import ResearchAuditLog
-from qts.research.promotion_packet import PromotionMachineValidationResult, PromotionPacketV2
+from qts.research.promotion_packet import PromotionPacketV2, PromotionPacketValidationResult
 
 from tests.unit.research.test_promotion_packet import _packet_payload, _write_verifiable_bundle
 
@@ -22,7 +22,7 @@ def test_machine_validation_returns_human_pending_without_human_review(
         audit_log=audit_log,
     )
 
-    assert isinstance(result, PromotionMachineValidationResult)
+    assert isinstance(result, PromotionPacketValidationResult)
     assert result.accepted is True
     assert result.status == "human_pending"
     assert "human_review_decided" not in {record.record_type for record in audit_log.list()}

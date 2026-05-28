@@ -108,7 +108,6 @@ from qts.research.promotion import (
     ResearchPromotionPolicy,
 )
 from qts.research.promotion_packet import (
-    PromotionMachineValidationResult,
     PromotionPacketV2,
     PromotionPacketValidationResult,
 )
@@ -243,7 +242,6 @@ __all__ = [
     "ResearchPromotionPolicy",
     "PromotionPacketV2",
     "PromotionPacketValidationResult",
-    "PromotionMachineValidationResult",
     "ResearchRunRecord",
     "ResearchRunRegistry",
     "HumanApprovalRecord",

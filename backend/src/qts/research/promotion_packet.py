@@ -24,7 +24,7 @@ from qts.research.reproducibility import ReproducibilitySnapshotV2
 
 
 @dataclass(frozen=True, slots=True)
-class PromotionMachineValidationResult:
+class PromotionPacketValidationResult:
     """Machine-readable outcome of machine-validating a promotion packet."""
 
     accepted: bool
@@ -45,11 +45,6 @@ class PromotionMachineValidationResult:
             "status": self.status,
             "warnings": list(self.warnings),
         }
-
-
-@dataclass(frozen=True, slots=True)
-class PromotionPacketValidationResult(PromotionMachineValidationResult):
-    """Backward-compatible result type for packet validation calls."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -141,19 +136,11 @@ class PromotionPacketV2:
     ) -> PromotionPacketValidationResult:
         """Machine-validate this packet and append an audit-log record."""
 
-        result = self.validate_machine(
+        return self.validate_machine(
             evidence_registry=evidence_registry,
             audit_log=audit_log,
             metrics_schema=metrics_schema,
             artifact_graph_writer=artifact_graph_writer,
-        )
-        return PromotionPacketValidationResult(
-            accepted=result.accepted,
-            status=result.status,
-            packet_hash=result.packet_hash,
-            audit_record_id=result.audit_record_id,
-            reasons=result.reasons,
-            warnings=result.warnings,
         )
 
     def validate_machine(
@@ -163,13 +150,13 @@ class PromotionPacketV2:
         audit_log: ResearchAuditLog,
         metrics_schema: ResearchMetricsSchema | None = None,
         artifact_graph_writer: ResearchArtifactGraphWriter | None = None,
-    ) -> PromotionMachineValidationResult:
+    ) -> PromotionPacketValidationResult:
         """Validate machine-checkable packet evidence without human approval."""
 
         packet_hash = stable_json_hash(self.to_payload())
         audit_chain_reasons = audit_log.verify_hash_chain()
         if audit_chain_reasons:
-            return PromotionMachineValidationResult(
+            return PromotionPacketValidationResult(
                 accepted=False,
                 status="rejected",
                 packet_hash=packet_hash,
@@ -595,7 +582,6 @@ class PromotionPacketV2:
 
 
 __all__ = [
-    "PromotionMachineValidationResult",
     "PromotionPacketV2",
     "PromotionPacketValidationResult",
 ]
