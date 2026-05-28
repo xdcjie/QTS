@@ -1,0 +1,70 @@
+campaign_id: gc_si_vwap_trend_post_dst_holdout_v1
+owner: research
+created_at: "2026-05-28T00:00:00+00:00"
+
+universe:
+  roots:
+    - GC
+    - SI
+  asset_class: futures
+  calendar: CME
+  timeframe: 1m
+  dataset_id: production_futures_gc_si_1m_post_dst_holdout
+
+families:
+  - id: vwap_trend_post_dst_holdout
+    template: vwap_trend
+    manifest_template: configs/research/manifests/templates/gc_si_vwap_trend.yaml
+    search_space: configs/research/search/gc_si_vwap_trend_clean_scan_winner_space.yaml
+
+execution:
+  default_mode: backtest_pipeline
+  metrics_source: backtest_artifacts
+  data_mode: full
+  windows:
+    - start: "2026-03-12T22:00:00+00:00"
+      end: "2026-03-13T21:00:00+00:00"
+    - start: "2026-03-18T22:00:00+00:00"
+      end: "2026-03-19T21:00:00+00:00"
+    - start: "2026-03-19T22:00:00+00:00"
+      end: "2026-03-20T21:00:00+00:00"
+    - start: "2026-03-23T22:00:00+00:00"
+      end: "2026-03-24T21:00:00+00:00"
+    - start: "2026-03-24T22:00:00+00:00"
+      end: "2026-03-25T21:00:00+00:00"
+    - start: "2026-03-25T22:00:00+00:00"
+      end: "2026-03-26T21:00:00+00:00"
+    - start: "2026-03-30T22:00:00+00:00"
+      end: "2026-03-31T21:00:00+00:00"
+
+selection:
+  selector: CandidateSelector
+  gauntlet: ValidationGauntlet
+
+launch_controls:
+  paper_live_launches: disabled
+
+objective:
+  primary: composite_score
+  components:
+    sharpe: 0.40
+    annualized_return: 0.25
+    calmar: 0.20
+    walk_forward_consistency: 0.10
+    drawdown_penalty: -0.25
+    turnover_cost_penalty: -0.10
+
+constraints:
+  min_oos_months: 12
+  min_oos_trade_count: 1
+  min_profit_factor: 1.15
+  max_drawdown: 0.12
+  max_cost_impact: 0.25
+  max_correlation_to_active: 0.50
+
+budget:
+  max_generations: 1
+  max_trials_per_generation: 1
+  max_total_trials: 1
+  max_family_trials: 1
+  wall_clock_limit_minutes: 120

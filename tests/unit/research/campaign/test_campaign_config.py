@@ -195,6 +195,59 @@ def test_gc_si_vwap_trend_clean_scan_config_searches_full_grid_on_clean_windows(
     assert campaign.budget.max_total_trials >= len(candidates)
 
 
+def test_gc_si_vwap_trend_post_dst_holdout_replays_clean_scan_winner() -> None:
+    campaign = ResearchCampaignConfig.from_yaml(
+        "configs/research/campaigns/gc_si_vwap_trend_post_dst_holdout_v1.yaml"
+    )
+    assert campaign.campaign_id == "gc_si_vwap_trend_post_dst_holdout_v1"
+    assert campaign.universe.roots == ("GC", "SI")
+    assert [family.id for family in campaign.families] == ["vwap_trend_post_dst_holdout"]
+    assert campaign.execution.data_mode == "full"
+    assert list(campaign.execution.windows) == [
+        {
+            "start": "2026-03-12T22:00:00+00:00",
+            "end": "2026-03-13T21:00:00+00:00",
+        },
+        {
+            "start": "2026-03-18T22:00:00+00:00",
+            "end": "2026-03-19T21:00:00+00:00",
+        },
+        {
+            "start": "2026-03-19T22:00:00+00:00",
+            "end": "2026-03-20T21:00:00+00:00",
+        },
+        {
+            "start": "2026-03-23T22:00:00+00:00",
+            "end": "2026-03-24T21:00:00+00:00",
+        },
+        {
+            "start": "2026-03-24T22:00:00+00:00",
+            "end": "2026-03-25T21:00:00+00:00",
+        },
+        {
+            "start": "2026-03-25T22:00:00+00:00",
+            "end": "2026-03-26T21:00:00+00:00",
+        },
+        {
+            "start": "2026-03-30T22:00:00+00:00",
+            "end": "2026-03-31T21:00:00+00:00",
+        },
+    ]
+
+    search_space = SearchSpaceSpec.from_yaml(campaign.families[0].search_space)
+    candidates = CandidateGenerator(search_space).grid()
+    assert len(candidates) == 1
+    assert candidates[0].parameters == {
+        "root": "GC",
+        "time_window": "evening_18_22",
+        "vwap_slope_lookback": 3,
+        "min_volume_ratio": "0",
+        "target_r_multiple": "2.0",
+    }
+    assert campaign.budget.max_generations == 1
+    assert campaign.budget.max_total_trials == 1
+
+
 def test_campaign_config_rejects_invalid_budget(tmp_path: Path) -> None:
     campaign_path = _write_campaign(tmp_path, {"budget": {"max_total_trials": 0}})
 
