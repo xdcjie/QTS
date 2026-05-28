@@ -172,6 +172,29 @@ def test_gc_si_vwap_trend_holdout_config_replays_selected_candidate_only() -> No
     assert set(candidates[0].parameters) - {"root"} == set(pipeline["strategy_parameter_names"])
 
 
+def test_gc_si_vwap_trend_clean_scan_config_searches_full_grid_on_clean_windows() -> None:
+    campaign = ResearchCampaignConfig.from_yaml(
+        "configs/research/campaigns/gc_si_vwap_trend_clean_scan_v1.yaml"
+    )
+    assert campaign.campaign_id == "gc_si_vwap_trend_clean_scan_v1"
+    assert campaign.universe.roots == ("GC", "SI")
+    assert [family.id for family in campaign.families] == ["vwap_trend_clean_scan"]
+    assert campaign.execution.data_mode == "full"
+    assert list(campaign.execution.windows) == list(
+        ResearchCampaignConfig.from_yaml(
+            "configs/research/campaigns/gc_si_vwap_trend_holdout_v1.yaml"
+        ).execution.windows
+    )
+
+    search_space = SearchSpaceSpec.from_yaml(campaign.families[0].search_space)
+    candidates = CandidateGenerator(search_space).grid()
+    assert len(candidates) == 32
+    assert {candidate.parameters["root"] for candidate in candidates} == {"GC", "SI"}
+    assert campaign.budget.max_generations == 1
+    assert campaign.budget.max_trials_per_generation >= len(candidates)
+    assert campaign.budget.max_total_trials >= len(candidates)
+
+
 def test_campaign_config_rejects_invalid_budget(tmp_path: Path) -> None:
     campaign_path = _write_campaign(tmp_path, {"budget": {"max_total_trials": 0}})
 
