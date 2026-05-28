@@ -42,6 +42,21 @@ def test_engine_generates_trials_from_campaign_search_space_and_strategy_factory
     assert all(row["trial_id"].startswith("generation-000-trial-") for row in rows)
 
 
+def test_engine_selection_policy_uses_campaign_profit_factor_constraint(tmp_path: Path) -> None:
+    campaign_path = write_campaign(tmp_path)
+    run = AutonomousResearchRun.from_yaml(
+        campaign_path,
+        data_paths=write_data_paths(tmp_path),
+        output_root=tmp_path / "run",
+    )
+    engine = AutonomousResearchEngine(repo_root=Path.cwd())
+
+    policy = engine._selection_policy(run)
+
+    assert policy.min_profit_factor == 1.15
+    assert policy.profit_factor_metric == "quality.profit_factor"
+
+
 def test_backtest_data_materialization_mode_controls_truncation(tmp_path: Path) -> None:
     source = tmp_path / "source.csv"
     source.write_text(

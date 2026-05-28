@@ -1816,11 +1816,15 @@ class AutonomousResearchEngine:
         return SelectionPolicy(
             max_drawdown=float(constraints.get("max_drawdown", 0.25)),
             min_oos_trade_count=int(constraints.get("min_oos_trade_count", 30)),
+            min_profit_factor=float(constraints["min_profit_factor"])
+            if "min_profit_factor" in constraints
+            else None,
             max_selected=1,
             total_return_metric="performance.total_return",
             oos_sharpe_metric="performance.oos_sharpe",
             max_drawdown_metric="performance.max_drawdown",
             oos_trade_count_metric="trading.oos_trade_count",
+            profit_factor_metric="quality.profit_factor",
             purpose="promotion",
             cost_sensitivity_metric="costs.cost_sensitivity",
         )

@@ -18,12 +18,14 @@ class SelectionPolicy:
 
     max_drawdown: float = 0.25
     min_oos_trade_count: int = 30
+    min_profit_factor: float | None = None
     max_selected: int | None = None
     purpose: str = "candidate_selection"
     total_return_metric: str = "performance.total_return"
     oos_sharpe_metric: str = "performance.oos_sharpe"
     max_drawdown_metric: str = "performance.max_drawdown"
     oos_trade_count_metric: str = "trading.oos_trade_count"
+    profit_factor_metric: str = "quality.profit_factor"
     cost_sensitivity_metric: str = "costs.cost_sensitivity"
     composite_weights: Mapping[str, float] = field(
         default_factory=lambda: {
@@ -39,6 +41,8 @@ class SelectionPolicy:
             raise ValueError("max_drawdown must be non-negative")
         if self.min_oos_trade_count < 0:
             raise ValueError("min_oos_trade_count must be non-negative")
+        if self.min_profit_factor is not None and self.min_profit_factor <= 0:
+            raise ValueError("min_profit_factor must be positive when provided")
         if self.max_selected is not None and self.max_selected < 1:
             raise ValueError("max_selected must be positive when provided")
         if not self.purpose.strip():
@@ -224,8 +228,10 @@ class SelectionResult:
                 "max_drawdown_metric": self.policy.max_drawdown_metric,
                 "max_selected": self.policy.max_selected,
                 "min_oos_trade_count": self.policy.min_oos_trade_count,
+                "min_profit_factor": self.policy.min_profit_factor,
                 "oos_sharpe_metric": self.policy.oos_sharpe_metric,
                 "oos_trade_count_metric": self.policy.oos_trade_count_metric,
+                "profit_factor_metric": self.policy.profit_factor_metric,
                 "purpose": self.policy.purpose,
                 "total_return_metric": self.policy.total_return_metric,
             },
@@ -354,6 +360,16 @@ class CandidateSelector:
             reasons.append(
                 f"oos_trade_count: {int(trade_count)} below {self.policy.min_oos_trade_count}"
             )
+
+        if self.policy.min_profit_factor is not None:
+            profit_factor = self.policy.metric_number(metrics, self.policy.profit_factor_metric)
+            if profit_factor is None:
+                reasons.append(f"{self.policy.profit_factor_metric}: metric is required")
+            elif profit_factor < self.policy.min_profit_factor:
+                reasons.append(
+                    f"profit_factor: {self._metric_text(profit_factor)} "
+                    f"below {self._metric_text(self.policy.min_profit_factor)}"
+                )
 
         reasons.extend(self._data_quality_reasons(candidate.get("data_quality")))
         reasons.extend(self._reproducibility_reasons(candidate.get("reproducibility")))
