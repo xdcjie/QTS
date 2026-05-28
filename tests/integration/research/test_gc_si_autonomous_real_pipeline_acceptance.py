@@ -23,6 +23,8 @@ def test_gc_si_autonomous_real_pipeline_acceptance_cli(
     assert config_payload["execution"]["default_mode"] == "backtest_pipeline"
     assert config_payload["selection"]["selector"] == "CandidateSelector"
     assert config_payload["selection"]["gauntlet"] == "ValidationGauntlet"
+    assert config_payload["execution"]["data_mode"] == "fixture"
+    assert config_payload["execution"]["max_rows"] == 50
     assert config_payload["launch_controls"]["paper_live_launches"] == "disabled"
 
     run_exit = run_research.main(
@@ -105,6 +107,26 @@ def test_gc_si_autonomous_real_pipeline_acceptance_cli(
     )
     graph.validate_full_chain()
     assert ResearchAuditLog(output_root / "audit" / "audit_log.jsonl").verify_hash_chain() == ()
+    selected_rows = _jsonl(output_root / "selected_candidates.jsonl")
+    rejected_rows = _jsonl(output_root / "rejected_candidates.jsonl")
+    landscape_rows = _jsonl(output_root / "fitness_landscape.jsonl")
+    assert len(landscape_rows) == len(selected_rows) + len(rejected_rows)
+    assert selected_rows
+    for row in selected_rows:
+        packet = json.loads(Path(row["promotion_packet_path"]).read_text())
+        assert packet["validation"]["status"] == "human_pending"
+        assert packet["review"] == {"status": "human_pending"}
+    gauntlet = json.loads((output_root / "generation-001" / "validation_gauntlet.json").read_text())
+    for result in gauntlet["results"]:
+        for decision in result["gate_decisions"]:
+            assert decision["evidence"]["artifact_path"]
+            assert str(decision["evidence"]["payload_hash"]).startswith("sha256:")
+
+    verify_exit = run_research.main(["campaign", "verify", "--output-root", str(output_root)])
+    assert verify_exit == 0
+    verify_payload = json.loads(capsys.readouterr().out)
+    assert verify_payload["accepted"] is True
+    assert (output_root / "release_verification.json").exists()
 
 
 def _jsonl(path: Path) -> list[dict[str, Any]]:

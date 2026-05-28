@@ -28,6 +28,8 @@ def test_campaign_config_accepts_valid_contract_and_serializes_payload(
     ]
     assert config.objective.components["drawdown_penalty"] == -0.2
     assert config.budget.max_total_trials == 500
+    assert config.execution.data_mode == "fixture"
+    assert config.execution.max_rows == 50
     assert payload["campaign_hash"] == config.campaign_hash
     assert payload["universe"]["roots"] == ["GC", "SI"]
     assert payload["families"][0]["manifest_template"] == (
@@ -51,12 +53,40 @@ def test_campaign_config_is_public_package_export() -> None:
     import qts.research as research
 
     assert research.ResearchCampaignConfig is ResearchCampaignConfig
+    assert research.ResearchCampaignExecution is not None
 
 
 def test_campaign_config_rejects_invalid_budget(tmp_path: Path) -> None:
     campaign_path = _write_campaign(tmp_path, {"budget": {"max_total_trials": 0}})
 
     with pytest.raises(ValueError, match="budget.max_total_trials"):
+        ResearchCampaignConfig.from_yaml(campaign_path)
+
+
+def test_campaign_config_requires_explicit_data_mode(tmp_path: Path) -> None:
+    campaign_path = _write_campaign(tmp_path, {"execution": {"data_mode": None}})
+
+    with pytest.raises(ValueError, match="execution.data_mode"):
+        ResearchCampaignConfig.from_yaml(campaign_path)
+
+
+def test_campaign_config_rejects_full_mode_truncation(tmp_path: Path) -> None:
+    campaign_path = _write_campaign(
+        tmp_path,
+        {"execution": {"data_mode": "full", "max_rows": 50}},
+    )
+
+    with pytest.raises(ValueError, match="execution.max_rows"):
+        ResearchCampaignConfig.from_yaml(campaign_path)
+
+
+def test_campaign_config_requires_fixture_max_rows(tmp_path: Path) -> None:
+    payload = _valid_campaign_payload()
+    del payload["execution"]["max_rows"]
+    campaign_path = tmp_path / "campaign.yaml"
+    campaign_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="execution.max_rows"):
         ResearchCampaignConfig.from_yaml(campaign_path)
 
 
@@ -146,6 +176,12 @@ def _valid_campaign_payload() -> dict[str, Any]:
                 "search_space": "configs/research/search/gc_si_spread_space.yaml",
             },
         ],
+        "execution": {
+            "default_mode": "backtest_pipeline",
+            "metrics_source": "backtest_artifacts",
+            "data_mode": "fixture",
+            "max_rows": 50,
+        },
         "objective": {
             "primary": "composite_score",
             "components": {

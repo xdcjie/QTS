@@ -25,7 +25,7 @@ def test_complete_paper_packet_accepted(tmp_path: Path) -> None:
     )
 
     assert result.accepted is True
-    assert result.status == "accepted"
+    assert result.status == "human_pending"
     assert result.reasons == ()
     assert result.audit_record_id
     assert result.packet_hash == stable_json_hash(_packet_payload(bundle_id))
@@ -51,18 +51,18 @@ def test_target_module_prefix_must_be_production_package(tmp_path: Path) -> None
     assert "target_module must start with strategies.production." in result.reasons
 
 
-def test_review_fields_are_required(tmp_path: Path) -> None:
+def test_machine_validation_does_not_require_review_fields(tmp_path: Path) -> None:
     registry, bundle_id = _write_verifiable_bundle(tmp_path)
     payload = _packet_payload(bundle_id)
-    payload["review"] = {"reviewer": "risk", "decision": "go"}
+    payload["review"] = {"status": "human_pending"}
 
     result = PromotionPacketV2.from_payload(payload).validate(
         evidence_registry=registry,
         audit_log=ResearchAuditLog(tmp_path / "audit.jsonl"),
     )
 
-    assert result.accepted is False
-    assert "review.reviewed_at is required" in result.reasons
+    assert result.accepted is True
+    assert result.status == "human_pending"
 
 
 def test_evidence_bundle_hash_path_mismatch_rejected_via_registry_verify(
@@ -350,46 +350,35 @@ def test_validation_writes_audit_record_and_chain_verifies(tmp_path: Path) -> No
 
     records = audit_log.list()
     assert [record.record_type for record in records] == [
+        "evidence_validated",
         "metrics_validated",
         "data_quality_validated",
         "reproducibility_validated",
-        "human_review_decided",
         "promotion_packet_validated",
     ]
-    assert records[0].payload["accepted"] is True
-    assert records[1].payload["accepted"] is True
-    assert records[2].payload["accepted"] is True
-    assert records[3].payload["reviewer"] == "risk"
-    assert records[3].payload["decision"] == "go"
-    assert records[3].payload["reviewed_at"] == "2026-05-26T00:00:00+00:00"
-    assert records[3].payload["evidence_bundle_id"] == bundle_id
-    assert records[3].payload["promotion_candidate_id"] == "pc-vwap"
     assert records[4].record_id == result.audit_record_id
     assert records[4].payload["packet_hash"] == result.packet_hash
     assert records[4].payload["accepted"] is True
-    assert records[4].payload["human_review_record_id"] == records[3].record_id
+    assert records[4].payload["status"] == "human_pending"
+    assert records[4].payload["human_approval_required"] is True
     assert audit_log.verify_hash_chain() == ()
 
 
-def test_validation_rejects_reviewed_at_without_timezone(tmp_path: Path) -> None:
+def test_human_review_rejects_reviewed_at_without_timezone(tmp_path: Path) -> None:
     registry, bundle_id = _write_verifiable_bundle(tmp_path)
     audit_log = ResearchAuditLog(tmp_path / "audit.jsonl")
-    payload = _packet_payload(bundle_id)
-    payload["review"]["reviewed_at"] = "2026-05-26T00:00:00"
+    packet = PromotionPacketV2.from_payload(_packet_payload(bundle_id))
 
-    result = PromotionPacketV2.from_payload(payload).validate(
-        evidence_registry=registry,
-        audit_log=audit_log,
-    )
+    with pytest.raises(ValueError, match="reviewed_at must be timezone-aware"):
+        packet.human_review(
+            audit_log=audit_log,
+            decision="approved",
+            reviewer="risk",
+            reviewed_at=datetime(2026, 5, 26),
+            expected_packet_hash=stable_json_hash(packet.to_payload()),
+        )
 
-    assert result.accepted is False
-    assert "review.reviewed_at must be timezone-aware" in result.reasons
-    assert [record.record_type for record in audit_log.list()] == [
-        "metrics_validated",
-        "data_quality_validated",
-        "reproducibility_validated",
-        "promotion_packet_validated",
-    ]
+    assert audit_log.list() == ()
 
 
 def test_validation_writes_artifact_graph_when_writer_is_supplied(tmp_path: Path) -> None:

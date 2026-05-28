@@ -24,8 +24,8 @@ from qts.research.reproducibility import ReproducibilitySnapshotV2
 
 
 @dataclass(frozen=True, slots=True)
-class PromotionPacketValidationResult:
-    """Machine-readable outcome of validating a promotion packet."""
+class PromotionMachineValidationResult:
+    """Machine-readable outcome of machine-validating a promotion packet."""
 
     accepted: bool
     status: str
@@ -45,6 +45,11 @@ class PromotionPacketValidationResult:
             "status": self.status,
             "warnings": list(self.warnings),
         }
+
+
+@dataclass(frozen=True, slots=True)
+class PromotionPacketValidationResult(PromotionMachineValidationResult):
+    """Backward-compatible result type for packet validation calls."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,12 +139,37 @@ class PromotionPacketV2:
         metrics_schema: ResearchMetricsSchema | None = None,
         artifact_graph_writer: ResearchArtifactGraphWriter | None = None,
     ) -> PromotionPacketValidationResult:
-        """Validate this packet and append an audit-log record."""
+        """Machine-validate this packet and append an audit-log record."""
+
+        result = self.validate_machine(
+            evidence_registry=evidence_registry,
+            audit_log=audit_log,
+            metrics_schema=metrics_schema,
+            artifact_graph_writer=artifact_graph_writer,
+        )
+        return PromotionPacketValidationResult(
+            accepted=result.accepted,
+            status=result.status,
+            packet_hash=result.packet_hash,
+            audit_record_id=result.audit_record_id,
+            reasons=result.reasons,
+            warnings=result.warnings,
+        )
+
+    def validate_machine(
+        self,
+        *,
+        evidence_registry: EvidenceRegistry,
+        audit_log: ResearchAuditLog,
+        metrics_schema: ResearchMetricsSchema | None = None,
+        artifact_graph_writer: ResearchArtifactGraphWriter | None = None,
+    ) -> PromotionMachineValidationResult:
+        """Validate machine-checkable packet evidence without human approval."""
 
         packet_hash = stable_json_hash(self.to_payload())
         audit_chain_reasons = audit_log.verify_hash_chain()
         if audit_chain_reasons:
-            return PromotionPacketValidationResult(
+            return PromotionMachineValidationResult(
                 accepted=False,
                 status="rejected",
                 packet_hash=packet_hash,
@@ -152,8 +182,7 @@ class PromotionPacketV2:
         reasons: list[str] = []
         warnings: list[str] = []
         self._append_packet_structure_reasons(reasons)
-        self._append_review_reasons(reasons)
-        self._append_evidence_reasons(evidence_registry, reasons, warnings)
+        self._append_evidence_reasons(evidence_registry, audit_log, reasons, warnings)
         metrics_reasons: list[str] = []
         metrics_warnings: list[str] = []
         reproducibility_reasons: list[str] = []
@@ -202,23 +231,11 @@ class PromotionPacketV2:
             },
         )
         accepted = not reasons
-        status = "accepted" if accepted else "rejected"
-        human_review_record_id: str | None = None
-        if accepted:
-            human_review_record = audit_log.append_human_review_decision(
-                reviewer=str(self.review["reviewer"]),
-                decision=str(self.review["decision"]),
-                reviewed_at=datetime.fromisoformat(str(self.review["reviewed_at"])),
-                evidence_bundle_id=self.evidence_bundle_id,
-                promotion_candidate_id=self.promotion_candidate_id,
-                notes=str(self.review["notes"])
-                if self._has_value(self.review.get("notes"))
-                else None,
-            )
-            human_review_record_id = human_review_record.record_id
+        status = "human_pending" if accepted else "rejected"
         validation_payload: dict[str, Any] = {
             "accepted": accepted,
             "evidence_bundle_id": self.evidence_bundle_id,
+            "human_approval_required": accepted,
             "packet_hash": packet_hash,
             "promotion_candidate_id": self.promotion_candidate_id,
             "reasons": reasons,
@@ -227,8 +244,6 @@ class PromotionPacketV2:
             "target_mode": self.target_mode,
             "warnings": warnings,
         }
-        if human_review_record_id is not None:
-            validation_payload["human_review_record_id"] = human_review_record_id
         record = audit_log.append(
             "promotion_packet_validated",
             validation_payload,
@@ -240,8 +255,6 @@ class PromotionPacketV2:
                 reproducibility_record.to_payload(),
                 record.to_payload(),
             ]
-            if human_review_record_id is not None:
-                audit_records.insert(0, human_review_record.to_payload())
             artifact_graph_writer.write_from_payloads(
                 evidence_bundles=(evidence_registry.show(self.evidence_bundle_id).to_payload(),),
                 promotion_packets=(
@@ -263,6 +276,41 @@ class PromotionPacketV2:
             audit_record_id=record.record_id,
             reasons=tuple(reasons),
             warnings=tuple(warnings),
+        )
+
+    def human_review(
+        self,
+        *,
+        audit_log: ResearchAuditLog,
+        decision: str,
+        reviewer: str,
+        reviewed_at: datetime,
+        expected_packet_hash: str | None = None,
+        notes: str | None = None,
+    ) -> PromotionPacketValidationResult:
+        """Append an explicit human review decision for this packet."""
+
+        packet_hash = stable_json_hash(self.to_payload())
+        if expected_packet_hash is not None and expected_packet_hash != packet_hash:
+            raise ValueError(f"packet hash mismatch: {packet_hash} != {expected_packet_hash}")
+        normalized_decision = decision.strip().lower()
+        accepted = normalized_decision in {"approved", "go"}
+        record = audit_log.append_human_review_decision(
+            reviewer=reviewer,
+            decision=normalized_decision,
+            reviewed_at=reviewed_at,
+            evidence_bundle_id=self.evidence_bundle_id,
+            promotion_candidate_id=self.promotion_candidate_id,
+            packet_hash=packet_hash,
+            notes=notes,
+        )
+        return PromotionPacketValidationResult(
+            accepted=accepted,
+            status="human_approved" if accepted else "human_rejected",
+            packet_hash=packet_hash,
+            audit_record_id=record.record_id,
+            reasons=() if accepted else (f"human review decision is {normalized_decision}",),
+            warnings=(),
         )
 
     def to_payload(self) -> dict[str, Any]:
@@ -304,9 +352,6 @@ class PromotionPacketV2:
             reasons.append("source_module and target_module must differ")
         if not self.target_module.startswith("strategies.production."):
             reasons.append("target_module must start with strategies.production.")
-        for field_name in ("reviewer", "decision", "reviewed_at"):
-            if not self._has_value(self.review.get(field_name)):
-                reasons.append(f"review.{field_name} is required")
 
     def _append_review_reasons(self, reasons: list[str]) -> None:
         reviewed_at = self.review.get("reviewed_at")
@@ -323,6 +368,7 @@ class PromotionPacketV2:
     def _append_evidence_reasons(
         self,
         evidence_registry: EvidenceRegistry,
+        audit_log: ResearchAuditLog,
         reasons: list[str],
         warnings: list[str],
     ) -> None:
@@ -337,6 +383,7 @@ class PromotionPacketV2:
                     idea_id=self.idea_id,
                 ),
                 evidence_registry=evidence_registry,
+                audit_log=audit_log,
             )
         except (FileNotFoundError, ValueError) as exc:
             reasons.append(f"evidence validation failed: {exc}")
@@ -539,4 +586,8 @@ class PromotionPacketV2:
         return True
 
 
-__all__ = ["PromotionPacketV2", "PromotionPacketValidationResult"]
+__all__ = [
+    "PromotionMachineValidationResult",
+    "PromotionPacketV2",
+    "PromotionPacketValidationResult",
+]

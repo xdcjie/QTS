@@ -31,9 +31,11 @@ class FitnessLandscapePoint:
     constraints: Mapping[str, Any]
     accepted: bool
     rejected_reasons: tuple[str, ...]
-    evidence_bundle_id: str
+    evidence_bundle_id: str | None
     promotion_packet_id: str | None
-    artifact_graph_hash: str
+    artifact_graph_hash: str | None
+    lifecycle_status: str = "selected"
+    rejection_stage: str | None = None
 
     def __post_init__(self) -> None:
         for field_name in (
@@ -47,14 +49,19 @@ class FitnessLandscapePoint:
             "regime",
             "session",
             "parameter_hash",
-            "evidence_bundle_id",
-            "artifact_graph_hash",
+            "lifecycle_status",
         ):
             value = getattr(self, field_name)
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{field_name} is required")
         if self.retry_id is not None and not self.retry_id.strip():
             raise ValueError("retry_id must be non-empty when provided")
+        if self.evidence_bundle_id is not None and not self.evidence_bundle_id.strip():
+            raise ValueError("evidence_bundle_id must be non-empty when provided")
+        if self.artifact_graph_hash is not None and not self.artifact_graph_hash.strip():
+            raise ValueError("artifact_graph_hash must be non-empty when provided")
+        if self.rejection_stage is not None and not self.rejection_stage.strip():
+            raise ValueError("rejection_stage must be non-empty when provided")
         if not self.universe:
             raise ValueError("universe must not be empty")
         object.__setattr__(self, "universe", tuple(str(item) for item in self.universe))
@@ -107,9 +114,16 @@ class FitnessLandscapePoint:
             constraints=constraints,
             accepted=bool(payload.get("accepted")),
             rejected_reasons=tuple(str(reason) for reason in rejected_reasons),
-            evidence_bundle_id=cls._required_text(payload, "evidence_bundle_id"),
+            evidence_bundle_id=cls._optional_text(payload, "evidence_bundle_id"),
             promotion_packet_id=cls._optional_text(payload, "promotion_packet_id"),
-            artifact_graph_hash=cls._required_text(payload, "artifact_graph_hash"),
+            artifact_graph_hash=cls._optional_text(payload, "artifact_graph_hash"),
+            lifecycle_status=str(
+                payload.get(
+                    "lifecycle_status",
+                    "selected" if payload.get("accepted") else "rejected",
+                )
+            ),
+            rejection_stage=cls._optional_text(payload, "rejection_stage"),
         )
 
     @property
@@ -167,6 +181,7 @@ class FitnessLandscapePoint:
             "parameter_hash": self.parameter_hash,
             "promotion_packet_id": self.promotion_packet_id,
             "regime": self.regime,
+            "rejection_stage": self.rejection_stage,
             "rejected_reasons": list(self.rejected_reasons),
             "retry_id": self.retry_id,
             "root": self.root,
@@ -175,6 +190,7 @@ class FitnessLandscapePoint:
             "timeframe": self.timeframe,
             "trial_id": self.trial_id,
             "universe": list(self.universe),
+            "lifecycle_status": self.lifecycle_status,
         }
 
     @staticmethod

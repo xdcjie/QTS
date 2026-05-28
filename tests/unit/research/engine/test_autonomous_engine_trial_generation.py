@@ -40,6 +40,27 @@ def test_engine_generates_trials_from_campaign_search_space_and_strategy_factory
     assert all(row["trial_id"].startswith("generation-000-trial-") for row in rows)
 
 
+def test_backtest_data_materialization_mode_controls_truncation(tmp_path: Path) -> None:
+    source = tmp_path / "source.csv"
+    source.write_text(
+        "\n".join(
+            ["timestamp,close"]
+            + [f"2026-01-02T00:{minute:02d}:00+00:00,{100 + minute:.1f}" for minute in range(60)]
+            + [""]
+        ),
+        encoding="utf-8",
+    )
+    engine = AutonomousResearchEngine(repo_root=Path.cwd())
+
+    fixture_target = tmp_path / "fixture.csv"
+    engine._materialize_backtest_csv(source, fixture_target, symbol="GC", max_rows=10)
+    assert len(fixture_target.read_text(encoding="utf-8").splitlines()) == 11
+
+    full_target = tmp_path / "full.csv"
+    engine._materialize_backtest_csv(source, full_target, symbol="GC", max_rows=None)
+    assert len(full_target.read_text(encoding="utf-8").splitlines()) == 61
+
+
 def write_campaign(
     tmp_path: Path,
     *,
@@ -50,6 +71,8 @@ def write_campaign(
     max_family_trials: int | None = None,
     compute_budget_limit: int | None = None,
     active_correlation: float = 0.30,
+    data_mode: str = "fixture",
+    max_rows: int | None = 50,
 ) -> Path:
     config_dir = tmp_path / "campaign_inputs"
     config_dir.mkdir(parents=True, exist_ok=True)
@@ -135,6 +158,11 @@ def write_campaign(
                 "  dataset_id: research_gc",
                 "families:",
                 *family_rows,
+                "execution:",
+                "  default_mode: backtest_pipeline",
+                "  metrics_source: backtest_artifacts",
+                f"  data_mode: {data_mode}",
+                *([] if max_rows is None else [f"  max_rows: {max_rows}"]),
                 "objective:",
                 "  primary: composite_score",
                 "  components:",

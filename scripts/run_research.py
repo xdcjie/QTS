@@ -201,6 +201,25 @@ def _add_promotion_parser(subparsers: Any) -> None:
         default=None,
         help="Optional artifact graph output root for packet validation records",
     )
+    approve = promotion_subparsers.add_parser(
+        "approve",
+        help="Record an explicit human approval decision for a machine-valid packet",
+    )
+    approve.add_argument("--packet", type=Path, required=True)
+    approve.add_argument("--expected-packet-hash", required=True)
+    approve.add_argument(
+        "--decision",
+        choices=("approved", "rejected"),
+        required=True,
+    )
+    approve.add_argument("--reviewer", required=True)
+    approve.add_argument("--reason", required=True)
+    approve.add_argument(
+        "--audit-log-root",
+        type=Path,
+        default=Path("runs/research/audit"),
+        help="Research audit log root directory",
+    )
 
 
 def _add_audit_parser(subparsers: Any) -> None:
@@ -370,6 +389,12 @@ def _add_campaign_parser(subparsers: Any) -> None:
         help="Return machine-readable campaign status",
     )
     status.add_argument("--output-root", type=Path, required=True)
+
+    verify = campaign_subparsers.add_parser(
+        "verify",
+        help="Verify an autonomous research campaign release bundle",
+    )
+    verify.add_argument("--output-root", type=Path, required=True)
 
     approval = campaign_subparsers.add_parser(
         "approve-next-generation",
@@ -696,6 +721,22 @@ def _run_promotion(args: argparse.Namespace) -> int:
             )
             print(json.dumps(packet_result.to_payload(), sort_keys=True, indent=2))
             return 0 if packet_result.accepted else 1
+        except (FileNotFoundError, ValueError) as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+    if args.promotion_command == "approve":
+        try:
+            packet = PromotionPacketV2.from_payload(_load_mapping(args.packet))
+            result = packet.human_review(
+                audit_log=ResearchAuditLog(args.audit_log_root),
+                decision=args.decision,
+                reviewer=args.reviewer,
+                reviewed_at=datetime.now(UTC),
+                expected_packet_hash=args.expected_packet_hash,
+                notes=args.reason,
+            )
+            print(json.dumps(result.to_payload(), sort_keys=True, indent=2))
+            return 0 if result.accepted else 1
         except (FileNotFoundError, ValueError) as exc:
             print(str(exc), file=sys.stderr)
             return 2
@@ -1045,6 +1086,11 @@ def _run_campaign(args: argparse.Namespace) -> int:
         print(json.dumps(status_payload, sort_keys=True, indent=2))
         return 0 if summary_path.exists() else 1
 
+    if args.campaign_command == "verify":
+        payload = _verify_campaign_release_bundle(args.output_root)
+        print(json.dumps(payload, sort_keys=True, indent=2))
+        return 0 if payload["accepted"] else 1
+
     if args.campaign_command == "approve-next-generation":
         try:
             proposal = _load_json_mapping(args.proposal)
@@ -1176,6 +1222,151 @@ def _run_campaign(args: argparse.Namespace) -> int:
         return 0
 
     raise ValueError(f"unsupported campaign command: {args.campaign_command}")
+
+
+def _verify_campaign_release_bundle(output_root: Path) -> dict[str, Any]:
+    output_root = Path(output_root)
+    criteria: dict[str, dict[str, Any]] = {}
+
+    summary_path = output_root / "validation_summary.json"
+    summary = _load_json_mapping(summary_path) if summary_path.exists() else {}
+    criteria["validation_summary"] = {
+        "accepted": summary.get("status") == "accepted",
+        "path": str(summary_path),
+        "status": summary.get("status"),
+    }
+
+    audit_log = ResearchAuditLog(output_root / "audit" / "audit_log.jsonl")
+    audit_reasons = list(audit_log.verify_hash_chain())
+    criteria["audit_hash_chain"] = {
+        "accepted": not audit_reasons and audit_log.path.exists(),
+        "path": str(audit_log.path),
+        "reasons": audit_reasons,
+    }
+
+    graph_path = output_root / "artifact_graph" / "artifact_graph.json"
+    graph_reasons: list[str] = []
+    if graph_path.exists():
+        try:
+            ResearchArtifactGraph.from_payload(_load_json_mapping(graph_path)).validate_full_chain()
+        except ValueError as exc:
+            graph_reasons.append(str(exc))
+    else:
+        graph_reasons.append(f"missing artifact graph: {graph_path}")
+    criteria["artifact_graph"] = {
+        "accepted": not graph_reasons,
+        "path": str(graph_path),
+        "reasons": graph_reasons,
+    }
+
+    selected_rows = _read_jsonl(output_root / "selected_candidates.jsonl")
+    rejected_rows = _read_jsonl(output_root / "rejected_candidates.jsonl")
+    generated_count = len(selected_rows) + len(rejected_rows)
+    try:
+        landscape = FitnessLandscapeStore(output_root).read()
+        landscape_count = len(landscape.points)
+        landscape_reasons = (
+            []
+            if landscape_count == generated_count
+            else [f"landscape count {landscape_count} != generated candidates {generated_count}"]
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        landscape_count = 0
+        landscape_reasons = [str(exc)]
+    criteria["fitness_landscape"] = {
+        "accepted": not landscape_reasons,
+        "generated_candidate_count": generated_count,
+        "landscape_trial_count": landscape_count,
+        "reasons": landscape_reasons,
+    }
+
+    packet_reasons = _selected_candidate_packet_reasons(selected_rows)
+    criteria["selected_candidate_packets"] = {
+        "accepted": bool(selected_rows) and not packet_reasons,
+        "reasons": packet_reasons,
+        "selected_count": len(selected_rows),
+    }
+
+    paper_live_launches = summary.get("paper_live_launches", [])
+    criteria["paper_live_launches"] = {
+        "accepted": paper_live_launches == [],
+        "paper_live_launches": paper_live_launches,
+    }
+
+    proposal_path = output_root / "next_generation_proposal.json"
+    proposal_reasons = _proposal_evidence_reasons(proposal_path)
+    criteria["next_generation_proposal"] = {
+        "accepted": not proposal_reasons,
+        "path": str(proposal_path),
+        "reasons": proposal_reasons,
+    }
+
+    report_path = output_root / "report.md"
+    criteria["report_projection"] = {
+        "accepted": report_path.exists(),
+        "path": str(report_path),
+    }
+
+    accepted = all(item["accepted"] for item in criteria.values())
+    payload = {
+        "accepted": accepted,
+        "criteria": criteria,
+        "output_root": str(output_root),
+        "release_verification_path": str(output_root / "release_verification.json"),
+    }
+    output_root.mkdir(parents=True, exist_ok=True)
+    (output_root / "release_verification.json").write_text(
+        json.dumps(payload, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return payload
+
+
+def _selected_candidate_packet_reasons(rows: Sequence[Mapping[str, Any]]) -> list[str]:
+    reasons: list[str] = []
+    for row in rows:
+        bundle_id = row.get("evidence_bundle_id")
+        packet_path = row.get("promotion_packet_path")
+        packet_hash = row.get("packet_hash")
+        if not isinstance(bundle_id, str) or not bundle_id.strip():
+            reasons.append(f"selected candidate missing evidence_bundle_id: {row.get('trial_id')}")
+        if not isinstance(packet_path, str) or not Path(packet_path).exists():
+            reasons.append(f"selected candidate missing packet: {row.get('trial_id')}")
+            continue
+        packet = _load_json_mapping(Path(packet_path))
+        validation = packet.get("validation")
+        if not isinstance(validation, Mapping):
+            reasons.append(f"packet missing validation payload: {packet_path}")
+            continue
+        if validation.get("status") not in {"human_pending", "human_approved"}:
+            reasons.append(f"packet is not machine-valid human-gated: {packet_path}")
+        if packet_hash != packet.get("packet_hash"):
+            reasons.append(f"packet hash mismatch in selected row: {packet_path}")
+    return reasons
+
+
+def _proposal_evidence_reasons(path: Path) -> list[str]:
+    if not path.exists():
+        return [f"missing next generation proposal: {path}"]
+    proposal = _load_json_mapping(path)
+    if not proposal:
+        return []
+    reasons: list[str] = []
+    evidence_refs = proposal.get("evidence_refs")
+    if not isinstance(evidence_refs, list) or not evidence_refs:
+        reasons.append("next_generation_proposal.evidence_refs must not be empty")
+    mutations = proposal.get("mutations", [])
+    if isinstance(mutations, Sequence) and not isinstance(mutations, str):
+        for index, mutation in enumerate(mutations):
+            if not isinstance(mutation, Mapping):
+                reasons.append(f"next_generation_proposal.mutations[{index}] must be a mapping")
+                continue
+            refs = mutation.get("evidence_refs")
+            if not isinstance(refs, list) or not refs:
+                reasons.append(
+                    f"next_generation_proposal.mutations[{index}].evidence_refs must not be empty"
+                )
+    return reasons
 
 
 def _run_landscape(args: argparse.Namespace) -> int:

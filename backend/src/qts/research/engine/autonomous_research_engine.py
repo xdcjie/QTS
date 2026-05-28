@@ -17,6 +17,7 @@ from qts.core.hashing import stable_json_dumps, stable_json_hash
 from qts.research.artifact_graph import (
     ResearchArtifactEdge,
     ResearchArtifactGraph,
+    ResearchArtifactGraphWriter,
     ResearchArtifactNode,
 )
 from qts.research.audit_log import ResearchAuditLog
@@ -284,9 +285,9 @@ class AutonomousResearchEngine:
             )
             generations.append(generation["generation"])
             all_trial_evidence_rows.extend(generation["trial_evidence_rows"])
-            selected_rows.extend(generation["selected_rows"])
-            rejected_rows.extend(generation["rejected_rows"])
-            next_proposal = cast(NextGenerationProposal, generation["next_generation_proposal"])
+        selected_rows.extend(generation["selected_rows"])
+        rejected_rows.extend(generation["rejected_rows"])
+        next_proposal = cast(NextGenerationProposal, generation["next_generation_proposal"])
 
         fitness_landscape_path = root / "fitness_landscape.jsonl"
         selected_candidates_path = root / "selected_candidates.jsonl"
@@ -319,6 +320,8 @@ class AutonomousResearchEngine:
             "approval_reasons": list(approval_reasons),
             "campaign_id": run.campaign_id,
             "generation_count": len(generations),
+            "generated_candidate_count": len(selected_rows) + len(rejected_rows),
+            "landscape_trial_count": len(landscape_store.read().points),
             "promotion_packet_count": len(selected_rows),
             "rejected_candidate_count": len(rejected_rows),
             "status": stop_status or ("accepted" if selected_rows else "rejected"),
@@ -413,7 +416,7 @@ class AutonomousResearchEngine:
         generation_landscape_rows = self._append_landscape_points(
             run=run,
             landscape_store=landscape_store,
-            rows=(*selected_rows, *execution_rejected_rows),
+            rows=(*selected_rows, *execution_rejected_rows, *budget_rejected_rows),
         )
         landscape_path = generation_dir / "fitness_landscape.jsonl"
         proposal_path = generation_dir / "next_generation_proposal.json"
@@ -423,7 +426,10 @@ class AutonomousResearchEngine:
             previous_generation_id=generation_id,
             analytics=FitnessAnalytics.from_landscape(landscape_store.read()),
             accepted_trial_count=len(landscape_store.read().points),
-            data_window=self._combined_data_window(tuple(data_paths.values())),
+            data_window=self._combined_data_window(
+                tuple(data_paths.values()),
+                max_rows=self._materialization_max_rows(run),
+            ),
         )
         self._write_next_generation_proposal(proposal_path, next_proposal)
         audit_log.append(
@@ -435,7 +441,7 @@ class AutonomousResearchEngine:
         return {
             "generation": AutonomousResearchGeneration(
                 generation_id=generation_id,
-                trial_count=len(trials),
+                trial_count=len(trials) + len(budget_rejected_rows),
                 selected_count=len(selected_rows),
                 rejected_count=len(rejected_rows),
                 audit_record_count=len(audit_log.list()),
@@ -583,7 +589,7 @@ class AutonomousResearchEngine:
                     "strategy_variant_hash": variant.variant_hash,
                     "strategy_variant_id": variant.variant_id,
                     "trial_id": trial_id,
-                    "validation": self._validation_evidence(parameters),
+                    "validation": {"artifacts_required": True},
                 }
             )
         return tuple(generated)
@@ -842,40 +848,6 @@ class AutonomousResearchEngine:
                 payload[parameter.name] = field_payload
         return payload
 
-    def _validation_evidence(self, parameters: Mapping[str, Any]) -> dict[str, Any]:
-        active_correlation = float(parameters.get("active_correlation", 0.30))
-        drawdown = float(parameters.get("stress_drawdown", 0.10))
-        slippage = float(parameters.get("slippage_sensitivity", 0.02))
-        cost_impact = float(parameters.get("cost_impact", 0.03))
-        return {
-            "capacity": {
-                "estimated_capacity": 1000000,
-                "required_capital": 100000,
-                "turnover": 0.2,
-            },
-            "correlation": {"max_active_correlation": active_correlation},
-            "cost_stress": {
-                "degradation": cost_impact,
-                "slippage_sensitivity": slippage,
-                "stressed_score": 1.0,
-            },
-            "deterministic_replay": {"passed": True},
-            "failure_windows": [
-                {
-                    "breached": False,
-                    "max_drawdown": drawdown,
-                    "name": "stress",
-                    "report_only": False,
-                }
-            ],
-            "no_lookahead": {"passed": True},
-            "walk_forward": {
-                "consistent": True,
-                "max_train_test_gap": 0.1,
-                "test_windows": [{"accepted": True, "name": "oos"}],
-            },
-        }
-
     def _backtest_pipeline_payload(
         self,
         *,
@@ -926,7 +898,10 @@ class AutonomousResearchEngine:
             root=root,
             data_path=data_paths[root],
         )
-        start, end = self._data_window(data_paths[root])
+        start, end = self._data_window(
+            data_paths[root],
+            max_rows=self._materialization_max_rows(run),
+        )
         config_path = run.output_root / "backtest_configs" / f"{trial_id}.yaml"
         payload = {
             "end": end,
@@ -962,7 +937,12 @@ class AutonomousResearchEngine:
         bars_dir = data_root / "data"
         bars_dir.mkdir(parents=True, exist_ok=True)
         target_csv = bars_dir / f"{root}.csv"
-        self._materialize_backtest_csv(data_path, target_csv, symbol=root)
+        self._materialize_backtest_csv(
+            data_path,
+            target_csv,
+            symbol=root,
+            max_rows=self._materialization_max_rows(run),
+        )
         config_path = data_root / "historical.local.yaml"
         payload = {
             "historical_data": {
@@ -991,7 +971,12 @@ class AutonomousResearchEngine:
         return config_path, target_csv
 
     def _materialize_backtest_csv(
-        self, source_path: Path, target_path: Path, *, symbol: str
+        self,
+        source_path: Path,
+        target_path: Path,
+        *,
+        symbol: str,
+        max_rows: int | None,
     ) -> None:
         with (
             source_path.open("r", encoding="utf-8") as source,
@@ -1017,7 +1002,7 @@ class AutonomousResearchEngine:
                 close_index = header.index("close")
                 volume_index = header.index("volume")
                 for source_index, line in enumerate(source, start=1):
-                    if emitted >= 50:
+                    if max_rows is not None and emitted >= max_rows:
                         break
                     if not line.strip():
                         continue
@@ -1055,14 +1040,17 @@ class AutonomousResearchEngine:
                     f"unsupported research CSV columns for backtest pipeline: {source_path}"
                 )
             for index, line in enumerate(source, start=1):
+                if max_rows is not None and emitted >= max_rows:
+                    break
                 if not line.strip():
                     continue
                 timestamp, close = line.strip().split(",", maxsplit=1)
                 target.write(
                     f"{timestamp},33,1,{index},{close},{close},{close},{close},1,{symbol}\n"
                 )
+                emitted += 1
 
-    def _data_window(self, source_path: Path) -> tuple[str, str]:
+    def _data_window(self, source_path: Path, *, max_rows: int | None) -> tuple[str, str]:
         timestamps: list[str] = []
         seen_timestamps: set[str] = set()
         with source_path.open("r", encoding="utf-8") as source:
@@ -1082,7 +1070,7 @@ class AutonomousResearchEngine:
                     continue
                 seen_timestamps.add(timestamp)
                 timestamps.append(timestamp)
-                if len(timestamps) >= 50:
+                if max_rows is not None and len(timestamps) >= max_rows:
                     break
         if not timestamps:
             raise ValueError(f"data path has no timestamp rows: {source_path}")
@@ -1093,8 +1081,13 @@ class AutonomousResearchEngine:
         end = (end_timestamp + timedelta(minutes=1)).isoformat().replace("+00:00", "Z")
         return start, end
 
-    def _combined_data_window(self, paths: Sequence[Path]) -> dict[str, str]:
-        windows = tuple(self._data_window(path) for path in paths)
+    def _combined_data_window(
+        self,
+        paths: Sequence[Path],
+        *,
+        max_rows: int | None,
+    ) -> dict[str, str]:
+        windows = tuple(self._data_window(path, max_rows=max_rows) for path in paths)
         if not windows:
             raise ValueError("at least one data path is required")
         starts = tuple(self._parse_timestamp(start) for start, _ in windows)
@@ -1108,13 +1101,24 @@ class AutonomousResearchEngine:
     def _parse_timestamp(value: str) -> datetime:
         return datetime.fromisoformat(value.replace(".000000000Z", "+00:00").replace("Z", "+00:00"))
 
+    def _materialization_max_rows(self, run: AutonomousResearchRun) -> int | None:
+        if run.campaign_config is None:
+            raise ValueError("campaign execution.data_mode is required")
+        execution = run.campaign_config.execution
+        if execution.data_mode == "full":
+            return None
+        return execution.max_rows
+
     def _manifest_payload(
         self,
         run: AutonomousResearchRun,
         checked_paths: tuple[str, ...],
         data_paths: Mapping[str, Path],
     ) -> dict[str, Any]:
-        data_window = self._combined_data_window(tuple(data_paths.values()))
+        data_window = self._combined_data_window(
+            tuple(data_paths.values()),
+            max_rows=self._materialization_max_rows(run),
+        )
         return {
             "campaign_id": run.campaign_id,
             "data": {
@@ -1122,6 +1126,18 @@ class AutonomousResearchEngine:
                 "checked_paths": list(checked_paths),
                 "dataset_id": run.dataset_id,
                 "end": data_window["end"],
+                "materialization": {
+                    "data_mode": (
+                        None
+                        if run.campaign_config is None
+                        else run.campaign_config.execution.data_mode
+                    ),
+                    "max_rows": (
+                        None
+                        if run.campaign_config is None
+                        else run.campaign_config.execution.max_rows
+                    ),
+                },
                 "start": data_window["start"],
                 "timeframe": run.timeframe,
             },
@@ -1180,6 +1196,7 @@ class AutonomousResearchEngine:
                     "status": result.status,
                     "trade_count": trading["oos_trade_count"],
                     "trial_id": trial_id,
+                    "validation_artifact_paths": dict(result.validation_artifact_paths),
                 }
             )
         return rows
@@ -1284,7 +1301,27 @@ class AutonomousResearchEngine:
                 result.metrics_path.parent / "workflow_summary.json",
                 idea=self._idea(run, generation_id, trial),
                 strategy_id=f"{run.campaign_id}_strategy",
+                audit_log=audit_log,
+                artifact_graph_writer=ResearchArtifactGraphWriter(
+                    run.output_root / "artifact_graph"
+                ),
             )
+            bundle_verification = evidence_registry.verify(
+                bundle.evidence_bundle_id,
+                audit_log=audit_log,
+            )
+            if not bundle_verification.accepted:
+                rejected_rows.append(
+                    {
+                        **row,
+                        "gauntlet_reasons": [],
+                        "promotion_reasons": list(bundle_verification.reasons),
+                        "reasons": list(bundle_verification.reasons),
+                        "rejection_stage": "promotion_packet",
+                        "selector_reasons": [],
+                    }
+                )
+                continue
             packet_payload = self._promotion_packet_payload(
                 run=run,
                 generation_id=generation_id,
@@ -1294,9 +1331,12 @@ class AutonomousResearchEngine:
                 metrics_payload=metrics,
             )
             packet = PromotionPacketV2.from_payload(packet_payload)
-            validation = packet.validate(
+            validation = packet.validate_machine(
                 evidence_registry=evidence_registry,
                 audit_log=audit_log,
+                artifact_graph_writer=ResearchArtifactGraphWriter(
+                    run.output_root / "artifact_graph"
+                ),
             )
             packet_path = run.output_root / "packets" / f"{packet.promotion_candidate_id}.json"
             self._write_json(
@@ -1358,8 +1398,28 @@ class AutonomousResearchEngine:
             "reproducibility": json.loads(
                 trial_result.reproducibility_path.read_text(encoding="utf-8")
             ),
-            "validation": dict(self._mapping(trial["validation"], "validation")),
+            "validation": self._validation_payload_from_artifacts(
+                trial_result.validation_artifact_paths
+            ),
         }
+
+    def _validation_payload_from_artifacts(
+        self,
+        validation_artifact_paths: Mapping[str, str],
+    ) -> dict[str, Any]:
+        if not validation_artifact_paths:
+            return {"artifacts": {}}
+        artifacts: dict[str, dict[str, str]] = {}
+        for artifact_name, path_text in sorted(validation_artifact_paths.items()):
+            path = Path(path_text)
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(payload, Mapping):
+                raise ValueError(f"validation artifact must be a JSON object: {path}")
+            payload_hash = payload.get("payload_hash")
+            if not isinstance(payload_hash, str) or not payload_hash.strip():
+                raise ValueError(f"validation artifact missing payload_hash: {path}")
+            artifacts[artifact_name] = {"path": str(path), "payload_hash": payload_hash}
+        return {"artifacts": artifacts, "evidence_mode": "artifact"}
 
     def _metrics_from_trial_result(self, result: ResearchTrialResult) -> Mapping[str, Any]:
         payload = json.loads(result.metrics_path.read_text(encoding="utf-8"))
@@ -1441,6 +1501,7 @@ class AutonomousResearchEngine:
             correlation_gate=CorrelationGate(
                 max_active_correlation=float(constraints.get("max_correlation_to_active", 0.80))
             ),
+            require_artifacts=True,
         )
 
     def _append_landscape_points(
@@ -1453,11 +1514,16 @@ class AutonomousResearchEngine:
         payloads: list[dict[str, Any]] = []
         for row in rows:
             parameters = self._mapping(row["parameters"], "parameters")
-            metrics = self._planner_metrics(self._mapping(row["metrics"], "metrics"))
+            metrics = (
+                self._planner_metrics(self._mapping(row["metrics"], "metrics"))
+                if isinstance(row.get("metrics"), Mapping)
+                else {}
+            )
             accepted = "promotion_candidate_id" in row
-            evidence_bundle_id = str(row.get("evidence_bundle_id") or "")
-            if not evidence_bundle_id:
-                raise ValueError(f"landscape row missing evidence_bundle_id: {row['trial_id']}")
+            evidence_bundle_id = (
+                None if row.get("evidence_bundle_id") is None else str(row["evidence_bundle_id"])
+            )
+            lifecycle_status = self._landscape_lifecycle_status(row, accepted=accepted)
             point = FitnessLandscapePoint(
                 trial_id=str(row["trial_id"]),
                 retry_id=None,
@@ -1483,10 +1549,33 @@ class AutonomousResearchEngine:
                         "trial_id": row["trial_id"],
                     }
                 ),
+                lifecycle_status=lifecycle_status,
+                rejection_stage=(
+                    None
+                    if accepted or row.get("rejection_stage") is None
+                    else str(row["rejection_stage"])
+                ),
             )
             landscape_store.append(point)
             payloads.append(point.to_payload())
         return tuple(payloads)
+
+    @staticmethod
+    def _landscape_lifecycle_status(row: Mapping[str, Any], *, accepted: bool) -> str:
+        if accepted:
+            return "selected"
+        stage = str(row.get("rejection_stage") or row.get("stage") or "").strip()
+        if stage == "trial_budget":
+            return "budget_rejected"
+        if stage == "selector":
+            return "selector_rejected"
+        if stage == "gauntlet":
+            return "gauntlet_rejected"
+        if stage == "promotion_packet":
+            return "promotion_packet_rejected"
+        if row.get("status") == "failed":
+            return "execution_failed"
+        return "execution_rejected"
 
     @staticmethod
     def _planner_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:
@@ -1634,9 +1723,7 @@ class AutonomousResearchEngine:
                 "snapshot_id": reproducibility_payload.get("artifact_id", trial_result.trial_id),
             },
             "review": {
-                "decision": "go",
-                "reviewed_at": "2026-05-26T00:00:00+00:00",
-                "reviewer": "research-human-gate",
+                "status": "human_pending",
             },
             "runtime": {
                 "account_id": "research-only",
@@ -1674,72 +1761,100 @@ class AutonomousResearchEngine:
     ) -> Path:
         if not selected_rows:
             raise ValueError("artifact graph requires at least one selected candidate")
-        selected = selected_rows[0]
-        packet_payload = json.loads(
-            Path(str(selected["promotion_packet_path"])).read_text(encoding="utf-8")
-        )
-        bundle = EvidenceRegistry(root / "evidence").show(str(selected["evidence_bundle_id"]))
-        audit_record = self._audit_record(audit_log, str(selected["validation_audit_record_id"]))
-        manifest_path = bundle.manifest_paths[0]
-        manifest_hashes = cast(Mapping[str, str], bundle.manifest_hashes or {})
-        metrics_path = str(selected["metrics_path"])
-        data_quality_path = str(
-            packet_payload["data_quality"]["payload"].get("path", "data_quality")
-        )
-        reproducibility_path = str(
-            packet_payload["reproducibility"]["payload"].get(
-                "path",
-                packet_payload["reproducibility"].get("snapshot_id", "reproducibility"),
-            )
-        )
         graph_path = root / "artifact_graph" / "artifact_graph.json"
         report_hash = self._sha256_path(report_path)
-        graph_hash_placeholder = "sha256:artifact-graph"
-        graph = self._artifact_graph(
-            artifact_graph_hash=graph_hash_placeholder,
+        graph = self._merged_selected_artifact_graph(
+            artifact_graph_hash="sha256:artifact-graph",
             artifact_graph_path=graph_path,
-            audit_payload_hash=audit_record.payload_hash,
-            audit_record_id=audit_record.record_id,
-            bundle_payload=bundle.to_payload(),
-            data_quality_hash=str(packet_payload["data_quality"]["payload_hash"]),
-            data_quality_path=data_quality_path,
-            manifest_hash=str(manifest_hashes[manifest_path]),
-            manifest_path=manifest_path,
-            metrics_hash=str(packet_payload["metrics"]["payload_hash"]),
-            metrics_path=metrics_path,
-            packet_hash=str(packet_payload["packet_hash"]),
-            promotion_candidate_id=str(packet_payload["promotion_candidate_id"]),
+            audit_log=audit_log,
             report_hash=report_hash,
             report_path=report_path,
-            reproducibility_hash=str(packet_payload["reproducibility"]["payload_hash"]),
-            reproducibility_path=reproducibility_path,
-            strategy_variant_hash=str(selected["strategy_variant_hash"]),
-            strategy_variant_id=str(selected["strategy_variant_id"]),
+            root=root,
+            selected_rows=selected_rows,
         )
-        graph = self._artifact_graph(
+        graph = self._merged_selected_artifact_graph(
             artifact_graph_hash=graph.stable_hash(),
             artifact_graph_path=graph_path,
-            audit_payload_hash=audit_record.payload_hash,
-            audit_record_id=audit_record.record_id,
-            bundle_payload=bundle.to_payload(),
-            data_quality_hash=str(packet_payload["data_quality"]["payload_hash"]),
-            data_quality_path=data_quality_path,
-            manifest_hash=str(manifest_hashes[manifest_path]),
-            manifest_path=manifest_path,
-            metrics_hash=str(packet_payload["metrics"]["payload_hash"]),
-            metrics_path=metrics_path,
-            packet_hash=str(packet_payload["packet_hash"]),
-            promotion_candidate_id=str(packet_payload["promotion_candidate_id"]),
+            audit_log=audit_log,
             report_hash=report_hash,
             report_path=report_path,
-            reproducibility_hash=str(packet_payload["reproducibility"]["payload_hash"]),
-            reproducibility_path=reproducibility_path,
-            strategy_variant_hash=str(selected["strategy_variant_hash"]),
-            strategy_variant_id=str(selected["strategy_variant_id"]),
+            root=root,
+            selected_rows=selected_rows,
         )
         graph.validate_full_chain()
         self._write_json(graph_path, graph.to_payload())
         return graph_path
+
+    def _merged_selected_artifact_graph(
+        self,
+        *,
+        artifact_graph_hash: str,
+        artifact_graph_path: Path,
+        audit_log: ResearchAuditLog,
+        report_hash: str,
+        report_path: Path,
+        root: Path,
+        selected_rows: Sequence[Mapping[str, Any]],
+    ) -> ResearchArtifactGraph:
+        nodes: dict[str, ResearchArtifactNode] = {}
+        edges: set[tuple[str, str, str]] = set()
+        registry = EvidenceRegistry(root / "evidence")
+        for selected in selected_rows:
+            packet_payload = json.loads(
+                Path(str(selected["promotion_packet_path"])).read_text(encoding="utf-8")
+            )
+            bundle = registry.show(str(selected["evidence_bundle_id"]))
+            audit_record = self._audit_record(
+                audit_log,
+                str(selected["validation_audit_record_id"]),
+            )
+            manifest_path = bundle.manifest_paths[0]
+            manifest_hashes = cast(Mapping[str, str], bundle.manifest_hashes or {})
+            graph = self._artifact_graph(
+                artifact_graph_hash=artifact_graph_hash,
+                artifact_graph_path=artifact_graph_path,
+                audit_payload_hash=audit_record.payload_hash,
+                audit_record_id=audit_record.record_id,
+                bundle_payload=bundle.to_payload(),
+                data_quality_hash=str(packet_payload["data_quality"]["payload_hash"]),
+                data_quality_path=str(
+                    packet_payload["data_quality"]["payload"].get("path", "data_quality")
+                ),
+                manifest_hash=str(manifest_hashes[manifest_path]),
+                manifest_path=manifest_path,
+                metrics_hash=str(packet_payload["metrics"]["payload_hash"]),
+                metrics_path=str(selected["metrics_path"]),
+                packet_hash=str(packet_payload["packet_hash"]),
+                promotion_candidate_id=str(packet_payload["promotion_candidate_id"]),
+                report_hash=report_hash,
+                report_path=report_path,
+                reproducibility_hash=str(packet_payload["reproducibility"]["payload_hash"]),
+                reproducibility_path=str(
+                    packet_payload["reproducibility"]["payload"].get(
+                        "path",
+                        packet_payload["reproducibility"].get(
+                            "snapshot_id",
+                            "reproducibility",
+                        ),
+                    )
+                ),
+                strategy_variant_hash=str(selected["strategy_variant_hash"]),
+                strategy_variant_id=str(selected["strategy_variant_id"]),
+            )
+            for node in graph.nodes:
+                existing = nodes.get(node.node_id)
+                if existing is not None and existing != node:
+                    raise ValueError(f"conflicting artifact graph node: {node.node_id}")
+                nodes[node.node_id] = node
+            for edge in graph.edges:
+                edges.add((edge.source_id, edge.target_id, edge.relation))
+        return ResearchArtifactGraph(
+            nodes=tuple(nodes.values()),
+            edges=tuple(
+                ResearchArtifactEdge(source_id=source, target_id=target, relation=relation)
+                for source, target, relation in sorted(edges)
+            ),
+        )
 
     def _write_empty_artifact_graph(self, root: Path) -> Path:
         graph_path = root / "artifact_graph" / "artifact_graph.json"

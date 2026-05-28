@@ -6,6 +6,7 @@ import json
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from qts.core.hashing import stable_json_dumps, stable_json_hash
@@ -101,6 +102,7 @@ class WalkForwardGate:
             accepted=not reasons,
             reasons=tuple(reasons),
             evidence={
+                **_artifact_metadata(evidence),
                 "accepted_test_windows": len(accepted_windows),
                 "consistent": evidence.get("consistent") is True,
                 "max_train_test_gap": gap,
@@ -175,6 +177,7 @@ class FailureWindowVetoGate:
             accepted=not reasons,
             reasons=tuple(reasons),
             evidence={
+                **_artifact_metadata(windows[0]),
                 "max_drawdown": self.max_drawdown,
                 "veto_window_count": veto_count,
                 "window_count": len(windows),
@@ -244,6 +247,7 @@ class CostStressGate:
             accepted=not reasons,
             reasons=tuple(reasons),
             evidence={
+                **_artifact_metadata(evidence),
                 "degradation": degradation,
                 "slippage_sensitivity": slippage,
                 "stressed_score": stressed_score,
@@ -293,7 +297,7 @@ class CorrelationGate:
             gate_name="correlation",
             accepted=not reasons,
             reasons=tuple(reasons),
-            evidence={"max_active_correlation": max_correlation},
+            evidence={**_artifact_metadata(evidence), "max_active_correlation": max_correlation},
         )
 
     @staticmethod
@@ -353,6 +357,7 @@ class CapacityGate:
             accepted=not reasons,
             reasons=tuple(reasons),
             evidence={
+                **_artifact_metadata(evidence),
                 "estimated_capacity": estimated_capacity,
                 "required_capital": required_capital,
                 "turnover": turnover,
@@ -445,6 +450,7 @@ class ValidationGauntlet:
         cost_stress_gate: CostStressGate | None = None,
         correlation_gate: CorrelationGate | None = None,
         capacity_gate: CapacityGate | None = None,
+        require_artifacts: bool = False,
     ) -> None:
         self.walk_forward_gate = walk_forward_gate or WalkForwardGate()
         self.failure_window_gate = failure_window_gate or FailureWindowVetoGate(max_drawdown=0.25)
@@ -454,6 +460,7 @@ class ValidationGauntlet:
         )
         self.correlation_gate = correlation_gate or CorrelationGate(max_active_correlation=0.80)
         self.capacity_gate = capacity_gate or CapacityGate()
+        self.require_artifacts = require_artifacts
 
     def validate(
         self,
@@ -465,6 +472,11 @@ class ValidationGauntlet:
         """Run all gates and optionally append an audit record."""
 
         normalized_candidate = self._json_candidate(candidate)
+        artifact_reasons: tuple[str, ...] = ()
+        if self.require_artifacts:
+            normalized_candidate, artifact_reasons = self._candidate_with_artifact_payloads(
+                normalized_candidate
+            )
         candidate_id = self._candidate_id(normalized_candidate)
         gate_decisions = (
             self.walk_forward_gate.evaluate(normalized_candidate),
@@ -488,9 +500,11 @@ class ValidationGauntlet:
             missing_reason="no_lookahead: evidence missing",
             reasons=status_reasons,
         )
-        reasons = tuple(
-            reason for decision in gate_decisions for reason in decision.reasons
-        ) + tuple(status_reasons)
+        reasons = (
+            artifact_reasons
+            + tuple(reason for decision in gate_decisions for reason in decision.reasons)
+            + tuple(status_reasons)
+        )
         result = ValidationGauntletResult(
             candidate_id=candidate_id,
             accepted=not reasons,
@@ -543,6 +557,107 @@ class ValidationGauntlet:
         if not isinstance(candidate_id, str) or not candidate_id.strip():
             raise ValueError("candidate_id is required")
         return candidate_id.strip()
+
+    def _candidate_with_artifact_payloads(
+        self,
+        candidate: Mapping[str, Any],
+    ) -> tuple[dict[str, Any], tuple[str, ...]]:
+        validation = candidate.get("validation")
+        if not isinstance(validation, Mapping):
+            return dict(candidate), ("validation artifacts: validation section missing",)
+        artifact_refs = validation.get("artifacts")
+        if not isinstance(artifact_refs, Mapping):
+            return dict(candidate), ("validation artifacts: artifact refs missing",)
+        reasons: list[str] = []
+        sections: dict[str, Any] = {}
+        for artifact_name, target_section in _REQUIRED_VALIDATION_ARTIFACTS.items():
+            ref = artifact_refs.get(artifact_name)
+            payload = self._load_validation_artifact(artifact_name, ref, reasons)
+            if payload is None:
+                continue
+            if target_section == "failure_windows":
+                windows = payload.get("failure_windows")
+                if isinstance(windows, Sequence) and not isinstance(windows, str):
+                    sections[target_section] = [
+                        {
+                            **dict(window),
+                            **_artifact_metadata(payload),
+                        }
+                        for window in windows
+                        if isinstance(window, Mapping)
+                    ]
+                else:
+                    reasons.append(f"{artifact_name}: payload.failure_windows must be a sequence")
+                continue
+            sections[target_section] = payload
+        return {**dict(candidate), "validation": {**dict(validation), **sections}}, tuple(reasons)
+
+    def _load_validation_artifact(
+        self,
+        artifact_name: str,
+        ref: Any,
+        reasons: list[str],
+    ) -> Mapping[str, Any] | None:
+        if not isinstance(ref, Mapping):
+            reasons.append(f"{artifact_name}: artifact ref missing")
+            return None
+        path_text = ref.get("path")
+        expected_hash = ref.get("payload_hash")
+        if not isinstance(path_text, str) or not path_text.strip():
+            reasons.append(f"{artifact_name}: artifact path missing")
+            return None
+        if not isinstance(expected_hash, str) or not expected_hash.strip():
+            reasons.append(f"{artifact_name}: payload_hash missing for {path_text}")
+            return None
+        path = Path(path_text)
+        if not path.exists():
+            reasons.append(f"{artifact_name}: artifact path does not exist: {path}")
+            return None
+        try:
+            wrapper = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            reasons.append(f"{artifact_name}: artifact unreadable: {path}: {exc}")
+            return None
+        if not isinstance(wrapper, Mapping):
+            reasons.append(f"{artifact_name}: artifact must be a JSON object: {path}")
+            return None
+        payload = wrapper.get("payload")
+        if not isinstance(payload, Mapping):
+            reasons.append(f"{artifact_name}: payload must be a JSON object: {path}")
+            return None
+        actual_hash = stable_json_hash(payload)
+        recorded_hash = wrapper.get("payload_hash")
+        if recorded_hash != actual_hash:
+            reasons.append(
+                f"{artifact_name}: artifact payload_hash mismatch at {path}: "
+                f"{actual_hash} != {recorded_hash}"
+            )
+        if expected_hash != actual_hash:
+            reasons.append(
+                f"{artifact_name}: artifact ref payload_hash mismatch at {path}: "
+                f"{actual_hash} != {expected_hash}"
+            )
+        return {**dict(payload), "artifact_path": str(path), "payload_hash": actual_hash}
+
+
+_REQUIRED_VALIDATION_ARTIFACTS = {
+    "capacity_report": "capacity",
+    "correlation_report": "correlation",
+    "cost_stress": "cost_stress",
+    "deterministic_replay": "deterministic_replay",
+    "failure_window_veto": "failure_windows",
+    "no_lookahead": "no_lookahead",
+    "walk_forward_validation": "walk_forward",
+}
+
+
+def _artifact_metadata(payload: Mapping[str, Any]) -> dict[str, Any]:
+    metadata: dict[str, Any] = {}
+    for field_name in ("artifact_path", "payload_hash"):
+        value = payload.get(field_name)
+        if isinstance(value, str) and value.strip():
+            metadata[field_name] = value
+    return metadata
 
 
 __all__ = [

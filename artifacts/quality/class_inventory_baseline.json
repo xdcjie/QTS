@@ -1,5 +1,5 @@
 {
-  "production_class_count": 852,
+  "production_class_count": 854,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -445,6 +445,7 @@
     "qts.research.campaign.config.ResearchCampaignBudget",
     "qts.research.campaign.config.ResearchCampaignConfig",
     "qts.research.campaign.config.ResearchCampaignConstraint",
+    "qts.research.campaign.config.ResearchCampaignExecution",
     "qts.research.campaign.config.ResearchCampaignFamily",
     "qts.research.campaign.config.ResearchCampaignObjective",
     "qts.research.campaign.config.ResearchCampaignUniverse",
@@ -576,6 +577,7 @@
     "qts.research.promotion.PromotionGateResult",
     "qts.research.promotion.ResearchPromotionDecision",
     "qts.research.promotion.ResearchPromotionPolicy",
+    "qts.research.promotion_packet.PromotionMachineValidationResult",
     "qts.research.promotion_packet.PromotionPacketV2",
     "qts.research.promotion_packet.PromotionPacketValidationResult",
     "qts.research.readiness.HumanApprovalRecord",

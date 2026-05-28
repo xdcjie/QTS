@@ -20,6 +20,7 @@ from qts.research.campaign import (
     ResearchCampaignBudget,
     ResearchCampaignConfig,
     ResearchCampaignConstraint,
+    ResearchCampaignExecution,
     ResearchCampaignFamily,
     ResearchCampaignObjective,
     ResearchCampaignUniverse,
@@ -106,7 +107,11 @@ from qts.research.promotion import (
     ResearchPromotionDecision,
     ResearchPromotionPolicy,
 )
-from qts.research.promotion_packet import PromotionPacketV2, PromotionPacketValidationResult
+from qts.research.promotion_packet import (
+    PromotionMachineValidationResult,
+    PromotionPacketV2,
+    PromotionPacketValidationResult,
+)
 from qts.research.readiness import (
     HumanApprovalRecord,
     PaperLiveReadinessDecision,
@@ -179,6 +184,7 @@ __all__ = [
     "ResearchCampaignBudget",
     "ResearchCampaignConfig",
     "ResearchCampaignConstraint",
+    "ResearchCampaignExecution",
     "ResearchCampaignFamily",
     "ResearchCampaignObjective",
     "ResearchCampaignUniverse",
@@ -237,6 +243,7 @@ __all__ = [
     "ResearchPromotionPolicy",
     "PromotionPacketV2",
     "PromotionPacketValidationResult",
+    "PromotionMachineValidationResult",
     "ResearchRunRecord",
     "ResearchRunRegistry",
     "HumanApprovalRecord",

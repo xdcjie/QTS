@@ -138,6 +138,12 @@ def test_campaign_run_status_approve_and_resume_generation(
     assert resume_payload["resumed_from_generation_id"] == "generation-001"
     assert (output_root / "generation-001").exists()
 
+    verify_exit = run_research.main(["campaign", "verify", "--output-root", str(output_root)])
+    assert verify_exit == 0
+    verify_payload = json.loads(capsys.readouterr().out)
+    assert verify_payload["accepted"] is True
+    assert (output_root / "release_verification.json").exists()
+
 
 def test_campaign_resume_requires_approved_generation(
     tmp_path: Path,

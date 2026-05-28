@@ -167,6 +167,84 @@ class ResearchCampaignBudget:
 
 
 @dataclass(frozen=True, slots=True)
+class ResearchCampaignExecution:
+    """Execution and data materialization policy for a research campaign."""
+
+    default_mode: str
+    metrics_source: str
+    data_mode: str
+    max_rows: int | None = None
+
+    _DATA_MODES = frozenset({"fixture", "full"})
+
+    def __post_init__(self) -> None:
+        default_mode = ResearchCampaignConfig.required_text_value(
+            self.default_mode,
+            "execution.default_mode",
+        )
+        metrics_source = ResearchCampaignConfig.required_text_value(
+            self.metrics_source,
+            "execution.metrics_source",
+        )
+        data_mode = ResearchCampaignConfig.required_text_value(
+            self.data_mode,
+            "execution.data_mode",
+        )
+        if data_mode not in self._DATA_MODES:
+            raise ValueError("execution.data_mode must be fixture or full")
+        max_rows = self.max_rows
+        if data_mode == "fixture":
+            if max_rows is None:
+                raise ValueError("execution.max_rows is required for fixture data_mode")
+            max_rows = ResearchCampaignBudget._positive_int(max_rows, "execution.max_rows")
+        elif max_rows is not None:
+            raise ValueError("execution.max_rows is only allowed for fixture data_mode")
+        object.__setattr__(self, "default_mode", default_mode)
+        object.__setattr__(self, "metrics_source", metrics_source)
+        object.__setattr__(self, "data_mode", data_mode)
+        object.__setattr__(self, "max_rows", max_rows)
+
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, Any]) -> Self:
+        """Construct execution policy from a campaign YAML payload section."""
+
+        return cls(
+            default_mode=ResearchCampaignConfig.required_text(
+                payload,
+                "execution.default_mode",
+                "default_mode",
+            ),
+            metrics_source=ResearchCampaignConfig.required_text(
+                payload,
+                "execution.metrics_source",
+                "metrics_source",
+            ),
+            data_mode=ResearchCampaignConfig.required_text(
+                payload,
+                "execution.data_mode",
+                "data_mode",
+            ),
+            max_rows=None
+            if payload.get("max_rows") is None
+            else ResearchCampaignBudget._positive_int(
+                payload.get("max_rows"), "execution.max_rows"
+            ),
+        )
+
+    def to_payload(self) -> dict[str, Any]:
+        """Return a JSON-ready execution policy payload."""
+
+        payload: dict[str, Any] = {
+            "data_mode": self.data_mode,
+            "default_mode": self.default_mode,
+            "metrics_source": self.metrics_source,
+        }
+        if self.max_rows is not None:
+            payload["max_rows"] = self.max_rows
+        return payload
+
+
+@dataclass(frozen=True, slots=True)
 class ResearchCampaignUniverse:
     """Universe and data contract fields for a research campaign."""
 
@@ -392,6 +470,7 @@ class ResearchCampaignConfig:
     objective: ResearchCampaignObjective
     constraints: tuple[ResearchCampaignConstraint, ...]
     budget: ResearchCampaignBudget
+    execution: ResearchCampaignExecution
 
     SAFE_TOKEN_CHARS = frozenset(
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
@@ -448,6 +527,7 @@ class ResearchCampaignConfig:
         objective = cls.required_mapping(payload, "objective")
         constraints = cls.required_mapping(payload, "constraints")
         budget = cls.required_mapping(payload, "budget")
+        execution = cls.required_mapping(payload, "execution")
         return cls(
             campaign_id=cls.required_text(payload, "campaign_id", "campaign_id"),
             owner=cls.required_text(payload, "owner", "owner"),
@@ -457,6 +537,7 @@ class ResearchCampaignConfig:
             objective=ResearchCampaignObjective.from_payload(objective),
             constraints=cls.constraints_from_payload(constraints),
             budget=ResearchCampaignBudget.from_payload(budget),
+            execution=ResearchCampaignExecution.from_payload(execution),
         )
 
     @property
@@ -475,6 +556,7 @@ class ResearchCampaignConfig:
                 constraint.name: constraint.to_payload_value() for constraint in self.constraints
             },
             "created_at": self.created_at,
+            "execution": self.execution.to_payload(),
             "families": [family.to_payload() for family in self.families],
             "objective": self.objective.to_payload(),
             "owner": self.owner,
@@ -578,6 +660,7 @@ __all__ = [
     "ResearchCampaignBudget",
     "ResearchCampaignConfig",
     "ResearchCampaignConstraint",
+    "ResearchCampaignExecution",
     "ResearchCampaignFamily",
     "ResearchCampaignObjective",
     "ResearchCampaignUniverse",

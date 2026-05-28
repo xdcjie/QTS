@@ -236,6 +236,7 @@ class ResearchAuditLog:
         reviewed_at: datetime,
         evidence_bundle_id: str | None = None,
         promotion_candidate_id: str | None = None,
+        packet_hash: str | None = None,
         notes: str | None = None,
     ) -> ResearchAuditRecord:
         """Append a validated human promotion-review decision record."""
@@ -255,12 +256,21 @@ class ResearchAuditLog:
             promotion_candidate_id,
             "promotion_candidate_id",
         )
-        if resolved_evidence_bundle_id is None and resolved_promotion_candidate_id is None:
-            raise ValueError("evidence_bundle_id or promotion_candidate_id is required")
+        resolved_packet_hash = self._optional_payload_text(packet_hash, "packet_hash")
+        if (
+            resolved_evidence_bundle_id is None
+            and resolved_promotion_candidate_id is None
+            and resolved_packet_hash is None
+        ):
+            raise ValueError(
+                "evidence_bundle_id, promotion_candidate_id, or packet_hash is required"
+            )
         if resolved_evidence_bundle_id is not None:
             payload["evidence_bundle_id"] = resolved_evidence_bundle_id
         if resolved_promotion_candidate_id is not None:
             payload["promotion_candidate_id"] = resolved_promotion_candidate_id
+        if resolved_packet_hash is not None:
+            payload["packet_hash"] = resolved_packet_hash
         if notes is not None:
             payload["notes"] = str(notes).strip()
         return self.append("human_review_decided", payload)

@@ -239,7 +239,7 @@ def test_run_research_promotion_validate_accepts_packet_and_writes_audit_log(
     assert exit_code == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["accepted"] is True
-    assert payload["status"] == "accepted"
+    assert payload["status"] == "human_pending"
     assert payload["packet_hash"] == packet_hash
     assert payload["audit_record_id"]
     assert payload["reasons"] == []
@@ -247,6 +247,69 @@ def test_run_research_promotion_validate_accepts_packet_and_writes_audit_log(
     audit_log = ResearchAuditLog(audit_log_root)
     assert audit_log.path.exists()
     assert audit_log.verify_hash_chain() == ()
+
+
+def test_run_research_promotion_approve_records_human_review(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _registry_root, bundle_id = _write_bundle(tmp_path)
+    packet_path, packet_hash = _write_packet(tmp_path, bundle_id)
+    audit_root = tmp_path / "audit"
+
+    exit_code = run_research.main(
+        [
+            "promotion",
+            "approve",
+            "--packet",
+            str(packet_path),
+            "--expected-packet-hash",
+            packet_hash,
+            "--decision",
+            "approved",
+            "--reviewer",
+            "risk",
+            "--reason",
+            "release evidence reviewed",
+            "--audit-log-root",
+            str(audit_root),
+        ]
+    )
+
+    assert exit_code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["status"] == "human_approved"
+    records = ResearchAuditLog(audit_root).list()
+    assert records[-1].record_type == "human_review_decided"
+    assert records[-1].payload["packet_hash"] == packet_hash
+
+
+def test_run_research_promotion_approve_rejects_packet_hash_mismatch(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _registry_root, bundle_id = _write_bundle(tmp_path)
+    packet_path, _packet_hash = _write_packet(tmp_path, bundle_id)
+
+    exit_code = run_research.main(
+        [
+            "promotion",
+            "approve",
+            "--packet",
+            str(packet_path),
+            "--expected-packet-hash",
+            "sha256:wrong",
+            "--decision",
+            "approved",
+            "--reviewer",
+            "risk",
+            "--reason",
+            "reviewed",
+        ]
+    )
+
+    assert exit_code == 2
+    assert "packet hash mismatch" in capsys.readouterr().err
 
 
 def test_run_research_promotion_validate_packet_writes_artifact_graph(
