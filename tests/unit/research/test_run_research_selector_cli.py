@@ -42,6 +42,17 @@ def test_selector_replay_reproduces_selection_result(
     assert payload["rejected_candidates"][0]["candidate_id"] == "drawdown"
 
 
+def test_selector_replay_policy_uses_campaign_profit_factor_constraint() -> None:
+    campaign = ResearchCampaignConfig.from_yaml(
+        Path("configs/research/campaigns/gc_si_autonomous_v1.yaml")
+    )
+
+    policy = run_research._selection_policy_from_campaign(campaign)
+
+    assert policy.min_profit_factor == 1.15
+    assert policy.profit_factor_metric == "quality.profit_factor"
+
+
 def test_selector_replay_detects_changed_metrics(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -153,6 +164,7 @@ def _candidates() -> list[dict[str, Any]]:
                     "oos_sharpe": 1.5,
                     "total_return": 0.24,
                 },
+                "quality": {"profit_factor": 1.4},
                 "trading": {"oos_trade_count": 50},
             },
             "reproducibility": {"blockers": []},
@@ -168,6 +180,7 @@ def _candidates() -> list[dict[str, Any]]:
                     "oos_sharpe": 1.9,
                     "total_return": 0.4,
                 },
+                "quality": {"profit_factor": 1.6},
                 "trading": {"oos_trade_count": 70},
             },
             "reproducibility": {"blockers": []},
