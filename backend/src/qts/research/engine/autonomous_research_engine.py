@@ -1304,10 +1304,12 @@ class AutonomousResearchEngine:
             trial_id = str(trial["trial_id"])
             result = by_trial_id[trial_id]
             metrics = self._metrics_from_trial_result(result)
+            backtest = self._mapping(metrics.get("backtest", {}), "backtest")
             quality = self._mapping(metrics["quality"], "quality")
             trading = self._mapping(metrics["trading"], "trading")
             rows.append(
                 {
+                    "backtest_manifest_path": str(backtest.get("manifest_path", "")),
                     "campaign_id": run.campaign_id,
                     "candidate_id": str(trial["candidate_id"]),
                     "candidate_space_hash": str(trial["candidate_space_hash"]),
@@ -1545,7 +1547,7 @@ class AutonomousResearchEngine:
         self,
         selected: Mapping[str, Any],
     ) -> dict[str, Any]:
-        manifest_path = Path(str(selected["manifest_path"]))
+        manifest_path = Path(str(selected["backtest_manifest_path"]))
         return {
             "candidate_id": str(selected["promotion_candidate_id"]),
             "manifest": json.loads(manifest_path.read_text(encoding="utf-8")),
@@ -1558,10 +1560,13 @@ class AutonomousResearchEngine:
         candidate_id: str,
         trial_result: ResearchTrialResult,
     ) -> dict[str, Any]:
+        metrics = json.loads(trial_result.metrics_path.read_text(encoding="utf-8"))
+        backtest = self._mapping(metrics.get("backtest", {}), "backtest")
+        manifest_path = Path(str(backtest["manifest_path"]))
         return {
             "candidate_id": candidate_id,
-            "manifest": json.loads(trial_result.manifest_path.read_text(encoding="utf-8")),
-            "manifest_path": str(trial_result.manifest_path),
+            "manifest": json.loads(manifest_path.read_text(encoding="utf-8")),
+            "manifest_path": str(manifest_path),
         }
 
     def _selector_candidate(

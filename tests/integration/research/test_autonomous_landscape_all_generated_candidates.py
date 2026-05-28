@@ -13,7 +13,6 @@ def test_landscape_records_all_generated_candidates_including_budget_rejections(
         tmp_path,
         max_trials_per_generation=3,
         max_total_trials=6,
-        compute_budget_limit=1,
     )
 
     selected = read_jsonl(result.selected_candidates_path)
