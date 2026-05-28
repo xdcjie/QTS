@@ -872,6 +872,13 @@ class AutonomousResearchEngine:
         if not isinstance(factor_payload, Mapping):
             raise ValueError(f"strategy template factor_definition is required: {path}")
         factor_definition = FactorDefinition.from_payload(cast(Mapping[str, Any], factor_payload))
+        manifest_template = dict(self._mapping(payload.get("manifest_template", {}), "manifest"))
+        backtest_pipeline = payload.get("backtest_pipeline")
+        if backtest_pipeline is not None:
+            manifest_template["backtest_pipeline"] = self._mapping(
+                backtest_pipeline,
+                "backtest_pipeline",
+            )
         return StrategyTemplate(
             template_id=str(payload.get("template_id", f"{family.template}_template")),
             family=family.id,
@@ -889,7 +896,7 @@ class AutonomousResearchEngine:
                 payload.get("execution_assumptions", {"slippage_bps": 1}),
                 "execution_assumptions",
             ),
-            manifest_template=self._mapping(payload.get("manifest_template", {}), "manifest"),
+            manifest_template=manifest_template,
         )
 
     def _parameter_space_payload(self, search_space: SearchSpaceSpec) -> dict[str, Any]:

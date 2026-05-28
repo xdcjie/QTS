@@ -171,6 +171,45 @@ def test_backtest_pipeline_template_maps_research_parameters_to_strategy_config(
     assert "strategy_parameter_map" not in payload
 
 
+def test_generated_trials_use_template_backtest_pipeline_mapping(tmp_path: Path) -> None:
+    campaign_path = write_campaign(
+        tmp_path,
+        families=("momentum",),
+        template_extra_lines=(
+            "backtest_pipeline:",
+            "  root_strategy_parameter: symbol",
+            "  strategy_parameter_defaults:",
+            "    target_quantity: \"1\"",
+            "  strategy_parameter_map:",
+            "    lookback: vwap_slope_lookback",
+        ),
+    )
+    run = AutonomousResearchRun.from_yaml(
+        campaign_path,
+        data_paths=write_data_paths(tmp_path),
+        output_root=tmp_path / "run",
+    )
+    engine = AutonomousResearchEngine(repo_root=Path.cwd())
+
+    trials = engine._generated_trials(
+        run,
+        "generation-000",
+        0,
+        proposal=None,
+    )
+
+    pipeline = dict(trials[0]["backtest_pipeline"])
+    assert pipeline["strategy_parameter_defaults"] == {
+        "symbol": "GC",
+        "target_quantity": "1",
+    }
+    assert pipeline["strategy_parameter_map"] == {"lookback": "vwap_slope_lookback"}
+    config_payload = yaml.safe_load(
+        Path(pipeline["backtest_config_path"]).read_text(encoding="utf-8")
+    )
+    assert config_payload["strategy_params"] == {"symbol": "GC", "target_quantity": "1"}
+
+
 def write_campaign(
     tmp_path: Path,
     *,
@@ -183,6 +222,7 @@ def write_campaign(
     active_correlation: float = 0.30,
     data_mode: str = "fixture",
     max_rows: int | None = 50,
+    template_extra_lines: tuple[str, ...] = (),
 ) -> Path:
     config_dir = tmp_path / "campaign_inputs"
     config_dir.mkdir(parents=True, exist_ok=True)
@@ -227,6 +267,7 @@ def write_campaign(
                     "  max_position_notional: 100000",
                     "execution_assumptions:",
                     "  slippage_bps: 1",
+                    *template_extra_lines,
                     "factor_definition:",
                     f"  factor_id: {family}_factor",
                     "  family: momentum",
