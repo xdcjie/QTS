@@ -37,6 +37,7 @@ from qts.research.orchestrator import (
 from qts.research.orchestrator.experiment_runner import (
     ResearchExperimentJob,
     ResearchExperimentResult,
+    ResearchExperimentRunner,
     ResearchTrialResult,
 )
 from qts.research.planner import (
@@ -1274,14 +1275,30 @@ class AutonomousResearchEngine:
             )
 
         gauntlet_results: list[dict[str, Any]] = []
+        validation_runner = ResearchExperimentRunner(repo_root=self._repo_root)
         for selected in selection.selected_candidates:
             trial_id = selected.candidate_id
             row = row_by_id[trial_id]
             result = result_by_id[trial_id]
             trial = trial_by_id[trial_id]
             metrics = self._mapping(row["metrics"], "metrics")
+            validation_artifact_paths = validation_runner.write_validation_artifacts_for_trial(
+                trial=trial,
+                trial_result=result,
+            )
+            result = replace(result, validation_artifact_paths=validation_artifact_paths)
+            result_by_id[trial_id] = result
+            row = {
+                **row,
+                "validation_artifact_paths": dict(validation_artifact_paths),
+            }
+            row_by_id[trial_id] = row
+            candidate_payload = {
+                **dict(selected.candidate_payload),
+                "validation": self._validation_payload_from_artifacts(validation_artifact_paths),
+            }
             gauntlet = self._validation_gauntlet(run).validate(
-                selected.candidate_payload,
+                candidate_payload,
                 audit_log=audit_log,
                 created_at=datetime(2026, 5, 26, tzinfo=UTC) + timedelta(seconds=300),
             )

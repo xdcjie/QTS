@@ -22,8 +22,9 @@ def test_experiment_runner_writes_required_trial_artifacts(
     _patch_backtest_pipeline_runner(monkeypatch)
     data_path = _write_bars(tmp_path)
     job = _job(tmp_path, data_path)
+    runner = ResearchExperimentRunner(repo_root=Path.cwd())
 
-    result = ResearchExperimentRunner(repo_root=Path.cwd()).run(job)
+    result = runner.run(job)
 
     assert result.status == "completed_with_failures"
     assert result.workflow_summary_path.exists()
@@ -40,21 +41,29 @@ def test_experiment_runner_writes_required_trial_artifacts(
     assert accepted.data_quality_path.exists()
     assert accepted.reproducibility_path.exists()
     assert accepted.metrics_path.exists()
-    assert accepted.validation_artifact_paths
+    assert accepted.validation_artifact_paths == {}
 
     data_quality = json.loads(accepted.data_quality_path.read_text(encoding="utf-8"))
     reproducibility = json.loads(accepted.reproducibility_path.read_text(encoding="utf-8"))
-    validation_artifact = json.loads(
-        Path(accepted.validation_artifact_paths["walk_forward_validation"]).read_text(
-            encoding="utf-8"
-        )
-    )
     assert data_quality["schema_version"] == 2
     assert data_quality["accepted"] is True
     assert reproducibility["schema_version"] == 2
     assert reproducibility["manifest_hash"] == accepted.manifest_hash
+
+    validation_artifact_paths = runner.write_validation_artifacts_for_trial(
+        trial=job.trials[0],
+        trial_result=accepted,
+    )
+    validation_artifact = json.loads(
+        Path(validation_artifact_paths["walk_forward_validation"]).read_text(encoding="utf-8")
+    )
     assert validation_artifact["evidence_source"] == "backtest_pipeline_artifact"
     assert validation_artifact["source_artifacts"]["backtest_manifest"].startswith("sha256:")
+    assert validation_artifact["source_artifacts"]["test_manifest"].startswith("sha256:")
+    workflow_summary = json.loads(
+        (accepted.metrics_path.parent / "workflow_summary.json").read_text(encoding="utf-8")
+    )
+    assert "walk_forward_validation" in {step["id"] for step in workflow_summary["steps"]}
 
     rejected = result.trials[1]
     assert rejected.status == "failed"
@@ -167,7 +176,20 @@ def _write_bars(tmp_path: Path) -> Path:
         ),
         encoding="utf-8",
     )
-    path.with_suffix(".yaml").write_text("mode: backtest\n", encoding="utf-8")
+    path.with_suffix(".yaml").write_text(
+        "\n".join(
+            [
+                "mode: backtest",
+                "start: '2026-01-02T00:00:00+00:00'",
+                "end: '2026-01-02T00:03:00+00:00'",
+                "cost_model:",
+                "  fixed_commission_per_contract: '0'",
+                "  slippage_bps: '0'",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
     return path
 
 
@@ -177,21 +199,30 @@ def _patch_backtest_pipeline_runner(monkeypatch: pytest.MonkeyPatch) -> None:
             run_dir = job.output_root / "run-0000"
             run_dir.mkdir(parents=True)
             manifest_path = run_dir / "manifest.json"
+            artifacts = {
+                "equity_curve": {"rows": 3, "sha256": "sha256:equity"},
+                "fills": {"rows": 42, "sha256": "sha256:fills"},
+                "statistics": {"rows": 1, "sha256": "sha256:statistics"},
+                "trade_ledger": {"rows": 42, "sha256": "sha256:trade-ledger"},
+            }
             manifest_path.write_text(
                 json.dumps(
                     {
-                        "artifacts": {
-                            "fills": {"rows": 42},
-                            "trade_ledger": {"rows": 42},
-                        },
+                        "artifacts": artifacts,
+                        "dataset_metadata": [{"dataset_id": "test"}],
+                        "initial_cash": "1000000",
                         "manifest_hash": "sha256:research-backtest-manifest",
                         "metrics": {},
                         "statistics": {
+                            "avg_gross_exposure": "0.5",
                             "max_drawdown": "0.10",
                             "profit_factor": "1.40",
                             "sharpe_ratio": "1.25",
+                            "total_commission": "0",
                             "total_return": "0.12",
+                            "total_slippage": "0",
                         },
+                        "statistics_hash": "sha256:statistics",
                     }
                 ),
                 encoding="utf-8",

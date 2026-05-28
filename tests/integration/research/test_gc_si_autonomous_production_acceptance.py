@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 from typing import Any
 
@@ -78,22 +77,11 @@ def test_gc_si_autonomous_production_acceptance(
 
 
 def _production_data_paths() -> dict[str, Path]:
-    if os.environ.get("QTS_USE_LOCAL_HISTORICAL_ACCEPTANCE") == "1":
-        production_paths = {
-            "GC": Path("historical/data/gc.csv"),
-            "SI": Path("historical/data/si.csv"),
-        }
-        missing_production = [str(path) for path in production_paths.values() if not path.exists()]
-        if missing_production:
-            raise AssertionError(
-                f"local GC/SI historical CSV files are required: {missing_production}"
-            )
-        return production_paths
-    fixture_paths = {
-        "GC": Path("tests/fixtures/research/gc_si_real_history/gc.csv"),
-        "SI": Path("tests/fixtures/research/gc_si_real_history/si.csv"),
+    production_paths = {
+        "GC": Path("historical/data/gc.csv"),
+        "SI": Path("historical/data/si.csv"),
     }
-    missing = [str(path) for path in fixture_paths.values() if not path.exists()]
+    missing = [str(path) for path in production_paths.values() if not path.exists()]
     if missing:
         raise AssertionError(f"GC/SI historical CSV files are required: {missing}")
-    return fixture_paths
+    return production_paths

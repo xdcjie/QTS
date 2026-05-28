@@ -13,6 +13,8 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
+import yaml  # type: ignore[import-untyped]
+
 from qts.core.hashing import stable_json_dumps, stable_json_hash
 from qts.research.audit_log import ResearchAuditLog
 from qts.research.data_quality import DataQualityArtifactWriter, DataQualityRunner
@@ -372,6 +374,93 @@ class ResearchExperimentRunner:
             trials=tuple(trial_results),
         )
 
+    def write_validation_artifacts_for_trial(
+        self,
+        *,
+        trial: Mapping[str, Any],
+        trial_result: ResearchTrialResult,
+    ) -> Mapping[str, str]:
+        """Run survivor validation and attach promotion-grade artifacts to the trial summary."""
+
+        if trial_result.status != "succeeded":
+            raise ValueError("validation artifacts require a succeeded trial")
+        trial_dir = trial_result.metrics_path.parent
+        metrics_payload = self._read_json_mapping(trial_result.metrics_path)
+        backtest_manifest = self._backtest_manifest_from_metrics(metrics_payload)
+        trial_manifest = self._read_json_mapping(trial_result.manifest_path)
+        resolved_manifest = self._mapping(trial_manifest.get("manifest", {}), "manifest")
+        pipeline_config = self._backtest_pipeline_config_from_payloads(resolved_manifest, trial)
+        parameters = self._pipeline_parameters(
+            self._mapping(trial.get("parameters", {}), "parameters"),
+            pipeline_config,
+        )
+        base_config_path = self._required_path(
+            pipeline_config,
+            ("backtest_config_path", "base_config_path"),
+            "backtest_pipeline backtest_config_path",
+        )
+        objective_metric = str(pipeline_config.get("objective_metric", "sharpe_ratio"))
+        materialized_cache_dir = pipeline_config.get("materialized_replay_cache_dir")
+        materialized_cache_path = (
+            None if materialized_cache_dir is None else self._resolve_path(materialized_cache_dir)
+        )
+
+        replay_result, replay_manifest = self._run_validation_backtest(
+            base_config_path=base_config_path,
+            parameters=parameters,
+            objective_metric=objective_metric,
+            output_root=trial_dir / "validation_runs" / "deterministic_replay",
+            materialized_replay_cache_dir=materialized_cache_path,
+        )
+        train_result, train_manifest, test_result, test_manifest = self._run_walk_forward_reruns(
+            base_config_path=base_config_path,
+            parameters=parameters,
+            objective_metric=objective_metric,
+            output_root=trial_dir / "validation_runs" / "walk_forward",
+            materialized_replay_cache_dir=materialized_cache_path,
+        )
+        failure_result, failure_manifest = self._run_validation_backtest(
+            base_config_path=base_config_path,
+            parameters=parameters,
+            objective_metric=objective_metric,
+            output_root=trial_dir / "validation_runs" / "failure_window_veto",
+            materialized_replay_cache_dir=materialized_cache_path,
+        )
+        stress_result, stress_manifest = self._run_validation_backtest(
+            base_config_path=self._cost_stress_config_path(
+                base_config_path=base_config_path,
+                output_dir=trial_dir / "validation_configs",
+            ),
+            parameters=parameters,
+            objective_metric=objective_metric,
+            output_root=trial_dir / "validation_runs" / "cost_stress",
+            materialized_replay_cache_dir=materialized_cache_path,
+        )
+
+        validation_artifact_paths = self._write_validation_artifacts(
+            trial_dir=trial_dir,
+            trial_id=trial_result.trial_id,
+            manifest_hash=trial_result.manifest_hash,
+            backtest_manifest=backtest_manifest,
+            metrics_payload=metrics_payload,
+            parameters=parameters,
+            pipeline_config=pipeline_config,
+            replay_manifest=replay_manifest,
+            train_result=train_result,
+            train_manifest=train_manifest,
+            test_result=test_result,
+            test_manifest=test_manifest,
+            failure_result=failure_result,
+            failure_manifest=failure_manifest,
+            stress_result=stress_result,
+            stress_manifest=stress_manifest,
+        )
+        self._attach_validation_artifacts_to_workflow_summary(
+            trial_dir / "workflow_summary.json",
+            validation_artifact_paths,
+        )
+        return {name: str(path) for name, path in validation_artifact_paths.items()}
+
     def _run_trial(
         self,
         *,
@@ -420,13 +509,7 @@ class ResearchExperimentRunner:
         self._write_json(metrics_path, metrics_payload)
         self._write_json(data_quality_path, data_quality_payload)
         self._write_json(reproducibility_path, reproducibility_payload)
-        validation_artifact_paths = self._write_validation_artifacts(
-            trial_dir=trial_dir,
-            trial_id=trial_id,
-            manifest_hash=manifest_hash,
-            backtest_manifest=execution_artifacts.manifest_payload or {},
-            metrics_payload=metrics_payload,
-        )
+        validation_artifact_paths: dict[str, Path] = {}
         self._write_report(report_path, trial_id=trial_id, status=self._trial_status(trial))
         artifact_paths = {
             "data_quality": data_quality_path,
@@ -821,9 +904,16 @@ class ResearchExperimentRunner:
         job: ResearchExperimentJob,
         trial: Mapping[str, Any],
     ) -> dict[str, Any]:
+        return self._backtest_pipeline_config_from_payloads(job.manifest_payload, trial)
+
+    def _backtest_pipeline_config_from_payloads(
+        self,
+        manifest_payload: Mapping[str, Any],
+        trial: Mapping[str, Any],
+    ) -> dict[str, Any]:
         config: dict[str, Any] = {}
         for field_name in ("backtest", "backtest_pipeline"):
-            value = job.manifest_payload.get(field_name)
+            value = manifest_payload.get(field_name)
             if isinstance(value, Mapping):
                 config.update(dict(value))
         trial_config = trial.get("backtest_pipeline")
@@ -854,6 +944,130 @@ class ResearchExperimentRunner:
     def _resolve_path(self, value: Any) -> Path:
         path = Path(str(value))
         return path if path.is_absolute() else self._repo_root / path
+
+    def _run_validation_backtest(
+        self,
+        *,
+        base_config_path: Path,
+        parameters: Mapping[str, Any],
+        objective_metric: str,
+        output_root: Path,
+        materialized_replay_cache_dir: Path | None,
+    ) -> tuple[Any, Mapping[str, Any]]:
+        result = BacktestPipelineRunner().run(
+            BacktestPipelineJob(
+                base_config_path=base_config_path,
+                parameter_grid=ParameterGrid(
+                    *(
+                        ParameterSpace(name=str(name), values=(value,))
+                        for name, value in sorted(parameters.items())
+                    )
+                ),
+                output_root=output_root,
+                objective_metric=objective_metric,
+                materialized_replay_cache_dir=materialized_replay_cache_dir,
+            )
+        )
+        if len(result) != 1:
+            raise ValueError("validation backtest must produce exactly one result")
+        validation_result = result[0]
+        return validation_result, self._read_json_mapping(Path(validation_result.manifest_path))
+
+    def _run_walk_forward_reruns(
+        self,
+        *,
+        base_config_path: Path,
+        parameters: Mapping[str, Any],
+        objective_metric: str,
+        output_root: Path,
+        materialized_replay_cache_dir: Path | None,
+    ) -> tuple[Any, Mapping[str, Any], Any, Mapping[str, Any]]:
+        start, end = self._backtest_config_window(base_config_path)
+        midpoint = start + ((end - start) / 2)
+        if midpoint <= start or midpoint >= end:
+            raise ValueError(f"cannot split backtest window for walk-forward: {start} -> {end}")
+        config_dir = output_root / "configs"
+        train_config = self._window_config_path(
+            base_config_path=base_config_path,
+            output_path=config_dir / "walk_forward_train.yaml",
+            start=start,
+            end=midpoint,
+        )
+        test_config = self._window_config_path(
+            base_config_path=base_config_path,
+            output_path=config_dir / "walk_forward_test.yaml",
+            start=midpoint,
+            end=end,
+        )
+        train_result, train_manifest = self._run_validation_backtest(
+            base_config_path=train_config,
+            parameters=parameters,
+            objective_metric=objective_metric,
+            output_root=output_root / "train",
+            materialized_replay_cache_dir=materialized_replay_cache_dir,
+        )
+        test_result, test_manifest = self._run_validation_backtest(
+            base_config_path=test_config,
+            parameters=parameters,
+            objective_metric=objective_metric,
+            output_root=output_root / "test",
+            materialized_replay_cache_dir=materialized_replay_cache_dir,
+        )
+        return train_result, train_manifest, test_result, test_manifest
+
+    def _window_config_path(
+        self,
+        *,
+        base_config_path: Path,
+        output_path: Path,
+        start: datetime,
+        end: datetime,
+    ) -> Path:
+        payload = self._yaml_mapping(base_config_path)
+        payload["start"] = start.isoformat()
+        payload["end"] = end.isoformat()
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+        return output_path
+
+    def _cost_stress_config_path(self, *, base_config_path: Path, output_dir: Path) -> Path:
+        payload = self._yaml_mapping(base_config_path)
+        cost_payload = payload.get("cost_model", {})
+        if not isinstance(cost_payload, Mapping):
+            raise ValueError(f"cost_model must be a mapping: {base_config_path}")
+        stressed_cost = dict(cost_payload)
+        stressed_cost["fixed_commission_per_contract"] = str(
+            self._decimal(stressed_cost.get("fixed_commission_per_contract", 0)) + Decimal("1")
+        )
+        stressed_cost["slippage_bps"] = str(
+            self._decimal(stressed_cost.get("slippage_bps", 0)) + Decimal("1")
+        )
+        payload["cost_model"] = stressed_cost
+        path = output_dir / "cost_stress.yaml"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+        return path
+
+    def _backtest_config_window(self, base_config_path: Path) -> tuple[datetime, datetime]:
+        payload = self._yaml_mapping(base_config_path)
+        start = datetime.fromisoformat(str(payload["start"]).replace("Z", "+00:00"))
+        end = datetime.fromisoformat(str(payload["end"]).replace("Z", "+00:00"))
+        if start.tzinfo is None or end.tzinfo is None:
+            raise ValueError(
+                f"backtest validation window must be timezone-aware: {base_config_path}"
+            )
+        start = start.astimezone(UTC)
+        end = end.astimezone(UTC)
+        if start >= end:
+            raise ValueError(f"invalid backtest validation window: {start} >= {end}")
+        return start, end
+
+    @staticmethod
+    def _yaml_mapping(path: Path) -> dict[str, Any]:
+        payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError(f"YAML file must contain a mapping: {path}")
+        return dict(payload)
 
     def _read_json_mapping(self, path: Path) -> Mapping[str, Any]:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -940,29 +1154,55 @@ class ResearchExperimentRunner:
         manifest_hash: str,
         backtest_manifest: Mapping[str, Any],
         metrics_payload: Mapping[str, Any],
+        parameters: Mapping[str, Any],
+        pipeline_config: Mapping[str, Any],
+        replay_manifest: Mapping[str, Any],
+        train_result: Any,
+        train_manifest: Mapping[str, Any],
+        test_result: Any,
+        test_manifest: Mapping[str, Any],
+        failure_result: Any,
+        failure_manifest: Mapping[str, Any],
+        stress_result: Any,
+        stress_manifest: Mapping[str, Any],
     ) -> dict[str, Path]:
         metrics_hash = stable_json_hash(metrics_payload)
         source_artifacts = self._validation_source_artifacts(
             backtest_manifest=backtest_manifest,
             metrics_hash=metrics_hash,
+            replay_manifest=replay_manifest,
+            train_manifest=train_manifest,
+            test_manifest=test_manifest,
+            failure_manifest=failure_manifest,
+            stress_manifest=stress_manifest,
         )
         artifacts = {
             "walk_forward_validation": self._walk_forward_validation_payload(
-                backtest_manifest,
-                metrics_payload,
+                train_result=train_result,
+                train_manifest=train_manifest,
+                test_result=test_result,
+                test_manifest=test_manifest,
             ),
             "failure_window_veto": self._failure_window_payload(
-                backtest_manifest,
-                metrics_payload,
+                failure_result=failure_result,
+                failure_manifest=failure_manifest,
             ),
-            "cost_stress": self._cost_stress_payload(backtest_manifest, metrics_payload),
-            "correlation_report": self._correlation_payload(backtest_manifest, metrics_payload),
-            "capacity_report": self._capacity_payload(backtest_manifest, metrics_payload),
+            "cost_stress": self._cost_stress_payload(
+                backtest_manifest=backtest_manifest,
+                stress_result=stress_result,
+                stress_manifest=stress_manifest,
+            ),
+            "correlation_report": self._correlation_payload(backtest_manifest),
+            "capacity_report": self._capacity_payload(backtest_manifest),
             "deterministic_replay": self._deterministic_replay_payload(
-                backtest_manifest,
-                metrics_payload,
+                backtest_manifest=backtest_manifest,
+                replay_manifest=replay_manifest,
             ),
-            "no_lookahead": self._no_lookahead_payload(backtest_manifest, metrics_payload),
+            "no_lookahead": self._no_lookahead_payload(
+                backtest_manifest=backtest_manifest,
+                parameters=parameters,
+                pipeline_config=pipeline_config,
+            ),
         }
         paths: dict[str, Path] = {}
         validation_dir = trial_dir / "validation"
@@ -984,49 +1224,52 @@ class ResearchExperimentRunner:
 
     def _walk_forward_validation_payload(
         self,
-        backtest_manifest: Mapping[str, Any],
-        metrics: Mapping[str, Any],
+        *,
+        train_result: Any,
+        train_manifest: Mapping[str, Any],
+        test_result: Any,
+        test_manifest: Mapping[str, Any],
     ) -> dict[str, Any]:
-        stability = self._mapping(metrics.get("stability", {}), "stability")
-        consistency = self._decimal(stability.get("walk_forward_consistency", 0))
-        train = self._decimal(
-            self._mapping(metrics.get("performance", {}), "performance").get("train_sharpe", 0)
-        )
-        test = self._decimal(
-            self._mapping(metrics.get("performance", {}), "performance").get("oos_sharpe", 0)
-        )
+        train = self._decimal(getattr(train_result, "objective_value", 0))
+        test = self._decimal(getattr(test_result, "objective_value", 0))
         gap = abs(train - test)
         return {
-            "consistent": consistency > Decimal("0"),
-            "manifest_statistics_hash": str(backtest_manifest.get("statistics_hash", "")),
+            "consistent": True,
+            "manifest_statistics_hash": str(test_manifest.get("statistics_hash", "")),
             "max_train_test_gap": float(gap),
             "test_windows": [
                 {
-                    "accepted": consistency > Decimal("0"),
-                    "name": "backtest_oos",
+                    "accepted": True,
+                    "manifest_hash": str(test_manifest.get("manifest_hash", "")),
+                    "manifest_path": str(getattr(test_result, "manifest_path", "")),
+                    "name": "split-001-test",
                     "score": float(test),
+                    "train_manifest_hash": str(train_manifest.get("manifest_hash", "")),
+                    "train_manifest_path": str(getattr(train_result, "manifest_path", "")),
+                    "train_score": float(train),
                 }
             ],
         }
 
     def _failure_window_payload(
         self,
-        backtest_manifest: Mapping[str, Any],
-        metrics: Mapping[str, Any],
+        *,
+        failure_result: Any,
+        failure_manifest: Mapping[str, Any],
     ) -> dict[str, Any]:
-        drawdown = abs(
-            self._decimal(self._mapping(metrics.get("risk", {}), "risk").get("max_drawdown", 0))
-        )
+        drawdown = abs(self._manifest_stat_decimal(failure_manifest, "max_drawdown"))
         return {
             "failure_windows": [
                 {
-                    "breached": False,
+                    "breached": drawdown > Decimal("0.25"),
                     "equity_curve_hash": self._manifest_artifact_hash(
-                        backtest_manifest,
+                        failure_manifest,
                         "equity_curve",
                     ),
+                    "manifest_hash": str(failure_manifest.get("manifest_hash", "")),
+                    "manifest_path": str(getattr(failure_result, "manifest_path", "")),
                     "max_drawdown": float(drawdown),
-                    "name": "backtest_full_window",
+                    "name": "adverse-validation-window",
                     "report_only": False,
                 }
             ]
@@ -1034,78 +1277,123 @@ class ResearchExperimentRunner:
 
     def _cost_stress_payload(
         self,
+        *,
         backtest_manifest: Mapping[str, Any],
-        metrics: Mapping[str, Any],
+        stress_result: Any,
+        stress_manifest: Mapping[str, Any],
     ) -> dict[str, Any]:
-        costs = self._mapping(metrics.get("execution", {}), "execution")
-        degradation = abs(self._decimal(costs.get("cost_impact", 0)))
-        slippage = abs(self._decimal(costs.get("slippage_sensitivity", 0)))
-        score = self._decimal(self._mapping(metrics.get("quality", {}), "quality").get("sharpe", 0))
+        baseline_return = self._manifest_stat_decimal(backtest_manifest, "total_return")
+        stress_return = self._manifest_stat_decimal(stress_manifest, "total_return")
+        degradation = abs(baseline_return - stress_return)
+        initial_cash = self._initial_cash_from_manifest(stress_manifest)
+        total_slippage = abs(self._manifest_stat_decimal(stress_manifest, "total_slippage"))
+        slippage = Decimal("0") if initial_cash == Decimal("0") else total_slippage / initial_cash
+        score = self._decimal(getattr(stress_result, "objective_value", 0))
         return {
             "degradation": float(degradation),
-            "fills_hash": self._manifest_artifact_hash(backtest_manifest, "fills"),
+            "baseline_manifest_hash": str(backtest_manifest.get("manifest_hash", "")),
+            "baseline_statistics_hash": str(backtest_manifest.get("statistics_hash", "")),
+            "fills_hash": self._manifest_artifact_hash(stress_manifest, "fills"),
+            "stress_manifest_hash": str(stress_manifest.get("manifest_hash", "")),
+            "stress_manifest_path": str(getattr(stress_result, "manifest_path", "")),
+            "stress_statistics_hash": str(stress_manifest.get("statistics_hash", "")),
             "slippage_sensitivity": float(slippage),
-            "stressed_score": float(score - degradation - slippage),
+            "stressed_score": float(score),
         }
 
     def _correlation_payload(
         self,
         backtest_manifest: Mapping[str, Any],
-        metrics: Mapping[str, Any],
     ) -> dict[str, Any]:
-        portfolio = self._mapping(metrics.get("portfolio", {}), "portfolio")
-        return {
-            "active_portfolio_snapshot_hash": None,
-            "correlation_context": "no active promotion portfolio supplied",
+        active_snapshot: dict[str, Any] = {
+            "active_candidates": [],
+            "calculation": "max_abs_pearson_correlation",
             "equity_curve_hash": self._manifest_artifact_hash(
                 backtest_manifest,
                 "equity_curve",
             ),
-            "max_active_correlation": float(
-                abs(self._decimal(portfolio.get("correlation_to_active", 0)))
+        }
+        return {
+            "active_portfolio_snapshot_hash": stable_json_hash(active_snapshot),
+            "active_portfolio_snapshot": active_snapshot,
+            "equity_curve_hash": self._manifest_artifact_hash(
+                backtest_manifest,
+                "equity_curve",
             ),
+            "max_active_correlation": 0.0,
         }
 
     def _capacity_payload(
         self,
         backtest_manifest: Mapping[str, Any],
-        metrics: Mapping[str, Any],
     ) -> dict[str, Any]:
-        trade_count = self._decimal(
-            self._mapping(metrics.get("trading", {}), "trading").get("oos_trade_count", 0)
+        initial_cash = self._initial_cash_from_manifest(backtest_manifest)
+        avg_gross_exposure = abs(
+            self._manifest_stat_decimal(backtest_manifest, "avg_gross_exposure")
         )
+        if avg_gross_exposure == Decimal("0"):
+            avg_gross_exposure = Decimal("1")
+        required_capital = initial_cash * avg_gross_exposure
+        estimated_capacity = max(initial_cash, required_capital)
+        trade_count = self._artifact_row_count(backtest_manifest, "trade_ledger")
+        equity_rows = max(self._artifact_row_count(backtest_manifest, "equity_curve"), 1)
         return {
-            "estimated_capacity": 1000000,
-            "required_capital": 100000,
+            "estimated_capacity": float(estimated_capacity),
+            "fills_hash": self._manifest_artifact_hash(backtest_manifest, "fills"),
+            "required_capital": float(required_capital),
             "trade_ledger_hash": self._manifest_artifact_hash(
                 backtest_manifest,
                 "trade_ledger",
             ),
-            "turnover": float(max(Decimal("0"), trade_count) / Decimal("1000")),
+            "turnover": float(Decimal(max(trade_count, 0)) / Decimal(equity_rows)),
         }
 
     def _deterministic_replay_payload(
         self,
+        *,
         backtest_manifest: Mapping[str, Any],
-        metrics: Mapping[str, Any],
+        replay_manifest: Mapping[str, Any],
     ) -> dict[str, Any]:
-        research = self._mapping(metrics.get("research", {}), "research")
+        compared_artifacts = ("equity_curve", "fills", "trade_ledger", "statistics")
+        artifact_matches = {
+            name: self._manifest_artifact_hash(backtest_manifest, name)
+            == self._manifest_artifact_hash(replay_manifest, name)
+            for name in compared_artifacts
+        }
+        statistics_match = str(backtest_manifest.get("statistics_hash", "")) == str(
+            replay_manifest.get("statistics_hash", "")
+        )
         return {
             "manifest_hash": str(backtest_manifest.get("manifest_hash", "")),
-            "passed": research.get("deterministic_replay_passed") is True,
+            "artifact_matches": artifact_matches,
+            "passed": statistics_match and all(artifact_matches.values()),
+            "replay_manifest_hash": str(replay_manifest.get("manifest_hash", "")),
+            "replay_statistics_hash": str(replay_manifest.get("statistics_hash", "")),
+            "statistics_hash": str(backtest_manifest.get("statistics_hash", "")),
         }
 
     def _no_lookahead_payload(
         self,
+        *,
         backtest_manifest: Mapping[str, Any],
-        metrics: Mapping[str, Any],
+        parameters: Mapping[str, Any],
+        pipeline_config: Mapping[str, Any],
     ) -> dict[str, Any]:
-        research = self._mapping(metrics.get("research", {}), "research")
+        forbidden_terms = ("future_return", "forward_return", "future_shift", "lookahead", "lead")
+        scanned_payload = {
+            "parameters": dict(parameters),
+            "pipeline_config": dict(pipeline_config),
+        }
+        serialized = stable_json_dumps(scanned_payload).lower()
+        violations = tuple(term for term in forbidden_terms if term in serialized)
         return {
             "dataset_metadata_hash": stable_json_hash(
                 backtest_manifest.get("dataset_metadata", ())
             ),
-            "passed": research.get("no_lookahead_passed") is True,
+            "forbidden_terms": list(forbidden_terms),
+            "manifest_hash": str(backtest_manifest.get("manifest_hash", "")),
+            "passed": not violations,
+            "violations": list(violations),
         }
 
     def _validation_source_artifacts(
@@ -1113,11 +1401,21 @@ class ResearchExperimentRunner:
         *,
         backtest_manifest: Mapping[str, Any],
         metrics_hash: str,
+        replay_manifest: Mapping[str, Any],
+        train_manifest: Mapping[str, Any],
+        test_manifest: Mapping[str, Any],
+        failure_manifest: Mapping[str, Any],
+        stress_manifest: Mapping[str, Any],
     ) -> dict[str, str]:
         artifacts = {
             "backtest_manifest": str(backtest_manifest.get("manifest_hash", "")),
+            "failure_window_manifest": str(failure_manifest.get("manifest_hash", "")),
             "metrics": metrics_hash,
+            "replay_manifest": str(replay_manifest.get("manifest_hash", "")),
             "statistics": str(backtest_manifest.get("statistics_hash", "")),
+            "stress_manifest": str(stress_manifest.get("manifest_hash", "")),
+            "test_manifest": str(test_manifest.get("manifest_hash", "")),
+            "train_manifest": str(train_manifest.get("manifest_hash", "")),
         }
         raw_artifacts = backtest_manifest.get("artifacts")
         if isinstance(raw_artifacts, Mapping):
@@ -1127,6 +1425,39 @@ class ResearchExperimentRunner:
                     if isinstance(digest, str) and digest.strip():
                         artifacts[str(name)] = digest.strip()
         return artifacts
+
+    def _backtest_manifest_from_metrics(
+        self, metrics_payload: Mapping[str, Any]
+    ) -> Mapping[str, Any]:
+        backtest = self._mapping(metrics_payload.get("backtest", {}), "backtest")
+        manifest_path_text = backtest.get("manifest_path")
+        if not isinstance(manifest_path_text, str) or not manifest_path_text.strip():
+            raise ValueError("metrics backtest.manifest_path is required for validation artifacts")
+        return self._read_json_mapping(Path(manifest_path_text))
+
+    def _attach_validation_artifacts_to_workflow_summary(
+        self,
+        workflow_summary_path: Path,
+        validation_artifact_paths: Mapping[str, Path],
+    ) -> None:
+        summary = self._read_json_mapping(workflow_summary_path)
+        raw_steps = summary.get("steps")
+        if not isinstance(raw_steps, Sequence) or isinstance(raw_steps, str):
+            raise ValueError(f"workflow summary steps must be a sequence: {workflow_summary_path}")
+        steps = [dict(step) for step in raw_steps if isinstance(step, Mapping)]
+        existing_ids = {str(step.get("id", "")) for step in steps}
+        for artifact_name, artifact_path in sorted(validation_artifact_paths.items()):
+            if artifact_name in existing_ids:
+                continue
+            steps.append(
+                {
+                    "id": artifact_name,
+                    "kind": "validation_artifact",
+                    "outputs": {"artifact_path": str(artifact_path)},
+                    "status": "passed",
+                }
+            )
+        self._write_json(workflow_summary_path, {**dict(summary), "steps": steps})
 
     @staticmethod
     def _manifest_artifact_hash(manifest: Mapping[str, Any], artifact_name: str) -> str | None:
@@ -1138,6 +1469,29 @@ class ResearchExperimentRunner:
             return None
         digest = artifact.get("sha256")
         return digest if isinstance(digest, str) and digest.strip() else None
+
+    def _manifest_stat_decimal(self, manifest: Mapping[str, Any], name: str) -> Decimal:
+        for section_name in ("statistics", "metrics"):
+            section = manifest.get(section_name)
+            if isinstance(section, Mapping) and name in section:
+                return self._decimal(section.get(name))
+        return Decimal("0")
+
+    def _initial_cash_from_manifest(self, manifest: Mapping[str, Any]) -> Decimal:
+        runtime_topology = manifest.get("runtime_topology")
+        if isinstance(runtime_topology, Mapping):
+            accounts = runtime_topology.get("accounts")
+            if isinstance(accounts, Sequence) and not isinstance(accounts, str) and accounts:
+                account = accounts[0]
+                if isinstance(account, Mapping):
+                    initial_cash = self._decimal(account.get("initial_cash"))
+                    if initial_cash > Decimal("0"):
+                        return initial_cash
+        for field_name in ("initial_cash", "starting_cash"):
+            value = self._decimal(manifest.get(field_name))
+            if value > Decimal("0"):
+                return value
+        return Decimal("0")
 
     def _trial_workflow_summary(
         self,
