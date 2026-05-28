@@ -94,9 +94,17 @@ def test_full_backtest_data_materialization_reuses_shared_csv(
         symbol: str,
         max_rows: int | None,
         window: tuple[str, str] | None = None,
+        windows: tuple[tuple[str, str], ...] = (),
     ) -> None:
         calls.append(target_path)
-        original(source_path, target_path, symbol=symbol, max_rows=max_rows, window=window)
+        original(
+            source_path,
+            target_path,
+            symbol=symbol,
+            max_rows=max_rows,
+            window=window,
+            windows=windows,
+        )
 
     monkeypatch.setattr(engine, "_materialize_backtest_csv", counted_materialize)
 

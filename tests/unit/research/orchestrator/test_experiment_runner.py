@@ -88,13 +88,14 @@ def test_experiment_runner_writes_required_trial_artifacts(
     assert [record.record_type for record in audit_records] == [
         "manifest_loaded",
         "evidence_bundle_created",
+        "artifact_graph_written",
         "research_run_completed",
         "manifest_loaded",
         "research_run_completed",
     ]
     assert audit_records[0].payload["trial_id"] == "trial-accepted"
-    assert audit_records[2].payload["status"] == "succeeded"
-    assert audit_records[4].payload["status"] == "failed"
+    assert audit_records[3].payload["status"] == "succeeded"
+    assert audit_records[5].payload["status"] == "failed"
     assert ResearchAuditLog(result.audit_log_path).verify_hash_chain() == ()
 
 
