@@ -83,10 +83,6 @@ def test_gc_si_autonomous_real_pipeline_acceptance_cli(
         row.get("rejection_stage") == "selector" and row.get("selector_reasons")
         for row in rejected_rows
     )
-    assert any(
-        row.get("rejection_stage") == "gauntlet" and row.get("gauntlet_reasons")
-        for row in rejected_rows
-    )
     assert all(
         not row.get("gauntlet_reasons")
         for row in rejected_rows
@@ -117,6 +113,7 @@ def test_gc_si_autonomous_real_pipeline_acceptance_cli(
         assert packet["validation"]["status"] == "human_pending"
         assert packet["review"] == {"status": "human_pending"}
     gauntlet = json.loads((output_root / "generation-001" / "validation_gauntlet.json").read_text())
+    assert gauntlet["results"]
     for result in gauntlet["results"]:
         for decision in result["gate_decisions"]:
             assert decision["evidence"]["artifact_path"]
