@@ -1843,9 +1843,14 @@ class AutonomousResearchEngine:
             )
             for node in graph.nodes:
                 existing = nodes.get(node.node_id)
-                if existing is not None and existing != node:
+                if (
+                    existing is not None
+                    and existing != node
+                    and not self._same_artifact_node(existing, node)
+                ):
                     raise ValueError(f"conflicting artifact graph node: {node.node_id}")
-                nodes[node.node_id] = node
+                if existing is None:
+                    nodes[node.node_id] = node
             for edge in graph.edges:
                 edges.add((edge.source_id, edge.target_id, edge.relation))
         return ResearchArtifactGraph(
@@ -1855,6 +1860,10 @@ class AutonomousResearchEngine:
                 for source, target, relation in sorted(edges)
             ),
         )
+
+    @staticmethod
+    def _same_artifact_node(left: ResearchArtifactNode, right: ResearchArtifactNode) -> bool:
+        return left.node_type == right.node_type and left.payload_hash == right.payload_hash
 
     def _write_empty_artifact_graph(self, root: Path) -> Path:
         graph_path = root / "artifact_graph" / "artifact_graph.json"

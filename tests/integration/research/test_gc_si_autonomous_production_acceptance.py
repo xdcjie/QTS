@@ -38,8 +38,6 @@ def test_gc_si_autonomous_production_acceptance(
             str(campaign_path),
             "--output-root",
             str(output_root),
-            "--approval-mode",
-            "none",
             "--data-path",
             f"GC={data_paths['GC']}",
             "--data-path",
@@ -47,6 +45,33 @@ def test_gc_si_autonomous_production_acceptance(
         ]
     )
     assert run_exit == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["status"] == "pending_human_approval"
+
+    proposal = json.loads((output_root / "next_generation_proposal.json").read_text())
+    approve_exit = run_research.main(
+        [
+            "campaign",
+            "approve-next-generation",
+            "--proposal",
+            str(output_root / "next_generation_proposal.json"),
+            "--expected-proposal-hash",
+            proposal["proposal_hash"],
+            "--output-root",
+            str(output_root),
+            "--decision",
+            "approved",
+            "--reviewer",
+            "research-lead",
+            "--reason",
+            "production campaign evidence reviewed",
+        ]
+    )
+    assert approve_exit == 0
+    capsys.readouterr()
+
+    resume_exit = run_research.main(["campaign", "resume", "--output-root", str(output_root)])
+    assert resume_exit == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["status"] == "accepted"
     assert payload["paper_live_launches"] == []
