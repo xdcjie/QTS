@@ -362,6 +362,7 @@ def validate_historical_sample(
     sample_rows: int | None,
     timeframe: str = "1m",
     schema: HistoricalCsvSchema | None = None,
+    allow_futures_outright_symbols: bool = True,
 ) -> HistoricalValidationSample:
     """Validate a bounded sample or full CSV when `sample_rows` is None."""
     return HistoricalDatasetValidator().validate_sample(
@@ -370,6 +371,7 @@ def validate_historical_sample(
         sample_rows=sample_rows,
         timeframe=timeframe,
         schema=schema,
+        allow_futures_outright_symbols=allow_futures_outright_symbols,
     )
 
 

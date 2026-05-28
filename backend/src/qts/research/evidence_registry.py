@@ -502,7 +502,7 @@ def _collect_manifest_artifact_paths(manifest_paths: Sequence[str]) -> dict[str,
                 if not isinstance(artifact_path, str):
                     continue
                 resolved_path = Path(artifact_path)
-                if not resolved_path.is_absolute():
+                if not resolved_path.is_absolute() and not resolved_path.exists():
                     resolved_path = path.parent / resolved_path
                 artifact_paths[str(resolved_path)] = str(artifact_hash)
     return artifact_paths
@@ -517,7 +517,10 @@ def _resolve_path_texts(paths: Sequence[str], *, base_dir: Path) -> tuple[str, .
     seen: set[str] = set()
     for path_text in paths:
         path = Path(path_text)
-        resolved_path = path if path.is_absolute() else base_dir / path
+        if path.is_absolute() or path.exists():
+            resolved_path = path
+        else:
+            resolved_path = base_dir / path
         normalized = str(resolved_path)
         if normalized not in seen:
             seen.add(normalized)

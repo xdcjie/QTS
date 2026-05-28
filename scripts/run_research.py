@@ -1753,12 +1753,14 @@ def _selection_policy_from_campaign(campaign: ResearchCampaignConfig) -> Selecti
     return SelectionPolicy(
         max_drawdown=constraints.get("max_drawdown", 0.25),
         min_oos_trade_count=int(constraints.get("min_oos_trade_count", 30)),
+        min_profit_factor=constraints.get("min_profit_factor"),
         max_selected=1,
         purpose="promotion",
         total_return_metric="performance.total_return",
         oos_sharpe_metric="performance.oos_sharpe",
         max_drawdown_metric="performance.max_drawdown",
         oos_trade_count_metric="trading.oos_trade_count",
+        profit_factor_metric="quality.profit_factor",
         cost_sensitivity_metric="costs.cost_sensitivity",
     )
 

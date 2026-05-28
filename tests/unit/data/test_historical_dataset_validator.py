@@ -95,3 +95,40 @@ def test_dataset_validator_rejects_spread_and_invalid_ohlc(tmp_path: Path) -> No
         DataValidationIssueCode.INVALID_OHLC,
         DataValidationIssueCode.EXCLUDED_SPREAD,
     }
+
+
+def test_dataset_validator_flags_outright_futures_symbols_without_chain(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "signals.csv"
+    _write_rows(
+        path,
+        [
+            {
+                "ts_event": "2026-01-02T14:30:00.000000000Z",
+                "rtype": "33",
+                "publisher_id": "1",
+                "instrument_id": "123",
+                "symbol": "GCM6",
+                "open": "2000",
+                "high": "2000",
+                "low": "2000",
+                "close": "2000",
+                "volume": "1",
+            },
+        ],
+    )
+    resolver = StaticSymbolResolver({"GCM6": InstrumentId("FUTURE.CME.GC.GCM6")})
+
+    result = HistoricalDatasetValidator().validate_sample(
+        path,
+        symbol_resolver=resolver,
+        sample_rows=1,
+        timeframe="1m",
+        allow_futures_outright_symbols=False,
+    )
+
+    assert result.report.valid is False
+    assert {issue.code for issue in result.report.issues} == {
+        DataValidationIssueCode.UNDECLARED_FUTURES_OUTRIGHT_SYMBOL
+    }

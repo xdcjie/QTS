@@ -8,6 +8,9 @@ from qts.research.artifact_graph import ResearchArtifactGraph
 from qts.research.audit_log import ResearchAuditLog
 
 from scripts import run_research
+from tests.unit.research.engine.test_autonomous_engine_trial_generation import (
+    force_clean_reproducibility,
+)
 
 
 def test_campaign_validate_writes_audit_and_artifact_graph(
@@ -62,7 +65,9 @@ def test_campaign_validate_rejects_invalid_campaign(
 def test_campaign_run_status_approve_and_resume_generation(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    force_clean_reproducibility(monkeypatch)
     output_root = tmp_path / "campaign"
     data_paths = _write_data_paths(tmp_path)
 
@@ -207,11 +212,29 @@ def _write_bars(path: Path, base: int) -> Path:
         "\n".join(
             ["timestamp,close"]
             + [
-                f"2026-01-02T00:{minute:02d}:00+00:00,{base + (minute * 0.5):.1f}"
-                for minute in range(20)
+                f"2026-01-02T00:{minute:02d}:00+00:00,{price:.1f}"
+                for minute, price in enumerate(_profit_factor_fixture_prices(base))
             ]
             + [""]
         ),
         encoding="utf-8",
     )
     return path
+
+
+def _profit_factor_fixture_prices(base: int) -> tuple[int, ...]:
+    return (
+        *((base,) * 15),
+        base + 1,
+        base,
+        base - 1,
+        *((base - 1,) * 15),
+        base,
+        base + 3,
+        base + 6,
+        base + 9,
+        base + 12,
+        base + 8,
+        base + 4,
+        *((base + 4,) * 10),
+    )

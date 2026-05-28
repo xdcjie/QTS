@@ -8,12 +8,20 @@ import shutil
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from pathlib import Path
 from typing import Any, cast
 
 import yaml  # type: ignore[import-untyped]
 
 from qts.core.hashing import stable_json_dumps, stable_json_hash
+from qts.data.historical.chains import HistoricalChain
+from qts.registry.future_roll import (
+    FirstNoticeDateFutureContractSelector,
+    FutureContractCandidate,
+    FutureContractRollSpec,
+)
+from qts.registry.providers.exchange_calendar_provider import ExchangeCalendarProvider
 from qts.research.artifact_graph import (
     ResearchArtifactEdge,
     ResearchArtifactGraph,
@@ -620,6 +628,10 @@ class AutonomousResearchEngine:
                 parameters,
                 allowed_roots=run.universe,
             )
+            manifest_patch = self._proposal_manifest_patch(
+                variant.to_manifest_patch(),
+                proposal,
+            )
             ordinal = len(generated)
             trial_id = f"{generation_id}-trial-{ordinal:03d}"
             root = str(parameters.get("root", run.universe[0]))
@@ -631,6 +643,7 @@ class AutonomousResearchEngine:
                         root=root,
                         parameters=parameters,
                         strategy_entrypoint=variant.strategy_entrypoint,
+                        manifest_patch=manifest_patch,
                     ),
                     "candidate_id": candidate.candidate_id,
                     "candidate_space_hash": candidate.candidate_space_hash,
@@ -638,10 +651,7 @@ class AutonomousResearchEngine:
                     "factor_hash": variant.factor_hash,
                     "family": family["family_id"],
                     "idea_id": self._idea_id(run, str(family["family_id"]), proposal),
-                    "manifest_patch": self._proposal_manifest_patch(
-                        variant.to_manifest_patch(),
-                        proposal,
-                    ),
+                    "manifest_patch": manifest_patch,
                     "parameters": parameters,
                     "proposal_application": self._proposal_application_payload(proposal),
                     "strategy_variant_hash": variant.variant_hash,
@@ -870,6 +880,13 @@ class AutonomousResearchEngine:
         if not isinstance(factor_payload, Mapping):
             raise ValueError(f"strategy template factor_definition is required: {path}")
         factor_definition = FactorDefinition.from_payload(cast(Mapping[str, Any], factor_payload))
+        manifest_template = dict(self._mapping(payload.get("manifest_template", {}), "manifest"))
+        backtest_pipeline = payload.get("backtest_pipeline")
+        if backtest_pipeline is not None:
+            manifest_template["backtest_pipeline"] = self._mapping(
+                backtest_pipeline,
+                "backtest_pipeline",
+            )
         return StrategyTemplate(
             template_id=str(payload.get("template_id", f"{family.template}_template")),
             family=family.id,
@@ -887,7 +904,7 @@ class AutonomousResearchEngine:
                 payload.get("execution_assumptions", {"slippage_bps": 1}),
                 "execution_assumptions",
             ),
-            manifest_template=self._mapping(payload.get("manifest_template", {}), "manifest"),
+            manifest_template=manifest_template,
         )
 
     def _parameter_space_payload(self, search_space: SearchSpaceSpec) -> dict[str, Any]:
@@ -914,13 +931,98 @@ class AutonomousResearchEngine:
         root: str,
         parameters: Mapping[str, Any],
         strategy_entrypoint: str,
+        manifest_patch: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
+        pipeline_template = self._backtest_pipeline_template(manifest_patch or {})
+        (
+            strategy_parameter_defaults,
+            strategy_parameter_map,
+            strategy_parameter_names,
+        ) = self._strategy_parameter_bindings(
+            root=root,
+            parameters=parameters,
+            pipeline_template=pipeline_template,
+        )
         backtest_config_path, data_quality_path = self._write_backtest_config(
             run=run,
             trial_id=trial_id,
             root=root,
             strategy_entrypoint=strategy_entrypoint,
+            strategy_params=strategy_parameter_defaults,
         )
+        payload: dict[str, Any] = {
+            "backtest_config_path": str(backtest_config_path),
+            "data_quality_paths": [str(data_quality_path)],
+            "objective_metric": "sharpe_ratio",
+            "strategy_parameter_defaults": strategy_parameter_defaults,
+        }
+        if strategy_parameter_map is not None:
+            payload["strategy_parameter_map"] = strategy_parameter_map
+        if strategy_parameter_names is not None:
+            payload["strategy_parameter_names"] = strategy_parameter_names
+        return payload
+
+    def _backtest_pipeline_template(
+        self,
+        manifest_patch: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        raw_template = manifest_patch.get("backtest_pipeline")
+        if raw_template is None:
+            return {}
+        return dict(self._mapping(raw_template, "backtest_pipeline"))
+
+    def _strategy_parameter_bindings(
+        self,
+        *,
+        root: str,
+        parameters: Mapping[str, Any],
+        pipeline_template: Mapping[str, Any],
+    ) -> tuple[dict[str, Any], dict[str, str] | None, tuple[str, ...] | None]:
+        if not pipeline_template:
+            return self._default_strategy_parameter_bindings(root, parameters)
+
+        raw_defaults = pipeline_template.get("strategy_parameter_defaults", {})
+        defaults = self._mapping(raw_defaults, "backtest_pipeline.strategy_parameter_defaults")
+        strategy_parameter_defaults = dict(defaults)
+        root_target = str(pipeline_template.get("root_strategy_parameter", "")).strip()
+        if root_target == "symbols":
+            strategy_parameter_defaults[root_target] = [root]
+        elif root_target:
+            strategy_parameter_defaults[root_target] = root
+
+        raw_map = pipeline_template.get("strategy_parameter_map")
+        raw_names = pipeline_template.get("strategy_parameter_names")
+        if raw_map is not None and raw_names is not None:
+            raise ValueError(
+                "backtest_pipeline cannot define both strategy_parameter_map "
+                "and strategy_parameter_names"
+            )
+        if raw_map is not None:
+            parameter_map = self._mapping(raw_map, "backtest_pipeline.strategy_parameter_map")
+            return (
+                strategy_parameter_defaults,
+                {str(source): str(target) for source, target in parameter_map.items()},
+                None,
+            )
+        if raw_names is None:
+            raise ValueError(
+                "backtest_pipeline requires strategy_parameter_names or strategy_parameter_map"
+            )
+        if not isinstance(raw_names, Sequence) or isinstance(raw_names, str):
+            raise ValueError("backtest_pipeline.strategy_parameter_names must be a sequence")
+        parameter_names = tuple(str(item) for item in raw_names)
+        missing = [name for name in parameter_names if name not in parameters]
+        if missing:
+            raise ValueError(
+                f"backtest_pipeline strategy parameter missing from trial parameters: {missing[0]}"
+            )
+        return strategy_parameter_defaults, None, parameter_names
+
+    @staticmethod
+    def _default_strategy_parameter_bindings(
+        root: str,
+        parameters: Mapping[str, Any],
+    ) -> tuple[dict[str, Any], dict[str, str], None]:
         strategy_parameter_map: dict[str, str] = {}
         strategy_parameter_defaults: dict[str, Any] = {"symbols": [root]}
         if "lookback" in parameters:
@@ -933,13 +1035,7 @@ class AutonomousResearchEngine:
         if not strategy_parameter_map:
             strategy_parameter_defaults["long_window"] = 2
             strategy_parameter_map["threshold"] = "long_window"
-        return {
-            "backtest_config_path": str(backtest_config_path),
-            "data_quality_paths": [str(data_quality_path)],
-            "objective_metric": "sharpe_ratio",
-            "strategy_parameter_defaults": strategy_parameter_defaults,
-            "strategy_parameter_map": strategy_parameter_map,
-        }
+        return strategy_parameter_defaults, strategy_parameter_map, None
 
     def _write_backtest_config(
         self,
@@ -948,6 +1044,7 @@ class AutonomousResearchEngine:
         trial_id: str,
         root: str,
         strategy_entrypoint: str,
+        strategy_params: Mapping[str, Any],
     ) -> tuple[Path, Path]:
         data_paths = self._required_data_paths(run)
         data_config_path, data_quality_path = self._write_backtest_data_config(
@@ -961,7 +1058,6 @@ class AutonomousResearchEngine:
         payload = {
             "end": end,
             "initial_cash": "1000000",
-            "instrument_ids": {root: f"DATASET.{root}"},
             "market_data": {
                 "catalog": "research",
                 "config": str(data_config_path),
@@ -969,9 +1065,10 @@ class AutonomousResearchEngine:
             },
             "risk_config": {"max_notional": "100000000"},
             "roots": [root],
+            "roll_policy": {"enabled": True},
             "start": start,
             "strategy_class": strategy_entrypoint,
-            "strategy_params": {"long_window": 2, "short_window": 1, "symbols": [root]},
+            "strategy_params": dict(strategy_params),
             "symbols": [root],
             "timeframe": run.timeframe,
             "warmup_bars": 0,
@@ -994,6 +1091,16 @@ class AutonomousResearchEngine:
             if max_rows is None
             else run.output_root / "backtest_data" / trial_id
         )
+        start, _end = self._backtest_window(run, data_path)
+        chain_path, chain = self._install_future_chain(
+            root=root,
+            source_data_path=data_path,
+            data_root=data_root,
+        )
+        materialized_symbol = self._default_materialized_contract_symbol(
+            chain,
+            as_of=self._parse_timestamp(start),
+        )
         bars_dir = data_root / "data"
         bars_dir.mkdir(parents=True, exist_ok=True)
         target_csv = bars_dir / f"{root}.csv"
@@ -1003,7 +1110,7 @@ class AutonomousResearchEngine:
             self._ensure_full_backtest_csv(
                 data_path,
                 target_csv,
-                symbol=root,
+                symbol=materialized_symbol,
                 window=window,
                 windows=windows,
             )
@@ -1011,7 +1118,7 @@ class AutonomousResearchEngine:
             self._materialize_backtest_csv(
                 data_path,
                 target_csv,
-                symbol=root,
+                symbol=materialized_symbol,
                 max_rows=max_rows,
                 window=window,
                 windows=windows,
@@ -1025,6 +1132,7 @@ class AutonomousResearchEngine:
                             root: {
                                 "asset_class": "future",
                                 "bars": [{"file": target_csv.name, "timeframe": run.timeframe}],
+                                "chain_file": chain_path.name,
                                 "exchange": run.calendar,
                             }
                         },
@@ -1034,6 +1142,7 @@ class AutonomousResearchEngine:
                 "stores": {
                     "local_csv": {
                         "bars_dir": "data",
+                        "chains_dir": "chains",
                         "root_dir": str(data_root),
                         "type": "local_csv",
                     }
@@ -1042,6 +1151,74 @@ class AutonomousResearchEngine:
         }
         config_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
         return config_path, target_csv
+
+    def _install_future_chain(
+        self,
+        *,
+        root: str,
+        source_data_path: Path,
+        data_root: Path,
+    ) -> tuple[Path, HistoricalChain]:
+        source_chain_path = self._required_source_chain_path(
+            root=root,
+            source_data_path=source_data_path,
+        )
+        chains_dir = data_root / "chains"
+        chains_dir.mkdir(parents=True, exist_ok=True)
+        target_chain_path = chains_dir / f"{root}.json"
+        shutil.copyfile(source_chain_path, target_chain_path)
+        return target_chain_path, HistoricalChain.load(target_chain_path)
+
+    def _required_source_chain_path(self, *, root: str, source_data_path: Path) -> Path:
+        root = root.strip().upper()
+        candidates = tuple(
+            dict.fromkeys(
+                (
+                    source_data_path.parent.parent / "chains" / f"{root}.json",
+                    self._repo_root / "historical" / "chains" / f"{root}.json",
+                )
+            )
+        )
+        for candidate in candidates:
+            if candidate.is_file():
+                return candidate
+        searched = ", ".join(str(path) for path in candidates)
+        raise FileNotFoundError(
+            f"required future chain metadata is missing for {root}; searched: {searched}"
+        )
+
+    @staticmethod
+    def _default_materialized_contract_symbol(
+        chain: HistoricalChain,
+        *,
+        as_of: datetime,
+    ) -> str:
+        selector = FirstNoticeDateFutureContractSelector(
+            contracts=tuple(
+                FutureContractRollSpec(
+                    symbol=contract.symbol,
+                    instrument_id=chain.instrument_id_for_symbol(contract.symbol),
+                    first_notice_day=contract.first_notice_day,
+                    expiry=contract.expiry,
+                )
+                for contract in chain.contracts
+            ),
+            session_offset=ExchangeCalendarProvider(chain.trading_calendar).session_offset,
+            active_months=chain.active_months,
+        )
+        candidates = tuple(
+            FutureContractCandidate(
+                root_symbol=chain.root,
+                symbol=contract.symbol,
+                instrument_id=chain.instrument_id_for_symbol(contract.symbol),
+                as_of=as_of,
+                close=Decimal("1"),
+                volume=Decimal("1"),
+                session_date=as_of.date(),
+            )
+            for contract in chain.contracts
+        )
+        return selector.select(candidates).symbol
 
     def _ensure_full_backtest_csv(
         self,
@@ -1115,6 +1292,7 @@ class AutonomousResearchEngine:
                 low_index = header.index("low")
                 close_index = header.index("close")
                 volume_index = header.index("volume")
+                symbol_index = header.index("symbol") if "symbol" in header else None
                 for source_index, line in enumerate(source, start=1):
                     if max_rows is not None and emitted >= max_rows:
                         break
@@ -1137,6 +1315,11 @@ class AutonomousResearchEngine:
                     close = values[close_index]
                     if close.startswith("-"):
                         continue
+                    output_symbol = (
+                        values[symbol_index].strip()
+                        if symbol_index is not None and values[symbol_index].strip()
+                        else symbol
+                    )
                     seen_timestamps.add(timestamp)
                     target.write(
                         ",".join(
@@ -1150,7 +1333,7 @@ class AutonomousResearchEngine:
                                 values[low_index],
                                 close,
                                 values[volume_index],
-                                symbol,
+                                output_symbol,
                             )
                         )
                         + "\n"
@@ -1727,11 +1910,15 @@ class AutonomousResearchEngine:
         return SelectionPolicy(
             max_drawdown=float(constraints.get("max_drawdown", 0.25)),
             min_oos_trade_count=int(constraints.get("min_oos_trade_count", 30)),
+            min_profit_factor=float(constraints["min_profit_factor"])
+            if "min_profit_factor" in constraints
+            else None,
             max_selected=1,
             total_return_metric="performance.total_return",
             oos_sharpe_metric="performance.oos_sharpe",
             max_drawdown_metric="performance.max_drawdown",
             oos_trade_count_metric="trading.oos_trade_count",
+            profit_factor_metric="quality.profit_factor",
             purpose="promotion",
             cost_sensitivity_metric="costs.cost_sensitivity",
         )

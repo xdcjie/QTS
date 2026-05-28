@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import re
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -24,6 +25,9 @@ from qts.data.validation_report import (
 )
 from qts.domain.market_data import Bar
 from qts.registry.symbol_resolution import SourceSymbolResolver
+
+
+_FUTURES_OUTRIGHT_SYMBOL_RE = re.compile(r"^[A-Z]{1,4}[FGHJKMNQUVXZ][0-9]{1,2}$")
 
 
 @dataclass(slots=True)
@@ -72,6 +76,7 @@ class HistoricalDatasetValidator:
         sample_rows: int | None,
         timeframe: str = "1m",
         schema: HistoricalCsvSchema | None = None,
+        allow_futures_outright_symbols: bool = True,
     ) -> HistoricalValidationSample:
         """Perform validate_sample."""
         if sample_rows is not None and sample_rows <= 0:
@@ -93,6 +98,22 @@ class HistoricalDatasetValidator:
                     break
                 stats.rows_seen += 1
                 symbol = row[active_schema.symbol]
+                if (
+                    not allow_futures_outright_symbols
+                    and is_futures_outright_symbol(symbol)
+                ):
+                    stats.invalid_rows += 1
+                    issues.append(
+                        DataValidationIssue(
+                            code=DataValidationIssueCode.UNDECLARED_FUTURES_OUTRIGHT_SYMBOL,
+                            message=(
+                                "futures outright symbols require a future asset_class "
+                                f"and chain metadata: {symbol}"
+                            ),
+                            severity=DataValidationSeverity.ERROR,
+                        )
+                    )
+                    continue
                 if not resolver.is_supported_symbol(symbol):
                     stats.symbols_excluded += 1
                     is_spread = _is_spread_symbol(symbol)
@@ -139,6 +160,40 @@ class HistoricalDatasetValidator:
         )
 
 
+def find_futures_outright_symbols(
+    csv_path: Path,
+    *,
+    schema: HistoricalCsvSchema | None = None,
+    limit: int = 5,
+) -> tuple[str, ...]:
+    """Return distinct futures outright-looking symbols found in a CSV."""
+
+    if limit <= 0:
+        raise ValueError("limit must be positive")
+    active_schema = schema or DEFAULT_HISTORICAL_CSV_SCHEMA
+    symbols: list[str] = []
+    seen: set[str] = set()
+    with csv_path.open(encoding="utf-8", newline="") as handle:
+        reader = csv.DictReader(handle)
+        validate_historical_csv_columns(tuple(reader.fieldnames or ()), schema=schema)
+        for row in reader:
+            symbol = row[active_schema.symbol]
+            normalized = symbol.strip().upper()
+            if normalized in seen or not is_futures_outright_symbol(normalized):
+                continue
+            seen.add(normalized)
+            symbols.append(normalized)
+            if len(symbols) >= limit:
+                break
+    return tuple(symbols)
+
+
+def is_futures_outright_symbol(symbol: str) -> bool:
+    """Return whether a source symbol looks like a listed futures outright contract."""
+
+    return bool(_FUTURES_OUTRIGHT_SYMBOL_RE.fullmatch(symbol.strip().upper()))
+
+
 def _group_bars(bars: list[Bar]) -> dict[InstrumentId, list[Bar]]:
     """Perform _group_bars."""
     grouped: dict[InstrumentId, list[Bar]] = defaultdict(list)
@@ -153,7 +208,9 @@ def _is_spread_symbol(symbol: str) -> bool:
 
 
 __all__ = [
+    "find_futures_outright_symbols",
     "HistoricalCsvStats",
     "HistoricalValidationSample",
     "HistoricalDatasetValidator",
+    "is_futures_outright_symbol",
 ]

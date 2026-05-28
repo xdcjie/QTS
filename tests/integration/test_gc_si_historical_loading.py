@@ -113,6 +113,104 @@ def test_historical_catalog_load_uses_static_ids_when_chain_is_absent(
     )
 
 
+def test_historical_catalog_future_requires_chain_even_with_static_instrument_ids(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "data").mkdir()
+    (tmp_path / "data" / "gc.csv").write_text(
+        ",".join(EXPECTED_HISTORICAL_COLUMNS) + "\n",
+        encoding="utf-8",
+    )
+    config_path = tmp_path / "historical.local.yaml"
+    config_path.write_text(
+        f"""
+historical_data:
+  stores:
+    local_csv:
+      type: local_csv
+      root_dir: {tmp_path}
+      bars_dir: data
+      chains_dir: chains
+  catalogs:
+    research_futures:
+      store: local_csv
+      datasets:
+        GC:
+          asset_class: future
+          exchange: CME
+          bars:
+            - file: gc.csv
+              timeframe: 1m
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(FileNotFoundError, match="historical/chains/GC.json"):
+        HistoricalCatalog.load(
+            HistoricalCatalogLoadConfig.from_historical_market_data_config(
+                config_path,
+                catalog="research_futures",
+                roots=("GC",),
+                instrument_ids={"GC": InstrumentId("DATASET.GC")},
+            )
+        )
+
+
+def test_historical_catalog_rejects_non_future_dataset_with_outright_contract_symbols(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "data").mkdir()
+    with (tmp_path / "data" / "gc.csv").open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=EXPECTED_HISTORICAL_COLUMNS)
+        writer.writeheader()
+        writer.writerow(
+            {
+                "ts_event": "2026-01-02T14:30:00.000000000Z",
+                "rtype": "33",
+                "publisher_id": "1",
+                "instrument_id": "123",
+                "open": "2000",
+                "high": "2000",
+                "low": "2000",
+                "close": "2000",
+                "volume": "1",
+                "symbol": "GCM6",
+            }
+        )
+    config_path = tmp_path / "historical.local.yaml"
+    config_path.write_text(
+        f"""
+historical_data:
+  stores:
+    local_csv:
+      type: local_csv
+      root_dir: {tmp_path}
+      bars_dir: data
+      chains_dir: chains
+  catalogs:
+    research_futures:
+      store: local_csv
+      datasets:
+        SIGNAL:
+          asset_class: equity
+          bars:
+            - file: gc.csv
+              timeframe: 1m
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="futures outright symbols"):
+        HistoricalCatalog.load(
+            HistoricalCatalogLoadConfig.from_historical_market_data_config(
+                config_path,
+                catalog="research_futures",
+                roots=("SIGNAL",),
+                instrument_ids={"GCM6": InstrumentId("FUTURE.CME.GC.GCM6")},
+            )
+        )
+
+
 def _write_historical_config(root: Path, *, roots: tuple[str, ...]) -> Path:
     config_path = root / "historical.local.yaml"
     datasets = "\n".join(

@@ -4,13 +4,18 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
 from qts.research.engine.autonomous_research_engine import (
     AutonomousResearchEngine,
     AutonomousResearchRun,
 )
 from qts.research.planner import GenerationApprovalRecord
 
-from .test_autonomous_engine_trial_generation import write_campaign, write_data_paths
+from .test_autonomous_engine_trial_generation import (
+    force_clean_reproducibility,
+    write_campaign,
+    write_data_paths,
+)
 
 
 def test_engine_stops_before_generation_greater_than_zero_without_approval(
@@ -38,7 +43,9 @@ def test_engine_stops_before_generation_greater_than_zero_without_approval(
 
 def test_engine_runs_generation_greater_than_zero_with_matching_approval(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    force_clean_reproducibility(monkeypatch)
     campaign_path = write_campaign(
         tmp_path,
         max_generations=2,

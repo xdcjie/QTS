@@ -1,0 +1,10 @@
+parameters:
+  - name: root
+    parameter_type: categorical
+    values: [GC, SI]
+  - name: short_window
+    parameter_type: categorical
+    values: [1, 2, 4, 6]
+  - name: long_window
+    parameter_type: categorical
+    values: [8, 16, 32, 64]

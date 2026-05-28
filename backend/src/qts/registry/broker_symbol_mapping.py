@@ -20,6 +20,9 @@ class BrokerSymbolMapping:
         existing = self._to_instrument.get(symbol)
         if existing is not None and existing != instrument_id:
             raise ValueError(f"broker symbol already mapped: {broker_symbol}")
+        existing_symbol = self._to_broker.get(instrument_id)
+        if existing_symbol is not None and existing_symbol != symbol:
+            raise ValueError(f"instrument already mapped to broker symbol: {instrument_id}")
         self._to_broker[instrument_id] = symbol
         self._to_instrument[symbol] = instrument_id
 

@@ -124,6 +124,25 @@ def test_candidate_selector_rejects_metrics_schema_failures() -> None:
     )
 
 
+def test_candidate_selector_rejects_candidates_below_min_profit_factor() -> None:
+    result = CandidateSelector(SelectionPolicy(min_profit_factor=1.15)).select(
+        (
+            _candidate(
+                "low-profit-factor",
+                total_return=-0.01,
+                oos_sharpe=-1.2,
+                max_drawdown=0.04,
+                oos_trade_count=50,
+                profit_factor=0.36,
+            ),
+        )
+    )
+
+    assert result.selected_candidates == ()
+    assert result.rejected_candidates[0].candidate_id == "low-profit-factor"
+    assert result.rejected_candidates[0].reasons == ("profit_factor: 0.36 below 1.15",)
+
+
 def test_candidate_selector_requires_every_candidate_to_have_an_id() -> None:
     with pytest.raises(ValueError, match="candidate_id is required"):
         CandidateSelector(SelectionPolicy()).select(({"metrics": {}},))
@@ -138,6 +157,7 @@ def _candidate(
     oos_trade_count: int,
     data_quality_accepted: bool = True,
     git_dirty: bool = False,
+    profit_factor: float = 1.50,
 ) -> dict[str, object]:
     return {
         "candidate_id": candidate_id,
@@ -147,6 +167,7 @@ def _candidate(
                 "oos_sharpe": oos_sharpe,
                 "total_return": total_return,
             },
+            "quality": {"profit_factor": profit_factor},
             "trading": {"oos_trade_count": oos_trade_count},
             "costs": {"cost_sensitivity": 0.01},
         },

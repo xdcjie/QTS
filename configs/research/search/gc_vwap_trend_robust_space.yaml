@@ -1,0 +1,16 @@
+parameters:
+  - name: root
+    parameter_type: categorical
+    values: [GC]
+  - name: time_window
+    parameter_type: categorical
+    values: [current_08_16, evening_18_22]
+  - name: vwap_slope_lookback
+    parameter_type: categorical
+    values: [3, 5]
+  - name: min_volume_ratio
+    parameter_type: categorical
+    values: ["0", "1.2"]
+  - name: target_r_multiple
+    parameter_type: categorical
+    values: ["1.0", "2.0"]

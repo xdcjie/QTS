@@ -1,0 +1,50 @@
+template_id: gc_si_vwap_trend_position_sized_template
+family: vwap_trend
+strategy_entrypoint: strategies.research.vwap_factor_research:VwapFactorResearchStrategy
+allowed_imports:
+  - qts.strategy_sdk
+  - qts.domain.market_data
+  - qts.domain.positions
+  - qts.indicators.session_regime
+  - qts.indicators.technical
+risk_assumptions:
+  max_position_notional: 100000
+execution_assumptions:
+  slippage_bps: 1
+backtest_pipeline:
+  root_strategy_parameter: symbol
+  strategy_parameter_defaults:
+    timeframe: 1m
+    atr_window: 14
+    volume_ratio_window: 20
+    max_bars_in_wait_state: 5
+    pullback_touch_atr_below: "0.15"
+    pullback_touch_atr_above: "0.10"
+    max_pullback_break_atr: "1.0"
+    stop_atr_multiple: "1.0"
+    stop_buffer_atr: "0.2"
+    exit_on_vwap_cross: false
+    factor_filters: []
+    min_session_open_minutes: 0
+    minutes_before_close_flat: 30
+  strategy_parameter_names:
+    - time_window
+    - vwap_slope_lookback
+    - min_volume_ratio
+    - target_r_multiple
+    - target_quantity
+factor_definition:
+  factor_id: gc_si_vwap_trend_position_sized_factor
+  family: momentum
+  inputs:
+    - root: GC
+      field: close
+    - root: SI
+      field: close
+  transforms:
+    - type: rolling_mean
+      lookback: 5
+  label_policy:
+    horizon_bars: 5
+    visible_after: bar_close
+    no_lookahead: true

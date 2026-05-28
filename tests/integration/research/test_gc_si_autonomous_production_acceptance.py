@@ -9,11 +9,11 @@ import yaml  # type: ignore[import-untyped]
 from scripts import run_research
 
 
-def test_gc_si_autonomous_production_acceptance(
+def test_gc_vwap_trend_robust_production_acceptance(
     tmp_path: Path,
     capsys: Any,
 ) -> None:
-    campaign_path = Path("configs/research/campaigns/gc_si_autonomous_production_v1.yaml")
+    campaign_path = Path("configs/research/campaigns/gc_vwap_trend_robust_scan_v1.yaml")
     data_paths = _production_data_paths()
 
     config = yaml.safe_load(campaign_path.read_text(encoding="utf-8"))
@@ -21,24 +21,19 @@ def test_gc_si_autonomous_production_acceptance(
     assert "max_rows" not in config["execution"]
     assert "start" not in config["execution"]
     assert "end" not in config["execution"]
-    assert config["execution"]["windows"] == [
+    assert len(config["execution"]["windows"]) == 25
+    assert config["families"] == [
         {
-            "start": "2026-01-06T23:00:00+00:00",
-            "end": "2026-01-07T22:00:00+00:00",
-        },
-        {
-            "start": "2026-01-07T23:00:00+00:00",
-            "end": "2026-01-08T22:00:00+00:00",
-        },
-        {
-            "start": "2026-01-13T23:00:00+00:00",
-            "end": "2026-01-14T22:00:00+00:00",
-        },
+            "id": "gc_vwap_trend_robust_scan",
+            "template": "vwap_trend",
+            "manifest_template": "configs/research/manifests/templates/gc_si_vwap_trend.yaml",
+            "search_space": "configs/research/search/gc_vwap_trend_robust_space.yaml",
+        }
     ]
-    assert config["budget"]["max_generations"] >= 2
-    assert config["budget"]["max_total_trials"] >= 30
+    assert config["budget"]["max_generations"] == 1
+    assert config["budget"]["max_total_trials"] == 16
 
-    output_root = tmp_path / "gc_si_autonomous_production_v1"
+    output_root = tmp_path / "gc_vwap_trend_robust_scan_v1"
     run_exit = run_research.main(
         [
             "campaign",
@@ -55,43 +50,16 @@ def test_gc_si_autonomous_production_acceptance(
     )
     assert run_exit == 0
     payload = json.loads(capsys.readouterr().out)
-    assert payload["status"] == "pending_human_approval"
-    assert _csv_row_count(output_root / "backtest_data" / "full" / "GC" / "data" / "GC.csv") == 4140
-    assert _csv_row_count(output_root / "backtest_data" / "full" / "SI" / "data" / "SI.csv") == 4140
-
-    proposal = json.loads((output_root / "next_generation_proposal.json").read_text())
-    approve_exit = run_research.main(
-        [
-            "campaign",
-            "approve-next-generation",
-            "--proposal",
-            str(output_root / "next_generation_proposal.json"),
-            "--expected-proposal-hash",
-            proposal["proposal_hash"],
-            "--output-root",
-            str(output_root),
-            "--decision",
-            "approved",
-            "--reviewer",
-            "research-lead",
-            "--reason",
-            "production campaign evidence reviewed",
-        ]
-    )
-    assert approve_exit == 0
-    capsys.readouterr()
-
-    resume_exit = run_research.main(["campaign", "resume", "--output-root", str(output_root)])
-    assert resume_exit == 0
-    payload = json.loads(capsys.readouterr().out)
     assert payload["status"] == "accepted"
     assert payload["paper_live_launches"] == []
+    gc_data_path = output_root / "backtest_data" / "full" / "GC" / "data" / "GC.csv"
+    assert _csv_row_count(gc_data_path) == 34500
 
     verify_exit = run_research.main(["campaign", "verify", "--output-root", str(output_root)])
     assert verify_exit == 0
     verify_payload = json.loads(capsys.readouterr().out)
     assert verify_payload["accepted"] is True
-    assert verify_payload["criteria"]["fitness_landscape"]["generated_candidate_count"] >= 30
+    assert verify_payload["criteria"]["fitness_landscape"]["generated_candidate_count"] == 16
 
 
 def _production_data_paths() -> dict[str, Path]:
