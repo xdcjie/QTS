@@ -31,7 +31,7 @@ def test_engine_uses_trial_budget_manager_before_execution(tmp_path: Path) -> No
     landscape_rows = read_jsonl(result.fitness_landscape_path)
     assert len(landscape_rows) == 3
     assert any(
-        row["lifecycle_status"] == "rejected" and row["rejection_stage"] == "budget"
+        row["lifecycle_status"] == "budget_rejected" and row["rejection_stage"] == "trial_budget"
         for row in landscape_rows
     )
     ledger_path = result.output_root / "trial_budget_ledger.jsonl"
