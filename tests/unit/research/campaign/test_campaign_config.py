@@ -109,6 +109,43 @@ def test_gc_si_vwap_trend_alpha_research_config_declares_campaign_mapping() -> N
     assert campaign.budget.max_trials_per_generation >= len(candidates)
 
 
+def test_gc_si_vwap_trend_holdout_config_replays_selected_candidate_only() -> None:
+    campaign = ResearchCampaignConfig.from_yaml(
+        "configs/research/campaigns/gc_si_vwap_trend_holdout_v1.yaml"
+    )
+    assert campaign.campaign_id == "gc_si_vwap_trend_holdout_v1"
+    assert [family.id for family in campaign.families] == ["vwap_trend_holdout"]
+    assert campaign.execution.data_mode == "full"
+    assert campaign.execution.default_mode == "backtest_pipeline"
+    assert campaign.execution.metrics_source == "backtest_artifacts"
+    assert campaign.execution.windows
+    assert all(
+        window["start"] >= "2026-02-01T00:00:00+00:00" for window in campaign.execution.windows
+    )
+    assert not any(window["start"].startswith("2026-01-") for window in campaign.execution.windows)
+    assert campaign.budget.max_generations == 1
+    assert campaign.budget.max_trials_per_generation == 1
+    assert campaign.budget.max_total_trials == 1
+
+    search_space = SearchSpaceSpec.from_yaml(campaign.families[0].search_space)
+    candidates = CandidateGenerator(search_space).grid()
+    assert len(candidates) == 1
+    assert candidates[0].parameters == {
+        "root": "GC",
+        "time_window": "current_08_16",
+        "vwap_slope_lookback": 3,
+        "min_volume_ratio": "1.2",
+        "target_r_multiple": "1.0",
+    }
+
+    template = yaml.safe_load(
+        Path(campaign.families[0].manifest_template).read_text(encoding="utf-8")
+    )
+    pipeline = template["backtest_pipeline"]
+    assert pipeline["root_strategy_parameter"] == "symbol"
+    assert set(candidates[0].parameters) - {"root"} == set(pipeline["strategy_parameter_names"])
+
+
 def test_campaign_config_rejects_invalid_budget(tmp_path: Path) -> None:
     campaign_path = _write_campaign(tmp_path, {"budget": {"max_total_trials": 0}})
 

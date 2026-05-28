@@ -179,7 +179,7 @@ def test_generated_trials_use_template_backtest_pipeline_mapping(tmp_path: Path)
             "backtest_pipeline:",
             "  root_strategy_parameter: symbol",
             "  strategy_parameter_defaults:",
-            "    target_quantity: \"1\"",
+            '    target_quantity: "1"',
             "  strategy_parameter_map:",
             "    lookback: vwap_slope_lookback",
         ),

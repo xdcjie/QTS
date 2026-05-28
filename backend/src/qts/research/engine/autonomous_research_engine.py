@@ -1006,8 +1006,7 @@ class AutonomousResearchEngine:
         missing = [name for name in parameter_names if name not in parameters]
         if missing:
             raise ValueError(
-                "backtest_pipeline strategy parameter missing from trial parameters: "
-                f"{missing[0]}"
+                f"backtest_pipeline strategy parameter missing from trial parameters: {missing[0]}"
             )
         return strategy_parameter_defaults, None, parameter_names
 
