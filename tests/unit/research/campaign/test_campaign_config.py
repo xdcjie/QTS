@@ -119,7 +119,32 @@ def test_gc_si_vwap_trend_holdout_config_replays_selected_candidate_only() -> No
     assert campaign.execution.data_mode == "full"
     assert campaign.execution.default_mode == "backtest_pipeline"
     assert campaign.execution.metrics_source == "backtest_artifacts"
-    assert campaign.execution.windows
+    assert list(campaign.execution.windows) == [
+        {
+            "start": "2026-02-03T23:00:00+00:00",
+            "end": "2026-02-04T22:00:00+00:00",
+        },
+        {
+            "start": "2026-02-04T23:00:00+00:00",
+            "end": "2026-02-05T22:00:00+00:00",
+        },
+        {
+            "start": "2026-02-05T23:00:00+00:00",
+            "end": "2026-02-06T22:00:00+00:00",
+        },
+        {
+            "start": "2026-02-23T23:00:00+00:00",
+            "end": "2026-02-24T22:00:00+00:00",
+        },
+        {
+            "start": "2026-03-02T23:00:00+00:00",
+            "end": "2026-03-03T22:00:00+00:00",
+        },
+        {
+            "start": "2026-03-03T23:00:00+00:00",
+            "end": "2026-03-04T22:00:00+00:00",
+        },
+    ]
     assert all(
         window["start"] >= "2026-02-01T00:00:00+00:00" for window in campaign.execution.windows
     )
