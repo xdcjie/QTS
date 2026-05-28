@@ -285,9 +285,9 @@ class AutonomousResearchEngine:
             )
             generations.append(generation["generation"])
             all_trial_evidence_rows.extend(generation["trial_evidence_rows"])
-        selected_rows.extend(generation["selected_rows"])
-        rejected_rows.extend(generation["rejected_rows"])
-        next_proposal = cast(NextGenerationProposal, generation["next_generation_proposal"])
+            selected_rows.extend(generation["selected_rows"])
+            rejected_rows.extend(generation["rejected_rows"])
+            next_proposal = cast(NextGenerationProposal, generation["next_generation_proposal"])
 
         fitness_landscape_path = root / "fitness_landscape.jsonl"
         selected_candidates_path = root / "selected_candidates.jsonl"
