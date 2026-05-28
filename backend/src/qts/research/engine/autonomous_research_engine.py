@@ -234,6 +234,7 @@ class AutonomousResearchEngine:
 
     def __init__(self, *, repo_root: Path) -> None:
         self._repo_root = Path(repo_root)
+        self._data_window_cache: dict[tuple[str, int | None], tuple[str, str]] = {}
 
     def run(self, run: AutonomousResearchRun) -> AutonomousResearchResult:
         """Run a bounded autonomous campaign without launching runtime modes."""
@@ -934,16 +935,19 @@ class AutonomousResearchEngine:
         root: str,
         data_path: Path,
     ) -> tuple[Path, Path]:
-        data_root = run.output_root / "backtest_data" / trial_id
+        max_rows = self._materialization_max_rows(run)
+        data_root = (
+            run.output_root / "backtest_data" / "full" / root
+            if max_rows is None
+            else run.output_root / "backtest_data" / trial_id
+        )
         bars_dir = data_root / "data"
         bars_dir.mkdir(parents=True, exist_ok=True)
         target_csv = bars_dir / f"{root}.csv"
-        self._materialize_backtest_csv(
-            data_path,
-            target_csv,
-            symbol=root,
-            max_rows=self._materialization_max_rows(run),
-        )
+        if max_rows is None:
+            self._ensure_full_backtest_csv(data_path, target_csv, symbol=root)
+        else:
+            self._materialize_backtest_csv(data_path, target_csv, symbol=root, max_rows=max_rows)
         config_path = data_root / "historical.local.yaml"
         payload = {
             "historical_data": {
@@ -970,6 +974,27 @@ class AutonomousResearchEngine:
         }
         config_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
         return config_path, target_csv
+
+    def _ensure_full_backtest_csv(
+        self, source_path: Path, target_path: Path, *, symbol: str
+    ) -> None:
+        metadata_path = target_path.with_suffix(".materialization.json")
+        source_stat = source_path.stat()
+        expected_metadata = {
+            "max_rows": None,
+            "source_path": str(source_path),
+            "source_size": source_stat.st_size,
+            "source_mtime_ns": source_stat.st_mtime_ns,
+            "symbol": symbol,
+        }
+        if target_path.exists() and metadata_path.exists():
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            if metadata == expected_metadata:
+                return
+        temp_path = target_path.with_suffix(f"{target_path.suffix}.tmp")
+        self._materialize_backtest_csv(source_path, temp_path, symbol=symbol, max_rows=None)
+        temp_path.replace(target_path)
+        self._write_json(metadata_path, expected_metadata)
 
     def _materialize_backtest_csv(
         self,
@@ -1052,6 +1077,10 @@ class AutonomousResearchEngine:
                 emitted += 1
 
     def _data_window(self, source_path: Path, *, max_rows: int | None) -> tuple[str, str]:
+        cache_key = (str(source_path.resolve()), max_rows)
+        cached = self._data_window_cache.get(cache_key)
+        if cached is not None:
+            return cached
         timestamps: list[str] = []
         seen_timestamps: set[str] = set()
         with source_path.open("r", encoding="utf-8") as source:
@@ -1080,7 +1109,9 @@ class AutonomousResearchEngine:
             timestamps[-1].replace(".000000000Z", "+00:00").replace("Z", "+00:00")
         )
         end = (end_timestamp + timedelta(minutes=1)).isoformat().replace("+00:00", "Z")
-        return start, end
+        window = (start, end)
+        self._data_window_cache[cache_key] = window
+        return window
 
     def _combined_data_window(
         self,

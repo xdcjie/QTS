@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
 from qts.research.engine.autonomous_research_engine import (
     AutonomousResearchEngine,
     AutonomousResearchRun,
@@ -59,6 +60,53 @@ def test_backtest_data_materialization_mode_controls_truncation(tmp_path: Path) 
     full_target = tmp_path / "full.csv"
     engine._materialize_backtest_csv(source, full_target, symbol="GC", max_rows=None)
     assert len(full_target.read_text(encoding="utf-8").splitlines()) == 61
+
+
+def test_full_backtest_data_materialization_reuses_shared_csv(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    campaign_path = write_campaign(tmp_path, data_mode="full", max_rows=None)
+    data_paths = write_data_paths(tmp_path)
+    run = AutonomousResearchRun.from_yaml(
+        campaign_path,
+        data_paths=data_paths,
+        output_root=tmp_path / "run",
+    )
+    engine = AutonomousResearchEngine(repo_root=Path.cwd())
+    calls: list[Path] = []
+    original = engine._materialize_backtest_csv
+
+    def counted_materialize(
+        source_path: Path,
+        target_path: Path,
+        *,
+        symbol: str,
+        max_rows: int | None,
+    ) -> None:
+        calls.append(target_path)
+        original(source_path, target_path, symbol=symbol, max_rows=max_rows)
+
+    monkeypatch.setattr(engine, "_materialize_backtest_csv", counted_materialize)
+
+    _first_config, first_csv = engine._write_backtest_data_config(
+        run=run,
+        trial_id="generation-000-trial-000",
+        root="GC",
+        data_path=data_paths["GC"],
+    )
+    _second_config, second_csv = engine._write_backtest_data_config(
+        run=run,
+        trial_id="generation-000-trial-001",
+        root="GC",
+        data_path=data_paths["GC"],
+    )
+
+    assert first_csv == second_csv
+    assert first_csv == tmp_path / "run" / "backtest_data" / "full" / "GC" / "data" / "GC.csv"
+    assert len(calls) == 1
+    metadata = json.loads(first_csv.with_suffix(".materialization.json").read_text())
+    assert metadata["max_rows"] is None
 
 
 def write_campaign(
