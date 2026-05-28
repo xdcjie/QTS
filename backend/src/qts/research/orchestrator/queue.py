@@ -22,14 +22,27 @@ class ExperimentScheduleResult:
 
     status: str
     completed_job_ids: tuple[str, ...] = ()
+    completed_results: Mapping[str, Mapping[str, Any]] | None = None
     failed_job_ids: tuple[str, ...] = ()
     retried_job_ids: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        results = self.completed_results or {}
+        object.__setattr__(
+            self,
+            "completed_results",
+            {str(job_id): dict(payload) for job_id, payload in sorted(results.items())},
+        )
 
     def to_payload(self) -> dict[str, Any]:
         """Return a deterministic JSON-ready scheduler result."""
 
         return {
             "completed_job_ids": list(self.completed_job_ids),
+            "completed_results": {
+                job_id: dict(payload)
+                for job_id, payload in sorted((self.completed_results or {}).items())
+            },
             "failed_job_ids": list(self.failed_job_ids),
             "retried_job_ids": list(self.retried_job_ids),
             "status": self.status,
@@ -70,6 +83,12 @@ class ExperimentQueue:
         """Return completed job IDs in deterministic order."""
 
         return tuple(sorted(self._completed))
+
+    @property
+    def completed_results(self) -> Mapping[str, Mapping[str, Any]]:
+        """Return completed job result payloads keyed by job ID."""
+
+        return {job_id: dict(payload) for job_id, payload in sorted(self._completed.items())}
 
     @property
     def failed_job_ids(self) -> tuple[str, ...]:
@@ -310,6 +329,7 @@ class ExperimentScheduler:
         return ExperimentScheduleResult(
             status=status,
             completed_job_ids=self._queue.completed_job_ids,
+            completed_results=self._queue.completed_results,
             failed_job_ids=self._queue.failed_job_ids,
             retried_job_ids=tuple(retried_job_ids),
         )

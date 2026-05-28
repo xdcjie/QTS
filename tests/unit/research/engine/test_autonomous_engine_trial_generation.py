@@ -27,12 +27,17 @@ def test_engine_generates_trials_from_campaign_search_space_and_strategy_factory
     assert {row["strategy_family"] for row in rows} == {"momentum"}
     assert {row["metrics"]["performance"]["oos_sharpe"] for row in rows}
     assert all(row["parameter_hash"].startswith("sha256:") for row in rows)
-    generation_rows = read_jsonl(result.generations[0].landscape_path)
-    assert {row["parameters"]["lookback"] for row in generation_rows} <= {5, 10, 15}
-    assert all(row["candidate_space_hash"].startswith("sha256:") for row in generation_rows)
-    assert all(row["strategy_variant_hash"].startswith("sha256:") for row in generation_rows)
-    assert all(row["factor_hash"].startswith("sha256:") for row in generation_rows)
-    assert all(row["trial_id"].startswith("generation-000-trial-") for row in generation_rows)
+    generation_candidate_rows = read_jsonl(
+        result.output_root / "generation-000" / "candidate_parameters.jsonl"
+    )
+    assert {row["parameters"]["lookback"] for row in generation_candidate_rows} <= {5, 10, 15}
+    assert all(
+        row["candidate_space_hash"].startswith("sha256:") for row in generation_candidate_rows
+    )
+    assert all(
+        row["strategy_variant_hash"].startswith("sha256:") for row in generation_candidate_rows
+    )
+    assert all(row["trial_id"].startswith("generation-000-trial-") for row in rows)
 
 
 def write_campaign(

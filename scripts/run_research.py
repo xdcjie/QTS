@@ -1489,20 +1489,25 @@ def _annotate_operator_acceptance_artifacts(
 
 
 def _annotated_rejected_candidate(row: Mapping[str, Any]) -> dict[str, Any]:
-    reasons = [str(reason) for reason in row.get("reasons", ())] if row.get("reasons") else []
-    selector_reasons = [
-        reason
-        for reason in reasons
-        if "top-ranked" in reason or "selection" in reason or "rank" in reason
-    ]
-    gauntlet_reasons = [reason for reason in reasons if reason not in selector_reasons]
-    if not gauntlet_reasons and reasons:
+    reasons = _reason_list(row.get("reasons"))
+    selector_reasons = _reason_list(row.get("selector_reasons"))
+    gauntlet_reasons = _reason_list(row.get("gauntlet_reasons"))
+    stage = str(row.get("rejection_stage") or row.get("stage") or "")
+    if not selector_reasons and stage == "selector":
+        selector_reasons = reasons
+    if not gauntlet_reasons and stage == "gauntlet":
         gauntlet_reasons = reasons
     return {
         **dict(row),
         "gauntlet_reasons": gauntlet_reasons,
         "selector_reasons": selector_reasons,
     }
+
+
+def _reason_list(value: Any) -> list[str]:
+    if isinstance(value, Sequence) and not isinstance(value, str):
+        return [str(reason) for reason in value]
+    return []
 
 
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -1539,6 +1544,7 @@ def _selection_policy_from_campaign(campaign: ResearchCampaignConfig) -> Selecti
         max_drawdown=constraints.get("max_drawdown", 0.25),
         min_oos_trade_count=int(constraints.get("min_oos_trade_count", 30)),
         max_selected=1,
+        purpose="promotion",
         total_return_metric="performance.total_return",
         oos_sharpe_metric="performance.oos_sharpe",
         max_drawdown_metric="performance.max_drawdown",

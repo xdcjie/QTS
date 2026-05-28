@@ -77,8 +77,19 @@ def test_gc_si_autonomous_real_pipeline_acceptance_cli(
     assert resume_payload["acceptance_markers"]["gauntlet"] == "ValidationGauntlet"
 
     rejected_rows = _jsonl(output_root / "rejected_candidates.jsonl")
-    assert any(row.get("selector_reasons") for row in rejected_rows)
-    assert any(row.get("gauntlet_reasons") for row in rejected_rows)
+    assert any(
+        row.get("rejection_stage") == "selector" and row.get("selector_reasons")
+        for row in rejected_rows
+    )
+    assert any(
+        row.get("rejection_stage") == "gauntlet" and row.get("gauntlet_reasons")
+        for row in rejected_rows
+    )
+    assert all(
+        not row.get("gauntlet_reasons")
+        for row in rejected_rows
+        if row.get("rejection_stage") != "gauntlet"
+    )
 
     validation_summary = json.loads((output_root / "validation_summary.json").read_text())
     assert validation_summary["real_path_markers"]["metrics_source"] == "backtest_artifacts"
@@ -102,12 +113,12 @@ def _jsonl(path: Path) -> list[dict[str, Any]]:
 
 def _historical_data_paths(tmp_path: Path) -> dict[str, Path]:
     source_paths = {
-        "GC": Path("historical/data/gc.csv"),
-        "SI": Path("historical/data/si.csv"),
+        "GC": Path("tests/fixtures/research/gc_si_real_history/gc.csv"),
+        "SI": Path("tests/fixtures/research/gc_si_real_history/si.csv"),
     }
     missing = [str(path) for path in source_paths.values() if not path.exists()]
     if missing:
-        raise AssertionError(f"real GC/SI historical CSV files are required: {missing}")
+        raise AssertionError(f"GC/SI historical fixture CSV files are required: {missing}")
     slice_dir = tmp_path / "real_historical_slice"
     slice_dir.mkdir()
     return {

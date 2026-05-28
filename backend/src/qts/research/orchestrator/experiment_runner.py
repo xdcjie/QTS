@@ -393,6 +393,11 @@ class ResearchExperimentRunner:
         reproducibility_path = trial_dir / "reproducibility_v2.json"
         manifest_path = trial_dir / "manifest.json"
         report_path = trial_dir / "report.md"
+        strategy_variant_path = self._write_strategy_variant_artifact(
+            trial_dir=trial_dir,
+            trial=trial,
+            manifest_payload=manifest_payload,
+        )
         self._write_json(metrics_path, metrics_payload)
         self._write_json(data_quality_path, data_quality_payload)
         self._write_json(reproducibility_path, reproducibility_payload)
@@ -403,6 +408,8 @@ class ResearchExperimentRunner:
             "reproducibility": reproducibility_path,
             **dict(execution_artifacts.artifact_paths or {}),
         }
+        if strategy_variant_path is not None:
+            artifact_paths["strategy_variant"] = strategy_variant_path
         manifest_payload = {
             **manifest_payload,
             "artifact_hashes": {
@@ -458,6 +465,7 @@ class ResearchExperimentRunner:
                     metrics_path=metrics_path,
                     data_quality_path=data_quality_path,
                     reproducibility_path=reproducibility_path,
+                    strategy_variant_path=strategy_variant_path,
                     report_path=report_path,
                 ),
             )
@@ -523,6 +531,44 @@ class ResearchExperimentRunner:
         if strategy_variant_hash is not None:
             payload["strategy_variant_hash"] = str(strategy_variant_hash)
         return payload
+
+    def _write_strategy_variant_artifact(
+        self,
+        *,
+        trial_dir: Path,
+        trial: Mapping[str, Any],
+        manifest_payload: Mapping[str, Any],
+    ) -> Path | None:
+        strategy_variant_id = trial.get("strategy_variant_id")
+        strategy_variant_hash = trial.get("strategy_variant_hash")
+        if strategy_variant_id is None and strategy_variant_hash is None:
+            return None
+        path = trial_dir / "strategy_variant.json"
+        manifest_patch = trial.get("manifest_patch")
+        research_factory = {}
+        if isinstance(manifest_patch, Mapping):
+            research_factory_raw = manifest_patch.get("research_factory", {})
+            if isinstance(research_factory_raw, Mapping):
+                research_factory = dict(research_factory_raw)
+        payload = {
+            "candidate_id": trial.get("candidate_id"),
+            "candidate_space_hash": trial.get("candidate_space_hash"),
+            "factor_hash": trial.get("factor_hash"),
+            "family": trial.get("family"),
+            "manifest_patch": dict(manifest_patch) if isinstance(manifest_patch, Mapping) else {},
+            "manifest_patch_hash": manifest_payload.get("manifest_patch_hash"),
+            "parameters": dict(self._mapping(trial.get("parameters", {}), "parameters")),
+            "strategy_variant_hash": None
+            if strategy_variant_hash is None
+            else str(strategy_variant_hash),
+            "strategy_variant_id": None
+            if strategy_variant_id is None
+            else str(strategy_variant_id),
+            "template_id": research_factory.get("template_id"),
+            "trial_id": self._text(trial.get("trial_id"), "trial_id"),
+        }
+        self._write_json(path, payload)
+        return path
 
     def _merged_manifest(
         self,
@@ -863,9 +909,53 @@ class ResearchExperimentRunner:
         metrics_path: Path,
         data_quality_path: Path,
         reproducibility_path: Path,
+        strategy_variant_path: Path | None,
         report_path: Path,
     ) -> dict[str, Any]:
         trial_id = self._text(trial.get("trial_id"), "trial_id")
+        steps: list[dict[str, Any]] = [
+            {
+                "id": "manifest",
+                "kind": "manifest",
+                "outputs": {"manifest_path": str(manifest_path)},
+                "status": "passed",
+            },
+            {
+                "id": "metrics",
+                "kind": "metrics",
+                "outputs": {"artifact_path": str(metrics_path)},
+                "status": "passed",
+            },
+            {
+                "id": "data_quality",
+                "kind": "data_quality",
+                "outputs": {"artifact_path": str(data_quality_path)},
+                "status": "passed",
+            },
+            {
+                "id": "reproducibility",
+                "kind": "reproducibility",
+                "outputs": {"reproducibility_v2_path": str(reproducibility_path)},
+                "status": "passed",
+            },
+        ]
+        if strategy_variant_path is not None:
+            steps.append(
+                {
+                    "id": "strategy_variant",
+                    "kind": "strategy_variant",
+                    "outputs": {"artifact_path": str(strategy_variant_path)},
+                    "status": "passed",
+                }
+            )
+        steps.append(
+            {
+                "id": "report",
+                "kind": "research_report",
+                "outputs": {"report_path": str(report_path)},
+                "status": "passed",
+            }
+        )
         return {
             "idea_metadata": self._idea(job, trial).to_payload(),
             "periods": [
@@ -886,38 +976,7 @@ class ResearchExperimentRunner:
                 "workflow_config_hash": manifest_hash,
             },
             "status": "completed",
-            "steps": [
-                {
-                    "id": "manifest",
-                    "kind": "manifest",
-                    "outputs": {"manifest_path": str(manifest_path)},
-                    "status": "passed",
-                },
-                {
-                    "id": "metrics",
-                    "kind": "metrics",
-                    "outputs": {"artifact_path": str(metrics_path)},
-                    "status": "passed",
-                },
-                {
-                    "id": "data_quality",
-                    "kind": "data_quality",
-                    "outputs": {"artifact_path": str(data_quality_path)},
-                    "status": "passed",
-                },
-                {
-                    "id": "reproducibility",
-                    "kind": "reproducibility",
-                    "outputs": {"reproducibility_v2_path": str(reproducibility_path)},
-                    "status": "passed",
-                },
-                {
-                    "id": "report",
-                    "kind": "research_report",
-                    "outputs": {"report_path": str(report_path)},
-                    "status": "passed",
-                },
-            ],
+            "steps": steps,
             "workflow_id": f"{job.job_id}-{trial_id}",
         }
 

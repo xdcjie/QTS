@@ -43,6 +43,11 @@ def test_queue_order_and_resume_state_are_deterministic(tmp_path: Path) -> None:
 
     assert result.status == "completed"
     assert result.completed_job_ids == ("job-a", "job-b")
+    assert result.completed_results == {
+        "job-a": {"job_id": "job-a", "status": "completed"},
+        "job-b": {"job_id": "job-b", "status": "completed"},
+    }
+    assert result.to_payload()["completed_results"]["job-a"]["status"] == "completed"
     assert resumed.to_payload()["pending"] == []
 
 

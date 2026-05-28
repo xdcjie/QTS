@@ -26,6 +26,7 @@ from qts.research.factory.factor_definition import FactorDefinition
 from qts.research.factory.strategy_template import StrategyTemplate, StrategyVariantFactory
 from qts.research.idea_spec import IdeaSpec
 from qts.research.landscape import FitnessAnalytics, FitnessLandscapePoint, FitnessLandscapeStore
+from qts.research.metrics_schema import ResearchMetricsSchema
 from qts.research.orchestrator import (
     ExperimentQueue,
     ExperimentRetryPolicy,
@@ -246,7 +247,7 @@ class AutonomousResearchEngine:
         landscape_store = FitnessLandscapeStore(root / "fitness_landscape.jsonl")
         budget_manager = self._budget_manager(run, root)
 
-        all_landscape_rows: list[dict[str, Any]] = []
+        all_trial_evidence_rows: list[dict[str, Any]] = []
         selected_rows: list[dict[str, Any]] = []
         rejected_rows: list[dict[str, Any]] = []
         generations: list[AutonomousResearchGeneration] = []
@@ -282,7 +283,7 @@ class AutonomousResearchEngine:
                 budget_manager=budget_manager,
             )
             generations.append(generation["generation"])
-            all_landscape_rows.extend(generation["landscape_rows"])
+            all_trial_evidence_rows.extend(generation["trial_evidence_rows"])
             selected_rows.extend(generation["selected_rows"])
             rejected_rows.extend(generation["rejected_rows"])
             next_proposal = cast(NextGenerationProposal, generation["next_generation_proposal"])
@@ -303,7 +304,7 @@ class AutonomousResearchEngine:
             self._write_next_generation_proposal(next_generation_proposal_path, next_proposal)
         self._write_jsonl(
             root / "candidate_parameters.jsonl",
-            self._candidate_parameter_rows_from_landscape(all_landscape_rows),
+            self._candidate_parameter_rows_from_trial_evidence(all_trial_evidence_rows),
         )
 
         report_path = root / "report.md"
@@ -388,7 +389,7 @@ class AutonomousResearchEngine:
             trials=trials,
         )
         experiment_result = self._run_experiment_job(job, audit_log=audit_log)
-        landscape_rows = self._landscape_rows(
+        trial_evidence_rows = self._trial_evidence_rows(
             run=run,
             generation_id=generation_id,
             trials=trials,
@@ -397,26 +398,26 @@ class AutonomousResearchEngine:
         self._append_trial_audit_records(
             audit_log=audit_log,
             generation_index=generation_index,
-            landscape_rows=landscape_rows,
+            trial_evidence_rows=trial_evidence_rows,
         )
         selected_rows, execution_rejected_rows = self._select_generation_candidates(
             run=run,
             generation_id=generation_id,
             trials=trials,
             trial_results=experiment_result.trials,
-            landscape_rows=landscape_rows,
+            trial_evidence_rows=trial_evidence_rows,
             evidence_registry=evidence_registry,
             audit_log=audit_log,
         )
         rejected_rows = [*execution_rejected_rows, *budget_rejected_rows]
-        self._append_landscape_points(
+        generation_landscape_rows = self._append_landscape_points(
             run=run,
             landscape_store=landscape_store,
             rows=(*selected_rows, *execution_rejected_rows),
         )
         landscape_path = generation_dir / "fitness_landscape.jsonl"
         proposal_path = generation_dir / "next_generation_proposal.json"
-        self._write_jsonl(landscape_path, landscape_rows)
+        self._write_jsonl(landscape_path, generation_landscape_rows)
         next_proposal = self._next_generation_proposal(
             run=run,
             previous_generation_id=generation_id,
@@ -442,7 +443,7 @@ class AutonomousResearchEngine:
                 next_generation_proposal_path=proposal_path,
                 experiment_result=experiment_result,
             ),
-            "landscape_rows": landscape_rows,
+            "trial_evidence_rows": trial_evidence_rows,
             "next_generation_proposal": next_proposal,
             "rejected_rows": rejected_rows,
             "selected_rows": selected_rows,
@@ -464,12 +465,7 @@ class AutonomousResearchEngine:
             raise RuntimeError(f"experiment scheduler failed: {schedule.to_payload()}")
         if schedule.completed_job_ids != (job.job_id,):
             raise RuntimeError(f"unexpected completed experiment jobs: {schedule.to_payload()}")
-        completed = {
-            str(row["job_id"]): row["payload"]
-            for row in queue.to_payload()["completed"]
-            if isinstance(row, Mapping) and isinstance(row.get("payload"), Mapping)
-        }
-        result_payload = completed.get(job.job_id)
+        result_payload = (schedule.completed_results or {}).get(job.job_id)
         if result_payload is None:
             raise RuntimeError(f"completed experiment result missing: {job.job_id}")
         return ResearchExperimentResult.from_payload(result_payload)
@@ -761,6 +757,9 @@ class AutonomousResearchEngine:
                 self._mapping(trial.get("proposal_application", {}), "proposal_application")
             ),
             "reasons": [decision_reason],
+            "rejection_stage": "trial_budget",
+            "selector_reasons": [],
+            "gauntlet_reasons": [],
             "stage": "trial_budget",
             "status": "rejected",
             "strategy_variant_hash": str(trial["strategy_variant_hash"]),
@@ -1139,7 +1138,7 @@ class AutonomousResearchEngine:
             },
         }
 
-    def _landscape_rows(
+    def _trial_evidence_rows(
         self,
         *,
         run: AutonomousResearchRun,
@@ -1190,9 +1189,9 @@ class AutonomousResearchEngine:
         *,
         audit_log: ResearchAuditLog,
         generation_index: int,
-        landscape_rows: Sequence[Mapping[str, Any]],
+        trial_evidence_rows: Sequence[Mapping[str, Any]],
     ) -> None:
-        for trial_index, row in enumerate(landscape_rows):
+        for trial_index, row in enumerate(trial_evidence_rows):
             audit_log.append(
                 "research_run_completed",
                 {
@@ -1214,7 +1213,7 @@ class AutonomousResearchEngine:
         generation_id: str,
         trials: Sequence[Mapping[str, Any]],
         trial_results: Sequence[ResearchTrialResult],
-        landscape_rows: Sequence[Mapping[str, Any]],
+        trial_evidence_rows: Sequence[Mapping[str, Any]],
         evidence_registry: EvidenceRegistry,
         audit_log: ResearchAuditLog,
     ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -1222,7 +1221,7 @@ class AutonomousResearchEngine:
         rejected_rows: list[dict[str, Any]] = []
         trial_by_id = {str(trial["trial_id"]): trial for trial in trials}
         result_by_id = {result.trial_id: result for result in trial_results}
-        row_by_id = {str(row["trial_id"]): dict(row) for row in landscape_rows}
+        row_by_id = {str(row["trial_id"]): dict(row) for row in trial_evidence_rows}
 
         selector_inputs = [
             self._selector_candidate(
@@ -1232,7 +1231,10 @@ class AutonomousResearchEngine:
             )
             for trial in trials
         ]
-        selection = CandidateSelector(self._selection_policy(run)).select(selector_inputs)
+        selection = CandidateSelector(self._selection_policy(run)).select(
+            selector_inputs,
+            metrics_schema=self._metrics_schema(),
+        )
         selection_dir = run.output_root / generation_id / "selection"
         selection.write_artifacts(selection_dir)
         self._write_jsonl(selection_dir / "candidate_results.jsonl", selector_inputs)
@@ -1244,7 +1246,15 @@ class AutonomousResearchEngine:
 
         for rejected in selection.rejected_candidates:
             row = row_by_id[rejected.candidate_id]
-            rejected_rows.append({**row, "reasons": list(rejected.reasons)})
+            rejected_rows.append(
+                {
+                    **row,
+                    "gauntlet_reasons": [],
+                    "reasons": list(rejected.reasons),
+                    "rejection_stage": "selector",
+                    "selector_reasons": list(rejected.reasons),
+                }
+            )
 
         gauntlet_results: list[dict[str, Any]] = []
         for selected in selection.selected_candidates:
@@ -1260,7 +1270,15 @@ class AutonomousResearchEngine:
             )
             gauntlet_results.append(gauntlet.to_payload())
             if not gauntlet.accepted:
-                rejected_rows.append({**row, "reasons": list(gauntlet.reasons)})
+                rejected_rows.append(
+                    {
+                        **row,
+                        "gauntlet_reasons": list(gauntlet.reasons),
+                        "reasons": list(gauntlet.reasons),
+                        "rejection_stage": "gauntlet",
+                        "selector_reasons": [],
+                    }
+                )
                 continue
             bundle = evidence_registry.create_from_workflow_summary(
                 result.metrics_path.parent / "workflow_summary.json",
@@ -1303,7 +1321,16 @@ class AutonomousResearchEngine:
                     }
                 )
             else:
-                rejected_rows.append({**row, "reasons": list(validation.reasons)})
+                rejected_rows.append(
+                    {
+                        **row,
+                        "gauntlet_reasons": [],
+                        "promotion_reasons": list(validation.reasons),
+                        "reasons": list(validation.reasons),
+                        "rejection_stage": "promotion_packet",
+                        "selector_reasons": [],
+                    }
+                )
         self._write_json(
             run.output_root / generation_id / "validation_gauntlet.json",
             {"results": gauntlet_results},
@@ -1360,7 +1387,7 @@ class AutonomousResearchEngine:
             for trial in trials
         )
 
-    def _candidate_parameter_rows_from_landscape(
+    def _candidate_parameter_rows_from_trial_evidence(
         self,
         rows: Sequence[Mapping[str, Any]],
     ) -> tuple[dict[str, Any], ...]:
@@ -1391,7 +1418,13 @@ class AutonomousResearchEngine:
             oos_sharpe_metric="performance.oos_sharpe",
             max_drawdown_metric="performance.max_drawdown",
             oos_trade_count_metric="trading.oos_trade_count",
+            purpose="promotion",
             cost_sensitivity_metric="costs.cost_sensitivity",
+        )
+
+    def _metrics_schema(self) -> ResearchMetricsSchema:
+        return ResearchMetricsSchema.from_yaml(
+            self._repo_root / "configs" / "research" / "metrics" / "schema_v2.yaml"
         )
 
     def _validation_gauntlet(self, run: AutonomousResearchRun) -> ValidationGauntlet:
@@ -1416,7 +1449,8 @@ class AutonomousResearchEngine:
         run: AutonomousResearchRun,
         landscape_store: FitnessLandscapeStore,
         rows: Sequence[Mapping[str, Any]],
-    ) -> None:
+    ) -> tuple[dict[str, Any], ...]:
+        payloads: list[dict[str, Any]] = []
         for row in rows:
             parameters = self._mapping(row["parameters"], "parameters")
             metrics = self._planner_metrics(self._mapping(row["metrics"], "metrics"))
@@ -1424,34 +1458,35 @@ class AutonomousResearchEngine:
             evidence_bundle_id = str(row.get("evidence_bundle_id") or "")
             if not evidence_bundle_id:
                 raise ValueError(f"landscape row missing evidence_bundle_id: {row['trial_id']}")
-            landscape_store.append(
-                FitnessLandscapePoint(
-                    trial_id=str(row["trial_id"]),
-                    retry_id=None,
-                    campaign_id=run.campaign_id,
-                    generation_id=str(row["generation_id"]),
-                    strategy_family=str(row["family"]),
-                    factor_family=str(row["factor_family"]),
-                    universe=run.universe,
-                    root=str(parameters.get("root", run.universe[0])),
-                    timeframe=run.timeframe,
-                    regime=str(parameters.get("regime", "research")),
-                    session=str(parameters.get("session", "rth")),
-                    parameter_hash=stable_json_hash(parameters),
-                    metrics=metrics,
-                    constraints=self._constraint_payload(run),
-                    accepted=accepted,
-                    rejected_reasons=tuple(str(reason) for reason in row.get("reasons", ())),
-                    evidence_bundle_id=evidence_bundle_id,
-                    promotion_packet_id=(str(row["promotion_candidate_id"]) if accepted else None),
-                    artifact_graph_hash=stable_json_hash(
-                        {
-                            "parameter_hash": stable_json_hash(parameters),
-                            "trial_id": row["trial_id"],
-                        }
-                    ),
-                )
+            point = FitnessLandscapePoint(
+                trial_id=str(row["trial_id"]),
+                retry_id=None,
+                campaign_id=run.campaign_id,
+                generation_id=str(row["generation_id"]),
+                strategy_family=str(row["family"]),
+                factor_family=str(row["factor_family"]),
+                universe=run.universe,
+                root=str(parameters.get("root", run.universe[0])),
+                timeframe=run.timeframe,
+                regime=str(parameters.get("regime", "research")),
+                session=str(parameters.get("session", "rth")),
+                parameter_hash=stable_json_hash(parameters),
+                metrics=metrics,
+                constraints=self._constraint_payload(run),
+                accepted=accepted,
+                rejected_reasons=tuple(str(reason) for reason in row.get("reasons", ())),
+                evidence_bundle_id=evidence_bundle_id,
+                promotion_packet_id=(str(row["promotion_candidate_id"]) if accepted else None),
+                artifact_graph_hash=stable_json_hash(
+                    {
+                        "parameter_hash": stable_json_hash(parameters),
+                        "trial_id": row["trial_id"],
+                    }
+                ),
             )
+            landscape_store.append(point)
+            payloads.append(point.to_payload())
+        return tuple(payloads)
 
     @staticmethod
     def _planner_metrics(metrics: Mapping[str, Any]) -> dict[str, Any]:

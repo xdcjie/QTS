@@ -24,3 +24,7 @@ def test_engine_writes_complete_fitness_landscape_points(tmp_path: Path) -> None
     assert accepted[0]["promotion_packet_id"] == selected["promotion_candidate_id"]
     assert accepted[0]["evidence_bundle_id"] != accepted[0]["trial_id"]
     assert all(row["point_hash"].startswith("sha256:") for row in rows)
+    generation_rows = read_jsonl(result.generations[0].landscape_path)
+    assert generation_rows == rows
+    assert all("parameters" not in row for row in generation_rows)
+    assert all(row["parameter_hash"].startswith("sha256:") for row in generation_rows)
