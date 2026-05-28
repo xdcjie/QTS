@@ -365,14 +365,32 @@ def write_data_paths(tmp_path: Path) -> dict[str, Path]:
         "\n".join(
             ["timestamp,close"]
             + [
-                f"2026-01-02T00:{minute:02d}:00+00:00,{100 + (minute * 0.5):.1f}"
-                for minute in range(20)
+                f"2026-01-02T00:{minute:02d}:00+00:00,{price:.1f}"
+                for minute, price in enumerate(_profit_factor_fixture_prices(100))
             ]
             + [""]
         ),
         encoding="utf-8",
     )
     return {"GC": data_path}
+
+
+def _profit_factor_fixture_prices(base: int) -> tuple[int, ...]:
+    return (
+        *((base,) * 15),
+        base + 1,
+        base,
+        base - 1,
+        *((base - 1,) * 15),
+        base,
+        base + 3,
+        base + 6,
+        base + 9,
+        base + 12,
+        base + 8,
+        base + 4,
+        *((base + 4,) * 10),
+    )
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
