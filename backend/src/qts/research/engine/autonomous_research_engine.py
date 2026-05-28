@@ -941,10 +941,17 @@ class AutonomousResearchEngine:
         bars_dir = data_root / "data"
         bars_dir.mkdir(parents=True, exist_ok=True)
         target_csv = bars_dir / f"{root}.csv"
+        window = self._execution_window(run)
         if max_rows is None:
-            self._ensure_full_backtest_csv(data_path, target_csv, symbol=root)
+            self._ensure_full_backtest_csv(data_path, target_csv, symbol=root, window=window)
         else:
-            self._materialize_backtest_csv(data_path, target_csv, symbol=root, max_rows=max_rows)
+            self._materialize_backtest_csv(
+                data_path,
+                target_csv,
+                symbol=root,
+                max_rows=max_rows,
+                window=window,
+            )
         config_path = data_root / "historical.local.yaml"
         payload = {
             "historical_data": {
@@ -973,7 +980,12 @@ class AutonomousResearchEngine:
         return config_path, target_csv
 
     def _ensure_full_backtest_csv(
-        self, source_path: Path, target_path: Path, *, symbol: str
+        self,
+        source_path: Path,
+        target_path: Path,
+        *,
+        symbol: str,
+        window: tuple[str, str] | None,
     ) -> None:
         metadata_path = target_path.with_suffix(".materialization.json")
         source_stat = source_path.stat()
@@ -983,13 +995,20 @@ class AutonomousResearchEngine:
             "source_size": source_stat.st_size,
             "source_mtime_ns": source_stat.st_mtime_ns,
             "symbol": symbol,
+            "window": None if window is None else {"end": window[1], "start": window[0]},
         }
         if target_path.exists() and metadata_path.exists():
             metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
             if metadata == expected_metadata:
                 return
         temp_path = target_path.with_suffix(f"{target_path.suffix}.tmp")
-        self._materialize_backtest_csv(source_path, temp_path, symbol=symbol, max_rows=None)
+        self._materialize_backtest_csv(
+            source_path,
+            temp_path,
+            symbol=symbol,
+            max_rows=None,
+            window=window,
+        )
         temp_path.replace(target_path)
         self._write_json(metadata_path, expected_metadata)
 
@@ -1000,7 +1019,10 @@ class AutonomousResearchEngine:
         *,
         symbol: str,
         max_rows: int | None,
+        window: tuple[str, str] | None = None,
     ) -> None:
+        start_time = None if window is None else self._parse_timestamp(window[0])
+        end_time = None if window is None else self._parse_timestamp(window[1])
         with (
             source_path.open("r", encoding="utf-8") as source,
             target_path.open(
@@ -1031,6 +1053,11 @@ class AutonomousResearchEngine:
                         continue
                     values = line.strip().split(",")
                     timestamp = values[timestamp_index]
+                    timestamp_time = self._parse_timestamp(timestamp)
+                    if start_time is not None and timestamp_time < start_time:
+                        continue
+                    if end_time is not None and timestamp_time >= end_time:
+                        break
                     if timestamp in seen_timestamps:
                         continue
                     close = values[close_index]
@@ -1068,10 +1095,17 @@ class AutonomousResearchEngine:
                 if not line.strip():
                     continue
                 timestamp, close = line.strip().split(",", maxsplit=1)
+                timestamp_time = self._parse_timestamp(timestamp)
+                if start_time is not None and timestamp_time < start_time:
+                    continue
+                if end_time is not None and timestamp_time >= end_time:
+                    break
                 target.write(
                     f"{timestamp},33,1,{index},{close},{close},{close},{close},1,{symbol}\n"
                 )
                 emitted += 1
+        if emitted == 0:
+            raise ValueError(f"data path has no rows in requested backtest window: {source_path}")
 
     def _data_window(self, source_path: Path, *, max_rows: int | None) -> tuple[str, str]:
         cache_key = (str(source_path.resolve()), max_rows)
@@ -1111,10 +1145,16 @@ class AutonomousResearchEngine:
         return window
 
     def _backtest_window(self, run: AutonomousResearchRun, source_path: Path) -> tuple[str, str]:
+        execution_window = self._execution_window(run)
+        if execution_window is not None:
+            return execution_window
+        return self._data_window(source_path, max_rows=self._materialization_max_rows(run))
+
+    def _execution_window(self, run: AutonomousResearchRun) -> tuple[str, str] | None:
         execution = run.campaign_config.execution if run.campaign_config is not None else None
         if execution is not None and execution.start is not None and execution.end is not None:
             return execution.start, execution.end
-        return self._data_window(source_path, max_rows=self._materialization_max_rows(run))
+        return None
 
     def _combined_data_window(
         self,

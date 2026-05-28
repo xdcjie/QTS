@@ -61,6 +61,16 @@ def test_backtest_data_materialization_mode_controls_truncation(tmp_path: Path) 
     engine._materialize_backtest_csv(source, full_target, symbol="GC", max_rows=None)
     assert len(full_target.read_text(encoding="utf-8").splitlines()) == 61
 
+    window_target = tmp_path / "window.csv"
+    engine._materialize_backtest_csv(
+        source,
+        window_target,
+        symbol="GC",
+        max_rows=None,
+        window=("2026-01-02T00:10:00+00:00", "2026-01-02T00:20:00+00:00"),
+    )
+    assert len(window_target.read_text(encoding="utf-8").splitlines()) == 11
+
 
 def test_full_backtest_data_materialization_reuses_shared_csv(
     tmp_path: Path,
@@ -83,9 +93,10 @@ def test_full_backtest_data_materialization_reuses_shared_csv(
         *,
         symbol: str,
         max_rows: int | None,
+        window: tuple[str, str] | None = None,
     ) -> None:
         calls.append(target_path)
-        original(source_path, target_path, symbol=symbol, max_rows=max_rows)
+        original(source_path, target_path, symbol=symbol, max_rows=max_rows, window=window)
 
     monkeypatch.setattr(engine, "_materialize_backtest_csv", counted_materialize)
 
