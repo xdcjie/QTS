@@ -30,6 +30,8 @@ def test_campaign_config_accepts_valid_contract_and_serializes_payload(
     assert config.budget.max_total_trials == 500
     assert config.execution.data_mode == "fixture"
     assert config.execution.max_rows == 50
+    assert config.execution.start == "2026-01-02T00:00:00+00:00"
+    assert config.execution.end == "2026-02-02T00:00:00+00:00"
     assert payload["campaign_hash"] == config.campaign_hash
     assert payload["universe"]["roots"] == ["GC", "SI"]
     assert payload["families"][0]["manifest_template"] == (
@@ -87,6 +89,28 @@ def test_campaign_config_requires_fixture_max_rows(tmp_path: Path) -> None:
     campaign_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
 
     with pytest.raises(ValueError, match="execution.max_rows"):
+        ResearchCampaignConfig.from_yaml(campaign_path)
+
+
+def test_campaign_config_rejects_partial_execution_window(tmp_path: Path) -> None:
+    campaign_path = _write_campaign(tmp_path, {"execution": {"end": None}})
+
+    with pytest.raises(ValueError, match="execution.start and execution.end"):
+        ResearchCampaignConfig.from_yaml(campaign_path)
+
+
+def test_campaign_config_rejects_reversed_execution_window(tmp_path: Path) -> None:
+    campaign_path = _write_campaign(
+        tmp_path,
+        {
+            "execution": {
+                "start": "2026-02-02T00:00:00+00:00",
+                "end": "2026-01-02T00:00:00+00:00",
+            }
+        },
+    )
+
+    with pytest.raises(ValueError, match="execution.start must be before execution.end"):
         ResearchCampaignConfig.from_yaml(campaign_path)
 
 
@@ -181,6 +205,8 @@ def _valid_campaign_payload() -> dict[str, Any]:
             "metrics_source": "backtest_artifacts",
             "data_mode": "fixture",
             "max_rows": 50,
+            "start": "2026-01-02T00:00:00+00:00",
+            "end": "2026-02-02T00:00:00+00:00",
         },
         "objective": {
             "primary": "composite_score",

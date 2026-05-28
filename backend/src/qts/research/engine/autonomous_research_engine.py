@@ -900,10 +900,7 @@ class AutonomousResearchEngine:
             root=root,
             data_path=data_paths[root],
         )
-        start, end = self._data_window(
-            data_paths[root],
-            max_rows=self._materialization_max_rows(run),
-        )
+        start, end = self._backtest_window(run, data_paths[root])
         config_path = run.output_root / "backtest_configs" / f"{trial_id}.yaml"
         payload = {
             "end": end,
@@ -1113,6 +1110,12 @@ class AutonomousResearchEngine:
         self._data_window_cache[cache_key] = window
         return window
 
+    def _backtest_window(self, run: AutonomousResearchRun, source_path: Path) -> tuple[str, str]:
+        execution = run.campaign_config.execution if run.campaign_config is not None else None
+        if execution is not None and execution.start is not None and execution.end is not None:
+            return execution.start, execution.end
+        return self._data_window(source_path, max_rows=self._materialization_max_rows(run))
+
     def _combined_data_window(
         self,
         paths: Sequence[Path],
@@ -1147,9 +1150,14 @@ class AutonomousResearchEngine:
         checked_paths: tuple[str, ...],
         data_paths: Mapping[str, Path],
     ) -> dict[str, Any]:
-        data_window = self._combined_data_window(
-            tuple(data_paths.values()),
-            max_rows=self._materialization_max_rows(run),
+        execution = run.campaign_config.execution if run.campaign_config is not None else None
+        data_window = (
+            {"end": execution.end, "start": execution.start}
+            if execution is not None and execution.start is not None and execution.end is not None
+            else self._combined_data_window(
+                tuple(data_paths.values()),
+                max_rows=self._materialization_max_rows(run),
+            )
         )
         return {
             "campaign_id": run.campaign_id,

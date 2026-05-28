@@ -174,6 +174,8 @@ class ResearchCampaignExecution:
     metrics_source: str
     data_mode: str
     max_rows: int | None = None
+    start: str | None = None
+    end: str | None = None
 
     _DATA_MODES = frozenset({"fixture", "full"})
 
@@ -199,10 +201,13 @@ class ResearchCampaignExecution:
             max_rows = ResearchCampaignBudget._positive_int(max_rows, "execution.max_rows")
         elif max_rows is not None:
             raise ValueError("execution.max_rows is only allowed for fixture data_mode")
+        start, end = self._validated_window(self.start, self.end)
         object.__setattr__(self, "default_mode", default_mode)
         object.__setattr__(self, "metrics_source", metrics_source)
         object.__setattr__(self, "data_mode", data_mode)
         object.__setattr__(self, "max_rows", max_rows)
+        object.__setattr__(self, "start", start)
+        object.__setattr__(self, "end", end)
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> Self:
@@ -229,6 +234,8 @@ class ResearchCampaignExecution:
             else ResearchCampaignBudget._positive_int(
                 payload.get("max_rows"), "execution.max_rows"
             ),
+            start=cls._optional_text(payload, "execution.start", "start"),
+            end=cls._optional_text(payload, "execution.end", "end"),
         )
 
     def to_payload(self) -> dict[str, Any]:
@@ -241,7 +248,37 @@ class ResearchCampaignExecution:
         }
         if self.max_rows is not None:
             payload["max_rows"] = self.max_rows
+        if self.start is not None:
+            payload["start"] = self.start
+        if self.end is not None:
+            payload["end"] = self.end
         return payload
+
+    @classmethod
+    def _optional_text(
+        cls,
+        payload: Mapping[str, Any],
+        label: str,
+        key: str,
+    ) -> str | None:
+        value = payload.get(key)
+        if value is None:
+            return None
+        return ResearchCampaignConfig.required_text(payload, label, key)
+
+    @staticmethod
+    def _validated_window(start: str | None, end: str | None) -> tuple[str | None, str | None]:
+        if (start is None) != (end is None):
+            raise ValueError("execution.start and execution.end must be provided together")
+        if start is None or end is None:
+            return None, None
+        start_time = datetime.fromisoformat(start.replace("Z", "+00:00"))
+        end_time = datetime.fromisoformat(end.replace("Z", "+00:00"))
+        if start_time.tzinfo is None or end_time.tzinfo is None:
+            raise ValueError("execution.start and execution.end must be timezone-aware")
+        if start_time >= end_time:
+            raise ValueError("execution.start must be before execution.end")
+        return start, end
 
 
 @dataclass(frozen=True, slots=True)

@@ -29,6 +29,8 @@ execution:
   default_mode: backtest_pipeline
   metrics_source: backtest_artifacts
   data_mode: full
+  start: "2024-01-02T00:00:00+00:00"
+  end: "2024-02-01T00:00:00+00:00"
 
 selection:
   selector: CandidateSelector

@@ -19,6 +19,8 @@ def test_gc_si_autonomous_production_acceptance(
     config = yaml.safe_load(campaign_path.read_text(encoding="utf-8"))
     assert config["execution"]["data_mode"] == "full"
     assert "max_rows" not in config["execution"]
+    assert config["execution"]["start"] == "2024-01-02T00:00:00+00:00"
+    assert config["execution"]["end"] == "2024-02-01T00:00:00+00:00"
     assert config["budget"]["max_generations"] >= 2
     assert config["budget"]["max_total_trials"] >= 30
 
