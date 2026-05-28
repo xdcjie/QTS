@@ -27,8 +27,13 @@ def test_engine_uses_trial_budget_manager_before_execution(tmp_path: Path) -> No
 
     result = AutonomousResearchEngine(repo_root=Path.cwd()).run(run)
 
-    assert result.generations[0].trial_count == 2
-    assert len(read_jsonl(result.fitness_landscape_path)) == 2
+    assert result.generations[0].trial_count == 3
+    landscape_rows = read_jsonl(result.fitness_landscape_path)
+    assert len(landscape_rows) == 3
+    assert any(
+        row["lifecycle_status"] == "rejected" and row["rejection_stage"] == "budget"
+        for row in landscape_rows
+    )
     ledger_path = result.output_root / "trial_budget_ledger.jsonl"
     records = [json.loads(line) for line in ledger_path.read_text(encoding="utf-8").splitlines()]
     assert [record["payload"]["accepted"] for record in records] == [True, True, False]
