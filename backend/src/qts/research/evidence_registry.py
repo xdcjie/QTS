@@ -502,7 +502,7 @@ def _collect_manifest_artifact_paths(manifest_paths: Sequence[str]) -> dict[str,
                 if not isinstance(artifact_path, str):
                     continue
                 resolved_path = Path(artifact_path)
-                if not resolved_path.is_absolute():
+                if not resolved_path.is_absolute() and not resolved_path.exists():
                     resolved_path = path.parent / resolved_path
                 artifact_paths[str(resolved_path)] = str(artifact_hash)
     return artifact_paths

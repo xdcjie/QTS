@@ -96,9 +96,20 @@ def test_evidence_bundle_preserves_existing_repo_relative_summary_paths(
 ) -> None:
     trial_dir = tmp_path / "runs" / "research" / "campaign" / "trial-000"
     trial_dir.mkdir(parents=True)
+    metrics_path = trial_dir / "metrics.json"
+    metrics_path.write_text('{"sharpe": "1.0"}\n', encoding="utf-8")
+    metrics_hash = f"sha256:{hashlib.sha256(metrics_path.read_bytes()).hexdigest()}"
     manifest_path = trial_dir / "manifest.json"
     manifest_path.write_text(
-        json.dumps({"artifact_hashes": {"metrics.json": "sha256:abc"}}, sort_keys=True),
+        json.dumps(
+            {
+                "artifact_hashes": {"metrics.json": metrics_hash},
+                "artifact_paths_by_hash": {
+                    metrics_hash: str(metrics_path.relative_to(tmp_path)),
+                },
+            },
+            sort_keys=True,
+        ),
         encoding="utf-8",
     )
     report_path = trial_dir / "workflow-report.md"
@@ -116,6 +127,8 @@ def test_evidence_bundle_preserves_existing_repo_relative_summary_paths(
 
     assert bundle.manifest_paths == (str(manifest_path.relative_to(tmp_path)),)
     assert bundle.report_path == str(report_path.relative_to(tmp_path))
+    assert bundle.artifact_paths == {str(metrics_path.relative_to(tmp_path)): metrics_hash}
+    assert registry.verify(bundle.evidence_bundle_id).accepted
 
 
 def test_evidence_bundle_creation_writes_audit_record(tmp_path: Path) -> None:
