@@ -81,6 +81,34 @@ def test_gc_si_momentum_alpha_research_config_uses_executable_parameters() -> No
     assert campaign.budget.max_total_trials >= len(candidates) * campaign.budget.max_generations
 
 
+def test_gc_si_vwap_trend_alpha_research_config_declares_campaign_mapping() -> None:
+    campaign = ResearchCampaignConfig.from_yaml(
+        "configs/research/campaigns/gc_si_vwap_trend_alpha_research_v1.yaml"
+    )
+    assert [family.id for family in campaign.families] == ["vwap_trend"]
+
+    search_space = SearchSpaceSpec.from_yaml(campaign.families[0].search_space)
+    candidates = CandidateGenerator(search_space).grid()
+    assert len(candidates) == 32
+    assert {candidate.parameters["root"] for candidate in candidates} == {"GC", "SI"}
+
+    template = yaml.safe_load(
+        Path(campaign.families[0].manifest_template).read_text(encoding="utf-8")
+    )
+    assert template["strategy_entrypoint"] == (
+        "strategies.research.vwap_factor_research:VwapFactorResearchStrategy"
+    )
+    pipeline = template["backtest_pipeline"]
+    assert pipeline["root_strategy_parameter"] == "symbol"
+    assert set(pipeline["strategy_parameter_names"]) == {
+        "min_volume_ratio",
+        "target_r_multiple",
+        "time_window",
+        "vwap_slope_lookback",
+    }
+    assert campaign.budget.max_trials_per_generation >= len(candidates)
+
+
 def test_campaign_config_rejects_invalid_budget(tmp_path: Path) -> None:
     campaign_path = _write_campaign(tmp_path, {"budget": {"max_total_trials": 0}})
 

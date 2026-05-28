@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import yaml  # type: ignore[import-untyped]
 from qts.research.engine.autonomous_research_engine import (
     AutonomousResearchEngine,
     AutonomousResearchRun,
@@ -126,6 +127,48 @@ def test_full_backtest_data_materialization_reuses_shared_csv(
     assert len(calls) == 1
     metadata = json.loads(first_csv.with_suffix(".materialization.json").read_text())
     assert metadata["max_rows"] is None
+
+
+def test_backtest_pipeline_template_maps_research_parameters_to_strategy_config(
+    tmp_path: Path,
+) -> None:
+    campaign_path = write_campaign(tmp_path, families=("momentum",))
+    run = AutonomousResearchRun.from_yaml(
+        campaign_path,
+        data_paths=write_data_paths(tmp_path),
+        output_root=tmp_path / "run",
+    )
+    engine = AutonomousResearchEngine(repo_root=Path.cwd())
+
+    payload = engine._backtest_pipeline_payload(
+        run=run,
+        trial_id="generation-000-trial-000",
+        root="GC",
+        parameters={
+            "root": "GC",
+            "time_window": "evening_18_22",
+            "vwap_slope_lookback": 5,
+        },
+        strategy_entrypoint="strategies.research.vwap_factor_research:VwapFactorResearchStrategy",
+        manifest_patch={
+            "backtest_pipeline": {
+                "root_strategy_parameter": "symbol",
+                "strategy_parameter_defaults": {"target_quantity": "1"},
+                "strategy_parameter_names": ["time_window", "vwap_slope_lookback"],
+            }
+        },
+    )
+
+    config_payload = yaml.safe_load(
+        Path(payload["backtest_config_path"]).read_text(encoding="utf-8")
+    )
+    assert config_payload["strategy_params"] == {"symbol": "GC", "target_quantity": "1"}
+    assert payload["strategy_parameter_defaults"] == {
+        "symbol": "GC",
+        "target_quantity": "1",
+    }
+    assert payload["strategy_parameter_names"] == ("time_window", "vwap_slope_lookback")
+    assert "strategy_parameter_map" not in payload
 
 
 def write_campaign(

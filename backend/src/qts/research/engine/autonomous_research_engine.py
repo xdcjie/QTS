@@ -620,6 +620,10 @@ class AutonomousResearchEngine:
                 parameters,
                 allowed_roots=run.universe,
             )
+            manifest_patch = self._proposal_manifest_patch(
+                variant.to_manifest_patch(),
+                proposal,
+            )
             ordinal = len(generated)
             trial_id = f"{generation_id}-trial-{ordinal:03d}"
             root = str(parameters.get("root", run.universe[0]))
@@ -631,6 +635,7 @@ class AutonomousResearchEngine:
                         root=root,
                         parameters=parameters,
                         strategy_entrypoint=variant.strategy_entrypoint,
+                        manifest_patch=manifest_patch,
                     ),
                     "candidate_id": candidate.candidate_id,
                     "candidate_space_hash": candidate.candidate_space_hash,
@@ -638,10 +643,7 @@ class AutonomousResearchEngine:
                     "factor_hash": variant.factor_hash,
                     "family": family["family_id"],
                     "idea_id": self._idea_id(run, str(family["family_id"]), proposal),
-                    "manifest_patch": self._proposal_manifest_patch(
-                        variant.to_manifest_patch(),
-                        proposal,
-                    ),
+                    "manifest_patch": manifest_patch,
                     "parameters": parameters,
                     "proposal_application": self._proposal_application_payload(proposal),
                     "strategy_variant_hash": variant.variant_hash,
@@ -914,13 +916,99 @@ class AutonomousResearchEngine:
         root: str,
         parameters: Mapping[str, Any],
         strategy_entrypoint: str,
+        manifest_patch: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
+        pipeline_template = self._backtest_pipeline_template(manifest_patch or {})
+        (
+            strategy_parameter_defaults,
+            strategy_parameter_map,
+            strategy_parameter_names,
+        ) = self._strategy_parameter_bindings(
+            root=root,
+            parameters=parameters,
+            pipeline_template=pipeline_template,
+        )
         backtest_config_path, data_quality_path = self._write_backtest_config(
             run=run,
             trial_id=trial_id,
             root=root,
             strategy_entrypoint=strategy_entrypoint,
+            strategy_params=strategy_parameter_defaults,
         )
+        payload: dict[str, Any] = {
+            "backtest_config_path": str(backtest_config_path),
+            "data_quality_paths": [str(data_quality_path)],
+            "objective_metric": "sharpe_ratio",
+            "strategy_parameter_defaults": strategy_parameter_defaults,
+        }
+        if strategy_parameter_map is not None:
+            payload["strategy_parameter_map"] = strategy_parameter_map
+        if strategy_parameter_names is not None:
+            payload["strategy_parameter_names"] = strategy_parameter_names
+        return payload
+
+    def _backtest_pipeline_template(
+        self,
+        manifest_patch: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        raw_template = manifest_patch.get("backtest_pipeline")
+        if raw_template is None:
+            return {}
+        return dict(self._mapping(raw_template, "backtest_pipeline"))
+
+    def _strategy_parameter_bindings(
+        self,
+        *,
+        root: str,
+        parameters: Mapping[str, Any],
+        pipeline_template: Mapping[str, Any],
+    ) -> tuple[dict[str, Any], dict[str, str] | None, tuple[str, ...] | None]:
+        if not pipeline_template:
+            return self._default_strategy_parameter_bindings(root, parameters)
+
+        raw_defaults = pipeline_template.get("strategy_parameter_defaults", {})
+        defaults = self._mapping(raw_defaults, "backtest_pipeline.strategy_parameter_defaults")
+        strategy_parameter_defaults = dict(defaults)
+        root_target = str(pipeline_template.get("root_strategy_parameter", "")).strip()
+        if root_target == "symbols":
+            strategy_parameter_defaults[root_target] = [root]
+        elif root_target:
+            strategy_parameter_defaults[root_target] = root
+
+        raw_map = pipeline_template.get("strategy_parameter_map")
+        raw_names = pipeline_template.get("strategy_parameter_names")
+        if raw_map is not None and raw_names is not None:
+            raise ValueError(
+                "backtest_pipeline cannot define both strategy_parameter_map "
+                "and strategy_parameter_names"
+            )
+        if raw_map is not None:
+            parameter_map = self._mapping(raw_map, "backtest_pipeline.strategy_parameter_map")
+            return (
+                strategy_parameter_defaults,
+                {str(source): str(target) for source, target in parameter_map.items()},
+                None,
+            )
+        if raw_names is None:
+            raise ValueError(
+                "backtest_pipeline requires strategy_parameter_names or strategy_parameter_map"
+            )
+        if not isinstance(raw_names, Sequence) or isinstance(raw_names, str):
+            raise ValueError("backtest_pipeline.strategy_parameter_names must be a sequence")
+        parameter_names = tuple(str(item) for item in raw_names)
+        missing = [name for name in parameter_names if name not in parameters]
+        if missing:
+            raise ValueError(
+                "backtest_pipeline strategy parameter missing from trial parameters: "
+                f"{missing[0]}"
+            )
+        return strategy_parameter_defaults, None, parameter_names
+
+    @staticmethod
+    def _default_strategy_parameter_bindings(
+        root: str,
+        parameters: Mapping[str, Any],
+    ) -> tuple[dict[str, Any], dict[str, str], None]:
         strategy_parameter_map: dict[str, str] = {}
         strategy_parameter_defaults: dict[str, Any] = {"symbols": [root]}
         if "lookback" in parameters:
@@ -933,13 +1021,7 @@ class AutonomousResearchEngine:
         if not strategy_parameter_map:
             strategy_parameter_defaults["long_window"] = 2
             strategy_parameter_map["threshold"] = "long_window"
-        return {
-            "backtest_config_path": str(backtest_config_path),
-            "data_quality_paths": [str(data_quality_path)],
-            "objective_metric": "sharpe_ratio",
-            "strategy_parameter_defaults": strategy_parameter_defaults,
-            "strategy_parameter_map": strategy_parameter_map,
-        }
+        return strategy_parameter_defaults, strategy_parameter_map, None
 
     def _write_backtest_config(
         self,
@@ -948,6 +1030,7 @@ class AutonomousResearchEngine:
         trial_id: str,
         root: str,
         strategy_entrypoint: str,
+        strategy_params: Mapping[str, Any],
     ) -> tuple[Path, Path]:
         data_paths = self._required_data_paths(run)
         data_config_path, data_quality_path = self._write_backtest_data_config(
@@ -971,7 +1054,7 @@ class AutonomousResearchEngine:
             "roots": [root],
             "start": start,
             "strategy_class": strategy_entrypoint,
-            "strategy_params": {"long_window": 2, "short_window": 1, "symbols": [root]},
+            "strategy_params": dict(strategy_params),
             "symbols": [root],
             "timeframe": run.timeframe,
             "warmup_bars": 0,
