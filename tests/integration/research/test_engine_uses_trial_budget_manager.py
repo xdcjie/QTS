@@ -23,7 +23,9 @@ def test_engine_enforces_trial_and_compute_budgets(tmp_path: Path) -> None:
     assert [record["payload"]["accepted"] for record in records] == [True, True, False]
     assert "compute budget exceeded" in records[-1]["payload"]["decision_reason"]
     assert TrialBudgetLedger(ledger_path).verify_hash_chain() == ()
-    assert len(read_jsonl(result.fitness_landscape_path)) == 2
+    landscape_rows = read_jsonl(result.fitness_landscape_path)
+    assert len(landscape_rows) == 3
+    assert [row["lifecycle_status"] for row in landscape_rows].count("budget_rejected") == 1
     budget_rejections = [
         row for row in read_jsonl(result.rejected_candidates_path) if row.get("budget_rejected")
     ]
