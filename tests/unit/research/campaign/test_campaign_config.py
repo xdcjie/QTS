@@ -114,6 +114,7 @@ def test_gc_si_vwap_trend_holdout_config_replays_selected_candidate_only() -> No
         "configs/research/campaigns/gc_si_vwap_trend_holdout_v1.yaml"
     )
     assert campaign.campaign_id == "gc_si_vwap_trend_holdout_v1"
+    assert campaign.universe.roots == ("GC", "SI")
     assert [family.id for family in campaign.families] == ["vwap_trend_holdout"]
     assert campaign.execution.data_mode == "full"
     assert campaign.execution.default_mode == "backtest_pipeline"

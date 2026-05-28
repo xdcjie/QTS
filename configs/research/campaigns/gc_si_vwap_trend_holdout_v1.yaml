@@ -5,10 +5,11 @@ created_at: "2026-05-28T00:00:00+00:00"
 universe:
   roots:
     - GC
+    - SI
   asset_class: futures
   calendar: CME
   timeframe: 1m
-  dataset_id: production_futures_gc_1m_holdout
+  dataset_id: production_futures_gc_si_1m_holdout
 
 families:
   - id: vwap_trend_holdout
