@@ -19,8 +19,8 @@ def test_gc_si_autonomous_production_acceptance(
     config = yaml.safe_load(campaign_path.read_text(encoding="utf-8"))
     assert config["execution"]["data_mode"] == "full"
     assert "max_rows" not in config["execution"]
-    assert config["execution"]["start"] == "2010-06-07T12:02:00+00:00"
-    assert config["execution"]["end"] == "2010-06-07T18:05:00+00:00"
+    assert config["execution"]["start"] == "2026-01-06T23:00:00+00:00"
+    assert config["execution"]["end"] == "2026-01-07T22:00:00+00:00"
     assert config["budget"]["max_generations"] >= 2
     assert config["budget"]["max_total_trials"] >= 30
 
@@ -42,6 +42,8 @@ def test_gc_si_autonomous_production_acceptance(
     assert run_exit == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["status"] == "pending_human_approval"
+    assert _csv_row_count(output_root / "backtest_data" / "full" / "GC" / "data" / "GC.csv") == 1380
+    assert _csv_row_count(output_root / "backtest_data" / "full" / "SI" / "data" / "SI.csv") == 1380
 
     proposal = json.loads((output_root / "next_generation_proposal.json").read_text())
     approve_exit = run_research.main(
@@ -87,3 +89,7 @@ def _production_data_paths() -> dict[str, Path]:
     if missing:
         raise AssertionError(f"GC/SI historical CSV files are required: {missing}")
     return production_paths
+
+
+def _csv_row_count(path: Path) -> int:
+    return max(len(path.read_text(encoding="utf-8").splitlines()) - 1, 0)

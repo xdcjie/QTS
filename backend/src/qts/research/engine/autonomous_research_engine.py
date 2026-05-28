@@ -284,6 +284,7 @@ class AutonomousResearchEngine:
                 evidence_registry=evidence_registry,
                 landscape_store=landscape_store,
                 budget_manager=budget_manager,
+                active_selected_rows=tuple(selected_rows),
             )
             generations.append(generation["generation"])
             all_trial_evidence_rows.extend(generation["trial_evidence_rows"])
@@ -367,6 +368,7 @@ class AutonomousResearchEngine:
         evidence_registry: EvidenceRegistry,
         landscape_store: FitnessLandscapeStore,
         budget_manager: TrialBudgetManager,
+        active_selected_rows: Sequence[Mapping[str, Any]],
     ) -> dict[str, Any]:
         generation_id = f"generation-{generation_index:03d}"
         generation_dir = run.output_root / generation_id
@@ -413,6 +415,7 @@ class AutonomousResearchEngine:
             trial_evidence_rows=trial_evidence_rows,
             evidence_registry=evidence_registry,
             audit_log=audit_log,
+            active_selected_rows=active_selected_rows,
         )
         rejected_rows = [*execution_rejected_rows, *budget_rejected_rows]
         generation_landscape_rows = self._append_landscape_points(
@@ -490,12 +493,46 @@ class AutonomousResearchEngine:
         budget_rejected_rows: list[dict[str, Any]],
     ) -> tuple[Mapping[str, Any], ...]:
         trials: list[Mapping[str, Any]] = []
-        for generated_trial in self._generated_trials(
+        generated_trials = self._generated_trials(
             run,
             generation_id,
             generation_index,
             proposal=proposal,
-        ):
+        )
+        for generated_index, generated_trial in enumerate(generated_trials):
+            created_at = datetime(2026, 5, 26, tzinfo=UTC) + timedelta(
+                seconds=(generation_index * 1000) + generated_index
+            )
+            if len(trials) >= run.trials_per_generation:
+                decision_reason = (
+                    "generation trial budget exceeded: "
+                    f"{len(trials)}/{run.trials_per_generation} accepted"
+                )
+                record = budget_manager.ledger.append_decision(
+                    self._trial_budget_payload(
+                        run=run,
+                        generation_id=generation_id,
+                        trial=generated_trial,
+                        accepted=False,
+                        decision_reason=decision_reason,
+                    ),
+                    created_at=created_at,
+                )
+                audit_log.append(
+                    "trial_budget_decision",
+                    record.payload,
+                    created_at=record.created_at,
+                )
+                budget_rejected_rows.append(
+                    self._budget_rejected_row(
+                        run=run,
+                        generation_id=generation_id,
+                        trial=generated_trial,
+                        budget_record_id=record.record_id,
+                        decision_reason=decision_reason,
+                    )
+                )
+                continue
             trial_id = str(generated_trial["trial_id"])
             decision = budget_manager.request_trial(
                 trial_id=trial_id,
@@ -506,8 +543,7 @@ class AutonomousResearchEngine:
                 idea_id=str(generated_trial["idea_id"]),
                 time_window=f"{run.dataset_id}:{run.timeframe}",
                 compute_cost=1,
-                created_at=datetime(2026, 5, 26, tzinfo=UTC)
-                + timedelta(seconds=(generation_index * 1000) + len(trials)),
+                created_at=created_at,
             )
             record = budget_manager.ledger.list()[-1]
             audit_log.append(
@@ -527,9 +563,29 @@ class AutonomousResearchEngine:
                 )
                 continue
             trials.append(generated_trial)
-            if len(trials) >= run.trials_per_generation:
-                break
         return tuple(trials)
+
+    def _trial_budget_payload(
+        self,
+        *,
+        run: AutonomousResearchRun,
+        generation_id: str,
+        trial: Mapping[str, Any],
+        accepted: bool,
+        decision_reason: str,
+    ) -> dict[str, Any]:
+        return {
+            "accepted": accepted,
+            "campaign_id": run.campaign_id,
+            "compute_cost": 1,
+            "decision_reason": decision_reason,
+            "factor_family": str(trial["factor_family"]),
+            "generation_id": generation_id,
+            "idea_id": str(trial["idea_id"]),
+            "strategy_family": str(trial["family"]),
+            "time_window": f"{run.dataset_id}:{run.timeframe}",
+            "trial_id": str(trial["trial_id"]),
+        }
 
     def _generated_trials(
         self,
@@ -1261,6 +1317,7 @@ class AutonomousResearchEngine:
                     "factor_hash": str(trial["factor_hash"]),
                     "generation_id": generation_id,
                     "manifest_hash": result.manifest_hash,
+                    "manifest_path": str(result.manifest_path),
                     "metrics": dict(metrics),
                     "metrics_path": str(result.metrics_path),
                     "objective_value": quality["sharpe"],
@@ -1313,6 +1370,7 @@ class AutonomousResearchEngine:
         trial_evidence_rows: Sequence[Mapping[str, Any]],
         evidence_registry: EvidenceRegistry,
         audit_log: ResearchAuditLog,
+        active_selected_rows: Sequence[Mapping[str, Any]],
     ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         selected_rows: list[dict[str, Any]] = []
         rejected_rows: list[dict[str, Any]] = []
@@ -1355,6 +1413,9 @@ class AutonomousResearchEngine:
 
         gauntlet_results: list[dict[str, Any]] = []
         validation_runner = ResearchExperimentRunner(repo_root=self._repo_root)
+        active_correlation_context = [
+            self._active_correlation_context_from_selected(row) for row in active_selected_rows
+        ]
         for selected in selection.selected_candidates:
             trial_id = selected.candidate_id
             row = row_by_id[trial_id]
@@ -1364,6 +1425,7 @@ class AutonomousResearchEngine:
             validation_artifact_paths = validation_runner.write_validation_artifacts_for_trial(
                 trial=trial,
                 trial_result=result,
+                active_correlation_context=active_correlation_context,
             )
             result = replace(result, validation_artifact_paths=validation_artifact_paths)
             result_by_id[trial_id] = result
@@ -1456,6 +1518,12 @@ class AutonomousResearchEngine:
                         "validation_audit_record_id": validation.audit_record_id,
                     }
                 )
+                active_correlation_context.append(
+                    self._active_correlation_context(
+                        candidate_id=packet.promotion_candidate_id,
+                        trial_result=result,
+                    )
+                )
             else:
                 rejected_rows.append(
                     {
@@ -1472,6 +1540,29 @@ class AutonomousResearchEngine:
             {"results": gauntlet_results},
         )
         return selected_rows, rejected_rows
+
+    def _active_correlation_context_from_selected(
+        self,
+        selected: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        manifest_path = Path(str(selected["manifest_path"]))
+        return {
+            "candidate_id": str(selected["promotion_candidate_id"]),
+            "manifest": json.loads(manifest_path.read_text(encoding="utf-8")),
+            "manifest_path": str(manifest_path),
+        }
+
+    def _active_correlation_context(
+        self,
+        *,
+        candidate_id: str,
+        trial_result: ResearchTrialResult,
+    ) -> dict[str, Any]:
+        return {
+            "candidate_id": candidate_id,
+            "manifest": json.loads(trial_result.manifest_path.read_text(encoding="utf-8")),
+            "manifest_path": str(trial_result.manifest_path),
+        }
 
     def _selector_candidate(
         self,
@@ -1797,8 +1888,10 @@ class AutonomousResearchEngine:
         return {
             "data_quality": {
                 "artifact_id": data_quality_payload.get("artifact_id", trial_result.trial_id),
-                "payload": data_quality_payload,
-                "payload_hash": stable_json_hash(data_quality_payload),
+                "payload": {**data_quality_payload, "path": str(trial_result.data_quality_path)},
+                "payload_hash": stable_json_hash(
+                    {**data_quality_payload, "path": str(trial_result.data_quality_path)}
+                ),
             },
             "evidence_bundle_id": evidence_bundle_id,
             "idea_id": self._idea(run, generation_id, trial).idea_id,
@@ -1814,8 +1907,13 @@ class AutonomousResearchEngine:
             },
             "promotion_candidate_id": promotion_candidate_id,
             "reproducibility": {
-                "payload": reproducibility_payload,
-                "payload_hash": stable_json_hash(reproducibility_payload),
+                "payload": {
+                    **reproducibility_payload,
+                    "path": str(trial_result.reproducibility_path),
+                },
+                "payload_hash": stable_json_hash(
+                    {**reproducibility_payload, "path": str(trial_result.reproducibility_path)}
+                ),
                 "snapshot_id": reproducibility_payload.get("artifact_id", trial_result.trial_id),
             },
             "review": {
@@ -1900,17 +1998,17 @@ class AutonomousResearchEngine:
                 Path(str(selected["promotion_packet_path"])).read_text(encoding="utf-8")
             )
             bundle = registry.show(str(selected["evidence_bundle_id"]))
-            audit_record = self._audit_record(
-                audit_log,
-                str(selected["validation_audit_record_id"]),
+            audit_records = self._audit_records_for_selected(
+                audit_log=audit_log,
+                selected=selected,
+                packet_payload=packet_payload,
             )
             manifest_path = bundle.manifest_paths[0]
             manifest_hashes = cast(Mapping[str, str], bundle.manifest_hashes or {})
             graph = self._artifact_graph(
                 artifact_graph_hash=artifact_graph_hash,
                 artifact_graph_path=artifact_graph_path,
-                audit_payload_hash=audit_record.payload_hash,
-                audit_record_id=audit_record.record_id,
+                audit_records=audit_records,
                 bundle_payload=bundle.to_payload(),
                 data_quality_hash=str(packet_payload["data_quality"]["payload_hash"]),
                 data_quality_path=str(
@@ -1928,10 +2026,7 @@ class AutonomousResearchEngine:
                 reproducibility_path=str(
                     packet_payload["reproducibility"]["payload"].get(
                         "path",
-                        packet_payload["reproducibility"].get(
-                            "snapshot_id",
-                            "reproducibility",
-                        ),
+                        packet_payload["reproducibility"].get("snapshot_id", "reproducibility"),
                     )
                 ),
                 strategy_variant_hash=str(selected["strategy_variant_hash"]),
@@ -1960,6 +2055,32 @@ class AutonomousResearchEngine:
     @staticmethod
     def _same_artifact_node(left: ResearchArtifactNode, right: ResearchArtifactNode) -> bool:
         return left.node_type == right.node_type and left.payload_hash == right.payload_hash
+
+    def _audit_records_for_selected(
+        self,
+        *,
+        audit_log: ResearchAuditLog,
+        selected: Mapping[str, Any],
+        packet_payload: Mapping[str, Any],
+    ) -> tuple[Any, ...]:
+        evidence_bundle_id = str(selected["evidence_bundle_id"])
+        promotion_candidate_id = str(packet_payload["promotion_candidate_id"])
+        explicit_record_ids = {
+            str(selected["validation_audit_record_id"]),
+            str(packet_payload.get("audit_record_id", "")),
+        }
+        records = []
+        for record in audit_log.list():
+            payload = record.payload
+            if (
+                record.record_id in explicit_record_ids
+                or payload.get("evidence_bundle_id") == evidence_bundle_id
+                or payload.get("promotion_candidate_id") == promotion_candidate_id
+            ):
+                records.append(record)
+        if not records:
+            raise ValueError(f"audit records not found for {promotion_candidate_id}")
+        return tuple(records)
 
     def _write_empty_artifact_graph(self, root: Path) -> Path:
         graph_path = root / "artifact_graph" / "artifact_graph.json"
@@ -2002,8 +2123,7 @@ class AutonomousResearchEngine:
         *,
         artifact_graph_hash: str,
         artifact_graph_path: Path,
-        audit_payload_hash: str,
-        audit_record_id: str,
+        audit_records: Sequence[Any],
         bundle_payload: Mapping[str, Any],
         data_quality_hash: str,
         data_quality_path: str,
@@ -2022,6 +2142,10 @@ class AutonomousResearchEngine:
     ) -> ResearchArtifactGraph:
         evidence_bundle_id = str(bundle_payload["evidence_bundle_id"])
         workflow_run_id = str(bundle_payload["workflow_run_id"])
+        audit_nodes = tuple(
+            ResearchArtifactNode(record.record_id, "audit_record", record.payload_hash)
+            for record in audit_records
+        )
         nodes = (
             ResearchArtifactNode(manifest_path, "manifest", manifest_hash),
             ResearchArtifactNode(
@@ -2044,9 +2168,17 @@ class AutonomousResearchEngine:
             ResearchArtifactNode(data_quality_path, "data_quality", data_quality_hash),
             ResearchArtifactNode(reproducibility_path, "reproducibility", reproducibility_hash),
             ResearchArtifactNode(promotion_candidate_id, "promotion_packet", packet_hash),
-            ResearchArtifactNode(audit_record_id, "audit_record", audit_payload_hash),
+            *audit_nodes,
             ResearchArtifactNode(str(report_path), "report", report_hash),
             ResearchArtifactNode(str(artifact_graph_path), "artifact_graph", artifact_graph_hash),
+        )
+        audit_edges = tuple(
+            edge
+            for record in audit_records
+            for edge in (
+                ResearchArtifactEdge(promotion_candidate_id, record.record_id, "references"),
+                ResearchArtifactEdge(str(report_path), record.record_id, "references"),
+            )
         )
         edges = (
             ResearchArtifactEdge(workflow_run_id, manifest_path, "references"),
@@ -2059,18 +2191,11 @@ class AutonomousResearchEngine:
             ResearchArtifactEdge(promotion_candidate_id, metrics_path, "references"),
             ResearchArtifactEdge(promotion_candidate_id, data_quality_path, "references"),
             ResearchArtifactEdge(promotion_candidate_id, reproducibility_path, "references"),
-            ResearchArtifactEdge(promotion_candidate_id, audit_record_id, "references"),
             ResearchArtifactEdge(str(report_path), promotion_candidate_id, "references"),
-            ResearchArtifactEdge(str(report_path), audit_record_id, "references"),
             ResearchArtifactEdge(str(report_path), str(artifact_graph_path), "references"),
+            *audit_edges,
         )
         return ResearchArtifactGraph(nodes=nodes, edges=edges)
-
-    def _audit_record(self, audit_log: ResearchAuditLog, record_id: str) -> Any:
-        for record in audit_log.list():
-            if record.record_id == record_id:
-                return record
-        raise ValueError(f"audit record not found: {record_id}")
 
     def _idea(
         self,

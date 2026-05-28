@@ -47,7 +47,7 @@ def test_autonomous_engine_runs_two_bounded_generations_without_runtime_launch(
         "generation-000",
         "generation-001",
     ]
-    assert all(generation.trial_count == 3 for generation in result.generations)
+    assert all(generation.trial_count == 9 for generation in result.generations)
     assert all(generation.audit_record_count > 0 for generation in result.generations)
     assert all(generation.landscape_path.exists() for generation in result.generations)
     assert all(
@@ -55,7 +55,7 @@ def test_autonomous_engine_runs_two_bounded_generations_without_runtime_launch(
     )
 
     landscape_rows = _jsonl(result.fitness_landscape_path)
-    assert len(landscape_rows) == 6
+    assert len(landscape_rows) == 18
     assert {row["generation_id"] for row in landscape_rows} == {
         "generation-000",
         "generation-001",

@@ -379,6 +379,7 @@ class ResearchExperimentRunner:
         *,
         trial: Mapping[str, Any],
         trial_result: ResearchTrialResult,
+        active_correlation_context: Sequence[Mapping[str, Any]] = (),
     ) -> Mapping[str, str]:
         """Run survivor validation and attach promotion-grade artifacts to the trial summary."""
 
@@ -454,6 +455,7 @@ class ResearchExperimentRunner:
             failure_manifest=failure_manifest,
             stress_result=stress_result,
             stress_manifest=stress_manifest,
+            active_correlation_context=active_correlation_context,
         )
         self._attach_validation_artifacts_to_workflow_summary(
             trial_dir / "workflow_summary.json",
@@ -1165,6 +1167,7 @@ class ResearchExperimentRunner:
         failure_manifest: Mapping[str, Any],
         stress_result: Any,
         stress_manifest: Mapping[str, Any],
+        active_correlation_context: Sequence[Mapping[str, Any]],
     ) -> dict[str, Path]:
         metrics_hash = stable_json_hash(metrics_payload)
         source_artifacts = self._validation_source_artifacts(
@@ -1192,7 +1195,10 @@ class ResearchExperimentRunner:
                 stress_result=stress_result,
                 stress_manifest=stress_manifest,
             ),
-            "correlation_report": self._correlation_payload(backtest_manifest),
+            "correlation_report": self._correlation_payload(
+                backtest_manifest,
+                active_correlation_context=active_correlation_context,
+            ),
             "capacity_report": self._capacity_payload(backtest_manifest),
             "deterministic_replay": self._deterministic_replay_payload(
                 backtest_manifest=backtest_manifest,
@@ -1304,10 +1310,39 @@ class ResearchExperimentRunner:
     def _correlation_payload(
         self,
         backtest_manifest: Mapping[str, Any],
+        *,
+        active_correlation_context: Sequence[Mapping[str, Any]],
     ) -> dict[str, Any]:
+        candidate_returns = self._equity_return_series(backtest_manifest)
+        active_candidates: list[dict[str, Any]] = []
+        max_correlation = Decimal("0")
+        for active in active_correlation_context:
+            active_manifest = active.get("manifest")
+            if not isinstance(active_manifest, Mapping):
+                continue
+            active_returns = self._equity_return_series(active_manifest)
+            correlation, common_count = self._aligned_pearson_correlation(
+                candidate_returns,
+                active_returns,
+            )
+            max_correlation = max(max_correlation, abs(correlation))
+            active_candidates.append(
+                {
+                    "candidate_id": str(active.get("candidate_id", "")),
+                    "common_return_count": common_count,
+                    "correlation": float(correlation),
+                    "equity_curve_hash": self._manifest_artifact_hash(
+                        active_manifest,
+                        "equity_curve",
+                    ),
+                    "manifest_hash": str(active_manifest.get("manifest_hash", "")),
+                    "manifest_path": str(active.get("manifest_path", "")),
+                }
+            )
         active_snapshot: dict[str, Any] = {
-            "active_candidates": [],
+            "active_candidates": active_candidates,
             "calculation": "max_abs_pearson_correlation",
+            "candidate_return_count": len(candidate_returns),
             "equity_curve_hash": self._manifest_artifact_hash(
                 backtest_manifest,
                 "equity_curve",
@@ -1320,7 +1355,7 @@ class ResearchExperimentRunner:
                 backtest_manifest,
                 "equity_curve",
             ),
-            "max_active_correlation": 0.0,
+            "max_active_correlation": float(max_correlation),
         }
 
     def _capacity_payload(
@@ -1469,6 +1504,72 @@ class ResearchExperimentRunner:
             return None
         digest = artifact.get("sha256")
         return digest if isinstance(digest, str) and digest.strip() else None
+
+    @classmethod
+    def _equity_return_series(cls, manifest: Mapping[str, Any]) -> dict[str, Decimal]:
+        path = cls._manifest_artifact_path(manifest, "equity_curve")
+        if path is None:
+            return {}
+        points: list[tuple[str, Decimal]] = []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            payload = json.loads(line)
+            if not isinstance(payload, Mapping):
+                continue
+            timestamp = payload.get("time")
+            equity = cls._decimal(payload.get("equity"))
+            if isinstance(timestamp, str):
+                points.append((timestamp, equity))
+        returns: dict[str, Decimal] = {}
+        for (_previous_time, previous_equity), (timestamp, equity) in zip(
+            points,
+            points[1:],
+            strict=False,
+        ):
+            if previous_equity == Decimal("0"):
+                continue
+            returns[timestamp] = (equity / previous_equity) - Decimal("1")
+        return returns
+
+    @staticmethod
+    def _aligned_pearson_correlation(
+        left: Mapping[str, Decimal],
+        right: Mapping[str, Decimal],
+    ) -> tuple[Decimal, int]:
+        common_timestamps = sorted(set(left).intersection(right))
+        if len(common_timestamps) < 2:
+            return Decimal("0"), len(common_timestamps)
+        left_values = [left[timestamp] for timestamp in common_timestamps]
+        right_values = [right[timestamp] for timestamp in common_timestamps]
+        left_mean = sum(left_values, Decimal("0")) / Decimal(len(left_values))
+        right_mean = sum(right_values, Decimal("0")) / Decimal(len(right_values))
+        numerator = sum(
+            (left_value - left_mean) * (right_value - right_mean)
+            for left_value, right_value in zip(left_values, right_values, strict=True)
+        )
+        left_variance = Decimal("0")
+        right_variance = Decimal("0")
+        for value in left_values:
+            left_variance += (value - left_mean) * (value - left_mean)
+        for value in right_values:
+            right_variance += (value - right_mean) * (value - right_mean)
+        if left_variance == Decimal("0") or right_variance == Decimal("0"):
+            return Decimal("0"), len(common_timestamps)
+        return numerator / (left_variance.sqrt() * right_variance.sqrt()), len(common_timestamps)
+
+    @staticmethod
+    def _manifest_artifact_path(manifest: Mapping[str, Any], artifact_name: str) -> Path | None:
+        artifacts = manifest.get("artifacts")
+        if not isinstance(artifacts, Mapping):
+            return None
+        artifact = artifacts.get(artifact_name)
+        if not isinstance(artifact, Mapping):
+            return None
+        path = artifact.get("path")
+        if not isinstance(path, str) or not path.strip():
+            return None
+        return Path(path)
 
     def _manifest_stat_decimal(self, manifest: Mapping[str, Any], name: str) -> Decimal:
         for section_name in ("statistics", "metrics"):
