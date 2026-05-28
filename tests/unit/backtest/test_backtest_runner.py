@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 import textwrap
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -64,6 +65,44 @@ def test_load_strategy_loads_from_relative_python_file(
         f"{module_name}:FileBacktestStrategy", {"note": "loaded"}
     )
     assert cast(Any, strategy).note == "loaded"
+
+
+def test_load_strategy_file_fallback_registers_module_for_dataclass_slots(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    module_name = "tmp_backtest_dataclass_strategy"
+    module_path = tmp_path / f"{module_name}.py"
+    module_path.write_text(
+        textwrap.dedent(
+            """
+            from dataclasses import dataclass
+            from qts.strategy_sdk import Strategy
+
+
+            @dataclass(frozen=True, slots=True)
+            class FileStrategyConfig:
+                note: str = "ok"
+
+
+            class FileDataclassStrategy(Strategy):
+                def __init__(self, note: str = "ok") -> None:
+                    self.config = FileStrategyConfig(note=note)
+            """
+        ).strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    sys.modules.pop(module_name, None)
+
+    strategy = BacktestPipeline.load_strategy(
+        f"{module_name}:FileDataclassStrategy",
+        {"note": "loaded"},
+    )
+
+    assert cast(Any, strategy).config.note == "loaded"
+    assert sys.modules[module_name].__name__ == module_name
 
 
 def test_load_strategy_rejects_invalid_class_path() -> None:
