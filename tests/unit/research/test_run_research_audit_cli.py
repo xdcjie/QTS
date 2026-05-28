@@ -17,7 +17,7 @@ def test_run_research_audit_verify_accepts_valid_chain(
     audit_log = ResearchAuditLog(tmp_path / "audit")
     audit_log.append_human_review_decision(
         reviewer="risk",
-        decision="go",
+        decision="approved",
         reviewed_at=datetime(2026, 5, 26, tzinfo=UTC),
         evidence_bundle_id="evb_001",
     )
@@ -35,12 +35,12 @@ def test_run_research_audit_verify_rejects_tampered_chain(
     audit_log = ResearchAuditLog(tmp_path / "audit")
     audit_log.append_human_review_decision(
         reviewer="risk",
-        decision="go",
+        decision="approved",
         reviewed_at=datetime(2026, 5, 26, tzinfo=UTC),
         evidence_bundle_id="evb_001",
     )
     audit_log.path.write_text(
-        audit_log.path.read_text(encoding="utf-8").replace("go", "no_go"),
+        audit_log.path.read_text(encoding="utf-8").replace("approved", "tampered"),
         encoding="utf-8",
     )
 

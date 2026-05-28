@@ -357,7 +357,7 @@ def test_evidence_create_verify_and_human_review_audit_chain_verifies(tmp_path: 
     registry.verify(bundle.evidence_bundle_id, audit_log=audit_log)
     audit_log.append_human_review_decision(
         reviewer="risk",
-        decision="go",
+        decision="approved",
         reviewed_at=datetime(2026, 5, 26, 16, 0, tzinfo=UTC),
         evidence_bundle_id=bundle.evidence_bundle_id,
     )

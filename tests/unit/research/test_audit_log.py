@@ -83,7 +83,7 @@ def test_audit_log_verification_reports_previous_hash_tampering(tmp_path: Path) 
     )
     audit_log.append(
         "human_review_decided",
-        {"decision": "no-go"},
+        {"decision": "rejected"},
         created_at=datetime(2026, 5, 26, 14, 10, tzinfo=UTC),
     )
 
@@ -122,7 +122,7 @@ def test_audit_log_appends_human_review_decision(tmp_path: Path) -> None:
 
     record = audit_log.append_human_review_decision(
         reviewer=" risk ",
-        decision=" go ",
+        decision=" approved ",
         reviewed_at=reviewed_at,
         evidence_bundle_id=" evb_001 ",
         promotion_candidate_id=" pc_001 ",
@@ -131,7 +131,7 @@ def test_audit_log_appends_human_review_decision(tmp_path: Path) -> None:
 
     assert record.record_type == "human_review_decided"
     assert record.payload == {
-        "decision": "go",
+        "decision": "approved",
         "evidence_bundle_id": "evb_001",
         "notes": "ready for paper",
         "promotion_candidate_id": "pc_001",
@@ -150,7 +150,7 @@ def test_audit_log_appends_human_review_decision(tmp_path: Path) -> None:
         ({"reviewed_at": datetime(2026, 5, 26, 16, 30)}, "reviewed_at must be timezone-aware"),
         (
             {"evidence_bundle_id": "", "promotion_candidate_id": None},
-            "evidence_bundle_id or promotion_candidate_id is required",
+            "evidence_bundle_id, promotion_candidate_id, or packet_hash is required",
         ),
     ],
 )
@@ -162,7 +162,7 @@ def test_audit_log_human_review_decision_validates_payload(
     audit_log = ResearchAuditLog(tmp_path / "audit.jsonl")
     payload: dict[str, Any] = {
         "reviewer": "risk",
-        "decision": "go",
+        "decision": "approved",
         "reviewed_at": datetime(2026, 5, 26, 16, 30, tzinfo=UTC),
         "evidence_bundle_id": "evb_001",
         "promotion_candidate_id": None,

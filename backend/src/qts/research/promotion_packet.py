@@ -294,7 +294,9 @@ class PromotionPacketV2:
         if expected_packet_hash is not None and expected_packet_hash != packet_hash:
             raise ValueError(f"packet hash mismatch: {packet_hash} != {expected_packet_hash}")
         normalized_decision = decision.strip().lower()
-        accepted = normalized_decision in {"approved", "go"}
+        if normalized_decision not in {"approved", "rejected"}:
+            raise ValueError("human review decision must be approved or rejected")
+        accepted = normalized_decision == "approved"
         record = audit_log.append_human_review_decision(
             reviewer=reviewer,
             decision=normalized_decision,
@@ -354,6 +356,12 @@ class PromotionPacketV2:
             reasons.append("target_module must start with strategies.production.")
 
     def _append_review_reasons(self, reasons: list[str]) -> None:
+        decision = self.review.get("decision")
+        if self._has_value(decision) and str(decision).strip().lower() not in {
+            "approved",
+            "rejected",
+        }:
+            reasons.append("review.decision must be approved or rejected")
         reviewed_at = self.review.get("reviewed_at")
         if not self._has_value(reviewed_at):
             return

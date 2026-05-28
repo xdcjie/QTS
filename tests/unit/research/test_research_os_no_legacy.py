@@ -120,7 +120,7 @@ def test_evidence_bundle_rejects_compat_review_decisions_payload() -> None:
             {
                 "evidence_bundle_id": "evb-compat",
                 "workflow_run_id": "run-compat",
-                "review_decisions": [{"decision": "go"}],
+                "review_decisions": [{"decision": "approved"}],
             }
         )
 
@@ -149,7 +149,7 @@ def test_append_review_decision_hard_fails_in_favor_of_audit_log(tmp_path: Path)
     with pytest.raises(
         ValueError, match="human review decisions must be written to ResearchAuditLog"
     ):
-        registry.append_review_decision(bundle.evidence_bundle_id, {"decision": "go"})
+        registry.append_review_decision(bundle.evidence_bundle_id, {"decision": "approved"})
 
 
 @pytest.mark.parametrize(

@@ -200,7 +200,7 @@ def _packet_payload(bundle_id: str) -> dict[str, Any]:
         },
         "review": {
             "reviewer": "risk",
-            "decision": "go",
+            "decision": "approved",
             "reviewed_at": "2026-05-26T00:00:00+00:00",
         },
     }

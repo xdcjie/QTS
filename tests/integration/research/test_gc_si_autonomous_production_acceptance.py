@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-import pytest
 import yaml  # type: ignore[import-untyped]
 
 from scripts import run_research
@@ -15,13 +14,7 @@ def test_gc_si_autonomous_production_acceptance(
     capsys: Any,
 ) -> None:
     campaign_path = Path("configs/research/campaigns/gc_si_autonomous_production_v1.yaml")
-    data_paths = {
-        "GC": Path("historical/data/gc.csv"),
-        "SI": Path("historical/data/si.csv"),
-    }
-    missing = [str(path) for path in data_paths.values() if not path.exists()]
-    if missing:
-        pytest.skip(f"production GC/SI historical CSV files are required: {missing}")
+    data_paths = _production_data_paths()
 
     config = yaml.safe_load(campaign_path.read_text(encoding="utf-8"))
     assert config["execution"]["data_mode"] == "full"
@@ -81,3 +74,20 @@ def test_gc_si_autonomous_production_acceptance(
     verify_payload = json.loads(capsys.readouterr().out)
     assert verify_payload["accepted"] is True
     assert verify_payload["criteria"]["fitness_landscape"]["generated_candidate_count"] >= 30
+
+
+def _production_data_paths() -> dict[str, Path]:
+    production_paths = {
+        "GC": Path("historical/data/gc.csv"),
+        "SI": Path("historical/data/si.csv"),
+    }
+    if all(path.exists() for path in production_paths.values()):
+        return production_paths
+    fixture_paths = {
+        "GC": Path("tests/fixtures/research/gc_si_real_history/gc.csv"),
+        "SI": Path("tests/fixtures/research/gc_si_real_history/si.csv"),
+    }
+    missing = [str(path) for path in fixture_paths.values() if not path.exists()]
+    if missing:
+        raise AssertionError(f"GC/SI historical CSV files are required: {missing}")
+    return fixture_paths

@@ -86,8 +86,10 @@ def _write_validation_artifact(
     wrapper = {
         "artifact_id": artifact_type,
         "artifact_type": artifact_type,
+        "evidence_source": "backtest_pipeline_artifact",
         "payload": payload,
         "payload_hash": payload_hash,
+        "source_artifacts": {"backtest_manifest": "sha256:manifest"},
         "trial_id": "candidate-001",
     }
     path.write_text(json.dumps(wrapper, sort_keys=True), encoding="utf-8")

@@ -243,8 +243,11 @@ class ResearchAuditLog:
 
         if reviewed_at.tzinfo is None or reviewed_at.tzinfo.utcoffset(reviewed_at) is None:
             raise ValueError("reviewed_at must be timezone-aware")
+        normalized_decision = self._required_payload_text(decision, "decision").lower()
+        if normalized_decision not in {"approved", "rejected"}:
+            raise ValueError("human review decision must be approved or rejected")
         payload: dict[str, Any] = {
-            "decision": self._required_payload_text(decision, "decision"),
+            "decision": normalized_decision,
             "reviewed_at": reviewed_at.isoformat(),
             "reviewer": self._required_payload_text(reviewer, "reviewer"),
         }

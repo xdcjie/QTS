@@ -495,7 +495,7 @@ def _packet_payload(
         "operations": operations,
         "review": {
             "reviewer": "risk",
-            "decision": "go",
+            "decision": "approved",
             "reviewed_at": "2026-05-26T00:00:00+00:00",
         },
     }

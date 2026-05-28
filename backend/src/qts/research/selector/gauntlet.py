@@ -621,6 +621,10 @@ class ValidationGauntlet:
         if not isinstance(wrapper, Mapping):
             reasons.append(f"{artifact_name}: artifact must be a JSON object: {path}")
             return None
+        if wrapper.get("evidence_source") != "backtest_pipeline_artifact":
+            reasons.append(
+                f"{artifact_name}: artifact evidence_source is not backtest_pipeline_artifact"
+            )
         payload = wrapper.get("payload")
         if not isinstance(payload, Mapping):
             reasons.append(f"{artifact_name}: payload must be a JSON object: {path}")

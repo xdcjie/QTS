@@ -40,13 +40,21 @@ def test_experiment_runner_writes_required_trial_artifacts(
     assert accepted.data_quality_path.exists()
     assert accepted.reproducibility_path.exists()
     assert accepted.metrics_path.exists()
+    assert accepted.validation_artifact_paths
 
     data_quality = json.loads(accepted.data_quality_path.read_text(encoding="utf-8"))
     reproducibility = json.loads(accepted.reproducibility_path.read_text(encoding="utf-8"))
+    validation_artifact = json.loads(
+        Path(accepted.validation_artifact_paths["walk_forward_validation"]).read_text(
+            encoding="utf-8"
+        )
+    )
     assert data_quality["schema_version"] == 2
     assert data_quality["accepted"] is True
     assert reproducibility["schema_version"] == 2
     assert reproducibility["manifest_hash"] == accepted.manifest_hash
+    assert validation_artifact["evidence_source"] == "backtest_pipeline_artifact"
+    assert validation_artifact["source_artifacts"]["backtest_manifest"].startswith("sha256:")
 
     rejected = result.trials[1]
     assert rejected.status == "failed"
@@ -70,13 +78,14 @@ def test_experiment_runner_writes_required_trial_artifacts(
     audit_records = ResearchAuditLog(result.audit_log_path).list()
     assert [record.record_type for record in audit_records] == [
         "manifest_loaded",
+        "evidence_bundle_created",
         "research_run_completed",
         "manifest_loaded",
         "research_run_completed",
     ]
     assert audit_records[0].payload["trial_id"] == "trial-accepted"
-    assert audit_records[1].payload["status"] == "succeeded"
-    assert audit_records[3].payload["status"] == "failed"
+    assert audit_records[2].payload["status"] == "succeeded"
+    assert audit_records[4].payload["status"] == "failed"
     assert ResearchAuditLog(result.audit_log_path).verify_hash_chain() == ()
 
 

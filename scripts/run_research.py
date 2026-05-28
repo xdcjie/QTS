@@ -1041,7 +1041,11 @@ def _run_campaign(args: argparse.Namespace) -> int:
         payload = result.to_payload()
         payload["accepted"] = result.status == "accepted"
         payload["acceptance_markers"] = acceptance_markers
-        if args.approval_mode == "manual" and requested_generations > 1:
+        if (
+            args.approval_mode == "manual"
+            and requested_generations > 1
+            and result.status == "accepted"
+        ):
             proposal = _load_json_mapping(result.next_generation_proposal_path)
             state = _write_campaign_state(
                 args.output_root,
@@ -1227,6 +1231,21 @@ def _run_campaign(args: argparse.Namespace) -> int:
 def _verify_campaign_release_bundle(output_root: Path) -> dict[str, Any]:
     output_root = Path(output_root)
     criteria: dict[str, dict[str, Any]] = {}
+
+    state_path = output_root / "campaign_state.json"
+    state = _load_json_mapping(state_path) if state_path.exists() else {}
+    state_status = state.get("status")
+    state_reasons = (
+        []
+        if state_status in {None, "accepted"}
+        else [f"campaign state is not accepted: {state_status}"]
+    )
+    criteria["campaign_state"] = {
+        "accepted": not state_reasons,
+        "path": str(state_path),
+        "reasons": state_reasons,
+        "status": state_status,
+    }
 
     summary_path = output_root / "validation_summary.json"
     summary = _load_json_mapping(summary_path) if summary_path.exists() else {}
