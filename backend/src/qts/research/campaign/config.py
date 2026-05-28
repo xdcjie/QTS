@@ -176,6 +176,7 @@ class ResearchCampaignExecution:
     max_rows: int | None = None
     start: str | None = None
     end: str | None = None
+    windows: tuple[Mapping[str, str], ...] = ()
 
     _DATA_MODES = frozenset({"fixture", "full"})
 
@@ -201,13 +202,15 @@ class ResearchCampaignExecution:
             max_rows = ResearchCampaignBudget._positive_int(max_rows, "execution.max_rows")
         elif max_rows is not None:
             raise ValueError("execution.max_rows is only allowed for fixture data_mode")
-        start, end = self._validated_window(self.start, self.end)
+        windows = self._validated_windows(self.windows)
+        start, end = self._validated_window(self.start, self.end, windows)
         object.__setattr__(self, "default_mode", default_mode)
         object.__setattr__(self, "metrics_source", metrics_source)
         object.__setattr__(self, "data_mode", data_mode)
         object.__setattr__(self, "max_rows", max_rows)
         object.__setattr__(self, "start", start)
         object.__setattr__(self, "end", end)
+        object.__setattr__(self, "windows", windows)
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> Self:
@@ -236,6 +239,7 @@ class ResearchCampaignExecution:
             ),
             start=cls._optional_text(payload, "execution.start", "start"),
             end=cls._optional_text(payload, "execution.end", "end"),
+            windows=cls._windows_from_payload(payload.get("windows", ())),
         )
 
     def to_payload(self) -> dict[str, Any]:
@@ -252,6 +256,8 @@ class ResearchCampaignExecution:
             payload["start"] = self.start
         if self.end is not None:
             payload["end"] = self.end
+        if self.windows:
+            payload["windows"] = [dict(window) for window in self.windows]
         return payload
 
     @classmethod
@@ -267,18 +273,89 @@ class ResearchCampaignExecution:
         return ResearchCampaignConfig.required_text(payload, label, key)
 
     @staticmethod
-    def _validated_window(start: str | None, end: str | None) -> tuple[str | None, str | None]:
+    def _validated_window(
+        start: str | None,
+        end: str | None,
+        windows: tuple[Mapping[str, str], ...],
+    ) -> tuple[str | None, str | None]:
+        if windows and (start is not None or end is not None):
+            raise ValueError("execution.windows cannot be combined with execution.start/end")
         if (start is None) != (end is None):
             raise ValueError("execution.start and execution.end must be provided together")
         if start is None or end is None:
             return None, None
+        start_time, end_time = ResearchCampaignExecution._validated_window_times(
+            start,
+            end,
+            "execution",
+        )
+        return start, end
+
+    @classmethod
+    def _windows_from_payload(cls, value: Any) -> tuple[Mapping[str, str], ...]:
+        if value in (None, ()):
+            return ()
+        if not isinstance(value, list):
+            raise ValueError("execution.windows must be a list")
+        windows: list[Mapping[str, str]] = []
+        for index, item in enumerate(value):
+            if not isinstance(item, Mapping):
+                raise ValueError("execution.windows entries must be mappings")
+            start = ResearchCampaignConfig.required_text(
+                item,
+                f"execution.windows[{index}].start",
+                "start",
+            )
+            end = ResearchCampaignConfig.required_text(
+                item,
+                f"execution.windows[{index}].end",
+                "end",
+            )
+            windows.append({"end": end, "start": start})
+        return tuple(windows)
+
+    @classmethod
+    def _validated_windows(
+        cls,
+        windows: tuple[Mapping[str, str], ...],
+    ) -> tuple[Mapping[str, str], ...]:
+        previous_end: datetime | None = None
+        validated: list[Mapping[str, str]] = []
+        for index, window in enumerate(windows):
+            start = ResearchCampaignConfig.required_text(
+                window,
+                f"execution.windows[{index}].start",
+                "start",
+            )
+            end = ResearchCampaignConfig.required_text(
+                window,
+                f"execution.windows[{index}].end",
+                "end",
+            )
+            start_time, end_time = cls._validated_window_times(
+                start,
+                end,
+                f"execution.windows[{index}]",
+            )
+            if previous_end is not None and start_time < previous_end:
+                raise ValueError("execution.windows must be sorted and non-overlapping")
+            previous_end = end_time
+            validated.append({"end": end, "start": start})
+        return tuple(validated)
+
+    @staticmethod
+    def _validated_window_times(
+        start: str,
+        end: str,
+        label: str,
+    ) -> tuple[datetime, datetime]:
         start_time = datetime.fromisoformat(start.replace("Z", "+00:00"))
         end_time = datetime.fromisoformat(end.replace("Z", "+00:00"))
         if start_time.tzinfo is None or end_time.tzinfo is None:
-            raise ValueError("execution.start and execution.end must be timezone-aware")
+            raise ValueError(f"{label}.start and {label}.end must be timezone-aware")
         if start_time >= end_time:
-            raise ValueError("execution.start must be before execution.end")
-        return start, end
+            raise ValueError(f"{label}.start must be before {label}.end")
+        return start_time, end_time
 
 
 @dataclass(frozen=True, slots=True)

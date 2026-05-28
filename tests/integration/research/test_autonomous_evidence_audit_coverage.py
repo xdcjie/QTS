@@ -26,3 +26,5 @@ def test_autonomous_engine_audits_selected_evidence_lifecycle(tmp_path: Path) ->
 
     assert len(created) >= selected_count
     assert len(validated) >= selected_count
+    trial_graphs = list((result.output_root / "artifact_graph").glob("evidence-bundle-*.json"))
+    assert len(trial_graphs) >= len(created)

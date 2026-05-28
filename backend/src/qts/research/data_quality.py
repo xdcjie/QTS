@@ -278,6 +278,7 @@ class DataQualityRunner:
     end: str | None = None
     calendar: str | None = None
     stale_price_max_repeats: int | None = None
+    windows: tuple[Mapping[str, str], ...] = ()
 
     def __post_init__(self) -> None:
         if not self.dataset_id.strip():
@@ -288,6 +289,7 @@ class DataQualityRunner:
             raise ValueError("calendar is required when provided")
         if self.stale_price_max_repeats is not None and self.stale_price_max_repeats < 1:
             raise ValueError("stale_price_max_repeats must be positive")
+        self._validated_windows()
 
     def run(self, snapshot: Mapping[str, Any]) -> DataQualityArtifact:
         """Run deterministic file-level quality checks and return an artifact."""
@@ -390,6 +392,17 @@ class DataQualityRunner:
         step = self._timeframe_seconds()
         if step is None:
             return 0
+        windows = self._parsed_windows()
+        if windows:
+            return sum(
+                self._missing_bar_count_for_window(
+                    timestamps,
+                    step=step,
+                    start=start,
+                    end=end,
+                )
+                for start, end in windows
+            )
         missing = 0
         unique = sorted(set(timestamps))
         start = None if self.start is None else self._parse_datetime(self.start)
@@ -404,6 +417,29 @@ class DataQualityRunner:
             seconds_to_end = int((end - unique[-1]).total_seconds())
             if seconds_to_end > step:
                 missing += max((seconds_to_end // step) - 1, 0)
+        for left, right in zip(unique, unique[1:], strict=False):
+            seconds = int((right - left).total_seconds())
+            if seconds > step:
+                missing += max((seconds // step) - 1, 0)
+        return missing
+
+    def _missing_bar_count_for_window(
+        self,
+        timestamps: Sequence[datetime],
+        *,
+        step: int,
+        start: datetime,
+        end: datetime,
+    ) -> int:
+        unique = sorted(timestamp for timestamp in set(timestamps) if start <= timestamp < end)
+        if not unique:
+            return int((end - start).total_seconds()) // step
+        missing = 0
+        if unique[0] > start:
+            missing += int((unique[0] - start).total_seconds()) // step
+        seconds_to_end = int((end - unique[-1]).total_seconds())
+        if seconds_to_end > step:
+            missing += max((seconds_to_end // step) - 1, 0)
         for left, right in zip(unique, unique[1:], strict=False):
             seconds = int((right - left).total_seconds())
             if seconds > step:
@@ -432,6 +468,11 @@ class DataQualityRunner:
         return stale
 
     def _session_aligned(self, timestamps: Sequence[datetime]) -> bool:
+        windows = self._parsed_windows()
+        if windows:
+            return all(
+                any(start <= timestamp < end for start, end in windows) for timestamp in timestamps
+            )
         start = None if self.start is None else self._parse_datetime(self.start)
         end = None if self.end is None else self._parse_datetime(self.end)
         for timestamp in timestamps:
@@ -475,6 +516,30 @@ class DataQualityRunner:
         if parsed.tzinfo is None:
             raise ValueError("data quality timestamps must be timezone-aware")
         return parsed
+
+    def _validated_windows(self) -> None:
+        previous_end: datetime | None = None
+        for window in self.windows:
+            if not isinstance(window, Mapping):
+                raise ValueError("data quality windows must contain mappings")
+            start = _required_text(window, "start")
+            end = _required_text(window, "end")
+            start_time = self._parse_datetime(start)
+            end_time = self._parse_datetime(end)
+            if start_time >= end_time:
+                raise ValueError("data quality window start must be before end")
+            if previous_end is not None and start_time < previous_end:
+                raise ValueError("data quality windows must be sorted and non-overlapping")
+            previous_end = end_time
+
+    def _parsed_windows(self) -> tuple[tuple[datetime, datetime], ...]:
+        return tuple(
+            (
+                self._parse_datetime(_required_text(window, "start")),
+                self._parse_datetime(_required_text(window, "end")),
+            )
+            for window in self.windows
+        )
 
 
 @dataclass(frozen=True, slots=True)

@@ -32,6 +32,7 @@ def test_campaign_config_accepts_valid_contract_and_serializes_payload(
     assert config.execution.max_rows == 50
     assert config.execution.start == "2026-01-02T00:00:00+00:00"
     assert config.execution.end == "2026-02-02T00:00:00+00:00"
+    assert config.execution.windows == ()
     assert payload["campaign_hash"] == config.campaign_hash
     assert payload["universe"]["roots"] == ["GC", "SI"]
     assert payload["families"][0]["manifest_template"] == (
@@ -111,6 +112,62 @@ def test_campaign_config_rejects_reversed_execution_window(tmp_path: Path) -> No
     )
 
     with pytest.raises(ValueError, match="execution.start must be before execution.end"):
+        ResearchCampaignConfig.from_yaml(campaign_path)
+
+
+def test_campaign_config_accepts_multi_execution_windows(tmp_path: Path) -> None:
+    campaign_path = _write_campaign(
+        tmp_path,
+        {
+            "execution": {
+                "end": None,
+                "start": None,
+                "windows": [
+                    {
+                        "start": "2026-01-06T23:00:00+00:00",
+                        "end": "2026-01-07T22:00:00+00:00",
+                    },
+                    {
+                        "start": "2026-01-07T23:00:00+00:00",
+                        "end": "2026-01-08T22:00:00+00:00",
+                    },
+                ],
+            }
+        },
+    )
+
+    config = ResearchCampaignConfig.from_yaml(campaign_path)
+
+    assert config.execution.start is None
+    assert config.execution.end is None
+    assert [dict(window) for window in config.execution.windows] == [
+        {
+            "end": "2026-01-07T22:00:00+00:00",
+            "start": "2026-01-06T23:00:00+00:00",
+        },
+        {
+            "end": "2026-01-08T22:00:00+00:00",
+            "start": "2026-01-07T23:00:00+00:00",
+        },
+    ]
+
+
+def test_campaign_config_rejects_window_and_start_end_mix(tmp_path: Path) -> None:
+    campaign_path = _write_campaign(
+        tmp_path,
+        {
+            "execution": {
+                "windows": [
+                    {
+                        "start": "2026-01-06T23:00:00+00:00",
+                        "end": "2026-01-07T22:00:00+00:00",
+                    }
+                ]
+            }
+        },
+    )
+
+    with pytest.raises(ValueError, match="execution.windows cannot be combined"):
         ResearchCampaignConfig.from_yaml(campaign_path)
 
 

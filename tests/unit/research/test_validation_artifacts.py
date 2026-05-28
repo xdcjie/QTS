@@ -34,7 +34,14 @@ def test_promotion_grade_gauntlet_reads_artifact_payloads_and_hashes(
             "slippage_sensitivity": 0.01,
             "stressed_score": 1.0,
         },
-        "correlation_report": {"max_active_correlation": 0.10},
+        "correlation_report": {
+            "active_portfolio_snapshot": {
+                "active_candidate_count": 0,
+                "active_portfolio_status": "no_active_candidates",
+                "candidate_return_count": 2,
+            },
+            "max_active_correlation": 0.10,
+        },
         "capacity_report": {
             "estimated_capacity": 1000000,
             "required_capital": 100000,

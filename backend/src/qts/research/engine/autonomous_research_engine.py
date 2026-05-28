@@ -997,9 +997,16 @@ class AutonomousResearchEngine:
         bars_dir = data_root / "data"
         bars_dir.mkdir(parents=True, exist_ok=True)
         target_csv = bars_dir / f"{root}.csv"
+        windows = self._execution_windows(run)
         window = self._execution_window(run)
         if max_rows is None:
-            self._ensure_full_backtest_csv(data_path, target_csv, symbol=root, window=window)
+            self._ensure_full_backtest_csv(
+                data_path,
+                target_csv,
+                symbol=root,
+                window=window,
+                windows=windows,
+            )
         else:
             self._materialize_backtest_csv(
                 data_path,
@@ -1007,6 +1014,7 @@ class AutonomousResearchEngine:
                 symbol=root,
                 max_rows=max_rows,
                 window=window,
+                windows=windows,
             )
         config_path = data_root / "historical.local.yaml"
         payload = {
@@ -1042,6 +1050,7 @@ class AutonomousResearchEngine:
         *,
         symbol: str,
         window: tuple[str, str] | None,
+        windows: Sequence[tuple[str, str]] = (),
     ) -> None:
         metadata_path = target_path.with_suffix(".materialization.json")
         source_stat = source_path.stat()
@@ -1052,6 +1061,7 @@ class AutonomousResearchEngine:
             "source_mtime_ns": source_stat.st_mtime_ns,
             "symbol": symbol,
             "window": None if window is None else {"end": window[1], "start": window[0]},
+            "windows": [{"end": end, "start": start} for start, end in windows],
         }
         if target_path.exists() and metadata_path.exists():
             metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
@@ -1064,6 +1074,7 @@ class AutonomousResearchEngine:
             symbol=symbol,
             max_rows=None,
             window=window,
+            windows=windows,
         )
         temp_path.replace(target_path)
         self._write_json(metadata_path, expected_metadata)
@@ -1076,9 +1087,11 @@ class AutonomousResearchEngine:
         symbol: str,
         max_rows: int | None,
         window: tuple[str, str] | None = None,
+        windows: Sequence[tuple[str, str]] = (),
     ) -> None:
-        start_time = None if window is None else self._parse_timestamp(window[0])
-        end_time = None if window is None else self._parse_timestamp(window[1])
+        parsed_windows = self._parsed_materialization_windows(window, windows)
+        start_time = None if not parsed_windows else parsed_windows[0][0]
+        end_time = None if not parsed_windows else parsed_windows[-1][1]
         with (
             source_path.open("r", encoding="utf-8") as source,
             target_path.open(
@@ -1114,6 +1127,11 @@ class AutonomousResearchEngine:
                         continue
                     if end_time is not None and timestamp_time >= end_time:
                         break
+                    if parsed_windows and not self._timestamp_in_windows(
+                        timestamp_time,
+                        parsed_windows,
+                    ):
+                        continue
                     if timestamp in seen_timestamps:
                         continue
                     close = values[close_index]
@@ -1156,12 +1174,34 @@ class AutonomousResearchEngine:
                     continue
                 if end_time is not None and timestamp_time >= end_time:
                     break
+                if parsed_windows and not self._timestamp_in_windows(
+                    timestamp_time,
+                    parsed_windows,
+                ):
+                    continue
                 target.write(
                     f"{timestamp},33,1,{index},{close},{close},{close},{close},1,{symbol}\n"
                 )
                 emitted += 1
         if emitted == 0:
             raise ValueError(f"data path has no rows in requested backtest window: {source_path}")
+
+    def _parsed_materialization_windows(
+        self,
+        window: tuple[str, str] | None,
+        windows: Sequence[tuple[str, str]],
+    ) -> tuple[tuple[datetime, datetime], ...]:
+        raw_windows = tuple(windows) if windows else (() if window is None else (window,))
+        return tuple(
+            (self._parse_timestamp(start), self._parse_timestamp(end)) for start, end in raw_windows
+        )
+
+    @staticmethod
+    def _timestamp_in_windows(
+        timestamp: datetime,
+        windows: Sequence[tuple[datetime, datetime]],
+    ) -> bool:
+        return any(start <= timestamp < end for start, end in windows)
 
     def _data_window(self, source_path: Path, *, max_rows: int | None) -> tuple[str, str]:
         cache_key = (str(source_path.resolve()), max_rows)
@@ -1207,10 +1247,19 @@ class AutonomousResearchEngine:
         return self._data_window(source_path, max_rows=self._materialization_max_rows(run))
 
     def _execution_window(self, run: AutonomousResearchRun) -> tuple[str, str] | None:
+        windows = self._execution_windows(run)
+        if windows:
+            return windows[0][0], windows[-1][1]
         execution = run.campaign_config.execution if run.campaign_config is not None else None
         if execution is not None and execution.start is not None and execution.end is not None:
             return execution.start, execution.end
         return None
+
+    def _execution_windows(self, run: AutonomousResearchRun) -> tuple[tuple[str, str], ...]:
+        execution = run.campaign_config.execution if run.campaign_config is not None else None
+        if execution is None:
+            return ()
+        return tuple((str(window["start"]), str(window["end"])) for window in execution.windows)
 
     def _combined_data_window(
         self,
@@ -1247,13 +1296,25 @@ class AutonomousResearchEngine:
         data_paths: Mapping[str, Path],
     ) -> dict[str, Any]:
         execution = run.campaign_config.execution if run.campaign_config is not None else None
+        execution_windows = self._execution_windows(run)
         data_window = (
-            {"end": execution.end, "start": execution.start}
-            if execution is not None and execution.start is not None and execution.end is not None
-            else self._combined_data_window(
-                tuple(data_paths.values()),
-                max_rows=self._materialization_max_rows(run),
+            {"end": execution_windows[-1][1], "start": execution_windows[0][0]}
+            if execution_windows
+            else (
+                {"end": execution.end, "start": execution.start}
+                if execution is not None
+                and execution.start is not None
+                and execution.end is not None
+                else self._combined_data_window(
+                    tuple(data_paths.values()),
+                    max_rows=self._materialization_max_rows(run),
+                )
             )
+        )
+        data_windows = (
+            [{"end": end, "start": start} for start, end in execution_windows]
+            if execution_windows
+            else [data_window]
         )
         return {
             "campaign_id": run.campaign_id,
@@ -1276,6 +1337,7 @@ class AutonomousResearchEngine:
                 },
                 "start": data_window["start"],
                 "timeframe": run.timeframe,
+                "windows": data_windows,
             },
             "run": {
                 "created_at": "2026-05-26T00:00:00+00:00",

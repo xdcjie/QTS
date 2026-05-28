@@ -42,7 +42,14 @@ def test_engine_blocks_promotion_when_gauntlet_rejects_all_gates(
                 "required_capital": 1000,
                 "turnover": 2.0,
             },
-            "correlation_report": {"max_active_correlation": 0.95},
+            "correlation_report": {
+                "active_portfolio_snapshot": {
+                    "active_candidate_count": 1,
+                    "active_portfolio_status": "computed",
+                    "candidate_return_count": 2,
+                },
+                "max_active_correlation": 0.95,
+            },
             "cost_stress": {
                 "degradation": 0.50,
                 "slippage_sensitivity": 0.50,

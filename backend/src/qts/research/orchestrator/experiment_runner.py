@@ -16,6 +16,7 @@ from typing import Any
 import yaml  # type: ignore[import-untyped]
 
 from qts.core.hashing import stable_json_dumps, stable_json_hash
+from qts.research.artifact_graph import ResearchArtifactGraphWriter
 from qts.research.audit_log import ResearchAuditLog
 from qts.research.data_quality import DataQualityArtifactWriter, DataQualityRunner
 from qts.research.evidence_registry import EvidenceRegistry
@@ -587,6 +588,9 @@ class ResearchExperimentRunner:
                 idea=self._idea(job, trial),
                 strategy_id=self._strategy_id(job),
                 audit_log=audit_log,
+                artifact_graph_writer=ResearchArtifactGraphWriter(
+                    job.output_root / "artifact_graph"
+                ),
             )
             evidence_bundle_id = bundle.evidence_bundle_id
 
@@ -1092,6 +1096,7 @@ class ResearchExperimentRunner:
             start=None if data.get("start") is None else str(data["start"]),
             end=None if data.get("end") is None else str(data["end"]),
             calendar=None if data.get("calendar") is None else str(data["calendar"]),
+            windows=self._data_quality_windows(data.get("windows", ())),
         ).run({"checked_paths": checked_paths})
         result = DataQualityArtifactWriter(trial_dir).write(artifact)
         payload = json.loads(result.path.read_text(encoding="utf-8"))
@@ -1117,6 +1122,22 @@ class ResearchExperimentRunner:
                 return tuple(str(path) for path in pipeline_paths)
         data = self._mapping(job.manifest_payload.get("data", {}), "data")
         return tuple(str(path) for path in data.get("checked_paths", ()))
+
+    @staticmethod
+    def _data_quality_windows(value: Any) -> tuple[Mapping[str, str], ...]:
+        if value is None:
+            return ()
+        if not isinstance(value, Sequence) or isinstance(value, str):
+            return ()
+        windows: list[Mapping[str, str]] = []
+        for item in value:
+            if not isinstance(item, Mapping):
+                continue
+            start = item.get("start")
+            end = item.get("end")
+            if isinstance(start, str) and isinstance(end, str):
+                windows.append({"end": end, "start": start})
+        return tuple(windows)
 
     def _reproducibility_payload(
         self,
@@ -1341,8 +1362,17 @@ class ResearchExperimentRunner:
             )
         active_snapshot: dict[str, Any] = {
             "active_candidates": active_candidates,
+            "active_candidate_count": len(active_candidates),
+            "active_portfolio_status": (
+                "computed" if active_candidates else "no_active_candidates"
+            ),
             "calculation": "max_abs_pearson_correlation",
             "candidate_return_count": len(candidate_returns),
+            "empty_reason": (
+                None
+                if active_candidates
+                else "no selected promotion candidates were available before this survivor"
+            ),
             "equity_curve_hash": self._manifest_artifact_hash(
                 backtest_manifest,
                 "equity_curve",

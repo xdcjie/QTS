@@ -84,6 +84,31 @@ def test_data_quality_runner_counts_missing_start_and_end_boundary_bars(
     assert {"code": "missing_bars", "message": "missing bars detected: 2"} in artifact.blockers()
 
 
+def test_data_quality_runner_counts_missing_bars_per_declared_window(tmp_path: Path) -> None:
+    bars_path = tmp_path / "bars.csv"
+    bars_path.write_text(
+        "timestamp,close\n"
+        "2026-01-02T14:30:00Z,100\n"
+        "2026-01-02T14:31:00Z,101\n"
+        "2026-01-03T14:30:00Z,102\n"
+        "2026-01-03T14:31:00Z,103\n",
+        encoding="utf-8",
+    )
+
+    artifact = DataQualityRunner(
+        dataset_id="dataset-001",
+        timeframe="1m",
+        calendar="TEST",
+        windows=(
+            {"start": "2026-01-02T14:30:00Z", "end": "2026-01-02T14:32:00Z"},
+            {"start": "2026-01-03T14:30:00Z", "end": "2026-01-03T14:32:00Z"},
+        ),
+    ).run({"dataset_files": [{"path": str(bars_path), "exists": True}]})
+
+    assert artifact.accepted is True
+    assert artifact.missing_bars == 0
+
+
 def test_data_quality_runner_detects_session_alignment_and_stale_prices(
     tmp_path: Path,
 ) -> None:

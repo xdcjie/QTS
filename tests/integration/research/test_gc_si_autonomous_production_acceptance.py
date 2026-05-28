@@ -19,8 +19,22 @@ def test_gc_si_autonomous_production_acceptance(
     config = yaml.safe_load(campaign_path.read_text(encoding="utf-8"))
     assert config["execution"]["data_mode"] == "full"
     assert "max_rows" not in config["execution"]
-    assert config["execution"]["start"] == "2026-01-06T23:00:00+00:00"
-    assert config["execution"]["end"] == "2026-01-07T22:00:00+00:00"
+    assert "start" not in config["execution"]
+    assert "end" not in config["execution"]
+    assert config["execution"]["windows"] == [
+        {
+            "start": "2026-01-06T23:00:00+00:00",
+            "end": "2026-01-07T22:00:00+00:00",
+        },
+        {
+            "start": "2026-01-07T23:00:00+00:00",
+            "end": "2026-01-08T22:00:00+00:00",
+        },
+        {
+            "start": "2026-01-13T23:00:00+00:00",
+            "end": "2026-01-14T22:00:00+00:00",
+        },
+    ]
     assert config["budget"]["max_generations"] >= 2
     assert config["budget"]["max_total_trials"] >= 30
 
@@ -42,8 +56,8 @@ def test_gc_si_autonomous_production_acceptance(
     assert run_exit == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["status"] == "pending_human_approval"
-    assert _csv_row_count(output_root / "backtest_data" / "full" / "GC" / "data" / "GC.csv") == 1380
-    assert _csv_row_count(output_root / "backtest_data" / "full" / "SI" / "data" / "SI.csv") == 1380
+    assert _csv_row_count(output_root / "backtest_data" / "full" / "GC" / "data" / "GC.csv") == 4140
+    assert _csv_row_count(output_root / "backtest_data" / "full" / "SI" / "data" / "SI.csv") == 4140
 
     proposal = json.loads((output_root / "next_generation_proposal.json").read_text())
     approve_exit = run_research.main(

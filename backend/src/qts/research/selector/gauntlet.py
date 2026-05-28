@@ -286,6 +286,26 @@ class CorrelationGate:
             )
         max_correlation = WalkForwardGate._number(evidence.get("max_active_correlation"))
         reasons: list[str] = []
+        snapshot = evidence.get("active_portfolio_snapshot")
+        active_status = (
+            snapshot.get("active_portfolio_status") if isinstance(snapshot, Mapping) else None
+        )
+        active_count = (
+            WalkForwardGate._number(snapshot.get("active_candidate_count"))
+            if isinstance(snapshot, Mapping)
+            else None
+        )
+        candidate_return_count = (
+            WalkForwardGate._number(snapshot.get("candidate_return_count"))
+            if isinstance(snapshot, Mapping)
+            else None
+        )
+        if active_status not in {"computed", "no_active_candidates"}:
+            reasons.append("correlation: active_portfolio_status missing")
+        if candidate_return_count is None or candidate_return_count <= 0:
+            reasons.append("correlation: candidate return series missing")
+        if active_status == "computed" and (active_count is None or active_count <= 0):
+            reasons.append("correlation: active candidates missing")
         if max_correlation is None:
             reasons.append("correlation: max_active_correlation missing")
         elif abs(max_correlation) > self.max_active_correlation:
@@ -297,7 +317,13 @@ class CorrelationGate:
             gate_name="correlation",
             accepted=not reasons,
             reasons=tuple(reasons),
-            evidence={**_artifact_metadata(evidence), "max_active_correlation": max_correlation},
+            evidence={
+                **_artifact_metadata(evidence),
+                "active_candidate_count": active_count,
+                "active_portfolio_status": active_status,
+                "candidate_return_count": candidate_return_count,
+                "max_active_correlation": max_correlation,
+            },
         )
 
     @staticmethod

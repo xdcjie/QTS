@@ -144,7 +144,14 @@ def _candidate() -> dict[str, Any]:
                 "slippage_sensitivity": 0.05,
                 "stressed_score": 0.84,
             },
-            "correlation": {"max_active_correlation": 0.42},
+            "correlation": {
+                "active_portfolio_snapshot": {
+                    "active_candidate_count": 1,
+                    "active_portfolio_status": "computed",
+                    "candidate_return_count": 2,
+                },
+                "max_active_correlation": 0.42,
+            },
             "capacity": {
                 "estimated_capacity": 1_000_000,
                 "required_capital": 500_000,

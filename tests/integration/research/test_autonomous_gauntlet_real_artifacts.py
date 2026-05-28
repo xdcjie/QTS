@@ -31,6 +31,11 @@ def test_autonomous_gauntlet_consumes_validation_artifact_refs(tmp_path: Path) -
         for decision in gauntlet_result["gate_decisions"]:
             assert Path(decision["evidence"]["artifact_path"]).exists()
             assert str(decision["evidence"]["payload_hash"]).startswith("sha256:")
+            if decision["gate_name"] == "correlation":
+                wrapper = json.loads(Path(decision["evidence"]["artifact_path"]).read_text())
+                snapshot = wrapper["payload"]["active_portfolio_snapshot"]
+                assert snapshot["active_portfolio_status"] == "no_active_candidates"
+                assert snapshot["candidate_return_count"] > 0
 
 
 def test_correlation_artifact_uses_prior_selected_equity_curve_context(tmp_path: Path) -> None:
