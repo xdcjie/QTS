@@ -279,6 +279,36 @@ def test_gc_si_vwap_trend_late_holdout_replays_clean_scan_winner() -> None:
     assert campaign.budget.max_total_trials == 1
 
 
+def test_gc_vwap_trend_robust_scan_searches_gc_grid_across_clean_windows() -> None:
+    campaign = ResearchCampaignConfig.from_yaml(
+        "configs/research/campaigns/gc_vwap_trend_robust_scan_v1.yaml"
+    )
+    assert campaign.campaign_id == "gc_vwap_trend_robust_scan_v1"
+    assert campaign.universe.roots == ("GC", "SI")
+    assert [family.id for family in campaign.families] == ["gc_vwap_trend_robust_scan"]
+    assert campaign.execution.data_mode == "full"
+    assert len(campaign.execution.windows) == 25
+    assert campaign.execution.windows[0] == {
+        "start": "2026-02-03T23:00:00+00:00",
+        "end": "2026-02-04T22:00:00+00:00",
+    }
+    assert campaign.execution.windows[-1] == {
+        "start": "2026-05-18T22:00:00+00:00",
+        "end": "2026-05-19T21:00:00+00:00",
+    }
+
+    search_space = SearchSpaceSpec.from_yaml(campaign.families[0].search_space)
+    candidates = CandidateGenerator(search_space).grid()
+    assert len(candidates) == 16
+    assert {candidate.parameters["root"] for candidate in candidates} == {"GC"}
+    assert {candidate.parameters["time_window"] for candidate in candidates} == {
+        "current_08_16",
+        "evening_18_22",
+    }
+    assert campaign.budget.max_generations == 1
+    assert campaign.budget.max_trials_per_generation >= len(candidates)
+
+
 def test_campaign_config_rejects_invalid_budget(tmp_path: Path) -> None:
     campaign_path = _write_campaign(tmp_path, {"budget": {"max_total_trials": 0}})
 
