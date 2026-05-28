@@ -8,6 +8,7 @@ import pytest
 import yaml  # type: ignore[import-untyped]
 from qts.core.hashing import stable_json_hash
 from qts.research.campaign.config import ResearchCampaignConfig
+from qts.research.search import CandidateGenerator, SearchSpaceSpec
 
 
 def test_campaign_config_accepts_valid_contract_and_serializes_payload(
@@ -57,6 +58,27 @@ def test_campaign_config_is_public_package_export() -> None:
 
     assert research.ResearchCampaignConfig is ResearchCampaignConfig
     assert research.ResearchCampaignExecution is not None
+
+
+def test_gc_si_momentum_alpha_research_config_uses_executable_parameters() -> None:
+    campaign = ResearchCampaignConfig.from_yaml(
+        "configs/research/campaigns/gc_si_momentum_alpha_research_v1.yaml"
+    )
+    assert [family.id for family in campaign.families] == ["momentum"]
+
+    search_space = SearchSpaceSpec.from_yaml(campaign.families[0].search_space)
+    parameter_names = tuple(parameter.name for parameter in search_space.parameters)
+    assert parameter_names == ("root", "short_window", "long_window")
+
+    candidates = CandidateGenerator(search_space).grid()
+    assert len(candidates) == 32
+    assert {candidate.parameters["root"] for candidate in candidates} == {"GC", "SI"}
+    assert all(
+        candidate.parameters["short_window"] < candidate.parameters["long_window"]
+        for candidate in candidates
+    )
+    assert campaign.budget.max_trials_per_generation >= len(candidates)
+    assert campaign.budget.max_total_trials >= len(candidates) * campaign.budget.max_generations
 
 
 def test_campaign_config_rejects_invalid_budget(tmp_path: Path) -> None:
