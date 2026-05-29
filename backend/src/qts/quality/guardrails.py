@@ -373,6 +373,10 @@ GUARDRAIL_REMEDIATIONS = {
         "Keep adapter business behavior out of transports; pass normalized payloads "
         "through protocols."
     ),
+    "VWAP_TAXONOMY_PRESENCE": (
+        "Classify the VWAP artifact in docs/architecture/vwap_taxonomy.md under the "
+        "correct category before tracking it."
+    ),
 }
 
 

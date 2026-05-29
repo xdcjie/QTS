@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import ast
+import re
+import subprocess
 from pathlib import Path
 
 import yaml  # type: ignore[import-untyped]
@@ -18,6 +20,10 @@ FORBIDDEN_RESEARCH_WORKFLOW_KEYS = frozenset(
     {"broker", "generate_code", "live", "orders", "paper", "promote", "runtime", "trade"}
 )
 FORBIDDEN_PRODUCTION_STRATEGY_IMPORT_PREFIXES = ("examples", "strategies.research")
+
+VWAP_TAXONOMY_PATH = Path("docs/architecture/vwap_taxonomy.md")
+VWAP_ARTIFACT_TOKEN = "vwap"
+_VWAP_BACKTICK_PATTERN = re.compile(r"`([^`]+)`")
 
 
 class _ResearchRunScriptRule:
@@ -358,11 +364,114 @@ class _VwapAdhocRunnerForbiddenRule:
         return violations
 
 
+class _VwapTaxonomyPresenceRule:
+    """Require every tracked VWAP artifact to have a taxonomy entry.
+
+    The taxonomy doc at ``docs/architecture/vwap_taxonomy.md`` is the registry of
+    record for VWAP artifacts (production strategy, research strategy, campaign /
+    search template, example/demo, runbook, and test). Any tracked file whose
+    path contains ``vwap`` (case-insensitive) must be listed in that doc so no
+    undocumented VWAP artifact can enter the repository unclassified.
+
+    The taxonomy doc itself is exempt: it is the registry, not a classified
+    artifact, and cannot meaningfully list its own path as an entry.
+    """
+
+    code = "VWAP_TAXONOMY_PRESENCE"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform per-file check."""
+        del relative_path, qts_relative_path, tree
+        return []
+
+    def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
+        """Perform repository-wide check."""
+        artifacts = [
+            artifact_path
+            for artifact_path in _tracked_vwap_artifacts(repo_root)
+            if artifact_path != VWAP_TAXONOMY_PATH.as_posix()
+        ]
+        if not artifacts:
+            return []
+
+        taxonomy_path = repo_root / VWAP_TAXONOMY_PATH
+        if not taxonomy_path.exists():
+            return [
+                GuardrailViolation(
+                    code=self.code,
+                    path=str(VWAP_TAXONOMY_PATH),
+                    line=1,
+                    message=(
+                        "VWAP taxonomy doc is missing; every tracked VWAP artifact must be "
+                        "classified there"
+                    ),
+                    symbol=VWAP_TAXONOMY_PATH.name,
+                )
+            ]
+
+        documented = _documented_vwap_paths(taxonomy_path)
+        return [
+            GuardrailViolation(
+                code=self.code,
+                path=artifact_path,
+                line=1,
+                message=(
+                    "VWAP artifact has no entry in docs/architecture/vwap_taxonomy.md; "
+                    "every VWAP artifact must be classified"
+                ),
+                remediation=(
+                    "Add the artifact to docs/architecture/vwap_taxonomy.md under the "
+                    "correct category (production, research, campaign, example, runbook, "
+                    "or test)."
+                ),
+                symbol=Path(artifact_path).name,
+            )
+            for artifact_path in artifacts
+            if artifact_path not in documented
+        ]
+
+
+def _tracked_vwap_artifacts(repo_root: Path) -> list[str]:
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "-z"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        # No git checkout to enumerate (e.g. an isolated fixture tree); there are
+        # no tracked VWAP artifacts to classify.
+        return []
+    return sorted(
+        entry
+        for entry in result.stdout.split("\0")
+        if entry and VWAP_ARTIFACT_TOKEN in entry.lower()
+    )
+
+
+def _documented_vwap_paths(taxonomy_path: Path) -> set[str]:
+    documented: set[str] = set()
+    for match in _VWAP_BACKTICK_PATTERN.finditer(taxonomy_path.read_text(encoding="utf-8")):
+        candidate = match.group(1).strip()
+        if VWAP_ARTIFACT_TOKEN in candidate.lower():
+            documented.add(candidate)
+    return documented
+
+
 ResearchRunScriptRule = _ResearchRunScriptRule
 ResearchWorkflowRuntimeKeyRule = _ResearchWorkflowRuntimeKeyRule
 ProductionStrategyImportRule = _ProductionStrategyImportRule
 VwapOptimizerConfigRule = _VwapOptimizerConfigRule
 VwapAdhocRunnerForbiddenRule = _VwapAdhocRunnerForbiddenRule
+VwapTaxonomyPresenceRule = _VwapTaxonomyPresenceRule
 
 __all__ = [
     "ResearchRunScriptRule",
@@ -370,4 +479,5 @@ __all__ = [
     "ProductionStrategyImportRule",
     "VwapOptimizerConfigRule",
     "VwapAdhocRunnerForbiddenRule",
+    "VwapTaxonomyPresenceRule",
 ]

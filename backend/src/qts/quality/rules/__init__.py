@@ -17,6 +17,7 @@ from qts.quality.rules.flows import (
     ResearchWorkflowRuntimeKeyRule,
     VwapAdhocRunnerForbiddenRule,
     VwapOptimizerConfigRule,
+    VwapTaxonomyPresenceRule,
 )
 from qts.quality.rules.imports import (
     ImportBoundaryRule,
@@ -114,4 +115,5 @@ __all__ = [
     "TransportCanonicalPathRule",
     "VwapAdhocRunnerForbiddenRule",
     "VwapOptimizerConfigRule",
+    "VwapTaxonomyPresenceRule",
 ]

@@ -7,11 +7,11 @@ from pathlib import Path
 
 from qts.quality.guardrails import QTS_ROOT, GuardrailViolation, RepositoryRule, Rule
 from qts.quality.rules import (
+    AccountFillMutationRule,
     BacktestActorLoopCohesionRule,
     BacktestEngineCohesionRule,
     BacktestInputCohesionRule,
     BacktestRunnerCohesionRule,
-    AccountFillMutationRule,
     BrokerSpecificRule,
     BrokerSymbolBoundaryRule,
     CallerPresenceRule,
@@ -53,6 +53,7 @@ from qts.quality.rules import (
     TransportCanonicalPathRule,
     VwapAdhocRunnerForbiddenRule,
     VwapOptimizerConfigRule,
+    VwapTaxonomyPresenceRule,
 )
 
 
@@ -100,6 +101,7 @@ class GuardrailSuite:
             ResearchRunScriptRule(),
             VwapOptimizerConfigRule(),
             VwapAdhocRunnerForbiddenRule(),
+            VwapTaxonomyPresenceRule(),
             ProductionStrategyImportRule(),
             ResearchWorkflowRuntimeKeyRule(),
             EvidenceBundleRequiredForPromotionRule(),

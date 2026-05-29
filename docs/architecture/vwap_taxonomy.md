@@ -20,6 +20,7 @@ deployable in paper or live mode.
 | `configs/backtest.vwap_production_pullback_si.yaml` | SI backtest config for production variant |
 | `configs/paper.vwap_production_pullback_gc.example.yaml` | GC paper example config |
 | `configs/paper.vwap_production_pullback_si.example.yaml` | SI paper example config |
+| `strategies/vwap_pullback/card.md` | Strategy lifecycle card for `vwap_pullback` (status, hypothesis, promotion gate) |
 | `docs/runbooks/vwap_pullback_live_runbook.md` | Live runbook for vwap_pullback |
 
 ### B. Research strategy — allowed (under Research OS workflow)
@@ -113,6 +114,7 @@ business artifacts; they verify strategy correctness.
 | `RESEARCH_RUN_SCRIPT` | `scripts/research/run_*_research.py`, `scripts/research/run_vwap_*.py` | All ad-hoc research runner scripts |
 | `VWAP_OPTIMIZER_CONFIG` | `configs/optimizer/*vwap*.{yaml,yml}` | VWAP optimizer configs outside workflow gates |
 | `VWAP_ADHOC_RUNNER_FORBIDDEN` | `scripts/research/run_vwap_*.py`, `configs/optimizer/*vwap*.{yaml,yml}` | Unified VWAP-specific ad-hoc artifact check |
+| `VWAP_TAXONOMY_PRESENCE` | Every tracked file whose path contains `vwap` (this doc excepted) | Undocumented VWAP artifact missing a taxonomy entry |
 | `PRODUCTION_STRATEGY_IMPORT` | Production code importing `examples.*` or `strategies.research.*` | Production importing non-promoted VWAP strategies |
 
 ## Canonical entrypoint for VWAP research
