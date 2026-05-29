@@ -1,5 +1,5 @@
 {
-  "production_class_count": 908,
+  "production_class_count": 906,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -75,10 +75,8 @@
     "qts.config.ibkr.IbkrSecretRefs",
     "qts.core.ids.AccountId",
     "qts.core.ids.BrokerId",
-    "qts.core.ids.CalendarId",
     "qts.core.ids.CausationId",
     "qts.core.ids.CorrelationId",
-    "qts.core.ids.CurrencyCode",
     "qts.core.ids.EventId",
     "qts.core.ids.InstrumentId",
     "qts.core.ids.OrderId",

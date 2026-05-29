@@ -6,7 +6,6 @@ import ast
 from pathlib import Path
 
 import pytest
-from qts.core.ids import CalendarId, CurrencyCode
 from qts.risk.config import RiskRuleName
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
@@ -76,50 +75,6 @@ class TestRiskRuleConfigUsesTypedName:
                                 f"Found raw string comparison in build dispatch: "
                                 f"'{comparator.value}' -- use RiskRuleName enum instead"
                             )
-
-
-class TestCalendarIdAndCurrencyCodeNewtypes:
-    """CalendarId and CurrencyCode must be proper _StringId subclasses."""
-
-    def test_calendar_id_is_string_id_subclass(self) -> None:
-        from qts.core.ids import _StringId
-
-        assert issubclass(CalendarId, _StringId)
-
-    def test_currency_code_is_string_id_subclass(self) -> None:
-        from qts.core.ids import _StringId
-
-        assert issubclass(CurrencyCode, _StringId)
-
-    def test_calendar_id_rejects_empty(self) -> None:
-        with pytest.raises(ValueError):
-            CalendarId("")
-
-    def test_calendar_id_rejects_whitespace(self) -> None:
-        with pytest.raises(ValueError):
-            CalendarId("   ")
-
-    def test_calendar_id_accepts_valid_exchange_calendar(self) -> None:
-        cal = CalendarId("XNAS")
-        assert str(cal) == "XNAS"
-
-    def test_currency_code_rejects_empty(self) -> None:
-        with pytest.raises(ValueError):
-            CurrencyCode("")
-
-    def test_currency_code_accepts_usd(self) -> None:
-        code = CurrencyCode("USD")
-        assert str(code) == "USD"
-
-    def test_calendar_id_exported_from_ids(self) -> None:
-        from qts.core.ids import __all__
-
-        assert "CalendarId" in __all__
-
-    def test_currency_code_exported_from_ids(self) -> None:
-        from qts.core.ids import __all__
-
-        assert "CurrencyCode" in __all__
 
 
 class TestNoPublicListAnyReturnInRuntime:
