@@ -84,9 +84,9 @@ class AccountActor(Actor):
         raise ActorUnhandledMessageError(f"unsupported account message: {type(message).__name__}")
 
     def snapshot(self) -> AccountSnapshot:
-        """Return current account snapshot."""
+        """Return current account snapshot with all currency balances."""
         return AccountSnapshot(
-            cash=MappingProxyType({"USD": self._cash.balance("USD")}),
+            cash=MappingProxyType(self._cash.balances()),
             holdings=self._holdings.snapshot(),
             account_id=self._account_id,
             seen_fill_ids=self._fill_ids.snapshot(),
