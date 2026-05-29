@@ -41,6 +41,7 @@ from qts.research.orchestrator import (
     ExperimentRetryPolicy,
     ExperimentScheduler,
     ExperimentWorker,
+    PromotionThresholds,
 )
 from qts.research.orchestrator.experiment_runner import (
     ResearchExperimentJob,
@@ -1625,6 +1626,40 @@ class AutonomousResearchEngine:
         result_by_id = {result.trial_id: result for result in trial_results}
         row_by_id = {str(row["trial_id"]): dict(row) for row in trial_evidence_rows}
 
+        # Validation artifacts must exist before selection: the selector enforces
+        # the promotion metrics schema, and the artifact-derived fields
+        # (deterministic_replay_passed, no_lookahead_passed, walk_forward
+        # consistency, parameter_sensitivity, oos_months, promotion_eligible)
+        # are honestly None until the survivor validation runs have produced the
+        # artifacts the metrics are derived from. Producing them up front keeps
+        # selection driven by real evidence rather than rejecting every
+        # candidate for missing-but-not-yet-derived fields.
+        validation_runner = ResearchExperimentRunner(
+            repo_root=self._repo_root,
+            promotion_thresholds=self._promotion_thresholds(run),
+        )
+        active_correlation_context = [
+            self._active_correlation_context_from_selected(row) for row in active_selected_rows
+        ]
+        for trial in trials:
+            trial_id = str(trial["trial_id"])
+            result = result_by_id[trial_id]
+            if result.status != "succeeded":
+                continue
+            validation_artifact_paths = validation_runner.write_validation_artifacts_for_trial(
+                trial=trial,
+                trial_result=result,
+                active_correlation_context=active_correlation_context,
+            )
+            result_by_id[trial_id] = replace(
+                result, validation_artifact_paths=validation_artifact_paths
+            )
+            row_by_id[trial_id] = {
+                **row_by_id[trial_id],
+                "metrics": dict(self._metrics_from_trial_result(result_by_id[trial_id])),
+                "validation_artifact_paths": dict(validation_artifact_paths),
+            }
+
         selector_inputs = [
             self._selector_candidate(
                 row=row_by_id[str(trial["trial_id"])],
@@ -1659,28 +1694,13 @@ class AutonomousResearchEngine:
             )
 
         gauntlet_results: list[dict[str, Any]] = []
-        validation_runner = ResearchExperimentRunner(repo_root=self._repo_root)
-        active_correlation_context = [
-            self._active_correlation_context_from_selected(row) for row in active_selected_rows
-        ]
         for selected in selection.selected_candidates:
             trial_id = selected.candidate_id
             row = row_by_id[trial_id]
             result = result_by_id[trial_id]
             trial = trial_by_id[trial_id]
             metrics = self._mapping(row["metrics"], "metrics")
-            validation_artifact_paths = validation_runner.write_validation_artifacts_for_trial(
-                trial=trial,
-                trial_result=result,
-                active_correlation_context=active_correlation_context,
-            )
-            result = replace(result, validation_artifact_paths=validation_artifact_paths)
-            result_by_id[trial_id] = result
-            row = {
-                **row,
-                "validation_artifact_paths": dict(validation_artifact_paths),
-            }
-            row_by_id[trial_id] = row
+            validation_artifact_paths = dict(result.validation_artifact_paths)
             candidate_payload = {
                 **dict(selected.candidate_payload),
                 "validation": self._validation_payload_from_artifacts(validation_artifact_paths),
@@ -1922,6 +1942,16 @@ class AutonomousResearchEngine:
             purpose="promotion",
             cost_sensitivity_metric="costs.cost_sensitivity",
         )
+
+    def _promotion_thresholds(self, run: AutonomousResearchRun) -> PromotionThresholds:
+        """Promotion-eligibility thresholds derived from the campaign constraints.
+
+        ``min_oos_months`` is campaign policy: the derived oos_months *value*
+        stays honestly computed from the validation windows, while the campaign
+        declares the bar its data horizon can meet.
+        """
+        constraints = self._constraint_payload(run)
+        return PromotionThresholds(min_oos_months=float(constraints.get("min_oos_months", 6.0)))
 
     def _metrics_schema(self) -> ResearchMetricsSchema:
         return ResearchMetricsSchema.from_yaml(

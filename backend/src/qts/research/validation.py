@@ -144,9 +144,7 @@ class NoLookaheadValidationResult:
     payload_hash: str
 
     def __post_init__(self) -> None:
-        object.__setattr__(
-            self, "checked_features", tuple(self.checked_features)
-        )
+        object.__setattr__(self, "checked_features", tuple(self.checked_features))
         object.__setattr__(self, "violations", tuple(self.violations))
         object.__setattr__(self, "window_overlaps", tuple(self.window_overlaps))
 
@@ -265,20 +263,16 @@ class NoLookaheadValidationRunner:
 
         feature_specs = tuple(
             FeatureTimingSpec(
-                name=_required_text(f, "name"),
-                timestamp=_required_datetime(f, "timestamp"),
-                visible_at=(
-                    _optional_datetime(f, "visible_at")
-                    if "visible_at" in f
-                    else None
-                ),
+                name=cls._required_text(f, "name"),
+                timestamp=cls._required_datetime(f, "timestamp"),
+                visible_at=(_optional_datetime(f, "visible_at") if "visible_at" in f else None),
             )
             for f in features
         )
         policy = (
             LabelPolicy(
-                horizon_bars=_required_int(label_policy, "horizon_bars"),
-                visible_after=_required_text(label_policy, "visible_after"),
+                horizon_bars=cls._required_int(label_policy, "horizon_bars"),
+                visible_after=cls._required_text(label_policy, "visible_after"),
                 no_lookahead=_bool_field(label_policy, "no_lookahead", default=True),
             )
             if label_policy is not None
@@ -286,10 +280,10 @@ class NoLookaheadValidationRunner:
         )
         window_specs = tuple(
             ValidationWindow(
-                name=_required_text(w, "name"),
-                role=_required_text(w, "role"),
-                start=_required_datetime(w, "start"),
-                end=_required_datetime(w, "end"),
+                name=cls._required_text(w, "name"),
+                role=cls._required_text(w, "role"),
+                start=cls._required_datetime(w, "start"),
+                end=cls._required_datetime(w, "end"),
             )
             for w in windows
         )
@@ -300,6 +294,48 @@ class NoLookaheadValidationRunner:
             factor_snapshot_protocol=factor_snapshot_protocol,
             decision_time=decision_time,
         )
+
+    @staticmethod
+    def _required_text(payload: Mapping[str, Any], field_name: str) -> str:
+        value = payload.get(field_name)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{field_name} is required")
+        return value.strip()
+
+    @staticmethod
+    def _required_int(payload: Mapping[str, Any], field_name: str) -> int:
+        value = payload.get(field_name)
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ValueError(f"{field_name} must be an integer")
+        return value
+
+    @staticmethod
+    def _required_datetime(payload: Mapping[str, Any], field_name: str) -> datetime:
+        value = payload.get(field_name)
+        if value is None:
+            raise ValueError(f"{field_name} is required")
+        return NoLookaheadValidationRunner._parse_datetime(value)
+
+    @staticmethod
+    def _parse_datetime(value: Any) -> datetime:
+        """Parse a value into a timezone-aware datetime."""
+        if isinstance(value, datetime):
+            if value.tzinfo is None:
+                return value.replace(tzinfo=UTC)
+            return value
+        if isinstance(value, date):
+            return datetime.combine(value, time.min, tzinfo=UTC)
+        if isinstance(value, str):
+            text = value
+            if text.endswith("Z"):
+                text = f"{text[:-1]}+00:00"
+            if "T" not in text:
+                return datetime.combine(date.fromisoformat(text), time.min, tzinfo=UTC)
+            parsed = datetime.fromisoformat(text)
+            if parsed.tzinfo is None:
+                return parsed.replace(tzinfo=UTC)
+            return parsed
+        raise ValueError(f"cannot parse datetime from {type(value).__name__}")
 
     def _check_feature_timestamps(self) -> list[NoLookaheadViolation]:
         """Check that every feature timestamp <= label cutoff / decision time."""
@@ -554,71 +590,24 @@ class NoLookaheadArtifactWriter:
         return path
 
 
-def _required_text(payload: Mapping[str, Any], field_name: str) -> str:
-    value = payload.get(field_name)
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{field_name} is required")
-    return value.strip()
-
-
-def _required_int(payload: Mapping[str, Any], field_name: str) -> int:
-    value = payload.get(field_name)
-    if isinstance(value, bool) or not isinstance(value, int):
-        raise ValueError(f"{field_name} must be an integer")
-    return value
-
-
-def _bool_field(
-    payload: Mapping[str, Any], field_name: str, *, default: bool
-) -> bool:
+def _bool_field(payload: Mapping[str, Any], field_name: str, *, default: bool) -> bool:
     value = payload.get(field_name, default)
     if not isinstance(value, bool):
         raise ValueError(f"{field_name} must be a boolean")
     return value
 
 
-def _required_datetime(payload: Mapping[str, Any], field_name: str) -> datetime:
-    value = payload.get(field_name)
-    if value is None:
-        raise ValueError(f"{field_name} is required")
-    return _parse_datetime(value)
-
-
-def _optional_datetime(
-    payload: Mapping[str, Any], field_name: str
-) -> datetime | None:
+def _optional_datetime(payload: Mapping[str, Any], field_name: str) -> datetime | None:
     value = payload.get(field_name)
     if value is None:
         return None
-    return _parse_datetime(value)
-
-
-def _parse_datetime(value: Any) -> datetime:
-    """Parse a value into a timezone-aware datetime."""
-
-    if isinstance(value, datetime):
-        if value.tzinfo is None:
-            return value.replace(tzinfo=UTC)
-        return value
-    if isinstance(value, date):
-        return datetime.combine(value, time.min, tzinfo=UTC)
-    if isinstance(value, str):
-        text = value
-        if text.endswith("Z"):
-            text = f"{text[:-1]}+00:00"
-        if "T" not in text:
-            return datetime.combine(date.fromisoformat(text), time.min, tzinfo=UTC)
-        parsed = datetime.fromisoformat(text)
-        if parsed.tzinfo is None:
-            return parsed.replace(tzinfo=UTC)
-        return parsed
-    raise ValueError(f"cannot parse datetime from {type(value).__name__}")
+    return NoLookaheadValidationRunner._parse_datetime(value)
 
 
 def _protocol_datetime(value: Any) -> datetime:
     """Parse a protocol field value into a timezone-aware datetime."""
 
-    return _parse_datetime(value)
+    return NoLookaheadValidationRunner._parse_datetime(value)
 
 
 def _format_timestamp(value: datetime) -> str:
