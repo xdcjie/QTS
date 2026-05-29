@@ -6,7 +6,7 @@ from collections.abc import Iterable
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
-from qts.core.ids import AccountId, CorrelationId, InstrumentId
+from qts.core.ids import AccountId, CorrelationId, InstrumentId, StrategyId
 from qts.data.permissions import MarketDataPermissionEvent
 from qts.data.sources.streaming_market_data_source import (
     StreamingMarketDataDegradation,
@@ -24,6 +24,7 @@ from qts.runtime.market_data_context import (
     RuntimeMarketDataCoordinatorContext,
     RuntimeMarketDataSessionContext,
 )
+from qts.runtime.order_lifecycle import CancelIntentRouter
 from qts.runtime.runtime_event_writer import RuntimeEventWriter
 from qts.runtime.session import RuntimeSessionResult
 from qts.runtime.state import RuntimeSessionState
@@ -247,17 +248,17 @@ class RuntimeMarketDataCoordinator:
         context = self._context
         contributions_by_account: dict[AccountId | None, list[SignalContribution]] = {}
         for binding in bindings_for_bar:
+            partition = context.resolve_partition(binding.account_id)
             strategy_result = binding.pipeline.execute_bar(
                 bar,
-                account_snapshot=context.resolve_partition(binding.account_id).account_ref.ask(
-                    GetAccountSnapshot()
-                ),
+                account_snapshot=partition.account_ref.ask(GetAccountSnapshot()),
                 latest_prices=context.latest_prices,
                 aggregate_signals=aggregate_signals,
                 account_id=binding.account_id,
                 correlation_id=correlation_id,
             )
             self.write_strategy_intent_events(binding, strategy_result, correlation_id)
+            self.route_strategy_cancels(partition, strategy_result.cancel_intents)
             if aggregate_signals:
                 self.collect_signal_contributions(
                     binding,
@@ -265,6 +266,19 @@ class RuntimeMarketDataCoordinator:
                     contributions_by_account,
                 )
         return contributions_by_account
+
+    def route_strategy_cancels(
+        self,
+        partition: Any,
+        cancel_intents: tuple[Any, ...],
+    ) -> None:
+        """Route strategy-emitted cancel intents through the order manager actor."""
+        if not cancel_intents:
+            return
+        CancelIntentRouter(
+            order_manager_ref=partition.order_manager_ref,
+            execution_ref=partition.execution_ref,
+        ).route(cancel_intents)
 
     def write_strategy_intent_events(
         self,
@@ -521,6 +535,7 @@ class RuntimeMarketDataCoordinator:
         )
         dispatch.orders.extend(processed.orders)
         dispatch.fills.extend(processed.fills)
+        self.deliver_fills_to_strategy(strategy_id, processed.fills)
         self._runtime_event_writer.write_risk_decision_events(
             processed.risk_decisions,
             correlation_id=correlation_id,
@@ -545,6 +560,19 @@ class RuntimeMarketDataCoordinator:
                 strategy_id=strategy_id,
                 correlation_id=correlation_id,
             )
+
+    def deliver_fills_to_strategy(
+        self,
+        strategy_id: StrategyId,
+        fills: tuple[Any, ...],
+    ) -> None:
+        """Dispatch validated fills to the originating strategy's ``on_fill``."""
+        if not fills:
+            return
+        for binding in self._context.strategy_bindings:
+            if binding.strategy_id == strategy_id:
+                binding.pipeline.deliver_fills(fills)
+                return
 
     @staticmethod
     def _single_account_snapshot(

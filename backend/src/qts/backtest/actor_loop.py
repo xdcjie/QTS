@@ -38,6 +38,7 @@ from qts.runtime.broker_runtime_topology import StrategyRuntimeBinding
 from qts.runtime.intent_processing import ProcessedIntent
 from qts.runtime.mailbox import Mailbox
 from qts.runtime.market_data_flow import MarketDataFlow
+from qts.runtime.order_lifecycle import CancelIntentRouter
 from qts.runtime.runtime_event_writer import RuntimeEventWriter
 from qts.runtime.signal_policy import SignalAggregationPolicy
 from qts.runtime.sinks.base import RuntimeEvent
@@ -385,6 +386,7 @@ class BacktestActorLoop:
             self.flush_pending_fills(state, bar)
             strategy_result = self.execute_strategy_bar(state, bar, correlation_id)
             self.write_strategy_signal_events(state, strategy_result, correlation_id)
+            self.route_strategy_cancels(state, strategy_result)
             if state.event_index < self._warmup_bars:
                 self.process_warmup_phase(state, bar)
                 continue
@@ -629,6 +631,21 @@ class BacktestActorLoop:
                 )
             )
 
+    def route_strategy_cancels(
+        self,
+        state: BacktestActorLoopState,
+        strategy_result: BacktestStrategyBarExecution,
+    ) -> None:
+        """Route strategy-emitted cancel intents to the order manager actor."""
+        router = CancelIntentRouter(
+            order_manager_ref=state.order_manager_ref,
+            execution_ref=state.execution_ref,
+        )
+        for _binding, result in strategy_result:
+            if not result.cancel_intents:
+                continue
+            router.route(result.cancel_intents)
+
     def write_signal_batch_events(
         self,
         state: BacktestActorLoopState,
@@ -812,6 +829,7 @@ class BacktestActorLoop:
             fallback_contributing_strategy_ids=batch.contributing_strategy_ids,
         )
         state.event_writer.write_fill_events(fill_payload, state.order_manager_ref)
+        self.deliver_fills_to_strategy(state, strategy_id, fill_payload)
         closed_events = state.account_ref.ask(DrainPositionClosedEvents())
         if closed_events:
             account_snapshot = state.account_ref.ask(GetAccountSnapshot())
@@ -825,6 +843,20 @@ class BacktestActorLoop:
             state.order_manager_ref.tell(
                 CompactForStreaming(order_ids=tuple(order.order_id for order in order_payload))
             )
+
+    def deliver_fills_to_strategy(
+        self,
+        state: BacktestActorLoopState,
+        strategy_id: StrategyId,
+        fills: tuple[OrderFill, ...],
+    ) -> None:
+        """Dispatch validated fills to the originating strategy's ``on_fill``."""
+        if not fills:
+            return
+        for binding in state.strategy_bindings:
+            if binding.strategy_id == strategy_id:
+                binding.pipeline.deliver_fills(fills)
+                return
 
     def write_broker_reject_event(
         self,

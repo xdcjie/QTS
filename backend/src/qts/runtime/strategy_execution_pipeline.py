@@ -9,6 +9,7 @@ from decimal import Decimal
 
 from qts.core.ids import AccountId, CorrelationId, InstrumentId, StrategyId
 from qts.domain.market_data import Bar
+from qts.domain.orders import CancelIntent, OrderFill
 from qts.registry.future_roll import FutureRollRegistry
 from qts.registry.instrument_registry import InstrumentRegistry
 from qts.runtime.actor_ref import ActorRef
@@ -22,6 +23,7 @@ from qts.runtime.actors.strategy_actor import (
     StrategyActor,
     StrategyBarEvent,
     StrategyBarResult,
+    StrategyFillEvent,
     StrategyFinalize,
     StrategyFinalized,
 )
@@ -36,6 +38,17 @@ from qts.strategy_sdk import (
 )
 from qts.strategy_sdk.data_view import DataView
 
+
+class TickFeedUnavailableError(RuntimeError):
+    """Raised when a strategy subscribes to ticks in a bar-only runtime.
+
+    Backtest and paper-fake runtimes are driven by completed bars and have no
+    tick feed; ``ctx.subscribe_ticks(...)`` is rejected explicitly rather than
+    silently dropped so the strategy author learns the capability is
+    unavailable on this runtime.
+    """
+
+
 PortfolioViewBuilder = Callable[..., PortfolioView]
 
 
@@ -46,6 +59,7 @@ class StrategyExecutionResult:
     bar: Bar
     intents: tuple[TargetIntent, ...]
     raw_intents: tuple[TargetIntent, ...] = ()
+    cancel_intents: tuple[CancelIntent, ...] = ()
     contributing_strategy_ids: tuple[StrategyId, ...] = ()
     rejected_strategy_ids: tuple[StrategyId, ...] = ()
     signal_batches: tuple[AggregatedSignalBatch, ...] = ()
@@ -106,7 +120,24 @@ class StrategyExecutionPipeline:
         self._signal_priority = signal_priority
         self._signal_weight = Decimal(signal_weight)
         self._conflict_group = conflict_group
+        self._reject_tick_subscriptions()
         self._history_limit = self._history_limit_from_subscriptions() if prune_history else None
+
+    def _reject_tick_subscriptions(self) -> None:
+        """Fail fast when a strategy requests ticks on this bar-only runtime."""
+        tick_subscriptions = tuple(
+            subscription
+            for subscription in self._ctx.subscriptions
+            if subscription.timeframe.strip() == "tick"
+        )
+        if tick_subscriptions:
+            instruments = ", ".join(
+                subscription.asset.instrument_id.value for subscription in tick_subscriptions
+            )
+            raise TickFeedUnavailableError(
+                "tick subscriptions are unavailable on this bar-driven runtime; "
+                f"requested for: {instruments}"
+            )
 
     @property
     def subscriptions(self) -> tuple[DataSubscription, ...]:
@@ -148,12 +179,14 @@ class StrategyExecutionPipeline:
                 bar=bar,
                 intents=(),
                 raw_intents=strategy_result.intents,
+                cancel_intents=strategy_result.cancel_intents,
             )
         if not strategy_result.intents:
             return StrategyExecutionResult(
                 bar=bar,
                 intents=(),
                 raw_intents=strategy_result.intents,
+                cancel_intents=strategy_result.cancel_intents,
                 signal_batches=(),
             )
 
@@ -177,6 +210,7 @@ class StrategyExecutionPipeline:
             bar=bar,
             intents=aggregated_intents,
             raw_intents=strategy_result.intents,
+            cancel_intents=strategy_result.cancel_intents,
             signal_batches=signal_batches,
             contributing_strategy_ids=tuple(
                 strategy_id
@@ -201,6 +235,13 @@ class StrategyExecutionPipeline:
             target_before_risk=signal_batches[0].target_before_risk,
             target_after_aggregation=signal_batches[0].target_after_aggregation,
         )
+
+    def deliver_fills(self, fills: tuple[OrderFill, ...]) -> None:
+        """Dispatch validated fills to the strategy's ``on_fill`` callback."""
+        if not fills:
+            return
+        self._strategy_ref.tell(StrategyFillEvent(fills=fills))
+        self._strategy_ref.process_all()
 
     def finalize(self) -> tuple[TargetIntent, ...]:
         """Finalize the strategy and return finalization intents."""
@@ -249,4 +290,8 @@ class StrategyExecutionPipeline:
         return result
 
 
-__all__ = ["StrategyExecutionPipeline", "StrategyExecutionResult"]
+__all__ = [
+    "StrategyExecutionPipeline",
+    "StrategyExecutionResult",
+    "TickFeedUnavailableError",
+]

@@ -1,4 +1,19 @@
 exceptions:
+  - class_name: CancelIntentRouter
+    module: qts.runtime.order_lifecycle
+    reason: routes SDK cancel intents to OrderManagerActor with stored route metadata (DR-025 SDK lifecycle wiring)
+    owner: platform
+    expiry: 2027-05-30
+  - class_name: StrategyFillEvent
+    module: qts.runtime.actors.strategy_actor
+    reason: actor message delivering validated fills for Strategy.on_fill dispatch (DR-025)
+    owner: platform
+    expiry: 2027-05-30
+  - class_name: TickFeedUnavailableError
+    module: qts.runtime.strategy_execution_pipeline
+    reason: explicit rejection when ticks are subscribed on a bar-only runtime (DR-025)
+    owner: platform
+    expiry: 2027-05-30
   - class_name: RestartPolicy
     module: qts.runtime.actor_policies
     reason: actor supervision restart policy value object (DR-017 supervision restart/degrade)

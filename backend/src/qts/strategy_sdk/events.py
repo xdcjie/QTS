@@ -43,6 +43,48 @@ class TimerSubscription:
             require_aware_datetime(self.first_fire, name="first_fire")
 
 
+class TimerScheduler:
+    """Deterministic next-fire bookkeeping for strategy timer subscriptions.
+
+    Owns the per-subscription next-fire clock so the runtime can ask, for a
+    given domain time, which timers are due. Firing uses ``now >= next_fire``
+    and advances ``next_fire`` by whole intervals so a single time jump never
+    fires the same timer more than once per elapsed interval.
+    """
+
+    def __init__(self) -> None:
+        """Create an empty timer scheduler."""
+        self._next_fire: dict[str, datetime] = {}
+        self._intervals: dict[str, timedelta] = {}
+
+    def register(self, subscription: TimerSubscription) -> None:
+        """Register a timer subscription, replacing any prior one with its name."""
+        first_fire = subscription.first_fire
+        self._intervals[subscription.name] = subscription.interval
+        if first_fire is not None:
+            self._next_fire[subscription.name] = first_fire
+        else:
+            # Defer the first fire until the scheduler observes its first time.
+            self._next_fire.pop(subscription.name, None)
+
+    def due(self, now: datetime) -> tuple[TimerEvent, ...]:
+        """Return timer events due at ``now`` and advance their next-fire times."""
+        require_aware_datetime(now, name="now")
+        events: list[TimerEvent] = []
+        for name in self._intervals:
+            interval = self._intervals[name]
+            next_fire = self._next_fire.get(name)
+            if next_fire is None:
+                # First observation establishes the first fire one interval out.
+                self._next_fire[name] = now + interval
+                continue
+            while now >= next_fire:
+                events.append(TimerEvent(name=name, time=next_fire))
+                next_fire = next_fire + interval
+            self._next_fire[name] = next_fire
+        return tuple(events)
+
+
 @dataclass(frozen=True, slots=True)
 class OrderUpdate:
     """Strategy-facing order status update."""
@@ -92,4 +134,4 @@ class Fill:
             raise ValueError("slippage must be non-negative")
 
 
-__all__ = ["Fill", "OrderUpdate", "TimerEvent", "TimerSubscription"]
+__all__ = ["Fill", "OrderUpdate", "TimerEvent", "TimerScheduler", "TimerSubscription"]

@@ -1,5 +1,5 @@
 {
-  "production_class_count": 927,
+  "production_class_count": 931,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -766,6 +766,7 @@
     "qts.runtime.actors.strategy_actor.StrategyActor",
     "qts.runtime.actors.strategy_actor.StrategyBarEvent",
     "qts.runtime.actors.strategy_actor.StrategyBarResult",
+    "qts.runtime.actors.strategy_actor.StrategyFillEvent",
     "qts.runtime.actors.strategy_actor.StrategyFinalize",
     "qts.runtime.actors.strategy_actor.StrategyFinalized",
     "qts.runtime.broker_lifecycle.BrokerReconnectReconciliation",
@@ -837,6 +838,7 @@
     "qts.runtime.mode.ExecutionEnvironment",
     "qts.runtime.mode.MarketDataEnvironment",
     "qts.runtime.mode.RuntimeMode",
+    "qts.runtime.order_lifecycle.CancelIntentRouter",
     "qts.runtime.order_result.RuntimeOrderResult",
     "qts.runtime.order_route_metadata.OrderRouteMetadata",
     "qts.runtime.partitioning.AccountBrokerMapping",
@@ -880,6 +882,7 @@
     "qts.runtime.state_recovery.StateSnapshot",
     "qts.runtime.strategy_execution_pipeline.StrategyExecutionPipeline",
     "qts.runtime.strategy_execution_pipeline.StrategyExecutionResult",
+    "qts.runtime.strategy_execution_pipeline.TickFeedUnavailableError",
     "qts.runtime.topology.AccountRuntimeSpec",
     "qts.runtime.topology.BrokerRouteSpec",
     "qts.runtime.topology.MarketDataRouteSpec",
@@ -902,6 +905,7 @@
     "qts.strategy_sdk.events.Fill",
     "qts.strategy_sdk.events.OrderUpdate",
     "qts.strategy_sdk.events.TimerEvent",
+    "qts.strategy_sdk.events.TimerScheduler",
     "qts.strategy_sdk.events.TimerSubscription",
     "qts.strategy_sdk.factors.FactorFactory",
     "qts.strategy_sdk.indicators.AssetIndicator",

@@ -87,6 +87,7 @@ class OrderPlan:
     order_time: datetime | None
     order_spec: OrderSpec
     aggregation_decision_id: str | None = None
+    intent_id: str | None = None
 
 
 class OrderPlanBuilder:
@@ -138,6 +139,7 @@ class OrderPlanBuilder:
                             order_time=bar.end_time,
                             order_spec=intent.order_spec,
                             aggregation_decision_id=aggregation_decision_id,
+                            intent_id=intent.intent_id,
                         )
                     )
 
@@ -173,6 +175,7 @@ class OrderPlanBuilder:
                     order_time=bar.end_time,
                     order_spec=intent.order_spec,
                     aggregation_decision_id=aggregation_decision_id,
+                    intent_id=intent.intent_id,
                 )
             )
 
@@ -322,6 +325,7 @@ class TargetIntentProcessor:
                 market_data_context=market_data_context,
                 order_number=order_number + index,
                 risk_state=risk_state,
+                intent_id=plan.intent_id,
             )
             orders.extend(processed.orders)
             fills.extend(processed.fills)
@@ -412,6 +416,7 @@ class TargetIntentProcessor:
         market_data_context: MarketDataRiskContext | None = None,
         order_number: int,
         risk_state: RiskStateSnapshot | None = None,
+        intent_id: str | None = None,
     ) -> ProcessedIntent:
         """Perform _process_order_delta."""
         if quantity_delta == Decimal("0"):
@@ -476,6 +481,7 @@ class TargetIntentProcessor:
             quantity=quantity,
             account_id=account_id,
             order_spec=order_spec,
+            intent_id=intent_id,
         )
         route_metadata = OrderRouteMetadata(
             broker_id=self._broker_id,
