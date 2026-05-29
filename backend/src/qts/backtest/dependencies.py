@@ -8,6 +8,7 @@ from datetime import tzinfo
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+from qts.backtest.execution_timing import ExecutionTimingModel
 from qts.core.ids import InstrumentId
 from qts.data.sessions import RegularSessionWindow
 from qts.domain.market_data import Bar
@@ -116,6 +117,7 @@ class BacktestActorLoopDependencies:
         default_factory=dict
     )
     future_roll_registry: FutureRollRegistry | None = None
+    execution_timing: ExecutionTimingModel = field(default_factory=ExecutionTimingModel)
 
 
 __all__ = [

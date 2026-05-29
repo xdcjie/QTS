@@ -1,5 +1,5 @@
 {
-  "production_class_count": 919,
+  "production_class_count": 922,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -60,11 +60,14 @@
     "qts.backtest.actor_loop.BacktestActorLoop",
     "qts.backtest.actor_loop.BacktestActorLoopResult",
     "qts.backtest.actor_loop.BacktestRuntimeSink",
+    "qts.backtest.actor_loop.PendingFill",
     "qts.backtest.dependencies.BacktestActorLoopConfig",
     "qts.backtest.dependencies.BacktestActorLoopDependencies",
     "qts.backtest.dependencies.BacktestEngineDependencies",
     "qts.backtest.engine.BacktestEngine",
     "qts.backtest.engine.BacktestStreamResult",
+    "qts.backtest.execution_timing.ExecutionTimingModel",
+    "qts.backtest.execution_timing.FillPolicy",
     "qts.backtest.instrument_context.BacktestInstrumentContext",
     "qts.backtest.pipeline.BacktestPipeline",
     "qts.backtest.portfolio_projection.BacktestPortfolioProjector",

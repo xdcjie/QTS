@@ -87,6 +87,23 @@ RollingPriceUpdater = Callable[..., None]
 
 
 @dataclass(frozen=True, slots=True)
+class PendingFill:
+    """An accepted intent whose fill is deferred to the next bar (next_bar_open).
+
+    The decision was made at the close of ``decision_bar``; under the
+    ``next_bar_open`` fill policy it must execute against the next strategy-
+    facing bar for the same instrument. ``correlation_id`` and ``batch`` carry
+    the originating decision's traceability so the deferred order/fill events
+    still link back to the bar that produced the intent.
+    """
+
+    intent: Any
+    batch: AggregatedSignalBatch
+    correlation_id: CorrelationId
+    decision_bar: Bar
+
+
+@dataclass(frozen=True, slots=True)
 class BacktestActorLoopResult:
     """Result summary produced by an actor loop run."""
 
@@ -154,6 +171,7 @@ class BacktestActorLoop:
         self._equity_point = dependencies.equity_point
         self._update_rolling_prices = dependencies.update_rolling_prices
         self._market_data_provenance_for = dependencies.market_data_provenance_for
+        self._execution_timing = dependencies.execution_timing
         self._account_id = account_id
         self._strategy_specs = self.normalize_strategy_specs(
             strategy_specs,
@@ -304,6 +322,7 @@ class BacktestActorLoop:
             signal_result_mailbox=signal_result_mailbox,
             market_data_flow=market_data_flow,
             latest_prices={},
+            pending_fills={},
             warmup_processed=0,
             trading_processed=0,
             event_index=0,
@@ -363,12 +382,32 @@ class BacktestActorLoop:
             correlation_id = self.market_data_correlation_id(bar)
             self.write_market_data_event(state, bar, correlation_id)
             self._update_rolling_prices(bar, latest_prices=state.latest_prices)
+            self.flush_pending_fills(state, bar)
             strategy_result = self.execute_strategy_bar(state, bar, correlation_id)
             self.write_strategy_signal_events(state, strategy_result, correlation_id)
             if state.event_index < self._warmup_bars:
                 self.process_warmup_phase(state, bar)
                 continue
             self.process_trading_phase(state, bar, strategy_result, correlation_id)
+
+    def flush_pending_fills(self, state: BacktestActorLoopState, bar: Bar) -> None:
+        """Execute intents deferred to this bar under the ``next_bar_open`` policy.
+
+        Deferred intents fill against the current bar's open before its
+        strategy runs, mirroring live execution where a market order placed at
+        the prior bar's close is filled by the time the next bar is observed.
+        """
+        pending = state.pending_fills.pop(bar.instrument_id, None)
+        if not pending:
+            return
+        for deferred in pending:
+            self.process_strategy_intent(
+                state,
+                bar,
+                deferred.batch,
+                deferred.intent,
+                deferred.correlation_id,
+            )
 
     def process_warmup_phase(self, state: BacktestActorLoopState, bar: Bar) -> None:
         """Record warmup accounting without submitting aggregated intents."""
@@ -394,13 +433,16 @@ class BacktestActorLoop:
             self.write_signal_batch_events(state, batch, correlation_id)
         for batch in signal_batches:
             for intent in batch.intents:
-                self.process_strategy_intent(
-                    state,
-                    bar,
-                    batch,
-                    intent,
-                    correlation_id,
-                )
+                if self._execution_timing.defers_to_next_bar:
+                    self.defer_strategy_intent(state, bar, batch, intent, correlation_id)
+                else:
+                    self.process_strategy_intent(
+                        state,
+                        bar,
+                        batch,
+                        intent,
+                        correlation_id,
+                    )
         state.trading_processed += 1
         self.write_equity_and_account_snapshot(state, bar)
         state.event_index += 1
@@ -690,6 +732,31 @@ class BacktestActorLoop:
                 instrument_id=batch.instrument_id,
                 account_id=self._account_id,
                 strategy_id=None,
+            )
+        )
+
+    def defer_strategy_intent(
+        self,
+        state: BacktestActorLoopState,
+        bar: Bar,
+        batch: AggregatedSignalBatch,
+        intent: Any,
+        correlation_id: CorrelationId,
+    ) -> None:
+        """Buffer an accepted intent to fill at the next bar's open (next_bar_open).
+
+        The intent is keyed by its target instrument so it executes against the
+        next strategy-facing bar for that instrument. Intents with no following
+        bar never fill, which is correct: a decision at the final bar has no
+        next obtainable price.
+        """
+        instrument_id = intent.asset.instrument_id
+        state.pending_fills.setdefault(instrument_id, []).append(
+            PendingFill(
+                intent=intent,
+                batch=batch,
+                correlation_id=correlation_id,
+                decision_bar=bar,
             )
         )
 

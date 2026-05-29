@@ -14,6 +14,7 @@ from qts.backtest.dependencies import (
     BacktestActorLoopDependencies,
     BacktestEngineDependencies,
 )
+from qts.backtest.execution_timing import ExecutionTimingModel
 from qts.backtest.instrument_context import BacktestInstrumentContext
 from qts.backtest.portfolio_projection import BacktestPortfolioProjector
 from qts.core.hashing import stable_json_hash
@@ -106,11 +107,18 @@ class BacktestEngine:
         session_window_by_instrument: Mapping[InstrumentId, RegularSessionWindow] | None = None,
         instrument_registry: InstrumentRegistry | None = None,
         backtest_runtime_config: BacktestRuntimeConfig | None = None,
+        execution_timing: ExecutionTimingModel | None = None,
     ) -> None:
         """Create an engine from explicit config and dependency objects.
 
         Keyword arguments are normalized into ``BacktestEngineConfig`` and
         ``BacktestEngineDependencies`` when explicit objects are not supplied.
+
+        ``execution_timing`` selects the fill-timing policy. It defaults to the
+        backward-compatible research-only ``same_bar_close`` model; supply
+        ``ExecutionTimingModel.promotion_grade()`` for next-obtainable
+        (``next_bar_open``) fills. The config-driven path (``from_config``)
+        defaults to the promotion-grade model.
         """
         if strategies is not None:
             if strategy is not None:
@@ -190,11 +198,13 @@ class BacktestEngine:
                 else "CUSTOM"
             ),
         )
+        self._execution_timing = execution_timing or ExecutionTimingModel()
         self._instrument_context = BacktestInstrumentContext(
             future_roll_registry=self._future_roll_registry,
             instrument_registry=dependencies.instrument_registry,
             registry_bars=self._registry_bars,
             contract_multipliers=self._contract_multipliers,
+            execution_timing=self._execution_timing,
         )
         self._portfolio_projector = BacktestPortfolioProjector(
             contract_multipliers=self._contract_multipliers
@@ -229,8 +239,18 @@ class BacktestEngine:
         exchange_timezone_by_instrument: Mapping[InstrumentId, str | tzinfo] | None = None,
         session_window_by_instrument: Mapping[InstrumentId, RegularSessionWindow] | None = None,
         contract_multipliers: Mapping[InstrumentId, Decimal] | None = None,
+        execution_timing: ExecutionTimingModel | None = None,
     ) -> BacktestEngine:
-        """Build an engine from a serialized backtest run config."""
+        """Build an engine from a serialized backtest run config.
+
+        ``execution_timing`` selects the fill-timing policy and is recorded in
+        the run manifest. When the config carries an explicit ``fill_policy`` it
+        is honored; otherwise the model falls back to the backward-compatible
+        research-only ``same_bar_close``. Promotion-grade runs supply
+        ``ExecutionTimingModel.promotion_grade()`` (``next_bar_open``); the
+        manifest's ``promotion_grade`` flag records whether the chosen policy
+        may back paper/live evidence.
+        """
         cost_model = BacktestCostModel(
             fixed_commission_per_contract=config.cost_model.fixed_commission_per_contract,
             slippage_bps=config.cost_model.slippage_bps,
@@ -260,6 +280,7 @@ class BacktestEngine:
             engine_config=engine_config,
             dependencies=dependencies,
             backtest_runtime_config=config,
+            execution_timing=execution_timing,
         )
 
     def run_streaming(
@@ -343,6 +364,7 @@ class BacktestEngine:
                 equity_point=self._portfolio_projector.equity_point,
                 update_rolling_prices=self._instrument_context.update_rolling_prices,
                 market_data_provenance_for=self._market_data_provenance_for,
+                execution_timing=self._execution_timing,
             ),
             strategy_id=strategy_id,
             account_id=account_id,
@@ -399,11 +421,19 @@ class BacktestEngine:
         )
 
     def _execution_assumptions_payload(self) -> dict[str, Any] | None:
-        """Return simulated execution assumptions when the adapter exposes them."""
+        """Return simulated execution assumptions enriched with the fill policy.
+
+        The fill-timing model is always recorded so the manifest captures
+        whether fills used the next-obtainable price (``next_bar_open``) or the
+        optimistic same-bar close, and whether an optimistic waiver was set.
+        """
+        timing_payload = self._execution_timing.to_manifest_payload()
         payload = getattr(self._execution_adapter, "execution_assumptions_payload", None)
         if payload is None:
-            return None
-        return cast(dict[str, Any], payload())
+            return dict(timing_payload)
+        assumptions = cast(dict[str, Any], payload())
+        assumptions.update(timing_payload)
+        return assumptions
 
     def _manifest_dataset_metadata_payloads(self) -> tuple[dict[str, Any], ...]:
         """Return dataset provenance rows with the M1 manifest aliases."""
