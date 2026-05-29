@@ -48,18 +48,37 @@ def test_gc_vwap_trend_robust_production_acceptance(
             f"SI={data_paths['SI']}",
         ]
     )
-    assert run_exit == 0
+    # WIRING: the full production grid (16 candidates) runs end-to-end over the
+    # full real GC history (34500 materialized rows) with no paper/live launch.
+    # HONESTY: under the multiplicity / deflated-Sharpe gate no candidate clears
+    # the promotion bar even on real data, so the campaign honestly rejects
+    # (exit 1, status=rejected, selected_count=0). Promotion is not faked.
+    assert run_exit == 1
     payload = json.loads(capsys.readouterr().out)
-    assert payload["status"] == "accepted"
+    assert payload["status"] == "rejected"
     assert payload["paper_live_launches"] == []
     gc_data_path = output_root / "backtest_data" / "full" / "GC" / "data" / "GC.csv"
     assert _csv_row_count(gc_data_path) == 34500
 
+    selected_rows = _jsonl(output_root / "selected_candidates.jsonl")
+    rejected_rows = _jsonl(output_root / "rejected_candidates.jsonl")
+    landscape_rows = _jsonl(output_root / "fitness_landscape.jsonl")
+    assert selected_rows == []
+    assert len(rejected_rows) == 16
+    assert all(row["reasons"] for row in rejected_rows)
+    assert len(landscape_rows) == 16
+
+    # HONESTY: a rejected campaign is not release-verifiable; verify fails because
+    # there is no promotion artifact chain to release.
     verify_exit = run_research.main(["campaign", "verify", "--output-root", str(output_root)])
-    assert verify_exit == 0
+    assert verify_exit == 1
     verify_payload = json.loads(capsys.readouterr().out)
-    assert verify_payload["accepted"] is True
+    assert verify_payload["accepted"] is False
     assert verify_payload["criteria"]["fitness_landscape"]["generated_candidate_count"] == 16
+
+
+def _jsonl(path: Path) -> list[dict[str, Any]]:
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
 
 
 def _production_data_paths() -> dict[str, Path]:

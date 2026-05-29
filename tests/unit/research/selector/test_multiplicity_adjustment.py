@@ -47,17 +47,20 @@ def test_expected_maximum_sharpe_grows_with_trial_count() -> None:
 def test_deflated_sharpe_decreases_monotonically_with_trial_count() -> None:
     # SR_hat = 0.10, n = 252, normal moments, sigma_SR = 0.05.
     # DSR = PSR(E[max_N]); the benchmark grows with N so DSR strictly falls.
-    kwargs = {
-        "observed_sharpe": 0.10,
-        "sample_size": 252,
-        "skewness": 0.0,
-        "kurtosis": 3.0,
-        "trial_sharpe_std": 0.05,
-    }
-    d1 = deflated_sharpe_ratio(trial_count=1, **kwargs)
-    d10 = deflated_sharpe_ratio(trial_count=10, **kwargs)
-    d100 = deflated_sharpe_ratio(trial_count=100, **kwargs)
-    d1000 = deflated_sharpe_ratio(trial_count=1000, **kwargs)
+    def dsr(trial_count: int) -> float:
+        return deflated_sharpe_ratio(
+            observed_sharpe=0.10,
+            sample_size=252,
+            skewness=0.0,
+            kurtosis=3.0,
+            trial_count=trial_count,
+            trial_sharpe_std=0.05,
+        )
+
+    d1 = dsr(1)
+    d10 = dsr(10)
+    d100 = dsr(100)
+    d1000 = dsr(1000)
     assert d1 == pytest.approx(0.942987, abs=1e-5)
     assert d10 == pytest.approx(0.631618, abs=1e-5)
     assert d100 == pytest.approx(0.337510, abs=1e-5)

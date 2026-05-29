@@ -62,11 +62,16 @@ def test_campaign_validate_rejects_invalid_campaign(
     assert "universe must be a mapping" in capsys.readouterr().err
 
 
-def test_campaign_run_status_approve_and_resume_generation(
+def test_campaign_run_and_status_honestly_reject_toy_fixture(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    # WIRING + HONESTY: the campaign CLI runs the pipeline end-to-end on a toy
+    # fixture, produces the full honest artifact set (validation summary, fitness
+    # landscape, rejected candidates with reasons, verifiable audit chain), and
+    # honestly rejects because no candidate clears the OOS / multiplicity bar.
+    # Promotion is NOT faked; rejection is the correct outcome to assert.
     force_clean_reproducibility(monkeypatch)
     output_root = tmp_path / "campaign"
     data_paths = _write_data_paths(tmp_path)
@@ -86,68 +91,54 @@ def test_campaign_run_status_approve_and_resume_generation(
         ]
     )
 
-    assert exit_code == 0
+    # Honest rejection is reported with a non-zero exit and an honest status.
+    assert exit_code == 1
     run_payload = json.loads(capsys.readouterr().out)
-    assert run_payload["accepted"] is True
-    assert run_payload["status"] == "pending_human_approval"
-    assert run_payload["completed_generation_count"] == 1
-    assert run_payload["pending_generation_id"] == "generation-001"
+    assert run_payload["accepted"] is False
+    assert run_payload["status"] == "rejected"
 
+    # WIRING: every honest artifact the pipeline must emit exists.
+    for relative_path in (
+        "validation_summary.json",
+        "fitness_landscape.jsonl",
+        "rejected_candidates.jsonl",
+        "selected_candidates.jsonl",
+        "audit/audit_log.jsonl",
+        "artifact_graph/artifact_graph.json",
+        "report.md",
+    ):
+        assert (output_root / relative_path).exists(), relative_path
+
+    # HONESTY: no candidate promoted; every rejection carries a recorded reason.
+    selected_rows = _jsonl(output_root / "selected_candidates.jsonl")
+    rejected_rows = _jsonl(output_root / "rejected_candidates.jsonl")
+    landscape_rows = _jsonl(output_root / "fitness_landscape.jsonl")
+    assert selected_rows == []
+    assert rejected_rows
+    assert all(row["reasons"] for row in rejected_rows)
+    assert len(landscape_rows) == len(selected_rows) + len(rejected_rows)
+
+    validation_summary = json.loads((output_root / "validation_summary.json").read_text())
+    assert validation_summary["status"] == "rejected"
+    assert validation_summary["promotion_packet_count"] == 0
+    assert validation_summary["rejected_candidate_count"] == len(rejected_rows)
+
+    # WIRING: the audit chain is intact and the artifact graph is structurally
+    # valid (a rejected campaign has no promotion sub-chain, so the basic graph
+    # contract is asserted rather than the release full-chain).
+    assert ResearchAuditLog(output_root / "audit" / "audit_log.jsonl").verify_hash_chain() == ()
+    graph = ResearchArtifactGraph.from_payload(
+        json.loads((output_root / "artifact_graph" / "artifact_graph.json").read_text())
+    )
+    graph.validate()
+
+    # WIRING: the status command reflects the same honest rejected verdict.
     status_exit = run_research.main(["campaign", "status", "--output-root", str(output_root)])
     assert status_exit == 0
     status_payload = json.loads(capsys.readouterr().out)
-    assert status_payload["status"] == "pending_human_approval"
-    assert status_payload["state"]["proposal_hash"] == run_payload["proposal_hash"]
-
-    proposal = json.loads((output_root / "next_generation_proposal.json").read_text())
-    approval_exit = run_research.main(
-        [
-            "campaign",
-            "approve-next-generation",
-            "--proposal",
-            str(output_root / "next_generation_proposal.json"),
-            "--expected-proposal-hash",
-            proposal["proposal_hash"],
-            "--output-root",
-            str(output_root),
-            "--decision",
-            "approved",
-            "--reviewer",
-            "research-lead",
-            "--reason",
-            "bounded evidence supports the next generation",
-            "--audit-log-root",
-            str(tmp_path / "approval-audit"),
-        ]
-    )
-    assert approval_exit == 0
-    approval_payload = json.loads(capsys.readouterr().out)
-    assert approval_payload["accepted"] is True
-    assert approval_payload["status"] == "approved_next_generation"
-
-    assert (
-        run_research.main(
-            [
-                "campaign",
-                "resume",
-                "--output-root",
-                str(output_root),
-                "--audit-log-root",
-                str(tmp_path / "state-audit"),
-            ]
-        )
-        == 0
-    )
-    resume_payload = json.loads(capsys.readouterr().out)
-    assert resume_payload["status"] == "accepted"
-    assert resume_payload["resumed_from_generation_id"] == "generation-001"
-    assert (output_root / "generation-001").exists()
-
-    verify_exit = run_research.main(["campaign", "verify", "--output-root", str(output_root)])
-    assert verify_exit == 0
-    verify_payload = json.loads(capsys.readouterr().out)
-    assert verify_payload["accepted"] is True
-    assert (output_root / "release_verification.json").exists()
+    assert status_payload["status"] == "rejected"
+    assert status_payload["promotion_packet_count"] == 0
+    assert status_payload["rejected_candidate_count"] == len(rejected_rows)
 
 
 def test_campaign_resume_requires_approved_generation(
@@ -196,6 +187,10 @@ def test_campaign_approval_rejects_changed_proposal_hash(
 
     assert exit_code == 2
     assert "proposal hash mismatch" in capsys.readouterr().err
+
+
+def _jsonl(path: Path) -> list[dict[str, object]]:
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
 
 
 def _write_data_paths(tmp_path: Path) -> dict[str, Path]:

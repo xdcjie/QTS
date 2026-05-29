@@ -21,13 +21,18 @@ import random
 from qts.research.selector import (
     CandidateSelector,
     DeflatedSharpeGate,
+    GateDecision,
     PBOGate,
+    SelectedCandidate,
     SelectionPolicy,
+    SelectionResult,
     ValidationGauntlet,
 )
 
 
-def _noise_candidate(candidate_id: str, observed_sharpe: float, sample_size: int) -> dict:
+def _noise_candidate(
+    candidate_id: str, observed_sharpe: float, sample_size: int
+) -> dict[str, object]:
     # A noise candidate: a positive observed Sharpe drawn by luck, no validation
     # edge. Annualized oos_sharpe is reported alongside the per-observation Sharpe.
     return {
@@ -58,11 +63,14 @@ def _gauntlet() -> ValidationGauntlet:
     )
 
 
-def _select_and_gate(candidates: tuple[dict, ...], *, trial_count: int):
+def _select_and_gate(
+    candidates: tuple[dict[str, object], ...], *, trial_count: int
+) -> tuple[SelectionResult, dict[str, tuple[SelectedCandidate, GateDecision]]]:
     policy = SelectionPolicy(min_oos_trade_count=20, max_drawdown=0.30)
     selection = CandidateSelector(policy).select(candidates, trial_count=trial_count)
     gauntlet = _gauntlet()
-    decisions = {}
+    assert gauntlet.deflated_sharpe_gate is not None
+    decisions: dict[str, tuple[SelectedCandidate, GateDecision]] = {}
     for selected in selection.selected_candidates:
         decision = gauntlet.deflated_sharpe_gate.evaluate(
             {
@@ -105,6 +113,8 @@ def test_many_trials_reject_noise_candidate_via_adjusted_score() -> None:
     # Acceptance criteria: raw Sharpe identical, deflated Sharpe collapses with N,
     # and both raw and adjusted scores are recorded on the selection result.
     assert lucky_few.raw_score == lucky_many.raw_score
+    assert lucky_few.adjusted_score is not None
+    assert lucky_many.adjusted_score is not None
     assert lucky_many.adjusted_score < lucky_few.adjusted_score
     assert lucky_few.multiplicity_adjustment is not None
     assert lucky_many.multiplicity_adjustment is not None

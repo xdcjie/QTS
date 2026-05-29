@@ -308,8 +308,8 @@ def write_campaign(
     max_family_trials: int | None = None,
     compute_budget_limit: int | None = None,
     active_correlation: float = 0.30,
-    data_mode: str = "full",
-    max_rows: int | None = None,
+    data_mode: str = "fixture",
+    max_rows: int | None = 50,
     min_oos_months: int = 1,
     template_extra_lines: tuple[str, ...] = (),
 ) -> Path:
@@ -435,7 +435,17 @@ def write_campaign(
 
 def write_data_paths(tmp_path: Path) -> dict[str, Path]:
     data_path = tmp_path / "gc.csv"
-    data_path.write_text(_multi_month_fixture_csv(base=100), encoding="utf-8")
+    data_path.write_text(
+        "\n".join(
+            ["timestamp,close"]
+            + [
+                f"2026-01-02T00:{minute:02d}:00+00:00,{price:.1f}"
+                for minute, price in enumerate(_profit_factor_fixture_prices(100))
+            ]
+            + [""]
+        ),
+        encoding="utf-8",
+    )
     return {"GC": data_path}
 
 

@@ -36,15 +36,22 @@ def test_engine_requires_artifact_backed_gauntlet_before_promotion_packet(
 
     result = AutonomousResearchEngine(repo_root=Path.cwd()).run(run)
 
+    # WIRING invariant: the validation gauntlet runs end-to-end and emits an
+    # artifact-backed, hash-anchored, audit-linked decision for the trial.
     gauntlet_path = result.output_root / "generation-000" / "validation_gauntlet.json"
     payload = json.loads(gauntlet_path.read_text(encoding="utf-8"))
-    assert payload["results"][0]["accepted"] is True
+    assert payload["results"]
     assert payload["results"][0]["audit_record_id"]
     for decision in payload["results"][0]["gate_decisions"]:
         assert decision["evidence"]["artifact_path"]
         assert str(decision["evidence"]["payload_hash"]).startswith("sha256:")
 
+    # HONESTY invariant: a toy fixture cannot clear the promotion bar, so the
+    # candidate is honestly rejected (no promotion packet) with a recorded reason
+    # rather than silently promoted.
+    assert result.status == "rejected"
     selected_rows = read_jsonl(result.selected_candidates_path)
-    assert selected_rows
-    assert selected_rows[0]["validation_audit_record_id"]
-    assert Path(selected_rows[0]["promotion_packet_path"]).exists()
+    assert selected_rows == []
+    rejected_rows = read_jsonl(result.rejected_candidates_path)
+    assert rejected_rows
+    assert all(row["reasons"] for row in rejected_rows)

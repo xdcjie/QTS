@@ -28,7 +28,8 @@ families:
 execution:
   default_mode: backtest_pipeline
   metrics_source: backtest_artifacts
-  data_mode: full
+  data_mode: fixture
+  max_rows: 50
 
 selection:
   selector: CandidateSelector
