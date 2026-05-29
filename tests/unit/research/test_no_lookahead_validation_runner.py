@@ -22,9 +22,7 @@ from qts.research.validation import (
 
 class TestFeatureTimingSpec:
     def test_valid_spec(self) -> None:
-        spec = FeatureTimingSpec(
-            name="momentum_5", timestamp=datetime(2026, 1, 1, tzinfo=UTC)
-        )
+        spec = FeatureTimingSpec(name="momentum_5", timestamp=datetime(2026, 1, 1, tzinfo=UTC))
         assert spec.name == "momentum_5"
         assert spec.visible_at is None
 
@@ -460,9 +458,7 @@ class TestFactorSnapshotProtocolTimingProof:
             factor_snapshot_protocol=protocol,
         ).validate()
         assert result.passed is False
-        assert any(
-            v.code == "available_at_exceeds_forward_return_start" for v in result.violations
-        )
+        assert any(v.code == "available_at_exceeds_forward_return_start" for v in result.violations)
 
     def test_forward_return_start_exceeds_end_rejected(self) -> None:
         protocol = {
@@ -475,9 +471,7 @@ class TestFactorSnapshotProtocolTimingProof:
             factor_snapshot_protocol=protocol,
         ).validate()
         assert result.passed is False
-        assert any(
-            v.code == "forward_return_start_exceeds_end" for v in result.violations
-        )
+        assert any(v.code == "forward_return_start_exceeds_end" for v in result.violations)
 
     def test_malformed_protocol_rejected(self) -> None:
         protocol = {"source_data_end": "2026-01-01"}
@@ -550,9 +544,7 @@ class TestStringOnlyScanInsufficient:
         gate = NoLookaheadGate()
         decision = gate.evaluate(candidate)
         assert decision.accepted is False
-        assert any(
-            "string-only scan is insufficient" in reason for reason in decision.reasons
-        )
+        assert any("string-only scan is insufficient" in reason for reason in decision.reasons)
 
     def test_no_lookahead_gate_rejects_missing_timing_validation(self) -> None:
         """NoLookaheadGate rejects evidence without timing_validation."""

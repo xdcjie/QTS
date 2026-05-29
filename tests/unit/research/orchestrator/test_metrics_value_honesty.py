@@ -58,9 +58,7 @@ class TestValidationArtifactReader:
     def test_returns_none_for_malformed_json(self, tmp_path: Path) -> None:
         validation_dir = tmp_path / "validation"
         validation_dir.mkdir(parents=True)
-        (validation_dir / "deterministic_replay.json").write_text(
-            "not json", encoding="utf-8"
-        )
+        (validation_dir / "deterministic_replay.json").write_text("not json", encoding="utf-8")
 
         reader = ValidationArtifactReader(tmp_path)
         assert reader.read("deterministic_replay") is None
@@ -92,9 +90,7 @@ class TestResearchMetricsFromValidationArtifacts:
     def test_missing_deterministic_replay_yields_none(self, tmp_path: Path) -> None:
         """If deterministic_replay.json is missing, field is None and promotion rejected."""
         reader = ValidationArtifactReader(tmp_path)
-        derivation = ResearchMetricsFromValidationArtifacts().derive(
-            reader, _workflow_summary()
-        )
+        derivation = ResearchMetricsFromValidationArtifacts().derive(reader, _workflow_summary())
         assert derivation.deterministic_replay_passed is None
         assert derivation.promotion_eligible is False
 
@@ -102,9 +98,7 @@ class TestResearchMetricsFromValidationArtifacts:
         """If no_lookahead.json is missing, field is None and promotion rejected."""
         _write_artifact(tmp_path, "deterministic_replay", {"passed": True})
         reader = ValidationArtifactReader(tmp_path)
-        derivation = ResearchMetricsFromValidationArtifacts().derive(
-            reader, _workflow_summary()
-        )
+        derivation = ResearchMetricsFromValidationArtifacts().derive(reader, _workflow_summary())
         assert derivation.no_lookahead_passed is None
         assert derivation.promotion_eligible is False
 
@@ -275,15 +269,11 @@ class TestResearchMetricsFromValidationArtifacts:
                 }
             ]
         }
-        derivation = ResearchMetricsFromValidationArtifacts().derive(
-            reader, summary
-        )
+        derivation = ResearchMetricsFromValidationArtifacts().derive(reader, summary)
         assert derivation.oos_months is not None
         assert derivation.oos_months > 0
 
-    def test_train_sharpe_and_oos_sharpe_from_separate_manifests(
-        self, tmp_path: Path
-    ) -> None:
+    def test_train_sharpe_and_oos_sharpe_from_separate_manifests(self, tmp_path: Path) -> None:
         _write_artifact(tmp_path, "deterministic_replay", {"passed": True})
         _write_artifact(tmp_path, "no_lookahead", {"passed": True})
         _write_artifact(
@@ -304,9 +294,7 @@ class TestResearchMetricsFromValidationArtifacts:
         )
         _write_artifact(tmp_path, "cost_stress", {"degradation": 0.1})
         reader = ValidationArtifactReader(tmp_path)
-        derivation = ResearchMetricsFromValidationArtifacts().derive(
-            reader, _workflow_summary()
-        )
+        derivation = ResearchMetricsFromValidationArtifacts().derive(reader, _workflow_summary())
         assert derivation.sharpe_sources.train_sharpe == 1.5
         assert derivation.sharpe_sources.oos_sharpe == 1.2
         assert derivation.sharpe_sources.train_manifest_hash == "sha256:train-manifest-diff"
@@ -331,29 +319,19 @@ class TestResearchMetricsFromValidationArtifacts:
             },
         )
         reader = ValidationArtifactReader(tmp_path)
-        derivation = ResearchMetricsFromValidationArtifacts().derive(
-            reader, _workflow_summary()
-        )
+        derivation = ResearchMetricsFromValidationArtifacts().derive(reader, _workflow_summary())
         assert derivation.sharpe_sources.same_source is True
         assert derivation.is_overfit_candidate is True
 
-    def test_derivation_has_hollow_verdict_when_artifacts_missing(
-        self, tmp_path: Path
-    ) -> None:
+    def test_derivation_has_hollow_verdict_when_artifacts_missing(self, tmp_path: Path) -> None:
         reader = ValidationArtifactReader(tmp_path)
-        derivation = ResearchMetricsFromValidationArtifacts().derive(
-            reader, _workflow_summary()
-        )
+        derivation = ResearchMetricsFromValidationArtifacts().derive(reader, _workflow_summary())
         assert derivation.has_hollow_verdict is True
 
-    def test_derivation_no_hollow_verdict_when_artifacts_present(
-        self, tmp_path: Path
-    ) -> None:
+    def test_derivation_no_hollow_verdict_when_artifacts_present(self, tmp_path: Path) -> None:
         _write_all_passing_artifacts(tmp_path)
         reader = ValidationArtifactReader(tmp_path)
-        derivation = ResearchMetricsFromValidationArtifacts().derive(
-            reader, _workflow_summary()
-        )
+        derivation = ResearchMetricsFromValidationArtifacts().derive(reader, _workflow_summary())
         assert derivation.has_hollow_verdict is False
 
 
@@ -377,9 +355,7 @@ class TestPromotionPacketHollowVerdictRejection:
         )
 
         assert result.accepted is False
-        assert any(
-            "deterministic_replay_passed is missing" in r for r in result.reasons
-        )
+        assert any("deterministic_replay_passed is missing" in r for r in result.reasons)
 
     def test_missing_no_lookahead_rejected(self, tmp_path: Path) -> None:
         """no_lookahead_passed=None triggers rejection."""
@@ -471,13 +447,9 @@ class TestPromotionPacketHollowVerdictRejection:
         )
 
         assert result.accepted is False
-        assert any(
-            "without separate source manifest provenance" in r for r in result.reasons
-        )
+        assert any("without separate source manifest provenance" in r for r in result.reasons)
 
-    def test_different_sharpe_from_different_manifests_accepted(
-        self, tmp_path: Path
-    ) -> None:
+    def test_different_sharpe_from_different_manifests_accepted(self, tmp_path: Path) -> None:
         """train_sharpe != oos_sharpe from different manifests passes."""
         registry, bundle_id = _write_verifiable_bundle(tmp_path)
         metrics = _honest_metrics()

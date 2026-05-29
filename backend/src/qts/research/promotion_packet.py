@@ -522,9 +522,7 @@ class PromotionPacketV2:
             "no_lookahead_passed",
             "promotion_eligible",
         }
-        all_research_true = all(
-            research.get(field) is True for field in research_booleans
-        )
+        all_research_true = all(research.get(field) is True for field in research_booleans)
 
         stability = metrics_payload.get("stability")
         stability_all_perfect = False
