@@ -3,8 +3,27 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, tzinfo
+from datetime import UTC, datetime, timedelta, tzinfo
+from typing import Protocol
 from zoneinfo import ZoneInfo
+
+
+class Clock(Protocol):
+    """Source of the current instant. Injecting a clock lets deterministic
+    modes (e.g. backtest replay) produce byte-identical timestamps while
+    live/paper callers keep wall-clock time."""
+
+    def now(self) -> datetime:
+        """Return the current timezone-aware instant."""
+        ...
+
+
+class SystemClock:
+    """Default wall-clock implementation backed by ``datetime.now(UTC)``."""
+
+    def now(self) -> datetime:
+        """Return the current UTC instant."""
+        return datetime.now(UTC)
 
 
 def require_aware_datetime(value: datetime, *, name: str) -> None:
@@ -49,4 +68,10 @@ class TimeInterval:
         return self.start <= value < self.end
 
 
-__all__ = ["TimeInterval", "require_aware_datetime", "to_exchange_time"]
+__all__ = [
+    "Clock",
+    "SystemClock",
+    "TimeInterval",
+    "require_aware_datetime",
+    "to_exchange_time",
+]

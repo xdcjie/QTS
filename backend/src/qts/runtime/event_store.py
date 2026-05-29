@@ -19,12 +19,17 @@ from qts.core.ids import (
     RuntimeRunId,
     StrategyId,
 )
+from qts.core.time import Clock, SystemClock
 from qts.domain.events import BaseEvent
 from qts.runtime.sinks.base import RuntimeEvent
 
 StoredEvent = BaseEvent | RuntimeEvent
 
 MigrationFn = Callable[[dict[str, Any]], dict[str, Any]]
+
+
+class SingleWriterViolation(RuntimeError):
+    """Raised when a second writer tries to open an already-locked store."""
 
 
 class SchemaMigrationMissing(KeyError):
@@ -229,17 +234,40 @@ class InMemoryEventStore:
 
 
 class FileEventStore:
-    """JSONL event store for local deterministic recovery tests."""
+    """JSONL event store for local deterministic recovery tests.
 
-    def __init__(self, path: Path) -> None:
-        """Perform __init__."""
+    On open the store seeds a monotonic sequence counter from the highest
+    persisted sequence so each :meth:`append` is O(1) (no full-file re-read).
+    A single-writer contract is enforced with an advisory ``flock`` acquired
+    on the first :meth:`append` and held for the store's lifetime: a second
+    writer that appends to the same path is rejected while the first is open.
+    Read-only callers never acquire the lock. Persisted ingest timestamps come
+    from an injected :class:`Clock` so a deterministic run produces
+    byte-identical files.
+    """
+
+    def __init__(
+        self,
+        path: Path,
+        *,
+        clock: Clock | None = None,
+        single_writer: bool = True,
+    ) -> None:
+        """Open the store and seed the monotonic sequence counter once."""
         self._path = path
+        self._clock = clock if clock is not None else SystemClock()
+        self._single_writer = single_writer
+        self._lock_handle: Any | None = None
+        self._next_sequence = self._highest_sequence() + 1
 
     def append(self, event: StoredEvent) -> int:
-        """Perform append."""
+        """Append one event with a seeded O(1) sequence and clock-stamped ingest time."""
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        sequence = len(self.replay()) + 1
+        if self._single_writer and self._lock_handle is None:
+            self._acquire_writer_lock()
+        sequence = self._next_sequence
         if isinstance(event, RuntimeEvent):
+            event = replace(event, ts_ingest=self._clock.now())
             RuntimeEvent.require_canonical_envelope(event.to_envelope(sequence_no=sequence))
             payload = {
                 "sequence": sequence,
@@ -252,7 +280,48 @@ class FileEventStore:
             handle.write("\n")
             handle.flush()
             os.fsync(handle.fileno())
+        self._next_sequence = sequence + 1
         return sequence
+
+    def close(self) -> None:
+        """Release the advisory writer lock, allowing another writer to open."""
+        handle = self._lock_handle
+        if handle is None:
+            return
+        self._lock_handle = None
+        try:
+            import fcntl
+
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        finally:
+            handle.close()
+
+    def __del__(self) -> None:
+        """Release the writer lock if the store is garbage-collected without close."""
+        try:
+            self.close()
+        except Exception:
+            pass
+
+    def _acquire_writer_lock(self) -> None:
+        """Acquire an exclusive advisory lock on a sidecar, held until close."""
+        import fcntl
+
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        lock_path = self._path.with_name(self._path.name + ".lock")
+        handle = lock_path.open("w", encoding="utf-8")
+        try:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as error:
+            handle.close()
+            raise SingleWriterViolation(
+                f"another writer holds the event store lock for {self._path}"
+            ) from error
+        self._lock_handle = handle
+
+    def _highest_sequence(self) -> int:
+        """Return the highest persisted sequence number, or 0 when empty."""
+        return max(self._read_sequences(), default=0)
 
     def replay(self, *, partition_key: str | None = None) -> tuple[StoredEvent, ...]:
         """Perform replay."""
@@ -416,9 +485,12 @@ class FileEventStore:
 
 
 __all__ = [
+    "Clock",
     "EventSequenceValidationReport",
     "EventStore",
     "FileEventStore",
     "InMemoryEventStore",
+    "SingleWriterViolation",
     "StoredEvent",
+    "SystemClock",
 ]

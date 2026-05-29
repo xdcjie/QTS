@@ -8,6 +8,16 @@ from qts.core.ids import CorrelationId, EventId
 from qts.domain.events import BaseEvent
 
 
+class _FixedClock:
+    """Clock that always returns the same instant for deterministic tests."""
+
+    def __init__(self, instant: datetime) -> None:
+        self._instant = instant
+
+    def now(self) -> datetime:
+        return self._instant
+
+
 def test_in_memory_event_store_appends_and_replays_deterministically() -> None:
     from qts.runtime.event_store import InMemoryEventStore
 
@@ -63,6 +73,7 @@ def test_file_event_store_appends_and_replays_runtime_event_envelopes(tmp_path: 
     from qts.runtime.sinks.base import RuntimeEvent
 
     path = tmp_path / "runtime-events.jsonl"
+    instant = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     event = RuntimeEvent(
         event_id=EventId("evt-runtime-001"),
         kind="runtime.state",
@@ -70,9 +81,11 @@ def test_file_event_store_appends_and_replays_runtime_event_envelopes(tmp_path: 
         run_id=RuntimeRunId("run-runtime-001"),
         mode="paper_broker",
         sequence_no=1,
+        ts_event=instant,
+        ts_ingest=instant,
     )
 
-    assert FileEventStore(path).append(event) == 1
+    assert FileEventStore(path, clock=_FixedClock(instant)).append(event) == 1
 
     restored = FileEventStore(path)
     assert restored.replay() == (event,)
