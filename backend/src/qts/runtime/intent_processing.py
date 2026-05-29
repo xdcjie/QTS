@@ -22,6 +22,8 @@ from qts.portfolio.holdings import Holding
 from qts.risk.risk_engine import RiskEngine
 
 if TYPE_CHECKING:
+    from qts.risk.intraday_pnl import IntradayPnlCalculator
+    from qts.risk.margin.calculator import MarginCalculator
     from qts.risk.risk_state import RiskStateSnapshot
 
 from qts.runtime.actor_ref import ActorRef
@@ -219,6 +221,8 @@ class TargetIntentProcessor:
         broker_id: BrokerId,
         order_id_prefix: str = "bt",
         broker_order_id_prefix: str = "sim",
+        margin_calculator: MarginCalculator | None = None,
+        intraday_pnl_calculator: IntradayPnlCalculator | None = None,
     ) -> None:
         """Perform __init__."""
         if not order_id_prefix.strip():
@@ -232,6 +236,8 @@ class TargetIntentProcessor:
         self._broker_id = broker_id
         self._order_id_prefix = order_id_prefix
         self._broker_order_id_prefix = broker_order_id_prefix
+        self._margin_calculator = margin_calculator
+        self._intraday_pnl_calculator = intraday_pnl_calculator
 
     def process_intent(
         self,
@@ -256,17 +262,27 @@ class TargetIntentProcessor:
 
         snapshot: AccountSnapshot = account_ref.ask(GetAccountSnapshot())
         marks = self._build_mark_map(intent, bar=bar, positions=snapshot.positions)
+        multipliers = {instr_id: self._multiplier_for(instr_id) for instr_id in snapshot.positions}
 
         # Deferred import to break circular dependency between qts.risk.risk_state
         # and qts.runtime.intent_processing.
         from qts.risk.risk_state import RiskStateSnapshot as _RiskStateSnapshot
 
+        intraday_pnl = Decimal("0")
+        if self._intraday_pnl_calculator is not None:
+            intraday_pnl = self._intraday_pnl_calculator.compute(
+                session_id=self._session_id_for(bar),
+                holdings=snapshot.positions,
+                marks=marks,
+                multipliers=multipliers,
+            )
+
         risk_state = _RiskStateSnapshot.from_account(
             snapshot,
             marks=marks,
-            multipliers={
-                instr_id: self._multiplier_for(instr_id) for instr_id in snapshot.positions
-            },
+            multipliers=multipliers,
+            intraday_pnl=intraday_pnl,
+            margin_calculator=self._margin_calculator,
         )
         account_equity = risk_state.account_equity
         multiplier = self._multiplier_for(
@@ -347,6 +363,35 @@ class TargetIntentProcessor:
                     pass
         return marks
 
+    @staticmethod
+    def _session_id_for(bar: Bar) -> str:
+        """Return an intraday-session key for the bar (resets the PnL window daily)."""
+        return bar.end_time.date().isoformat()
+
+    def _projected_initial_margin(
+        self,
+        *,
+        current_position: Decimal,
+        signed_quantity_delta: Decimal,
+        market_price: Decimal,
+        multiplier: Decimal,
+    ) -> Decimal | None:
+        """Return the incremental initial margin of an order's exposure-increasing part.
+
+        Only the portion of the order that increases absolute exposure consumes
+        new margin; risk-reducing orders return zero. None is returned when no
+        margin calculator is configured (the margin rule, if enabled, then fails
+        closed on the missing context).
+        """
+        if self._margin_calculator is None:
+            return None
+        new_position = current_position + signed_quantity_delta
+        increasing_quantity = max(abs(new_position) - abs(current_position), Decimal("0"))
+        if increasing_quantity == Decimal("0"):
+            return Decimal("0")
+        notional = increasing_quantity * market_price * multiplier
+        return self._margin_calculator.order_initial_margin(notional)
+
     def _process_order_delta(
         self,
         *,
@@ -387,13 +432,23 @@ class TargetIntentProcessor:
             market_data=market_data_context,
         )
         if risk_state is not None:
+            current_position = risk_state.current_position(instrument_id)
             risk_request = replace(
                 risk_request,
                 account_equity=risk_state.account_equity,
                 current_exposure=risk_state.current_exposure,
                 intraday_pnl=risk_state.intraday_pnl,
                 current_notional_by_instrument=risk_state.current_notional_by_instrument,
-                current_position=risk_state.current_position(instrument_id),
+                current_position=current_position,
+                signed_quantity_delta=quantity_delta,
+                current_margin_requirement=risk_state.current_margin_requirement,
+                available_margin=risk_state.available_margin,
+                projected_initial_margin=self._projected_initial_margin(
+                    current_position=current_position,
+                    signed_quantity_delta=quantity_delta,
+                    market_price=market_price,
+                    multiplier=self._multiplier_for(instrument_id),
+                ),
             )
         risk_decision = self._risk_engine.check(risk_request)
         if (

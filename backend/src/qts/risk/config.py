@@ -22,6 +22,7 @@ class RiskRuleName(StrEnum):
     MAX_NOTIONAL = "max_notional"
     MAX_ORDER_QTY = "max_order_quantity"
     VOLATILITY_ADJUSTED_SIZING = "volatility_adjusted_sizing"
+    MARGIN_LIMIT = "margin_limit"
     MARKET_DATA_PERMISSION = "market_data_permission"
     MARKET_DATA_FRESHNESS = "market_data_freshness"
     ORDER_SPEC_VALIDITY = "order_spec_validity"

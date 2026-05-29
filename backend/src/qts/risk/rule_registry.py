@@ -9,6 +9,7 @@ from qts.risk.rule import RiskRule
 from qts.risk.rules.concentration_limit import ConcentrationLimitRule
 from qts.risk.rules.intraday_loss_limit import IntradayLossLimitRule
 from qts.risk.rules.leverage_limit import LeverageLimitRule
+from qts.risk.rules.margin_limit import MarginRule
 from qts.risk.rules.market_data_freshness import MarketDataFreshnessRiskRule
 from qts.risk.rules.market_data_permission import MarketDataPermissionRiskRule
 from qts.risk.rules.max_notional import MaxNotionalRule
@@ -42,10 +43,16 @@ class RiskRuleRegistry:
             return MaxNotionalRule(max_notional=self._param(config, "max_notional"))
         if config.name is RiskRuleName.MAX_ORDER_QTY:
             return MaxOrderQuantityRule(max_quantity=self._param(config, "max_quantity"))
+        if config.name is RiskRuleName.MARGIN_LIMIT:
+            return MarginRule()
         if config.name is RiskRuleName.MARKET_DATA_PERMISSION:
             return MarketDataPermissionRiskRule()
         if config.name is RiskRuleName.MARKET_DATA_FRESHNESS:
-            return MarketDataFreshnessRiskRule()
+            return MarketDataFreshnessRiskRule(
+                require_market_data_context=(
+                    config.params.get("require_market_data_context", Decimal("0")) != Decimal("0")
+                )
+            )
         if config.name is RiskRuleName.ORDER_SPEC_VALIDITY:
             return OrderSpecValidityRule()
         raise KeyError(f"unknown risk rule: {config.name}")

@@ -21,8 +21,19 @@ class PositionLimitRule:
             raise ValueError("max_position must be positive")
 
     def check(self, request: OrderRiskRequest) -> RiskDecision:
-        """Reject orders whose worst-case projected absolute position exceeds the limit."""
-        projected_position = abs(request.current_position) + request.quantity
+        """Reject orders whose projected absolute position exceeds the limit.
+
+        When the request carries a signed quantity delta (buy positive, sell
+        negative) the projection is computed against the *net* post-trade
+        position ``abs(current_position + signed_quantity_delta)``, so a
+        risk-reducing order (e.g. short 10 then buy 5 -> projected 5) is never
+        blocked by an absolute position limit. Without a signed delta the rule
+        falls back to the conservative worst-case ``abs(current) + quantity``.
+        """
+        if request.signed_quantity_delta is not None:
+            projected_position = abs(request.current_position + request.signed_quantity_delta)
+        else:
+            projected_position = abs(request.current_position) + request.quantity
         if projected_position > self.max_position:
             return RiskDecision.rejected(
                 "POSITION_LIMIT_EXCEEDED",

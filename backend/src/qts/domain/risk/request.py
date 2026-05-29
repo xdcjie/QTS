@@ -33,6 +33,10 @@ class OrderRiskRequest:
     intraday_pnl: Decimal | None = None
     current_notional_by_instrument: Mapping[InstrumentId, Decimal] | None = None
     volatility: Decimal | None = None
+    signed_quantity_delta: Decimal | None = None
+    current_margin_requirement: Decimal | None = None
+    projected_initial_margin: Decimal | None = None
+    available_margin: Decimal | None = None
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""
@@ -63,6 +67,11 @@ class OrderRiskRequest:
                     raise ValueError("current instrument notional must be non-negative")
         if self.volatility is not None and self.volatility < Decimal("0"):
             raise ValueError("volatility must be non-negative")
+        if self.signed_quantity_delta is not None:
+            if self.signed_quantity_delta == Decimal("0"):
+                raise ValueError("signed_quantity_delta must not be zero")
+            if abs(self.signed_quantity_delta) != self.quantity:
+                raise ValueError("abs(signed_quantity_delta) must equal quantity")
 
     @property
     def notional(self) -> Decimal:

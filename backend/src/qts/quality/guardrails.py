@@ -314,8 +314,16 @@ GUARDRAIL_REMEDIATIONS = {
         "Keep production classes within the platform baseline or add an explicit freeze exception."
     ),
     "DUPLICATE_DTO_NAME": ("Use distinct DTO names across application and runtime boundaries."),
+    "ACCOUNT_FILL_MUTATION": (
+        "Only actors may apply fills to account state; route fills through the "
+        "OrderManagerActor/AccountActor path instead of importing or constructing ApplyFill."
+    ),
     "IMPORT_BOUNDARY": (
         "Move the dependency to the owning lower layer or introduce a boundary DTO/protocol."
+    ),
+    "LAYER_DEPENDENCY": (
+        "Lower layers must not import qts.runtime; move the shared value object to a lower "
+        "layer or invert the dependency through a boundary protocol/DTO."
     ),
     "LIVE_PACKAGE_REPLAY_CLASS": (
         "Place replay concepts under data sources or historical boundaries."

@@ -37,43 +37,42 @@ def test_gc_and_si_futures_pnl_use_contract_multipliers() -> None:
     ) == Decimal("25.000")
 
 
-def test_fill_accounting_anchor_uses_contract_multiplier_for_futures_and_options() -> None:
-    from qts.core.ids import InstrumentId, OrderId
-    from qts.domain.orders import OrderSide
-    from qts.portfolio.accounting.fill_accounting import AccountingFill, FillAccounting
-    from qts.portfolio.cash_book import CashBook
-    from qts.portfolio.holdings import HoldingBook
+def test_account_fill_application_uses_contract_multiplier_for_futures_and_options() -> None:
+    # Anchor the contract-multiplier cash invariant on the production fill path
+    # (AccountActor), not a parallel helper: cash moves by
+    # quantity * price * multiplier and the holding by quantity.
+    from qts.core.ids import AccountId, InstrumentId, OrderId
+    from qts.domain.orders import OrderFill, OrderSide
+    from qts.runtime.actors.account_actor import AccountActor, ApplyFill
 
-    future_cash = CashBook({"USD": Decimal("1000000")})
-    future_holdings = HoldingBook()
-    future_fill = AccountingFill(
-        fill_id=OrderId("fill-future-001"),
+    account_id = AccountId("acct-accounting-anchor")
+
+    future_actor = AccountActor(account_id=account_id, initial_cash={"USD": Decimal("1000000")})
+    future_fill = OrderFill(
+        fill_id="fill-future-001",
+        order_id=OrderId("ord-future-001"),
+        account_id=account_id,
         instrument_id=InstrumentId("FUTURE.US.COMEX.GC.202606"),
         side=OrderSide.BUY,
         quantity=Decimal("2"),
         price=Decimal("2350.10"),
-        currency="USD",
-        multiplier=Decimal("100"),
     )
+    future_actor.handle(ApplyFill(fill=future_fill, currency="USD", multiplier=Decimal("100")))
+    future_snapshot = future_actor.snapshot()
+    assert future_snapshot.positions[future_fill.instrument_id].quantity == Decimal("2")
+    assert future_snapshot.cash["USD"] == Decimal("529980.00")
 
-    FillAccounting.apply(future_fill, cash_book=future_cash, holding_book=future_holdings)
-
-    assert future_holdings.quantity(future_fill.instrument_id) == Decimal("2")
-    assert future_cash.balance("USD") == Decimal("529980.00")
-
-    option_cash = CashBook({"USD": Decimal("10000")})
-    option_holdings = HoldingBook()
-    option_fill = AccountingFill(
-        fill_id=OrderId("fill-option-001"),
+    option_actor = AccountActor(account_id=account_id, initial_cash={"USD": Decimal("10000")})
+    option_fill = OrderFill(
+        fill_id="fill-option-001",
+        order_id=OrderId("ord-option-001"),
+        account_id=account_id,
         instrument_id=InstrumentId("OPTION.US.OPRA.AAPL.20260619.C.200"),
         side=OrderSide.BUY,
         quantity=Decimal("3"),
         price=Decimal("4.25"),
-        currency="USD",
-        multiplier=Decimal("100"),
     )
-
-    FillAccounting.apply(option_fill, cash_book=option_cash, holding_book=option_holdings)
-
-    assert option_holdings.quantity(option_fill.instrument_id) == Decimal("3")
-    assert option_cash.balance("USD") == Decimal("8725.00")
+    option_actor.handle(ApplyFill(fill=option_fill, currency="USD", multiplier=Decimal("100")))
+    option_snapshot = option_actor.snapshot()
+    assert option_snapshot.positions[option_fill.instrument_id].quantity == Decimal("3")
+    assert option_snapshot.cash["USD"] == Decimal("8725.00")

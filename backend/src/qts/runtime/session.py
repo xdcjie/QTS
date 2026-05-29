@@ -14,6 +14,7 @@ from qts.data.sources.streaming_market_data_source import (
 )
 from qts.domain.market_data import Bar
 from qts.domain.orders import Order, OrderFill, OrderState, OrderStateSnapshot
+from qts.risk.intraday_pnl import IntradayPnlCalculator
 from qts.risk.kill_switch import RuntimeKillSwitchCommand
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.account_actor import (
@@ -131,6 +132,8 @@ class RuntimeSession:
                 ),
                 order_id_prefix=dependencies.order_id_prefix,
                 broker_order_id_prefix=dependencies.order_id_prefix,
+                margin_calculator=dependencies.margin_calculator,
+                intraday_pnl_calculator=IntradayPnlCalculator(),
             )
             for account_id, partition in self._account_partitions.items()
         }

@@ -72,5 +72,13 @@ class MarginCalculator:
             available_margin=available_margin,
         )
 
+    def order_initial_margin(self, notional: Decimal) -> Decimal:
+        """Return the initial margin required for an order of the given notional.
+
+        Used for the incremental pre-trade margin gate: the margin attributable
+        to the exposure-increasing portion of a proposed order.
+        """
+        return abs(notional) * self._initial_margin_rate
+
 
 __all__ = ["MarginCalculator", "MarginRequirement"]

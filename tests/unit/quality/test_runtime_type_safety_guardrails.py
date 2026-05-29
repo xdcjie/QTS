@@ -41,6 +41,7 @@ class TestRiskRuleConfigUsesTypedName:
             "max_notional",
             "max_order_quantity",
             "volatility_adjusted_sizing",
+            "margin_limit",
             "market_data_permission",
             "market_data_freshness",
             "order_spec_validity",
@@ -132,7 +133,6 @@ class TestNoPublicListAnyReturnInRuntime:
             "qts/runtime/intent_processing.py",
             "qts/risk/risk_engine.py",
             "qts/risk/rule_registry.py",
-            "qts/portfolio/accounting/fill_accounting.py",
         ],
     )
     def test_no_list_any_return(self, module_path: str) -> None:

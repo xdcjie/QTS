@@ -46,9 +46,6 @@ def test_context_explicit_replacement_classes_exist_at_owning_boundaries() -> No
         "ReconciliationCashSnapshot": [
             "backend/src/qts/reconciliation/snapshots.py:39",
         ],
-        "AccountingFill": [
-            "backend/src/qts/portfolio/accounting/fill_accounting.py:15",
-        ],
     }
 
     for class_name, locations in expected_locations.items():

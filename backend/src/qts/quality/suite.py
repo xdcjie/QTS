@@ -11,6 +11,7 @@ from qts.quality.rules import (
     BacktestEngineCohesionRule,
     BacktestInputCohesionRule,
     BacktestRunnerCohesionRule,
+    AccountFillMutationRule,
     BrokerSpecificRule,
     BrokerSymbolBoundaryRule,
     CallerPresenceRule,
@@ -20,6 +21,7 @@ from qts.quality.rules import (
     EvidenceBundleRequiredForPromotionRule,
     IdeaRegistryRequiredForCandidateRule,
     ImportBoundaryRule,
+    LayerDependencyRule,
     LivePackageNoReplayClassRule,
     OOPHelperOwnershipRule,
     OOPPublicFactoryRule,
@@ -62,6 +64,8 @@ class GuardrailSuite:
     ) -> None:
         self.rules = rules or (
             ImportBoundaryRule(),
+            LayerDependencyRule(),
+            AccountFillMutationRule(),
             ProductSpecificRule(),
             BrokerSpecificRule(),
             BrokerSymbolBoundaryRule(),

@@ -8,8 +8,8 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from qts.core.ids import InstrumentId
+from qts.portfolio.account_snapshot import AccountSnapshot
 from qts.portfolio.valuation.valuator import PortfolioValuator
-from qts.runtime.actors.account_actor import AccountSnapshot
 
 if TYPE_CHECKING:
     from qts.risk.margin.calculator import MarginCalculator
