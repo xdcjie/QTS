@@ -1,5 +1,5 @@
 {
-  "production_class_count": 917,
+  "production_class_count": 919,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -136,6 +136,8 @@
     "qts.data.provenance.ReplayDataAnomalyEvent",
     "qts.data.provenance.ReplayDataAnomalyType",
     "qts.data.sessions.calendar_lookup.CalendarSessionLookup",
+    "qts.data.sessions.interval_source.CalendarSessionIntervalSource",
+    "qts.data.sessions.interval_source.SessionIntervalSource",
     "qts.data.sessions.window.RegularSessionWindow",
     "qts.data.sources.replay_bundle_builder.ReplayMarketDataBundle",
     "qts.data.sources.replay_bundle_builder.ReplayMarketDataBundleBuilder",

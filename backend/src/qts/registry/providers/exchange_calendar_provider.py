@@ -6,6 +6,7 @@ from datetime import date, datetime
 from typing import Any
 
 import exchange_calendars as xc  # type: ignore[import-untyped]
+from exchange_calendars.errors import NotSessionError  # type: ignore[import-untyped]
 
 from qts.core.time import TimeInterval
 from qts.registry.calendar_registry import MarketSession
@@ -31,6 +32,19 @@ class ExchangeCalendarProvider:
             session_id=session_label,
             interval=TimeInterval(start=open_time, end=close_time),
         )
+
+    def session_interval_for(self, session_date: date) -> TimeInterval | None:
+        """Return the half-open session interval, or ``None`` if not a session.
+
+        Holidays are not sessions and resolve to ``None``. Half-days resolve to
+        the early-close interval. Keeping the library's ``NotSessionError``
+        contained here preserves the calendar-library wrapping boundary.
+        """
+        try:
+            session = self.session_for(session_date)
+        except NotSessionError:
+            return None
+        return session.interval
 
     def session_offset(self, session_date: date, offset: int) -> date:
         """Return the exchange session date at ``offset`` from ``session_date``."""
