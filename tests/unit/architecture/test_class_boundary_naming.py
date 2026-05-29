@@ -24,7 +24,7 @@ def test_known_ambiguous_backend_class_names_are_context_explicit() -> None:
     assert _class_locations("SessionLookup") == []
     assert _class_locations("PositionSnapshot") == []
     assert _class_locations("CashSnapshot") == []
-    assert _class_locations("Fill") == ["backend/src/qts/strategy_sdk/events.py:47"]
+    assert _class_locations("Fill") == ["backend/src/qts/strategy_sdk/events.py:65"]
 
 
 def test_context_explicit_replacement_classes_exist_at_owning_boundaries() -> None:

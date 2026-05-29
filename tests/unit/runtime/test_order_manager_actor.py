@@ -402,7 +402,7 @@ def test_order_route_metadata_is_preserved_across_submit_cancel_replace_and_fill
     assert cancel_a.route_metadata == metadata_a
     assert execution_b.empty()
 
-    with pytest.raises(NotImplementedError, match="replace order execution"):
+    with pytest.raises(RuntimeError, match="replace order is not supported.*supports_replace"):
         actor_a.handle(
             ReplaceOrder(
                 intent=ReplaceIntent(order_id=order_id_a, new_quantity=Decimal("12")),
@@ -521,6 +521,73 @@ def test_order_route_metadata_round_trips_for_recovery() -> None:
     restored = OrderRouteMetadata.from_payload(metadata.to_payload())
 
     assert restored == metadata
+
+
+def test_replace_order_returns_structured_rejection_not_not_implemented_error() -> None:
+    from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import (
+        OrderIntent,
+        OrderSide,
+        ReplaceIntent,
+    )
+    from qts.domain.risk import RiskDecision
+    from qts.runtime.actor_ref import ActorRef
+    from qts.runtime.actors.order_manager_actor import OrderManagerActor, ReplaceOrder, SubmitOrder
+    from qts.runtime.mailbox import Mailbox
+
+    account_id = AccountId("acct-a")
+    strategy_id = StrategyId("strategy-a")
+    order_id = OrderId("ord-replace-reject")
+    execution = Mailbox()
+    actor = OrderManagerActor(
+        account_id=account_id,
+        execution_ref=ActorRef(mailbox=execution),
+        account_ref=ActorRef(mailbox=Mailbox()),
+    )
+    actor.handle(
+        SubmitOrder(
+            intent=OrderIntent(
+                order_id=order_id,
+                account_id=account_id,
+                instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),
+                side=OrderSide.BUY,
+                quantity=Decimal("10"),
+            ),
+            risk_decision=RiskDecision.approve(),
+            broker_order_id="broker-replace-reject",
+            market_price=Decimal("101"),
+            account_id=account_id,
+            strategy_id=strategy_id,
+            route_metadata=_route_metadata(
+                account_id=account_id,
+                strategy_id=strategy_id,
+                client_order_id="client-replace-reject",
+                correlation_id=CorrelationId("corr-replace-reject"),
+            ),
+        )
+    )
+    assert execution.get() is not None
+
+    with pytest.raises(RuntimeError, match="replace order is not supported.*supports_replace"):
+        actor.handle(
+            ReplaceOrder(
+                intent=ReplaceIntent(order_id=order_id, new_quantity=Decimal("20")),
+                risk_decision=RiskDecision.approve(),
+                account_id=account_id,
+                strategy_id=strategy_id,
+                route_metadata=_route_metadata(
+                    account_id=account_id,
+                    strategy_id=strategy_id,
+                    client_order_id="client-replace-reject",
+                    correlation_id=CorrelationId("corr-replace-reject"),
+                ),
+            )
+        )
+
+    order = actor.get_order(order_id)
+    assert order.intent.quantity == Decimal("10"), (
+        "order quantity must remain unchanged after rejected replace"
+    )
 
 
 def test_order_route_metadata_references_signal_aggregation_decision() -> None:

@@ -1,5 +1,9 @@
 from qts.runtime.actor import Actor
+from qts.runtime.actor_errors import ActorAskTimeoutError, ActorUnhandledMessageError
+from qts.runtime.actor_events import ActorFailureEvent
+from qts.runtime.actor_path import ActorPath
 from qts.runtime.actor_ref import ActorRef
+from qts.runtime.actor_supervisor import ActorSupervisor, SupervisorDecision
 from qts.runtime.commands import (
     RuntimeCommand,
     RuntimeCommandBus,
@@ -45,7 +49,12 @@ __all__ = [
     "AccountRiskConfig",
     "AccountRuntimeSpec",
     "Actor",
+    "ActorAskTimeoutError",
+    "ActorFailureEvent",
+    "ActorPath",
     "ActorRef",
+    "ActorSupervisor",
+    "ActorUnhandledMessageError",
     "BrokerRouteSpec",
     "EventRouter",
     "ExecutionEnvironment",
@@ -76,4 +85,5 @@ __all__ = [
     "SnapshotStore",
     "StateSnapshot",
     "StrategyRuntimeSpec",
+    "SupervisorDecision",
 ]

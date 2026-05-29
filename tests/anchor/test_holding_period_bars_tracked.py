@@ -6,13 +6,14 @@ which each fill occurred. The 2.25-year VWAP run surfaced a defect:
 every position_closed event had ``opened_at=null`` and
 ``closed_at=1970-01-01`` (epoch), because ``AccountActor._apply_fill``
 hardcoded ``fill_time=None`` and the rest of the execution chain
-(``ApplyFill`` → ``ExecutionReport`` → ``OrderExecutionRequest`` →
-``SubmitOrder``) had no field to carry the bar's wall-clock time.
+(``OrderManagerActor`` → ``ApplyFill`` → ``ExecutionReport`` →
+``OrderExecutionRequest`` → ``SubmitOrder``) had no field to carry
+the bar's wall-clock time.
 
 Owner: chain ``intent_processing.process_intent`` → ``SubmitOrder``
 → ``OrderExecutionRequest`` → ``SimulatedExecutionAdapter`` →
-``ExecutionReport`` → ``ExecutionReportHandler`` → ``ApplyFill`` →
-``AccountActor`` → ``HoldingBook.apply_fill``.
+``ExecutionReport`` → ``ExecutionReportHandler`` → ``OrderManagerActor``
+→ ``ApplyFill`` → ``AccountActor`` → ``HoldingBook.apply_fill``.
 
 Forbidden shortcut: defaulting fill_time to None; defaulting
 opened_at to None for backtest fills; computing holding_bars from

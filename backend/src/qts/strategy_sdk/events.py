@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 from qts.core.ids import AccountId, InstrumentId, OrderId
@@ -23,6 +23,24 @@ class TimerEvent:
         if not self.name.strip():
             raise ValueError("name must not be empty")
         require_aware_datetime(self.time, name="time")
+
+
+@dataclass(frozen=True, slots=True)
+class TimerSubscription:
+    """Strategy-declared timer schedule request."""
+
+    name: str
+    interval: timedelta
+    first_fire: datetime | None = None
+
+    def __post_init__(self) -> None:
+        """Validate timer subscription fields."""
+        if not self.name.strip():
+            raise ValueError("name must not be empty")
+        if self.interval <= timedelta(0):
+            raise ValueError("interval must be positive")
+        if self.first_fire is not None:
+            require_aware_datetime(self.first_fire, name="first_fire")
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,11 +74,14 @@ class Fill:
     commission: Decimal = Decimal("0")
     slippage: Decimal = Decimal("0")
     account_id: AccountId | None = None
+    intent_id: str | None = None
 
     def __post_init__(self) -> None:
         """Validate fill economics."""
         if not self.fill_id.strip():
             raise ValueError("fill_id must not be empty")
+        if self.intent_id is not None and not self.intent_id.strip():
+            raise ValueError("intent_id must not be empty if provided")
         if self.quantity <= Decimal("0"):
             raise ValueError("quantity must be positive")
         if self.price <= Decimal("0"):
@@ -71,4 +92,4 @@ class Fill:
             raise ValueError("slippage must be non-negative")
 
 
-__all__ = ["Fill", "OrderUpdate", "TimerEvent"]
+__all__ = ["Fill", "OrderUpdate", "TimerEvent", "TimerSubscription"]

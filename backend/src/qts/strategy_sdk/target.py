@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from enum import StrEnum
 from types import MappingProxyType
+from uuid import uuid4
 
 from qts.domain.orders import OrderSpec, OrderType
 from qts.strategy_sdk.asset_ref import AssetRef
@@ -28,6 +29,7 @@ class TargetIntent:
     asset: AssetRef
     intent_type: TargetIntentType
     value: Decimal | None
+    intent_id: str = field(default_factory=lambda: str(uuid4()))
     order_spec: OrderSpec = OrderSpec()
     metadata: Mapping[str, str] = field(default_factory=dict)
 

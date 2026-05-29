@@ -104,17 +104,26 @@ def test_volatility_adjusted_sizing_rejects_notional_above_volatility_cap() -> N
 
 
 def test_standard_five_risk_rules_build_from_registry_in_declared_order() -> None:
-    from qts.risk import RiskRuleConfig, RiskRuleRegistry
+    from qts.risk.config import RiskRuleConfig, RiskRuleName
+    from qts.risk.rule_registry import RiskRuleRegistry
 
     rules = RiskRuleRegistry().build_all(
         (
-            RiskRuleConfig("risk-position", "position_limit", {"max_position": Decimal("1000")}),
-            RiskRuleConfig("risk-leverage", "leverage_limit", {"max_leverage": Decimal("2")}),
-            RiskRuleConfig("risk-loss", "intraday_loss_limit", {"max_loss": Decimal("5000")}),
-            RiskRuleConfig("risk-conc", "concentration_limit", {"max_fraction": Decimal("0.50")}),
+            RiskRuleConfig(
+                "risk-position", RiskRuleName.POSITION_LIMIT, {"max_position": Decimal("1000")}
+            ),
+            RiskRuleConfig(
+                "risk-leverage", RiskRuleName.LEVERAGE_LIMIT, {"max_leverage": Decimal("2")}
+            ),
+            RiskRuleConfig(
+                "risk-loss", RiskRuleName.INTRADAY_LOSS_LIMIT, {"max_loss": Decimal("5000")}
+            ),
+            RiskRuleConfig(
+                "risk-conc", RiskRuleName.CONCENTRATION_LIMIT, {"max_fraction": Decimal("0.50")}
+            ),
             RiskRuleConfig(
                 "risk-vol",
-                "volatility_adjusted_sizing",
+                RiskRuleName.VOLATILITY_ADJUSTED_SIZING,
                 {"max_notional_per_volatility": Decimal("1000")},
             ),
         )
@@ -130,12 +139,18 @@ def test_standard_five_risk_rules_build_from_registry_in_declared_order() -> Non
 
 
 def test_risk_engine_runs_registry_built_rules_in_declared_order() -> None:
-    from qts.risk import RiskEngine, RiskRuleConfig, RiskRuleRegistry
+    from qts.risk.config import RiskRuleConfig, RiskRuleName
+    from qts.risk.risk_engine import RiskEngine
+    from qts.risk.rule_registry import RiskRuleRegistry
 
     rules = RiskRuleRegistry().build_all(
         (
-            RiskRuleConfig("risk-loss", "intraday_loss_limit", {"max_loss": Decimal("5000")}),
-            RiskRuleConfig("risk-position", "position_limit", {"max_position": Decimal("10")}),
+            RiskRuleConfig(
+                "risk-loss", RiskRuleName.INTRADAY_LOSS_LIMIT, {"max_loss": Decimal("5000")}
+            ),
+            RiskRuleConfig(
+                "risk-position", RiskRuleName.POSITION_LIMIT, {"max_position": Decimal("10")}
+            ),
         )
     )
 
@@ -145,7 +160,7 @@ def test_risk_engine_runs_registry_built_rules_in_declared_order() -> None:
 
 
 def test_risk_config_loads_yaml_rules_in_declared_order(tmp_path: Path) -> None:
-    from qts.risk import RiskConfig
+    from qts.risk.config import RiskConfig
 
     path = tmp_path / "risk.yaml"
     path.write_text(

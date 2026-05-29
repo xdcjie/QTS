@@ -75,5 +75,5 @@ def test_signal_portfolio_construction_targets_enter_existing_backtest_path(
 
     assert len(captured.orders) == 1
     assert len(captured.fills) == 1
-    assert captured.result.final_account.positions[_INSTRUMENT].quantity == Decimal("0.5")
-    assert captured.result.final_account.cash["USD"] == Decimal("950.0")
+    assert captured.result.final_account.positions[_INSTRUMENT].quantity == Decimal("5")
+    assert captured.result.final_account.cash["USD"] == Decimal("500")

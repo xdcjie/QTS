@@ -50,6 +50,23 @@ class Mailbox:
                 return self._messages.popleft()
             raise MailboxTimeoutError(f"mailbox get timed out after {timeout}s (spurious wake)")
 
+    def get_blocking(self) -> object:
+        """Block indefinitely until a message arrives.
+
+        Used by the ask pattern when no timeout is configured.  In the
+        synchronous actor model the response is typically already in the
+        mailbox by the time this is called, so the condition is satisfied
+        immediately.  When the mailbox is empty the thread blocks until
+        :meth:`put` notifies.
+        """
+        with self._condition:
+            if self._messages:
+                return self._messages.popleft()
+            self._condition.wait()
+            if self._messages:
+                return self._messages.popleft()
+            raise RuntimeError("blocking mailbox wait failed (spurious wake with no message)")
+
     def empty(self) -> bool:
         """Perform empty."""
         return not self._messages

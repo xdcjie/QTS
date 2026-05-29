@@ -26,7 +26,6 @@ from qts.data.validation_report import (
 from qts.domain.market_data import Bar
 from qts.registry.symbol_resolution import SourceSymbolResolver
 
-
 _FUTURES_OUTRIGHT_SYMBOL_RE = re.compile(r"^[A-Z]{1,4}[FGHJKMNQUVXZ][0-9]{1,2}$")
 
 
@@ -98,10 +97,7 @@ class HistoricalDatasetValidator:
                     break
                 stats.rows_seen += 1
                 symbol = row[active_schema.symbol]
-                if (
-                    not allow_futures_outright_symbols
-                    and is_futures_outright_symbol(symbol)
-                ):
+                if not allow_futures_outright_symbols and is_futures_outright_symbol(symbol):
                     stats.invalid_rows += 1
                     issues.append(
                         DataValidationIssue(

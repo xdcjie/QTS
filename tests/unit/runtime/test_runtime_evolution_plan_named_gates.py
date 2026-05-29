@@ -283,13 +283,10 @@ def test_missing_account_route_raises_route_not_found() -> None:
 def test_unresolved_execution_report_is_quarantined() -> None:
     from qts.domain.orders import ExecutionReport, ExecutionReportStatus
     from qts.execution.order_manager import OrderManager
-    from qts.runtime.actor_ref import ActorRef
     from qts.runtime.execution_report_handler import ExecutionReportHandler
-    from qts.runtime.mailbox import Mailbox
 
     handler = ExecutionReportHandler(
         order_manager=OrderManager(),
-        account_ref=ActorRef(mailbox=Mailbox()),
     )
     report = ExecutionReport(
         report_id="unknown-report",

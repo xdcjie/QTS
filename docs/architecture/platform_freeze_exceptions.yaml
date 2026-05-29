@@ -2024,3 +2024,33 @@ exceptions:
     reason: research OS evidence completeness policy owner enforcing verifiable provenance before promotion packet review
     owner: platform
     expiry: 2027-05-26
+  - class_name: ActorAskTimeoutError
+    module: qts.runtime.actor_errors
+    reason: Actor ask() requires a domain-specific timeout error distinct from MailboxTimeoutError for live-critical broker callback bounded timeouts
+    owner: platform
+    expiry: 2027-05-29
+  - class_name: ActorUnhandledMessageError
+    module: qts.runtime.actor_errors
+    reason: Actor message dispatch requires a distinct error type to separate unhandled-message failures from type-validation errors in test and production code
+    owner: platform
+    expiry: 2027-05-29
+  - class_name: ActorFailureEvent
+    module: qts.runtime.actor_events
+    reason: Actor runtime hardening requires a structured immutable failure event for supervision, observability, and graceful degradation
+    owner: platform
+    expiry: 2027-05-29
+  - class_name: ActorPath
+    module: qts.runtime.actor_path
+    reason: Actor runtime hardening requires hierarchical actor naming for supervision topology and failure event routing
+    owner: platform
+    expiry: 2027-05-29
+  - class_name: SupervisorDecision
+    module: qts.runtime.actor_supervisor
+    reason: Actor supervision requires a decision enum for future restart policy classification
+    owner: platform
+    expiry: 2027-05-29
+  - class_name: ActorSupervisor
+    module: qts.runtime.actor_supervisor
+    reason: Actor runtime hardening requires a minimal supervisor that registers actors, records failures, and marks failed paths for observability
+    owner: platform
+    expiry: 2027-05-29

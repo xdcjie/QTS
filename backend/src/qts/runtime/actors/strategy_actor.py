@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from qts.domain.market_data import Bar
 from qts.runtime.actor import Actor
+from qts.runtime.actor_errors import ActorUnhandledMessageError
 from qts.runtime.actor_ref import ActorRef
 from qts.strategy_sdk import DataView, PortfolioView, Strategy, StrategyContext, TargetIntent
 
@@ -63,7 +64,7 @@ class StrategyActor(Actor):
         if isinstance(message, StrategyFinalize):
             self._handle_finalize()
             return
-        raise TypeError(f"unsupported strategy message: {type(message).__name__}")
+        raise ActorUnhandledMessageError(f"unsupported strategy message: {type(message).__name__}")
 
     def _handle_bar(self, message: StrategyBarEvent) -> None:
         """Perform _handle_bar."""

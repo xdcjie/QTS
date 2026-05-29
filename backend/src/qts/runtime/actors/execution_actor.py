@@ -10,6 +10,7 @@ from qts.core.ids import AccountId, OrderId, StrategyId
 from qts.domain.orders import OrderIntent
 from qts.execution.execution_adapter import ExecutionAdapter
 from qts.runtime.actor import Actor
+from qts.runtime.actor_errors import ActorUnhandledMessageError
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.live_capital import LiveCapitalOrderDecision
 from qts.runtime.order_route_metadata import OrderRouteMetadata
@@ -95,7 +96,7 @@ class ExecutionActor(Actor):
             )
             self._order_manager_ref.tell(report)
             return
-        raise TypeError(f"unsupported execution message: {type(message).__name__}")
+        raise ActorUnhandledMessageError(f"unsupported execution message: {type(message).__name__}")
 
 
 __all__ = ["ExecutionActor", "OrderCancelRequest", "OrderExecutionRequest"]

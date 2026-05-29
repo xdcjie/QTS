@@ -351,6 +351,10 @@ def test_backtest_actor_loop_emits_broker_reject_event_for_capability_reject(
     )
 
     rows = _read_ndjson(next(tmp_path.glob("*.events.ndjson")))
+    event_kinds = [row["kind"] for row in rows]
+    assert "runtime.broker_rejected" in event_kinds, (
+        f"broker_rejected not found in event kinds: {event_kinds}"
+    )
     reject_event = next(row for row in rows if row["kind"] == "runtime.broker_rejected")
     assert reject_event["payload"]["reason_code"] == "unsupported_order_type"
     assert reject_event["payload"]["broker_capability_model"]["supports_market_orders"] is False

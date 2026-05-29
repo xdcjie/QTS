@@ -56,7 +56,8 @@ def test_backtest_engine_order_path_uses_shared_actor_chain() -> None:
     assert "order_instrument_for_intent" in order_plan_builder_source
     assert "market_price_for_intent" in order_plan_builder_source
     assert "ExecutionReportHandler" in order_manager_actor_source
-    assert "ApplyFill" in report_handler_source
+    assert "ApplyFill" in order_manager_actor_source
+    assert "ApplyFill" not in report_handler_source
     assert "ApplyFill" not in engine_source
 
 

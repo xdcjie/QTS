@@ -5,10 +5,26 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from decimal import Decimal
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 import yaml  # type: ignore[import-untyped]
+
+
+class RiskRuleName(StrEnum):
+    """Typed names for risk rules, replacing raw string dispatch."""
+
+    POSITION_LIMIT = "position_limit"
+    LEVERAGE_LIMIT = "leverage_limit"
+    INTRADAY_LOSS_LIMIT = "intraday_loss_limit"
+    CONCENTRATION_LIMIT = "concentration_limit"
+    MAX_NOTIONAL = "max_notional"
+    MAX_ORDER_QTY = "max_order_quantity"
+    VOLATILITY_ADJUSTED_SIZING = "volatility_adjusted_sizing"
+    MARKET_DATA_PERMISSION = "market_data_permission"
+    MARKET_DATA_FRESHNESS = "market_data_freshness"
+    ORDER_SPEC_VALIDITY = "order_spec_validity"
 
 
 @dataclass(frozen=True, slots=True)
@@ -16,15 +32,19 @@ class RiskRuleConfig:
     """One configured risk rule."""
 
     rule_id: str
-    name: str
+    name: RiskRuleName
     params: dict[str, Decimal]
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""
         if not self.rule_id.strip():
             raise ValueError("rule_id must not be empty")
-        if not self.name.strip():
-            raise ValueError("name must not be empty")
+        # Convert plain string to RiskRuleName for backwards compatibility.
+        # StrEnum(string_value) returns the matching member or raises ValueError
+        # for unknown names -- catching invalid rule names at config construction
+        # is a type-safety improvement over deferring to registry dispatch.
+        if not isinstance(self.name, RiskRuleName):
+            object.__setattr__(self, "name", RiskRuleName(self.name))
 
     @classmethod
     def from_mapping(cls, payload: Mapping[str, Any]) -> RiskRuleConfig:
@@ -34,7 +54,7 @@ class RiskRuleConfig:
             raise ValueError("risk rule params must be a mapping")
         return cls(
             rule_id=str(payload["rule_id"]),
-            name=str(payload["name"]),
+            name=RiskRuleName(str(payload["name"])),
             params={str(name): Decimal(str(value)) for name, value in params_payload.items()},
         )
 
@@ -97,4 +117,4 @@ class RiskConfig:
         return result
 
 
-__all__ = ["RiskConfig", "RiskRuleConfig"]
+__all__ = ["RiskConfig", "RiskRuleConfig", "RiskRuleName"]

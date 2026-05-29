@@ -2,33 +2,28 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from decimal import Decimal
-
-from qts.core.ids import AccountId, InstrumentId
+from qts.core.ids import AccountId
 from qts.domain.orders import ExecutionReport, OrderFill
 from qts.execution.order_manager import OrderManager
-from qts.runtime.actor_ref import ActorRef
 
 
 class ExecutionReportHandler:
-    """Route normalized execution reports through order and account actors."""
+    """Process normalized execution reports through the order manager.
+
+    Returns validated fills for the owning actor to route downstream.
+    Does NOT directly send messages to the account actor; the owning
+    order manager actor is responsible for routing fill messages.
+    """
 
     def __init__(
         self,
         *,
         order_manager: OrderManager,
-        account_ref: ActorRef,
-        multiplier_by_instrument: Mapping[InstrumentId, Decimal] | None = None,
         account_id: AccountId | None = None,
-        currency: str = "USD",
     ) -> None:
         """Create a report handler for an actor-owned order manager."""
         self._order_manager = order_manager
-        self._account_ref = account_ref
         self._account_id = account_id
-        self._multiplier_by_instrument = dict(multiplier_by_instrument or {})
-        self._currency = currency
         self._quarantined_reports: list[ExecutionReport] = []
 
     @property
@@ -37,7 +32,11 @@ class ExecutionReportHandler:
         return tuple(self._quarantined_reports)
 
     def handle(self, report: ExecutionReport) -> tuple[OrderFill, ...]:
-        """Apply a normalized execution report and enqueue account fill updates."""
+        """Apply a normalized execution report and return validated fills.
+
+        The caller is responsible for routing the returned fills to the
+        account actor.
+        """
         try:
             result = self._order_manager.process_report(report)
         except KeyError:
@@ -48,17 +47,6 @@ class ExecutionReportHandler:
                 if fill.account_id != self._account_id:
                     self._quarantined_reports.append(report)
                     return ()
-        for fill in result.fills:
-            from qts.runtime.actors.account_actor import ApplyFill
-
-            self._account_ref.tell(
-                ApplyFill(
-                    fill=fill,
-                    currency=self._currency,
-                    multiplier=self._multiplier_by_instrument.get(fill.instrument_id, Decimal("1")),
-                    fill_time=report.fill_time,
-                )
-            )
         return result.fills
 
 

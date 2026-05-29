@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from qts.risk.config import RiskRuleConfig
+from qts.risk.config import RiskRuleConfig, RiskRuleName
 from qts.risk.rule import RiskRule
 from qts.risk.rules.concentration_limit import ConcentrationLimitRule
 from qts.risk.rules.intraday_loss_limit import IntradayLossLimitRule
@@ -23,30 +23,30 @@ class RiskRuleRegistry:
 
     def build(self, config: RiskRuleConfig) -> RiskRule:
         """Perform build."""
-        if config.name == "position_limit":
+        if config.name is RiskRuleName.POSITION_LIMIT:
             return PositionLimitRule(max_position=self._param(config, "max_position"))
-        if config.name == "leverage_limit":
+        if config.name is RiskRuleName.LEVERAGE_LIMIT:
             return LeverageLimitRule(max_leverage=self._param(config, "max_leverage"))
-        if config.name == "intraday_loss_limit":
+        if config.name is RiskRuleName.INTRADAY_LOSS_LIMIT:
             return IntradayLossLimitRule(max_loss=self._param(config, "max_loss"))
-        if config.name == "concentration_limit":
+        if config.name is RiskRuleName.CONCENTRATION_LIMIT:
             return ConcentrationLimitRule(max_fraction=self._param(config, "max_fraction"))
-        if config.name == "volatility_adjusted_sizing":
+        if config.name is RiskRuleName.VOLATILITY_ADJUSTED_SIZING:
             return VolatilityAdjustedSizingRule(
                 max_notional_per_volatility=self._param(
                     config,
                     "max_notional_per_volatility",
                 )
             )
-        if config.name == "max_notional":
+        if config.name is RiskRuleName.MAX_NOTIONAL:
             return MaxNotionalRule(max_notional=self._param(config, "max_notional"))
-        if config.name == "max_order_quantity":
+        if config.name is RiskRuleName.MAX_ORDER_QTY:
             return MaxOrderQuantityRule(max_quantity=self._param(config, "max_quantity"))
-        if config.name == "market_data_permission":
+        if config.name is RiskRuleName.MARKET_DATA_PERMISSION:
             return MarketDataPermissionRiskRule()
-        if config.name == "market_data_freshness":
+        if config.name is RiskRuleName.MARKET_DATA_FRESHNESS:
             return MarketDataFreshnessRiskRule()
-        if config.name == "order_spec_validity":
+        if config.name is RiskRuleName.ORDER_SPEC_VALIDITY:
             return OrderSpecValidityRule()
         raise KeyError(f"unknown risk rule: {config.name}")
 

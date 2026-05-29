@@ -48,6 +48,7 @@ from qts.quality import (
     TradeDiagnosticsRequiredForPaperRule,
     TransportAdapterImportRule,
     TransportCanonicalPathRule,
+    VwapAdhocRunnerForbiddenRule,
     VwapOptimizerConfigRule,
 )
 from qts.quality import (
@@ -128,6 +129,7 @@ __all__ = [
     "TradeDiagnosticsRequiredForPaperRule",
     "TransportAdapterImportRule",
     "TransportCanonicalPathRule",
+    "VwapAdhocRunnerForbiddenRule",
     "VwapOptimizerConfigRule",
     "main",
     "run_guardrails",

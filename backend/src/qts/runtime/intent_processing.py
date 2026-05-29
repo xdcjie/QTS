@@ -6,7 +6,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from datetime import datetime
 from decimal import Decimal
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
 from qts.domain.market_data import Bar
@@ -20,6 +20,10 @@ from qts.domain.orders import (
 from qts.domain.risk import MarketDataRiskContext, OrderRiskRequest, RiskDecision
 from qts.portfolio.holdings import Holding
 from qts.risk.risk_engine import RiskEngine
+
+if TYPE_CHECKING:
+    from qts.risk.risk_state import RiskStateSnapshot
+
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.account_actor import AccountSnapshot, GetAccountSnapshot
 from qts.runtime.actors.order_manager_actor import (
@@ -98,6 +102,8 @@ class OrderPlanBuilder:
         bar: Bar,
         positions: Mapping[InstrumentId, Holding],
         aggregation_decision_id: str | None = None,
+        account_equity: Decimal | None = None,
+        multiplier: Decimal = Decimal("1"),
     ) -> tuple[OrderPlan, ...]:
         """Build concrete order plans for a target intent."""
         target_instrument = self._instrument_context.order_instrument_for_intent(
@@ -151,6 +157,8 @@ class OrderPlanBuilder:
             intent,
             current_quantity=current_quantity,
             market_price=target_market_price,
+            account_equity=account_equity,
+            multiplier=multiplier,
         )
         quantity_delta = desired_quantity - current_quantity
         if quantity_delta != Decimal("0"):
@@ -174,6 +182,8 @@ class OrderPlanBuilder:
         *,
         current_quantity: Decimal,
         market_price: Decimal,
+        account_equity: Decimal | None = None,
+        multiplier: Decimal = Decimal("1"),
     ) -> Decimal:
         """Return the desired quantity implied by a target intent."""
         if intent.intent_type is TargetIntentType.CLOSE:
@@ -187,9 +197,12 @@ class OrderPlanBuilder:
         if intent.intent_type is TargetIntentType.VALUE:
             return intent.value / market_price
         if intent.intent_type is TargetIntentType.PERCENT:
-            current_value = current_quantity * market_price
-            target_value = max(current_value, market_price) * intent.value
-            return target_value / market_price
+            if account_equity is None:
+                raise ValueError("account_equity is required for PERCENT intent")
+            if account_equity <= Decimal("0"):
+                raise ValueError("account_equity must be positive for PERCENT intent")
+            target_value = account_equity * intent.value
+            return target_value / (market_price * multiplier)
 
         raise ValueError(f"unsupported target intent type: {intent.intent_type}")
 
@@ -213,6 +226,7 @@ class TargetIntentProcessor:
         if not broker_order_id_prefix.strip():
             raise ValueError("broker_order_id_prefix must not be empty")
         self._risk_engine = risk_engine
+        self._instrument_context = instrument_context
         self._order_plan_builder = OrderPlanBuilder(instrument_context=instrument_context)
         self._multiplier_for = multiplier_for
         self._broker_id = broker_id
@@ -241,12 +255,31 @@ class TargetIntentProcessor:
             raise ValueError("account_id is required")
 
         snapshot: AccountSnapshot = account_ref.ask(GetAccountSnapshot())
+        marks = self._build_mark_map(intent, bar=bar, positions=snapshot.positions)
+
+        # Deferred import to break circular dependency between qts.risk.risk_state
+        # and qts.runtime.intent_processing.
+        from qts.risk.risk_state import RiskStateSnapshot as _RiskStateSnapshot
+
+        risk_state = _RiskStateSnapshot.from_account(
+            snapshot,
+            marks=marks,
+            multipliers={
+                instr_id: self._multiplier_for(instr_id) for instr_id in snapshot.positions
+            },
+        )
+        account_equity = risk_state.account_equity
+        multiplier = self._multiplier_for(
+            self._instrument_context.order_instrument_for_intent(intent, bar=bar),
+        )
         order_plans = self._order_plan_builder.build(
             intent,
             account_id=account_id,
             bar=bar,
             positions=snapshot.positions,
             aggregation_decision_id=aggregation_decision_id,
+            account_equity=account_equity,
+            multiplier=multiplier,
         )
         if not order_plans:
             return ProcessedIntent(orders=(), fills=())
@@ -272,6 +305,7 @@ class TargetIntentProcessor:
                 conflict_reason=conflict_reason,
                 market_data_context=market_data_context,
                 order_number=order_number + index,
+                risk_state=risk_state,
             )
             orders.extend(processed.orders)
             fills.extend(processed.fills)
@@ -282,6 +316,36 @@ class TargetIntentProcessor:
             fills=tuple(fills),
             risk_decisions=tuple(risk_decisions),
         )
+
+    def _build_mark_map(
+        self,
+        intent: TargetIntent,
+        *,
+        bar: Bar,
+        positions: Mapping[InstrumentId, Holding],
+    ) -> dict[InstrumentId, Decimal]:
+        """Build a mark-price map from the current bar for all held instruments."""
+        marks: dict[InstrumentId, Decimal] = {}
+        target_instrument = self._instrument_context.order_instrument_for_intent(
+            intent,
+            bar=bar,
+        )
+        marks[target_instrument] = self._instrument_context.market_price_for_intent(
+            intent,
+            instrument_id=target_instrument,
+            bar=bar,
+        )
+        for instrument_id in positions:
+            if instrument_id not in marks:
+                try:
+                    marks[instrument_id] = self._instrument_context.market_price_for_intent(
+                        intent,
+                        instrument_id=instrument_id,
+                        bar=bar,
+                    )
+                except (KeyError, ValueError):
+                    pass
+        return marks
 
     def _process_order_delta(
         self,
@@ -302,6 +366,7 @@ class TargetIntentProcessor:
         conflict_reason: str | None = None,
         market_data_context: MarketDataRiskContext | None = None,
         order_number: int,
+        risk_state: RiskStateSnapshot | None = None,
     ) -> ProcessedIntent:
         """Perform _process_order_delta."""
         if quantity_delta == Decimal("0"):
@@ -309,20 +374,28 @@ class TargetIntentProcessor:
 
         side = OrderSide.BUY if quantity_delta > Decimal("0") else OrderSide.SELL
         quantity = abs(quantity_delta)
-        risk_decision = self._risk_engine.check(
-            OrderRiskRequest(
-                instrument_id=instrument_id,
-                quantity=quantity,
-                price=market_price,
-                multiplier=self._multiplier_for(instrument_id),
-                order_spec=order_spec,
-                order_time=order_time,
-                contributing_strategy_ids=contributing_strategy_ids,
-                aggregation_decision_id=aggregation_decision_id,
-                conflict_reason=conflict_reason,
-                market_data=market_data_context,
-            )
+        risk_request = OrderRiskRequest(
+            instrument_id=instrument_id,
+            quantity=quantity,
+            price=market_price,
+            multiplier=self._multiplier_for(instrument_id),
+            order_spec=order_spec,
+            order_time=order_time,
+            contributing_strategy_ids=contributing_strategy_ids,
+            aggregation_decision_id=aggregation_decision_id,
+            conflict_reason=conflict_reason,
+            market_data=market_data_context,
         )
+        if risk_state is not None:
+            risk_request = replace(
+                risk_request,
+                account_equity=risk_state.account_equity,
+                current_exposure=risk_state.current_exposure,
+                intraday_pnl=risk_state.intraday_pnl,
+                current_notional_by_instrument=risk_state.current_notional_by_instrument,
+                current_position=risk_state.current_position(instrument_id),
+            )
+        risk_decision = self._risk_engine.check(risk_request)
         if (
             risk_decision.contributing_strategy_ids != contributing_strategy_ids
             or risk_decision.aggregation_decision_id != aggregation_decision_id

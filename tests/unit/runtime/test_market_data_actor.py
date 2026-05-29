@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
+from qts.runtime.actor_errors import ActorUnhandledMessageError
 
 
 def test_market_data_actor_forwards_normalized_tick_to_subscribers() -> None:
@@ -40,7 +41,7 @@ def test_market_data_actor_rejects_order_execution_requests() -> None:
 
     actor = MarketDataActor()
 
-    with pytest.raises(TypeError, match="unsupported market data message"):
+    with pytest.raises(ActorUnhandledMessageError, match="unsupported market data message"):
         actor.handle(
             OrderExecutionRequest(
                 intent=OrderIntent(

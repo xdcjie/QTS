@@ -129,7 +129,13 @@ def test_intent_processor_translates_value_intent_into_expected_quantity() -> No
     assert result.orders[0].intent.quantity == Decimal("4")
 
 
-def test_intent_processor_percent_target_uses_current_or_cash_floor() -> None:
+def test_intent_processor_percent_target_uses_account_equity() -> None:
+    """PERCENT intent targets a fraction of account equity, not max(current, price).
+
+    Account starts with cash=10000. After buying 1 share at 100, equity = 10000.
+    target_percent(0.2) → desired = 10000 * 0.2 / 100 = 20 shares.
+    Already hold 1 → delta = 19 → buy 19.
+    """
     bar = _bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC), close="100")
     processor, order_manager_actor, order_manager_ref, execution_ref, _, account_ref = (
         _new_environment(bar=bar)
@@ -161,8 +167,8 @@ def test_intent_processor_percent_target_uses_current_or_cash_floor() -> None:
         order_number=2,
     )
 
-    assert second.orders[0].intent.quantity == Decimal("0.8")
-    assert second.orders[0].intent.side.value == "sell"
+    assert second.orders[0].intent.quantity == Decimal("19")
+    assert second.orders[0].intent.side.value == "buy"
 
 
 def test_intent_processor_rejects_missing_account_id() -> None:

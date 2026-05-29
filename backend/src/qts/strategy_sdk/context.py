@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
-from qts.core.ids import InstrumentId
+from qts.core.ids import InstrumentId, OrderId
 from qts.domain.instruments import OptionRight
+from qts.domain.orders import BracketLeg, BracketSpec, CancelIntent, OrderType
 from qts.portfolio.holdings import Holding
 from qts.strategy_sdk.asset_ref import AssetRef
 from qts.strategy_sdk.asset_resolver import (
@@ -20,6 +21,7 @@ from qts.strategy_sdk.asset_resolver import (
     SymbolResolver,
 )
 from qts.strategy_sdk.data_view import DataView
+from qts.strategy_sdk.events import TimerSubscription
 from qts.strategy_sdk.factors import FactorFactory
 from qts.strategy_sdk.indicators import IndicatorFactory
 from qts.strategy_sdk.portfolio_construction import PortfolioConstructionModel
@@ -49,6 +51,8 @@ class StrategyContext:
     )
     _universe: Universe = field(default_factory=Universe.empty, init=False)
     _signals: list[Signal] = field(default_factory=list, init=False)
+    _cancel_intents: list[CancelIntent] = field(default_factory=list, init=False)
+    _timer_subscriptions: list[TimerSubscription] = field(default_factory=list, init=False)
 
     def __post_init__(self) -> None:
         """Initialize internal SDK collaborators."""
@@ -67,6 +71,16 @@ class StrategyContext:
     def signals(self) -> tuple[Signal, ...]:
         """Return pending signals waiting for portfolio construction."""
         return tuple(self._signals)
+
+    @property
+    def cancel_intents(self) -> tuple[CancelIntent, ...]:
+        """Return cancel intents emitted by the strategy."""
+        return tuple(self._cancel_intents)
+
+    @property
+    def timer_subscriptions(self) -> tuple[TimerSubscription, ...]:
+        """Return timer subscriptions requested by the strategy."""
+        return tuple(self._timer_subscriptions)
 
     @property
     def subscriptions(self) -> tuple[DataSubscription, ...]:
@@ -177,6 +191,69 @@ class StrategyContext:
             )
         )
 
+    def cancel_order(self, order_id: str, *, reason: str | None = None) -> None:
+        """Emit a cancel intent for an order.
+
+        Cancellations are fire-and-forget at the strategy level;
+        the runtime routes them through OrderManagerActor.
+        """
+        cancel = CancelIntent(order_id=OrderId(order_id), reason=reason)
+        self._cancel_intents.append(cancel)
+
+    def target_bracket(
+        self,
+        asset: AssetRef,
+        take_profit_price: Decimal,
+        stop_loss_price: Decimal,
+        *,
+        quantity: Decimal = Decimal("1"),
+        metadata: Mapping[str, str] | None = None,
+    ) -> TargetIntent:
+        """Emit a bracket order target with take-profit and stop-loss legs."""
+        bracket = BracketSpec(
+            legs=(
+                BracketLeg(
+                    order_type=OrderType.LIMIT,
+                    side="sell",
+                    quantity=quantity,
+                    limit_price=take_profit_price,
+                ),
+                BracketLeg(
+                    order_type=OrderType.STOP,
+                    side="sell",
+                    quantity=quantity,
+                    stop_price=stop_loss_price,
+                ),
+            )
+        )
+        spec = OrderSpec(order_type=OrderType.BRACKET, bracket=bracket)
+        return self._intent_emitter.emit(
+            TargetIntent(
+                asset=asset,
+                intent_type=TargetIntentType.QUANTITY,
+                value=quantity,
+                order_spec=spec,
+                metadata=metadata or {},
+            )
+        )
+
+    def schedule_timer(
+        self,
+        name: str,
+        interval: timedelta,
+        *,
+        first_fire: datetime | None = None,
+    ) -> TimerSubscription:
+        """Register a timer that delivers TimerEvent to Strategy.on_timer()."""
+        subscription = TimerSubscription(name=name, interval=interval, first_fire=first_fire)
+        self._timer_subscriptions.append(subscription)
+        return subscription
+
+    def subscribe_ticks(self, asset: AssetRef) -> DataSubscription:
+        """Subscribe to tick-level market data for an asset."""
+        subscription = DataSubscription(asset=asset, timeframe="tick", warmup=1)
+        return self._subscription_registry.subscribe(subscription)
+
     def emit_signal(self, signal: Signal) -> Signal:
         """Record a forecast signal for later portfolio construction."""
         self._signals.append(signal)
@@ -248,13 +325,19 @@ class StrategyContext:
 
 
 __all__ = [
+    "BracketLeg",
+    "BracketSpec",
+    "CancelIntent",
     "DataSubscription",
     "ContinuousFutureResolver",
     "FutureContractResolver",
     "OptionContractRef",
     "OptionContractResolver",
+    "OrderId",
+    "OrderType",
     "StrategyAssetResolver",
     "SymbolResolver",
     "StrategyContext",
     "Signal",
+    "TimerSubscription",
 ]

@@ -43,3 +43,12 @@ def test_brokerage_model_mapping_lives_at_adapter_boundary() -> None:
     assert capabilities.supports_tif(TimeInForce.DAY)
     assert capabilities.supports_fractional is False
     assert capabilities.supported_asset_classes == frozenset({"future"})
+
+
+def test_broker_capabilities_supports_replace_defaults_to_false() -> None:
+    capabilities = BrokerCapabilities(broker_id=BrokerId("test-broker"))
+
+    assert capabilities.supports_replace is False
+
+    manifest = capabilities.to_manifest_payload()
+    assert manifest["supports_replace"] is False

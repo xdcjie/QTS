@@ -9,6 +9,7 @@ from hashlib import sha256
 from qts.core.ids import AccountId, CorrelationId, InstrumentId, StrategyId
 from qts.domain.market_data import Bar
 from qts.runtime.actor import Actor
+from qts.runtime.actor_errors import ActorUnhandledMessageError
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.signal_policy import (
     SignalAggregationPolicy,
@@ -76,7 +77,9 @@ class SignalAggregatorActor(Actor):
     def handle(self, message: object) -> None:
         """Perform handle."""
         if not isinstance(message, StrategySignalEvent):
-            raise TypeError(f"unsupported signal aggregation message: {type(message).__name__}")
+            raise ActorUnhandledMessageError(
+                f"unsupported signal aggregation message: {type(message).__name__}"
+            )
 
         if message.strategy_id is None and not message.contributions:
             self._result_ref.tell(

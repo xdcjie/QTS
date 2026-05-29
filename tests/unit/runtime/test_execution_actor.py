@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import pytest
+from qts.runtime.actor_errors import ActorUnhandledMessageError
 
 if TYPE_CHECKING:
     from qts.core.ids import AccountId, CorrelationId, StrategyId
@@ -200,7 +201,7 @@ def test_execution_actor_rejects_market_data_messages() -> None:
         execution_adapter=_simulated_execution_adapter(),
     )
 
-    with pytest.raises(TypeError, match="unsupported execution message"):
+    with pytest.raises(ActorUnhandledMessageError, match="unsupported execution message"):
         actor.handle(
             Tick(
                 instrument_id=InstrumentId("EQUITY.US.NASDAQ.AAPL"),

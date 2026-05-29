@@ -159,6 +159,8 @@ def test_order_plan_builder_sizes_continuous_percent_target_with_target_market_p
         account_id=AccountId("acct-backtest"),
         bar=signal_bar,
         positions={},
+        account_equity=Decimal("100"),
+        multiplier=Decimal("1"),
     )
 
     assert len(plans) == 1

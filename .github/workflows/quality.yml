@@ -8,7 +8,9 @@ on:
       - master
 
 jobs:
-  python-quality:
+  pr-quality:
+    name: PR quality gate
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,8 +20,32 @@ jobs:
           python-version: "3.11"
       - run: uv sync --group dev
       - run: make format
+        name: format
       - run: make lint
+        name: lint
       - run: make guardrails
+        name: guardrails
       - run: make typecheck
+        name: typecheck
       - run: uv run pytest tests/quality/test_platform_freeze.py
+        name: platform-freeze
       - run: make test-unit
+        name: test-unit
+      - run: make test-integration
+        name: test-integration
+      - run: make test-anchor
+        name: test-anchor
+
+  master-check:
+    name: Master full check
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: uv sync --group dev
+      - run: make check
+        name: check

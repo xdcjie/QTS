@@ -14,6 +14,7 @@ from qts.execution.idempotency import FillIdempotencyStore
 from qts.portfolio.cash_book import CashBook
 from qts.portfolio.holdings import Holding, HoldingBook, PositionClosed
 from qts.runtime.actor import Actor
+from qts.runtime.actor_errors import ActorUnhandledMessageError
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,7 +109,7 @@ class AccountActor(Actor):
         if isinstance(message, ApplyFill):
             self._apply_fill(message)
             return
-        raise TypeError(f"unsupported account message: {type(message).__name__}")
+        raise ActorUnhandledMessageError(f"unsupported account message: {type(message).__name__}")
 
     def snapshot(self) -> AccountSnapshot:
         """Return current account snapshot."""

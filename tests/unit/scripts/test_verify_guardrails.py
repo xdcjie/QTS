@@ -1155,7 +1155,7 @@ def test_guardrails_reject_vwap_research_runner_scripts(tmp_path: Path) -> None:
         '"""One-off VWAP research runner shortcut."""\n',
     )
 
-    assert _codes(root) == {"RESEARCH_RUN_SCRIPT"}
+    assert _codes(root) == {"RESEARCH_RUN_SCRIPT", "VWAP_ADHOC_RUNNER_FORBIDDEN"}
 
 
 def test_guardrails_reject_nested_vwap_research_runner_scripts(tmp_path: Path) -> None:
@@ -1166,7 +1166,7 @@ def test_guardrails_reject_nested_vwap_research_runner_scripts(tmp_path: Path) -
         '"""Nested one-off VWAP research runner shortcut."""\n',
     )
 
-    assert _codes(root) == {"RESEARCH_RUN_SCRIPT"}
+    assert _codes(root) == {"RESEARCH_RUN_SCRIPT", "VWAP_ADHOC_RUNNER_FORBIDDEN"}
 
 
 @pytest.mark.parametrize(
@@ -1188,7 +1188,78 @@ def test_guardrails_reject_vwap_optimizer_configs(
         "objective_metric: sharpe_ratio\n",
     )
 
-    assert _codes(root) == {"VWAP_OPTIMIZER_CONFIG"}
+    assert _codes(root) == {"VWAP_OPTIMIZER_CONFIG", "VWAP_ADHOC_RUNNER_FORBIDDEN"}
+
+
+def test_guardrails_reject_vwap_adhoc_runner_scripts(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "scripts/research/run_vwap_smoke.py",
+        '"""One-off VWAP research runner shortcut."""\n',
+    )
+
+    assert "VWAP_ADHOC_RUNNER_FORBIDDEN" in _codes(root)
+
+
+def test_guardrails_reject_nested_vwap_adhoc_runner_scripts(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "scripts/research/archive/run_vwap_smoke.py",
+        '"""Nested one-off VWAP research runner shortcut."""\n',
+    )
+
+    assert "VWAP_ADHOC_RUNNER_FORBIDDEN" in _codes(root)
+
+
+@pytest.mark.parametrize(
+    "relative_path",
+    [
+        "configs/optimizer/vwap_factor_search.yaml",
+        "configs/optimizer/gc_vwap_factor_search.yaml",
+        "configs/optimizer/vwap_factor_search.yml",
+    ],
+)
+def test_guardrails_reject_vwap_adhoc_optimizer_configs(
+    tmp_path: Path,
+    relative_path: str,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        relative_path,
+        "objective_metric: sharpe_ratio\n",
+    )
+
+    assert "VWAP_ADHOC_RUNNER_FORBIDDEN" in _codes(root)
+
+
+def test_guardrails_reject_vwap_adhoc_runner_and_optimizer_combined(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "scripts/research/run_vwap_alpha.py",
+        '"""One-off VWAP alpha runner."""\n',
+    )
+    _write(
+        root,
+        "configs/optimizer/vwap_alpha_search.yaml",
+        "objective_metric: sharpe_ratio\n",
+    )
+
+    codes = _codes(root)
+    assert "VWAP_ADHOC_RUNNER_FORBIDDEN" in codes
+    # Both files should be flagged by the unified rule.
+    violations = [v for v in run_guardrails(root) if v.code == "VWAP_ADHOC_RUNNER_FORBIDDEN"]
+    assert len(violations) == 2
+
+
+def test_guardrails_vwap_adhoc_runner_forbidden_passes_clean_repo(tmp_path: Path) -> None:
+    root = tmp_path
+    _write_platform_freeze_stub(root)
+
+    assert "VWAP_ADHOC_RUNNER_FORBIDDEN" not in _codes(root)
 
 
 def test_guardrails_allow_quickstart_optimizer_config(tmp_path: Path) -> None:
@@ -1849,6 +1920,7 @@ def test_guardrail_suite_includes_required_m0_hard_gate_rules() -> None:
     assert {
         "RESEARCH_RUN_SCRIPT",
         "VWAP_OPTIMIZER_CONFIG",
+        "VWAP_ADHOC_RUNNER_FORBIDDEN",
         "PRODUCTION_STRATEGY_IMPORT",
         "RESEARCH_WORKFLOW_RUNTIME_KEY",
         "EVIDENCE_BUNDLE_REQUIRED_FOR_PROMOTION",

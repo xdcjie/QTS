@@ -49,6 +49,7 @@ from qts.quality.rules import (
     TradeDiagnosticsRequiredForPaperRule,
     TransportAdapterImportRule,
     TransportCanonicalPathRule,
+    VwapAdhocRunnerForbiddenRule,
     VwapOptimizerConfigRule,
 )
 
@@ -94,6 +95,7 @@ class GuardrailSuite:
             CallerPresenceRule(repo_root=repo_root),
             ResearchRunScriptRule(),
             VwapOptimizerConfigRule(),
+            VwapAdhocRunnerForbiddenRule(),
             ProductionStrategyImportRule(),
             ResearchWorkflowRuntimeKeyRule(),
             EvidenceBundleRequiredForPromotionRule(),

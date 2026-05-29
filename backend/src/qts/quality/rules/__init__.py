@@ -14,6 +14,7 @@ from qts.quality.rules.flows import (
     ProductionStrategyImportRule,
     ResearchRunScriptRule,
     ResearchWorkflowRuntimeKeyRule,
+    VwapAdhocRunnerForbiddenRule,
     VwapOptimizerConfigRule,
 )
 from qts.quality.rules.imports import (
@@ -107,5 +108,6 @@ __all__ = [
     "TradeDiagnosticsRequiredForPaperRule",
     "TransportAdapterImportRule",
     "TransportCanonicalPathRule",
+    "VwapAdhocRunnerForbiddenRule",
     "VwapOptimizerConfigRule",
 ]

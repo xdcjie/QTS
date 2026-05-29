@@ -3,15 +3,12 @@ from __future__ import annotations
 from decimal import Decimal
 
 
-def test_execution_report_handler_routes_validated_fills_to_account_actor() -> None:
+def test_execution_report_handler_returns_validated_fills() -> None:
     from qts.core.ids import AccountId, InstrumentId, OrderId
     from qts.domain.orders import ExecutionReport, ExecutionReportStatus, OrderIntent, OrderSide
     from qts.domain.risk import RiskDecision
     from qts.execution.order_manager import OrderManager
-    from qts.runtime.actor_ref import ActorRef
-    from qts.runtime.actors.account_actor import ApplyFill
     from qts.runtime.execution_report_handler import ExecutionReportHandler
-    from qts.runtime.mailbox import Mailbox
 
     instrument_id = InstrumentId("FUT.CME.GC.202606")
     order_manager = OrderManager()
@@ -26,11 +23,8 @@ def test_execution_report_handler_routes_validated_fills_to_account_actor() -> N
         risk_decision=RiskDecision.approve(),
     )
     order_manager.mark_sent(OrderId("ord-001"), broker_order_id="broker-001")
-    account_mailbox = Mailbox()
     handler = ExecutionReportHandler(
         order_manager=order_manager,
-        account_ref=ActorRef(mailbox=account_mailbox),
-        multiplier_by_instrument={instrument_id: Decimal("100")},
         account_id=AccountId("acct-a"),
     )
 
@@ -46,11 +40,8 @@ def test_execution_report_handler_routes_validated_fills_to_account_actor() -> N
     )
 
     assert len(fills) == 1
-    fill_message = account_mailbox.get()
-    assert isinstance(fill_message, ApplyFill)
-    assert fill_message.fill == fills[0]
-    assert fill_message.currency == "USD"
-    assert fill_message.multiplier == Decimal("100")
+    assert fills[0].quantity == Decimal("2")
+    assert fills[0].price == Decimal("2300")
 
 
 def test_execution_report_handler_quarantines_unresolved_reports() -> None:
@@ -58,9 +49,7 @@ def test_execution_report_handler_quarantines_unresolved_reports() -> None:
     from qts.domain.orders import ExecutionReport, ExecutionReportStatus, OrderIntent, OrderSide
     from qts.domain.risk import RiskDecision
     from qts.execution.order_manager import OrderManager
-    from qts.runtime.actor_ref import ActorRef
     from qts.runtime.execution_report_handler import ExecutionReportHandler
-    from qts.runtime.mailbox import Mailbox
 
     instrument_id = InstrumentId("FUT.CME.GC.202606")
     order_manager = OrderManager()
@@ -77,7 +66,6 @@ def test_execution_report_handler_quarantines_unresolved_reports() -> None:
     order_manager.mark_sent(OrderId("ord-001"), broker_order_id="broker-001")
     handler = ExecutionReportHandler(
         order_manager=order_manager,
-        account_ref=ActorRef(mailbox=Mailbox()),
         account_id=AccountId("acct-a"),
     )
 
@@ -99,9 +87,7 @@ def test_execution_report_handler_quarantines_cross_account_fills() -> None:
     from qts.domain.orders import ExecutionReport, ExecutionReportStatus, OrderIntent, OrderSide
     from qts.domain.risk import RiskDecision
     from qts.execution.order_manager import OrderManager
-    from qts.runtime.actor_ref import ActorRef
     from qts.runtime.execution_report_handler import ExecutionReportHandler
-    from qts.runtime.mailbox import Mailbox
 
     instrument_id = InstrumentId("FUT.CME.GC.202606")
     order_manager = OrderManager()
@@ -116,10 +102,8 @@ def test_execution_report_handler_quarantines_cross_account_fills() -> None:
         risk_decision=RiskDecision.approve(),
     )
     order_manager.mark_sent(OrderId("ord-001"), broker_order_id="broker-001")
-    account_mailbox = Mailbox()
     handler = ExecutionReportHandler(
         order_manager=order_manager,
-        account_ref=ActorRef(mailbox=account_mailbox),
         account_id=AccountId("acct-b"),
     )
 
@@ -135,7 +119,6 @@ def test_execution_report_handler_quarantines_cross_account_fills() -> None:
     )
 
     assert fills == ()
-    assert account_mailbox.empty()
     assert handler.quarantined_reports == (
         ExecutionReport(
             report_id="rpt-cross-account",
@@ -146,3 +129,15 @@ def test_execution_report_handler_quarantines_cross_account_fills() -> None:
             fill_id="fill-001",
         ),
     )
+
+
+def test_execution_report_handler_does_not_import_apply_fill_or_account_actor() -> None:
+    """ExecutionReportHandler must not reference ApplyFill or AccountActor."""
+    import inspect
+
+    from qts.runtime.execution_report_handler import ExecutionReportHandler
+
+    source = inspect.getsource(ExecutionReportHandler)
+    assert "ApplyFill" not in source
+    assert "AccountActor" not in source
+    assert "account_ref" not in source

@@ -1,18 +1,16 @@
-from __future__ import annotations
-
 import ast
 from decimal import Decimal
 from pathlib import Path
 
 import pytest
+from qts.risk.config import RiskConfig, RiskRuleConfig, RiskRuleName
+from qts.risk.rule_registry import RiskRuleRegistry
 
 
 def test_risk_config_supports_account_and_product_rules() -> None:
-    from qts.risk import RiskConfig, RiskRuleConfig
-
     rule = RiskRuleConfig(
         rule_id="rule-001",
-        name="max_notional",
+        name=RiskRuleName.MAX_NOTIONAL,
         params={"max_notional": Decimal("100000")},
     )
     config = RiskConfig(
@@ -30,13 +28,12 @@ def test_risk_config_supports_account_and_product_rules() -> None:
 def test_risk_rule_registry_builds_rules_and_rejects_unknown_names() -> None:
     from qts.core.ids import InstrumentId
     from qts.domain.risk import OrderRiskRequest
-    from qts.risk import RiskRuleConfig, RiskRuleRegistry
 
     registry = RiskRuleRegistry()
     rule = registry.build(
         RiskRuleConfig(
             rule_id="rule-001",
-            name="max_notional",
+            name=RiskRuleName.MAX_NOTIONAL,
             params={"max_notional": Decimal("100")},
         )
     )
@@ -49,12 +46,18 @@ def test_risk_rule_registry_builds_rules_and_rejects_unknown_names() -> None:
             multiplier=Decimal("1"),
         )
     ).approved
-    with pytest.raises(KeyError, match="unknown risk rule"):
-        registry.build(RiskRuleConfig(rule_id="rule-002", name="unknown", params={}))
+    # Unknown rule names are now caught at config construction (ValueError)
+    # instead of registry dispatch (KeyError) -- a type-safety improvement.
+    with pytest.raises(ValueError, match="unknown"):
+        RiskRuleConfig(rule_id="rule-002", name="unknown", params={})  # type: ignore[arg-type]
+    # Verify the config.name field holds the typed enum after string coercion.
+    config = RiskRuleConfig(
+        rule_id="rule-003", name=RiskRuleName.MAX_NOTIONAL, params={"max_notional": Decimal("50")}
+    )
+    assert config.name is RiskRuleName.MAX_NOTIONAL
 
 
 def test_risk_rule_registry_builds_market_data_rules() -> None:
-    from qts.risk import RiskRuleConfig, RiskRuleRegistry
     from qts.risk.rules.market_data_freshness import MarketDataFreshnessRiskRule
     from qts.risk.rules.market_data_permission import MarketDataPermissionRiskRule
 
@@ -62,31 +65,33 @@ def test_risk_rule_registry_builds_market_data_rules() -> None:
 
     assert isinstance(
         registry.build(
-            RiskRuleConfig(rule_id="rule-md-permission", name="market_data_permission", params={})
+            RiskRuleConfig(
+                rule_id="rule-md-permission", name=RiskRuleName.MARKET_DATA_PERMISSION, params={}
+            )
         ),
         MarketDataPermissionRiskRule,
     )
     assert isinstance(
         registry.build(
-            RiskRuleConfig(rule_id="rule-md-freshness", name="market_data_freshness", params={})
+            RiskRuleConfig(
+                rule_id="rule-md-freshness", name=RiskRuleName.MARKET_DATA_FRESHNESS, params={}
+            )
         ),
         MarketDataFreshnessRiskRule,
     )
 
 
 def test_risk_rule_registry_builds_rules_in_declared_order() -> None:
-    from qts.risk import RiskRuleConfig, RiskRuleRegistry
-
     rules = RiskRuleRegistry().build_all(
         (
             RiskRuleConfig(
                 rule_id="rule-position",
-                name="position_limit",
+                name=RiskRuleName.POSITION_LIMIT,
                 params={"max_position": Decimal("100")},
             ),
             RiskRuleConfig(
                 rule_id="rule-notional",
-                name="max_notional",
+                name=RiskRuleName.MAX_NOTIONAL,
                 params={"max_notional": Decimal("1000")},
             ),
         )

@@ -61,7 +61,7 @@ def test_brokerage_model_manifest_serializes_auditable_assumptions() -> None:
 def test_brokerage_model_live_market_data_requirement_feeds_risk_engine() -> None:
     from qts.core.ids import InstrumentId
     from qts.domain.risk import MarketDataRiskContext, OrderRiskRequest
-    from qts.risk import RiskEngine
+    from qts.risk.risk_engine import RiskEngine
 
     model = brokerage_model_for_name("IBKR_EQUITY")
     engine = RiskEngine([]).with_brokerage_model(model)

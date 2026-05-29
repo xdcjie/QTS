@@ -277,14 +277,97 @@ def _iter_yaml_mapping_keys(node: Node) -> list[tuple[str, int]]:
     return keys
 
 
+class _VwapAdhocRunnerForbiddenRule:
+    """Reject VWAP ad-hoc runners and optimizer configs that bypass Research OS workflow.
+
+    Checks two patterns together:
+      - scripts/research/run_vwap_*.py (ad-hoc VWAP runner scripts)
+      - configs/optimizer/*vwap*.{yaml,yml} (VWAP optimizer configs outside workflow gates)
+
+    Both patterns are forbidden per docs/architecture/system_flows.md
+    FLOW-RESEARCH and FLOW-OPTIMIZER forbidden-shortcut rules. VWAP research
+    and optimizer work must enter through the canonical Research OS workflow
+    entrypoint with a reviewed configs/research/workflows/ YAML.
+    """
+
+    code = "VWAP_ADHOC_RUNNER_FORBIDDEN"
+
+    def check(
+        self,
+        *,
+        relative_path: Path,
+        qts_relative_path: Path,
+        tree: ast.AST,
+    ) -> list[GuardrailViolation]:
+        """Perform per-file check."""
+        del relative_path, qts_relative_path, tree
+        return []
+
+    def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
+        """Perform repository-wide check."""
+        violations: list[GuardrailViolation] = []
+
+        # Check for ad-hoc VWAP runner scripts.
+        scripts_path = repo_root / "scripts" / "research"
+        if scripts_path.exists():
+            for path in sorted(scripts_path.rglob("run_vwap_*.py")):
+                if path.is_file():
+                    violations.append(
+                        GuardrailViolation(
+                            code=self.code,
+                            path=str(path.relative_to(repo_root)),
+                            line=1,
+                            message=(
+                                "VWAP ad-hoc runner scripts must not bypass the Research OS "
+                                "workflow entrypoint"
+                            ),
+                            remediation=(
+                                "Move reusable behavior behind the research workflow boundary "
+                                "under configs/research/workflows/ and remove the one-off "
+                                "runner script."
+                            ),
+                            symbol=path.name,
+                        )
+                    )
+
+        # Check for VWAP optimizer configs outside workflow gates.
+        optimizer_path = repo_root / "configs" / "optimizer"
+        if optimizer_path.exists():
+            for path in sorted(optimizer_path.iterdir()):
+                if (
+                    path.is_file()
+                    and path.suffix.lower() in {".yaml", ".yml"}
+                    and "vwap" in path.stem.lower()
+                ):
+                    violations.append(
+                        GuardrailViolation(
+                            code=self.code,
+                            path=str(path.relative_to(repo_root)),
+                            line=1,
+                            message=(
+                                "VWAP optimizer configs must not bypass research workflow gates"
+                            ),
+                            remediation=(
+                                "Model VWAP research through configs/research/workflows and "
+                                "keep configs/optimizer for generic optimizer examples."
+                            ),
+                            symbol=path.name,
+                        )
+                    )
+
+        return violations
+
+
 ResearchRunScriptRule = _ResearchRunScriptRule
 ResearchWorkflowRuntimeKeyRule = _ResearchWorkflowRuntimeKeyRule
 ProductionStrategyImportRule = _ProductionStrategyImportRule
 VwapOptimizerConfigRule = _VwapOptimizerConfigRule
+VwapAdhocRunnerForbiddenRule = _VwapAdhocRunnerForbiddenRule
 
 __all__ = [
     "ResearchRunScriptRule",
     "ResearchWorkflowRuntimeKeyRule",
     "ProductionStrategyImportRule",
     "VwapOptimizerConfigRule",
+    "VwapAdhocRunnerForbiddenRule",
 ]

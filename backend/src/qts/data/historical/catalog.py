@@ -176,9 +176,11 @@ class HistoricalCatalog:
         historical_data_config: HistoricalMarketDataConfig,
     ) -> bool:
         normalized_root = HistoricalDatasetConfig.normalize_root(root)
-        return historical_data_config.catalog(config.catalog_name).datasets[
-            normalized_root
-        ].requires_chain
+        return (
+            historical_data_config.catalog(config.catalog_name)
+            .datasets[normalized_root]
+            .requires_chain
+        )
 
     @staticmethod
     def _chain_path_exists(

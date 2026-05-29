@@ -21,7 +21,9 @@ from qts.domain.orders import (
 from qts.domain.risk import RiskDecision
 from qts.execution.order_manager import OrderManager
 from qts.runtime.actor import Actor
+from qts.runtime.actor_errors import ActorUnhandledMessageError
 from qts.runtime.actor_ref import ActorRef
+from qts.runtime.actors.account_actor import ApplyFill
 from qts.runtime.actors.execution_actor import OrderCancelRequest, OrderExecutionRequest
 from qts.runtime.execution_report_handler import ExecutionReportHandler
 from qts.runtime.order_route_metadata import OrderRouteMetadata
@@ -163,15 +165,17 @@ class OrderManagerActor(Actor):
         account_ref: ActorRef,
         account_id: AccountId | None = None,
         multiplier_by_instrument: Mapping[InstrumentId, Decimal] | None = None,
+        currency: str = "USD",
     ) -> None:
         """Perform __init__."""
         self._account_id = account_id
         self._manager = OrderManager()
         self._execution_ref = execution_ref
+        self._account_ref = account_ref
+        self._multiplier_by_instrument = dict(multiplier_by_instrument or {})
+        self._currency = currency
         self._execution_report_handler = ExecutionReportHandler(
             order_manager=self._manager,
-            account_ref=account_ref,
-            multiplier_by_instrument=multiplier_by_instrument,
             account_id=account_id,
         )
         self._fills_list: list[OrderFill] = []
@@ -211,7 +215,9 @@ class OrderManagerActor(Actor):
         if isinstance(message, CompactForStreaming):
             self._compact_for_streaming(message.order_ids)
             return
-        raise TypeError(f"unsupported order manager message: {type(message).__name__}")
+        raise ActorUnhandledMessageError(
+            f"unsupported order manager message: {type(message).__name__}"
+        )
 
     def get_order(self, order_id: OrderId) -> Order:
         """Return order by ID."""
@@ -300,11 +306,21 @@ class OrderManagerActor(Actor):
             raise ValueError("replace route metadata does not match submitted order")
         if self._account_id is not None and message.account_id != self._account_id:
             raise ValueError("replace account_id does not match OrderManagerActor account_id")
-        raise NotImplementedError("replace order execution is not implemented")
+        raise RuntimeError("replace order is not supported: broker supports_replace is False")
 
     def _handle_report(self, message: ExecutionReport) -> None:
-        """Perform _handle_report."""
-        self._fills_list.extend(self._execution_report_handler.handle(message))
+        """Process execution report and route fills to the account actor."""
+        fills = self._execution_report_handler.handle(message)
+        for fill in fills:
+            self._account_ref.tell(
+                ApplyFill(
+                    fill=fill,
+                    currency=self._currency,
+                    multiplier=self._multiplier_by_instrument.get(fill.instrument_id, Decimal("1")),
+                    fill_time=message.fill_time,
+                )
+            )
+        self._fills_list.extend(fills)
 
 
 __all__ = [

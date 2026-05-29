@@ -22,6 +22,7 @@ from qts.data.subscriptions import (
 )
 from qts.domain.market_data import Bar, Quote, Tick
 from qts.runtime.actor import Actor
+from qts.runtime.actor_errors import ActorUnhandledMessageError
 from qts.runtime.actor_ref import ActorRef
 
 MarketDataPayload = Bar | Quote | Tick
@@ -101,7 +102,9 @@ class MarketDataActor(Actor):
                 return
             self._publish(message.payload)
             return
-        raise TypeError(f"unsupported market data message: {type(message).__name__}")
+        raise ActorUnhandledMessageError(
+            f"unsupported market data message: {type(message).__name__}"
+        )
 
     @property
     def logical_subscription_count(self) -> int:

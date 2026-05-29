@@ -168,6 +168,31 @@ class FutureRollSelection:
             raise ValueError("source_symbol must not be empty")
 
 
+_MAX_DEFERRED_OFFSET = 3
+
+
+class MissingExecutionPriceError(ValueError):
+    """Structured exception for missing roll execution price."""
+
+    instrument_id: InstrumentId
+    as_of: datetime
+    context: str
+
+    def __init__(
+        self,
+        *,
+        instrument_id: InstrumentId,
+        as_of: datetime,
+        context: str,
+    ) -> None:
+        self.instrument_id = instrument_id
+        self.as_of = as_of
+        self.context = context
+        super().__init__(
+            f"missing roll execution price for {instrument_id} at {as_of.isoformat()}: {context}"
+        )
+
+
 class FutureRollRegistry:
     """Resolve continuous futures to concrete contracts over time."""
 
@@ -179,6 +204,9 @@ class FutureRollRegistry:
         self._selections_by_continuous: dict[InstrumentId, list[FutureRollSelection]] = {}
         self._selection_times_by_continuous: dict[InstrumentId, list[datetime]] = {}
         self._latest_prices_by_continuous: dict[InstrumentId, dict[InstrumentId, Decimal]] = {}
+        self._exchange_by_root: dict[str, str] = {}
+        self._front_by_deferred: dict[InstrumentId, InstrumentId] = {}
+        self._offset_by_deferred: dict[InstrumentId, int] = {}
 
     def register_root(
         self,
@@ -187,34 +215,71 @@ class FutureRollRegistry:
         exchange: str,
         contracts: tuple[InstrumentId, ...],
     ) -> InstrumentId:
-        """Perform register_root."""
+        """Register a root symbol with its exchange and ordered contracts.
+
+        Also registers deferred continuous IDs for offsets 1 through
+        min(len(contracts) - 1, _MAX_DEFERRED_OFFSET).
+        """
         root = self._normalize_root(root_symbol)
         if not exchange.strip():
             raise ValueError("exchange must not be empty")
         unique_contracts = tuple(dict.fromkeys(contracts))
         if not unique_contracts:
             raise ValueError("contracts must not be empty")
-        continuous_id = InstrumentId(f"CONTINUOUS_FUTURE.{exchange.strip().upper()}.{root}")
-        self._continuous_by_root[root] = continuous_id
-        self._root_by_continuous[continuous_id] = root
-        self._contracts_by_continuous[continuous_id] = unique_contracts
-        self._selections_by_continuous.setdefault(continuous_id, [])
-        self._selection_times_by_continuous.setdefault(continuous_id, [])
-        self._latest_prices_by_continuous.setdefault(continuous_id, {})
-        return continuous_id
+        exchange_clean = exchange.strip().upper()
+        self._exchange_by_root[root] = exchange_clean
+        front_id = InstrumentId(f"CONTINUOUS_FUTURE.{exchange_clean}.{root}")
+        self._continuous_by_root[root] = front_id
+        self._root_by_continuous[front_id] = root
+        self._contracts_by_continuous[front_id] = unique_contracts
+        self._selections_by_continuous.setdefault(front_id, [])
+        self._selection_times_by_continuous.setdefault(front_id, [])
+        self._latest_prices_by_continuous.setdefault(front_id, {})
+        max_deferred = min(len(unique_contracts) - 1, _MAX_DEFERRED_OFFSET)
+        for offset in range(1, max_deferred + 1):
+            deferred_id = InstrumentId(f"CONTINUOUS_FUTURE.{exchange_clean}.{root}.M{offset + 1}")
+            self._root_by_continuous[deferred_id] = root
+            self._contracts_by_continuous[deferred_id] = unique_contracts
+            self._front_by_deferred[deferred_id] = front_id
+            self._offset_by_deferred[deferred_id] = offset
+        return front_id
 
     def continuous_instrument_id(self, root_symbol: str, *, offset: int = 0) -> InstrumentId:
-        """Perform continuous_instrument_id."""
-        if offset != 0:
-            raise ValueError("only front continuous futures are supported")
+        """Return the continuous InstrumentId for a root at the given offset.
+
+        offset=0 returns the front continuous ID (M1).
+        offset>0 returns a deferred continuous ID (M{offset+1}).
+        offset<0 raises ValueError.
+        """
+        if offset < 0:
+            raise ValueError("offset must be non-negative")
         root = self._normalize_root(root_symbol)
         try:
-            return self._continuous_by_root[root]
+            front_id = self._continuous_by_root[root]
         except KeyError as exc:
             raise KeyError(f"missing future roll root: {root_symbol}") from exc
+        if offset == 0:
+            return front_id
+        contracts = self._contracts_by_continuous[front_id]
+        max_offset = min(len(contracts) - 1, _MAX_DEFERRED_OFFSET)
+        if offset > max_offset:
+            raise ValueError(
+                f"offset {offset} exceeds available deferred contracts "
+                f"for {root_symbol} (max offset: {max_offset})"
+            )
+        exchange = self._exchange_by_root[root]
+        return InstrumentId(f"CONTINUOUS_FUTURE.{exchange}.{root}.M{offset + 1}")
 
     def record_selection(self, selection: FutureRollSelection) -> None:
-        """Perform record_selection."""
+        """Record a roll selection against the front continuous future.
+
+        Deferred continuous IDs are not valid targets for selection recording.
+        """
+        if selection.continuous_instrument_id in self._front_by_deferred:
+            raise ValueError(
+                "selections must be recorded against the front continuous future, "
+                f"not a deferred reference: {selection.continuous_instrument_id}"
+            )
         if selection.continuous_instrument_id not in self._root_by_continuous:
             raise KeyError(f"unknown continuous future: {selection.continuous_instrument_id}")
         selections = self._selections_by_continuous[selection.continuous_instrument_id]
@@ -242,16 +307,41 @@ class FutureRollRegistry:
         as_of: datetime,
         offset: int = 0,
     ) -> InstrumentId:
-        """Perform resolve_contract."""
-        if offset != 0:
-            raise ValueError("only front continuous futures are supported")
+        """Resolve a continuous future reference to a concrete contract at as_of.
+
+        offset=0 returns the front (selected) contract.
+        offset>0 returns the Nth deferred contract after the front.
+        If *reference* is a deferred continuous ID, its implicit offset
+        is combined with the explicit *offset* parameter.
+        """
+        if offset < 0:
+            raise ValueError("offset must be non-negative")
         continuous_id = (
             reference
             if isinstance(reference, InstrumentId)
             else self.continuous_instrument_id(reference)
         )
-        selection = self._selection_at(continuous_id, as_of=as_of)
-        return selection.concrete_instrument_id
+        front_id = self._front_by_deferred.get(continuous_id, continuous_id)
+        effective_offset = offset + self._offset_by_deferred.get(continuous_id, 0)
+        selection = self._selection_at(front_id, as_of=as_of)
+        if effective_offset == 0:
+            return selection.concrete_instrument_id
+        contracts = self._contracts_by_continuous[front_id]
+        front_contract = selection.concrete_instrument_id
+        try:
+            front_index = contracts.index(front_contract)
+        except ValueError as exc:
+            raise ValueError(
+                f"front contract {front_contract} not found in registered contracts for {front_id}"
+            ) from exc
+        target_index = front_index + effective_offset
+        if target_index >= len(contracts):
+            raise ValueError(
+                f"effective offset {effective_offset} from front contract at index "
+                f"{front_index} exceeds available contracts "
+                f"(total: {len(contracts)})"
+            )
+        return contracts[target_index]
 
     def related_contracts(self, continuous_instrument_id: InstrumentId) -> tuple[InstrumentId, ...]:
         """Perform related_contracts."""
@@ -289,14 +379,17 @@ class FutureRollRegistry:
         *,
         as_of: datetime,
     ) -> Decimal:
-        """Perform execution_price."""
-        selection = self._selection_at(continuous_instrument_id, as_of=as_of)
+        """Return the recorded execution price for a concrete contract at a given time."""
+        front_id = self._front_by_deferred.get(continuous_instrument_id, continuous_instrument_id)
+        selection = self._selection_at(front_id, as_of=as_of)
         try:
             return selection.prices_by_instrument[concrete_instrument_id]
-        except KeyError as exc:
-            raise KeyError(
-                f"missing roll execution price for {concrete_instrument_id} at {as_of.isoformat()}"
-            ) from exc
+        except KeyError:
+            raise MissingExecutionPriceError(
+                instrument_id=concrete_instrument_id,
+                as_of=as_of,
+                context=f"no price recorded in selection for {continuous_instrument_id}",
+            ) from None
 
     def _selection_at(
         self,
@@ -330,7 +423,7 @@ __all__ = [
     "FutureContractCandidate",
     "FutureContractRollSpec",
     "FutureContractSelector",
-    "FutureRollRegistry",
     "FutureRollSelection",
     "HighestVolumeFutureContractSelector",
+    "MissingExecutionPriceError",
 ]
