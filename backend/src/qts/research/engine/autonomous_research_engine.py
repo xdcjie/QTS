@@ -5,9 +5,9 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, cast
@@ -1098,10 +1098,8 @@ class AutonomousResearchEngine:
             source_data_path=data_path,
             data_root=data_root,
         )
-        materialized_symbol = self._default_materialized_contract_symbol(
-            chain,
-            as_of=self._parse_timestamp(start),
-        )
+        contract_symbol_for = self._materialized_contract_symbol_resolver(chain)
+        materialized_symbol = contract_symbol_for(self._parse_timestamp(start))
         bars_dir = data_root / "data"
         bars_dir.mkdir(parents=True, exist_ok=True)
         target_csv = bars_dir / f"{root}.csv"
@@ -1112,6 +1110,7 @@ class AutonomousResearchEngine:
                 data_path,
                 target_csv,
                 symbol=materialized_symbol,
+                contract_symbol_for=contract_symbol_for,
                 window=window,
                 windows=windows,
             )
@@ -1120,6 +1119,7 @@ class AutonomousResearchEngine:
                 data_path,
                 target_csv,
                 symbol=materialized_symbol,
+                contract_symbol_for=contract_symbol_for,
                 max_rows=max_rows,
                 window=window,
                 windows=windows,
@@ -1189,11 +1189,17 @@ class AutonomousResearchEngine:
         )
 
     @staticmethod
-    def _default_materialized_contract_symbol(
+    def _materialized_contract_symbol_resolver(
         chain: HistoricalChain,
-        *,
-        as_of: datetime,
-    ) -> str:
+    ) -> Callable[[datetime], str]:
+        """Return a roll-aware contract-symbol resolver keyed by bar timestamp.
+
+        The continuous-future replay rolls between contracts using the chain's
+        roll schedule, so a synthetic single-symbol fixture loses bars once a
+        window crosses a roll boundary. Labelling each bar with the contract the
+        roll selector considers active at that bar's session keeps every
+        walk-forward window (train and out-of-sample) backed by real bars.
+        """
         selector = FirstNoticeDateFutureContractSelector(
             contracts=tuple(
                 FutureContractRollSpec(
@@ -1207,19 +1213,39 @@ class AutonomousResearchEngine:
             session_offset=ExchangeCalendarProvider(chain.trading_calendar).session_offset,
             active_months=chain.active_months,
         )
-        candidates = tuple(
-            FutureContractCandidate(
-                root_symbol=chain.root,
-                symbol=contract.symbol,
-                instrument_id=chain.instrument_id_for_symbol(contract.symbol),
-                as_of=as_of,
-                close=Decimal("1"),
-                volume=Decimal("1"),
-                session_date=as_of.date(),
+        cache: dict[date, str] = {}
+
+        def resolve(as_of: datetime) -> str:
+            session_date = as_of.date()
+            cached = cache.get(session_date)
+            if cached is not None:
+                return cached
+            candidates = tuple(
+                FutureContractCandidate(
+                    root_symbol=chain.root,
+                    symbol=contract.symbol,
+                    instrument_id=chain.instrument_id_for_symbol(contract.symbol),
+                    as_of=as_of,
+                    close=Decimal("1"),
+                    volume=Decimal("1"),
+                    session_date=session_date,
+                )
+                for contract in chain.contracts
             )
-            for contract in chain.contracts
-        )
-        return selector.select(candidates).symbol
+            symbol = selector.select(candidates).symbol
+            cache[session_date] = symbol
+            return symbol
+
+        return resolve
+
+    @classmethod
+    def _default_materialized_contract_symbol(
+        cls,
+        chain: HistoricalChain,
+        *,
+        as_of: datetime,
+    ) -> str:
+        return cls._materialized_contract_symbol_resolver(chain)(as_of)
 
     def _ensure_full_backtest_csv(
         self,
@@ -1227,6 +1253,7 @@ class AutonomousResearchEngine:
         target_path: Path,
         *,
         symbol: str,
+        contract_symbol_for: Callable[[datetime], str] | None = None,
         window: tuple[str, str] | None,
         windows: Sequence[tuple[str, str]] = (),
     ) -> None:
@@ -1234,6 +1261,7 @@ class AutonomousResearchEngine:
         source_stat = source_path.stat()
         expected_metadata = {
             "max_rows": None,
+            "roll_aware_symbols": contract_symbol_for is not None,
             "source_path": str(source_path),
             "source_size": source_stat.st_size,
             "source_mtime_ns": source_stat.st_mtime_ns,
@@ -1250,6 +1278,7 @@ class AutonomousResearchEngine:
             source_path,
             temp_path,
             symbol=symbol,
+            contract_symbol_for=contract_symbol_for,
             max_rows=None,
             window=window,
             windows=windows,
@@ -1263,6 +1292,7 @@ class AutonomousResearchEngine:
         target_path: Path,
         *,
         symbol: str,
+        contract_symbol_for: Callable[[datetime], str] | None = None,
         max_rows: int | None,
         window: tuple[str, str] | None = None,
         windows: Sequence[tuple[str, str]] = (),
@@ -1363,8 +1393,11 @@ class AutonomousResearchEngine:
                     parsed_windows,
                 ):
                     continue
+                bar_symbol = (
+                    symbol if contract_symbol_for is None else contract_symbol_for(timestamp_time)
+                )
                 target.write(
-                    f"{timestamp},33,1,{index},{close},{close},{close},{close},1,{symbol}\n"
+                    f"{timestamp},33,1,{index},{close},{close},{close},{close},1,{bar_symbol}\n"
                 )
                 emitted += 1
         if emitted == 0:

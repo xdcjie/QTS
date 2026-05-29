@@ -304,8 +304,9 @@ def write_campaign(
     max_family_trials: int | None = None,
     compute_budget_limit: int | None = None,
     active_correlation: float = 0.30,
-    data_mode: str = "fixture",
-    max_rows: int | None = 50,
+    data_mode: str = "full",
+    max_rows: int | None = None,
+    min_oos_months: int = 1,
     template_extra_lines: tuple[str, ...] = (),
 ) -> Path:
     config_dir = tmp_path / "campaign_inputs"
@@ -403,7 +404,7 @@ def write_campaign(
                 "  components:",
                 "    sharpe: 1.0",
                 "constraints:",
-                "  min_oos_months: 12",
+                f"  min_oos_months: {min_oos_months}",
                 "  min_oos_trade_count: 1",
                 "  min_profit_factor: 1.15",
                 "  max_drawdown: 0.25",
@@ -430,18 +431,31 @@ def write_campaign(
 
 def write_data_paths(tmp_path: Path) -> dict[str, Path]:
     data_path = tmp_path / "gc.csv"
-    data_path.write_text(
-        "\n".join(
-            ["timestamp,close"]
-            + [
-                f"2026-01-02T00:{minute:02d}:00+00:00,{price:.1f}"
-                for minute, price in enumerate(_profit_factor_fixture_prices(100))
-            ]
-            + [""]
-        ),
-        encoding="utf-8",
-    )
+    data_path.write_text(_multi_month_fixture_csv(base=100), encoding="utf-8")
     return {"GC": data_path}
+
+
+def _multi_month_fixture_csv(*, base: int, minutes: int = 92000) -> str:
+    """Build a multi-month 1m fixture as a contiguous repeating profitable cycle.
+
+    The bars are emitted as an unbroken 1-minute series so the data-quality gap
+    check sees no missing bars, while the ~2.1-month span crosses a futures
+    contract roll. Repeating the same profitable cycle gives the walk-forward
+    train and out-of-sample halves matching profitable cycles, so the
+    honestly-derived oos_months clears the 1-month intraday promotion bar and
+    walk-forward consistency stays positive.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    cycle = _profit_factor_fixture_prices(base)
+    start = datetime(2026, 1, 5, tzinfo=UTC)
+    rows = ["timestamp,close"]
+    rows.extend(
+        f"{(start + timedelta(minutes=offset)).isoformat()},{cycle[offset % len(cycle)]:.1f}"
+        for offset in range(minutes)
+    )
+    rows.append("")
+    return "\n".join(rows)
 
 
 def write_future_ohlcv_data_paths(tmp_path: Path) -> dict[str, Path]:

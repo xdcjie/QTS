@@ -999,7 +999,9 @@ class ResearchExperimentRunner:
         bundle verification can recompute the hash from a registered path.
         """
         manifest = dict(self._read_json_mapping(manifest_path))
-        artifact_hashes = dict(self._mapping(manifest.get("artifact_hashes", {}), "artifact_hashes"))
+        artifact_hashes = dict(
+            self._mapping(manifest.get("artifact_hashes", {}), "artifact_hashes")
+        )
         if artifact_name not in artifact_hashes:
             return
         stale_hash = artifact_hashes[artifact_name]

@@ -11,6 +11,10 @@ from qts.research.engine.autonomous_research_engine import (
 )
 from qts.research.planner import GenerationApprovalRecord
 
+from tests.unit.research.engine.test_autonomous_engine_trial_generation import (
+    _multi_month_fixture_csv,
+)
+
 
 def test_autonomous_engine_runs_two_bounded_generations_without_runtime_launch(
     tmp_path: Path,
@@ -89,33 +93,5 @@ def _write_data_paths(tmp_path: Path) -> dict[str, Path]:
 
 
 def _write_bars(path: Path, *, base: int) -> Path:
-    path.write_text(
-        "\n".join(
-            ["timestamp,close"]
-            + [
-                f"2026-01-02T00:{minute:02d}:00+00:00,{price:.1f}"
-                for minute, price in enumerate(_profit_factor_fixture_prices(base))
-            ]
-            + [""]
-        ),
-        encoding="utf-8",
-    )
+    path.write_text(_multi_month_fixture_csv(base=base), encoding="utf-8")
     return path
-
-
-def _profit_factor_fixture_prices(base: int) -> tuple[int, ...]:
-    return (
-        *((base,) * 15),
-        base + 1,
-        base,
-        base - 1,
-        *((base - 1,) * 15),
-        base,
-        base + 3,
-        base + 6,
-        base + 9,
-        base + 12,
-        base + 8,
-        base + 4,
-        *((base + 4,) * 10),
-    )
