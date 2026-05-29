@@ -21,9 +21,11 @@ from qts.strategy_sdk.indicators import (
 from qts.strategy_sdk.portfolio_construction import (
     ConfidenceWeightedSignalPortfolioConstruction,
     EqualWeightSignalPortfolioConstruction,
+    HorizonAwareSignalPortfolioConstruction,
     MagnitudeWeightedSignalPortfolioConstruction,
     PortfolioConstructionModel,
     RiskParitySignalPortfolioConstruction,
+    VolatilityTargetedSignalPortfolioConstruction,
 )
 from qts.strategy_sdk.portfolio_view import PortfolioPosition, PortfolioView
 from qts.strategy_sdk.signals import Signal, SignalDirection
@@ -50,8 +52,10 @@ __all__ = [
     "ConfidenceWeightedSignalPortfolioConstruction",
     "EqualWeightSignalPortfolioConstruction",
     "FactorFactory",
+    "HorizonAwareSignalPortfolioConstruction",
     "MagnitudeWeightedSignalPortfolioConstruction",
     "RiskParitySignalPortfolioConstruction",
+    "VolatilityTargetedSignalPortfolioConstruction",
     "Fill",
     "FundamentalTopNSelector",
     "FundamentalUniverseRow",

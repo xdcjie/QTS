@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import timedelta
 from decimal import Decimal
 from typing import Protocol
 
@@ -294,10 +295,132 @@ class RiskParitySignalPortfolioConstruction:
         return _build_targets(flat_targets, final_weights)
 
 
+@dataclass(frozen=True, slots=True)
+class HorizonAwareSignalPortfolioConstruction:
+    """Scale magnitude-weighted targets by each signal's forecast horizon.
+
+    A shorter forecast horizon means the signal is expected to be acted on for
+    less time, so it earns a smaller share of risk budget. Each directional
+    signal's raw weight is its magnitude scaled by a horizon factor:
+
+        horizon_factor = min(1, horizon / reference_horizon)
+
+    so a horizon at or beyond ``reference_horizon`` keeps full size while shorter
+    horizons are linearly down-weighted toward zero. Weights are normalized so
+    total gross equals target_gross_exposure, then capped at max_single_weight.
+    """
+
+    reference_horizon: timedelta = timedelta(days=1)
+    target_gross_exposure: Decimal = Decimal("1.0")
+    max_single_weight: Decimal = Decimal("0.25")
+
+    def __post_init__(self) -> None:
+        """Validate portfolio construction configuration."""
+        object.__setattr__(self, "target_gross_exposure", Decimal(str(self.target_gross_exposure)))
+        object.__setattr__(self, "max_single_weight", Decimal(str(self.max_single_weight)))
+        if self.reference_horizon <= timedelta(0):
+            raise ValueError("reference_horizon must be positive")
+        if not self.target_gross_exposure.is_finite() or self.target_gross_exposure <= Decimal("0"):
+            raise ValueError("target_gross_exposure must be finite and positive")
+        if not self.max_single_weight.is_finite() or self.max_single_weight <= Decimal("0"):
+            raise ValueError("max_single_weight must be finite and positive")
+
+    def construct(self, signals: tuple[Signal, ...]) -> tuple[TargetIntent, ...]:
+        """Convert UP/DOWN/FLAT signals into horizon-scaled percent or close intents."""
+        directional = tuple(
+            signal for signal in signals if signal.direction != SignalDirection.FLAT
+        )
+        flat_targets = _flat_close_targets(signals)
+
+        if not directional:
+            return flat_targets
+
+        raw_weights: dict[Signal, Decimal] = {}
+        for signal in directional:
+            mag = signal.magnitude if signal.magnitude is not None else Decimal("1")
+            direction_sign = (
+                Decimal("1") if signal.direction == SignalDirection.UP else Decimal("-1")
+            )
+            raw_weights[signal] = direction_sign * abs(mag) * self._horizon_factor(signal)
+
+        total_raw = sum(abs(w) for w in raw_weights.values())
+        if total_raw == Decimal("0"):
+            return flat_targets
+
+        norm_factor = self.target_gross_exposure / total_raw
+        normalized = {signal: weight * norm_factor for signal, weight in raw_weights.items()}
+
+        final_weights = _apply_weight_cap(normalized, self.max_single_weight)
+        return _build_targets(flat_targets, final_weights)
+
+    def _horizon_factor(self, signal: Signal) -> Decimal:
+        """Return the linear horizon down-weight in (0, 1]."""
+        ratio = Decimal(signal.horizon.total_seconds()) / Decimal(
+            self.reference_horizon.total_seconds()
+        )
+        return min(Decimal("1"), ratio)
+
+
+@dataclass(frozen=True, slots=True)
+class VolatilityTargetedSignalPortfolioConstruction:
+    """Size positions inversely to forecast volatility to target unit risk.
+
+    For each directional signal with a positive ``volatility`` (a per-asset
+    realized/forecast standard deviation), the raw position weight is
+
+        weight = direction_sign * (target_volatility / signal.volatility)
+
+    so a higher-volatility asset receives a proportionally smaller position and
+    every position carries roughly the same risk contribution. This is a true
+    volatility target, not the confidence proxy used by RiskParity. Signals that
+    do not carry a volatility are skipped. Weights are then capped at
+    max_single_weight; gross is not renormalized so the realized portfolio
+    volatility tracks ``target_volatility`` per position rather than a fixed
+    gross.
+    """
+
+    target_volatility: Decimal = Decimal("0.1")
+    max_single_weight: Decimal = Decimal("0.25")
+
+    def __post_init__(self) -> None:
+        """Validate portfolio construction configuration."""
+        object.__setattr__(self, "target_volatility", Decimal(str(self.target_volatility)))
+        object.__setattr__(self, "max_single_weight", Decimal(str(self.max_single_weight)))
+        if not self.target_volatility.is_finite() or self.target_volatility <= Decimal("0"):
+            raise ValueError("target_volatility must be finite and positive")
+        if not self.max_single_weight.is_finite() or self.max_single_weight <= Decimal("0"):
+            raise ValueError("max_single_weight must be finite and positive")
+
+    def construct(self, signals: tuple[Signal, ...]) -> tuple[TargetIntent, ...]:
+        """Convert UP/DOWN/FLAT signals into vol-targeted percent or close intents."""
+        directional = tuple(
+            signal
+            for signal in signals
+            if signal.direction != SignalDirection.FLAT and signal.volatility is not None
+        )
+        flat_targets = _flat_close_targets(signals)
+
+        if not directional:
+            return flat_targets
+
+        raw_weights: dict[Signal, Decimal] = {}
+        for signal in directional:
+            assert signal.volatility is not None  # filtered above
+            direction_sign = (
+                Decimal("1") if signal.direction == SignalDirection.UP else Decimal("-1")
+            )
+            raw_weights[signal] = direction_sign * (self.target_volatility / signal.volatility)
+
+        final_weights = _apply_weight_cap(raw_weights, self.max_single_weight)
+        return _build_targets(flat_targets, final_weights)
+
+
 __all__ = [
     "ConfidenceWeightedSignalPortfolioConstruction",
     "EqualWeightSignalPortfolioConstruction",
+    "HorizonAwareSignalPortfolioConstruction",
     "MagnitudeWeightedSignalPortfolioConstruction",
     "PortfolioConstructionModel",
     "RiskParitySignalPortfolioConstruction",
+    "VolatilityTargetedSignalPortfolioConstruction",
 ]
