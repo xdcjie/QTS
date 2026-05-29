@@ -350,6 +350,20 @@ class FutureRollRegistry:
         except KeyError as exc:
             raise KeyError(f"unknown continuous future: {continuous_instrument_id}") from exc
 
+    def front_continuous_id(self, continuous_instrument_id: InstrumentId) -> InstrumentId:
+        """Resolve a (possibly deferred) continuous ID to its front continuous ID."""
+        return self._front_by_deferred.get(continuous_instrument_id, continuous_instrument_id)
+
+    def selection_at(
+        self,
+        continuous_instrument_id: InstrumentId,
+        *,
+        as_of: datetime,
+    ) -> FutureRollSelection:
+        """Return the roll selection in effect at ``as_of`` for a continuous future."""
+        front_id = self.front_continuous_id(continuous_instrument_id)
+        return self._selection_at(front_id, as_of=as_of)
+
     def selection_history(
         self,
         continuous_instrument_id: InstrumentId | str | None = None,
