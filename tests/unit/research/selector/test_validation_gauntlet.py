@@ -36,6 +36,7 @@ def test_validation_gauntlet_accepts_candidate_and_writes_audit_record(tmp_path:
         "cost_stress",
         "correlation",
         "capacity",
+        "no_lookahead",
     ]
 
     records = audit_log.list()
@@ -102,6 +103,16 @@ def test_validation_gauntlet_rejects_failed_replay_or_lookahead_status() -> None
 
     lookahead_failure = _candidate()
     _set_path(lookahead_failure, ("validation", "no_lookahead", "passed"), False)
+    _set_path(
+        lookahead_failure,
+        ("validation", "no_lookahead", "timing_validation", "passed"),
+        False,
+    )
+    _set_path(
+        lookahead_failure,
+        ("validation", "no_lookahead", "timing_validation", "violations"),
+        [{"code": "test_violation", "message": "test"}],
+    )
 
     lookahead_result = _gauntlet().validate(lookahead_failure)
 
@@ -158,7 +169,22 @@ def _candidate() -> dict[str, Any]:
                 "turnover": 1.8,
             },
             "deterministic_replay": {"passed": True, "evidence_id": "replay-001"},
-            "no_lookahead": {"passed": True, "evidence_id": "lookahead-001"},
+            "no_lookahead": {
+                "passed": True,
+                "evidence_id": "lookahead-001",
+                "string_scan_only": False,
+                "string_scan_violations": [],
+                "violations": [],
+                "timing_validation": {
+                    "passed": True,
+                    "checked_features": ["momentum_10"],
+                    "label_horizon": 5,
+                    "max_feature_timestamp": "2025-12-01",
+                    "min_label_cutoff": "2026-06-01",
+                    "violations": [],
+                    "window_overlaps": [],
+                },
+            },
         },
     }
 
