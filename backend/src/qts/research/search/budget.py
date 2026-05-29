@@ -335,6 +335,40 @@ class TrialBudgetManager:
         self.ledger.append_decision(payload, created_at=timestamp)
         return decision
 
+    def accepted_trial_count(
+        self,
+        campaign_id: str,
+        *,
+        strategy_family: str | None = None,
+        factor_family: str | None = None,
+    ) -> int:
+        """Return the number of trials that consumed budget for a campaign.
+
+        This is the multiple-testing trial count ``N`` threaded from the search
+        budget into candidate selection: every accepted trial is one configuration
+        tested. Optionally narrow the count to a strategy or factor family so the
+        multiplicity correction can be applied per family. ``campaign_id`` is
+        required.
+        """
+
+        resolved_campaign = self._required_text(campaign_id, "campaign_id")
+        payloads = self._accepted_payloads(resolved_campaign)
+        if strategy_family is not None:
+            payloads = tuple(
+                payload
+                for payload in payloads
+                if payload.get("strategy_family")
+                == self._required_text(strategy_family, "strategy_family")
+            )
+        if factor_family is not None:
+            payloads = tuple(
+                payload
+                for payload in payloads
+                if payload.get("factor_family")
+                == self._required_text(factor_family, "factor_family")
+            )
+        return len(payloads)
+
     def _decide(self, payload: Mapping[str, Any]) -> TrialBudgetDecision:
         accepted_payloads = self._accepted_payloads(str(payload["campaign_id"]))
         campaign_count = len(accepted_payloads)

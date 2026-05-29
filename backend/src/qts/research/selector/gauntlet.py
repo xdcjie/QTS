@@ -449,9 +449,7 @@ class NoLookaheadGate:
                 reasons.append("no_lookahead: timing protocol validation failed")
 
             timing_violations = timing_validation.get("violations")
-            if isinstance(timing_violations, Sequence) and not isinstance(
-                timing_violations, str
-            ):
+            if isinstance(timing_violations, Sequence) and not isinstance(timing_violations, str):
                 for violation in timing_violations:
                     if isinstance(violation, Mapping):
                         code = violation.get("code", "")
@@ -460,9 +458,7 @@ class NoLookaheadGate:
                             reasons.append(f"no_lookahead: {code}: {msg}")
 
             window_overlaps = timing_validation.get("window_overlaps")
-            if isinstance(window_overlaps, Sequence) and not isinstance(
-                window_overlaps, str
-            ):
+            if isinstance(window_overlaps, Sequence) and not isinstance(window_overlaps, str):
                 for overlap in window_overlaps:
                     if isinstance(overlap, str) and overlap.strip():
                         reasons.append(f"no_lookahead: window overlap: {overlap}")
@@ -474,12 +470,8 @@ class NoLookaheadGate:
             "string_scan_only": string_scan_only is True,
         }
         if isinstance(timing_validation, Mapping):
-            gate_evidence["timing_checked_features"] = timing_validation.get(
-                "checked_features", []
-            )
-            gate_evidence["timing_violation_count"] = len(
-                timing_validation.get("violations", [])
-            )
+            gate_evidence["timing_checked_features"] = timing_validation.get("checked_features", [])
+            gate_evidence["timing_violation_count"] = len(timing_validation.get("violations", []))
 
         return GateDecision(
             gate_name="no_lookahead",
@@ -495,6 +487,112 @@ class NoLookaheadGate:
             return {}
         no_lookahead = validation.get("no_lookahead")
         return no_lookahead if isinstance(no_lookahead, Mapping) else {}
+
+
+@dataclass(frozen=True, slots=True)
+class DeflatedSharpeGate:
+    """Reject candidates whose Deflated Sharpe Ratio falls below the threshold.
+
+    The Deflated Sharpe Ratio (Bailey & Lopez de Prado 2014) is the probability
+    that the candidate's true Sharpe exceeds the expected maximum Sharpe of the
+    ``N`` trials run in its family. Because the deflation benchmark grows with the
+    trial count, a candidate with a high *raw* Sharpe but a poor *deflated* Sharpe
+    fails this gate. Evidence is read from the multiplicity-adjustment section that
+    ``CandidateSelector`` records on each candidate.
+    """
+
+    min_deflated_sharpe_ratio: float = 0.95
+
+    def __post_init__(self) -> None:
+        if not 0.0 <= self.min_deflated_sharpe_ratio <= 1.0:
+            raise ValueError("min_deflated_sharpe_ratio must be in [0, 1]")
+
+    def evaluate(self, candidate: Mapping[str, Any]) -> GateDecision:
+        """Return the deflated-Sharpe gate decision."""
+
+        evidence = _multiplicity_evidence(candidate)
+        if not evidence:
+            return GateDecision(
+                gate_name="deflated_sharpe",
+                accepted=False,
+                reasons=("deflated_sharpe: multiplicity adjustment evidence missing",),
+                evidence={},
+            )
+        dsr = WalkForwardGate._number(evidence.get("deflated_sharpe_ratio"))
+        trial_count = WalkForwardGate._number(evidence.get("trial_count"))
+        reasons: list[str] = []
+        if dsr is None:
+            reasons.append("deflated_sharpe: deflated_sharpe_ratio missing")
+        elif dsr < self.min_deflated_sharpe_ratio:
+            reasons.append(
+                f"deflated_sharpe: deflated_sharpe_ratio {dsr:g} "
+                f"below {self.min_deflated_sharpe_ratio:g}"
+            )
+        return GateDecision(
+            gate_name="deflated_sharpe",
+            accepted=not reasons,
+            reasons=tuple(reasons),
+            evidence={
+                "deflated_sharpe_ratio": dsr,
+                "expected_maximum_sharpe": WalkForwardGate._number(
+                    evidence.get("expected_maximum_sharpe")
+                ),
+                "min_deflated_sharpe_ratio": self.min_deflated_sharpe_ratio,
+                "observed_sharpe": WalkForwardGate._number(evidence.get("observed_sharpe")),
+                "trial_count": int(trial_count) if trial_count is not None else None,
+            },
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class PBOGate:
+    """Reject candidates whose Probability of Backtest Overfitting is too high.
+
+    PBO is estimated by Combinatorially-Symmetric Cross-Validation (Bailey,
+    Borwein, Lopez de Prado & Zhu 2017): the frequency with which the in-sample
+    best configuration under-performs the median out of sample. Evidence is read
+    from the multiplicity-adjustment section recorded by ``CandidateSelector``.
+    """
+
+    max_pbo: float = 0.50
+
+    def __post_init__(self) -> None:
+        if not 0.0 <= self.max_pbo <= 1.0:
+            raise ValueError("max_pbo must be in [0, 1]")
+
+    def evaluate(self, candidate: Mapping[str, Any]) -> GateDecision:
+        """Return the PBO gate decision."""
+
+        evidence = _multiplicity_evidence(candidate)
+        if not evidence:
+            return GateDecision(
+                gate_name="pbo",
+                accepted=False,
+                reasons=("pbo: multiplicity adjustment evidence missing",),
+                evidence={},
+            )
+        pbo = WalkForwardGate._number(evidence.get("probability_of_backtest_overfitting"))
+        reasons: list[str] = []
+        if pbo is None:
+            reasons.append("pbo: probability_of_backtest_overfitting missing")
+        elif pbo > self.max_pbo:
+            reasons.append(
+                f"pbo: probability_of_backtest_overfitting {pbo:g} exceeds {self.max_pbo:g}"
+            )
+        return GateDecision(
+            gate_name="pbo",
+            accepted=not reasons,
+            reasons=tuple(reasons),
+            evidence={
+                "max_pbo": self.max_pbo,
+                "probability_of_backtest_overfitting": pbo,
+            },
+        )
+
+
+def _multiplicity_evidence(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
+    adjustment = candidate.get("multiplicity_adjustment")
+    return adjustment if isinstance(adjustment, Mapping) else {}
 
 
 @dataclass(frozen=True, slots=True)
@@ -571,6 +669,8 @@ class ValidationGauntlet:
         correlation_gate: CorrelationGate | None = None,
         capacity_gate: CapacityGate | None = None,
         no_lookahead_gate: NoLookaheadGate | None = None,
+        deflated_sharpe_gate: DeflatedSharpeGate | None = None,
+        pbo_gate: PBOGate | None = None,
         require_artifacts: bool = False,
     ) -> None:
         self.walk_forward_gate = walk_forward_gate or WalkForwardGate()
@@ -582,6 +682,11 @@ class ValidationGauntlet:
         self.correlation_gate = correlation_gate or CorrelationGate(max_active_correlation=0.80)
         self.capacity_gate = capacity_gate or CapacityGate()
         self.no_lookahead_gate = no_lookahead_gate or NoLookaheadGate()
+        # Multiplicity gates are opt-in: they run only when a multiplicity-aware
+        # gauntlet is constructed with them, so callers that have not yet attached
+        # multiplicity-adjustment evidence keep their existing gate set.
+        self.deflated_sharpe_gate = deflated_sharpe_gate
+        self.pbo_gate = pbo_gate
         self.require_artifacts = require_artifacts
 
     def validate(
@@ -600,14 +705,21 @@ class ValidationGauntlet:
                 normalized_candidate
             )
         candidate_id = self._candidate_id(normalized_candidate)
-        gate_decisions = (
+        decisions: list[GateDecision] = [
             self.walk_forward_gate.evaluate(normalized_candidate),
             self.failure_window_gate.evaluate(normalized_candidate),
             self.cost_stress_gate.evaluate(normalized_candidate),
             self.correlation_gate.evaluate(normalized_candidate),
             self.capacity_gate.evaluate(normalized_candidate),
-            self.no_lookahead_gate.evaluate(normalized_candidate),
-        )
+        ]
+        if self.deflated_sharpe_gate is not None:
+            decisions.append(self.deflated_sharpe_gate.evaluate(normalized_candidate))
+        if self.pbo_gate is not None:
+            decisions.append(self.pbo_gate.evaluate(normalized_candidate))
+        # ``no_lookahead`` is evaluated last so the status logic can read it as the
+        # final decision regardless of which optional gates are configured.
+        decisions.append(self.no_lookahead_gate.evaluate(normalized_candidate))
+        gate_decisions = tuple(decisions)
         status_reasons: list[str] = []
         deterministic_status = self._status(
             normalized_candidate,
@@ -622,8 +734,7 @@ class ValidationGauntlet:
         elif no_lookahead_decision.reasons:
             no_lookahead_status = "failed"
             status_reasons.extend(
-                reason for reason in no_lookahead_decision.reasons
-                if reason not in status_reasons
+                reason for reason in no_lookahead_decision.reasons if reason not in status_reasons
             )
         else:
             no_lookahead_status = "missing"
@@ -796,9 +907,11 @@ __all__ = [
     "CapacityGate",
     "CorrelationGate",
     "CostStressGate",
+    "DeflatedSharpeGate",
     "FailureWindowVetoGate",
     "GateDecision",
     "NoLookaheadGate",
+    "PBOGate",
     "ValidationGauntlet",
     "ValidationGauntletResult",
     "WalkForwardGate",
