@@ -31,6 +31,10 @@ from qts.research.artifact_graph import (
 from qts.research.audit_log import ResearchAuditLog
 from qts.research.campaign import ResearchCampaignConfig, ResearchCampaignFamily
 from qts.research.evidence_registry import EvidenceRegistry
+from qts.research.factory.discovery_mapper import (
+    FactorDefinitionDraftConstraints,
+    FactorDiscoveryDraftMapper,
+)
 from qts.research.factory.factor_definition import FactorDefinition
 from qts.research.factory.strategy_template import StrategyTemplate, StrategyVariantFactory
 from qts.research.idea_spec import IdeaSpec
@@ -880,7 +884,13 @@ class AutonomousResearchEngine:
         factor_payload = payload.get("factor_definition")
         if not isinstance(factor_payload, Mapping):
             raise ValueError(f"strategy template factor_definition is required: {path}")
-        factor_definition = FactorDefinition.from_payload(cast(Mapping[str, Any], factor_payload))
+        factor_definition = self._factor_definition_for_family(
+            run=run,
+            family=family,
+            template_payload=payload,
+            static_factor_payload=cast(Mapping[str, Any], factor_payload),
+            path=path,
+        )
         manifest_template = dict(self._mapping(payload.get("manifest_template", {}), "manifest"))
         backtest_pipeline = payload.get("backtest_pipeline")
         if backtest_pipeline is not None:
@@ -907,6 +917,48 @@ class AutonomousResearchEngine:
             ),
             manifest_template=manifest_template,
         )
+
+    def _factor_definition_for_family(
+        self,
+        *,
+        run: AutonomousResearchRun,
+        family: ResearchCampaignFamily,
+        template_payload: Mapping[str, Any],
+        static_factor_payload: Mapping[str, Any],
+        path: Path,
+    ) -> FactorDefinition:
+        """Resolve the family factor definition, mapping a discovered idea when present.
+
+        When the manifest template declares ``factor_discovery.idea_spec``, the
+        discovered idea is mapped to a controlled FactorDefinition draft through
+        ``FactorDiscoveryDraftMapper`` so a research idea actually drives the
+        generated candidates. Ideas the deterministic mapper cannot place fall
+        back to the static template definition, which always remains required.
+        """
+        idea_spec = self._template_idea_spec(template_payload, path=path)
+        if idea_spec is None:
+            return FactorDefinition.from_payload(static_factor_payload)
+        draft = FactorDiscoveryDraftMapper(
+            constraints=FactorDefinitionDraftConstraints(roots=run.universe)
+        ).draft_from_idea_spec(idea_spec)
+        if draft.needs_human_spec or draft.factor_definition is None:
+            return FactorDefinition.from_payload(static_factor_payload)
+        return draft.factor_definition
+
+    def _template_idea_spec(
+        self,
+        template_payload: Mapping[str, Any],
+        *,
+        path: Path,
+    ) -> IdeaSpec | None:
+        discovery_payload = template_payload.get("factor_discovery")
+        if discovery_payload is None:
+            return None
+        discovery = self._mapping(discovery_payload, "factor_discovery")
+        idea_payload = discovery.get("idea_spec")
+        if not isinstance(idea_payload, Mapping):
+            raise ValueError(f"strategy template factor_discovery.idea_spec is required: {path}")
+        return IdeaSpec.from_payload(cast(Mapping[str, Any], idea_payload))
 
     def _parameter_space_payload(self, search_space: SearchSpaceSpec) -> dict[str, Any]:
         payload: dict[str, Any] = {}

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
+from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -118,6 +120,7 @@ def test_full_backtest_data_materialization_reuses_shared_csv(
         max_rows: int | None,
         window: tuple[str, str] | None = None,
         windows: tuple[tuple[str, str], ...] = (),
+        contract_symbol_for: Callable[[datetime], str] | None = None,
     ) -> None:
         calls.append(target_path)
         original(
@@ -127,6 +130,7 @@ def test_full_backtest_data_materialization_reuses_shared_csv(
             max_rows=max_rows,
             window=window,
             windows=windows,
+            contract_symbol_for=contract_symbol_for,
         )
 
     monkeypatch.setattr(engine, "_materialize_backtest_csv", counted_materialize)
