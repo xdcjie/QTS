@@ -23,6 +23,10 @@ from qts.research.evidence_registry import EvidenceRegistry
 from qts.research.idea_spec import IdeaSpec
 from qts.research.optimizer.parameter_space import ParameterGrid, ParameterSpace
 from qts.research.optimizer.pipeline import BacktestPipelineJob, BacktestPipelineRunner
+from qts.research.orchestrator.validation_artifact_reader import (
+    ResearchMetricsFromValidationArtifacts,
+    ValidationArtifactReader,
+)
 from qts.research.reproducibility import ReproducibilitySnapshotV2
 
 _BACKTEST_PIPELINE_MODE = "backtest_pipeline"
@@ -462,6 +466,14 @@ class ResearchExperimentRunner:
             trial_dir / "workflow_summary.json",
             validation_artifact_paths,
         )
+        # Rewrite metrics with honest artifact-derived values now that
+        # validation artifacts exist on disk.
+        self._rewrite_metrics_with_validation_derivation(
+            metrics_path=trial_result.metrics_path,
+            trial_dir=trial_dir,
+            train_manifest=train_manifest,
+            test_manifest=test_manifest,
+        )
         return {name: str(path) for name, path in validation_artifact_paths.items()}
 
     def _run_trial(
@@ -780,6 +792,7 @@ class ResearchExperimentRunner:
             statistics=statistics_block,
             objective_metric=objective_metric,
             objective_value=result.objective_value,
+            trial_dir=trial_dir,
         )
         return _TrialExecutionArtifacts(
             metrics_payload={
@@ -811,6 +824,9 @@ class ResearchExperimentRunner:
         statistics: Mapping[str, Any],
         objective_metric: str,
         objective_value: Decimal,
+        trial_dir: Path | None = None,
+        train_manifest: Mapping[str, Any] | None = None,
+        test_manifest: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         sharpe = self._decimal(statistics.get("sharpe_ratio", objective_value))
         total_return = self._decimal(statistics.get("total_return", 0))
@@ -822,6 +838,38 @@ class ResearchExperimentRunner:
         total_commission = abs(self._decimal(statistics.get("total_commission", 0)))
         total_slippage = abs(self._decimal(statistics.get("total_slippage", 0)))
         cost_impact = total_commission + total_slippage
+
+        # Derive honest metrics from validation artifacts when available
+        derivation = self._derive_validation_metrics(
+            trial_dir=trial_dir,
+            train_manifest=train_manifest,
+            test_manifest=test_manifest,
+        )
+
+        # Use artifact-derived values, falling back to None for unverified fields
+        deterministic_replay_passed: bool | None = (
+            derivation.deterministic_replay_passed if derivation else None
+        )
+        no_lookahead_passed: bool | None = (
+            derivation.no_lookahead_passed if derivation else None
+        )
+        walk_forward_consistency: float | None = (
+            derivation.walk_forward_consistency if derivation else None
+        )
+        parameter_sensitivity: float | None = (
+            derivation.parameter_sensitivity if derivation else None
+        )
+        oos_months: float | None = derivation.oos_months if derivation else None
+        promotion_eligible: bool = (
+            derivation.promotion_eligible if derivation else False
+        )
+        train_sharpe: float | None = (
+            derivation.sharpe_sources.train_sharpe if derivation else None
+        )
+        oos_sharpe: float | None = (
+            derivation.sharpe_sources.oos_sharpe if derivation else None
+        )
+
         return {
             "costs": {"cost_sensitivity": float(cost_impact)},
             "execution": {
@@ -832,23 +880,96 @@ class ResearchExperimentRunner:
             },
             "performance": {
                 "max_drawdown": float(max_drawdown),
-                "oos_sharpe": float(sharpe),
+                "oos_sharpe": oos_sharpe,
                 "total_return": float(total_return),
-                "train_sharpe": float(sharpe),
+                "train_sharpe": train_sharpe,
             },
             "portfolio": {"correlation_to_active": 0.0},
             "quality": {"profit_factor": float(profit_factor), "sharpe": float(sharpe)},
             "research": {
-                "deterministic_replay_passed": True,
+                "deterministic_replay_passed": deterministic_replay_passed,
                 "metrics_source": "backtest_pipeline",
-                "no_lookahead_passed": True,
+                "no_lookahead_passed": no_lookahead_passed,
                 "objective_metric": objective_metric,
-                "promotion_eligible": True,
+                "promotion_eligible": promotion_eligible,
             },
             "risk": {"max_drawdown": float(max_drawdown)},
-            "stability": {"parameter_sensitivity": 1.0, "walk_forward_consistency": 1.0},
-            "trading": {"oos_months": 12.0, "oos_trade_count": trade_count},
+            "stability": {
+                "parameter_sensitivity": parameter_sensitivity,
+                "walk_forward_consistency": walk_forward_consistency,
+            },
+            "trading": {"oos_months": oos_months, "oos_trade_count": trade_count},
         }
+
+    def _derive_validation_metrics(
+        self,
+        *,
+        trial_dir: Path | None,
+        train_manifest: Mapping[str, Any] | None,
+        test_manifest: Mapping[str, Any] | None,
+    ) -> Any | None:
+        """Derive honest validation metrics from artifact files if available."""
+        if trial_dir is None or not trial_dir.exists():
+            return None
+        reader = ValidationArtifactReader(trial_dir)
+        workflow_summary_path = trial_dir / "workflow_summary.json"
+        workflow_summary: Mapping[str, Any] = {}
+        if workflow_summary_path.exists():
+            try:
+                workflow_summary = self._read_json_mapping(workflow_summary_path)
+            except (ValueError, OSError):
+                workflow_summary = {}
+        return ResearchMetricsFromValidationArtifacts().derive(
+            reader,
+            workflow_summary,
+            train_manifest=train_manifest,
+            test_manifest=test_manifest,
+        )
+
+    def _rewrite_metrics_with_validation_derivation(
+        self,
+        *,
+        metrics_path: Path,
+        trial_dir: Path,
+        train_manifest: Mapping[str, Any],
+        test_manifest: Mapping[str, Any],
+    ) -> None:
+        """Rewrite metrics.json with honest artifact-derived validation fields."""
+        derivation = self._derive_validation_metrics(
+            trial_dir=trial_dir,
+            train_manifest=train_manifest,
+            test_manifest=test_manifest,
+        )
+        if derivation is None:
+            return
+        current_payload = self._read_json_mapping(metrics_path)
+        updated = dict(current_payload)
+
+        # Patch research section with artifact-derived values
+        research = dict(self._mapping(updated.get("research", {}), "research"))
+        research["deterministic_replay_passed"] = derivation.deterministic_replay_passed
+        research["no_lookahead_passed"] = derivation.no_lookahead_passed
+        research["promotion_eligible"] = derivation.promotion_eligible
+        updated["research"] = research
+
+        # Patch stability section
+        stability = dict(self._mapping(updated.get("stability", {}), "stability"))
+        stability["parameter_sensitivity"] = derivation.parameter_sensitivity
+        stability["walk_forward_consistency"] = derivation.walk_forward_consistency
+        updated["stability"] = stability
+
+        # Patch trading section
+        trading = dict(self._mapping(updated.get("trading", {}), "trading"))
+        trading["oos_months"] = derivation.oos_months
+        updated["trading"] = trading
+
+        # Patch performance section with separate train/oos sharpe
+        performance = dict(self._mapping(updated.get("performance", {}), "performance"))
+        performance["train_sharpe"] = derivation.sharpe_sources.train_sharpe
+        performance["oos_sharpe"] = derivation.sharpe_sources.oos_sharpe
+        updated["performance"] = performance
+
+        self._write_json(metrics_path, updated)
 
     def _artifact_row_count(self, manifest: Mapping[str, Any], artifact_name: str) -> int:
         artifacts = manifest.get("artifacts")

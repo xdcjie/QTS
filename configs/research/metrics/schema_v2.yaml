@@ -72,3 +72,13 @@ metrics:
     unit: boolean
     direction: neutral
     required_for: [promotion]
+  - path: performance.train_sharpe
+    type: float
+    unit: ratio
+    direction: higher_is_better
+    required_for: []
+  - path: performance.oos_sharpe
+    type: float
+    unit: ratio
+    direction: higher_is_better
+    required_for: []

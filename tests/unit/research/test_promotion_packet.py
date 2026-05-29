@@ -524,6 +524,14 @@ def _valid_metrics() -> dict[str, dict[str, object]]:
             "cost_impact": 0.01,
             "slippage_sensitivity": 0.02,
         },
+        "performance": {
+            "max_drawdown": 0.2,
+            "oos_sharpe": 1.0,
+            "oos_manifest_hash": "sha256:oos-manifest",
+            "total_return": 0.15,
+            "train_manifest_hash": "sha256:train-manifest",
+            "train_sharpe": 1.2,
+        },
         "portfolio": {"correlation_to_active": 0.3},
         "quality": {
             "profit_factor": 1.4,
@@ -540,7 +548,7 @@ def _valid_metrics() -> dict[str, dict[str, object]]:
             "walk_forward_consistency": 0.75,
         },
         "trading": {
-            "oos_months": 12.0,
+            "oos_months": 6.0,
             "oos_trade_count": 40,
         },
     }

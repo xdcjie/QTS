@@ -148,6 +148,10 @@ def _valid_metrics() -> dict[str, dict[str, object]]:
             "cost_impact": 0.01,
             "slippage_sensitivity": 0.02,
         },
+        "performance": {
+            "oos_sharpe": 1.0,
+            "train_sharpe": 1.2,
+        },
         "portfolio": {"correlation_to_active": 0.3},
         "quality": {
             "profit_factor": 1.4,

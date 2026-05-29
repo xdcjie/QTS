@@ -13,6 +13,13 @@ from qts.research.orchestrator.queue import (
     ExperimentScheduleResult,
     ExperimentWorker,
 )
+from qts.research.orchestrator.validation_artifact_reader import (
+    ResearchMetricsDerivation,
+    ResearchMetricsFromValidationArtifacts,
+    SharpeSources,
+    ValidationArtifactRead,
+    ValidationArtifactReader,
+)
 
 __all__ = [
     "ExperimentQueue",
@@ -23,5 +30,10 @@ __all__ = [
     "ResearchExperimentJob",
     "ResearchExperimentResult",
     "ResearchExperimentRunner",
+    "ResearchMetricsDerivation",
+    "ResearchMetricsFromValidationArtifacts",
     "ResearchTrialResult",
+    "SharpeSources",
+    "ValidationArtifactRead",
+    "ValidationArtifactReader",
 ]

@@ -36,6 +36,12 @@ class ResearchMetrics:
                     "cost_impact": None,
                     "slippage_sensitivity": None,
                 },
+                "performance": {
+                    "max_drawdown": None,
+                    "oos_sharpe": None,
+                    "total_return": None,
+                    "train_sharpe": None,
+                },
                 "portfolio": {
                     "correlation_to_active": None,
                     "marginal_contribution": None,
