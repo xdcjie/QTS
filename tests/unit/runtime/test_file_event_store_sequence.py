@@ -58,7 +58,7 @@ def test_append_does_not_re_read_the_whole_file(tmp_path: Path) -> None:
         calls["replay"] += 1
         return original_replay(*args, **kwargs)  # type: ignore[arg-type]
 
-    store.replay = _counting_replay  # type: ignore[method-assign]
+    store.replay = _counting_replay  # type: ignore[method-assign,assignment]
 
     assert store.append(_event("evt-003", 32)) == 3
     assert calls["replay"] == 0

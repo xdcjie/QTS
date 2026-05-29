@@ -5,6 +5,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+from qts.quality.guardrails import GuardrailViolation
 from qts.quality.rules.account_mutation import AccountFillMutationRule
 
 _SOURCE = """
@@ -16,7 +17,7 @@ def route(fill):
 """
 
 
-def _check(source: str, qts_rel: str) -> list:
+def _check(source: str, qts_rel: str) -> list[GuardrailViolation]:
     rule = AccountFillMutationRule()
     return rule.check(
         relative_path=Path("backend/src/qts") / qts_rel,

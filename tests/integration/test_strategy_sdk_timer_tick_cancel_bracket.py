@@ -19,7 +19,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
-from qts.backtest.actor_loop import BacktestActorLoop
+from qts.backtest.actor_loop import BacktestActorLoop, BacktestActorLoopState
 from qts.backtest.dependencies import BacktestActorLoopConfig, BacktestActorLoopDependencies
 from qts.backtest.engine import BacktestEngine
 from qts.core.ids import AccountId, InstrumentId, StrategyId
@@ -142,7 +142,7 @@ class LifecycleStrategy(Strategy):
         self.fills.append(fill)
 
 
-def _run_lifecycle_strategy() -> tuple[LifecycleStrategy, RecordingSink, object]:
+def _run_lifecycle_strategy() -> tuple[LifecycleStrategy, RecordingSink, BacktestActorLoopState]:
     bars = _bars(3)
     strategy = LifecycleStrategy()
     account_id = AccountId("acct-backtest")

@@ -209,7 +209,7 @@ def test_guardrails_reject_execution_adapter_state_dependency(tmp_path: Path) ->
         "from qts.portfolio.holdings import HoldingBook\n",
     )
 
-    assert _codes(root) == {"ADAPTER_STATE_DEPENDENCY"}
+    assert _codes(root) == {"ADAPTER_STATE_DEPENDENCY", "LAYER_DEPENDENCY"}
 
 
 def test_guardrails_reject_removed_position_book_import(tmp_path: Path) -> None:
@@ -1111,7 +1111,7 @@ def test_guardrails_reject_pipeline_importing_runtime_actor(tmp_path: Path) -> N
         "from qts.runtime.actor_ref import ActorRef\n",
     )
 
-    assert _codes(root) == {"PIPELINE_ACTOR_IMPORT"}
+    assert _codes(root) == {"PIPELINE_ACTOR_IMPORT", "LAYER_DEPENDENCY"}
 
 
 def test_guardrails_reject_transport_importing_runtime_actor(tmp_path: Path) -> None:
@@ -1122,7 +1122,7 @@ def test_guardrails_reject_transport_importing_runtime_actor(tmp_path: Path) -> 
         "from qts.runtime.actors.account_actor import AccountActor\n",
     )
 
-    assert _codes(root) == {"TRANSPORT_ACTOR_IMPORT"}
+    assert _codes(root) == {"TRANSPORT_ACTOR_IMPORT", "LAYER_DEPENDENCY"}
 
 
 def test_guardrails_reject_provider_sdk_import_in_runtime(tmp_path: Path) -> None:

@@ -36,7 +36,7 @@ def _window(prices: dict[_Asset, tuple[Decimal, ...]], lookback: int) -> FactorW
 
 
 def _score(result: FactorResult, asset: _Asset) -> Decimal:
-    return result.score(asset)  # type: ignore[arg-type]
+    return result.score(asset)
 
 
 # ---------------------------------------------------------------------------
