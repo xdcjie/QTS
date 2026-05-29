@@ -48,7 +48,21 @@ def test_promotion_grade_gauntlet_reads_artifact_payloads_and_hashes(
             "turnover": 0.1,
         },
         "deterministic_replay": {"passed": True},
-        "no_lookahead": {"passed": True},
+        "no_lookahead": {
+            "passed": True,
+            "string_scan_only": False,
+            "string_scan_violations": [],
+            "violations": [],
+            "timing_validation": {
+                "passed": True,
+                "checked_features": ["momentum_10"],
+                "label_horizon": 5,
+                "max_feature_timestamp": "2025-12-01",
+                "min_label_cutoff": "2026-06-01",
+                "violations": [],
+                "window_overlaps": [],
+            },
+        },
     }
     refs = {
         name: _write_validation_artifact(tmp_path / f"{name}.json", name, payload)
@@ -114,5 +128,19 @@ def _inline_validation() -> dict[str, Any]:
         "correlation": {"max_active_correlation": 0.10},
         "capacity": {"estimated_capacity": 1000000, "required_capital": 100000},
         "deterministic_replay": {"passed": True},
-        "no_lookahead": {"passed": True},
+        "no_lookahead": {
+            "passed": True,
+            "string_scan_only": False,
+            "string_scan_violations": [],
+            "violations": [],
+            "timing_validation": {
+                "passed": True,
+                "checked_features": ["momentum_10"],
+                "label_horizon": 5,
+                "max_feature_timestamp": "2025-12-01",
+                "min_label_cutoff": "2026-06-01",
+                "violations": [],
+                "window_overlaps": [],
+            },
+        },
     }

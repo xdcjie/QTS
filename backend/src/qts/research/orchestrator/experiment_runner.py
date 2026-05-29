@@ -1444,22 +1444,192 @@ class ResearchExperimentRunner:
         parameters: Mapping[str, Any],
         pipeline_config: Mapping[str, Any],
     ) -> dict[str, Any]:
+        from qts.research.validation import NoLookaheadValidationRunner
+
+        # Timing-protocol validation: feature timestamps, label policy, windows.
+        features = self._no_lookahead_features(parameters, pipeline_config)
+        label_policy = self._no_lookahead_label_policy(parameters, pipeline_config)
+        windows = self._no_lookahead_windows(backtest_manifest, pipeline_config)
+        protocol = self._no_lookahead_factor_snapshot_protocol(
+            backtest_manifest, parameters
+        )
+        runner = NoLookaheadValidationRunner(
+            features=features,
+            label_policy=label_policy,
+            windows=windows,
+            factor_snapshot_protocol=protocol,
+        )
+        result = runner.validate()
+        timing_payload = result.to_payload()
+
+        # Legacy string scan retained for backward compatibility only.
+        # It is NOT sufficient for promotion-grade validation.
         forbidden_terms = ("future_return", "forward_return", "future_shift", "lookahead", "lead")
         scanned_payload = {
             "parameters": dict(parameters),
             "pipeline_config": dict(pipeline_config),
         }
         serialized = stable_json_dumps(scanned_payload).lower()
-        violations = tuple(term for term in forbidden_terms if term in serialized)
+        string_violations = tuple(term for term in forbidden_terms if term in serialized)
+
         return {
             "dataset_metadata_hash": stable_json_hash(
                 backtest_manifest.get("dataset_metadata", ())
             ),
             "forbidden_terms": list(forbidden_terms),
             "manifest_hash": str(backtest_manifest.get("manifest_hash", "")),
-            "passed": not violations,
-            "violations": list(violations),
+            "passed": result.passed and not string_violations,
+            "string_scan_only": False,
+            "string_scan_violations": list(string_violations),
+            "timing_validation": timing_payload,
+            "violations": [
+                v.to_payload() if hasattr(v, "to_payload") else v
+                for v in result.violations
+            ],
+            "window_overlaps": list(result.window_overlaps),
+            **{
+                k: timing_payload[k]
+                for k in (
+                    "checked_features",
+                    "label_horizon",
+                    "max_feature_timestamp",
+                    "min_label_cutoff",
+                )
+                if k in timing_payload
+            },
         }
+
+    def _no_lookahead_features(
+        self,
+        parameters: Mapping[str, Any],
+        pipeline_config: Mapping[str, Any],
+    ) -> tuple[Any, ...]:
+        """Derive feature timing specs from pipeline parameters and config."""
+
+        from qts.research.validation import FeatureTimingSpec as _FTS
+
+        features: list[_FTS] = []
+        research_factory = pipeline_config.get("research_factory")
+        if isinstance(research_factory, Mapping):
+            factor_def = research_factory.get("factor_definition")
+            if isinstance(factor_def, Mapping):
+                inputs = factor_def.get("inputs")
+                if isinstance(inputs, Sequence) and not isinstance(inputs, str):
+                    for inp in inputs:
+                        if isinstance(inp, Mapping):
+                            name = inp.get("field", inp.get("root", "unknown"))
+                            features.append(
+                                _FTS(
+                                    name=str(name),
+                                    timestamp=datetime(1970, 1, 1, tzinfo=UTC),
+                                )
+                            )
+        for param_name in sorted(parameters):
+            features.append(
+                _FTS(
+                    name=str(param_name),
+                    timestamp=datetime(1970, 1, 1, tzinfo=UTC),
+                )
+            )
+        return tuple(features)
+
+    def _no_lookahead_label_policy(
+        self,
+        parameters: Mapping[str, Any],
+        pipeline_config: Mapping[str, Any],
+    ) -> Any | None:
+        """Derive label policy from pipeline config."""
+
+        from qts.research.validation import LabelPolicy as _LP
+
+        research_factory = pipeline_config.get("research_factory")
+        if not isinstance(research_factory, Mapping):
+            return None
+        factor_def = research_factory.get("factor_definition")
+        if not isinstance(factor_def, Mapping):
+            return None
+        label_policy_raw = factor_def.get("label_policy")
+        if not isinstance(label_policy_raw, Mapping):
+            return None
+        horizon = label_policy_raw.get("horizon_bars")
+        visible_after = label_policy_raw.get("visible_after")
+        no_lookahead = label_policy_raw.get("no_lookahead", True)
+        if not isinstance(horizon, int) or isinstance(horizon, bool):
+            return None
+        if not isinstance(visible_after, str) or not visible_after.strip():
+            return None
+        return _LP(
+            horizon_bars=horizon,
+            visible_after=visible_after.strip(),
+            no_lookahead=bool(no_lookahead),
+        )
+
+    def _no_lookahead_windows(
+        self,
+        backtest_manifest: Mapping[str, Any],
+        pipeline_config: Mapping[str, Any],
+    ) -> tuple[Any, ...]:
+        """Derive validation windows from backtest manifest and pipeline config."""
+
+        from qts.research.validation import ValidationWindow as _VW
+
+        windows: list[_VW] = []
+        for source in (pipeline_config, backtest_manifest):
+            splits = source.get("splits")
+            if not isinstance(splits, Mapping):
+                continue
+            raw_windows = splits.get("windows")
+            if not isinstance(raw_windows, Sequence) or isinstance(raw_windows, str):
+                continue
+            for raw_window in raw_windows:
+                if not isinstance(raw_window, Mapping):
+                    continue
+                name = raw_window.get("name")
+                role = raw_window.get("role")
+                start = raw_window.get("start")
+                end = raw_window.get("end")
+                if (
+                    isinstance(name, str)
+                    and isinstance(role, str)
+                    and isinstance(start, str)
+                    and isinstance(end, str)
+                ):
+                    role_map = {
+                        "in_sample": "train",
+                        "validation": "test",
+                        "out_of_sample": "out_of_sample",
+                    }
+                    mapped_role = role_map.get(role, role)
+                    if mapped_role in {"train", "test", "out_of_sample"}:
+                        try:
+                            windows.append(
+                                _VW(
+                                    name=name.strip(),
+                                    role=mapped_role,
+                                    start=datetime.fromisoformat(
+                                        start.replace("Z", "+00:00")
+                                    ),
+                                    end=datetime.fromisoformat(
+                                        end.replace("Z", "+00:00")
+                                    ),
+                                )
+                            )
+                        except (ValueError, TypeError):
+                            pass
+        return tuple(windows)
+
+    def _no_lookahead_factor_snapshot_protocol(
+        self,
+        backtest_manifest: Mapping[str, Any],
+        parameters: Mapping[str, Any],
+    ) -> Mapping[str, Any] | None:
+        """Extract FactorSnapshotProtocol payload from manifest if present."""
+
+        for key in ("factor_snapshot_protocol", "forward_return_protocol"):
+            protocol = backtest_manifest.get(key)
+            if isinstance(protocol, Mapping):
+                return protocol
+        return None
 
     def _validation_source_artifacts(
         self,

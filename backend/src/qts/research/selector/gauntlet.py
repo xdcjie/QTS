@@ -404,6 +404,100 @@ class CapacityGate:
 
 
 @dataclass(frozen=True, slots=True)
+class NoLookaheadGate:
+    """Validate no-lookahead evidence contains timing-protocol proof.
+
+    String-only scans are rejected for promotion-grade validation.
+    The evidence must contain timing_validation with real feature
+    timestamp and label cutoff checks.
+    """
+
+    def evaluate(self, candidate: Mapping[str, Any]) -> GateDecision:
+        """Return the no-lookahead gate decision."""
+
+        evidence = self._no_lookahead_evidence(candidate)
+        reasons: list[str] = []
+
+        if not evidence:
+            return GateDecision(
+                gate_name="no_lookahead",
+                accepted=False,
+                reasons=("no_lookahead: evidence missing",),
+                evidence={},
+            )
+
+        if evidence.get("passed") is not True:
+            reasons.append("no_lookahead: validation evidence failed")
+
+        # String-only scan is insufficient for promotion-grade validation.
+        string_scan_only = evidence.get("string_scan_only")
+        timing_validation = evidence.get("timing_validation")
+
+        if string_scan_only is True:
+            reasons.append(
+                "no_lookahead: string-only scan is insufficient for promotion-grade validation"
+            )
+
+        if not isinstance(timing_validation, Mapping):
+            reasons.append(
+                "no_lookahead: timing_validation evidence missing; "
+                "only string scan detected which is insufficient for promotion"
+            )
+        else:
+            timing_passed = timing_validation.get("passed")
+            if timing_passed is not True:
+                reasons.append("no_lookahead: timing protocol validation failed")
+
+            timing_violations = timing_validation.get("violations")
+            if isinstance(timing_violations, Sequence) and not isinstance(
+                timing_violations, str
+            ):
+                for violation in timing_violations:
+                    if isinstance(violation, Mapping):
+                        code = violation.get("code", "")
+                        msg = violation.get("message", "")
+                        if code or msg:
+                            reasons.append(f"no_lookahead: {code}: {msg}")
+
+            window_overlaps = timing_validation.get("window_overlaps")
+            if isinstance(window_overlaps, Sequence) and not isinstance(
+                window_overlaps, str
+            ):
+                for overlap in window_overlaps:
+                    if isinstance(overlap, str) and overlap.strip():
+                        reasons.append(f"no_lookahead: window overlap: {overlap}")
+
+        gate_evidence: dict[str, Any] = {
+            **_artifact_metadata(evidence),
+            "has_timing_validation": isinstance(timing_validation, Mapping),
+            "passed": evidence.get("passed") is True,
+            "string_scan_only": string_scan_only is True,
+        }
+        if isinstance(timing_validation, Mapping):
+            gate_evidence["timing_checked_features"] = timing_validation.get(
+                "checked_features", []
+            )
+            gate_evidence["timing_violation_count"] = len(
+                timing_validation.get("violations", [])
+            )
+
+        return GateDecision(
+            gate_name="no_lookahead",
+            accepted=not reasons,
+            reasons=tuple(reasons),
+            evidence=gate_evidence,
+        )
+
+    @staticmethod
+    def _no_lookahead_evidence(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
+        validation = candidate.get("validation")
+        if not isinstance(validation, Mapping):
+            return {}
+        no_lookahead = validation.get("no_lookahead")
+        return no_lookahead if isinstance(no_lookahead, Mapping) else {}
+
+
+@dataclass(frozen=True, slots=True)
 class ValidationGauntletResult:
     """Complete validation gauntlet decision for one selected candidate."""
 
@@ -476,6 +570,7 @@ class ValidationGauntlet:
         cost_stress_gate: CostStressGate | None = None,
         correlation_gate: CorrelationGate | None = None,
         capacity_gate: CapacityGate | None = None,
+        no_lookahead_gate: NoLookaheadGate | None = None,
         require_artifacts: bool = False,
     ) -> None:
         self.walk_forward_gate = walk_forward_gate or WalkForwardGate()
@@ -486,6 +581,7 @@ class ValidationGauntlet:
         )
         self.correlation_gate = correlation_gate or CorrelationGate(max_active_correlation=0.80)
         self.capacity_gate = capacity_gate or CapacityGate()
+        self.no_lookahead_gate = no_lookahead_gate or NoLookaheadGate()
         self.require_artifacts = require_artifacts
 
     def validate(
@@ -510,6 +606,7 @@ class ValidationGauntlet:
             self.cost_stress_gate.evaluate(normalized_candidate),
             self.correlation_gate.evaluate(normalized_candidate),
             self.capacity_gate.evaluate(normalized_candidate),
+            self.no_lookahead_gate.evaluate(normalized_candidate),
         )
         status_reasons: list[str] = []
         deterministic_status = self._status(
@@ -519,13 +616,18 @@ class ValidationGauntlet:
             missing_reason="deterministic_replay: evidence missing",
             reasons=status_reasons,
         )
-        no_lookahead_status = self._status(
-            normalized_candidate,
-            field_name="no_lookahead",
-            failed_reason="no_lookahead: validation evidence failed",
-            missing_reason="no_lookahead: evidence missing",
-            reasons=status_reasons,
-        )
+        no_lookahead_decision = gate_decisions[-1]
+        if no_lookahead_decision.accepted:
+            no_lookahead_status = "passed"
+        elif no_lookahead_decision.reasons:
+            no_lookahead_status = "failed"
+            status_reasons.extend(
+                reason for reason in no_lookahead_decision.reasons
+                if reason not in status_reasons
+            )
+        else:
+            no_lookahead_status = "missing"
+            status_reasons.append("no_lookahead: evidence missing")
         reasons = (
             artifact_reasons
             + tuple(reason for decision in gate_decisions for reason in decision.reasons)
@@ -696,6 +798,7 @@ __all__ = [
     "CostStressGate",
     "FailureWindowVetoGate",
     "GateDecision",
+    "NoLookaheadGate",
     "ValidationGauntlet",
     "ValidationGauntletResult",
     "WalkForwardGate",
