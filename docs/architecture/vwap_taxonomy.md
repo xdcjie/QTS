@@ -106,6 +106,7 @@ business artifacts; they verify strategy correctness.
 | `tests/unit/strategies/test_vwap_factor_research.py` | Unit test for research strategy |
 | `tests/unit/strategies/test_vwap_pullback.py` | Unit test for pullback strategy |
 | `tests/unit/strategies/test_vwap_regime_pullback.py` | Unit test for regime pullback |
+| `tests/unit/architecture/test_vwap_taxonomy.py` | Gate test for the VWAP taxonomy-presence guardrail itself |
 
 ## Guardrail enforcement
 
