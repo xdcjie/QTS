@@ -1279,11 +1279,6 @@ exceptions:
     reason: baseline allowance
     owner: platform
     expiry: 2027-05-17
-  - class_name: RuntimePartitionKey
-    module: qts.runtime.topology
-    reason: baseline allowance
-    owner: platform
-    expiry: 2027-05-17
   - class_name: RuntimeTopology
     module: qts.runtime.topology
     reason: baseline allowance

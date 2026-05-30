@@ -156,18 +156,6 @@ class MarketDataRouteSpec:
 
 
 @dataclass(frozen=True, slots=True)
-class RuntimePartitionKey:
-    """Stable account-scoped runtime partition key."""
-
-    account_id: AccountId
-
-    @property
-    def value(self) -> str:
-        """Return the route key value."""
-        return f"account:{self.account_id.value}"
-
-
-@dataclass(frozen=True, slots=True)
 class RuntimeTopology:
     """Auditable topology for one runtime session."""
 
@@ -578,7 +566,6 @@ __all__ = [
     "AccountRuntimeSpec",
     "BrokerRouteSpec",
     "MarketDataRouteSpec",
-    "RuntimePartitionKey",
     "RuntimeMode",
     "RuntimeTopologyManifest",
     "RuntimeTopologyBuilder",
