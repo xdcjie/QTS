@@ -18,6 +18,7 @@ from qts.backtest.instrument_context import BacktestInstrumentContext
 from qts.backtest.portfolio_projection import BacktestPortfolioProjector
 from qts.backtest.provenance import BacktestDatasetManifestBuilder
 from qts.backtest.risk_policy import BacktestRiskPolicyFactory
+from qts.backtest.runtime_manifest import BacktestRuntimeTopologyManifestBuilder
 from qts.core.hashing import stable_json_hash
 from qts.core.ids import (
     AccountId,
@@ -46,7 +47,6 @@ from qts.runtime.config import BacktestCostModel, BacktestEngineConfig, Backtest
 from qts.runtime.intent_processing import TargetIntentProcessor
 from qts.runtime.sinks.backtest import BacktestRuntimeEventSink
 from qts.runtime.sinks.base import RuntimeEventContext
-from qts.runtime.topology import RuntimeTopologyBuilder
 from qts.strategy_sdk import Strategy
 
 
@@ -311,28 +311,16 @@ class BacktestEngine:
         """
         config_hash = stable_json_hash(self._config_hash_payload)
         runtime_run_id = RuntimeRunId(f"bt-{config_hash.removeprefix('sha256:')[:12]}")
-        strategy_id: StrategyId | None = StrategyId("strategy")
-        account_id = AccountId("acct-backtest")
-        strategy_specs = None
-        if self._backtest_runtime_config is not None:
-            runtime_topology = RuntimeTopologyBuilder.from_backtest_config(
-                self._backtest_runtime_config,
-                runtime_run_id,
-            )
-            runtime_topology_payload = runtime_topology.to_manifest_payload()
-            strategy_specs = runtime_topology.strategies
-            if runtime_topology.accounts:
-                account_id = runtime_topology.accounts[0].account_id
-            if len(runtime_topology.strategies) == 1:
-                strategy_id = runtime_topology.strategies[0].strategy_id
-            elif runtime_topology.strategies:
-                strategy_id = None
-        else:
-            runtime_topology_payload = self._default_runtime_topology_payload(
-                runtime_run_id=runtime_run_id,
-                account_id=account_id,
-                strategy_id=strategy_id or StrategyId("strategy"),
-            )
+        resolved_topology = BacktestRuntimeTopologyManifestBuilder().resolve(
+            backtest_runtime_config=self._backtest_runtime_config,
+            runtime_run_id=runtime_run_id,
+            default_account_id=AccountId("acct-backtest"),
+            default_strategy_id=StrategyId("strategy"),
+        )
+        runtime_topology_payload = resolved_topology.payload
+        account_id = resolved_topology.account_id
+        strategy_id = resolved_topology.strategy_id
+        strategy_specs = resolved_topology.strategy_specs
         writer = BacktestArtifactWriter(
             output_dir,
             run_id=runtime_run_id,
@@ -439,24 +427,6 @@ class BacktestEngine:
         assumptions = cast(dict[str, Any], payload())
         assumptions.update(timing_payload)
         return assumptions
-
-    @staticmethod
-    def _default_runtime_topology_payload(
-        *,
-        runtime_run_id: RuntimeRunId,
-        account_id: AccountId,
-        strategy_id: StrategyId,
-    ) -> dict[str, Any]:
-        payload: dict[str, Any] = {
-            "run_id": runtime_run_id.value,
-            "mode": "backtest",
-            "accounts": [{"account_id": account_id.value}],
-            "strategies": [{"strategy_id": strategy_id.value, "account_id": account_id.value}],
-            "broker_routes": [],
-            "market_data_routes": [],
-        }
-        payload["topology_hash"] = stable_json_hash(payload)
-        return payload
 
 
 __all__ = [
