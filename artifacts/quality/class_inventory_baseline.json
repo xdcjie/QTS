@@ -1,5 +1,5 @@
 {
-  "production_class_count": 971,
+  "production_class_count": 972,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -81,6 +81,7 @@
     "qts.backtest.instrument_context.BacktestInstrumentContext",
     "qts.backtest.pipeline.BacktestPipeline",
     "qts.backtest.portfolio_projection.BacktestPortfolioProjector",
+    "qts.backtest.provenance.BacktestDatasetManifestBuilder",
     "qts.backtest.replay_input.BacktestReplayInputProvider",
     "qts.backtest.risk_policy.BacktestMarginPolicyResolver",
     "qts.backtest.risk_policy.BacktestRiskPolicyFactory",

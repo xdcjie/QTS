@@ -16,6 +16,7 @@ from qts.backtest.dependencies import (
 )
 from qts.backtest.instrument_context import BacktestInstrumentContext
 from qts.backtest.portfolio_projection import BacktestPortfolioProjector
+from qts.backtest.provenance import BacktestDatasetManifestBuilder
 from qts.backtest.risk_policy import BacktestRiskPolicyFactory
 from qts.core.hashing import stable_json_hash
 from qts.core.ids import (
@@ -37,7 +38,6 @@ from qts.registry.instrument_registry import InstrumentRegistry
 from qts.reporting.backtest import (
     BacktestArtifactWriter,
     EquityCurvePoint,
-    dataset_metadata_payload,
     zero_time,
 )
 from qts.risk.risk_engine import RiskEngine
@@ -204,6 +204,12 @@ class BacktestEngine:
             broker_id=self._backtest_broker_id(),
             margin_calculator=dependencies.margin_calculator,
         )
+        self._dataset_manifest_builder = BacktestDatasetManifestBuilder(
+            dataset_metadata=self._dataset_metadata,
+            registry_bars=self._registry_bars,
+            config_hash_payload=self._config_hash_payload,
+            target_timeframe=self._target_timeframe,
+        )
 
     def _backtest_broker_id(self) -> BrokerId:
         capabilities = getattr(self._execution_adapter, "capabilities", None)
@@ -362,7 +368,7 @@ class BacktestEngine:
                 portfolio_view=self._portfolio_projector.portfolio_view,
                 equity_point=self._portfolio_projector.equity_point,
                 update_rolling_prices=self._instrument_context.update_rolling_prices,
-                market_data_provenance_for=self._market_data_provenance_for,
+                market_data_provenance_for=self._dataset_manifest_builder.market_data_provenance_for,
                 execution_timing=self._execution_timing,
             ),
             strategy_id=strategy_id,
@@ -390,7 +396,7 @@ class BacktestEngine:
         )
         run_id_value, report_hash, _, artifacts = writer.finalize(
             config_hash=config_hash,
-            dataset_metadata=self._manifest_dataset_metadata_payloads(),
+            dataset_metadata=self._dataset_manifest_builder.manifest_dataset_metadata_payloads(),
             cost_model=self._cost_model.to_payload(),
             processed_bars=processed_bar_count,
             warmup_bars=runtime.warmup_bars,
@@ -434,86 +440,6 @@ class BacktestEngine:
         assumptions.update(timing_payload)
         return assumptions
 
-    def _manifest_dataset_metadata_payloads(self) -> tuple[dict[str, Any], ...]:
-        """Return dataset provenance rows with the M1 manifest aliases."""
-        first_ts, last_ts = self._dataset_time_bounds()
-        if self._dataset_metadata:
-            return tuple(
-                self._enrich_dataset_manifest_payload(
-                    dataset_metadata_payload(item),
-                    first_ts=first_ts,
-                    last_ts=last_ts,
-                )
-                for item in self._dataset_metadata
-            )
-        return (self._inline_dataset_manifest_payload(first_ts=first_ts, last_ts=last_ts),)
-
-    def _dataset_time_bounds(self) -> tuple[str | None, str | None]:
-        start = self._config_hash_payload.get("start")
-        end = self._config_hash_payload.get("end")
-        if isinstance(start, str) and isinstance(end, str):
-            return start, end
-        if self._registry_bars:
-            return (
-                min(bar.start_time for bar in self._registry_bars).isoformat(),
-                max(bar.end_time for bar in self._registry_bars).isoformat(),
-            )
-        return None, None
-
-    @staticmethod
-    def _enrich_dataset_manifest_payload(
-        payload: dict[str, Any],
-        *,
-        first_ts: str | None,
-        last_ts: str | None,
-    ) -> dict[str, Any]:
-        enriched = dict(payload)
-        if first_ts is not None:
-            enriched.setdefault("first_ts", first_ts)
-        if last_ts is not None:
-            enriched.setdefault("last_ts", last_ts)
-        return enriched
-
-    def _inline_dataset_manifest_payload(
-        self,
-        *,
-        first_ts: str | None,
-        last_ts: str | None,
-    ) -> dict[str, Any]:
-        row_count = len(self._registry_bars)
-        source_payload = [
-            {
-                "instrument_id": bar.instrument_id.value,
-                "timeframe": bar.timeframe,
-                "start_time": bar.start_time.isoformat(),
-                "end_time": bar.end_time.isoformat(),
-                "open": str(bar.open),
-                "high": str(bar.high),
-                "low": str(bar.low),
-                "close": str(bar.close),
-                "volume": str(bar.volume) if bar.volume is not None else None,
-            }
-            for bar in self._registry_bars
-        ]
-        file_hash = stable_json_hash(source_payload)
-        return {
-            "dataset_id": "inline-bars",
-            "source": "inline",
-            "instrument_id": "MULTI",
-            "timeframe": self._target_timeframe or "source",
-            "timezone": "UTC",
-            "timezone_policy": "UTC",
-            "adjustment_mode": "none",
-            "adjustment_policy": "none",
-            "normalization_version": "inline-bars-v1",
-            "created_at": first_ts or zero_time().isoformat(),
-            "content_hash": file_hash,
-            "file_hash": file_hash,
-            "row_count": row_count,
-            "first_ts": first_ts or zero_time().isoformat(),
-            "last_ts": last_ts or zero_time().isoformat(),
-        }
-
     @staticmethod
     def _default_runtime_topology_payload(
         *,
@@ -531,31 +457,6 @@ class BacktestEngine:
         }
         payload["topology_hash"] = stable_json_hash(payload)
         return payload
-
-    def _market_data_provenance_for(self, bar: Bar) -> dict[str, str | int | None]:
-        """Return replay provenance for a market-data runtime event."""
-        candidates = [
-            metadata for metadata in self._dataset_metadata if metadata.timeframe == bar.timeframe
-        ]
-        for metadata in candidates:
-            if metadata.instrument_id == bar.instrument_id and metadata.timeframe == bar.timeframe:
-                return self._dataset_provenance_payload(metadata)
-        if len(candidates) == 1:
-            return self._dataset_provenance_payload(candidates[0])
-        return {}
-
-    @staticmethod
-    def _dataset_provenance_payload(metadata: DatasetMetadata) -> dict[str, str | int | None]:
-        """Serialize dataset metadata for a runtime market-data event."""
-        return {
-            "source_id": metadata.source,
-            "dataset_id": metadata.dataset_id,
-            "provider": metadata.source,
-            "permission_state": None,
-            "adjustment_mode": metadata.adjustment_policy,
-            "content_hash": metadata.content_hash,
-            "row_count": metadata.row_count,
-        }
 
 
 __all__ = [
