@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from qts.core.ids import AccountId
 from qts.domain.orders import ExecutionReport, OrderFill
+from qts.execution.errors import UnknownBrokerOrder
 from qts.execution.order_manager import OrderManager
 
 
@@ -39,7 +40,7 @@ class ExecutionReportHandler:
         """
         try:
             result = self._order_manager.process_report(report)
-        except KeyError:
+        except (KeyError, UnknownBrokerOrder):
             self._quarantined_reports.append(report)
             return ()
         if self._account_id is not None:
