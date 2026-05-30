@@ -6,6 +6,7 @@ from pathlib import Path
 
 from qts.application.dto import BacktestStrategyOptionDTO
 from qts.runtime.config import BacktestRuntimeConfig
+from qts.runtime.config_loader import BacktestConfigLoader
 
 
 class BacktestStrategyCatalog:
@@ -29,7 +30,7 @@ class BacktestStrategyCatalog:
     def _option_from_path(self, path: Path) -> BacktestStrategyOptionDTO | None:
         """Parse one config file into a UI/API strategy option."""
         try:
-            config = BacktestRuntimeConfig.from_yaml(path)
+            config = BacktestConfigLoader.from_path(path)
         except (KeyError, OSError, TypeError, ValueError):
             return None
         label = self._label_for_config(path, config)

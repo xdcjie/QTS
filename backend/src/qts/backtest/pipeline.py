@@ -37,6 +37,7 @@ from qts.data.sources.replay_market_data_source import (
     ReplayMarketDataSource,
 )
 from qts.runtime.config import BacktestRuntimeConfig, BacktestStrategyConfig
+from qts.runtime.config_loader import BacktestConfigLoader
 from qts.strategy_sdk import Strategy
 
 
@@ -57,8 +58,8 @@ class BacktestPipeline:
 
     @classmethod
     def from_yaml(cls, config_path: Path) -> BacktestPipeline:
-        """Load a config file and wrap it in a pipeline."""
-        return cls(BacktestRuntimeConfig.from_yaml(config_path))
+        """Load a config file via the config loader and wrap it in a pipeline."""
+        return cls(BacktestConfigLoader.from_path(config_path))
 
     @property
     def config(self) -> BacktestRuntimeConfig:

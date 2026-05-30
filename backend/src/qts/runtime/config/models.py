@@ -9,8 +9,6 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, ClassVar
 
-import yaml  # type: ignore[import-untyped]
-
 from qts.core.hashing import stable_json_hash
 from qts.core.ids import InstrumentId
 from qts.data.provenance import DatasetMetadata
@@ -337,14 +335,6 @@ class BacktestStrategyConfig:
         if not self.conflict_group.strip():
             raise ValueError("strategy conflict_group must not be empty")
 
-    @classmethod
-    def from_yaml(cls, path: Path) -> BacktestStrategyConfig:
-        """Perform from_yaml."""
-        payload = yaml.safe_load(path.read_text(encoding="utf-8"))
-        if not isinstance(payload, dict):
-            raise ValueError("strategy config must be a mapping")
-        return cls.from_payload(payload)
-
     def to_payload(self) -> dict[str, Any]:
         """Perform to_payload."""
         return {
@@ -523,13 +513,6 @@ class BacktestRuntimeConfig:
         if not brokerage_model:
             raise ValueError("brokerage_model must not be empty")
         object.__setattr__(self, "brokerage_model", brokerage_model)
-
-    @classmethod
-    def from_yaml(cls, path: Path) -> BacktestRuntimeConfig:
-        """Perform from_yaml."""
-        from qts.runtime.config_loader import BacktestConfigLoader
-
-        return BacktestConfigLoader.from_path(path)
 
     @property
     def config_hash(self) -> str:

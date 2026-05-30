@@ -18,7 +18,7 @@ from qts.research.workflow import (
     ResearchWorkflowRunner,
     ResearchWorkflowStepConfig,
 )
-from qts.runtime.config import BacktestRuntimeConfig
+from qts.runtime.config_loader import BacktestConfigLoader
 
 
 def _write_workflow(tmp_path: Path, body: str) -> Path:
@@ -2352,7 +2352,7 @@ def test_vwap_research_backtests_use_costed_100k_margin_sized_capital(
     margin_proxy: Decimal,
     baseline_quantity: str,
 ) -> None:
-    runtime_config = BacktestRuntimeConfig.from_yaml(backtest_path)
+    runtime_config = BacktestConfigLoader.from_path(backtest_path)
 
     assert runtime_config.initial_cash == Decimal("100000")
     assert runtime_config.cost_model.fixed_commission_per_contract == Decimal("2.50")

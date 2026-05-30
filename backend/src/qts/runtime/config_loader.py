@@ -27,11 +27,23 @@ class BacktestConfigLoader:
 
     @classmethod
     def from_path(cls, path: Path) -> BacktestRuntimeConfig:
-        """Perform from_path."""
+        """Load and parse a backtest run config from a YAML file path."""
         payload = yaml.safe_load(path.read_text(encoding="utf-8"))
         if not isinstance(payload, dict):
             raise ValueError("backtest config must be a mapping")
         return cls.from_payload(payload)
+
+    @classmethod
+    def strategy_from_path(cls, path: Path) -> BacktestStrategyConfig:
+        """Load and parse a standalone strategy config from a YAML file path.
+
+        File-format parsing lives in the loader; ``BacktestStrategyConfig`` only
+        validates the normalized payload.
+        """
+        payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError("strategy config must be a mapping")
+        return BacktestStrategyConfig.from_payload(payload)
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> BacktestRuntimeConfig:
@@ -94,7 +106,7 @@ class BacktestConfigLoader:
                 raise ValueError(
                     "strategy_config must not be combined with strategy_class or strategy_params"
                 )
-            strategy = BacktestStrategyConfig.from_yaml(strategy_config_path)
+            strategy = cls.strategy_from_path(strategy_config_path)
             strategy_class = strategy.class_path
             strategy_params = dict(strategy.params)
         else:
