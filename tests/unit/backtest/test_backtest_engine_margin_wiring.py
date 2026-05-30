@@ -12,7 +12,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 import pytest
-from qts.backtest.engine import BacktestEngine
+from qts.backtest.risk_policy import BacktestMarginPolicyResolver, BacktestRiskPolicyFactory
 from qts.core.ids import InstrumentId
 from qts.domain.instruments import AssetClass, ContractSpec, Instrument, SettlementType
 from qts.registry.instrument_registry import InstrumentRegistry
@@ -45,7 +45,7 @@ def _registry(*margin_rates: Decimal | None) -> InstrumentRegistry:
 
 
 def _built_rule_types(*, max_notional: Decimal, margin_enabled: bool) -> list[type]:
-    configs = BacktestEngine._risk_rule_configs(
+    configs = BacktestRiskPolicyFactory.risk_rule_configs(
         max_notional=max_notional,
         margin_enabled=margin_enabled,
     )
@@ -64,20 +64,20 @@ def test_rule_set_includes_margin_rule_with_configured_rate() -> None:
 
 
 def test_resolved_rate_is_none_without_registry() -> None:
-    assert BacktestEngine._resolved_initial_margin_rate(None) is None
+    assert BacktestMarginPolicyResolver().resolve_initial_margin_rate(None) is None
 
 
 def test_resolved_rate_is_none_when_no_contract_configures_one() -> None:
     registry = _registry(None, None)
-    assert BacktestEngine._resolved_initial_margin_rate(registry) is None
+    assert BacktestMarginPolicyResolver().resolve_initial_margin_rate(registry) is None
 
 
 def test_resolved_rate_returns_the_single_configured_rate() -> None:
     registry = _registry(None, Decimal("0.05"))
-    assert BacktestEngine._resolved_initial_margin_rate(registry) == Decimal("0.05")
+    assert BacktestMarginPolicyResolver().resolve_initial_margin_rate(registry) == Decimal("0.05")
 
 
 def test_resolved_rate_rejects_conflicting_rates() -> None:
     registry = _registry(Decimal("0.05"), Decimal("0.10"))
     with pytest.raises(ValueError, match="single rate"):
-        BacktestEngine._resolved_initial_margin_rate(registry)
+        BacktestMarginPolicyResolver().resolve_initial_margin_rate(registry)

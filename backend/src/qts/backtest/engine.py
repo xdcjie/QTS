@@ -16,6 +16,7 @@ from qts.backtest.dependencies import (
 )
 from qts.backtest.instrument_context import BacktestInstrumentContext
 from qts.backtest.portfolio_projection import BacktestPortfolioProjector
+from qts.backtest.risk_policy import BacktestRiskPolicyFactory
 from qts.core.hashing import stable_json_hash
 from qts.core.ids import (
     AccountId,
@@ -39,10 +40,7 @@ from qts.reporting.backtest import (
     dataset_metadata_payload,
     zero_time,
 )
-from qts.risk.config import RiskRuleConfig, RiskRuleName
-from qts.risk.margin.calculator import MarginCalculator
 from qts.risk.risk_engine import RiskEngine
-from qts.risk.rule_registry import RiskRuleRegistry
 from qts.runtime.actors.account_actor import AccountSnapshot
 from qts.runtime.config import BacktestCostModel, BacktestEngineConfig, BacktestRuntimeConfig
 from qts.runtime.intent_processing import TargetIntentProcessor
@@ -255,21 +253,9 @@ class BacktestEngine:
             dataset_metadata=tuple(dataset_metadata),
             cost_model=cost_model,
         )
-        margin_rate = cls._resolved_initial_margin_rate(instrument_registry)
-        risk_engine = RiskEngine(
-            list(
-                RiskRuleRegistry().build_all(
-                    cls._risk_rule_configs(
-                        max_notional=config.risk_config.max_notional,
-                        margin_enabled=margin_rate is not None,
-                    )
-                )
-            )
-        )
-        margin_calculator = (
-            MarginCalculator(initial_margin_rate=margin_rate, maintenance_margin_rate=margin_rate)
-            if margin_rate is not None
-            else None
+        risk_engine, margin_calculator = BacktestRiskPolicyFactory().build(
+            max_notional=config.risk_config.max_notional,
+            instrument_registry=instrument_registry,
         )
         dependencies = BacktestEngineDependencies.with_defaults(
             initial_cash=config.initial_cash,
@@ -295,61 +281,6 @@ class BacktestEngine:
             backtest_runtime_config=config,
             execution_timing=execution_timing,
         )
-
-    @staticmethod
-    def _risk_rule_configs(
-        *,
-        max_notional: Decimal,
-        margin_enabled: bool,
-    ) -> tuple[RiskRuleConfig, ...]:
-        """Return the config-driven risk rule set for a backtest run.
-
-        ``MaxNotionalRule`` is always present (the historical default). The
-        per-contract margin gate is appended only when a margin rate is
-        resolvable from the instrument registry, so runs without a configured
-        margin rate behave exactly as before (no fail-closed margin rejection).
-        """
-        configs = [
-            RiskRuleConfig(
-                rule_id="max_notional",
-                name=RiskRuleName.MAX_NOTIONAL,
-                params={"max_notional": max_notional},
-            )
-        ]
-        if margin_enabled:
-            configs.append(
-                RiskRuleConfig(rule_id="margin_limit", name=RiskRuleName.MARGIN_LIMIT, params={})
-            )
-        return tuple(configs)
-
-    @staticmethod
-    def _resolved_initial_margin_rate(
-        instrument_registry: InstrumentRegistry | None,
-    ) -> Decimal | None:
-        """Resolve a single account-wide initial-margin rate from the registry.
-
-        The margin rate is a per-contract product fact owned by ``ContractSpec``.
-        Returns ``None`` when no registered instrument configures a rate (margin
-        enforcement stays disabled). When more than one distinct rate is
-        configured the run is rejected, because the account-wide
-        ``MarginCalculator`` cannot represent conflicting per-contract rates;
-        this fails closed on misconfiguration rather than silently picking one.
-        """
-        if instrument_registry is None:
-            return None
-        rates = {
-            spec.initial_margin_rate
-            for spec in instrument_registry.contract_specs()
-            if spec.initial_margin_rate is not None
-        }
-        if not rates:
-            return None
-        if len(rates) > 1:
-            raise ValueError(
-                "multiple distinct initial_margin_rate values configured; "
-                "the account-wide margin gate requires a single rate"
-            )
-        return rates.pop()
 
     def run_streaming(
         self,
