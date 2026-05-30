@@ -15,6 +15,16 @@ from qts.execution.transports.ibkr_tws_order_execution_transport import (
     IbkrOrderRequest,
 )
 
+requires_official_ibapi = pytest.mark.skipif(
+    find_spec("ibapi") is None,
+    reason="official IBKR TWS Python API package (ibapi) is required",
+)
+"""Skip a test that constructs real ibapi objects when the package is absent.
+
+Tests that monkeypatch ``_ibapi_attr`` do not need this guard; only tests that
+call the real ``to_ibapi_*`` builders or reconciliation paths do.
+"""
+
 
 class IbkrGatewayMarketDataTransport(Protocol):
     @property

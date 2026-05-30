@@ -14,6 +14,7 @@ from qts.research.orchestrator.queue import (
     ExperimentWorker,
 )
 from qts.research.orchestrator.validation_artifact_reader import (
+    PromotionThresholds,
     ResearchMetricsDerivation,
     ResearchMetricsFromValidationArtifacts,
     SharpeSources,
@@ -27,6 +28,7 @@ __all__ = [
     "ExperimentScheduleResult",
     "ExperimentScheduler",
     "ExperimentWorker",
+    "PromotionThresholds",
     "ResearchExperimentJob",
     "ResearchExperimentResult",
     "ResearchExperimentRunner",

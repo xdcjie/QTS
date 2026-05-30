@@ -8,11 +8,12 @@ from datetime import datetime
 from decimal import Decimal
 from types import MappingProxyType
 
-from qts.core.ids import AccountId, InstrumentId
+from qts.core.ids import AccountId
 from qts.domain.orders import OrderFill, OrderSide
 from qts.execution.idempotency import FillIdempotencyStore
+from qts.portfolio.account_snapshot import AccountSnapshot
 from qts.portfolio.cash_book import CashBook
-from qts.portfolio.holdings import Holding, HoldingBook, PositionClosed
+from qts.portfolio.holdings import HoldingBook, PositionClosed
 from qts.runtime.actor import Actor
 from qts.runtime.actor_errors import ActorUnhandledMessageError
 
@@ -51,35 +52,6 @@ class ApplyFill:
     fill_time: datetime | None = None
 
 
-@dataclass(frozen=True, slots=True, init=False)
-class AccountSnapshot:
-    """Read-only account snapshot."""
-
-    cash: Mapping[str, Decimal]
-    holdings: Mapping[InstrumentId, Holding]
-    account_id: AccountId | None = None
-    seen_fill_ids: tuple[str, ...] = ()
-
-    def __init__(
-        self,
-        *,
-        cash: Mapping[str, Decimal],
-        holdings: Mapping[InstrumentId, Holding] | None = None,
-        positions: Mapping[InstrumentId, Holding] | None = None,
-        account_id: AccountId | None = None,
-        seen_fill_ids: tuple[str, ...] = (),
-    ) -> None:
-        object.__setattr__(self, "cash", cash)
-        object.__setattr__(self, "holdings", holdings if holdings is not None else positions or {})
-        object.__setattr__(self, "account_id", account_id)
-        object.__setattr__(self, "seen_fill_ids", seen_fill_ids)
-
-    @property
-    def positions(self) -> Mapping[InstrumentId, Holding]:
-        """Return holdings as quantity-bearing position snapshots."""
-        return self.holdings
-
-
 class AccountActor(Actor):
     """Owns account cash and position state."""
 
@@ -112,9 +84,9 @@ class AccountActor(Actor):
         raise ActorUnhandledMessageError(f"unsupported account message: {type(message).__name__}")
 
     def snapshot(self) -> AccountSnapshot:
-        """Return current account snapshot."""
+        """Return current account snapshot with all currency balances."""
         return AccountSnapshot(
-            cash=MappingProxyType({"USD": self._cash.balance("USD")}),
+            cash=MappingProxyType(self._cash.balances()),
             holdings=self._holdings.snapshot(),
             account_id=self._account_id,
             seen_fill_ids=self._fill_ids.snapshot(),

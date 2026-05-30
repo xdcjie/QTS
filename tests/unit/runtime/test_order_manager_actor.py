@@ -402,16 +402,17 @@ def test_order_route_metadata_is_preserved_across_submit_cancel_replace_and_fill
     assert cancel_a.route_metadata == metadata_a
     assert execution_b.empty()
 
-    with pytest.raises(RuntimeError, match="replace order is not supported.*supports_replace"):
-        actor_a.handle(
-            ReplaceOrder(
-                intent=ReplaceIntent(order_id=order_id_a, new_quantity=Decimal("12")),
-                risk_decision=RiskDecision.approve(),
-                account_id=account_a,
-                strategy_id=strategy_a,
-                route_metadata=metadata_a,
-            )
+    actor_a.handle(
+        ReplaceOrder(
+            intent=ReplaceIntent(order_id=order_id_a, new_quantity=Decimal("12")),
+            risk_decision=RiskDecision.approve(),
+            account_id=account_a,
+            strategy_id=strategy_a,
+            route_metadata=metadata_a,
         )
+    )
+    assert actor_a.replace_rejections[-1].order_id == order_id_a
+    assert actor_a.replace_rejections[-1].reason_code == "REPLACE_NOT_SUPPORTED"
     assert actor_a.route_metadata(order_id_a) == metadata_a
 
     actor_a.handle(
@@ -568,21 +569,24 @@ def test_replace_order_returns_structured_rejection_not_not_implemented_error() 
     )
     assert execution.get() is not None
 
-    with pytest.raises(RuntimeError, match="replace order is not supported.*supports_replace"):
-        actor.handle(
-            ReplaceOrder(
-                intent=ReplaceIntent(order_id=order_id, new_quantity=Decimal("20")),
-                risk_decision=RiskDecision.approve(),
+    actor.handle(
+        ReplaceOrder(
+            intent=ReplaceIntent(order_id=order_id, new_quantity=Decimal("20")),
+            risk_decision=RiskDecision.approve(),
+            account_id=account_id,
+            strategy_id=strategy_id,
+            route_metadata=_route_metadata(
                 account_id=account_id,
                 strategy_id=strategy_id,
-                route_metadata=_route_metadata(
-                    account_id=account_id,
-                    strategy_id=strategy_id,
-                    client_order_id="client-replace-reject",
-                    correlation_id=CorrelationId("corr-replace-reject"),
-                ),
-            )
+                client_order_id="client-replace-reject",
+                correlation_id=CorrelationId("corr-replace-reject"),
+            ),
         )
+    )
+
+    rejection = actor.replace_rejections[-1]
+    assert rejection.order_id == order_id
+    assert rejection.reason_code == "REPLACE_NOT_SUPPORTED"
 
     order = actor.get_order(order_id)
     assert order.intent.quantity == Decimal("10"), (

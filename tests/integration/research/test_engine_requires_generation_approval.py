@@ -55,5 +55,8 @@ def test_engine_requires_approved_generation_record_before_generation_one(
 
     approved = AutonomousResearchEngine(repo_root=Path.cwd()).run(approved_run)
 
-    assert approved.status == "accepted"
+    # WIRING: the matching approval lets the engine proceed past the human gate
+    # and run generation-001. HONESTY: the toy fixture promotes nothing across
+    # either generation, so the campaign honestly rejects.
     assert (approved.output_root / "generation-001").exists()
+    assert approved.status == "rejected"

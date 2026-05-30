@@ -50,10 +50,9 @@ qts.data.market_data_pipeline.MarketDataPipeline  expires=2027-05-17  target=lib
 qts.runtime.durable_recovery.DurableAccountRecovery  expires=2027-05-17  target=library
 # module-internal helpers (1-year horizon)
 qts.application.commands.start_runtime.RuntimeStartResult  expires=2027-05-17  target=internal
+qts.backtest.actor_loop.PendingFill  expires=2027-05-30  target=internal
 qts.backtest.runner.BacktestRun  expires=2027-05-17  target=internal
 qts.core.ids.RuntimeInstanceId  expires=2027-05-17  target=internal
-qts.core.ids.CalendarId  expires=2027-05-17  target=internal
-qts.core.ids.CurrencyCode  expires=2027-05-17  target=internal
 qts.data.bars.aggregator.BarAggregator  expires=2027-05-17  target=internal
 qts.data.sources.replay_market_data_source.ReplayClock  expires=2027-05-17  target=internal
 qts.data.sources.replay_market_data_source.ReplayEventSequencer  expires=2027-05-17  target=internal
@@ -72,9 +71,8 @@ qts.runtime.intent_processing.OrderPlanBuilder  expires=2027-05-17  target=inter
 | `qts.api.schemas.common.RiskRuleSchema` | framework | Pydantic schema; fastapi instantiates via reflection during request validation. |
 | `qts.application.commands.start_runtime.RuntimeStartResult` | internal | Application command result; consumed via DI through dynamic dispatch in tests / API layer. |
 | `qts.application.strategy_lifecycle.StrategyRegistry` | OPT-34 | Planned hub for scheduler integration. |
+| `qts.backtest.actor_loop.PendingFill` | internal | Next-bar-open deferred-fill record; only caller is `defer_strategy_intent`/`flush_pending_fills` in the same backtest actor loop. |
 | `qts.backtest.runner.BacktestRun` | internal | Application-layer DTO; same pattern as RuntimeStartResult. |
-| `qts.core.ids.CalendarId` | internal | StringId-style ID; consumed via type annotations and registry resolution. |
-| `qts.core.ids.CurrencyCode` | internal | StringId-style ID; consumed via type annotations and instrument registry. |
 | `qts.core.ids.RuntimeInstanceId` | internal | StringId-style ID; passed as a string, rarely named directly. |
 | `qts.data.bars.aggregator.BarAggregator` | internal | Public caller is `aggregate_bars` in the same file. |
 | `qts.data.market_data_pipeline.MarketDataPipeline` | library | Library entry-point used by external research scripts. |

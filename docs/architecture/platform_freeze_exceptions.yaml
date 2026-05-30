@@ -1,4 +1,59 @@
 exceptions:
+  - class_name: CancelIntentRouter
+    module: qts.runtime.order_lifecycle
+    reason: routes SDK cancel intents to OrderManagerActor with stored route metadata (DR-025 SDK lifecycle wiring)
+    owner: platform
+    expiry: 2027-05-30
+  - class_name: StrategyFillEvent
+    module: qts.runtime.actors.strategy_actor
+    reason: actor message delivering validated fills for Strategy.on_fill dispatch (DR-025)
+    owner: platform
+    expiry: 2027-05-30
+  - class_name: TickFeedUnavailableError
+    module: qts.runtime.strategy_execution_pipeline
+    reason: explicit rejection when ticks are subscribed on a bar-only runtime (DR-025)
+    owner: platform
+    expiry: 2027-05-30
+  - class_name: RestartPolicy
+    module: qts.runtime.actor_policies
+    reason: actor supervision restart policy value object (DR-017 supervision restart/degrade)
+    owner: platform
+    expiry: 2027-05-29
+  - class_name: MailboxDrainPolicy
+    module: qts.runtime.actor_policies
+    reason: actor supervision mailbox-drain policy for failed-actor restart (DR-017)
+    owner: platform
+    expiry: 2027-05-29
+  - class_name: MailboxDrainMode
+    module: qts.runtime.actor_policies
+    reason: mailbox-drain mode enum for actor supervision (DR-017)
+    owner: platform
+    expiry: 2027-05-29
+  - class_name: AskContextPolicy
+    module: qts.runtime.actor_policies
+    reason: in-flight ask() failure policy for actor supervision live path (DR-017)
+    owner: platform
+    expiry: 2027-05-29
+  - class_name: AskContextMode
+    module: qts.runtime.actor_policies
+    reason: ask-context mode enum for actor supervision (DR-017)
+    owner: platform
+    expiry: 2027-05-29
+  - class_name: RuntimeSupervisionCoordinator
+    module: qts.runtime.actor_supervisor
+    reason: wires ActorSupervisor into RuntimeSession for restart/degrade on actor failure (DR-017)
+    owner: platform
+    expiry: 2027-05-29
+  - class_name: SingleWriterViolation
+    module: qts.runtime.event_store
+    reason: single-writer guard error for FileEventStore O(1) append + flock contract (DR-024 EventStore determinism)
+    owner: platform
+    expiry: 2027-05-29
+  - class_name: ReplaceRejected
+    module: qts.runtime.actors.order_manager_actor
+    reason: structured replace-rejection result owned by OrderManagerActor for capability-gated replace handling (DR-026); replaces the prior RuntimeError raise
+    owner: platform
+    expiry: 2027-05-29
   - class_name: PositionSide
     module: qts.domain.positions
     reason: domain value object for signed position direction shared by portfolio, risk, execution, and strategies

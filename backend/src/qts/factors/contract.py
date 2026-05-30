@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Literal, Protocol, runtime_checkable
+from typing import ClassVar, Literal, Protocol, runtime_checkable
 
 
 class FactorAsset(Protocol):
@@ -82,8 +82,8 @@ class FactorWindow:
 class Factor(Protocol):
     """Versioned factor contract."""
 
-    name: str
-    version: str
+    name: ClassVar[str]
+    version: ClassVar[str]
 
     def compute(self, window: FactorWindow) -> FactorResult:
         """Compute factor scores for a time-sliced input window."""

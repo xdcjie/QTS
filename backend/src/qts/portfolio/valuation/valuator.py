@@ -30,14 +30,23 @@ class PortfolioValuator:
         holdings: Mapping[InstrumentId, Holding],
         marks: Mapping[InstrumentId, Decimal],
         multipliers: Mapping[InstrumentId, Decimal],
+        fx_rates: Mapping[str, Decimal] | None = None,
+        base_currency: str = "USD",
     ) -> AccountValuation:
-        """Return a full account valuation.
+        """Return a full account valuation in ``base_currency``.
 
         Each holding's market value = quantity * mark_price * multiplier.
-        account_equity = sum(cash balances) + sum(holding market values).
+        Cash is converted to the base currency using ``fx_rates`` (base units
+        per 1 unit of the currency). When ``fx_rates`` is None all cash is
+        assumed base-denominated (single-currency account). When ``fx_rates`` is
+        supplied, a non-base currency with no rate raises (fail closed) rather
+        than silently summing mixed currencies.
+        account_equity = converted cash + sum(holding market values).
         current_exposure = sum(abs(holding market values)).
         """
-        total_cash = sum(cash.values(), Decimal("0"))
+        total_cash = PortfolioValuator._convert_cash(
+            cash=cash, fx_rates=fx_rates, base_currency=base_currency
+        )
         holding_equity = Decimal("0")
         exposure = Decimal("0")
         notional_by_instrument: dict[InstrumentId, Decimal] = {}
@@ -62,6 +71,41 @@ class PortfolioValuator:
             current_notional_by_instrument=notional_by_instrument,
             current_position_by_instrument=position_by_instrument,
         )
+
+    @staticmethod
+    def _convert_cash(
+        *,
+        cash: Mapping[str, Decimal],
+        fx_rates: Mapping[str, Decimal] | None,
+        base_currency: str,
+    ) -> Decimal:
+        """Convert all cash balances into the base currency.
+
+        ``fx_rates`` maps a currency to base units per 1 unit of that currency.
+        Missing a non-base currency rate (when fx_rates is supplied) fails closed.
+        """
+        base = base_currency.strip().upper()
+        normalized_rates = (
+            {currency.strip().upper(): rate for currency, rate in fx_rates.items()}
+            if fx_rates is not None
+            else None
+        )
+        total = Decimal("0")
+        for currency, balance in cash.items():
+            ccy = currency.strip().upper()
+            if ccy == base:
+                rate = Decimal("1")
+            elif normalized_rates is None:
+                rate = Decimal("1")
+            else:
+                try:
+                    rate = normalized_rates[ccy]
+                except KeyError:
+                    raise ValueError(
+                        f"missing FX rate for currency {ccy} to value account in {base}"
+                    ) from None
+            total += balance * rate
+        return total
 
 
 __all__ = ["AccountValuation", "PortfolioValuator"]

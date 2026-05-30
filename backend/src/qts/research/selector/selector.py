@@ -10,6 +10,11 @@ from typing import Any
 
 from qts.core.hashing import stable_json_dumps, stable_json_hash
 from qts.research.metrics_schema import ResearchMetricsSchema
+from qts.research.selector.multiplicity_adjustment import (
+    CandidateStatistics,
+    MultiplicityAdjustmentResult,
+    ResearchMultiplicityAdjustment,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,6 +32,12 @@ class SelectionPolicy:
     oos_trade_count_metric: str = "trading.oos_trade_count"
     profit_factor_metric: str = "quality.profit_factor"
     cost_sensitivity_metric: str = "costs.cost_sensitivity"
+    observed_sharpe_metric: str = "performance.observed_sharpe"
+    sample_size_metric: str = "performance.return_observation_count"
+    skewness_metric: str = "performance.return_skewness"
+    kurtosis_metric: str = "performance.return_kurtosis"
+    oos_returns_metric: str = "performance.oos_returns"
+    false_discovery_rate: float = 0.10
     composite_weights: Mapping[str, float] = field(
         default_factory=lambda: {
             "total_return": 1.0,
@@ -45,6 +56,8 @@ class SelectionPolicy:
             raise ValueError("min_profit_factor must be positive when provided")
         if self.max_selected is not None and self.max_selected < 1:
             raise ValueError("max_selected must be positive when provided")
+        if not 0.0 < self.false_discovery_rate <= 1.0:
+            raise ValueError("false_discovery_rate must be in (0, 1]")
         if not self.purpose.strip():
             raise ValueError("purpose must not be empty")
         object.__setattr__(
@@ -67,6 +80,48 @@ class SelectionPolicy:
             - weights.get("max_drawdown", 0.0) * drawdown
             - weights.get("cost_sensitivity", 0.0) * cost_sensitivity
         )
+
+    def candidate_statistics(
+        self,
+        candidate_id: str,
+        metrics: Mapping[str, Any],
+    ) -> CandidateStatistics:
+        """Return the statistical inputs the multiplicity adjustment consumes.
+
+        ``observed_sharpe`` falls back to the annualized ``oos_sharpe`` metric when a
+        dedicated per-observation Sharpe is not published; ``sample_size`` defaults to
+        the OOS trade count. Skewness/kurtosis default to the normal moments
+        (``0`` / ``3``) when not published.
+        """
+
+        observed_sharpe = self.metric_number(metrics, self.observed_sharpe_metric)
+        if observed_sharpe is None:
+            observed_sharpe = self.metric_number(metrics, self.oos_sharpe_metric) or 0.0
+        sample_size = self.metric_number(metrics, self.sample_size_metric)
+        if sample_size is None:
+            sample_size = self.metric_number(metrics, self.oos_trade_count_metric) or 0.0
+        skewness = self.metric_number(metrics, self.skewness_metric)
+        kurtosis = self.metric_number(metrics, self.kurtosis_metric)
+        return CandidateStatistics(
+            candidate_id=candidate_id,
+            raw_score=self.composite_score(metrics),
+            observed_sharpe=observed_sharpe,
+            sample_size=max(int(sample_size), 0),
+            skewness=skewness if skewness is not None else 0.0,
+            kurtosis=kurtosis if kurtosis is not None else 3.0,
+            oos_returns=self._oos_returns(metrics),
+        )
+
+    def _oos_returns(self, metrics: Mapping[str, Any]) -> tuple[float, ...]:
+        value = self.metric_value(metrics, self.oos_returns_metric)
+        if not isinstance(value, Sequence) or isinstance(value, str):
+            return ()
+        returns: list[float] = []
+        for item in value:
+            if isinstance(item, bool) or not isinstance(item, int | float):
+                continue
+            returns.append(float(item))
+        return tuple(returns)
 
     def metric_number(self, metrics: Mapping[str, Any], path: str) -> float | None:
         """Return a finite numeric metric value from a dotted metrics path."""
@@ -95,7 +150,13 @@ class SelectionPolicy:
 
 @dataclass(frozen=True, slots=True)
 class SelectedCandidate:
-    """One candidate accepted by the selector and ready for gauntlet validation."""
+    """One candidate accepted by the selector and ready for gauntlet validation.
+
+    ``composite_score`` is the raw selection objective. ``raw_score`` mirrors it,
+    and ``adjusted_score`` is the trial-count / overfitting-corrected objective the
+    selector ranks on. ``multiplicity_adjustment`` carries the full per-candidate
+    correction payload (deflated/probabilistic Sharpe, PBO, FDR significance).
+    """
 
     candidate_id: str
     selected_rank: int
@@ -103,6 +164,9 @@ class SelectedCandidate:
     metrics: Mapping[str, Any]
     evidence: Mapping[str, Any]
     candidate_payload: Mapping[str, Any]
+    raw_score: float | None = None
+    adjusted_score: float | None = None
+    multiplicity_adjustment: Mapping[str, Any] | None = None
 
     def __post_init__(self) -> None:
         if not self.candidate_id.strip():
@@ -116,18 +180,33 @@ class SelectedCandidate:
             "candidate_payload",
             self._json_object(self.candidate_payload, "candidate_payload"),
         )
+        if self.raw_score is None:
+            object.__setattr__(self, "raw_score", self.composite_score)
+        if self.adjusted_score is None:
+            object.__setattr__(self, "adjusted_score", self.raw_score)
+        if self.multiplicity_adjustment is not None:
+            object.__setattr__(
+                self,
+                "multiplicity_adjustment",
+                self._json_object(self.multiplicity_adjustment, "multiplicity_adjustment"),
+            )
 
     def to_payload(self) -> dict[str, Any]:
         """Return JSON-ready selected candidate evidence."""
 
-        return {
+        payload: dict[str, Any] = {
+            "adjusted_score": self.adjusted_score,
             "candidate_id": self.candidate_id,
             "candidate_payload": dict(self.candidate_payload),
             "composite_score": self.composite_score,
             "evidence": dict(self.evidence),
             "metrics": dict(self.metrics),
+            "raw_score": self.raw_score,
             "selected_rank": self.selected_rank,
         }
+        if self.multiplicity_adjustment is not None:
+            payload["multiplicity_adjustment"] = dict(self.multiplicity_adjustment)
+        return payload
 
     @staticmethod
     def _json_object(payload: Mapping[str, Any], field_name: str) -> dict[str, Any]:
@@ -224,15 +303,21 @@ class SelectionResult:
             "policy": {
                 "composite_weights": dict(self.policy.composite_weights),
                 "cost_sensitivity_metric": self.policy.cost_sensitivity_metric,
+                "false_discovery_rate": self.policy.false_discovery_rate,
+                "kurtosis_metric": self.policy.kurtosis_metric,
                 "max_drawdown": self.policy.max_drawdown,
                 "max_drawdown_metric": self.policy.max_drawdown_metric,
                 "max_selected": self.policy.max_selected,
                 "min_oos_trade_count": self.policy.min_oos_trade_count,
                 "min_profit_factor": self.policy.min_profit_factor,
+                "observed_sharpe_metric": self.policy.observed_sharpe_metric,
+                "oos_returns_metric": self.policy.oos_returns_metric,
                 "oos_sharpe_metric": self.policy.oos_sharpe_metric,
                 "oos_trade_count_metric": self.policy.oos_trade_count_metric,
                 "profit_factor_metric": self.policy.profit_factor_metric,
                 "purpose": self.policy.purpose,
+                "sample_size_metric": self.policy.sample_size_metric,
+                "skewness_metric": self.policy.skewness_metric,
                 "total_return_metric": self.policy.total_return_metric,
             },
             "rejected_candidates": [
@@ -263,8 +348,19 @@ class CandidateSelector:
         candidate_results: Iterable[Mapping[str, Any]],
         *,
         metrics_schema: ResearchMetricsSchema | None = None,
+        trial_count: int = 1,
     ) -> SelectionResult:
-        """Return selected/rejected candidates for a completed research generation."""
+        """Return selected/rejected candidates for a completed research generation.
+
+        ``trial_count`` is the number of configurations tried in the family
+        (threaded from the search budget). It feeds the multiplicity adjustment:
+        with more trials the expected-maximum-Sharpe haircut grows, every adjusted
+        score drops, and the acceptance threshold rises. With the default of ``1``
+        there is no inflation and the adjusted score equals the raw objective.
+        """
+
+        if trial_count < 1:
+            raise ValueError("trial_count must be positive")
 
         survivors: list[SelectedCandidate] = []
         rejections: list[RejectedCandidate] = []
@@ -296,9 +392,11 @@ class CandidateSelector:
                 )
             )
 
+        adjustments = self._adjustments(survivors, trial_count)
+        survivors = [self._with_adjustment(survivor, adjustments) for survivor in survivors]
         ranked = sorted(
             survivors,
-            key=lambda survivor: (-survivor.composite_score, survivor.candidate_id),
+            key=lambda survivor: (-(survivor.adjusted_score or 0.0), survivor.candidate_id),
         )
         selected: list[SelectedCandidate] = []
         max_selected = self.policy.max_selected or len(ranked)
@@ -312,6 +410,9 @@ class CandidateSelector:
                         metrics=survivor.metrics,
                         evidence=survivor.evidence,
                         candidate_payload=survivor.candidate_payload,
+                        raw_score=survivor.raw_score,
+                        adjusted_score=survivor.adjusted_score,
+                        multiplicity_adjustment=survivor.multiplicity_adjustment,
                     )
                 )
             else:
@@ -331,6 +432,48 @@ class CandidateSelector:
                 sorted(rejections, key=lambda candidate: candidate.candidate_id)
             ),
             policy=self.policy,
+        )
+
+    def _adjustments(
+        self,
+        survivors: Sequence[SelectedCandidate],
+        trial_count: int,
+    ) -> dict[str, MultiplicityAdjustmentResult]:
+        if not survivors:
+            return {}
+        statistics = [
+            self.policy.candidate_statistics(survivor.candidate_id, survivor.metrics)
+            for survivor in survivors
+        ]
+        adjustment = ResearchMultiplicityAdjustment(
+            trial_count=trial_count,
+            false_discovery_rate=self.policy.false_discovery_rate,
+            objective_sharpe_key="oos_sharpe",
+            composite_weights=self.policy.composite_weights,
+        )
+        return {result.candidate_id: result for result in adjustment.adjust(statistics)}
+
+    @staticmethod
+    def _with_adjustment(
+        survivor: SelectedCandidate,
+        adjustments: Mapping[str, MultiplicityAdjustmentResult],
+    ) -> SelectedCandidate:
+        result = adjustments.get(survivor.candidate_id)
+        if result is None:
+            return survivor
+        return SelectedCandidate(
+            candidate_id=survivor.candidate_id,
+            selected_rank=survivor.selected_rank,
+            composite_score=survivor.composite_score,
+            metrics=survivor.metrics,
+            evidence=survivor.evidence,
+            candidate_payload={
+                **dict(survivor.candidate_payload),
+                "multiplicity_adjustment": result.to_payload(),
+            },
+            raw_score=result.raw_score,
+            adjusted_score=result.adjusted_score,
+            multiplicity_adjustment=result.to_payload(),
         )
 
     def _rejection_reasons(
@@ -454,6 +597,8 @@ class CandidateSelector:
 
 __all__ = [
     "CandidateSelector",
+    "CandidateStatistics",
+    "MultiplicityAdjustmentResult",
     "RejectedCandidate",
     "SelectedCandidate",
     "SelectionPolicy",

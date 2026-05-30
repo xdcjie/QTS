@@ -86,14 +86,10 @@ def _string_only_lookahead_candidate() -> dict[str, Any]:
         "validation": {
             "walk_forward": {
                 "consistent": True,
-                "test_windows": (
-                    {"name": "split-001", "accepted": True, "score": 1.10},
-                ),
+                "test_windows": ({"name": "split-001", "accepted": True, "score": 1.10},),
                 "max_train_test_gap": 0.30,
             },
-            "failure_windows": (
-                {"name": "crisis", "max_drawdown": 0.12},
-            ),
+            "failure_windows": ({"name": "crisis", "max_drawdown": 0.12},),
             "cost_stress": {
                 "degradation": 0.12,
                 "slippage_sensitivity": 0.05,
@@ -129,14 +125,10 @@ def _lookahead_factor_candidate() -> dict[str, Any]:
         "validation": {
             "walk_forward": {
                 "consistent": True,
-                "test_windows": (
-                    {"name": "split-001", "accepted": True, "score": 1.10},
-                ),
+                "test_windows": ({"name": "split-001", "accepted": True, "score": 1.10},),
                 "max_train_test_gap": 0.30,
             },
-            "failure_windows": (
-                {"name": "crisis", "max_drawdown": 0.12},
-            ),
+            "failure_windows": ({"name": "crisis", "max_drawdown": 0.12},),
             "cost_stress": {
                 "degradation": 0.12,
                 "slippage_sensitivity": 0.05,
@@ -310,9 +302,7 @@ def _write_all_validation_artifacts(
             "test_windows": [{"accepted": True, "name": "oos"}],
         },
         "failure_window_veto": {
-            "failure_windows": [
-                {"breached": False, "max_drawdown": 0.12, "name": "crisis"}
-            ]
+            "failure_windows": [{"breached": False, "max_drawdown": 0.12, "name": "crisis"}]
         },
         "cost_stress": {
             "degradation": 0.12,

@@ -5,9 +5,9 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, cast
@@ -31,6 +31,10 @@ from qts.research.artifact_graph import (
 from qts.research.audit_log import ResearchAuditLog
 from qts.research.campaign import ResearchCampaignConfig, ResearchCampaignFamily
 from qts.research.evidence_registry import EvidenceRegistry
+from qts.research.factory.discovery_mapper import (
+    FactorDefinitionDraftConstraints,
+    FactorDiscoveryDraftMapper,
+)
 from qts.research.factory.factor_definition import FactorDefinition
 from qts.research.factory.strategy_template import StrategyTemplate, StrategyVariantFactory
 from qts.research.idea_spec import IdeaSpec
@@ -41,6 +45,7 @@ from qts.research.orchestrator import (
     ExperimentRetryPolicy,
     ExperimentScheduler,
     ExperimentWorker,
+    PromotionThresholds,
 )
 from qts.research.orchestrator.experiment_runner import (
     ResearchExperimentJob,
@@ -879,7 +884,13 @@ class AutonomousResearchEngine:
         factor_payload = payload.get("factor_definition")
         if not isinstance(factor_payload, Mapping):
             raise ValueError(f"strategy template factor_definition is required: {path}")
-        factor_definition = FactorDefinition.from_payload(cast(Mapping[str, Any], factor_payload))
+        factor_definition = self._factor_definition_for_family(
+            run=run,
+            family=family,
+            template_payload=payload,
+            static_factor_payload=cast(Mapping[str, Any], factor_payload),
+            path=path,
+        )
         manifest_template = dict(self._mapping(payload.get("manifest_template", {}), "manifest"))
         backtest_pipeline = payload.get("backtest_pipeline")
         if backtest_pipeline is not None:
@@ -906,6 +917,48 @@ class AutonomousResearchEngine:
             ),
             manifest_template=manifest_template,
         )
+
+    def _factor_definition_for_family(
+        self,
+        *,
+        run: AutonomousResearchRun,
+        family: ResearchCampaignFamily,
+        template_payload: Mapping[str, Any],
+        static_factor_payload: Mapping[str, Any],
+        path: Path,
+    ) -> FactorDefinition:
+        """Resolve the family factor definition, mapping a discovered idea when present.
+
+        When the manifest template declares ``factor_discovery.idea_spec``, the
+        discovered idea is mapped to a controlled FactorDefinition draft through
+        ``FactorDiscoveryDraftMapper`` so a research idea actually drives the
+        generated candidates. Ideas the deterministic mapper cannot place fall
+        back to the static template definition, which always remains required.
+        """
+        idea_spec = self._template_idea_spec(template_payload, path=path)
+        if idea_spec is None:
+            return FactorDefinition.from_payload(static_factor_payload)
+        draft = FactorDiscoveryDraftMapper(
+            constraints=FactorDefinitionDraftConstraints(roots=run.universe)
+        ).draft_from_idea_spec(idea_spec)
+        if draft.needs_human_spec or draft.factor_definition is None:
+            return FactorDefinition.from_payload(static_factor_payload)
+        return draft.factor_definition
+
+    def _template_idea_spec(
+        self,
+        template_payload: Mapping[str, Any],
+        *,
+        path: Path,
+    ) -> IdeaSpec | None:
+        discovery_payload = template_payload.get("factor_discovery")
+        if discovery_payload is None:
+            return None
+        discovery = self._mapping(discovery_payload, "factor_discovery")
+        idea_payload = discovery.get("idea_spec")
+        if not isinstance(idea_payload, Mapping):
+            raise ValueError(f"strategy template factor_discovery.idea_spec is required: {path}")
+        return IdeaSpec.from_payload(cast(Mapping[str, Any], idea_payload))
 
     def _parameter_space_payload(self, search_space: SearchSpaceSpec) -> dict[str, Any]:
         payload: dict[str, Any] = {}
@@ -1097,10 +1150,8 @@ class AutonomousResearchEngine:
             source_data_path=data_path,
             data_root=data_root,
         )
-        materialized_symbol = self._default_materialized_contract_symbol(
-            chain,
-            as_of=self._parse_timestamp(start),
-        )
+        contract_symbol_for = self._materialized_contract_symbol_resolver(chain)
+        materialized_symbol = contract_symbol_for(self._parse_timestamp(start))
         bars_dir = data_root / "data"
         bars_dir.mkdir(parents=True, exist_ok=True)
         target_csv = bars_dir / f"{root}.csv"
@@ -1111,6 +1162,7 @@ class AutonomousResearchEngine:
                 data_path,
                 target_csv,
                 symbol=materialized_symbol,
+                contract_symbol_for=contract_symbol_for,
                 window=window,
                 windows=windows,
             )
@@ -1119,6 +1171,7 @@ class AutonomousResearchEngine:
                 data_path,
                 target_csv,
                 symbol=materialized_symbol,
+                contract_symbol_for=contract_symbol_for,
                 max_rows=max_rows,
                 window=window,
                 windows=windows,
@@ -1188,11 +1241,17 @@ class AutonomousResearchEngine:
         )
 
     @staticmethod
-    def _default_materialized_contract_symbol(
+    def _materialized_contract_symbol_resolver(
         chain: HistoricalChain,
-        *,
-        as_of: datetime,
-    ) -> str:
+    ) -> Callable[[datetime], str]:
+        """Return a roll-aware contract-symbol resolver keyed by bar timestamp.
+
+        The continuous-future replay rolls between contracts using the chain's
+        roll schedule, so a synthetic single-symbol fixture loses bars once a
+        window crosses a roll boundary. Labelling each bar with the contract the
+        roll selector considers active at that bar's session keeps every
+        walk-forward window (train and out-of-sample) backed by real bars.
+        """
         selector = FirstNoticeDateFutureContractSelector(
             contracts=tuple(
                 FutureContractRollSpec(
@@ -1206,19 +1265,39 @@ class AutonomousResearchEngine:
             session_offset=ExchangeCalendarProvider(chain.trading_calendar).session_offset,
             active_months=chain.active_months,
         )
-        candidates = tuple(
-            FutureContractCandidate(
-                root_symbol=chain.root,
-                symbol=contract.symbol,
-                instrument_id=chain.instrument_id_for_symbol(contract.symbol),
-                as_of=as_of,
-                close=Decimal("1"),
-                volume=Decimal("1"),
-                session_date=as_of.date(),
+        cache: dict[date, str] = {}
+
+        def resolve(as_of: datetime) -> str:
+            session_date = as_of.date()
+            cached = cache.get(session_date)
+            if cached is not None:
+                return cached
+            candidates = tuple(
+                FutureContractCandidate(
+                    root_symbol=chain.root,
+                    symbol=contract.symbol,
+                    instrument_id=chain.instrument_id_for_symbol(contract.symbol),
+                    as_of=as_of,
+                    close=Decimal("1"),
+                    volume=Decimal("1"),
+                    session_date=session_date,
+                )
+                for contract in chain.contracts
             )
-            for contract in chain.contracts
-        )
-        return selector.select(candidates).symbol
+            symbol = selector.select(candidates).symbol
+            cache[session_date] = symbol
+            return symbol
+
+        return resolve
+
+    @classmethod
+    def _default_materialized_contract_symbol(
+        cls,
+        chain: HistoricalChain,
+        *,
+        as_of: datetime,
+    ) -> str:
+        return cls._materialized_contract_symbol_resolver(chain)(as_of)
 
     def _ensure_full_backtest_csv(
         self,
@@ -1226,6 +1305,7 @@ class AutonomousResearchEngine:
         target_path: Path,
         *,
         symbol: str,
+        contract_symbol_for: Callable[[datetime], str] | None = None,
         window: tuple[str, str] | None,
         windows: Sequence[tuple[str, str]] = (),
     ) -> None:
@@ -1233,6 +1313,7 @@ class AutonomousResearchEngine:
         source_stat = source_path.stat()
         expected_metadata = {
             "max_rows": None,
+            "roll_aware_symbols": contract_symbol_for is not None,
             "source_path": str(source_path),
             "source_size": source_stat.st_size,
             "source_mtime_ns": source_stat.st_mtime_ns,
@@ -1249,6 +1330,7 @@ class AutonomousResearchEngine:
             source_path,
             temp_path,
             symbol=symbol,
+            contract_symbol_for=contract_symbol_for,
             max_rows=None,
             window=window,
             windows=windows,
@@ -1262,6 +1344,7 @@ class AutonomousResearchEngine:
         target_path: Path,
         *,
         symbol: str,
+        contract_symbol_for: Callable[[datetime], str] | None = None,
         max_rows: int | None,
         window: tuple[str, str] | None = None,
         windows: Sequence[tuple[str, str]] = (),
@@ -1362,8 +1445,11 @@ class AutonomousResearchEngine:
                     parsed_windows,
                 ):
                     continue
+                bar_symbol = (
+                    symbol if contract_symbol_for is None else contract_symbol_for(timestamp_time)
+                )
                 target.write(
-                    f"{timestamp},33,1,{index},{close},{close},{close},{close},1,{symbol}\n"
+                    f"{timestamp},33,1,{index},{close},{close},{close},{close},1,{bar_symbol}\n"
                 )
                 emitted += 1
         if emitted == 0:
@@ -1625,6 +1711,40 @@ class AutonomousResearchEngine:
         result_by_id = {result.trial_id: result for result in trial_results}
         row_by_id = {str(row["trial_id"]): dict(row) for row in trial_evidence_rows}
 
+        # Validation artifacts must exist before selection: the selector enforces
+        # the promotion metrics schema, and the artifact-derived fields
+        # (deterministic_replay_passed, no_lookahead_passed, walk_forward
+        # consistency, parameter_sensitivity, oos_months, promotion_eligible)
+        # are honestly None until the survivor validation runs have produced the
+        # artifacts the metrics are derived from. Producing them up front keeps
+        # selection driven by real evidence rather than rejecting every
+        # candidate for missing-but-not-yet-derived fields.
+        validation_runner = ResearchExperimentRunner(
+            repo_root=self._repo_root,
+            promotion_thresholds=self._promotion_thresholds(run),
+        )
+        active_correlation_context = [
+            self._active_correlation_context_from_selected(row) for row in active_selected_rows
+        ]
+        for trial in trials:
+            trial_id = str(trial["trial_id"])
+            result = result_by_id[trial_id]
+            if result.status != "succeeded":
+                continue
+            validation_artifact_paths = validation_runner.write_validation_artifacts_for_trial(
+                trial=trial,
+                trial_result=result,
+                active_correlation_context=active_correlation_context,
+            )
+            result_by_id[trial_id] = replace(
+                result, validation_artifact_paths=validation_artifact_paths
+            )
+            row_by_id[trial_id] = {
+                **row_by_id[trial_id],
+                "metrics": dict(self._metrics_from_trial_result(result_by_id[trial_id])),
+                "validation_artifact_paths": dict(validation_artifact_paths),
+            }
+
         selector_inputs = [
             self._selector_candidate(
                 row=row_by_id[str(trial["trial_id"])],
@@ -1659,28 +1779,13 @@ class AutonomousResearchEngine:
             )
 
         gauntlet_results: list[dict[str, Any]] = []
-        validation_runner = ResearchExperimentRunner(repo_root=self._repo_root)
-        active_correlation_context = [
-            self._active_correlation_context_from_selected(row) for row in active_selected_rows
-        ]
         for selected in selection.selected_candidates:
             trial_id = selected.candidate_id
             row = row_by_id[trial_id]
             result = result_by_id[trial_id]
             trial = trial_by_id[trial_id]
             metrics = self._mapping(row["metrics"], "metrics")
-            validation_artifact_paths = validation_runner.write_validation_artifacts_for_trial(
-                trial=trial,
-                trial_result=result,
-                active_correlation_context=active_correlation_context,
-            )
-            result = replace(result, validation_artifact_paths=validation_artifact_paths)
-            result_by_id[trial_id] = result
-            row = {
-                **row,
-                "validation_artifact_paths": dict(validation_artifact_paths),
-            }
-            row_by_id[trial_id] = row
+            validation_artifact_paths = dict(result.validation_artifact_paths)
             candidate_payload = {
                 **dict(selected.candidate_payload),
                 "validation": self._validation_payload_from_artifacts(validation_artifact_paths),
@@ -1922,6 +2027,16 @@ class AutonomousResearchEngine:
             purpose="promotion",
             cost_sensitivity_metric="costs.cost_sensitivity",
         )
+
+    def _promotion_thresholds(self, run: AutonomousResearchRun) -> PromotionThresholds:
+        """Promotion-eligibility thresholds derived from the campaign constraints.
+
+        ``min_oos_months`` is campaign policy: the derived oos_months *value*
+        stays honestly computed from the validation windows, while the campaign
+        declares the bar its data horizon can meet.
+        """
+        constraints = self._constraint_payload(run)
+        return PromotionThresholds(min_oos_months=float(constraints.get("min_oos_months", 6.0)))
 
     def _metrics_schema(self) -> ResearchMetricsSchema:
         return ResearchMetricsSchema.from_yaml(

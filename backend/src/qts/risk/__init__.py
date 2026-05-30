@@ -15,6 +15,8 @@ _RISK_SUBMODULES = {
     "RiskStateSnapshot": "qts.risk.risk_state",
     "MarginCalculator": "qts.risk.margin",
     "MarginRequirement": "qts.risk.margin",
+    "MarginRule": "qts.risk.rules.margin_limit",
+    "IntradayPnlCalculator": "qts.risk.intraday_pnl",
 }
 
 
@@ -30,11 +32,13 @@ def __getattr__(name: str) -> object:
 
 
 __all__ = [
+    "IntradayPnlCalculator",
     "KillSwitchRegistry",
     "KillSwitchScope",
     "KillSwitchState",
     "MarginCalculator",
     "MarginRequirement",
+    "MarginRule",
     "RiskConfig",
     "RiskEngine",
     "RiskRule",

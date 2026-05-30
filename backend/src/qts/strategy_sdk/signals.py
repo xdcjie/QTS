@@ -31,6 +31,7 @@ class Signal:
     confidence: Decimal = Decimal("1")
     magnitude: Decimal | None = None
     weight: Decimal | None = None
+    volatility: Decimal | None = None
     group_id: str | None = None
 
     def __post_init__(self) -> None:
@@ -54,6 +55,13 @@ class Signal:
             if not weight.is_finite():
                 raise ValueError("weight must be finite")
             object.__setattr__(self, "weight", weight)
+        if self.volatility is not None:
+            volatility = Decimal(str(self.volatility))
+            if not volatility.is_finite():
+                raise ValueError("volatility must be finite")
+            if volatility <= Decimal("0"):
+                raise ValueError("volatility must be positive")
+            object.__setattr__(self, "volatility", volatility)
 
         require_aware_datetime(self.generated_at, name="generated_at")
         if self.horizon <= timedelta(0):

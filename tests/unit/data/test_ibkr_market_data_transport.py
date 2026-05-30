@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from tests.support.ibkr_transports import requires_official_ibapi
+
 if TYPE_CHECKING:
     from qts.data.transports.ibkr_tws_market_data_transport import (
         IbkrBarPayload,
@@ -90,6 +92,7 @@ def test_ibkr_market_data_transport_dispatches_raw_callbacks_to_adapter() -> Non
     assert not fake_transport.connected
 
 
+@requires_official_ibapi
 def test_ibkr_tws_market_data_transport_builds_stock_contract_and_normalizes_tick() -> None:
     from qts.core.ids import BrokerId, InstrumentId
     from qts.data.adapters.ibkr_market_data import (
@@ -310,6 +313,7 @@ def test_ibkr_tws_market_data_transport_ignores_late_ticks_after_unsubscribe() -
     assert transport.handle_tick_price(77, tick_type=4, price=101.25) is None
 
 
+@requires_official_ibapi
 def test_ibkr_tws_market_data_transport_resubscribes_active_requests_after_reconnect() -> None:
     from qts.core.ids import BrokerId, InstrumentId
     from qts.data.adapters.ibkr_market_data import (

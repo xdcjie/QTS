@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from decimal import Decimal
 
+from qts.backtest.execution_timing import ExecutionTimingModel
 from qts.core.ids import InstrumentId
 from qts.domain.instruments import AssetClass, ContractSpec, Instrument, SettlementType
 from qts.domain.market_data import Bar
@@ -23,6 +24,7 @@ class BacktestInstrumentContext:
         instrument_registry: InstrumentRegistry | None = None,
         registry_bars: Sequence[Bar] | None = None,
         contract_multipliers: Mapping[InstrumentId, Decimal] | None = None,
+        execution_timing: ExecutionTimingModel | None = None,
     ) -> None:
         """Perform __init__."""
         self._future_roll_registry = future_roll_registry
@@ -30,6 +32,12 @@ class BacktestInstrumentContext:
         self._registry_bars = tuple(registry_bars or ())
         self._related_contracts_by_continuous: dict[InstrumentId, frozenset[InstrumentId]] = {}
         self._contract_multipliers = dict(contract_multipliers or {})
+        self._execution_timing = execution_timing or ExecutionTimingModel()
+
+    @property
+    def execution_timing(self) -> ExecutionTimingModel:
+        """Return the fill-timing model that prices decisions for this context."""
+        return self._execution_timing
 
     def instrument_registry(self) -> InstrumentRegistry:
         """Perform instrument_registry."""
@@ -92,7 +100,7 @@ class BacktestInstrumentContext:
                 instrument_id,
                 as_of=bar.end_time,
             )
-        return bar.close
+        return self._execution_timing.price_for_execution_bar(bar)
 
     def update_rolling_prices(
         self, bar: Bar, *, latest_prices: dict[InstrumentId, Decimal]

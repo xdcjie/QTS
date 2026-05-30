@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
+from datetime import datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -118,6 +120,7 @@ def test_full_backtest_data_materialization_reuses_shared_csv(
         max_rows: int | None,
         window: tuple[str, str] | None = None,
         windows: tuple[tuple[str, str], ...] = (),
+        contract_symbol_for: Callable[[datetime], str] | None = None,
     ) -> None:
         calls.append(target_path)
         original(
@@ -127,6 +130,7 @@ def test_full_backtest_data_materialization_reuses_shared_csv(
             max_rows=max_rows,
             window=window,
             windows=windows,
+            contract_symbol_for=contract_symbol_for,
         )
 
     monkeypatch.setattr(engine, "_materialize_backtest_csv", counted_materialize)
@@ -306,6 +310,7 @@ def write_campaign(
     active_correlation: float = 0.30,
     data_mode: str = "fixture",
     max_rows: int | None = 50,
+    min_oos_months: int = 1,
     template_extra_lines: tuple[str, ...] = (),
 ) -> Path:
     config_dir = tmp_path / "campaign_inputs"
@@ -403,7 +408,7 @@ def write_campaign(
                 "  components:",
                 "    sharpe: 1.0",
                 "constraints:",
-                "  min_oos_months: 12",
+                f"  min_oos_months: {min_oos_months}",
                 "  min_oos_trade_count: 1",
                 "  min_profit_factor: 1.15",
                 "  max_drawdown: 0.25",
@@ -442,6 +447,29 @@ def write_data_paths(tmp_path: Path) -> dict[str, Path]:
         encoding="utf-8",
     )
     return {"GC": data_path}
+
+
+def _multi_month_fixture_csv(*, base: int, minutes: int = 92000) -> str:
+    """Build a multi-month 1m fixture as a contiguous repeating profitable cycle.
+
+    The bars are emitted as an unbroken 1-minute series so the data-quality gap
+    check sees no missing bars, while the ~2.1-month span crosses a futures
+    contract roll. Repeating the same profitable cycle gives the walk-forward
+    train and out-of-sample halves matching profitable cycles, so the
+    honestly-derived oos_months clears the 1-month intraday promotion bar and
+    walk-forward consistency stays positive.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    cycle = _profit_factor_fixture_prices(base)
+    start = datetime(2026, 1, 5, tzinfo=UTC)
+    rows = ["timestamp,close"]
+    rows.extend(
+        f"{(start + timedelta(minutes=offset)).isoformat()},{cycle[offset % len(cycle)]:.1f}"
+        for offset in range(minutes)
+    )
+    rows.append("")
+    return "\n".join(rows)
 
 
 def write_future_ohlcv_data_paths(tmp_path: Path) -> dict[str, Path]:

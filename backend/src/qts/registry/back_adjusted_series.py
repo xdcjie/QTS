@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
@@ -48,7 +49,7 @@ class BackAdjustedContinuousSeriesBuilder:
         contract-switch points, and computes proportional adjustment
         factors using the prices recorded in each selection.
         """
-        front_id = self._registry._front_by_deferred.get(continuous_id, continuous_id)
+        front_id = self._registry.front_continuous_id(continuous_id)
         selections = self._registry.selection_history(front_id)
         if len(selections) < 2:
             return ()
@@ -58,7 +59,7 @@ class BackAdjustedContinuousSeriesBuilder:
         for selection in selections[1:]:
             current_contract = selection.concrete_instrument_id
             if current_contract != prev_contract:
-                prev_selection = self._registry._selection_at(front_id, as_of=selection.as_of)
+                prev_selection = self._registry.selection_at(front_id, as_of=selection.as_of)
                 old_price = prev_selection.prices_by_instrument.get(prev_contract)
                 new_price = prev_selection.prices_by_instrument.get(current_contract)
                 if old_price is not None and new_price is not None and new_price != Decimal("0"):
@@ -90,7 +91,7 @@ class BackAdjustedContinuousSeriesBuilder:
         back-adjusted price that is continuous with the most recent
         contract's raw prices.
         """
-        front_id = self._registry._front_by_deferred.get(continuous_id, continuous_id)
+        front_id = self._registry.front_continuous_id(continuous_id)
         adjustments = self.build_adjustment_factors(front_id)
         cumulative = Decimal("1")
         for point in adjustments:
@@ -99,6 +100,31 @@ class BackAdjustedContinuousSeriesBuilder:
         if cumulative == Decimal("0"):
             raise ValueError("cumulative adjustment factor is zero; cannot adjust price")
         return raw_price / cumulative
+
+    def series_hash(self, continuous_id: InstrumentId) -> str:
+        """Return a deterministic sha256 over the roll adjustment points.
+
+        Provides reproducibility evidence for a back-adjusted series: the same
+        roll history (boundaries, raw prices, factors) yields the same hash, so
+        a recorded adjusted series can be verified against the roll registry.
+        """
+        adjustments = self.build_adjustment_factors(continuous_id)
+        digest = hashlib.sha256()
+        for point in adjustments:
+            digest.update(
+                "|".join(
+                    (
+                        point.as_of.isoformat(),
+                        str(point.old_contract),
+                        str(point.new_contract),
+                        str(point.old_price),
+                        str(point.new_price),
+                        str(point.adjustment_factor),
+                    )
+                ).encode("utf-8")
+            )
+            digest.update(b"\n")
+        return f"sha256:{digest.hexdigest()}"
 
 
 __all__ = ["BackAdjustedContinuousSeriesBuilder", "RollAdjustmentPoint"]

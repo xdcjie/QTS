@@ -179,6 +179,7 @@ class OrderManager:
                 commission=report.commission,
                 slippage=report.slippage,
                 account_id=order.intent.account_id,
+                intent_id=order.intent.intent_id,
             ),
         )
 

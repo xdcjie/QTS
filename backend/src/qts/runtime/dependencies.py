@@ -25,6 +25,7 @@ from qts.runtime.topology import RuntimeTopology
 from qts.strategy_sdk import PortfolioView, Strategy
 
 if TYPE_CHECKING:
+    from qts.risk.margin.calculator import MarginCalculator
     from qts.runtime.broker_lifecycle import BrokerReconnectReconciliation
     from qts.runtime.live_capital import LiveCapitalOrderDecision
 
@@ -44,6 +45,7 @@ class RuntimeSessionDependencies:
     account_actor: AccountActor
     portfolio_view: Callable[..., PortfolioView]
     multiplier_for: Callable[[InstrumentId], Decimal]
+    margin_calculator: MarginCalculator | None = None
     risk_engines: dict[AccountId, RiskEngine] | None = None
     strategy: Strategy | None = None
     strategies: tuple[Strategy, ...] | None = None

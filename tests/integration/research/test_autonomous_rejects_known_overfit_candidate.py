@@ -97,9 +97,7 @@ def test_validation_derivation_rejects_same_source_overfit(tmp_path: Path) -> No
     _write_validation_artifact(tmp_path, "cost_stress", {"degradation": 0.05})
 
     reader = ValidationArtifactReader(tmp_path)
-    derivation = ResearchMetricsFromValidationArtifacts().derive(
-        reader, _workflow_summary()
-    )
+    derivation = ResearchMetricsFromValidationArtifacts().derive(reader, _workflow_summary())
 
     assert derivation.is_overfit_candidate is True
     assert derivation.promotion_eligible is False

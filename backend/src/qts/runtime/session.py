@@ -14,8 +14,11 @@ from qts.data.sources.streaming_market_data_source import (
 )
 from qts.domain.market_data import Bar
 from qts.domain.orders import Order, OrderFill, OrderState, OrderStateSnapshot
+from qts.risk.intraday_pnl import IntradayPnlCalculator
 from qts.risk.kill_switch import RuntimeKillSwitchCommand
+from qts.runtime.actor_events import ActorFailureEvent
 from qts.runtime.actor_ref import ActorRef
+from qts.runtime.actor_supervisor import SupervisorDecision
 from qts.runtime.actors.account_actor import (
     AccountSnapshot,
     GetAccountSnapshot,
@@ -131,6 +134,8 @@ class RuntimeSession:
                 ),
                 order_id_prefix=dependencies.order_id_prefix,
                 broker_order_id_prefix=dependencies.order_id_prefix,
+                margin_calculator=dependencies.margin_calculator,
+                intraday_pnl_calculator=IntradayPnlCalculator(),
             )
             for account_id, partition in self._account_partitions.items()
         }
@@ -160,6 +165,7 @@ class RuntimeSession:
                 else None
             ),
         )
+        from qts.runtime.actor_supervisor import RuntimeSupervisionCoordinator
         from qts.runtime.broker_lifecycle import RuntimeBrokerLifecycleCoordinator
         from qts.runtime.market_data_context import RuntimeMarketDataSessionContext
         from qts.runtime.market_data_coordinator import RuntimeMarketDataCoordinator
@@ -171,6 +177,7 @@ class RuntimeSession:
         self._recovery_coordinator = RuntimeRecoveryCoordinator(self)
         self._rollback_coordinator = RuntimeRollbackCoordinator(self)
         self._safety_controller = RuntimeSafetyController(self)
+        self._supervision_coordinator = RuntimeSupervisionCoordinator(self)
         self._market_data_coordinator = RuntimeMarketDataCoordinator(
             RuntimeMarketDataSessionContext(self)
         )
@@ -259,6 +266,16 @@ class RuntimeSession:
     def recover(self) -> RuntimeSessionState:
         """Recover a degraded session."""
         return self._recovery_coordinator.recover()
+
+    def on_actor_failure(self, event: ActorFailureEvent) -> SupervisorDecision:
+        """Route an actor failure through the supervisor and degrade if needed.
+
+        This is the production caller for :class:`ActorSupervisor`: the supervisor
+        records the failure, applies its restart policy, and returns a decision;
+        a non-restart decision degrades the running/paused session so it stops
+        accepting new work while observability stays alive.
+        """
+        return self._supervision_coordinator.on_actor_failure(event)
 
     def on_broker_disconnect(self, *, reason: str) -> RuntimeSessionState:
         """Mark the session degraded after broker connectivity is lost."""

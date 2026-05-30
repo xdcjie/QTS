@@ -37,5 +37,16 @@ class ComexGoldCalendarProvider:
             ),
         )
 
+    def session_interval_for(self, session_date: date) -> TimeInterval:
+        """Return the half-open DST-aware session interval for a close date.
+
+        This provider models only the regular COMEX Gold session (no holiday
+        or half-day calendar), so every date resolves to a session. The
+        interval is DST-aware via ``America/New_York``: the exchange-local
+        ``[18:00, 17:00)`` window is constant, but the UTC interval shortens
+        on spring-forward and lengthens on fall-back.
+        """
+        return self.session_for(session_date).interval
+
 
 __all__ = ["ComexGoldCalendarProvider"]

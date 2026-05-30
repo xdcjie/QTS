@@ -78,11 +78,20 @@ def test_engine_runs_generation_greater_than_zero_with_matching_approval(
 
     result = AutonomousResearchEngine(repo_root=Path.cwd()).run(approved_run)
 
-    assert result.status == "accepted"
+    # WIRING invariant: a matching approval lets the engine proceed past the
+    # human gate and run the second bounded generation (contrast with the
+    # no-approval case, which stops after generation-000).
     assert [generation.generation_id for generation in result.generations] == [
         "generation-000",
         "generation-001",
     ]
+    # HONESTY invariant: the toy fixture clears no candidate through the
+    # promotion bar across either generation, so the campaign honestly rejects.
+    assert result.status == "rejected"
+    summary = json.loads(result.validation_summary_path.read_text(encoding="utf-8"))
+    assert summary["status"] == "rejected"
+    assert summary["promotion_packet_count"] == 0
+    assert summary["rejected_candidate_count"] >= 1
 
 
 def test_engine_rejects_generation_approval_for_wrong_proposal_hash(tmp_path: Path) -> None:

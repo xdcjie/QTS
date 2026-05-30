@@ -42,11 +42,14 @@ class OrderIntent:
     quantity: Decimal
     account_id: AccountId | None = None
     order_spec: OrderSpec = OrderSpec()
+    intent_id: str | None = None
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""
         if self.quantity <= Decimal("0"):
             raise ValueError("quantity must be positive")
+        if self.intent_id is not None and not self.intent_id.strip():
+            raise ValueError("intent_id must not be empty if provided")
 
 
 @dataclass(frozen=True, slots=True)
@@ -131,6 +134,12 @@ class OrderFill:
     commission: Decimal = Decimal("0")
     slippage: Decimal = Decimal("0")
     account_id: AccountId | None = None
+    intent_id: str | None = None
+
+    def __post_init__(self) -> None:
+        """Validate optional intent correlation id."""
+        if self.intent_id is not None and not self.intent_id.strip():
+            raise ValueError("intent_id must not be empty if provided")
 
 
 @dataclass(frozen=True, slots=True)

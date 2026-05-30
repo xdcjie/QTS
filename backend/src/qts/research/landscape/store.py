@@ -36,6 +36,7 @@ class FitnessLandscapePoint:
     artifact_graph_hash: str | None
     lifecycle_status: str = "selected"
     rejection_stage: str | None = None
+    trial_count_at_selection: int | None = None
 
     def __post_init__(self) -> None:
         for field_name in (
@@ -62,6 +63,8 @@ class FitnessLandscapePoint:
             raise ValueError("artifact_graph_hash must be non-empty when provided")
         if self.rejection_stage is not None and not self.rejection_stage.strip():
             raise ValueError("rejection_stage must be non-empty when provided")
+        if self.trial_count_at_selection is not None and self.trial_count_at_selection < 1:
+            raise ValueError("trial_count_at_selection must be positive when provided")
         if not self.universe:
             raise ValueError("universe must not be empty")
         object.__setattr__(self, "universe", tuple(str(item) for item in self.universe))
@@ -124,6 +127,9 @@ class FitnessLandscapePoint:
                 )
             ),
             rejection_stage=cls._optional_text(payload, "rejection_stage"),
+            trial_count_at_selection=cls._optional_positive_int(
+                payload, "trial_count_at_selection"
+            ),
         )
 
     @property
@@ -188,6 +194,7 @@ class FitnessLandscapePoint:
             "session": self.session,
             "strategy_family": self.strategy_family,
             "timeframe": self.timeframe,
+            "trial_count_at_selection": self.trial_count_at_selection,
             "trial_id": self.trial_id,
             "universe": list(self.universe),
             "lifecycle_status": self.lifecycle_status,
@@ -215,6 +222,15 @@ class FitnessLandscapePoint:
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"{field_name} must be non-empty when provided")
         return value.strip()
+
+    @staticmethod
+    def _optional_positive_int(payload: Mapping[str, Any], field_name: str) -> int | None:
+        value = payload.get(field_name)
+        if value is None:
+            return None
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError(f"{field_name} must be a positive integer when provided")
+        return value
 
 
 @dataclass(frozen=True, slots=True)

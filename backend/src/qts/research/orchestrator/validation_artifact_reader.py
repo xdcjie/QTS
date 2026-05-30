@@ -62,9 +62,7 @@ class ValidationArtifactReader:
             path=path,
         )
 
-    def read_all(
-        self, artifact_names: tuple[str, ...]
-    ) -> dict[str, ValidationArtifactRead | None]:
+    def read_all(self, artifact_names: tuple[str, ...]) -> dict[str, ValidationArtifactRead | None]:
         """Read multiple artifacts by name.
 
         Missing artifacts map to ``None`` values.
@@ -194,7 +192,34 @@ def _months_from_manifest_window(manifest: Mapping[str, Any]) -> float | None:
     end = _parse_iso(manifest.get("end"))
     if start is not None and end is not None:
         return _month_delta(start, end)
-    return None
+    # Fallback: realized data span recorded in dataset_metadata first_ts/last_ts.
+    return _months_from_dataset_metadata(manifest.get("dataset_metadata"))
+
+
+def _months_from_dataset_metadata(dataset_metadata: Any) -> float | None:
+    """Compute months spanned by the realized data window in dataset_metadata.
+
+    ``dataset_metadata`` is the per-dataset provenance block emitted on backtest
+    manifests; each entry records the realized ``first_ts``/``last_ts`` of the
+    bars actually consumed.  This is the honest OOS data span when no explicit
+    window declaration is present.
+    """
+    if not isinstance(dataset_metadata, list):
+        return None
+    starts: list[datetime] = []
+    ends: list[datetime] = []
+    for entry in dataset_metadata:
+        if not isinstance(entry, Mapping):
+            continue
+        first_ts = _parse_iso(entry.get("first_ts"))
+        last_ts = _parse_iso(entry.get("last_ts"))
+        if first_ts is not None:
+            starts.append(first_ts)
+        if last_ts is not None:
+            ends.append(last_ts)
+    if not starts or not ends:
+        return None
+    return _month_delta(min(starts), max(ends))
 
 
 def _parse_iso(value: Any) -> datetime | None:
@@ -217,6 +242,32 @@ def _month_delta(start: datetime, end: datetime) -> float:
     return round(delta_days / 30.4375, 2)
 
 
+@dataclass(frozen=True, slots=True)
+class PromotionThresholds:
+    """Policy thresholds applied to honestly-derived metrics for promotion.
+
+    These are policy, not domain truth: the metric *values* are always derived
+    from real validation artifacts, while these thresholds decide whether the
+    derived evidence clears the promotion bar.  ``min_oos_months`` is sourced
+    from the campaign's ``constraints`` so intraday/short-horizon research
+    campaigns and long-horizon campaigns can set the bar their data can honestly
+    meet.  Defaults match the durable promotion-grade thresholds gated by the
+    DR-001 honesty tests.
+    """
+
+    min_oos_months: float = 6.0
+    min_walk_forward_consistency: float = 0.5
+    min_parameter_sensitivity: float = 0.5
+
+    def __post_init__(self) -> None:
+        if self.min_oos_months < 0:
+            raise ValueError("min_oos_months must be non-negative")
+        if self.min_walk_forward_consistency < 0:
+            raise ValueError("min_walk_forward_consistency must be non-negative")
+        if self.min_parameter_sensitivity < 0:
+            raise ValueError("min_parameter_sensitivity must be non-negative")
+
+
 class ResearchMetricsFromValidationArtifacts:
     """Derive honest research metrics from validation artifacts.
 
@@ -224,6 +275,9 @@ class ResearchMetricsFromValidationArtifacts:
     experiment runner and produces metrics where every field is backed by real
     evidence or explicitly ``None``.
     """
+
+    def __init__(self, thresholds: PromotionThresholds | None = None) -> None:
+        self._thresholds = thresholds or PromotionThresholds()
 
     def derive(
         self,
@@ -326,9 +380,7 @@ class ResearchMetricsFromValidationArtifacts:
             return None
         train_score = first_window.get("train_score")
         test_score = first_window.get("score")
-        if not isinstance(train_score, (int, float)) or not isinstance(
-            test_score, (int, float)
-        ):
+        if not isinstance(train_score, (int, float)) or not isinstance(test_score, (int, float)):
             return None
         if train_score == 0:
             return 0.0
@@ -371,12 +423,8 @@ class ResearchMetricsFromValidationArtifacts:
                         train_sharpe = float(train_score)
                     if isinstance(test_score, (int, float)):
                         oos_sharpe = float(test_score)
-                    train_manifest_hash = str(
-                        first_window.get("train_manifest_hash", "")
-                    ) or None
-                    oos_manifest_hash = str(
-                        first_window.get("manifest_hash", "")
-                    ) or None
+                    train_manifest_hash = str(first_window.get("train_manifest_hash", "")) or None
+                    oos_manifest_hash = str(first_window.get("manifest_hash", "")) or None
 
         # Override from explicit manifests if available
         if train_manifest is not None:
@@ -406,8 +454,8 @@ class ResearchMetricsFromValidationArtifacts:
             oos_manifest_hash=oos_manifest_hash,
         )
 
-    @staticmethod
     def _derive_promotion_eligible(
+        self,
         *,
         deterministic_replay_passed: bool | None,
         no_lookahead_passed: bool | None,
@@ -417,15 +465,22 @@ class ResearchMetricsFromValidationArtifacts:
         sharpe_sources: SharpeSources,
     ) -> bool:
         """Promotion eligibility is derived from validation status, not a default."""
+        thresholds = self._thresholds
         if deterministic_replay_passed is not True:
             return False
         if no_lookahead_passed is not True:
             return False
-        if walk_forward_consistency is None or walk_forward_consistency < 0.5:
+        if (
+            walk_forward_consistency is None
+            or walk_forward_consistency < thresholds.min_walk_forward_consistency
+        ):
             return False
-        if parameter_sensitivity is None or parameter_sensitivity < 0.5:
+        if (
+            parameter_sensitivity is None
+            or parameter_sensitivity < thresholds.min_parameter_sensitivity
+        ):
             return False
-        if oos_months is None or oos_months < 6.0:
+        if oos_months is None or oos_months < thresholds.min_oos_months:
             return False
         if sharpe_sources.same_source and sharpe_sources.train_sharpe == sharpe_sources.oos_sharpe:
             return False
@@ -436,6 +491,7 @@ class ResearchMetricsFromValidationArtifacts:
 
 
 __all__ = [
+    "PromotionThresholds",
     "ResearchMetricsDerivation",
     "ResearchMetricsFromValidationArtifacts",
     "SharpeSources",

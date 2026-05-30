@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import cast
 from unittest.mock import MagicMock
@@ -12,8 +12,19 @@ from qts.runtime.actor import Actor
 from qts.runtime.actor_errors import ActorAskTimeoutError, ActorUnhandledMessageError
 from qts.runtime.actor_events import ActorFailureEvent
 from qts.runtime.actor_path import ActorPath
+from qts.runtime.actor_policies import (
+    AskContextMode,
+    AskContextPolicy,
+    MailboxDrainMode,
+    MailboxDrainPolicy,
+    RestartPolicy,
+)
 from qts.runtime.actor_ref import ActorRef
-from qts.runtime.actor_supervisor import ActorSupervisor, SupervisorDecision
+from qts.runtime.actor_supervisor import (
+    ActorSupervisor,
+    RuntimeSupervisionCoordinator,
+    SupervisorDecision,
+)
 from qts.runtime.mailbox import Mailbox
 
 # ---------------------------------------------------------------------------
@@ -425,11 +436,17 @@ class TestActorSupervisor:
         path = ActorPath.root("execution")
         mailbox = Mailbox()
         actor = CrashingActor()
+
+        def sink(event: ActorFailureEvent) -> None:
+            # handle_failure now returns a SupervisorDecision; the failure_sink
+            # contract is fire-and-forget, so drop the return value here.
+            supervisor.handle_failure(event)
+
         actor_ref = ActorRef(
             actor=actor,
             mailbox=mailbox,
             path=path,
-            failure_sink=supervisor.handle_failure,
+            failure_sink=sink,
         )
         supervisor.supervise(actor_ref, path=path)
 
@@ -508,3 +525,308 @@ class TestBackwardCompatibility:
         mailbox = Mailbox()
         ref = ActorRef(mailbox=mailbox)
         assert ref.failure_sink is None
+
+
+# ---------------------------------------------------------------------------
+# RestartPolicy
+# ---------------------------------------------------------------------------
+
+
+class TestRestartPolicy:
+    """RestartPolicy decides restart vs. escalate within a bounded window."""
+
+    def test_recoverable_first_failure_restarts(self) -> None:
+        policy = RestartPolicy(max_restarts=2, window=timedelta(minutes=1))
+        now = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+        assert policy.should_restart((), now=now, recoverable=True) is True
+
+    def test_non_recoverable_never_restarts(self) -> None:
+        policy = RestartPolicy(max_restarts=5, window=timedelta(minutes=1))
+        now = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+        assert policy.should_restart((), now=now, recoverable=False) is False
+
+    def test_failures_beyond_budget_escalate(self) -> None:
+        policy = RestartPolicy(max_restarts=2, window=timedelta(minutes=1))
+        base = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+        prior = (base, base + timedelta(seconds=10))
+        now = base + timedelta(seconds=20)
+        # 2 prior failures within the window == max_restarts -> no more restarts
+        assert policy.should_restart(prior, now=now, recoverable=True) is False
+
+    def test_failures_outside_window_do_not_count(self) -> None:
+        policy = RestartPolicy(max_restarts=1, window=timedelta(minutes=1))
+        base = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+        # Prior failure is 2 minutes old -> outside the 1-minute window
+        prior = (base - timedelta(minutes=2),)
+        assert policy.should_restart(prior, now=base, recoverable=True) is True
+
+    def test_restarts_within_window_count(self) -> None:
+        policy = RestartPolicy(max_restarts=3, window=timedelta(minutes=1))
+        base = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+        prior = (base - timedelta(seconds=30), base - timedelta(minutes=5))
+        assert policy.restarts_within_window(prior, now=base) == 1
+
+    def test_invalid_max_restarts_rejected(self) -> None:
+        with pytest.raises(ValueError, match="max_restarts"):
+            RestartPolicy(max_restarts=-1)
+
+    def test_invalid_window_rejected(self) -> None:
+        with pytest.raises(ValueError, match="window"):
+            RestartPolicy(window=timedelta(0))
+
+
+# ---------------------------------------------------------------------------
+# MailboxDrainPolicy
+# ---------------------------------------------------------------------------
+
+
+class TestMailboxDrainPolicy:
+    """MailboxDrainPolicy governs queued messages on restart."""
+
+    def test_discard_empties_mailbox_and_returns_messages(self) -> None:
+        policy = MailboxDrainPolicy(mode=MailboxDrainMode.DISCARD)
+        mailbox = Mailbox()
+        mailbox.put("a")
+        mailbox.put("b")
+        drained = policy.apply(mailbox)
+        assert drained == ("a", "b")
+        assert mailbox.empty()
+        assert policy.discards is True
+
+    def test_preserve_leaves_mailbox_intact(self) -> None:
+        policy = MailboxDrainPolicy(mode=MailboxDrainMode.PRESERVE)
+        mailbox = Mailbox()
+        mailbox.put("a")
+        drained = policy.apply(mailbox)
+        assert drained == ()
+        assert mailbox.size == 1
+        assert policy.discards is False
+
+    def test_default_mode_is_discard(self) -> None:
+        assert MailboxDrainPolicy().mode is MailboxDrainMode.DISCARD
+
+
+# ---------------------------------------------------------------------------
+# AskContextPolicy
+# ---------------------------------------------------------------------------
+
+
+class TestAskContextPolicy:
+    """AskContextPolicy governs in-flight ask() behavior on failure."""
+
+    def test_default_mode_fails_fast(self) -> None:
+        policy = AskContextPolicy()
+        assert policy.mode is AskContextMode.FAIL_FAST
+        assert policy.fails_fast is True
+
+    def test_wait_for_timeout_does_not_fail_fast(self) -> None:
+        policy = AskContextPolicy(mode=AskContextMode.WAIT_FOR_TIMEOUT)
+        assert policy.fails_fast is False
+
+
+# ---------------------------------------------------------------------------
+# ActorSupervisor restart/degrade decisions
+# ---------------------------------------------------------------------------
+
+
+class TestSupervisorDecisions:
+    """handle_failure returns a deterministic restart/degrade decision."""
+
+    def test_recoverable_failure_returns_restart(self) -> None:
+        supervisor = ActorSupervisor()
+        event = ActorFailureEvent.from_exception(
+            actor_name="/account",
+            exception=ValueError("transient"),
+        )
+        decision = supervisor.handle_failure(event)
+        assert decision is SupervisorDecision.RESTART
+        # Failure event is still emitted/recorded.
+        assert supervisor.failure_events == (event,)
+
+    def test_non_recoverable_failure_returns_degrade(self) -> None:
+        supervisor = ActorSupervisor()
+        event = ActorFailureEvent.from_exception(
+            actor_name="/execution",
+            exception=RuntimeError("broker disconnected"),
+            recoverable=False,
+        )
+        decision = supervisor.handle_failure(event)
+        assert decision is SupervisorDecision.DEGRADE
+
+    def test_repeated_failures_beyond_policy_escalate_to_degrade(self) -> None:
+        supervisor = ActorSupervisor(
+            restart_policy=RestartPolicy(max_restarts=2, window=timedelta(minutes=5))
+        )
+        base = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+        decisions = []
+        for offset in range(4):
+            event = ActorFailureEvent(
+                actor_name="/account",
+                exception_type="ValueError",
+                exception_message="boom",
+                timestamp=base + timedelta(seconds=offset),
+                recoverable=True,
+            )
+            decisions.append(supervisor.handle_failure(event))
+        # First two restart (budget 2), then degrade.
+        assert decisions[0] is SupervisorDecision.RESTART
+        assert decisions[1] is SupervisorDecision.RESTART
+        assert decisions[2] is SupervisorDecision.DEGRADE
+        assert decisions[3] is SupervisorDecision.DEGRADE
+        assert supervisor.failure_count("/account") == 4
+
+    def test_on_decision_callback_receives_decision(self) -> None:
+        seen: list[tuple[ActorFailureEvent, SupervisorDecision]] = []
+        supervisor = ActorSupervisor(on_decision=lambda e, d: seen.append((e, d)))
+        event = ActorFailureEvent.from_exception(
+            actor_name="/account",
+            exception=ValueError("x"),
+        )
+        decision = supervisor.handle_failure(event)
+        assert seen == [(event, decision)]
+
+    def test_restart_applies_mailbox_drain_discard(self) -> None:
+        """On restart the supervisor drains the failed actor's mailbox (discard)."""
+        supervisor = ActorSupervisor(
+            mailbox_drain_policy=MailboxDrainPolicy(mode=MailboxDrainMode.DISCARD)
+        )
+        path = ActorPath.root("account")
+        mailbox = Mailbox()
+        mailbox.put("queued-behind-failure")
+        actor_ref = ActorRef(mailbox=mailbox)
+        supervisor.supervise(actor_ref, path=path)
+
+        event = ActorFailureEvent.from_exception(
+            actor_name="/account",
+            exception=ValueError("transient"),
+        )
+        decision = supervisor.handle_failure(event)
+        assert decision is SupervisorDecision.RESTART
+        # Messages queued behind the failure were discarded on restart.
+        assert mailbox.empty()
+
+    def test_restart_with_preserve_keeps_mailbox(self) -> None:
+        supervisor = ActorSupervisor(
+            mailbox_drain_policy=MailboxDrainPolicy(mode=MailboxDrainMode.PRESERVE)
+        )
+        path = ActorPath.root("account")
+        mailbox = Mailbox()
+        mailbox.put("keep-me")
+        actor_ref = ActorRef(mailbox=mailbox)
+        supervisor.supervise(actor_ref, path=path)
+
+        supervisor.handle_failure(
+            ActorFailureEvent.from_exception(
+                actor_name="/account",
+                exception=ValueError("transient"),
+            )
+        )
+        assert mailbox.size == 1
+
+    def test_supervisor_exposes_policies(self) -> None:
+        restart = RestartPolicy(max_restarts=7)
+        drain = MailboxDrainPolicy(mode=MailboxDrainMode.PRESERVE)
+        ask = AskContextPolicy(mode=AskContextMode.WAIT_FOR_TIMEOUT)
+        supervisor = ActorSupervisor(
+            restart_policy=restart,
+            mailbox_drain_policy=drain,
+            ask_context_policy=ask,
+        )
+        assert supervisor.restart_policy is restart
+        assert supervisor.mailbox_drain_policy is drain
+        assert supervisor.ask_context_policy is ask
+
+
+# ---------------------------------------------------------------------------
+# RuntimeSupervisionCoordinator
+# ---------------------------------------------------------------------------
+
+
+class _FakeSessionState:
+    """Minimal session double for coordinator wiring tests."""
+
+    def __init__(self) -> None:
+        from qts.runtime.state import RuntimeSessionState
+
+        self.state = RuntimeSessionState.RUNNING
+        self.events: list[tuple[str, dict[str, object]]] = []
+        self.degraded = False
+
+    def _write_event(self, kind: str, payload: dict[str, object]) -> None:
+        self.events.append((kind, payload))
+
+    def degrade(self) -> object:
+        from qts.runtime.state import RuntimeSessionState
+
+        self.degraded = True
+        self.state = RuntimeSessionState.DEGRADED
+        return self.state
+
+
+class TestRuntimeSupervisionCoordinator:
+    """Coordinator maps supervisor decisions onto the session lifecycle."""
+
+    def test_recoverable_failure_does_not_degrade(self) -> None:
+        session = _FakeSessionState()
+        coordinator = RuntimeSupervisionCoordinator(session)
+        event = ActorFailureEvent.from_exception(
+            actor_name="/account",
+            exception=ValueError("transient"),
+        )
+        decision = coordinator.on_actor_failure(event)
+        assert decision is SupervisorDecision.RESTART
+        assert session.degraded is False
+        # A runtime.actor_failure event is recorded.
+        assert session.events[-1][0] == "runtime.actor_failure"
+        assert session.events[-1][1]["decision"] == "RESTART"
+
+    def test_non_recoverable_failure_degrades_running_session(self) -> None:
+        session = _FakeSessionState()
+        coordinator = RuntimeSupervisionCoordinator(session)
+        event = ActorFailureEvent.from_exception(
+            actor_name="/execution",
+            exception=RuntimeError("broker gone"),
+            recoverable=False,
+        )
+        decision = coordinator.on_actor_failure(event)
+        assert decision is SupervisorDecision.DEGRADE
+        assert session.degraded is True
+        assert session.events[-1][1]["decision"] == "DEGRADE"
+
+    def test_repeated_failures_eventually_degrade(self) -> None:
+        session = _FakeSessionState()
+        coordinator = RuntimeSupervisionCoordinator(
+            session,
+            supervisor=ActorSupervisor(
+                restart_policy=RestartPolicy(max_restarts=1, window=timedelta(minutes=5))
+            ),
+        )
+        base = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+        first = coordinator.on_actor_failure(
+            ActorFailureEvent(
+                actor_name="/account",
+                exception_type="ValueError",
+                exception_message="boom",
+                timestamp=base,
+                recoverable=True,
+            )
+        )
+        second = coordinator.on_actor_failure(
+            ActorFailureEvent(
+                actor_name="/account",
+                exception_type="ValueError",
+                exception_message="boom",
+                timestamp=base + timedelta(seconds=1),
+                recoverable=True,
+            )
+        )
+        assert first is SupervisorDecision.RESTART
+        assert second is SupervisorDecision.DEGRADE
+        assert session.degraded is True
+
+    def test_supervise_registers_actor_with_owned_supervisor(self) -> None:
+        session = _FakeSessionState()
+        coordinator = RuntimeSupervisionCoordinator(session)
+        path = ActorPath.root("account")
+        coordinator.supervise(ActorRef(mailbox=Mailbox()), path=path)
+        assert path in coordinator.supervisor._registered

@@ -5,9 +5,9 @@ from __future__ import annotations
 from decimal import Decimal
 
 from qts.core.ids import InstrumentId
+from qts.portfolio.account_snapshot import AccountSnapshot
 from qts.portfolio.holdings import Holding
 from qts.risk.risk_state import RiskStateSnapshot
-from qts.runtime.actors.account_actor import AccountSnapshot
 
 
 def test_from_account_builds_correct_snapshot() -> None:

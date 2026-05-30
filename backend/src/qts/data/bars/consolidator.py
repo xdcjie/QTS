@@ -9,7 +9,7 @@ from typing import Protocol
 from qts.core.time import TimeInterval
 from qts.data.bars.alignment import clock_bucket_for
 from qts.data.bars.timeframe import AlignmentMode, Timeframe
-from qts.data.sessions import RegularSessionWindow
+from qts.data.sessions import SessionIntervalSource
 from qts.domain.market_data import Bar
 
 
@@ -30,7 +30,7 @@ class NMinuteConsolidator:
         source_timeframe: Timeframe,
         target_timeframe: Timeframe,
         exchange_timezone: str | tzinfo,
-        session_window: RegularSessionWindow | None = None,
+        session_window: SessionIntervalSource | None = None,
     ) -> None:
         if source_timeframe.alignment is not AlignmentMode.CLOCK:
             raise ValueError("source timeframe must be clock-aligned")

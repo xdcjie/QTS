@@ -11,6 +11,10 @@ from qts.research.engine.autonomous_research_engine import (
 )
 from qts.research.planner import GenerationApprovalRecord
 
+from tests.unit.research.engine.test_autonomous_engine_trial_generation import (
+    _profit_factor_fixture_prices,
+)
+
 
 def test_autonomous_engine_runs_two_bounded_generations_without_runtime_launch(
     tmp_path: Path,
@@ -41,7 +45,11 @@ def test_autonomous_engine_runs_two_bounded_generations_without_runtime_launch(
 
     result = AutonomousResearchEngine(repo_root=Path.cwd()).run(run)
 
-    assert result.status == "accepted"
+    # WIRING: two bounded generations run without any paper/live launch, each
+    # emitting audited, hash-anchored fitness-landscape rows. HONESTY: the toy
+    # fixture clears no candidate through the promotion bar, so the campaign
+    # honestly rejects rather than faking promotion.
+    assert result.status == "rejected"
     assert result.paper_live_launches == ()
     assert [generation.generation_id for generation in result.generations] == [
         "generation-000",
@@ -63,10 +71,11 @@ def test_autonomous_engine_runs_two_bounded_generations_without_runtime_launch(
     assert all(str(row["artifact_graph_hash"]).startswith("sha256:") for row in landscape_rows)
     assert all(str(row["point_hash"]).startswith("sha256:") for row in landscape_rows)
 
-    selected_rows = _jsonl(result.selected_candidates_path)
-    assert selected_rows
-    assert all(row["evidence_bundle_id"] for row in selected_rows)
-    assert all(Path(str(row["promotion_packet_path"])).exists() for row in selected_rows)
+    # No candidate promoted; every rejection carries a recorded reason.
+    assert _jsonl(result.selected_candidates_path) == []
+    rejected_rows = _jsonl(result.rejected_candidates_path)
+    assert rejected_rows
+    assert all(row["reasons"] for row in rejected_rows)
 
     proposal = json.loads(result.next_generation_proposal_path.read_text(encoding="utf-8"))
     assert proposal["proposal_id"] == "gc_si_autonomous_v1:generation-002"
@@ -101,21 +110,3 @@ def _write_bars(path: Path, *, base: int) -> Path:
         encoding="utf-8",
     )
     return path
-
-
-def _profit_factor_fixture_prices(base: int) -> tuple[int, ...]:
-    return (
-        *((base,) * 15),
-        base + 1,
-        base,
-        base - 1,
-        *((base - 1,) * 15),
-        base,
-        base + 3,
-        base + 6,
-        base + 9,
-        base + 12,
-        base + 8,
-        base + 4,
-        *((base + 4,) * 10),
-    )

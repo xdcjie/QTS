@@ -24,6 +24,10 @@ class CashBook:
         """Perform balance."""
         return self._balances.get(self._normalize_currency(currency), Decimal("0"))
 
+    def balances(self) -> dict[str, Decimal]:
+        """Return a copy of all currency balances for multi-currency snapshotting."""
+        return dict(self._balances)
+
     def available(self, currency: str, *, reservations: ReservationBook) -> Decimal:
         """Perform available."""
         normalized = self._normalize_currency(currency)

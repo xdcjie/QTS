@@ -24,6 +24,7 @@ from qts.research.idea_spec import IdeaSpec
 from qts.research.optimizer.parameter_space import ParameterGrid, ParameterSpace
 from qts.research.optimizer.pipeline import BacktestPipelineJob, BacktestPipelineRunner
 from qts.research.orchestrator.validation_artifact_reader import (
+    PromotionThresholds,
     ResearchMetricsFromValidationArtifacts,
     ValidationArtifactReader,
 )
@@ -283,8 +284,14 @@ class _TrialExecutionArtifacts:
 class ResearchExperimentRunner:
     """Owns deterministic research experiment artifact production."""
 
-    def __init__(self, *, repo_root: Path) -> None:
+    def __init__(
+        self,
+        *,
+        repo_root: Path,
+        promotion_thresholds: PromotionThresholds | None = None,
+    ) -> None:
         self._repo_root = Path(repo_root)
+        self._promotion_thresholds = promotion_thresholds or PromotionThresholds()
 
     def run(self, job: ResearchExperimentJob) -> ResearchExperimentResult:
         """Run all job trials and write deterministic research-only artifacts."""
@@ -468,12 +475,22 @@ class ResearchExperimentRunner:
         )
         # Rewrite metrics with honest artifact-derived values now that
         # validation artifacts exist on disk.
-        self._rewrite_metrics_with_validation_derivation(
+        metrics_rewritten = self._rewrite_metrics_with_validation_derivation(
             metrics_path=trial_result.metrics_path,
             trial_dir=trial_dir,
             train_manifest=train_manifest,
             test_manifest=test_manifest,
         )
+        # The trial manifest recorded the metrics artifact hash before the
+        # honest rewrite, so its artifact_hashes/artifact_paths_by_hash entries
+        # for metrics are now stale. Refresh them so the evidence bundle can
+        # recompute the metrics hash and the recomputation path stays sound.
+        if metrics_rewritten:
+            self._refresh_manifest_artifact_hash(
+                manifest_path=trial_result.manifest_path,
+                artifact_name="metrics",
+                artifact_path=trial_result.metrics_path,
+            )
         return {name: str(path) for name, path in validation_artifact_paths.items()}
 
     def _run_trial(
@@ -850,9 +867,7 @@ class ResearchExperimentRunner:
         deterministic_replay_passed: bool | None = (
             derivation.deterministic_replay_passed if derivation else None
         )
-        no_lookahead_passed: bool | None = (
-            derivation.no_lookahead_passed if derivation else None
-        )
+        no_lookahead_passed: bool | None = derivation.no_lookahead_passed if derivation else None
         walk_forward_consistency: float | None = (
             derivation.walk_forward_consistency if derivation else None
         )
@@ -860,15 +875,9 @@ class ResearchExperimentRunner:
             derivation.parameter_sensitivity if derivation else None
         )
         oos_months: float | None = derivation.oos_months if derivation else None
-        promotion_eligible: bool = (
-            derivation.promotion_eligible if derivation else False
-        )
-        train_sharpe: float | None = (
-            derivation.sharpe_sources.train_sharpe if derivation else None
-        )
-        oos_sharpe: float | None = (
-            derivation.sharpe_sources.oos_sharpe if derivation else None
-        )
+        promotion_eligible: bool = derivation.promotion_eligible if derivation else False
+        train_sharpe: float | None = derivation.sharpe_sources.train_sharpe if derivation else None
+        oos_sharpe: float | None = derivation.sharpe_sources.oos_sharpe if derivation else None
 
         return {
             "costs": {"cost_sensitivity": float(cost_impact)},
@@ -919,7 +928,7 @@ class ResearchExperimentRunner:
                 workflow_summary = self._read_json_mapping(workflow_summary_path)
             except (ValueError, OSError):
                 workflow_summary = {}
-        return ResearchMetricsFromValidationArtifacts().derive(
+        return ResearchMetricsFromValidationArtifacts(self._promotion_thresholds).derive(
             reader,
             workflow_summary,
             train_manifest=train_manifest,
@@ -933,15 +942,19 @@ class ResearchExperimentRunner:
         trial_dir: Path,
         train_manifest: Mapping[str, Any],
         test_manifest: Mapping[str, Any],
-    ) -> None:
-        """Rewrite metrics.json with honest artifact-derived validation fields."""
+    ) -> bool:
+        """Rewrite metrics.json with honest artifact-derived validation fields.
+
+        Returns True when the metrics file was rewritten so callers can refresh
+        any manifest entries that recorded the pre-rewrite metrics hash.
+        """
         derivation = self._derive_validation_metrics(
             trial_dir=trial_dir,
             train_manifest=train_manifest,
             test_manifest=test_manifest,
         )
         if derivation is None:
-            return
+            return False
         current_payload = self._read_json_mapping(metrics_path)
         updated = dict(current_payload)
 
@@ -970,6 +983,40 @@ class ResearchExperimentRunner:
         updated["performance"] = performance
 
         self._write_json(metrics_path, updated)
+        return True
+
+    def _refresh_manifest_artifact_hash(
+        self,
+        *,
+        manifest_path: Path,
+        artifact_name: str,
+        artifact_path: Path,
+    ) -> None:
+        """Update a trial manifest's recorded hash for a rewritten artifact.
+
+        Keeps ``artifact_hashes[artifact_name]`` and ``artifact_paths_by_hash``
+        consistent with the artifact's current on-disk content so evidence
+        bundle verification can recompute the hash from a registered path.
+        """
+        manifest = dict(self._read_json_mapping(manifest_path))
+        artifact_hashes = dict(
+            self._mapping(manifest.get("artifact_hashes", {}), "artifact_hashes")
+        )
+        if artifact_name not in artifact_hashes:
+            return
+        stale_hash = artifact_hashes[artifact_name]
+        fresh_hash = self._sha256_path(artifact_path)
+        if fresh_hash == stale_hash:
+            return
+        artifact_hashes[artifact_name] = fresh_hash
+        artifact_paths_by_hash = dict(
+            self._mapping(manifest.get("artifact_paths_by_hash", {}), "artifact_paths_by_hash")
+        )
+        artifact_paths_by_hash.pop(stale_hash, None)
+        artifact_paths_by_hash[fresh_hash] = str(artifact_path)
+        manifest["artifact_hashes"] = artifact_hashes
+        manifest["artifact_paths_by_hash"] = artifact_paths_by_hash
+        self._write_json(manifest_path, manifest)
 
     def _artifact_row_count(self, manifest: Mapping[str, Any], artifact_name: str) -> int:
         artifacts = manifest.get("artifacts")
@@ -1571,9 +1618,7 @@ class ResearchExperimentRunner:
         features = self._no_lookahead_features(parameters, pipeline_config)
         label_policy = self._no_lookahead_label_policy(parameters, pipeline_config)
         windows = self._no_lookahead_windows(backtest_manifest, pipeline_config)
-        protocol = self._no_lookahead_factor_snapshot_protocol(
-            backtest_manifest, parameters
-        )
+        protocol = self._no_lookahead_factor_snapshot_protocol(backtest_manifest, parameters)
         runner = NoLookaheadValidationRunner(
             features=features,
             label_policy=label_policy,
@@ -1604,8 +1649,7 @@ class ResearchExperimentRunner:
             "string_scan_violations": list(string_violations),
             "timing_validation": timing_payload,
             "violations": [
-                v.to_payload() if hasattr(v, "to_payload") else v
-                for v in result.violations
+                v.to_payload() if hasattr(v, "to_payload") else v for v in result.violations
             ],
             "window_overlaps": list(result.window_overlaps),
             **{
@@ -1727,12 +1771,8 @@ class ResearchExperimentRunner:
                                 _VW(
                                     name=name.strip(),
                                     role=mapped_role,
-                                    start=datetime.fromisoformat(
-                                        start.replace("Z", "+00:00")
-                                    ),
-                                    end=datetime.fromisoformat(
-                                        end.replace("Z", "+00:00")
-                                    ),
+                                    start=datetime.fromisoformat(start.replace("Z", "+00:00")),
+                                    end=datetime.fromisoformat(end.replace("Z", "+00:00")),
                                 )
                             )
                         except (ValueError, TypeError):

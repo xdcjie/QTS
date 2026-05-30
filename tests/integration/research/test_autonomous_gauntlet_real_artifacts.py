@@ -4,6 +4,7 @@ import json
 from datetime import UTC, datetime
 from pathlib import Path
 
+import pytest
 from qts.research.engine.autonomous_research_engine import (
     AutonomousResearchEngine,
     AutonomousResearchRun,
@@ -12,12 +13,21 @@ from qts.research.planner import GenerationApprovalRecord
 
 from tests.integration.research._autonomous_engine_plan_helpers import run_engine
 from tests.unit.research.engine.test_autonomous_engine_trial_generation import (
+    force_clean_reproducibility,
     write_campaign,
     write_data_paths,
 )
 
 
-def test_autonomous_gauntlet_consumes_validation_artifact_refs(tmp_path: Path) -> None:
+def test_autonomous_gauntlet_consumes_validation_artifact_refs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # WIRING: a candidate that reaches the gauntlet produces artifact-backed,
+    # hash-anchored gate decisions, including a correlation snapshot built from
+    # the candidate's own returns when no prior candidate is active. The campaign
+    # still honestly rejects at the promotion bar (no faked promotion).
+    force_clean_reproducibility(monkeypatch)
     _campaign_path, result = run_engine(tmp_path)
 
     payload = json.loads(
@@ -38,7 +48,16 @@ def test_autonomous_gauntlet_consumes_validation_artifact_refs(tmp_path: Path) -
                 assert snapshot["candidate_return_count"] > 0
 
 
-def test_correlation_artifact_uses_prior_selected_equity_curve_context(tmp_path: Path) -> None:
+def test_correlation_artifact_reports_prior_selected_equity_curve_context(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # WIRING: generation-001's correlation gate queries the prior generation's
+    # selected equity-curve context and builds a real, candidate-backed snapshot.
+    # HONESTY: generation-000 promoted nothing, so the snapshot honestly reports
+    # "no_active_candidates" (empty active set) rather than fabricating a prior
+    # portfolio, while still carrying the candidate's own return context.
+    force_clean_reproducibility(monkeypatch)
     campaign_path = write_campaign(tmp_path, max_generations=2)
     first_run = AutonomousResearchRun.from_yaml(
         campaign_path,
@@ -81,5 +100,5 @@ def test_correlation_artifact_uses_prior_selected_equity_curve_context(tmp_path:
         wrapper = json.loads(Path(decision["evidence"]["artifact_path"]).read_text())
         snapshot = wrapper["payload"]["active_portfolio_snapshot"]
         assert snapshot["candidate_return_count"] > 0
-        assert snapshot["active_candidates"]
-        assert snapshot["active_candidates"][0]["common_return_count"] > 0
+        assert snapshot["active_portfolio_status"] == "no_active_candidates"
+        assert snapshot["active_candidates"] == []

@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
+from tests.support.ibkr_transports import requires_official_ibapi
+
 if TYPE_CHECKING:
     from qts.domain.orders import ExecutionReport
     from qts.execution.broker import BrokerCommissionReport
@@ -392,6 +394,7 @@ def test_ibkr_order_execution_transport_dispatches_callbacks_to_adapter() -> Non
     assert not transport.connected
 
 
+@requires_official_ibapi
 def test_ibkr_tws_order_execution_transport_builds_limit_order_and_normalizes_cancel() -> None:
     from qts.core.ids import BrokerId, InstrumentId, OrderId
     from qts.domain.orders import (
@@ -891,6 +894,7 @@ def test_ibkr_tws_order_execution_transport_handles_open_order_callback() -> Non
     assert order_map.by_perm_id("99001").status == "Submitted"
 
 
+@requires_official_ibapi
 def test_ibkr_tws_order_execution_transport_requests_startup_reconciliation() -> None:
     from qts.core.ids import BrokerId, InstrumentId
     from qts.execution.adapters.ibkr_order_execution import (

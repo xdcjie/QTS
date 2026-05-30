@@ -64,21 +64,11 @@ class CausationId(_StringId):
     """Identifier linking an event to the event that caused it."""
 
 
-class CalendarId(_StringId):
-    """Typed calendar identifier to prevent raw string usage."""
-
-
-class CurrencyCode(_StringId):
-    """Typed currency code (USD, EUR, etc.)."""
-
-
 __all__ = [
     "AccountId",
     "BrokerId",
     "CausationId",
-    "CalendarId",
     "CorrelationId",
-    "CurrencyCode",
     "EventId",
     "InstrumentId",
     "OrderId",
