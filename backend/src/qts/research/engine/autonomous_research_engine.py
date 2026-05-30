@@ -1768,11 +1768,13 @@ class AutonomousResearchEngine:
         # Multiple-testing correction: the multiplicity haircut must see how many
         # configurations were tried this generation, not the default of 1 (which
         # makes the expected-maximum-Sharpe haircut a no-op). Every selector input
-        # is one configuration tried, so the trial count is their cardinality.
+        # is one configuration tried, so the trial count is their cardinality and
+        # the scope is the generation the candidates were produced in.
         selection = CandidateSelector(self._selection_policy(run)).select(
             selector_inputs,
             metrics_schema=self._metrics_schema(),
             trial_count=max(len(selector_inputs), 1),
+            multiplicity_scope="generation",
         )
         selection_dir = run.output_root / generation_id / "selection"
         selection.write_artifacts(selection_dir)

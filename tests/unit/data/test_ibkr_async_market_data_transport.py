@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
@@ -170,6 +171,60 @@ def test_ib_async_market_data_transport_does_not_reemit_unchanged_ticker_snapsho
     assert first.instrument_id == instrument_id
 
 
+def test_ib_async_market_data_transport_stamps_events_with_injected_clock() -> None:
+    from datetime import UTC
+
+    from qts.core.ids import BrokerId, InstrumentId
+    from qts.data.adapters.ibkr_market_data import (
+        IbkrMarketDataAdapter,
+        IbkrMarketDataConnection,
+    )
+    from qts.data.transports.ib_async_market_data_transport import (
+        IbAsyncMarketDataTransport,
+        IbAsyncMarketDataTransportConfig,
+    )
+    from qts.data.transports.ibkr_tws_market_data_transport import IbkrMarketDataContractSpec
+    from qts.domain.market_data import Quote
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    adapter = IbkrMarketDataAdapter(
+        connection=IbkrMarketDataConnection(
+            host="127.0.0.1",
+            port=4002,
+            client_id=101,
+            source_id="ibkr-paper-md",
+        ),
+        symbol_mapping=mapping,
+    )
+    fake_ib = _FakeIb()
+    fixed = datetime(2026, 5, 30, 14, 30, tzinfo=UTC)
+    transport = IbAsyncMarketDataTransport(
+        config=IbAsyncMarketDataTransportConfig(
+            host="127.0.0.1",
+            port=4002,
+            client_id=101,
+            timeout_seconds=1,
+            market_data_type=3,
+        ),
+        sink=adapter,
+        ib_factory=lambda: fake_ib,
+        clock=_FixedClock(fixed),
+    )
+
+    transport.connect()
+    event = transport.collect_first_event(
+        IbkrMarketDataContractSpec.stock("AAPL", primary_exchange="ISLAND"),
+        timeout_seconds=1,
+    )
+    transport.disconnect()
+
+    assert isinstance(event, Quote)
+    assert event.time == fixed
+
+
 def test_ib_async_market_data_transport_raises_broker_error() -> None:
     from qts.core.ids import BrokerId, InstrumentId
     from qts.data.adapters.ibkr_market_data import (
@@ -224,6 +279,14 @@ def test_ib_async_market_data_transport_raises_broker_error() -> None:
 
     with pytest.raises(RuntimeError, match="code=354.*Requested market data is not subscribed"):
         transport.wait_for_event(timeout_seconds=1)
+
+
+@dataclass(slots=True)
+class _FixedClock:
+    instant: datetime
+
+    def now(self) -> datetime:
+        return self.instant
 
 
 @dataclass(slots=True)

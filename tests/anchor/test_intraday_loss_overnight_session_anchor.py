@@ -45,9 +45,7 @@ def test_intraday_loss_window_persists_across_utc_midnight_within_one_session() 
     )
 
     # 18:00 ET: open a 10-lot long at 100 (flat session start -> intraday pnl 0).
-    opened = harness.submit(
-        target_quantity="10", when=_BAR1, price="100", session_id=_SESSION
-    )
+    opened = harness.submit(target_quantity="10", when=_BAR1, price="100", session_id=_SESSION)
     assert opened.fills
 
     # 20:00 ET (next UTC date, SAME session): price 90 -> unrealized 10*(90-100)

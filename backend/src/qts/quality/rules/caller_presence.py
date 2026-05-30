@@ -344,8 +344,7 @@ class CallerPresenceRule:
             if isinstance(node, ast.Import | ast.ImportFrom):
                 excluded.update(range(node.lineno, (node.end_lineno or node.lineno) + 1))
             elif isinstance(node, ast.Assign) and any(
-                isinstance(target, ast.Name) and target.id == "__all__"
-                for target in node.targets
+                isinstance(target, ast.Name) and target.id == "__all__" for target in node.targets
             ):
                 excluded.update(range(node.lineno, (node.end_lineno or node.lineno) + 1))
         return "\n".join(
@@ -378,8 +377,7 @@ class CallerPresenceRule:
             if isinstance(node, ast.Import | ast.ImportFrom):
                 excluded.update(range(node.lineno, (node.end_lineno or node.lineno) + 1))
             elif isinstance(node, ast.Assign) and any(
-                isinstance(target, ast.Name) and target.id == "__all__"
-                for target in node.targets
+                isinstance(target, ast.Name) and target.id == "__all__" for target in node.targets
             ):
                 excluded.update(range(node.lineno, (node.end_lineno or node.lineno) + 1))
         pattern = re.compile(rf"\b{re.escape(name)}\b")

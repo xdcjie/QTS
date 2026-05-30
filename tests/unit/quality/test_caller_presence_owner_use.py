@@ -20,13 +20,11 @@ from qts.quality.rules.caller_presence import CallerPresenceRule
 
 def _class_node(source: str, name: str) -> ast.ClassDef:
     tree = ast.parse(source)
-    return next(
-        node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == name
-    )
+    return next(node for node in tree.body if isinstance(node, ast.ClassDef) and node.name == name)
 
 
 def test_caller_reference_source_strips_imports_and_all() -> None:
-    source = "from pkg import Foo\n__all__ = [\"Foo\"]\nbar = Foo()\n"
+    source = 'from pkg import Foo\n__all__ = ["Foo"]\nbar = Foo()\n'
     scannable = CallerPresenceRule._caller_reference_source(source)
     assert "Foo()" in scannable  # the real use site is preserved
     assert "import" not in scannable  # the import line is stripped
@@ -63,10 +61,7 @@ def test_self_reference_inside_class_body_does_not_count(tmp_path: Path) -> None
 
 def test_import_and_all_in_defining_module_do_not_count_as_owner_use(tmp_path: Path) -> None:
     source = (
-        "from elsewhere import Helper as _Helper\n"
-        "__all__ = [\"Helper\"]\n"
-        "class Helper:\n"
-        "    pass\n"
+        'from elsewhere import Helper as _Helper\n__all__ = ["Helper"]\nclass Helper:\n    pass\n'
     )
     module = tmp_path / "m.py"
     module.write_text(source, encoding="utf-8")

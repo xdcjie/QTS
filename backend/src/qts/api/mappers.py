@@ -10,11 +10,21 @@ from qts.api.schemas.backtest_schema import (
     BacktestRunSchema,
     BacktestStrategyOptionSchema,
 )
+from qts.api.schemas.common import (
+    AccountSnapshotSchema,
+    OrderStatusSchema,
+    StrategyStatusSchema,
+)
 from qts.application.dto.backtest import (
     BacktestRequestDTO,
     BacktestRunDTO,
     BacktestRunResultDTO,
     BacktestStrategyOptionDTO,
+)
+from qts.application.dto.control_plane import (
+    AccountSnapshotDTO,
+    OrderStatusDTO,
+    StrategyStatusDTO,
 )
 from qts.application.dto.operations import (
     KillSwitchStateDTO,
@@ -65,6 +75,24 @@ def map_backtest_strategy_option_dto(
         label=option.label,
         config_path=option.config_path,
     )
+
+
+def map_strategy_status_dto(status: StrategyStatusDTO) -> StrategyStatusSchema:
+    """Map a strategy status DTO into an API response schema."""
+
+    return StrategyStatusSchema(strategy_id=status.strategy_id, status=status.status)
+
+
+def map_order_status_dto(status: OrderStatusDTO) -> OrderStatusSchema:
+    """Map an order status DTO into an API response schema."""
+
+    return OrderStatusSchema(order_id=status.order_id, status=status.status)
+
+
+def map_account_snapshot_dto(snapshot: AccountSnapshotDTO) -> AccountSnapshotSchema:
+    """Map an account snapshot DTO into an API response schema."""
+
+    return AccountSnapshotSchema(account_id=snapshot.account_id, cash=dict(snapshot.cash))
 
 
 def map_runtime_state_dto(state: RuntimeStateDTO) -> dict[str, Any]:
@@ -133,12 +161,15 @@ def _map_operator_value(value: object) -> object:
 
 
 __all__ = [
+    "map_account_snapshot_dto",
     "map_backtest_request_schema",
     "map_backtest_run_dto",
     "map_backtest_run_result_dto",
     "map_backtest_strategy_option_dto",
     "map_kill_switch_state_dto",
     "map_operator_dashboard_status_dto",
+    "map_order_status_dto",
     "map_runtime_command_result_dto",
     "map_runtime_state_dto",
+    "map_strategy_status_dto",
 ]

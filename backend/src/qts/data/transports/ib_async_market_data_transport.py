@@ -5,12 +5,12 @@ from __future__ import annotations
 import queue
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from decimal import Decimal
 from math import isfinite
 from time import monotonic
 from typing import Any
 
+from qts.core.time import Clock, SystemClock
 from qts.data.transports.ibkr_tws_market_data_transport import (
     IbkrMarketDataCallbackSink,
     IbkrMarketDataContractSpec,
@@ -74,10 +74,12 @@ class IbAsyncMarketDataTransport:
         config: IbAsyncMarketDataTransportConfig,
         sink: IbkrMarketDataCallbackSink,
         ib_factory: Callable[[], Any] | None = None,
+        clock: Clock | None = None,
     ) -> None:
         self.config = config
         self._sink = sink
         self._ib_factory = ib_factory or _default_ib_factory
+        self._clock = clock if clock is not None else SystemClock()
         self._ib: Any | None = None
         self._events: queue.Queue[Tick | Quote | Bar] = queue.Queue()
         self._errors: queue.Queue[IbkrMarketDataErrorPayload] = queue.Queue()
@@ -204,7 +206,7 @@ class IbAsyncMarketDataTransport:
                 self._sink.on_quote(
                     IbkrQuotePayload(
                         broker_symbol=ticker.contract.symbol,
-                        time=datetime.now(tz=UTC),
+                        time=self._clock.now(),
                         bid_price=Decimal(str(bid)),
                         ask_price=Decimal(str(ask)),
                         bid_size=Decimal(str(getattr(ticker, "bidSize", 0) or 0)),
@@ -227,7 +229,7 @@ class IbAsyncMarketDataTransport:
                 self._sink.on_tick(
                     IbkrTickPayload(
                         broker_symbol=ticker.contract.symbol,
-                        time=datetime.now(tz=UTC),
+                        time=self._clock.now(),
                         price=Decimal(str(last)),
                         size=Decimal(str(getattr(ticker, "lastSize", 0) or 0)),
                     )

@@ -24,10 +24,13 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from qts.core.ids import InstrumentId
 from qts.portfolio.holdings import Holding
-from qts.risk.margin.calculator import MarginCalculator
+
+if TYPE_CHECKING:
+    from qts.risk.margin.calculator import MarginCalculator
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,7 +57,15 @@ class MarginLedger:
         calculator: MarginCalculator | None = None,
         account_equity: Decimal = Decimal("0"),
     ) -> None:
-        self._calculator = calculator or MarginCalculator()
+        if calculator is None:
+            # Deferred import: the rate-based MarginCalculator lives under
+            # qts.risk, and qts.risk modules depend on qts.portfolio.holdings.
+            # Importing it at construction time (not module load) keeps the
+            # portfolio package free of an import-time dependency on qts.risk.
+            from qts.risk.margin.calculator import MarginCalculator
+
+            calculator = MarginCalculator()
+        self._calculator = calculator
         self._account_equity = account_equity
         self._variation_margin = Decimal("0")
         self._last_marks: dict[InstrumentId, Decimal] = {}

@@ -10,6 +10,7 @@ from qts.risk.rule_registry import RiskRuleRegistry
 from qts.risk.rules.concentration_limit import ConcentrationLimitRule
 from qts.risk.rules.intraday_loss_limit import IntradayLossLimitRule
 from qts.risk.rules.leverage_limit import LeverageLimitRule
+from qts.risk.rules.margin_limit import MarginRule
 from qts.risk.rules.market_data_freshness import MarketDataFreshnessRiskRule
 from qts.risk.rules.market_data_permission import MarketDataPermissionRiskRule
 from qts.risk.rules.max_notional import MaxNotionalRule
@@ -88,6 +89,11 @@ class TestRiskRuleRegistryEnumDispatch:
         )
         rule = registry.build(config)
         assert isinstance(rule, VolatilityAdjustedSizingRule)
+
+    def test_margin_limit_by_enum(self, registry: RiskRuleRegistry) -> None:
+        config = RiskRuleConfig(rule_id="r-margin", name=RiskRuleName.MARGIN_LIMIT, params={})
+        rule = registry.build(config)
+        assert isinstance(rule, MarginRule)
 
     def test_market_data_permission_by_enum(self, registry: RiskRuleRegistry) -> None:
         config = RiskRuleConfig(rule_id="r8", name=RiskRuleName.MARKET_DATA_PERMISSION, params={})

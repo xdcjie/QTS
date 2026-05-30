@@ -24,13 +24,18 @@ def test_api_strategy_account_order_routes_return_public_dtos() -> None:
         "strategy_id": "strategy-001",
         "status": "running",
     }
+    # No live account source is bound to the stateless API, so the account
+    # query service derives an empty cash snapshot rather than a {"USD": "0"}
+    # route literal.
     assert client.get("/accounts/acct-001", headers=_auth_headers()).json() == {
         "account_id": "acct-001",
-        "cash": {"USD": "0"},
+        "cash": {},
     }
+    # No live order source is bound, so the order query service derives a
+    # not-found status rather than an "unknown" route literal.
     assert client.get("/orders/ord-001", headers=_auth_headers()).json() == {
         "order_id": "ord-001",
-        "status": "unknown",
+        "status": "not_found",
     }
 
 

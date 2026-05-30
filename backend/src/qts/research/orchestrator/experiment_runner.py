@@ -1794,13 +1794,11 @@ class ResearchExperimentRunner:
 
         from qts.research.validation import FeatureTimingSpec as _FTS
 
-        observed_at = decision_cutoff if decision_cutoff is not None else datetime(
-            1970, 1, 1, tzinfo=UTC
+        observed_at = (
+            decision_cutoff if decision_cutoff is not None else datetime(1970, 1, 1, tzinfo=UTC)
         )
         # A clearly-after-cutoff stamp for forward-looking derivations.
-        after_cutoff = (
-            decision_cutoff + timedelta(days=1) if decision_cutoff is not None else None
-        )
+        after_cutoff = decision_cutoff + timedelta(days=1) if decision_cutoff is not None else None
 
         features: list[_FTS] = []
         research_factory = pipeline_config.get("research_factory")

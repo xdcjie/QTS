@@ -260,13 +260,47 @@ class RejectedCandidate:
         }
 
 
+# Scopes over which the multiple-testing correction is applied. ``generation``
+# counts every candidate tried in one research generation; ``family`` narrows the
+# count to a single idea family; ``campaign`` spans the whole campaign.
+_MULTIPLICITY_SCOPES = frozenset({"generation", "family", "campaign"})
+
+
 @dataclass(frozen=True, slots=True)
 class SelectionResult:
-    """Complete selector decision artifact."""
+    """Complete selector decision artifact.
+
+    ``trial_count`` is the campaign-level number of configurations tried that the
+    multiplicity correction was computed against, ``multiplicity_scope`` records the
+    boundary that count spans (``generation`` | ``family`` | ``campaign``), and
+    ``false_discovery_rate`` is the Benjamini-Hochberg control level ``q`` the
+    selector applied. Serializing all three makes the statistical correction in
+    ``selection_result.json`` auditable instead of implicit.
+    """
 
     selected_candidates: tuple[SelectedCandidate, ...]
     rejected_candidates: tuple[RejectedCandidate, ...]
     policy: SelectionPolicy
+    trial_count: int = 1
+    multiplicity_scope: str = "generation"
+    false_discovery_rate: float | None = None
+
+    def __post_init__(self) -> None:
+        if self.trial_count < 1:
+            raise ValueError("trial_count must be positive")
+        if self.multiplicity_scope not in _MULTIPLICITY_SCOPES:
+            raise ValueError(
+                "multiplicity_scope must be one of "
+                f"{sorted(_MULTIPLICITY_SCOPES)}; got {self.multiplicity_scope!r}"
+            )
+        fdr = (
+            self.policy.false_discovery_rate
+            if self.false_discovery_rate is None
+            else self.false_discovery_rate
+        )
+        if not 0.0 < fdr <= 1.0:
+            raise ValueError("false_discovery_rate must be in (0, 1]")
+        object.__setattr__(self, "false_discovery_rate", fdr)
 
     @property
     def selection_hash(self) -> str:
@@ -300,6 +334,8 @@ class SelectionResult:
 
     def _payload_without_hash(self) -> dict[str, Any]:
         return {
+            "false_discovery_rate": self.false_discovery_rate,
+            "multiplicity_scope": self.multiplicity_scope,
             "policy": {
                 "composite_weights": dict(self.policy.composite_weights),
                 "cost_sensitivity_metric": self.policy.cost_sensitivity_metric,
@@ -328,6 +364,7 @@ class SelectionResult:
                 candidate.to_payload() for candidate in self.selected_candidates
             ],
             "selected_count": len(self.selected_candidates),
+            "trial_count": self.trial_count,
         }
 
     @staticmethod
@@ -349,6 +386,7 @@ class CandidateSelector:
         *,
         metrics_schema: ResearchMetricsSchema | None = None,
         trial_count: int = 1,
+        multiplicity_scope: str = "generation",
     ) -> SelectionResult:
         """Return selected/rejected candidates for a completed research generation.
 
@@ -357,10 +395,18 @@ class CandidateSelector:
         with more trials the expected-maximum-Sharpe haircut grows, every adjusted
         score drops, and the acceptance threshold rises. With the default of ``1``
         there is no inflation and the adjusted score equals the raw objective.
+        ``multiplicity_scope`` (``generation`` | ``family`` | ``campaign``) records
+        the boundary that ``trial_count`` spans so the correction is auditable on
+        the produced ``SelectionResult``.
         """
 
         if trial_count < 1:
             raise ValueError("trial_count must be positive")
+        if multiplicity_scope not in _MULTIPLICITY_SCOPES:
+            raise ValueError(
+                "multiplicity_scope must be one of "
+                f"{sorted(_MULTIPLICITY_SCOPES)}; got {multiplicity_scope!r}"
+            )
 
         survivors: list[SelectedCandidate] = []
         rejections: list[RejectedCandidate] = []
@@ -432,6 +478,9 @@ class CandidateSelector:
                 sorted(rejections, key=lambda candidate: candidate.candidate_id)
             ),
             policy=self.policy,
+            trial_count=trial_count,
+            multiplicity_scope=multiplicity_scope,
+            false_discovery_rate=self.policy.false_discovery_rate,
         )
 
     def _adjustments(

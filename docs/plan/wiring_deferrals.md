@@ -75,7 +75,7 @@ qts.strategy_sdk.universe.FundamentalTopNSelector  expires=2027-05-30  target=li
 qts.strategy_sdk.universe.TopNVolumeSelector  expires=2027-05-30  target=library
 # Live/paper/research subsystems pending their roadmap milestone wiring
 # (M8 paper, M10 live, research deploy). OPT-65 batch; 3-month review fuse.
-qts.application.services.strategy_service.StrategyLifecycleService  expires=2026-08-30  target=OPT-65
+qts.application.services.promotion_runtime_config.PromotionRuntimeConfigBuilder  expires=2026-08-30  target=OPT-65
 qts.data.feeds.replay_feed.ReplayFeed  expires=2026-08-30  target=OPT-65
 qts.data.historical.adapter.HistoricalMarketDataAdapter  expires=2026-08-30  target=OPT-65
 qts.data.live.reconnect.ReconnectPolicy  expires=2026-08-30  target=OPT-65

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections import deque
-from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
@@ -11,6 +10,7 @@ from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from qts.api.auth_backend_factory import default_auth_backend
 from qts.api.security import verify_websocket_authorization
 from qts.api.websocket.manager import WebSocketConnectionManager
+from qts.core.time import Clock, SystemClock
 
 router = APIRouter()
 
@@ -18,6 +18,16 @@ router = APIRouter()
 manager = WebSocketConnectionManager()
 _stream_sequence = 0
 _stream_buffer: deque[dict[str, Any]] = deque(maxlen=128)
+# Source of event timestamps. Injecting a deterministic clock lets tests
+# (and any deterministic replay producer) stamp byte-identical event times;
+# live serving keeps wall-clock UTC via the default SystemClock.
+_clock: Clock = SystemClock()
+
+
+def set_stream_clock(clock: Clock | None = None) -> None:
+    """Set the clock used to stamp stream events (defaults to SystemClock)."""
+    global _clock
+    _clock = clock if clock is not None else SystemClock()
 
 
 def _next_sequence() -> int:
@@ -38,7 +48,7 @@ def _to_event(
     envelope = {
         "event_type": event_type,
         "sequence_number": _next_sequence(),
-        "event_time_utc": datetime.now(tz=UTC).isoformat(),
+        "event_time_utc": _clock.now().isoformat(),
         "payload": payload,
         "replayed": replayed,
         "correlation_id": correlation_id,
@@ -58,7 +68,7 @@ def _resync_event(from_sequence: int) -> dict[str, Any]:
     return {
         "event_type": "stream.resync_required",
         "sequence_number": _next_sequence(),
-        "event_time_utc": datetime.now(tz=UTC).isoformat(),
+        "event_time_utc": _clock.now().isoformat(),
         "payload": {
             "from_sequence": from_sequence,
             "oldest_available_sequence": oldest,
@@ -93,7 +103,16 @@ async def broadcast_stream_event(
     *,
     correlation_id: str | None = None,
 ) -> dict[str, Any]:
-    """Build and broadcast one envelope to all active websocket clients."""
+    """Build and broadcast one envelope to all active websocket clients.
+
+    Internal-only: this is the fan-out entrypoint a future runtime event sink
+    will call to push domain events onto the websocket stream. No production
+    producer is wired yet, so the live ``/ws/events`` route currently serves
+    only the synthetic snapshot plus client-driven replay. Wiring a real
+    producer (e.g. a RuntimeEventSink) is out of scope here and tracked
+    separately; the contract is locked by the unit tests in
+    ``tests/unit/api/test_websocket_events_clock.py``.
+    """
     event = _to_event(event_type, payload, correlation_id=correlation_id)
     await manager.broadcast(event)
     return event
@@ -136,4 +155,4 @@ async def event_stream(websocket: WebSocket) -> None:
         manager.disconnect(websocket)
 
 
-__all__ = ["router", "broadcast_stream_event"]
+__all__ = ["broadcast_stream_event", "router", "set_stream_clock"]

@@ -1377,6 +1377,60 @@ def test_ibkr_unknown_order_status_callback_is_quarantined() -> None:
     ]
 
 
+def test_ibkr_record_submitted_order_stamps_with_injected_clock() -> None:
+    from dataclasses import dataclass
+    from datetime import UTC, datetime
+
+    from qts.core.ids import AccountId, BrokerId, InstrumentId, OrderId, StrategyId
+    from qts.domain.orders import OrderIntent, OrderSide
+    from qts.execution.adapters.ibkr_order_execution import (
+        IbkrOrderExecutionAdapter,
+        IbkrOrderExecutionConnection,
+    )
+    from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    @dataclass(slots=True)
+    class _FixedClock:
+        instant: datetime
+
+        def now(self) -> datetime:
+            return self.instant
+
+    fixed = datetime(2026, 5, 30, 9, 15, tzinfo=UTC)
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    order_map = BrokerOrderMap()
+    adapter = IbkrOrderExecutionAdapter(
+        connection=IbkrOrderExecutionConnection(
+            host="127.0.0.1",
+            port=4002,
+            client_id=201,
+            broker_id=BrokerId("IBKR"),
+            account_id="DU1234567",
+        ),
+        symbol_mapping=mapping,
+        order_map=order_map,
+        clock=_FixedClock(fixed),
+    )
+    request = adapter.to_order_request(
+        OrderIntent(
+            order_id=OrderId("ord-001"),
+            account_id=AccountId("acct-ibkr"),
+            instrument_id=instrument_id,
+            side=OrderSide.BUY,
+            quantity=Decimal("1"),
+        ),
+        client_order_id="client-ord-001",
+        strategy_id=StrategyId("strategy-ibkr"),
+    )
+
+    adapter.record_submitted_order(request, ibkr_order_id="100")
+
+    assert order_map.by_internal_order_id(OrderId("ord-001")).submitted_at == fixed
+
+
 def test_ibkr_unresolved_callbacks_block_new_order_requests() -> None:
     from qts.core.ids import BrokerId, InstrumentId, OrderId
     from qts.domain.orders import (

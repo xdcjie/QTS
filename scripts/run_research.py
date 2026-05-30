@@ -1460,7 +1460,15 @@ def _run_selector(args: argparse.Namespace) -> int:
             campaign = ResearchCampaignConfig.from_yaml(args.campaign)
             expected = _load_selection_result(args.selection_result)
             candidates = _load_json_or_jsonl_records(args.candidate_results)
-            result = CandidateSelector(_selection_policy_from_campaign(campaign)).select(candidates)
+            # Replay must reproduce the recorded multiplicity context, not the
+            # defaults: the trial count and scope drive the expected-maximum-Sharpe
+            # haircut and therefore the adjusted scores in the hashed payload.
+            trial_count, multiplicity_scope = _recorded_multiplicity_context(expected)
+            result = CandidateSelector(_selection_policy_from_campaign(campaign)).select(
+                candidates,
+                trial_count=trial_count,
+                multiplicity_scope=multiplicity_scope,
+            )
         except (FileNotFoundError, ValueError) as exc:
             print(str(exc), file=sys.stderr)
             return 2
@@ -1763,6 +1771,22 @@ def _selection_policy_from_campaign(campaign: ResearchCampaignConfig) -> Selecti
         profit_factor_metric="quality.profit_factor",
         cost_sensitivity_metric="costs.cost_sensitivity",
     )
+
+
+def _recorded_multiplicity_context(expected: Mapping[str, Any]) -> tuple[int, str]:
+    """Return the (trial_count, multiplicity_scope) recorded on the selection result.
+
+    Older selection results that predate campaign-level multiplicity serialization
+    fall back to the selector defaults (single trial, generation scope).
+    """
+
+    trial_count = expected.get("trial_count", 1)
+    if not isinstance(trial_count, int) or isinstance(trial_count, bool) or trial_count < 1:
+        raise ValueError("selection_result trial_count must be a positive integer")
+    scope = expected.get("multiplicity_scope", "generation")
+    if not isinstance(scope, str) or not scope.strip():
+        raise ValueError("selection_result multiplicity_scope must be a non-empty string")
+    return trial_count, scope
 
 
 def _selector_replay_reasons(

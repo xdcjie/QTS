@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 from decimal import Decimal
 from typing import Any, cast
 
 from qts.core.ids import AccountId, BrokerId, OrderId, StrategyId
+from qts.core.time import Clock, SystemClock
 from qts.domain.orders import ExecutionReport, OrderIntent, OrderType, TimeInForce
 from qts.execution.adapters.ibkr_callback_normalizer import (
     IbkrCallbackNormalizer,
@@ -68,11 +69,13 @@ class IbkrOrderExecutionAdapter:
         capabilities: BrokerCapabilities | None = None,
         order_map: BrokerOrderMap | None = None,
         live_capital_decision: object | None = None,
+        clock: Clock | None = None,
     ) -> None:
         """Perform __init__."""
         self.connection = connection
         self._order_map = order_map
         self._live_capital_decision = live_capital_decision
+        self._clock = clock if clock is not None else SystemClock()
         self._capabilities = capabilities or BrokerCapabilities(
             broker_id=connection.broker_id,
             supports_market_orders=True,
@@ -180,7 +183,7 @@ class IbkrOrderExecutionAdapter:
             return
         if request.internal_account_id is None:
             raise ValueError("internal_account_id is required to record IBKR order mapping")
-        submitted_at = submitted_at or datetime.now(UTC)
+        submitted_at = submitted_at or self._clock.now()
         self._order_map.record_pending_submission(
             internal_order_id=request.internal_order_id,
             client_order_id=request.client_order_id,

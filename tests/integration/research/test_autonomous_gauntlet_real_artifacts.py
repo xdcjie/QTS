@@ -64,9 +64,7 @@ def test_correlation_artifact_reports_prior_selected_equity_curve_context(
     # "no_active_candidates" (empty active set) rather than fabricating a prior
     # portfolio, while still carrying the candidate's own return context.
     force_clean_reproducibility(monkeypatch)
-    campaign_path = write_campaign(
-        tmp_path, max_generations=2, fill_policy="same_bar_close"
-    )
+    campaign_path = write_campaign(tmp_path, max_generations=2, fill_policy="same_bar_close")
     first_run = AutonomousResearchRun.from_yaml(
         campaign_path,
         data_paths=write_data_paths(tmp_path),

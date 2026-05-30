@@ -4,9 +4,14 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from qts.runtime.broker_startup import BrokerRuntimeStartupDecision
 from qts.runtime.mode import RuntimeMode
+
+if TYPE_CHECKING:
+    from qts.application.services.runtime_session_builder import RuntimeSessionBuilder
+    from qts.runtime.session import RuntimeSession
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,7 +43,15 @@ class StartRuntimeCommand:
 
 @dataclass(frozen=True, slots=True)
 class RuntimeStartResult:
-    """Stable evidence returned after accepting a start-runtime command."""
+    """Result of a start-runtime command.
+
+    ``status`` is ``started`` when the command was accepted; ``session`` carries
+    the real :class:`RuntimeSession` only when a session builder was supplied and
+    a session was actually constructed and started. ``evidence`` reports
+    ``session_constructed`` honestly so callers cannot mistake an accepted-but-
+    unbuilt command for a running session. ``order_submission_enabled`` /
+    ``live_order_submission_enabled`` always report the computed gating.
+    """
 
     runtime_mode: RuntimeMode
     config_ref: str
@@ -49,17 +62,37 @@ class RuntimeStartResult:
     live_order_submission_enabled: bool
     reason: str
     evidence: Mapping[str, object] = field(default_factory=dict)
+    session: RuntimeSession | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "evidence", dict(self.evidence))
 
 
-def start_runtime(command: StartRuntimeCommand) -> RuntimeStartResult:
-    """Accept a runtime start command without constructing mode-specific runtimes."""
+def start_runtime(
+    command: StartRuntimeCommand,
+    *,
+    session_builder: RuntimeSessionBuilder | None = None,
+) -> RuntimeStartResult:
+    """Accept a start-runtime command, constructing a real session when possible.
+
+    When ``session_builder`` is supplied the real :class:`RuntimeSession` is
+    built and started, and the started session is returned on the result with
+    ``session_constructed`` evidence set to ``True``. When no builder is supplied
+    the command is accepted (gating is computed) but no session is built, and the
+    evidence reports ``session_constructed=False`` so callers never mistake the
+    acceptance for a running session.
+    """
 
     runtime_mode = RuntimeMode.from_value(command.runtime_mode)
     order_submission_enabled = _order_submission_enabled(command)
     live_order_submission_enabled = _live_order_submission_enabled(command)
+    session = None
+    if session_builder is not None:
+        session = session_builder.build()
+        session.start()
+        construction_reason = "runtime session constructed and started"
+    else:
+        construction_reason = "session builder not supplied; start command accepted only"
     return RuntimeStartResult(
         runtime_mode=runtime_mode,
         config_ref=command.config_ref,
@@ -76,7 +109,10 @@ def start_runtime(command: StartRuntimeCommand) -> RuntimeStartResult:
             "idempotency_key": command.idempotency_key,
             "reason": command.reason,
             "startup_gate_checked": command.startup_decision is not None,
+            "session_constructed": session is not None,
+            "construction_reason": construction_reason,
         },
+        session=session,
     )
 
 

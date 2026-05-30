@@ -1,15 +1,15 @@
-"""Run a short, real paper-simulated runtime loop and report real evidence.
+"""Full paper event loop: fake market data produces fills/state through the chain.
 
-This drives the shared runtime chain end to end: it builds a real paper
-``RuntimeSession`` via :class:`RuntimeSessionBuilder`, feeds deterministic fake
-market-data bars through ``session.on_market_data``, and reports the fills and
-account state actually produced — not a hardcoded ``started`` string.
+This exercises the shared Strategy -> RiskEngine -> OrderManager -> Execution ->
+Account chain end to end via a builder-constructed RuntimeSession driven by the
+deterministic fake market-data adapter and the simulated execution adapter.
 """
 
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from typing import Any
 
 from qts.application.commands.start_runtime import StartRuntimeCommand, start_runtime
 from qts.application.services import RuntimeSessionBuilder, RuntimeStartConfig
@@ -17,6 +17,7 @@ from qts.core.ids import AccountId, InstrumentId
 from qts.data.events import MarketDataSubscription
 from qts.domain.instruments import AssetClass, ContractSpec, Instrument, SettlementType
 from qts.domain.market_data import Bar
+from qts.domain.orders import Order, OrderFill, OrderSide
 from qts.registry.instrument_registry import InstrumentRegistry
 from qts.runtime.mode import RuntimeMode
 from qts.strategy_sdk import Strategy
@@ -26,17 +27,14 @@ _INSTRUMENT_ID = InstrumentId("EQUITY.US.NASDAQ.AAPL")
 
 
 class _BuyOnceStrategy(Strategy):
-    """Open a single long AAPL position on the first bar and hold."""
+    def initialize(self, ctx: Any) -> None:
+        self.asset = ctx.symbol("AAPL")
+        self.done = False
 
-    def initialize(self, ctx):  # type: ignore[no-untyped-def]
-        self._asset = ctx.symbol("AAPL")
-        self._opened = False
-
-    def on_bar(self, ctx, bar):  # type: ignore[no-untyped-def]
-        if self._opened:
-            return
-        ctx.target_quantity(self._asset, Decimal("1"))
-        self._opened = True
+    def on_bar(self, ctx: Any, bar: object) -> None:
+        if not self.done:
+            ctx.target_quantity(self.asset, Decimal("1"))
+            self.done = True
 
 
 def _instrument_registry() -> InstrumentRegistry:
@@ -76,13 +74,11 @@ def _bar(start: datetime, *, close: Decimal) -> Bar:
     )
 
 
-def main() -> None:
-    """Build and run a short paper-simulated loop, reporting real fills."""
-    account_id = AccountId("acct-paper-local")
+def test_paper_runtime_loop_produces_fills_and_account_state() -> None:
     builder = RuntimeSessionBuilder.from_runtime_config(
         RuntimeStartConfig(
             runtime_mode=RuntimeMode.PAPER_SIMULATED,
-            account_id=account_id,
+            account_id=AccountId("acct-paper-loop"),
             initial_cash={"USD": Decimal("100000")},
         ),
         strategy=_BuyOnceStrategy(),
@@ -90,19 +86,18 @@ def main() -> None:
     )
     result = start_runtime(
         StartRuntimeCommand(
-            runtime_mode="paper_simulated",
+            runtime_mode=RuntimeMode.PAPER_SIMULATED,
             config_ref="configs/paper_simulated.yaml",
-            operator_id="paper-local",
-            idempotency_key="run-paper-local",
-            reason="local paper runtime start",
+            operator_id="ops",
+            idempotency_key="paper-loop-1",
+            reason="market data loop",
         ),
         session_builder=builder,
     )
     session = result.session
-    if session is None:
-        raise RuntimeError("paper runtime session was not constructed")
+    assert session is not None
 
-    source = FakeStreamingMarketDataAdapter(source_id="paper-local")
+    source = FakeStreamingMarketDataAdapter(source_id="paper-loop")
     source.subscribe(
         MarketDataSubscription(
             subscription_id="aapl-1m",
@@ -111,20 +106,20 @@ def main() -> None:
         )
     )
 
-    total_fills = 0
+    fills: list[OrderFill] = []
+    orders: list[Order] = []
     start_time = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     for index in range(3):
-        bar = _bar(start_time + timedelta(minutes=index), close=Decimal("100") + index)
-        loop_result = session.on_market_data(bar)
-        total_fills += len(loop_result.fills)
+        event = source.emit(_bar(start_time + timedelta(minutes=index), close=Decimal("100")))
+        assert isinstance(event.payload, Bar)
+        loop_result = session.on_market_data(event.payload)
+        fills.extend(loop_result.fills)
+        orders.extend(loop_result.orders)
 
+    # Exactly one buy filled through the shared chain.
+    assert len(fills) == 1
+    assert {order.intent.side for order in orders} == {OrderSide.BUY}
+    # Account state reflects the fill: 1 share long, cash debited by 1 * 100.
     snapshot = session.account_snapshot
-    position = snapshot.positions.get(_INSTRUMENT_ID)
-    quantity = position.quantity if position is not None else Decimal("0")
-
-    print(f"status={result.status} session_constructed={result.evidence['session_constructed']}")
-    print(f"bars=3 fills={total_fills} aapl_position={quantity} cash_usd={snapshot.cash['USD']}")
-
-
-if __name__ == "__main__":
-    main()
+    assert snapshot.positions[_INSTRUMENT_ID].quantity == Decimal("1")
+    assert snapshot.cash["USD"] == Decimal("99900")
