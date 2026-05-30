@@ -1,4 +1,19 @@
 exceptions:
+  - class_name: RuntimeCommandNotBound
+    module: qts.runtime.errors
+    reason: runtime control-plane domain error replacing raw RuntimeError on unbound commands (QTS-FINAL-008)
+    owner: platform
+    expiry: 2027-05-30
+  - class_name: RuntimeCommandRejected
+    module: qts.runtime.errors
+    reason: runtime control-plane domain error for rejected operator commands (QTS-FINAL-008)
+    owner: platform
+    expiry: 2027-05-30
+  - class_name: RuntimeSafetyViolation
+    module: qts.runtime.errors
+    reason: runtime safety-invariant domain error replacing raw RuntimeError (QTS-FINAL-008)
+    owner: platform
+    expiry: 2027-05-30
   - class_name: RuntimeSafetyState
     module: qts.runtime.safety_port
     reason: owns the kill-switch active flag behind the safety port so coordinators stop poking RuntimeSession privates (QTS-FINAL-012)

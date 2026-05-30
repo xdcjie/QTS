@@ -47,6 +47,7 @@ from qts.quality.rules.oop import (
     OOPPublicFactoryRule,
 )
 from qts.quality.rules.order_domain import OrderDomainTypingRule
+from qts.quality.rules.public_boundary_exceptions import PublicBoundaryExceptionRule
 from qts.quality.rules.research import (
     EvidenceBundleRequiredForPromotionRule,
     IdeaRegistryRequiredForCandidateRule,
@@ -106,6 +107,7 @@ __all__ = [
     "ProductionPlaceholderDocstringRule",
     "PromotionValueHonestyRule",
     "ProviderSdkImportRule",
+    "PublicBoundaryExceptionRule",
     "ResearchReportDecisionRequiredRule",
     "ResearchRunScriptRule",
     "ResearchStrategyStaleDocstringRule",

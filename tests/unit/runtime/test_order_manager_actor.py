@@ -109,7 +109,9 @@ def test_order_manager_actor_does_not_send_risk_rejected_order_to_execution() ->
         quantity=Decimal("10"),
     )
 
-    with pytest.raises(ValueError, match="risk decision is not approved"):
+    from qts.execution.errors import RiskRejectedOrder
+
+    with pytest.raises(RiskRejectedOrder, match="risk decision is not approved"):
         actor.handle(
             SubmitOrder(
                 intent=intent,

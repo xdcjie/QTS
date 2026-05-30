@@ -33,6 +33,7 @@ def test_order_manager_rejects_unapproved_intent() -> None:
     from qts.core.ids import InstrumentId, OrderId
     from qts.domain.orders import OrderIntent, OrderSide
     from qts.domain.risk import RiskDecision
+    from qts.execution.errors import RiskRejectedOrder
     from qts.execution.order_manager import OrderManager
 
     manager = OrderManager()
@@ -43,7 +44,7 @@ def test_order_manager_rejects_unapproved_intent() -> None:
         quantity=Decimal("10"),
     )
 
-    with pytest.raises(ValueError, match="risk decision is not approved"):
+    with pytest.raises(RiskRejectedOrder, match="risk decision is not approved"):
         manager.create_order(
             intent,
             risk_decision=RiskDecision.rejected("BLOCKED", "blocked by test"),
@@ -160,6 +161,7 @@ def test_order_manager_rejects_discarding_non_terminal_order_state() -> None:
     from qts.core.ids import InstrumentId, OrderId
     from qts.domain.orders import OrderIntent, OrderSide
     from qts.domain.risk import RiskDecision
+    from qts.execution.errors import OrderLifecycleError
     from qts.execution.order_manager import OrderManager
 
     manager = OrderManager()
@@ -174,7 +176,7 @@ def test_order_manager_rejects_discarding_non_terminal_order_state() -> None:
     )
     manager.mark_sent(order.order_id, broker_order_id="broker-001")
 
-    with pytest.raises(ValueError, match="terminal"):
+    with pytest.raises(OrderLifecycleError, match="terminal"):
         manager.discard_terminal_order(order.order_id)
 
     assert manager.get_order(order.order_id).broker_order_id == "broker-001"

@@ -18,6 +18,12 @@ from qts.domain.orders import (
     ReplaceIntent,
 )
 from qts.domain.risk import RiskDecision
+from qts.execution.errors import (
+    MissingFillPrice,
+    OrderLifecycleError,
+    RiskRejectedOrder,
+    UnknownBrokerOrder,
+)
 from qts.execution.idempotency import FillIdempotencyStore
 from qts.execution.order_state_machine import OrderEvent, OrderStateMachine
 
@@ -38,9 +44,13 @@ class OrderManager:
         self._report_ids_by_order: dict[OrderId, set[str]] = {}
 
     def create_order(self, intent: OrderIntent, *, risk_decision: RiskDecision) -> Order:
-        """Perform create_order."""
+        """Create a tracked order from a risk-approved intent.
+
+        Raises ``RiskRejectedOrder`` if the risk decision is not approved; the
+        order is never created in that case.
+        """
         if not risk_decision.approved:
-            raise ValueError("risk decision is not approved")
+            raise RiskRejectedOrder("risk decision is not approved")
         machine = OrderStateMachine()
         order = Order(order_id=intent.order_id, intent=intent, state=machine.state)
         self._orders[order.order_id] = order
@@ -48,9 +58,12 @@ class OrderManager:
         return order
 
     def mark_sent(self, order_id: OrderId, *, broker_order_id: str) -> Order:
-        """Perform mark_sent."""
+        """Record that an order was sent to the broker under ``broker_order_id``.
+
+        Raises ``OrderLifecycleError`` if the broker order id is empty.
+        """
         if not broker_order_id.strip():
-            raise ValueError("broker_order_id must not be empty")
+            raise OrderLifecycleError("broker_order_id must not be empty")
         machine = self._machines[order_id]
         state = machine.apply(OrderEvent.SENT)
         order = self._replace_order(order_id, state=state, broker_order_id=broker_order_id)
@@ -63,9 +76,12 @@ class OrderManager:
         return self._replace_order(intent.order_id, state=state)
 
     def request_replace(self, intent: ReplaceIntent, *, risk_decision: RiskDecision) -> Order:
-        """Perform request_replace."""
+        """Request a replace on a tracked order from a risk-approved intent.
+
+        Raises ``RiskRejectedOrder`` if the risk decision is not approved.
+        """
         if not risk_decision.approved:
-            raise ValueError("risk decision is not approved")
+            raise RiskRejectedOrder("risk decision is not approved")
         state = self._machines[intent.order_id].apply(OrderEvent.REPLACE_REQUESTED)
         current = self._orders[intent.order_id]
         replaced_intent = OrderIntent(
@@ -86,8 +102,18 @@ class OrderManager:
         return order
 
     def process_report(self, report: ExecutionReport) -> OrderProcessingResult:
-        """Perform process_report."""
-        order_id = self._broker_to_order[report.broker_order_id]
+        """Apply a normalized broker execution report to the referenced order.
+
+        Raises ``UnknownBrokerOrder`` if the report's broker order id is not
+        mapped to a tracked order, and ``MissingFillPrice`` if a positive fill
+        quantity arrives without a fill price.
+        """
+        try:
+            order_id = self._broker_to_order[report.broker_order_id]
+        except KeyError as exc:
+            raise UnknownBrokerOrder(
+                f"no tracked order for broker order id {report.broker_order_id!r}"
+            ) from exc
         if report.report_id in self._seen_report_ids:
             return OrderProcessingResult(order=self._orders[order_id])
         state = self._machines[order_id].apply(self._event_for_report(report.status))
@@ -102,10 +128,13 @@ class OrderManager:
         return self._orders[order_id]
 
     def discard_terminal_order(self, order_id: OrderId) -> None:
-        """Perform discard_terminal_order."""
+        """Drop a terminal order and compact its idempotency ids.
+
+        Raises ``OrderLifecycleError`` if the order is not in a terminal state.
+        """
         order = self._orders[order_id]
         if order.state not in _TERMINAL_ORDER_STATES:
-            raise ValueError(f"only terminal orders can be discarded: {order.state}")
+            raise OrderLifecycleError(f"only terminal orders can be discarded: {order.state}")
         self._orders.pop(order_id)
         self._machines.pop(order_id, None)
         if order.broker_order_id is not None:
@@ -197,7 +226,7 @@ class OrderManager:
         if report.filled_quantity <= Decimal("0") or report.fill_id is None:
             return ()
         if report.fill_price is None:
-            raise ValueError("fill_price is required when filled_quantity is positive")
+            raise MissingFillPrice("fill_price is required when filled_quantity is positive")
         if not self._fill_ids.mark_seen(report.fill_id):
             return ()
         self._fill_ids_by_order.setdefault(order.order_id, set()).add(report.fill_id)

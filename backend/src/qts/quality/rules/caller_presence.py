@@ -58,6 +58,13 @@ _EXCEPTION_BASE_NAMES = frozenset(
         "AttributeError",
         "ImportError",
         "NotImplementedError",
+        # Project domain exception bases (qts.core.errors): subclasses of these
+        # are exception types caught by type, not invoked, so they are exempt
+        # from the caller-presence requirement just like builtin exceptions.
+        "QTSError",
+        "QTSConfigurationError",
+        "QTSInvariantError",
+        "QTSRuntimeError",
     }
 )
 
