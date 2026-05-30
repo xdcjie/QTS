@@ -372,8 +372,8 @@ class TargetIntentProcessor:
         """Return the intraday-session key for the bar.
 
         The key is the bar's exchange-local ``session_id`` (a domain fact),
-        not a UTC calendar date. Overnight sessions (e.g. COMEX GC/SI
-        ``[18:00 ET, 17:00 ET)``) span two UTC dates within a single session;
+        not a UTC calendar date. An overnight session whose window crosses
+        UTC midnight spans two UTC dates within a single trading session;
         deriving the key from ``end_time.astimezone(UTC).date()`` would reset
         the intraday-loss window mid-session. See
         ``docs/domain/market_calendar_and_sessions.md``.
