@@ -36,26 +36,23 @@ Required gates / verification:
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
 from qts.backtest.engine import BacktestEngine
-from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
+from qts.core.ids import AccountId, InstrumentId
 from qts.domain.instruments import AssetClass, ContractSpec, Instrument, SettlementType
 from qts.domain.market_data import Bar
-from qts.domain.orders import (
-    ExecutionReport,
-    ExecutionReportStatus,
-    OrderIntent,
-    OrderState,
-)
+from qts.domain.orders import OrderState
+from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
 from qts.registry.instrument_registry import InstrumentRegistry
 from qts.risk.risk_engine import RiskEngine
 from qts.risk.rules.max_notional import MaxNotionalRule
 from qts.runtime.actors.account_actor import AccountActor
+from qts.runtime.config import BacktestCostModel
 from qts.runtime.dependencies import RuntimeSessionDependencies
 from qts.runtime.session import RuntimeSession, RuntimeSessionResult
 from qts.strategy_sdk import PortfolioPosition, PortfolioView, TargetIntent
@@ -68,9 +65,15 @@ _SYMBOL = "AAPL"
 _INSTRUMENT_ID = InstrumentId("EQUITY.US.NASDAQ.AAPL")
 _TARGET_QUANTITY = Decimal("2")
 _INITIAL_CASH = Decimal("10000")
-_BAR_PRICE = Decimal("100")
+# Non-degenerate OHLC: open != close and a real high/low range, so the fill
+# price is the bar's close as decided by the execution adapter (not trivially
+# equal to every other field on a flat bar). A market order fills at the close.
+_BAR_OPEN = Decimal("100")
+_BAR_HIGH = Decimal("105")
+_BAR_LOW = Decimal("98")
+_BAR_CLOSE = Decimal("102")
 _BAR_START = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
-# max_notional must admit the intent (2 * 100 = 200) so both modes approve.
+# max_notional must admit the intent (2 * 102 = 204) so both modes approve.
 _MAX_NOTIONAL = Decimal("1000000")
 
 
@@ -102,11 +105,11 @@ def test_backtest_and_paper_produce_identical_meaningful_results() -> None:
     assert backtest_fill == _MeaningfulFill(
         side="buy",
         quantity=_TARGET_QUANTITY,
-        price=_BAR_PRICE,
+        price=_BAR_CLOSE,
     )
 
     # --- Same AccountSnapshot delta (cash delta + position quantity) ---
-    expected_cash_delta = -(_TARGET_QUANTITY * _BAR_PRICE)  # buy 2 @ 100, multiplier 1
+    expected_cash_delta = -(_TARGET_QUANTITY * _BAR_CLOSE)  # buy 2 @ 102, multiplier 1
     backtest_account = backtest.result.final_account
     paper_account = paper.account_snapshot
     assert paper_account is not None
@@ -229,7 +232,10 @@ def _run_paper(bar: Bar) -> RuntimeSessionResult:
             strategy=ParityTargetQuantityStrategy(symbol=_SYMBOL, quantity=_TARGET_QUANTITY),
             risk_engine=RiskEngine([MaxNotionalRule(max_notional=_MAX_NOTIONAL)]),
             instrument_context=_ParityInstrumentContext(),
-            execution_adapter=_FillingExecutionAdapter(),
+            # Real shared fill model (same adapter the backtest ExecutionActor
+            # uses), not a fake instant-fill stub, so the test detects any
+            # divergence between the two modes' execution mechanics.
+            execution_adapter=SimulatedExecutionAdapter(BacktestCostModel()),
             account_actor=AccountActor(
                 initial_cash={"USD": _INITIAL_CASH},
                 account_id=account_id,
@@ -267,18 +273,20 @@ def _parity_registry() -> InstrumentRegistry:
 
 
 def _parity_bar() -> Bar:
-    # Flat bar (open == high == low == close) so both fill-timing policies and
-    # both modes realize the decision at the same price.
+    # Non-degenerate OHLC: a real intrabar range with open != close. A market
+    # order fills at the close under both modes' shared execution adapter, so a
+    # fill at any other field (open/high/low) would now surface as a parity
+    # failure rather than passing trivially on a flat bar.
     return Bar(
         instrument_id=_INSTRUMENT_ID,
         start_time=_BAR_START,
         end_time=_BAR_START + timedelta(minutes=1),
         timeframe="1m",
         session_id="2026-01-02",
-        open=_BAR_PRICE,
-        high=_BAR_PRICE,
-        low=_BAR_PRICE,
-        close=_BAR_PRICE,
+        open=_BAR_OPEN,
+        high=_BAR_HIGH,
+        low=_BAR_LOW,
+        close=_BAR_CLOSE,
         volume=Decimal("100"),
         is_complete=True,
     )
@@ -310,53 +318,6 @@ class _ParityInstrumentContext:
         continuous_instrument_id: InstrumentId,
     ) -> frozenset[InstrumentId]:
         raise RuntimeError("continuous contracts are not configured")
-
-
-@dataclass(slots=True)
-class _FillingExecutionAdapter:
-    """Paper execution boundary adapter: fills at the supplied market price."""
-
-    seen: list[OrderIntent] = field(default_factory=list)
-
-    def execute_market_order(
-        self,
-        intent: OrderIntent,
-        *,
-        broker_order_id: str,
-        market_price: Decimal,
-        account_id: AccountId,
-        strategy_id: StrategyId,
-        client_order_id: str,
-        correlation_id: CorrelationId,
-        bar_time: object | None = None,
-    ) -> ExecutionReport:
-        del account_id, strategy_id, client_order_id, correlation_id, bar_time
-        self.seen.append(intent)
-        return ExecutionReport(
-            report_id=f"{broker_order_id}-filled",
-            broker_order_id=broker_order_id,
-            status=ExecutionReportStatus.FILLED,
-            filled_quantity=intent.quantity,
-            fill_price=market_price,
-            fill_id=f"{broker_order_id}-fill",
-        )
-
-    def cancel_order(
-        self,
-        order_id: OrderId,
-        *,
-        broker_order_id: str,
-        account_id: AccountId,
-        strategy_id: StrategyId,
-        client_order_id: str,
-        correlation_id: CorrelationId,
-    ) -> ExecutionReport:
-        del order_id, account_id, strategy_id, client_order_id, correlation_id
-        return ExecutionReport(
-            report_id=f"{broker_order_id}-cancelled",
-            broker_order_id=broker_order_id,
-            status=ExecutionReportStatus.CANCELLED,
-        )
 
 
 def _portfolio_view(
