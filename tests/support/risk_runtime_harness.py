@@ -34,14 +34,26 @@ from qts.strategy_sdk.asset_ref import AssetRef
 _DEFAULT_INSTRUMENT = InstrumentId("EQUITY.US.NASDAQ.AAPL")
 
 
-def make_bar(when: datetime, close: str, instrument: InstrumentId = _DEFAULT_INSTRUMENT) -> Bar:
-    """Build a complete one-minute bar at the supplied close."""
+def make_bar(
+    when: datetime,
+    close: str,
+    instrument: InstrumentId = _DEFAULT_INSTRUMENT,
+    *,
+    session_id: str | None = None,
+) -> Bar:
+    """Build a complete one-minute bar at the supplied close.
+
+    ``session_id`` defaults to the bar's UTC date (adequate for instruments
+    whose session does not cross UTC midnight). Overnight-session tests pass
+    an explicit exchange-local ``session_id`` that two bars on different UTC
+    dates can share.
+    """
     return Bar(
         instrument_id=instrument,
         start_time=when,
         end_time=when + timedelta(minutes=1),
         timeframe="1m",
-        session_id=when.date().isoformat(),
+        session_id=session_id if session_id is not None else when.date().isoformat(),
         open=Decimal(close),
         high=Decimal(close),
         low=Decimal(close),
@@ -105,10 +117,16 @@ class RiskRuntimeHarness:
         price: str,
         intent_type: TargetIntentType = TargetIntentType.QUANTITY,
         market_data: MarketDataRiskContext | None = None,
+        session_id: str | None = None,
     ) -> ProcessedIntent:
-        """Submit one target intent at ``price`` and return the processed result."""
+        """Submit one target intent at ``price`` and return the processed result.
+
+        ``session_id`` overrides the bar's exchange-local session key, letting
+        overnight-session tests place two bars on different UTC dates in the
+        same trading session.
+        """
         self._order_number += 1
-        bar = make_bar(when, price, self.instrument)
+        bar = make_bar(when, price, self.instrument, session_id=session_id)
         return self.processor.process_intent(
             TargetIntent(
                 intent_type=intent_type,

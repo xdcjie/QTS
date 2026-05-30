@@ -369,8 +369,16 @@ class TargetIntentProcessor:
 
     @staticmethod
     def _session_id_for(bar: Bar) -> str:
-        """Return an intraday-session key for the bar (resets the PnL window daily)."""
-        return bar.end_time.date().isoformat()
+        """Return the intraday-session key for the bar.
+
+        The key is the bar's exchange-local ``session_id`` (a domain fact),
+        not a UTC calendar date. Overnight sessions (e.g. COMEX GC/SI
+        ``[18:00 ET, 17:00 ET)``) span two UTC dates within a single session;
+        deriving the key from ``end_time.astimezone(UTC).date()`` would reset
+        the intraday-loss window mid-session. See
+        ``docs/domain/market_calendar_and_sessions.md``.
+        """
+        return bar.session_id
 
     def _projected_initial_margin(
         self,
