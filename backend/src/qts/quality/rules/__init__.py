@@ -1,6 +1,7 @@
 """Guardrail rule implementations grouped by rule family."""
 
 from qts.quality.rules.account_mutation import AccountFillMutationRule
+from qts.quality.rules.backtest_pipeline_cohesion import BacktestPipelineCohesionRule
 from qts.quality.rules.boundaries import (
     BrokerSpecificRule,
     BrokerSymbolBoundaryRule,
@@ -82,6 +83,7 @@ __all__ = [
     "BacktestActorLoopCohesionRule",
     "BacktestEngineCohesionRule",
     "BacktestInputCohesionRule",
+    "BacktestPipelineCohesionRule",
     "BacktestRunnerCohesionRule",
     "BrokerSpecificRule",
     "BrokerSymbolBoundaryRule",

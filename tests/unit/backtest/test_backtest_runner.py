@@ -198,9 +198,13 @@ def test_materialized_replay_cache_reuses_aggregated_bars_without_consuming_sour
         captured_engine_bars.append(captured)
         return type("FakeEngine", (), {"bars": captured})()
 
-    monkeypatch.setattr("qts.backtest.pipeline.ReplayMarketDataSource", FakeReplayMarketDataSource)
-    monkeypatch.setattr("qts.backtest.pipeline.BacktestEngine.from_config", fake_from_config)
-    monkeypatch.setattr(BacktestPipeline, "catalog", lambda self: object())
+    monkeypatch.setattr(
+        "qts.backtest.replay_input.ReplayMarketDataSource", FakeReplayMarketDataSource
+    )
+    monkeypatch.setattr("qts.backtest.assembly.BacktestEngine.from_config", fake_from_config)
+    monkeypatch.setattr(
+        "qts.backtest.replay_input.HistoricalCatalog.load", lambda _config: object()
+    )
 
     pipeline = BacktestPipeline(_backtest_config(tmp_path)).with_materialized_replay_cache(
         tmp_path / "replay-cache"
