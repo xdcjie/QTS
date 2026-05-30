@@ -234,7 +234,7 @@ def test_backtest_engine_routes_bars_through_strategy_actor(
     monkeypatch: Any,
     tmp_path: Path,
 ) -> None:
-    from qts.backtest import engine as engine_module
+    from qts.backtest import actor_loop as actor_loop_module
     from qts.backtest.engine import BacktestEngine
     from qts.runtime.actors.strategy_actor import (
         StrategyBarEvent,
@@ -267,7 +267,7 @@ def test_backtest_engine_routes_bars_through_strategy_actor(
                 return
             raise TypeError(f"unsupported test message: {type(message).__name__}")
 
-    monkeypatch.setattr(engine_module, "StrategyActor", RecordingStrategyActor)
+    monkeypatch.setattr(actor_loop_module, "StrategyActor", RecordingStrategyActor)
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     captured = run_engine_streaming(
@@ -288,7 +288,7 @@ def test_backtest_engine_routes_strategy_intents_through_signal_aggregator(
     monkeypatch: Any,
     tmp_path: Path,
 ) -> None:
-    from qts.backtest import engine as engine_module
+    from qts.backtest import actor_loop as actor_loop_module
     from qts.backtest.engine import BacktestEngine
     from qts.runtime.actors.signal_aggregator_actor import (
         AggregatedSignalBatch,
@@ -323,7 +323,7 @@ def test_backtest_engine_routes_strategy_intents_through_signal_aggregator(
                 return
             raise TypeError(f"unsupported test message: {type(message).__name__}")
 
-    monkeypatch.setattr(engine_module, "SignalAggregatorActor", RecordingSignalAggregatorActor)
+    monkeypatch.setattr(actor_loop_module, "SignalAggregatorActor", RecordingSignalAggregatorActor)
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     captured = run_engine_streaming(

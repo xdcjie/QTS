@@ -31,9 +31,11 @@ from qts.runtime.actors.order_manager_actor import (
 )
 from qts.runtime.actors.signal_aggregator_actor import (
     AggregatedSignalBatch,
+    SignalAggregatorActor,
     SignalContribution,
     StrategySignalEvent,
 )
+from qts.runtime.actors.strategy_actor import StrategyActor
 from qts.runtime.broker_runtime_topology import StrategyRuntimeBinding
 from qts.runtime.intent_processing import ProcessedIntent
 from qts.runtime.mailbox import Mailbox
@@ -204,12 +206,13 @@ class BacktestActorLoop:
 
     @staticmethod
     def _resolve_actor_classes() -> tuple[type, type]:
-        """Perform _resolve_actor_classes."""
-        from qts.backtest import engine as engine_module
+        """Return the (StrategyActor, SignalAggregatorActor) classes to instantiate.
 
-        strategy_actor = engine_module.StrategyActor
-        signal_aggregator_actor = engine_module.SignalAggregatorActor
-        return strategy_actor, signal_aggregator_actor
+        Read from this module's globals (not re-exported through the engine) so
+        tests can monkeypatch ``qts.backtest.actor_loop.StrategyActor`` /
+        ``SignalAggregatorActor`` to record actor traffic.
+        """
+        return StrategyActor, SignalAggregatorActor
 
     def normalize_strategy_specs(
         self,

@@ -44,18 +44,6 @@ from qts.risk.margin.calculator import MarginCalculator
 from qts.risk.risk_engine import RiskEngine
 from qts.risk.rule_registry import RiskRuleRegistry
 from qts.runtime.actors.account_actor import AccountSnapshot
-from qts.runtime.actors.signal_aggregator_actor import (
-    AggregatedSignalBatch,
-    SignalAggregatorActor,
-    StrategySignalEvent,
-)
-from qts.runtime.actors.strategy_actor import (
-    StrategyActor,
-    StrategyBarEvent,
-    StrategyBarResult,
-    StrategyFinalize,
-    StrategyFinalized,
-)
 from qts.runtime.config import BacktestCostModel, BacktestEngineConfig, BacktestRuntimeConfig
 from qts.runtime.intent_processing import TargetIntentProcessor
 from qts.runtime.sinks.backtest import BacktestRuntimeEventSink
@@ -643,12 +631,4 @@ __all__ = [
     "BacktestCostModel",
     "BacktestEngine",
     "BacktestStreamResult",
-    "SignalAggregatorActor",
-    "StrategyActor",
-    "StrategyBarEvent",
-    "StrategyBarResult",
-    "StrategyFinalize",
-    "StrategyFinalized",
-    "AggregatedSignalBatch",
-    "StrategySignalEvent",
 ]
