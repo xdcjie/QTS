@@ -111,6 +111,23 @@ by the honest research defaults plus the promotion gate. Covered by
 `tests/unit/backtest/test_backtest_execution_timing_config.py`, and
 `tests/integration/research/test_autonomous_rejects_same_bar_close_promotion.py`.
 
+## Margin Enforcement
+
+Futures initial-margin enforcement is a per-contract product fact owned by
+`ContractSpec.initial_margin_rate`. `BacktestEngine.from_config` builds the
+`RiskEngine` through `RiskRuleRegistry` and appends `MarginRule` + a
+`MarginCalculator` only when a margin rate is resolvable from the instrument
+registry — rate-less runs behave exactly as before (no fail-closed rejection).
+
+Deferred: the catalog/replay data path
+(`qts.data ... replay_bundle_builder`) does not yet populate
+`initial_margin_rate` from the futures-chain config, so catalog-loaded
+production backtests leave the rate `None` and do not enforce margin until a
+chain-config margin knob is added. The config-driven path is fully wired and
+exercised end-to-end by `tests/integration/test_runtime_futures_margin_enforced.py`.
+This is an isolated data-source-layer follow-up; it does not weaken the
+config-driven gate.
+
 ## Forbidden Patterns
 
 - Calling broker adapters directly from strategy code.

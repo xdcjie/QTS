@@ -486,3 +486,53 @@ class _MarketDataReconnectApp:
 
     def disconnect(self) -> None:
         self.disconnected = True
+
+
+def test_ibkr_tws_market_data_transport_stamps_ticks_from_injected_clock() -> None:
+    # Live/paper timestamps must come from the injected clock, not a direct
+    # datetime.now() wall-clock read, so deterministic callers control the time.
+    from datetime import UTC, datetime
+
+    from qts.core.ids import BrokerId, InstrumentId
+    from qts.data.adapters.ibkr_market_data import (
+        IbkrMarketDataAdapter,
+        IbkrMarketDataConnection,
+    )
+    from qts.data.transports.ibkr_tws_market_data_transport import (
+        IbkrTwsMarketDataTransport,
+        IbkrTwsMarketDataTransportConfig,
+    )
+    from qts.domain.market_data import Tick
+    from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
+
+    class _FixedClock:
+        def __init__(self, instant: datetime) -> None:
+            self._instant = instant
+
+        def now(self) -> datetime:
+            return self._instant
+
+    fixed = datetime(2026, 5, 30, 14, 30, tzinfo=UTC)
+    instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+    mapping = BrokerSymbolMapping(BrokerId("IBKR"))
+    mapping.register(instrument_id, "AAPL")
+    adapter = IbkrMarketDataAdapter(
+        connection=IbkrMarketDataConnection(
+            host="127.0.0.1",
+            port=4002,
+            client_id=101,
+            source_id="ibkr-paper-md",
+        ),
+        symbol_mapping=mapping,
+    )
+    transport = IbkrTwsMarketDataTransport(
+        config=IbkrTwsMarketDataTransportConfig(host="127.0.0.1", port=4002, client_id=101),
+        sink=adapter,
+        clock=_FixedClock(fixed),
+    )
+
+    transport.register_market_data_request(77, broker_symbol="AAPL")
+    tick = transport.handle_tick_price(77, tick_type=4, price=101.25)
+
+    assert isinstance(tick, Tick)
+    assert tick.time == fixed

@@ -13,6 +13,7 @@ from importlib import import_module
 from time import monotonic
 from typing import Any, Protocol
 
+from qts.core.time import Clock, SystemClock
 from qts.domain.market_data import Bar, Quote, Tick
 
 _BID_PRICE_TICK_TYPES = frozenset({1, 66})
@@ -290,9 +291,11 @@ class IbkrTwsMarketDataTransport:
         *,
         config: IbkrTwsMarketDataTransportConfig,
         sink: IbkrMarketDataCallbackSink,
+        clock: Clock | None = None,
     ) -> None:
         self.config = config
         self._sink = sink
+        self._clock = clock if clock is not None else SystemClock()
         self._app: Any | None = None
         self._thread: threading.Thread | None = None
         self._ready = threading.Event()
@@ -471,7 +474,7 @@ class IbkrTwsMarketDataTransport:
             return self.emit_tick(
                 IbkrTickPayload(
                     broker_symbol=self._broker_symbol_for(req_id),
-                    time=datetime.now(tz=UTC),
+                    time=self._clock.now(),
                     price=value,
                     size=self._last_sizes.get(req_id, Decimal("0")),
                 )
@@ -607,7 +610,7 @@ class IbkrTwsMarketDataTransport:
         return self.emit_quote(
             IbkrQuotePayload(
                 broker_symbol=self._broker_symbol_for(req_id),
-                time=datetime.now(tz=UTC),
+                time=self._clock.now(),
                 bid_price=state.bid_price,
                 ask_price=state.ask_price,
                 bid_size=state.bid_size,
