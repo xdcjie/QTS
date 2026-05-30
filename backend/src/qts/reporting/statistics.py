@@ -177,6 +177,8 @@ class StatisticsBuilder:
         downside = [item for item in self._returns if item < Decimal("0")]
         downside_std = _stddev(downside)
         sharpe = _ratio(mean_return, std) * annualization.sqrt()
+        observed_sharpe = _ratio(mean_return, std)
+        return_skewness, return_kurtosis = _higher_moments(self._returns)
         sortino = _ratio(mean_return, downside_std) * annualization.sqrt()
         car = _compound_annual_return(self._first, self._last, self._points, annualization)
         wins = [pnl for pnl in self._closed_pnls if pnl > Decimal("0")]
@@ -192,6 +194,15 @@ class StatisticsBuilder:
             "max_drawdown_duration_bars": self._max_drawdown_duration,
             "calmar_ratio": _ratio(car, abs(self._max_drawdown)),
             "sharpe_ratio": sharpe,
+            # Per-observation (non-annualized) Sharpe and the higher moments of
+            # the per-period return series. These feed the multiple-testing /
+            # deflated-Sharpe correction, which operates on the per-observation
+            # Sharpe, sample size, skewness, and (full) kurtosis -- not the
+            # annualized ratio.
+            "observed_sharpe": observed_sharpe,
+            "return_observation_count": len(self._returns),
+            "return_skewness": return_skewness,
+            "return_kurtosis": return_kurtosis,
             "sortino_ratio": sortino,
             "probabilistic_sharpe_ratio": _probabilistic_sharpe_ratio(self._returns),
             "total_trades": total_trades,
@@ -297,6 +308,28 @@ def _compound_annual_return(
     if points <= 0 or first <= Decimal("0") or last <= Decimal("0"):
         return Decimal("0")
     return ((last / first).ln() * (annualization / Decimal(points))).exp() - Decimal("1")
+
+
+def _higher_moments(returns: list[Decimal]) -> tuple[Decimal, Decimal]:
+    """Return (skewness, full kurtosis) of the per-period return series.
+
+    Uses the population moments of the standardized returns, matching the
+    convention consumed by the deflated-Sharpe / PSR correction (normal
+    kurtosis = 3, normal skewness = 0). Returns the normal defaults when there
+    are too few points or zero dispersion to estimate the moments.
+    """
+    if len(returns) < 2:
+        return Decimal("0"), Decimal("3")
+    sample = [float(r) for r in returns]
+    n = len(sample)
+    mean = sum(sample) / n
+    variance = sum((r - mean) ** 2 for r in sample) / n
+    if variance <= 0.0:
+        return Decimal("0"), Decimal("3")
+    std = math.sqrt(variance)
+    skew = sum(((r - mean) / std) ** 3 for r in sample) / n
+    kurt = sum(((r - mean) / std) ** 4 for r in sample) / n
+    return Decimal(str(skew)), Decimal(str(kurt))
 
 
 def _probabilistic_sharpe_ratio(returns: list[Decimal]) -> Decimal:

@@ -82,3 +82,27 @@ metrics:
     unit: ratio
     direction: higher_is_better
     required_for: []
+  # Per-observation statistics for the multiple-testing / deflated-Sharpe
+  # correction. Type-governed but not required for any purpose: the selector
+  # falls back to documented defaults when they are absent.
+  - path: performance.observed_sharpe
+    type: float
+    unit: ratio
+    direction: higher_is_better
+    required_for: []
+  - path: performance.return_observation_count
+    type: int
+    unit: count
+    direction: higher_is_better
+    required_for: []
+    minimum: 0
+  - path: performance.return_skewness
+    type: float
+    unit: ratio
+    direction: neutral
+    required_for: []
+  - path: performance.return_kurtosis
+    type: float
+    unit: ratio
+    direction: neutral
+    required_for: []

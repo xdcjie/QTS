@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import shutil
 import sys
 from collections.abc import Mapping, Sequence
@@ -846,6 +847,16 @@ class ResearchExperimentRunner:
         test_manifest: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
         sharpe = self._decimal(statistics.get("sharpe_ratio", objective_value))
+        # Per-observation statistics consumed by the multiple-testing /
+        # deflated-Sharpe correction. None/empty when an older manifest predates
+        # their emission; the selector then falls back to its documented defaults.
+        observed_sharpe = self._optional_metric_float(statistics.get("observed_sharpe"))
+        return_observation_count = self._optional_metric_int(
+            statistics.get("return_observation_count")
+        )
+        return_skewness = self._optional_metric_float(statistics.get("return_skewness"))
+        return_kurtosis = self._optional_metric_float(statistics.get("return_kurtosis"))
+        oos_returns = self._oos_returns_from_manifest(backtest_manifest)
         total_return = self._decimal(statistics.get("total_return", 0))
         max_drawdown = abs(self._decimal(statistics.get("max_drawdown", 0)))
         profit_factor = self._decimal(statistics.get("profit_factor", 0))
@@ -889,7 +900,12 @@ class ResearchExperimentRunner:
             },
             "performance": {
                 "max_drawdown": float(max_drawdown),
+                "observed_sharpe": observed_sharpe,
+                "oos_returns": oos_returns,
                 "oos_sharpe": oos_sharpe,
+                "return_kurtosis": return_kurtosis,
+                "return_observation_count": return_observation_count,
+                "return_skewness": return_skewness,
                 "total_return": float(total_return),
                 "train_sharpe": train_sharpe,
             },
@@ -1017,6 +1033,67 @@ class ResearchExperimentRunner:
         manifest["artifact_hashes"] = artifact_hashes
         manifest["artifact_paths_by_hash"] = artifact_paths_by_hash
         self._write_json(manifest_path, manifest)
+
+    @staticmethod
+    def _optional_metric_float(value: Any) -> float | None:
+        """Coerce a serialized scalar metric to float, or None when absent."""
+        if value is None or isinstance(value, bool):
+            return None
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return None
+        return number if math.isfinite(number) else None
+
+    @staticmethod
+    def _optional_metric_int(value: Any) -> int | None:
+        """Coerce a serialized count metric to int, or None when absent."""
+        if value is None or isinstance(value, bool):
+            return None
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
+    def _oos_returns_from_manifest(self, manifest: Mapping[str, Any]) -> list[float]:
+        """Return the per-period return series from the backtest equity-curve artifact.
+
+        The Probability-of-Backtest-Overfitting (PBO/CSCV) estimator needs the
+        realized return series; it is derived from the equity_curve artifact the
+        backtest writes. Returns an empty list when the artifact is absent so the
+        PBO computation degrades to its documented neutral value.
+        """
+        artifacts = manifest.get("artifacts")
+        if not isinstance(artifacts, Mapping):
+            return []
+        equity_artifact = artifacts.get("equity_curve")
+        if not isinstance(equity_artifact, Mapping):
+            return []
+        path_text = equity_artifact.get("path")
+        if not isinstance(path_text, str) or not path_text.strip():
+            return []
+        path = Path(path_text)
+        if not path.exists():
+            return []
+        equities: list[float] = []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                return []
+            if not isinstance(row, Mapping):
+                continue
+            equity = self._optional_metric_float(row.get("equity"))
+            if equity is not None:
+                equities.append(equity)
+        returns: list[float] = []
+        for index in range(1, len(equities)):
+            previous = equities[index - 1]
+            if previous != 0.0:
+                returns.append((equities[index] - previous) / previous)
+        return returns
 
     def _artifact_row_count(self, manifest: Mapping[str, Any], artifact_name: str) -> int:
         artifacts = manifest.get("artifacts")

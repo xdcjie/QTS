@@ -69,7 +69,9 @@ from qts.research.selector import (
     CandidateSelector,
     CorrelationGate,
     CostStressGate,
+    DeflatedSharpeGate,
     FailureWindowVetoGate,
+    PBOGate,
     SelectionPolicy,
     ValidationGauntlet,
 )
@@ -1763,9 +1765,14 @@ class AutonomousResearchEngine:
             )
             for trial in trials
         ]
+        # Multiple-testing correction: the multiplicity haircut must see how many
+        # configurations were tried this generation, not the default of 1 (which
+        # makes the expected-maximum-Sharpe haircut a no-op). Every selector input
+        # is one configuration tried, so the trial count is their cardinality.
         selection = CandidateSelector(self._selection_policy(run)).select(
             selector_inputs,
             metrics_schema=self._metrics_schema(),
+            trial_count=max(len(selector_inputs), 1),
         )
         selection_dir = run.output_root / generation_id / "selection"
         selection.write_artifacts(selection_dir)
@@ -1800,6 +1807,12 @@ class AutonomousResearchEngine:
                 **dict(selected.candidate_payload),
                 "validation": self._validation_payload_from_artifacts(validation_artifact_paths),
             }
+            # The deflated-Sharpe / PBO gates read the selector's multiplicity
+            # adjustment, which the raw candidate payload does not carry.
+            if selected.multiplicity_adjustment is not None:
+                candidate_payload["multiplicity_adjustment"] = dict(
+                    selected.multiplicity_adjustment
+                )
             gauntlet = self._validation_gauntlet(run).validate(
                 candidate_payload,
                 audit_log=audit_log,
@@ -2067,6 +2080,12 @@ class AutonomousResearchEngine:
             correlation_gate=CorrelationGate(
                 max_active_correlation=float(constraints.get("max_correlation_to_active", 0.80))
             ),
+            # Multiple-testing / overfitting gates read the multiplicity-adjustment
+            # evidence the selector records on each candidate (deflated Sharpe vs the
+            # expected maximum over the trials tried, and PBO from the OOS return
+            # series). They are no longer opt-out for autonomous promotion.
+            deflated_sharpe_gate=DeflatedSharpeGate(),
+            pbo_gate=PBOGate(),
             require_artifacts=True,
         )
 

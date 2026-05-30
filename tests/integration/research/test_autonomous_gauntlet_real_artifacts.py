@@ -41,6 +41,10 @@ def test_autonomous_gauntlet_consumes_validation_artifact_refs(
     assert payload["results"]
     for gauntlet_result in payload["results"]:
         for decision in gauntlet_result["gate_decisions"]:
+            if decision["gate_name"] in ("deflated_sharpe", "pbo"):
+                # Multiplicity gates read the selector's inline multiplicity-
+                # adjustment evidence, not a backtest_pipeline artifact.
+                continue
             assert Path(decision["evidence"]["artifact_path"]).exists()
             assert str(decision["evidence"]["payload_hash"]).startswith("sha256:")
             if decision["gate_name"] == "correlation":

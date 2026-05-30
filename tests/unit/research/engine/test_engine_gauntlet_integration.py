@@ -48,6 +48,10 @@ def test_engine_requires_artifact_backed_gauntlet_before_promotion_packet(
     assert payload["results"]
     assert payload["results"][0]["audit_record_id"]
     for decision in payload["results"][0]["gate_decisions"]:
+        if decision["gate_name"] in ("deflated_sharpe", "pbo"):
+            # Multiplicity gates read the selector's inline multiplicity-adjustment
+            # evidence (deflated Sharpe / PBO), not a backtest_pipeline artifact.
+            continue
         assert decision["evidence"]["artifact_path"]
         assert str(decision["evidence"]["payload_hash"]).startswith("sha256:")
 

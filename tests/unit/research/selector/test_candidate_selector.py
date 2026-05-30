@@ -148,6 +148,44 @@ def test_candidate_selector_requires_every_candidate_to_have_an_id() -> None:
         CandidateSelector(SelectionPolicy()).select(({"metrics": {}},))
 
 
+def test_policy_reads_per_observation_statistics_over_fallbacks() -> None:
+    # When the backtest publishes per-observation statistics (C2), the policy
+    # consumes them directly instead of the annualized oos_sharpe / trade-count
+    # fallbacks and the normal-moment defaults.
+    policy = SelectionPolicy()
+    metrics = {
+        "performance": {
+            "oos_sharpe": 9.9,
+            "observed_sharpe": 0.21,
+            "return_observation_count": 480,
+            "return_skewness": -0.4,
+            "return_kurtosis": 5.0,
+            "oos_returns": [0.01, -0.02, 0.015, 0.0],
+        },
+        "trading": {"oos_trade_count": 7},
+    }
+    stats = policy.candidate_statistics("cand-1", metrics)
+    assert stats.observed_sharpe == 0.21  # not the annualized oos_sharpe fallback
+    assert stats.sample_size == 480  # not the oos_trade_count fallback
+    assert stats.skewness == -0.4  # not the normal default of 0
+    assert stats.kurtosis == 5.0  # not the normal default of 3
+    assert stats.oos_returns == (0.01, -0.02, 0.015, 0.0)
+
+
+def test_policy_falls_back_when_per_observation_statistics_absent() -> None:
+    policy = SelectionPolicy()
+    metrics = {
+        "performance": {"oos_sharpe": 1.3},
+        "trading": {"oos_trade_count": 42},
+    }
+    stats = policy.candidate_statistics("cand-1", metrics)
+    assert stats.observed_sharpe == 1.3  # annualized fallback
+    assert stats.sample_size == 42  # trade-count fallback
+    assert stats.skewness == 0.0  # normal default
+    assert stats.kurtosis == 3.0  # normal default
+    assert stats.oos_returns == ()
+
+
 def _candidate(
     candidate_id: str,
     *,
