@@ -62,6 +62,54 @@ qts.research.factor_discovery.UrllibFactorDiscoveryHttpClient  expires=2027-05-2
 qts.reporting.backtest.StreamingEquityMetrics  expires=2027-05-17  target=internal
 qts.runtime.durability.RuntimeDurabilityDrill  expires=2027-05-17  target=internal
 qts.runtime.intent_processing.OrderPlanBuilder  expires=2027-05-17  target=internal
+# --- C5a batch: surfaced when the caller-presence gate stopped counting bare
+# re-exports. Owner-used helpers auto-pass; these have no caller yet. ---
+# SDK exports for user strategies (library, 1-year horizon)
+qts.strategy_sdk.portfolio_construction.EqualWeightSignalPortfolioConstruction  expires=2027-05-30  target=library
+qts.strategy_sdk.portfolio_construction.ConfidenceWeightedSignalPortfolioConstruction  expires=2027-05-30  target=library
+qts.strategy_sdk.portfolio_construction.MagnitudeWeightedSignalPortfolioConstruction  expires=2027-05-30  target=library
+qts.strategy_sdk.portfolio_construction.RiskParitySignalPortfolioConstruction  expires=2027-05-30  target=library
+qts.strategy_sdk.portfolio_construction.HorizonAwareSignalPortfolioConstruction  expires=2027-05-30  target=library
+qts.strategy_sdk.portfolio_construction.VolatilityTargetedSignalPortfolioConstruction  expires=2027-05-30  target=library
+qts.strategy_sdk.universe.FundamentalTopNSelector  expires=2027-05-30  target=library
+qts.strategy_sdk.universe.TopNVolumeSelector  expires=2027-05-30  target=library
+# Live/paper/research subsystems pending their roadmap milestone wiring
+# (M8 paper, M10 live, research deploy). OPT-65 batch; 3-month review fuse.
+qts.application.services.strategy_service.StrategyLifecycleService  expires=2026-08-30  target=OPT-65
+qts.data.feeds.replay_feed.ReplayFeed  expires=2026-08-30  target=OPT-65
+qts.data.historical.adapter.HistoricalMarketDataAdapter  expires=2026-08-30  target=OPT-65
+qts.data.live.reconnect.ReconnectPolicy  expires=2026-08-30  target=OPT-65
+qts.data.sources.replay_market_data_source.SubscriptionReplayMarketDataSource  expires=2026-08-30  target=OPT-65
+qts.data.stores.memory_store.InMemoryMarketDataStore  expires=2026-08-30  target=OPT-65
+qts.data.stores.parquet_store.ParquetMarketDataStore  expires=2026-08-30  target=OPT-65
+qts.data.transports.ib_async_market_data_transport.IbAsyncMarketDataTransport  expires=2026-08-30  target=OPT-65
+qts.execution.adapters.broker_execution_adapter.BrokerExecutionAdapter  expires=2026-08-30  target=OPT-65
+qts.execution.adapters.ibkr_order_execution.IbkrOrderExecutionAdapter  expires=2026-08-30  target=OPT-65
+qts.execution.transports.ib_async_order_execution_transport.IbAsyncOrderExecutionTransport  expires=2026-08-30  target=OPT-65
+qts.indicators.session_regime.SessionRegimeGateConfig  expires=2026-08-30  target=OPT-65
+qts.indicators.session_regime.TrailingSessionRegimeGate  expires=2026-08-30  target=OPT-65
+qts.observability.dashboard.OperationalDashboardSnapshot  expires=2026-08-30  target=OPT-65
+qts.observability.errors.RuntimeErrorReason  expires=2026-08-30  target=OPT-65
+qts.registry.back_adjusted_series.BackAdjustedContinuousSeriesBuilder  expires=2026-08-30  target=OPT-65
+qts.registry.calendar_registry.CalendarRegistry  expires=2026-08-30  target=OPT-65
+qts.registry.future_chain_registry.FutureChainRegistry  expires=2026-08-30  target=OPT-65
+qts.registry.future_roll.HighestVolumeFutureContractSelector  expires=2026-08-30  target=OPT-65
+qts.registry.option_chain_registry.OptionChainRegistry  expires=2026-08-30  target=OPT-65
+qts.reporting.backtest.BacktestReportWriter  expires=2026-08-30  target=OPT-65
+qts.reporting.broker_runtime.BrokerRuntimeEventReporter  expires=2026-08-30  target=OPT-65
+qts.reporting.broker_runtime.BrokerRuntimeReportWriter  expires=2026-08-30  target=OPT-65
+qts.research.readiness.PaperLiveReadinessDecision  expires=2026-08-30  target=OPT-65
+qts.research.trade_diagnostics.PaperCandidateDiagnosticsGate  expires=2026-08-30  target=OPT-65
+qts.research.validation.NoLookaheadArtifactWriter  expires=2026-08-30  target=OPT-65
+qts.risk.rules.trading_session_rule.TradingSessionRule  expires=2026-08-30  target=OPT-65
+qts.runtime.config.models.ConfigMigration  expires=2026-08-30  target=OPT-65
+qts.runtime.config.models.TradingRuntimeConfig  expires=2026-08-30  target=OPT-65
+qts.runtime.config.paper.PaperSimulatedRuntimeConfig  expires=2026-08-30  target=OPT-65
+qts.runtime.partitioning.AccountBrokerMapping  expires=2026-08-30  target=OPT-65
+qts.runtime.partitioning.AccountPartitionPolicy  expires=2026-08-30  target=OPT-65
+qts.runtime.partitioning.AccountRiskConfig  expires=2026-08-30  target=OPT-65
+qts.runtime.router.EventRouter  expires=2026-08-30  target=OPT-65
+qts.runtime.state_recovery.InMemorySnapshotStore  expires=2026-08-30  target=OPT-65
 ```
 
 ## Rationale for current entries
@@ -87,6 +135,25 @@ qts.runtime.intent_processing.OrderPlanBuilder  expires=2027-05-17  target=inter
 | `qts.runtime.intent_processing.OrderPlanBuilder` | internal | Composed into `TargetIntentProcessor` in the same file. |
 | `qts.runtime.state_recovery.DurableSnapshotStore` | OPT-64 | Cross-restart state recovery wiring (this batch). |
 | `qts.runtime.state_recovery.SnapshotFrequencyPolicy` | OPT-64 | Same as DurableSnapshotStore. |
+
+### C5a batch (surfaced by the re-export-aware caller gate)
+
+When the caller-presence gate stopped counting bare re-exports as callers
+(and started counting same-module owner-use), 43 baseline symbols with no real
+caller surfaced. They fall into two groups:
+
+- **`library` (8)** — Strategy SDK portfolio-construction and universe-selector
+  classes exposed for user strategies. Wired by an example strategy; 1-year
+  horizon.
+- **`OPT-65` (35)** — real, test-exercised components of the live/paper/research
+  subsystems that are not yet driven by a production entrypoint (IBKR/replay
+  market-data + execution transports and adapters, runtime router/partitioning/
+  snapshot/config scaffolding, registry chain/calendar/roll/back-adjustment
+  capabilities, broker/backtest report writers, research readiness/diagnostics/
+  no-lookahead writers, the session/observability/risk gates). The wiring is
+  blocked on the roadmap milestones (M8 paper, M10 live, research deploy); the
+  3-month fuse forces a conscious re-defer-or-wire at each review rather than
+  letting the debt hide.
 
 ## How the rule reads this file
 
