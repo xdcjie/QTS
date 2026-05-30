@@ -1,5 +1,5 @@
 {
-  "production_class_count": 975,
+  "production_class_count": 977,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -79,6 +79,8 @@
     "qts.backtest.dependencies.BacktestEngineDependencies",
     "qts.backtest.engine.BacktestEngine",
     "qts.backtest.engine.BacktestStreamResult",
+    "qts.backtest.engine_assembly.BacktestEngineAssembler",
+    "qts.backtest.engine_assembly.BacktestEngineCollaborators",
     "qts.backtest.instrument_context.BacktestInstrumentContext",
     "qts.backtest.pipeline.BacktestPipeline",
     "qts.backtest.portfolio_projection.BacktestPortfolioProjector",

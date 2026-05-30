@@ -15,15 +15,11 @@ from qts.backtest.dependencies import (
     BacktestActorLoopDependencies,
     BacktestEngineDependencies,
 )
-from qts.backtest.instrument_context import BacktestInstrumentContext
-from qts.backtest.portfolio_projection import BacktestPortfolioProjector
-from qts.backtest.provenance import BacktestDatasetManifestBuilder
-from qts.backtest.risk_policy import BacktestRiskPolicyFactory
+from qts.backtest.engine_assembly import BacktestEngineAssembler
 from qts.backtest.runtime_manifest import BacktestRuntimeTopologyManifestBuilder
 from qts.core.hashing import stable_json_hash
 from qts.core.ids import (
     AccountId,
-    BrokerId,
     InstrumentId,
     RuntimeRunId,
     StrategyId,
@@ -32,14 +28,11 @@ from qts.data.provenance import DatasetMetadata
 from qts.data.sessions import RegularSessionWindow
 from qts.domain.execution_timing import ExecutionTimingModel
 from qts.domain.market_data import Bar
-from qts.execution.adapters.brokerage_capabilities import broker_capabilities_for_model
-from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
 from qts.observability.metrics import MetricsRegistry
 from qts.registry.future_roll import FutureRollRegistry
 from qts.registry.instrument_registry import InstrumentRegistry
 from qts.risk.risk_engine import RiskEngine
 from qts.runtime.config import BacktestCostModel, BacktestEngineConfig, BacktestRuntimeConfig
-from qts.runtime.intent_processing import TargetIntentProcessor
 from qts.strategy_sdk import Strategy
 
 if TYPE_CHECKING:
@@ -174,47 +167,19 @@ class BacktestEngine:
         self._exchange_timezone_by_instrument = dict(dependencies.exchange_timezone_by_instrument)
         self._session_window_by_instrument = dict(dependencies.session_window_by_instrument)
         self._risk_engine = dependencies.risk_engine
-        self._execution_adapter = dependencies.execution_adapter or SimulatedExecutionAdapter(
-            self._cost_model,
-            capabilities=broker_capabilities_for_model(
-                self._backtest_runtime_config.brokerage_model
-                if self._backtest_runtime_config is not None
-                else "CUSTOM"
-            ),
-        )
-        self._execution_timing = execution_timing or ExecutionTimingModel()
-        self._instrument_context = BacktestInstrumentContext(
-            future_roll_registry=self._future_roll_registry,
-            instrument_registry=dependencies.instrument_registry,
+        collaborators = BacktestEngineAssembler().collaborators(
+            engine_config=engine_config,
+            dependencies=dependencies,
             registry_bars=self._registry_bars,
-            contract_multipliers=self._contract_multipliers,
-            execution_timing=self._execution_timing,
+            backtest_runtime_config=backtest_runtime_config,
+            execution_timing=execution_timing,
         )
-        self._portfolio_projector = BacktestPortfolioProjector(
-            contract_multipliers=self._contract_multipliers
-        )
-        self._intent_processor = TargetIntentProcessor(
-            risk_engine=self._risk_engine,
-            instrument_context=self._instrument_context,
-            multiplier_for=self._portfolio_projector.multiplier_for,
-            broker_id=self._backtest_broker_id(),
-            margin_calculator=dependencies.margin_calculator,
-        )
-        self._dataset_manifest_builder = BacktestDatasetManifestBuilder(
-            dataset_metadata=self._dataset_metadata,
-            registry_bars=self._registry_bars,
-            config_hash_payload=self._config_hash_payload,
-            target_timeframe=self._target_timeframe,
-        )
-
-    def _backtest_broker_id(self) -> BrokerId:
-        capabilities = getattr(self._execution_adapter, "capabilities", None)
-        if capabilities is None:
-            return BrokerId("simulated")
-        broker_id = capabilities.broker_id
-        if isinstance(broker_id, BrokerId):
-            return broker_id
-        return BrokerId(str(broker_id))
+        self._execution_adapter = collaborators.execution_adapter
+        self._execution_timing = collaborators.execution_timing
+        self._instrument_context = collaborators.instrument_context
+        self._portfolio_projector = collaborators.portfolio_projector
+        self._intent_processor = collaborators.intent_processor
+        self._dataset_manifest_builder = collaborators.dataset_manifest_builder
 
     @classmethod
     def from_config(
@@ -242,38 +207,18 @@ class BacktestEngine:
         ``optimistic_fill_waiver: true``; the manifest's ``promotion_grade`` flag
         then records that such a run may not back paper/live evidence.
         """
-        cost_model = BacktestCostModel(
-            fixed_commission_per_contract=config.cost_model.fixed_commission_per_contract,
-            slippage_bps=config.cost_model.slippage_bps,
-        )
-        engine_config = BacktestEngineConfig(
-            initial_cash=config.initial_cash,
-            warmup_bars=config.warmup_bars,
-            target_timeframe=config.timeframe,
-            strategy_version=config.strategy_class,
-            config_payload=config.to_payload(),
-            dataset_metadata=tuple(dataset_metadata),
-            cost_model=cost_model,
-        )
-        risk_engine, margin_calculator = BacktestRiskPolicyFactory().build(
-            max_notional=config.risk_config.max_notional,
-            instrument_registry=instrument_registry,
-        )
-        dependencies = BacktestEngineDependencies.with_defaults(
-            initial_cash=config.initial_cash,
-            risk_engine=risk_engine,
-            instrument_registry=instrument_registry,
-            future_roll_registry=future_roll_registry,
-            contract_multipliers=contract_multipliers,
-            exchange_timezone_by_instrument=exchange_timezone_by_instrument,
-            session_window_by_instrument=session_window_by_instrument,
-            margin_calculator=margin_calculator,
-        )
-        if execution_timing is None:
-            execution_timing = ExecutionTimingModel.from_value(
-                config.fill_policy,
-                optimistic_waiver=config.optimistic_fill_waiver,
+        engine_config, dependencies, resolved_timing = (
+            BacktestEngineAssembler().runtime_config_inputs(
+                config,
+                dataset_metadata=dataset_metadata,
+                instrument_registry=instrument_registry,
+                future_roll_registry=future_roll_registry,
+                contract_multipliers=contract_multipliers,
+                exchange_timezone_by_instrument=exchange_timezone_by_instrument,
+                session_window_by_instrument=session_window_by_instrument,
+                execution_timing=execution_timing,
             )
+        )
         return cls(
             strategy=strategy,
             strategies=strategies,
@@ -281,7 +226,7 @@ class BacktestEngine:
             engine_config=engine_config,
             dependencies=dependencies,
             backtest_runtime_config=config,
-            execution_timing=execution_timing,
+            execution_timing=resolved_timing,
         )
 
     def run_streaming(
