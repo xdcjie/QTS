@@ -85,6 +85,30 @@ class _ExecutionAdapter:
             slippage=Decimal("0"),
         )
 
+    def replace_order(
+        self,
+        order_id: OrderId,
+        *,
+        broker_order_id: str,
+        new_quantity: Decimal,
+        account_id: AccountId,
+        strategy_id: StrategyId,
+        client_order_id: str,
+        correlation_id: CorrelationId,
+    ) -> ExecutionReport:
+        """Return a synthetic accepted replace execution report."""
+        _ = order_id, new_quantity, account_id, strategy_id, client_order_id, correlation_id
+        self._counter += 1
+        return ExecutionReport(
+            report_id=f"report-{self._counter}",
+            broker_order_id=broker_order_id,
+            status=ExecutionReportStatus.ACCEPTED,
+            filled_quantity=Decimal("0"),
+            fill_id=None,
+            commission=Decimal("0"),
+            slippage=Decimal("0"),
+        )
+
 
 class _Strategy(Strategy):
     pass

@@ -230,3 +230,23 @@ class _FakeIbkrOrderExecutionTransport:
             broker_order_id=broker_order_id,
             status=ExecutionReportStatus.CANCELLED,
         )
+
+    def replace_order(
+        self,
+        order_id: OrderId,
+        *,
+        broker_order_id: str,
+        new_quantity: Decimal,
+        account_id: AccountId,
+        strategy_id: StrategyId,
+        client_order_id: str,
+        correlation_id: CorrelationId,
+    ) -> ExecutionReport:
+        from qts.domain.orders import ExecutionReport, ExecutionReportStatus
+
+        _ = order_id, new_quantity, account_id, strategy_id, client_order_id, correlation_id
+        return ExecutionReport(
+            report_id=f"rpt-replace-{broker_order_id}",
+            broker_order_id=broker_order_id,
+            status=ExecutionReportStatus.ACCEPTED,
+        )

@@ -165,6 +165,30 @@ class SimulatedExecutionAdapter:
             status=ExecutionReportStatus.CANCELLED,
         )
 
+    def replace_order(
+        self,
+        order_id: OrderId,
+        *,
+        broker_order_id: str,
+        new_quantity: Decimal,
+        account_id: AccountId,
+        strategy_id: StrategyId,
+        client_order_id: str,
+        correlation_id: CorrelationId,
+    ) -> ExecutionReport:
+        """Return a deterministic replace-acknowledgement report for actor parity.
+
+        The simulated broker accepts the modified order immediately; the
+        ``ACCEPTED`` status drives ``REPLACE_REQUESTED -> ACCEPTED`` in the
+        order state machine.
+        """
+        _ = order_id, new_quantity, account_id, strategy_id, client_order_id, correlation_id
+        return ExecutionReport(
+            report_id=f"{broker_order_id}-replace-1",
+            broker_order_id=broker_order_id,
+            status=ExecutionReportStatus.ACCEPTED,
+        )
+
     def execution_assumptions_payload(self) -> dict[str, object]:
         """Serialize simulated execution assumptions for report manifests."""
         capabilities = self.capabilities

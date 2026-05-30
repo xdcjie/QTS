@@ -124,6 +124,11 @@ def _make_broker_stub(*, broker_fill_time: datetime | None) -> BrokerAdapter:
         def cancel_order(self, order_id: OrderId) -> BrokerExecutionReport:  # pragma: no cover
             raise NotImplementedError
 
+        def replace_order(  # pragma: no cover
+            self, order_id: OrderId, *, new_quantity: Decimal
+        ) -> BrokerExecutionReport:
+            raise NotImplementedError
+
     return _Stub()
 
 

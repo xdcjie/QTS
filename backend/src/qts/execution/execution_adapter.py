@@ -41,5 +41,24 @@ class ExecutionAdapter(Protocol):
         """Cancel an active order."""
         ...
 
+    def replace_order(
+        self,
+        order_id: OrderId,
+        *,
+        broker_order_id: str,
+        new_quantity: Decimal,
+        account_id: AccountId,
+        strategy_id: StrategyId,
+        client_order_id: str,
+        correlation_id: CorrelationId,
+    ) -> ExecutionReport:
+        """Replace (modify) an active order's quantity at the broker.
+
+        Only invoked for brokers whose ``BrokerCapabilities.supports_replace``
+        is true; the runtime gates unsupported brokers with
+        ``UnsupportedOrderReplace`` before routing here.
+        """
+        ...
+
 
 __all__ = ["ExecutionAdapter"]

@@ -253,6 +253,13 @@ class BrokerAdapter(Protocol):
         """Cancel an order by internal ID."""
         ...
 
+    def replace_order(self, order_id: OrderId, *, new_quantity: Decimal) -> BrokerExecutionReport:
+        """Replace an order's quantity by internal ID.
+
+        Only invoked when ``capabilities.supports_replace`` is true.
+        """
+        ...
+
 
 def normalize_broker_status(status: ExecutionReportStatus) -> ExecutionReportStatus:
     """Map broker status to normalized execution status.

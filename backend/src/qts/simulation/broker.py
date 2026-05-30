@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from decimal import Decimal
 
 from qts.core.ids import BrokerId, OrderId
@@ -24,8 +25,12 @@ class SimulatedBrokerAdapter:
 
     @property
     def capabilities(self) -> BrokerCapabilities:
-        """Return deterministic broker capabilities."""
-        return BrokerCapabilities(broker_id=self._broker_id)
+        """Return deterministic broker capabilities.
+
+        The simulated broker implements cancel and replace, so it advertises
+        both; the runtime capability gate relies on this honesty.
+        """
+        return BrokerCapabilities(broker_id=self._broker_id, supports_replace=True)
 
     def submit_order(self, request: BrokerOrderRequest) -> BrokerExecutionReport:
         """Submit an order and record it as accepted."""
@@ -47,6 +52,22 @@ class SimulatedBrokerAdapter:
             request,
             broker_order_id=self._broker_order_ids[order_id],
             status=ExecutionReportStatus.CANCELLED,
+        )
+
+    def replace_order(self, order_id: OrderId, *, new_quantity: Decimal) -> BrokerExecutionReport:
+        """Replace a previously accepted order's quantity.
+
+        Records the modified quantity and acknowledges with ``ACCEPTED`` so the
+        order state machine transitions ``REPLACE_REQUESTED -> ACCEPTED``.
+        """
+        if new_quantity <= Decimal("0"):
+            raise ValueError("new_quantity must be positive")
+        request = replace(self._orders[order_id], quantity=new_quantity)
+        self._orders[order_id] = request
+        return self._report(
+            request,
+            broker_order_id=self._broker_order_ids[order_id],
+            status=ExecutionReportStatus.ACCEPTED,
         )
 
     def order_request(self, order_id: OrderId) -> BrokerOrderRequest:

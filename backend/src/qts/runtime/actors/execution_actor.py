@@ -54,6 +54,27 @@ class OrderCancelRequest:
             raise ValueError("cancel strategy_id does not match route metadata")
 
 
+@dataclass(frozen=True, slots=True)
+class OrderReplaceRequest:
+    """Message requesting broker order replacement (quantity modification)."""
+
+    order_id: OrderId
+    broker_order_id: str
+    new_quantity: Decimal
+    account_id: AccountId
+    strategy_id: StrategyId
+    route_metadata: OrderRouteMetadata
+
+    def __post_init__(self) -> None:
+        """Validate replace request identity and quantity fields."""
+        if self.route_metadata.account_id != self.account_id:
+            raise ValueError("replace account_id does not match route metadata")
+        if self.route_metadata.strategy_id != self.strategy_id:
+            raise ValueError("replace strategy_id does not match route metadata")
+        if self.new_quantity <= Decimal("0"):
+            raise ValueError("replace new_quantity must be positive")
+
+
 class ExecutionActor(Actor):
     """Actor wrapper for an order execution adapter or simulator."""
 
@@ -96,7 +117,24 @@ class ExecutionActor(Actor):
             )
             self._order_manager_ref.tell(report)
             return
+        if isinstance(message, OrderReplaceRequest):
+            report = self._execution_adapter.replace_order(
+                message.order_id,
+                broker_order_id=message.broker_order_id,
+                new_quantity=message.new_quantity,
+                account_id=message.account_id,
+                strategy_id=message.strategy_id,
+                client_order_id=message.route_metadata.client_order_id,
+                correlation_id=message.route_metadata.correlation_id,
+            )
+            self._order_manager_ref.tell(report)
+            return
         raise ActorUnhandledMessageError(f"unsupported execution message: {type(message).__name__}")
 
 
-__all__ = ["ExecutionActor", "OrderCancelRequest", "OrderExecutionRequest"]
+__all__ = [
+    "ExecutionActor",
+    "OrderCancelRequest",
+    "OrderExecutionRequest",
+    "OrderReplaceRequest",
+]

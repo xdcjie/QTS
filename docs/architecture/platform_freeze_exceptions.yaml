@@ -669,6 +669,11 @@ exceptions:
     reason: baseline allowance
     owner: platform
     expiry: 2027-05-17
+  - class_name: OrderReplaceRequest
+    module: qts.runtime.actors.execution_actor
+    reason: QTS-FINAL-007 full ReplaceOrder lifecycle execution-boundary message
+    owner: platform
+    expiry: 2027-05-30
   - class_name: ExecutionActor
     module: qts.runtime.actors.execution_actor
     reason: baseline allowance

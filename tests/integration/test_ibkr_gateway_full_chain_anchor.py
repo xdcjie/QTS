@@ -355,6 +355,21 @@ class _IbkrRuntimeExecutionAdapter:
         self._active_external_ids.discard(external_broker_order_id)
         return replace(report, broker_order_id=broker_order_id)
 
+    def replace_order(
+        self,
+        order_id: OrderId,
+        *,
+        broker_order_id: str,
+        new_quantity: Decimal,
+        account_id: AccountId,
+        strategy_id: StrategyId,
+        client_order_id: str,
+        correlation_id: CorrelationId,
+    ) -> Any:
+        del order_id
+        _ = broker_order_id, new_quantity, account_id, strategy_id, client_order_id, correlation_id
+        raise NotImplementedError("replace is not exercised by the gateway full-chain anchor")
+
     def external_id_for(self, runtime_broker_order_id: str) -> str | None:
         return self._external_by_runtime.get(runtime_broker_order_id)
 

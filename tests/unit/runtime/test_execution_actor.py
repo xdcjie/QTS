@@ -124,6 +124,19 @@ def test_execution_actor_forwards_route_metadata_to_execution_adapter() -> None:
         ) -> ExecutionReport:
             raise AssertionError("cancel should not be called")
 
+        def replace_order(
+            self,
+            order_id: OrderId,
+            *,
+            broker_order_id: str,
+            new_quantity: Decimal,
+            account_id: AccountId,
+            strategy_id: StrategyId,
+            client_order_id: str,
+            correlation_id: CorrelationId,
+        ) -> ExecutionReport:
+            raise AssertionError("replace should not be called")
+
     out = Mailbox()
     adapter = RecordingAdapter()
     actor = ExecutionActor(order_manager_ref=ActorRef(mailbox=out), execution_adapter=adapter)

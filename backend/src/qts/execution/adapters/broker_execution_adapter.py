@@ -113,6 +113,27 @@ class BrokerExecutionAdapter:
         broker_report = self._broker.cancel_order(order_id)
         return self._normalize_with_runtime_broker_order_id(broker_report)
 
+    def replace_order(
+        self,
+        order_id: OrderId,
+        *,
+        broker_order_id: str,
+        new_quantity: Decimal,
+        account_id: AccountId,
+        strategy_id: StrategyId,
+        client_order_id: str,
+        correlation_id: CorrelationId | None = None,
+    ) -> ExecutionReport:
+        """Replace an active broker order's quantity and normalize the callback."""
+        if not broker_order_id.strip():
+            raise ValueError("broker_order_id must not be empty")
+        if not client_order_id.strip():
+            raise ValueError("client_order_id must not be empty")
+        _ = correlation_id
+        self._validate_route(account_id=account_id, strategy_id=strategy_id)
+        broker_report = self._broker.replace_order(order_id, new_quantity=new_quantity)
+        return self._normalize_with_runtime_broker_order_id(broker_report)
+
     def _validate_route(self, *, account_id: AccountId, strategy_id: StrategyId) -> None:
         if account_id != self._account_id:
             raise ValueError("account_id does not match BrokerExecutionAdapter account_id")
