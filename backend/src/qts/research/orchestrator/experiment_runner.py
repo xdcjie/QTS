@@ -887,6 +887,12 @@ class ResearchExperimentRunner:
         )
         oos_months: float | None = derivation.oos_months if derivation else None
         promotion_eligible: bool = derivation.promotion_eligible if derivation else False
+        fill_timing_promotion_grade: bool | None = (
+            derivation.fill_timing_promotion_grade if derivation else None
+        )
+        fill_timing_optimistic: bool | None = (
+            derivation.fill_timing_optimistic if derivation else None
+        )
         train_sharpe: float | None = derivation.sharpe_sources.train_sharpe if derivation else None
         oos_sharpe: float | None = derivation.sharpe_sources.oos_sharpe if derivation else None
 
@@ -913,6 +919,8 @@ class ResearchExperimentRunner:
             "quality": {"profit_factor": float(profit_factor), "sharpe": float(sharpe)},
             "research": {
                 "deterministic_replay_passed": deterministic_replay_passed,
+                "fill_timing_optimistic": fill_timing_optimistic,
+                "fill_timing_promotion_grade": fill_timing_promotion_grade,
                 "metrics_source": "backtest_pipeline",
                 "no_lookahead_passed": no_lookahead_passed,
                 "objective_metric": objective_metric,
@@ -977,6 +985,8 @@ class ResearchExperimentRunner:
         # Patch research section with artifact-derived values
         research = dict(self._mapping(updated.get("research", {}), "research"))
         research["deterministic_replay_passed"] = derivation.deterministic_replay_passed
+        research["fill_timing_optimistic"] = derivation.fill_timing_optimistic
+        research["fill_timing_promotion_grade"] = derivation.fill_timing_promotion_grade
         research["no_lookahead_passed"] = derivation.no_lookahead_passed
         research["promotion_eligible"] = derivation.promotion_eligible
         updated["research"] = research

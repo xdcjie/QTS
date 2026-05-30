@@ -107,6 +107,7 @@ class ResearchMetricsDerivation:
     deterministic_replay_passed: bool | None
     no_lookahead_passed: bool | None
     fill_timing_promotion_grade: bool | None
+    fill_timing_optimistic: bool | None
     walk_forward_consistency: float | None
     parameter_sensitivity: float | None
     oos_months: float | None
@@ -309,7 +310,13 @@ class ResearchMetricsFromValidationArtifacts:
         no_lookahead_passed = self._derive_no_lookahead(
             artifacts.get("no_lookahead"),
         )
-        fill_timing_promotion_grade = self._derive_fill_timing_promotion_grade(
+        fill_timing_promotion_grade = self._derive_execution_assumption_flag(
+            "promotion_grade",
+            test_manifest=test_manifest,
+            train_manifest=train_manifest,
+        )
+        fill_timing_optimistic = self._derive_execution_assumption_flag(
+            "optimistic",
             test_manifest=test_manifest,
             train_manifest=train_manifest,
         )
@@ -344,6 +351,7 @@ class ResearchMetricsFromValidationArtifacts:
             deterministic_replay_passed=deterministic_replay_passed,
             no_lookahead_passed=no_lookahead_passed,
             fill_timing_promotion_grade=fill_timing_promotion_grade,
+            fill_timing_optimistic=fill_timing_optimistic,
             walk_forward_consistency=walk_forward_consistency,
             parameter_sensitivity=parameter_sensitivity,
             oos_months=oos_months,
@@ -368,26 +376,29 @@ class ResearchMetricsFromValidationArtifacts:
         return bool(artifact.payload.get("passed"))
 
     @staticmethod
-    def _derive_fill_timing_promotion_grade(
+    def _derive_execution_assumption_flag(
+        flag_name: str,
         *,
         test_manifest: Mapping[str, Any] | None,
         train_manifest: Mapping[str, Any] | None,
     ) -> bool | None:
-        """Read whether the evidence backtest used a promotion-grade fill policy.
+        """Read a boolean ``execution_assumptions`` flag from the evidence manifest.
 
         A backtest manifest records ``execution_assumptions.promotion_grade``
-        (False for the optimistic same-bar-close look-ahead policy, True for
-        next-bar-open). The OOS/test manifest is the promotion evidence, so it
-        is preferred; the train manifest is the fallback. ``None`` when no
-        manifest records the flag (synthetic fixtures); real engine manifests
-        always carry it.
+        (False for the optimistic same-bar-close look-ahead policy unless an
+        optimistic waiver was set, True for next-bar-open) and
+        ``execution_assumptions.optimistic`` (True whenever the fills used the
+        same-bar close, regardless of any waiver). The OOS/test manifest is the
+        promotion evidence, so it is preferred; the train manifest is the
+        fallback. ``None`` when no manifest records the flag (synthetic
+        fixtures); real engine manifests always carry both.
         """
         for manifest in (test_manifest, train_manifest):
             if not isinstance(manifest, Mapping):
                 continue
             assumptions = manifest.get("execution_assumptions")
-            if isinstance(assumptions, Mapping) and "promotion_grade" in assumptions:
-                return bool(assumptions["promotion_grade"])
+            if isinstance(assumptions, Mapping) and flag_name in assumptions:
+                return bool(assumptions[flag_name])
         return None
 
     @staticmethod

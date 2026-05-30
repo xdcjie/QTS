@@ -78,6 +78,39 @@ Divergence is allowed only at these adapter boundaries:
 Every divergence must name the boundary and explain why it is external I/O or
 environment-specific.
 
+## Fill-Timing Policy Defaults
+
+`ExecutionTimingModel` selects the fill policy at the execution-adapter boundary
+(`same_bar_close` vs `next_bar_open`). Default selection is deliberately split by
+entrypoint and gated for honesty:
+
+- **Promotion-feeding entrypoints default to the honest policy.** The autonomous
+  research engine (`AutonomousResearchEngine`) and campaign config
+  (`CampaignExecutionConfig`) default `fill_policy = next_bar_open`
+  (promotion-grade: a decision at bar `N` fills at `N+1` open).
+- **The generic single-run primitive stays backward-compatible.**
+  `BacktestRuntimeConfig` / `config_loader` keep `same_bar_close` as the
+  construction default so existing ad-hoc/in-sample example configs and their
+  recorded outputs are unchanged. `same_bar_close` is optimistic (the decision
+  bar's close is not realistically obtainable) and is always an explicit,
+  identity-bearing choice once overridden.
+- **Honesty is enforced at the promotion gate, not by silent default flipping.**
+  The backtest manifest records `execution_timing.promotion_grade` /
+  `optimistic`; `PromotionPacketV2.validate_machine()` rejects evidence produced
+  with `same_bar_close` unless an explicit optimistic waiver is recorded, and a
+  waived packet is permanently stamped `optimistic`.
+
+Deliberate deviation from the original deep-review plan (which asked the generic
+config default to also be `next_bar_open`): flipping the generic primitive would
+change the numerical results of all existing `configs/backtest.*.yaml` runs for
+no promotion-honesty benefit (those runs cannot be promoted, and the
+research/promotion paths already default honest). The correctness intent —
+"production/promotion entrypoints never silently use optimistic fills" — is met
+by the honest research defaults plus the promotion gate. Covered by
+`tests/integration/test_backtest_next_obtainable_fill_policy.py`,
+`tests/unit/backtest/test_backtest_execution_timing_config.py`, and
+`tests/integration/research/test_autonomous_rejects_same_bar_close_promotion.py`.
+
 ## Forbidden Patterns
 
 - Calling broker adapters directly from strategy code.

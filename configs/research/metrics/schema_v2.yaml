@@ -72,6 +72,21 @@ metrics:
     unit: boolean
     direction: neutral
     required_for: [promotion]
+  # Manifest-derived fill-timing honesty facts. Type-governed but not required:
+  # synthetic fixtures may omit them (None), and the promotion-eligibility
+  # derivation already rejects unverified evidence. fill_timing_promotion_grade
+  # is False only for optimistic same_bar_close fills without a waiver;
+  # fill_timing_optimistic stays True whenever same-bar fills were used.
+  - path: research.fill_timing_promotion_grade
+    type: bool
+    unit: boolean
+    direction: neutral
+    required_for: []
+  - path: research.fill_timing_optimistic
+    type: bool
+    unit: boolean
+    direction: neutral
+    required_for: []
   - path: performance.train_sharpe
     type: float
     unit: ratio

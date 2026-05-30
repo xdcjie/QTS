@@ -20,6 +20,7 @@ from qts.risk.rules.max_notional import MaxNotionalRule
 if TYPE_CHECKING:
     from qts.execution.execution_adapter import ExecutionAdapter
     from qts.reporting.backtest import EquityCurvePoint
+    from qts.risk.margin.calculator import MarginCalculator
     from qts.runtime.intent_processing import ProcessedIntent
     from qts.strategy_sdk import PortfolioView
 
@@ -50,6 +51,7 @@ class BacktestEngineDependencies:
         default_factory=dict
     )
     execution_adapter: ExecutionAdapter | None = None
+    margin_calculator: MarginCalculator | None = None
 
     @classmethod
     def with_defaults(
@@ -63,6 +65,7 @@ class BacktestEngineDependencies:
         exchange_timezone_by_instrument: Mapping[InstrumentId, str | tzinfo] | None = None,
         session_window_by_instrument: Mapping[InstrumentId, RegularSessionWindow] | None = None,
         execution_adapter: ExecutionAdapter | None = None,
+        margin_calculator: MarginCalculator | None = None,
     ) -> BacktestEngineDependencies:
         """Build runtime dependencies with stable defaults."""
         resolved_risk_engine = (
@@ -78,6 +81,7 @@ class BacktestEngineDependencies:
             exchange_timezone_by_instrument=dict(exchange_timezone_by_instrument or {}),
             session_window_by_instrument=dict(session_window_by_instrument or {}),
             execution_adapter=execution_adapter,
+            margin_calculator=margin_calculator,
         )
 
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+
 from qts.core.ids import InstrumentId
 from qts.domain.instruments import ContractSpec, Instrument
 
@@ -38,6 +40,11 @@ class InstrumentRegistry:
     def get_contract_spec(self, instrument_id: InstrumentId) -> ContractSpec:
         """Perform get_contract_spec."""
         return self.get_instrument(instrument_id).contract_spec
+
+    def contract_specs(self) -> Iterator[ContractSpec]:
+        """Yield the contract spec of every registered instrument."""
+        for instrument in self._instruments.values():
+            yield instrument.contract_spec
 
     @staticmethod
     def _normalize_symbol(user_symbol: str) -> str:

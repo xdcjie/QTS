@@ -61,6 +61,76 @@ def test_future_instrument_requires_future_metadata_with_root_symbol() -> None:
     assert future.derivative.root_symbol == "GC"
 
 
+def test_contract_spec_initial_margin_rate_defaults_to_none() -> None:
+    assert _contract_spec().initial_margin_rate is None
+
+
+def test_contract_spec_accepts_configured_initial_margin_rate() -> None:
+    spec = ContractSpec(
+        tick_size=Decimal("0.1"),
+        lot_size=Decimal("1"),
+        multiplier=Decimal("100"),
+        settlement=SettlementType.PHYSICAL,
+        calendar_id="CMES",
+        initial_margin_rate=Decimal("0.05"),
+    )
+    assert spec.initial_margin_rate == Decimal("0.05")
+
+
+@pytest.mark.parametrize("bad_rate", [Decimal("0"), Decimal("-0.01")])
+def test_contract_spec_rejects_non_positive_margin_rate(bad_rate: Decimal) -> None:
+    with pytest.raises(ValueError, match="initial_margin_rate must be positive"):
+        ContractSpec(
+            tick_size=Decimal("0.1"),
+            lot_size=Decimal("1"),
+            multiplier=Decimal("100"),
+            settlement=SettlementType.PHYSICAL,
+            calendar_id="CMES",
+            initial_margin_rate=bad_rate,
+        )
+
+
+def test_contract_spec_rejects_margin_rate_above_one() -> None:
+    with pytest.raises(ValueError, match="initial_margin_rate must not exceed 1"):
+        ContractSpec(
+            tick_size=Decimal("0.1"),
+            lot_size=Decimal("1"),
+            multiplier=Decimal("100"),
+            settlement=SettlementType.PHYSICAL,
+            calendar_id="CMES",
+            initial_margin_rate=Decimal("1.5"),
+        )
+
+
+def test_contract_spec_margin_rate_drives_calculator_projection() -> None:
+    """The per-contract rate is the product fact a MarginCalculator consumes.
+
+    A 10-lot at price 100 with multiplier 100 has notional 100,000; at the
+    contract's 0.05 rate the projected initial margin is 5,000.
+    """
+    from qts.risk.margin.calculator import MarginCalculator
+
+    spec = _contract_spec_with_margin(Decimal("0.05"))
+    assert spec.initial_margin_rate is not None
+    calculator = MarginCalculator(
+        initial_margin_rate=spec.initial_margin_rate,
+        maintenance_margin_rate=spec.initial_margin_rate,
+    )
+    notional = Decimal("10") * Decimal("100") * Decimal("100")
+    assert calculator.order_initial_margin(notional) == Decimal("5000")
+
+
+def _contract_spec_with_margin(rate: Decimal) -> ContractSpec:
+    return ContractSpec(
+        tick_size=Decimal("0.1"),
+        lot_size=Decimal("1"),
+        multiplier=Decimal("100"),
+        settlement=SettlementType.PHYSICAL,
+        calendar_id="CMES",
+        initial_margin_rate=rate,
+    )
+
+
 def test_equity_instrument_rejects_derivative_metadata() -> None:
     from qts.core.ids import InstrumentId
     from qts.domain.instruments import AssetClass, FutureSpec, Instrument

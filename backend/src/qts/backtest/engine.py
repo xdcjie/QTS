@@ -39,8 +39,10 @@ from qts.reporting.backtest import (
     dataset_metadata_payload,
     zero_time,
 )
+from qts.risk.config import RiskRuleConfig, RiskRuleName
+from qts.risk.margin.calculator import MarginCalculator
 from qts.risk.risk_engine import RiskEngine
-from qts.risk.rules.max_notional import MaxNotionalRule
+from qts.risk.rule_registry import RiskRuleRegistry
 from qts.runtime.actors.account_actor import AccountSnapshot
 from qts.runtime.actors.signal_aggregator_actor import (
     AggregatedSignalBatch,
@@ -214,6 +216,7 @@ class BacktestEngine:
             instrument_context=self._instrument_context,
             multiplier_for=self._portfolio_projector.multiplier_for,
             broker_id=self._backtest_broker_id(),
+            margin_calculator=dependencies.margin_calculator,
         )
 
     def _backtest_broker_id(self) -> BrokerId:
@@ -264,14 +267,31 @@ class BacktestEngine:
             dataset_metadata=tuple(dataset_metadata),
             cost_model=cost_model,
         )
+        margin_rate = cls._resolved_initial_margin_rate(instrument_registry)
+        risk_engine = RiskEngine(
+            list(
+                RiskRuleRegistry().build_all(
+                    cls._risk_rule_configs(
+                        max_notional=config.risk_config.max_notional,
+                        margin_enabled=margin_rate is not None,
+                    )
+                )
+            )
+        )
+        margin_calculator = (
+            MarginCalculator(initial_margin_rate=margin_rate, maintenance_margin_rate=margin_rate)
+            if margin_rate is not None
+            else None
+        )
         dependencies = BacktestEngineDependencies.with_defaults(
             initial_cash=config.initial_cash,
-            risk_engine=RiskEngine([MaxNotionalRule(max_notional=config.risk_config.max_notional)]),
+            risk_engine=risk_engine,
             instrument_registry=instrument_registry,
             future_roll_registry=future_roll_registry,
             contract_multipliers=contract_multipliers,
             exchange_timezone_by_instrument=exchange_timezone_by_instrument,
             session_window_by_instrument=session_window_by_instrument,
+            margin_calculator=margin_calculator,
         )
         if execution_timing is None:
             execution_timing = ExecutionTimingModel.from_value(
@@ -287,6 +307,61 @@ class BacktestEngine:
             backtest_runtime_config=config,
             execution_timing=execution_timing,
         )
+
+    @staticmethod
+    def _risk_rule_configs(
+        *,
+        max_notional: Decimal,
+        margin_enabled: bool,
+    ) -> tuple[RiskRuleConfig, ...]:
+        """Return the config-driven risk rule set for a backtest run.
+
+        ``MaxNotionalRule`` is always present (the historical default). The
+        per-contract margin gate is appended only when a margin rate is
+        resolvable from the instrument registry, so runs without a configured
+        margin rate behave exactly as before (no fail-closed margin rejection).
+        """
+        configs = [
+            RiskRuleConfig(
+                rule_id="max_notional",
+                name=RiskRuleName.MAX_NOTIONAL,
+                params={"max_notional": max_notional},
+            )
+        ]
+        if margin_enabled:
+            configs.append(
+                RiskRuleConfig(rule_id="margin_limit", name=RiskRuleName.MARGIN_LIMIT, params={})
+            )
+        return tuple(configs)
+
+    @staticmethod
+    def _resolved_initial_margin_rate(
+        instrument_registry: InstrumentRegistry | None,
+    ) -> Decimal | None:
+        """Resolve a single account-wide initial-margin rate from the registry.
+
+        The margin rate is a per-contract product fact owned by ``ContractSpec``.
+        Returns ``None`` when no registered instrument configures a rate (margin
+        enforcement stays disabled). When more than one distinct rate is
+        configured the run is rejected, because the account-wide
+        ``MarginCalculator`` cannot represent conflicting per-contract rates;
+        this fails closed on misconfiguration rather than silently picking one.
+        """
+        if instrument_registry is None:
+            return None
+        rates = {
+            spec.initial_margin_rate
+            for spec in instrument_registry.contract_specs()
+            if spec.initial_margin_rate is not None
+        }
+        if not rates:
+            return None
+        if len(rates) > 1:
+            raise ValueError(
+                "multiple distinct initial_margin_rate values configured; "
+                "the account-wide margin gate requires a single rate"
+            )
+        return rates.pop()
 
     def run_streaming(
         self,
