@@ -146,6 +146,12 @@ class CallerPresenceRule:
             non_defining_callers = {p for p in caller_files if p != defining_file}
             if non_defining_callers:
                 continue
+            # Owner-use: a class consumed by a co-located owner in its own module
+            # (e.g. a value object a sibling class constructs/calls) is wired --
+            # the owner is the durable signal (CLAUDE.md §11). Such a reference is
+            # outside the class's own body, so it is distinct from a self-reference.
+            if self._defining_module_uses_symbol(defining_file, class_node, entry.name):
+                continue
             violations.append(
                 GuardrailViolation(
                     code=self.code,
@@ -309,9 +315,79 @@ class CallerPresenceRule:
                     source = path.read_text(encoding="utf-8")
                 except OSError:
                     continue
-                for match in _NAME_REFERENCE_PATTERN.findall(source):
+                # A bare re-export (an ``import`` of a symbol, or its name in
+                # ``__all__``) forwards the symbol without exercising it, so it
+                # must not count as a caller. Stripping import / ``__all__`` lines
+                # closes the loophole where a symbol satisfied the gate purely by
+                # being re-exported from a package ``__init__``; a module that both
+                # imports and uses a symbol still counts via its use site.
+                scannable = CallerPresenceRule._caller_reference_source(source)
+                for match in _NAME_REFERENCE_PATTERN.findall(scannable):
                     index.setdefault(match, set()).add(path)
         return {name: frozenset(paths) for name, paths in index.items()}
+
+    @staticmethod
+    def _caller_reference_source(source: str) -> str:
+        """Return ``source`` with ``import`` statements and ``__all__`` removed.
+
+        Re-exports forward a symbol without exercising it; dropping the lines they
+        span (everything else -- real use sites -- is preserved) prevents a bare
+        re-export from counting as a caller. Falls back to the raw source if the
+        file does not parse.
+        """
+        try:
+            tree = ast.parse(source)
+        except SyntaxError:
+            return source
+        excluded: set[int] = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import | ast.ImportFrom):
+                excluded.update(range(node.lineno, (node.end_lineno or node.lineno) + 1))
+            elif isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id == "__all__"
+                for target in node.targets
+            ):
+                excluded.update(range(node.lineno, (node.end_lineno or node.lineno) + 1))
+        return "\n".join(
+            line
+            for number, line in enumerate(source.splitlines(), start=1)
+            if number not in excluded
+        )
+
+    @classmethod
+    def _defining_module_uses_symbol(
+        cls, defining_file: Path, class_node: ast.ClassDef, name: str
+    ) -> bool:
+        """Return whether the defining module references ``name`` outside its class body.
+
+        A reference outside the class's own ``lineno..end_lineno`` range (and
+        outside imports / ``__all__``) is a co-located owner using the symbol --
+        the wiring signal -- as opposed to the class merely referring to itself.
+        """
+        tree = cls._file_tree(defining_file)
+        if tree is None:
+            return False
+        try:
+            source = defining_file.read_text(encoding="utf-8")
+        except OSError:
+            return False
+        excluded: set[int] = set(
+            range(class_node.lineno, (class_node.end_lineno or class_node.lineno) + 1)
+        )
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import | ast.ImportFrom):
+                excluded.update(range(node.lineno, (node.end_lineno or node.lineno) + 1))
+            elif isinstance(node, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id == "__all__"
+                for target in node.targets
+            ):
+                excluded.update(range(node.lineno, (node.end_lineno or node.lineno) + 1))
+        pattern = re.compile(rf"\b{re.escape(name)}\b")
+        return any(
+            pattern.search(line)
+            for number, line in enumerate(source.splitlines(), start=1)
+            if number not in excluded
+        )
 
     @staticmethod
     def _defining_file(repo_root: Path, entry: _BaselineEntry) -> Path | None:
