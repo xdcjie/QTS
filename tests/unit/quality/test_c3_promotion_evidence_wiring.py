@@ -45,6 +45,11 @@ _ENGINE_SOURCE = Path("backend/src/qts/research/engine/autonomous_research_engin
     encoding="utf-8"
 )
 _BACKTEST_ENGINE_SOURCE = Path("backend/src/qts/backtest/engine.py").read_text(encoding="utf-8")
+# QTS-FINAL-002 moved the config->timing derivation out of BacktestEngine.from_config and
+# into BacktestEngineAssembler.runtime_config_inputs, which from_config now delegates to.
+_ENGINE_ASSEMBLY_SOURCE = Path("backend/src/qts/backtest/engine_assembly.py").read_text(
+    encoding="utf-8"
+)
 _PROMOTION_PACKET_SOURCE = Path("backend/src/qts/research/promotion_packet.py").read_text(
     encoding="utf-8"
 )
@@ -69,22 +74,28 @@ def _selector_select_calls(tree: ast.AST) -> list[ast.Call]:
 
 
 def test_backtest_engine_from_config_derives_timing_from_fill_policy() -> None:
-    tree = ast.parse(_BACKTEST_ENGINE_SOURCE)
-    from_config = next(
+    # The config->timing derivation now lives in BacktestEngineAssembler.runtime_config_inputs,
+    # which BacktestEngine.from_config delegates to (QTS-FINAL-002). Verify the wiring there,
+    # and that from_config still routes through the assembler.
+    assert "runtime_config_inputs" in _BACKTEST_ENGINE_SOURCE, (
+        "from_config must delegate config translation to BacktestEngineAssembler"
+    )
+    tree = ast.parse(_ENGINE_ASSEMBLY_SOURCE)
+    deriver = next(
         node
         for node in ast.walk(tree)
-        if isinstance(node, ast.FunctionDef) and node.name == "from_config"
+        if isinstance(node, ast.FunctionDef) and node.name == "runtime_config_inputs"
     )
-    # The producer->consumer wiring: from_config must derive the timing model from
-    # the config's fill_policy via ExecutionTimingModel.from_value(config.fill_policy).
+    # The producer->consumer wiring: the timing model is derived from the config's
+    # fill_policy via ExecutionTimingModel.from_value(config.fill_policy).
     from_value_calls = [
         node
-        for node in ast.walk(from_config)
+        for node in ast.walk(deriver)
         if isinstance(node, ast.Call)
         and isinstance(node.func, ast.Attribute)
         and node.func.attr == "from_value"
     ]
-    assert from_value_calls, "from_config must call ExecutionTimingModel.from_value(...)"
+    assert from_value_calls, "runtime_config_inputs must call ExecutionTimingModel.from_value(...)"
     references_fill_policy = any(
         isinstance(inner, ast.Attribute) and inner.attr == "fill_policy"
         for call in from_value_calls
