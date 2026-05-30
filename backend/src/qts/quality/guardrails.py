@@ -197,6 +197,16 @@ BACKTEST_INPUT_FORBIDDEN_HELPERS = frozenset(
 BACKTEST_ENGINE_FORBIDDEN_IMPORT_PREFIXES = (
     "qts.data.historical.chains",
     "qts.data.historical.config",
+    "qts.reporting.backtest",
+    "qts.runtime.actors",
+    "qts.runtime.sinks",
+    "qts.runtime.topology",
+    "qts.risk.rule_registry",
+)
+BACKTEST_ENGINE_FORBIDDEN_IMPORTED_NAMES = frozenset(
+    {
+        "MarginCalculator",
+    }
 )
 BACKTEST_ENGINE_FORBIDDEN_HELPERS = frozenset(
     {
@@ -957,7 +967,10 @@ def _check_backtest_engine_cohesion(
     if qts_relative_path.parts != ("backtest", "engine.py"):
         return []
     violations: list[GuardrailViolation] = []
+    type_checking_lines = _type_checking_block_lines(tree)
     for imported_module, line in _iter_imports(tree):
+        if line in type_checking_lines:
+            continue
         if imported_module.startswith(BACKTEST_ENGINE_FORBIDDEN_IMPORT_PREFIXES):
             violations.append(
                 GuardrailViolation(
@@ -965,8 +978,23 @@ def _check_backtest_engine_cohesion(
                     path=str(relative_path),
                     line=line,
                     message=(
-                        "backtest engine should consume prepared replay inputs, not own "
-                        f"historical input assembly via {imported_module}"
+                        "backtest engine should consume prepared replay inputs and delegate "
+                        f"artifact/runtime ownership, not import {imported_module} directly"
+                    ),
+                )
+            )
+    for imported_module, imported_name, line in _iter_imported_names(tree):
+        if line in type_checking_lines:
+            continue
+        if imported_name in BACKTEST_ENGINE_FORBIDDEN_IMPORTED_NAMES:
+            violations.append(
+                GuardrailViolation(
+                    code="BACKTEST_ENGINE_COHESION",
+                    path=str(relative_path),
+                    line=line,
+                    message=(
+                        "backtest engine must delegate risk/valuation construction, not import "
+                        f"{imported_name} from {imported_module} directly"
                     ),
                 )
             )
@@ -1212,6 +1240,29 @@ def _iter_imported_names(tree: ast.AST) -> list[tuple[str, str, int]]:
         if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module is not None:
             imports.extend((node.module, alias.name, node.lineno) for alias in node.names)
     return imports
+
+
+def _type_checking_block_lines(tree: ast.AST) -> set[int]:
+    """Return line numbers inside ``if TYPE_CHECKING:`` blocks.
+
+    Type-only imports are erased at runtime, create no import cycle, and do not
+    constitute a runtime coupling, so cohesion checks exclude them.
+    """
+    lines: set[int] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.If):
+            continue
+        test = node.test
+        is_type_checking = (isinstance(test, ast.Name) and test.id == "TYPE_CHECKING") or (
+            isinstance(test, ast.Attribute) and test.attr == "TYPE_CHECKING"
+        )
+        if not is_type_checking:
+            continue
+        for inner in ast.walk(node):
+            line = getattr(inner, "lineno", None)
+            if line is not None:
+                lines.add(line)
+    return lines
 
 
 def _iter_docstrings(tree: ast.AST) -> list[tuple[ast.AST, str]]:

@@ -6,9 +6,10 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import tzinfo
 from decimal import Decimal
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from qts.backtest.actor_loop import BacktestActorLoop
+from qts.backtest.artifacts import BacktestArtifactService
 from qts.backtest.dependencies import (
     BacktestActorLoopConfig,
     BacktestActorLoopDependencies,
@@ -36,18 +37,13 @@ from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutio
 from qts.observability.metrics import MetricsRegistry
 from qts.registry.future_roll import FutureRollRegistry
 from qts.registry.instrument_registry import InstrumentRegistry
-from qts.reporting.backtest import (
-    BacktestArtifactWriter,
-    EquityCurvePoint,
-    zero_time,
-)
 from qts.risk.risk_engine import RiskEngine
-from qts.runtime.actors.account_actor import AccountSnapshot
 from qts.runtime.config import BacktestCostModel, BacktestEngineConfig, BacktestRuntimeConfig
 from qts.runtime.intent_processing import TargetIntentProcessor
-from qts.runtime.sinks.backtest import BacktestRuntimeEventSink
-from qts.runtime.sinks.base import RuntimeEventContext
 from qts.strategy_sdk import Strategy
+
+if TYPE_CHECKING:
+    from qts.runtime.actors.account_actor import AccountSnapshot
 
 
 @dataclass(frozen=True, slots=True)
@@ -321,20 +317,12 @@ class BacktestEngine:
         account_id = resolved_topology.account_id
         strategy_id = resolved_topology.strategy_id
         strategy_specs = resolved_topology.strategy_specs
-        writer = BacktestArtifactWriter(
+        artifact_service = BacktestArtifactService(
             output_dir,
             run_id=runtime_run_id,
+            account_id=account_id,
+            strategy_id=strategy_id,
             compact_events=compact_events,
-        )
-        sink = BacktestRuntimeEventSink(
-            writer,
-            context=RuntimeEventContext(
-                run_id=runtime_run_id,
-                mode="backtest",
-                execution_environment="simulated",
-                account_id=account_id,
-                strategy_id=strategy_id,
-            ),
             metrics=metrics,
         )
         actor_loop = BacktestActorLoop(
@@ -364,17 +352,17 @@ class BacktestEngine:
             strategy_specs=strategy_specs,
         )
         runtime = actor_loop.run(
-            sink=sink,
+            sink=artifact_service.sink,
             prune_history=True,
             compact_orders=True,
         )
 
         if runtime.processed_bars == 0:
-            sink.write_equity_point(
-                EquityCurvePoint(
-                    time=runtime.last_bar.end_time if runtime.last_bar is not None else zero_time(),
-                    equity=self._initial_cash,
-                )
+            artifact_service.record_empty_run_equity(
+                equity=self._initial_cash,
+                last_bar_end_time=(
+                    runtime.last_bar.end_time if runtime.last_bar is not None else None
+                ),
             )
         processed_bar_count = runtime.processed_bars
         brokerage_model = (
@@ -382,7 +370,7 @@ class BacktestEngine:
             if self._backtest_runtime_config is not None
             else "CUSTOM"
         )
-        run_id_value, report_hash, _, artifacts = writer.finalize(
+        run_id_value, report_hash, _, artifacts = artifact_service.finalize(
             config_hash=config_hash,
             dataset_metadata=self._dataset_manifest_builder.manifest_dataset_metadata_payloads(),
             cost_model=self._cost_model.to_payload(),

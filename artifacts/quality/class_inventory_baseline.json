@@ -1,5 +1,5 @@
 {
-  "production_class_count": 974,
+  "production_class_count": 975,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -72,6 +72,7 @@
     "qts.backtest.actor_loop.BacktestActorLoopResult",
     "qts.backtest.actor_loop.BacktestRuntimeSink",
     "qts.backtest.actor_loop.PendingFill",
+    "qts.backtest.artifacts.BacktestArtifactService",
     "qts.backtest.assembly.BacktestRunAssembler",
     "qts.backtest.dependencies.BacktestActorLoopConfig",
     "qts.backtest.dependencies.BacktestActorLoopDependencies",

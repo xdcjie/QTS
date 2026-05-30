@@ -624,6 +624,50 @@ def test_guardrails_reject_backtest_engine_historical_input_assembly(
     assert _codes(root) == {"BACKTEST_ENGINE_COHESION"}
 
 
+def test_guardrails_reject_backtest_engine_artifact_and_runtime_ownership(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write_platform_freeze_stub(root)
+    _write(
+        root,
+        "backend/src/qts/backtest/engine.py",
+        "from qts.reporting.backtest import BacktestArtifactWriter\n"
+        "from qts.runtime.actors.account_actor import AccountSnapshot\n"
+        "from qts.runtime.sinks.backtest import BacktestRuntimeEventSink\n"
+        "from qts.runtime.topology import RuntimeTopologyBuilder\n"
+        "from qts.risk.rule_registry import RiskRuleRegistry\n"
+        "from qts.risk.margin.calculator import MarginCalculator\n\n"
+        "class BacktestEngine:\n"
+        "    def run(self):\n"
+        "        return (\n"
+        "            BacktestArtifactWriter, AccountSnapshot, BacktestRuntimeEventSink,\n"
+        "            RuntimeTopologyBuilder, RiskRuleRegistry, MarginCalculator,\n"
+        "        )\n",
+    )
+
+    assert _codes(root) == {"BACKTEST_ENGINE_COHESION"}
+
+
+def test_guardrails_allow_backtest_engine_type_only_runtime_import(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write_platform_freeze_stub(root)
+    _write(
+        root,
+        "backend/src/qts/backtest/engine.py",
+        "from __future__ import annotations\n\n"
+        "from typing import TYPE_CHECKING\n\n"
+        "if TYPE_CHECKING:\n"
+        "    from qts.runtime.actors.account_actor import AccountSnapshot\n\n"
+        "class BacktestEngine:\n"
+        "    def final_account(self) -> AccountSnapshot: ...\n",
+    )
+
+    assert _codes(root) == set()
+
+
 def test_guardrails_reject_backtest_actor_loop_boundary_ownership(
     tmp_path: Path,
 ) -> None:
