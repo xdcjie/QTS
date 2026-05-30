@@ -129,12 +129,10 @@ qts.runtime.state_recovery.InMemorySnapshotStore  expires=2026-08-30  target=OPT
 | `qts.observability.audit_sink.InMemoryAuditSink` | internal | Test/in-process sink; production deployments use `StderrJsonAuditSink`. |
 | `qts.quality.guardrails.PlatformFreezeConfig` | internal | Consumed inside the guardrails module via dynamic AST walks. |
 | `qts.research.factor_discovery.UrllibFactorDiscoveryHttpClient` | internal | Default HTTP implementation composed by factor discovery source classes in the same module. |
-| `qts.reconciliation.persistent_drift.PersistentDriftKillSwitch` | OPT-63 | Runtime reconciliation integration (this batch). |
 | `qts.reporting.backtest.StreamingEquityMetrics` | internal | Composed into `BacktestArtifactWriter`. |
 | `qts.runtime.durability.RuntimeDurabilityDrill` | internal | Durability drill harness; remains opt-in. |
 | `qts.runtime.intent_processing.OrderPlanBuilder` | internal | Composed into `TargetIntentProcessor` in the same file. |
-| `qts.runtime.state_recovery.DurableSnapshotStore` | OPT-64 | Cross-restart state recovery wiring (this batch). |
-| `qts.runtime.state_recovery.SnapshotFrequencyPolicy` | OPT-64 | Same as DurableSnapshotStore. |
+| `qts.runtime.durable_recovery.DurableAccountRecovery` | library | Library entry-point for cross-restart account recovery; consumed by external recovery scripts. |
 
 ### C5a batch (surfaced by the re-export-aware caller gate)
 

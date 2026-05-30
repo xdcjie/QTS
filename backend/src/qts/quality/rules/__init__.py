@@ -67,6 +67,10 @@ from qts.quality.rules.transport import (
     TransportAdapterImportRule,
     TransportCanonicalPathRule,
 )
+from qts.quality.rules.value_honesty import (
+    PromotionValueHonestyRule,
+    RouteNoFakeDataRule,
+)
 
 __all__ = [
     "AccountFillMutationRule",
@@ -94,6 +98,7 @@ __all__ = [
     "ProductionNoFakeClassRule",
     "ProductionNoTestingImportRule",
     "ProductionPlaceholderDocstringRule",
+    "PromotionValueHonestyRule",
     "ProviderSdkImportRule",
     "ResearchReportDecisionRequiredRule",
     "ResearchRunScriptRule",
@@ -101,6 +106,7 @@ __all__ = [
     "ResearchWorkflowRuntimeKeyRule",
     "RemovedImportNoNewUsageRule",
     "RouteMetadataRequiredRule",
+    "RouteNoFakeDataRule",
     "RuntimeCoordinatorDecisionRule",
     "RuntimeExecutionBoundaryRule",
     "RuntimeSessionComplexityRule",

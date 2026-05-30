@@ -11,30 +11,29 @@ past the cutoff so the runner flags it.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from pathlib import Path
 
-from qts.research.orchestrator.experiment_runner import ResearchExperimentRunner
+from qts.research.orchestrator.validation_artifact_writer import ValidationArtifactWriter
 
 _ANCHOR = datetime(2026, 3, 1, tzinfo=UTC)
 
 
-def _runner() -> ResearchExperimentRunner:
-    return ResearchExperimentRunner(repo_root=Path("."))
+def _writer() -> ValidationArtifactWriter:
+    return ValidationArtifactWriter()
 
 
 def test_forward_transform_detected_by_type() -> None:
     factor = {"transforms": [{"type": "forward_returns", "horizon": 5}]}
-    assert _runner()._forward_looking_transform(factor) is not None
+    assert _writer()._forward_looking_transform(factor) is not None
 
 
 def test_forward_transform_detected_by_negative_offset() -> None:
     factor = {"transforms": [{"type": "returns", "lookback": -3}]}
-    assert _runner()._forward_looking_transform(factor) is not None
+    assert _writer()._forward_looking_transform(factor) is not None
 
 
 def test_backward_transform_not_flagged() -> None:
     factor = {"transforms": [{"type": "returns", "lookback": 2}]}
-    assert _runner()._forward_looking_transform(factor) is None
+    assert _writer()._forward_looking_transform(factor) is None
 
 
 def test_forward_transform_feature_placed_after_cutoff() -> None:
@@ -46,7 +45,7 @@ def test_forward_transform_feature_placed_after_cutoff() -> None:
             }
         }
     }
-    features = _runner()._no_lookahead_features({}, pipeline_config, _ANCHOR)
+    features = _writer()._no_lookahead_features({}, pipeline_config, _ANCHOR)
     # The backward input is observable at the cutoff; the forward transform is not.
     forward = [f for f in features if f.name.startswith("transform:")]
     assert forward, "expected a forward-looking transform feature"
@@ -63,6 +62,6 @@ def test_backward_factor_features_observable_at_cutoff() -> None:
             }
         }
     }
-    features = _runner()._no_lookahead_features({}, pipeline_config, _ANCHOR)
+    features = _writer()._no_lookahead_features({}, pipeline_config, _ANCHOR)
     assert features
     assert all(f.timestamp <= _ANCHOR for f in features)

@@ -196,5 +196,22 @@ prove every design decision, but it should block obvious placement mistakes:
 - production classes over 500 lines must have a split/retain decision and
   evidence in that matrix.
 
+### Value-honesty guardrails (C3 / C5)
+
+Shipped value must be real, not faked. Three mechanisms enforce this:
+
+- `RouteNoFakeDataRule` blocks a business API route handler
+  (strategies/orders/accounts/operations) that returns a business DTO/schema
+  built only from literal constants without consulting an injected service.
+- `PromotionValueHonestyRule` blocks assigning a promotion-verdict field
+  (`*_passed`, `*_accepted`, `promotion_eligible`) to the literal `True` in
+  research code; verdicts must be derived from artifacts/inputs.
+- C3 ("math exists but no production entrypoint consumes it") is enforced by
+  `CallerPresenceRule` + `RouteNoFakeDataRule` + the four named producer→consumer
+  wiring tests in `tests/unit/quality/test_c3_promotion_evidence_wiring.py`
+  (fill_policy→ExecutionTimingModel, engine→selector `trial_count`, artifact-derived
+  metrics, and PromotionPacket execution-timing evidence). A generic call-graph
+  rule was rejected as brittle and redundant with these.
+
 When a new module boundary is introduced, update this document and the guardrail
 tests in the same change.

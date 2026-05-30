@@ -1,5 +1,5 @@
 {
-  "production_class_count": 940,
+  "production_class_count": 943,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -409,6 +409,8 @@
     "qts.quality.rules.stale.StaleArchitectureTextRule",
     "qts.quality.rules.transport.TransportAdapterImportRule",
     "qts.quality.rules.transport.TransportCanonicalPathRule",
+    "qts.quality.rules.value_honesty.PromotionValueHonestyRule",
+    "qts.quality.rules.value_honesty.RouteNoFakeDataRule",
     "qts.quality.suite.GuardrailSuite",
     "qts.reconciliation.drift.DriftItem",
     "qts.reconciliation.drift.DriftKind",
@@ -613,6 +615,7 @@
     "qts.research.orchestrator.validation_artifact_reader.SharpeSources",
     "qts.research.orchestrator.validation_artifact_reader.ValidationArtifactRead",
     "qts.research.orchestrator.validation_artifact_reader.ValidationArtifactReader",
+    "qts.research.orchestrator.validation_artifact_writer.ValidationArtifactWriter",
     "qts.research.planner.next_generation.FamilyBudgetMutation",
     "qts.research.planner.next_generation.GenerationApprovalPolicy",
     "qts.research.planner.next_generation.GenerationApprovalRecord",

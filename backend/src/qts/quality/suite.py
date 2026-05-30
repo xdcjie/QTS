@@ -32,6 +32,7 @@ from qts.quality.rules import (
     ProductionStrategyImportRule,
     ProductSpecificRule,
     PromotionConfigBoundaryRule,
+    PromotionValueHonestyRule,
     ProviderSdkImportRule,
     RemovedImportNoNewUsageRule,
     ResearchReportDecisionRequiredRule,
@@ -39,6 +40,7 @@ from qts.quality.rules import (
     ResearchStrategyStaleDocstringRule,
     ResearchWorkflowRuntimeKeyRule,
     RouteMetadataRequiredRule,
+    RouteNoFakeDataRule,
     RuntimeCoordinatorDecisionRule,
     RuntimeExecutionBoundaryRule,
     RuntimeSessionComplexityRule,
@@ -111,6 +113,8 @@ class GuardrailSuite:
             RouteMetadataRequiredRule(),
             ResearchReportDecisionRequiredRule(),
             ResearchStrategyStaleDocstringRule(),
+            RouteNoFakeDataRule(),
+            PromotionValueHonestyRule(),
         )
 
     def check_file(
