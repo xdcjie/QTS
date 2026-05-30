@@ -425,7 +425,7 @@ class ResearchExperimentRunner:
             None if materialized_cache_dir is None else self._resolve_path(materialized_cache_dir)
         )
 
-        replay_result, replay_manifest = self._run_validation_backtest(
+        _replay_result, replay_manifest = self._run_validation_backtest(
             base_config_path=base_config_path,
             parameters=parameters,
             objective_metric=objective_metric,
@@ -554,7 +554,7 @@ class ResearchExperimentRunner:
             "data_quality": data_quality_path,
             "metrics": metrics_path,
             "reproducibility": reproducibility_path,
-            **{name: path for name, path in validation_artifact_paths.items()},
+            **dict(validation_artifact_paths.items()),
             **dict(execution_artifacts.artifact_paths or {}),
         }
         if strategy_variant_path is not None:
@@ -739,7 +739,7 @@ class ResearchExperimentRunner:
                 result[str(key)] = self._merged_manifest(current, value)
             else:
                 result[str(key)] = value
-        return {key: value for key, value in json.loads(stable_json_dumps(result)).items()}
+        return dict(json.loads(stable_json_dumps(result)).items())
 
     def _execute_trial(
         self,

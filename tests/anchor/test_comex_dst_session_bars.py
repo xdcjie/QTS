@@ -24,6 +24,7 @@ count from a fixed 23h window instead of the DST-aware interval.
 
 from __future__ import annotations
 
+import itertools
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
@@ -110,5 +111,5 @@ def test_synthesizer_tiles_dst_session_cleanly_with_no_phantom_or_gap(
         assert bar.end_time - bar.start_time == _ONE_MINUTE
         assert interval.start <= bar.start_time
         assert bar.end_time <= interval.end
-    for left, right in zip(output, output[1:], strict=False):
+    for left, right in itertools.pairwise(output):
         assert left.end_time == right.start_time

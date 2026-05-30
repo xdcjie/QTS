@@ -19,7 +19,7 @@ Implementation note: this rule scans source files once per ``make
 guardrails`` invocation. The scan reads each non-test ``.py`` file under
 the relevant roots, extracts top-level identifier references, and builds
 a reverse index from ``ClassName`` to caller paths. Performance is
-acceptable up to a few thousand baseline symbols × a few thousand
+acceptable up to a few thousand baseline symbols x a few thousand
 source files; if that ratio grows, switch to AST symbol resolution.
 """
 
@@ -29,7 +29,7 @@ import ast
 import json
 import re
 from dataclasses import dataclass
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from qts.quality.guardrails import GuardrailViolation
@@ -110,7 +110,7 @@ class CallerPresenceRule:
         deferrals = self._load_deferrals(repo_root)
         caller_index = self._build_caller_index(repo_root)
         value_object_cache: dict[Path, set[str]] = {}
-        today = date.today()
+        today = datetime.now(tz=UTC).date()
 
         violations: list[GuardrailViolation] = []
         for symbol, deferral in deferrals.items():
@@ -348,10 +348,12 @@ class CallerPresenceRule:
             return source
         excluded: set[int] = set()
         for node in ast.walk(tree):
-            if isinstance(node, ast.Import | ast.ImportFrom):
-                excluded.update(range(node.lineno, (node.end_lineno or node.lineno) + 1))
-            elif isinstance(node, ast.Assign) and any(
-                isinstance(target, ast.Name) and target.id == "__all__" for target in node.targets
+            if isinstance(node, ast.Import | ast.ImportFrom) or (
+                isinstance(node, ast.Assign)
+                and any(
+                    isinstance(target, ast.Name) and target.id == "__all__"
+                    for target in node.targets
+                )
             ):
                 excluded.update(range(node.lineno, (node.end_lineno or node.lineno) + 1))
         return "\n".join(
@@ -381,10 +383,12 @@ class CallerPresenceRule:
             range(class_node.lineno, (class_node.end_lineno or class_node.lineno) + 1)
         )
         for node in ast.walk(tree):
-            if isinstance(node, ast.Import | ast.ImportFrom):
-                excluded.update(range(node.lineno, (node.end_lineno or node.lineno) + 1))
-            elif isinstance(node, ast.Assign) and any(
-                isinstance(target, ast.Name) and target.id == "__all__" for target in node.targets
+            if isinstance(node, ast.Import | ast.ImportFrom) or (
+                isinstance(node, ast.Assign)
+                and any(
+                    isinstance(target, ast.Name) and target.id == "__all__"
+                    for target in node.targets
+                )
             ):
                 excluded.update(range(node.lineno, (node.end_lineno or node.lineno) + 1))
         pattern = re.compile(rf"\b{re.escape(name)}\b")

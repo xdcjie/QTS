@@ -84,7 +84,7 @@ class WalkForwardGate:
         for window in windows:
             if window.get("accepted") is False:
                 reasons.append(
-                    f"walk_forward: {str(window.get('name', 'window'))} test window rejected"
+                    f"walk_forward: {window.get('name', 'window')!s} test window rejected"
                 )
 
         gap = self._number(evidence.get("max_train_test_gap"))
@@ -164,12 +164,12 @@ class FailureWindowVetoGate:
                 continue
             veto_count += 1
             if window.get("breached") is True:
-                reasons.append(f"failure_window_veto: {str(window.get('name', 'window'))} breached")
+                reasons.append(f"failure_window_veto: {window.get('name', 'window')!s} breached")
             drawdown = WalkForwardGate._number(window.get("max_drawdown"))
             if drawdown is not None and abs(drawdown) > self.max_drawdown:
                 reasons.append(
                     "failure_window_veto: "
-                    f"{str(window.get('name', 'window'))} max_drawdown {abs(drawdown):g} "
+                    f"{window.get('name', 'window')!s} max_drawdown {abs(drawdown):g} "
                     f"exceeds {self.max_drawdown:g}"
                 )
         return GateDecision(

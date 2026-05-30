@@ -51,6 +51,7 @@ from qts.quality.rules.oop import (
 from qts.quality.rules.order_domain import OrderDomainTypingRule
 from qts.quality.rules.public_boundary_exceptions import PublicBoundaryExceptionRule
 from qts.quality.rules.public_surface import PublicSurfaceRule
+from qts.quality.rules.pyproject_quality import PyprojectQualityRule
 from qts.quality.rules.research import (
     EvidenceBundleRequiredForPromotionRule,
     IdeaRegistryRequiredForCandidateRule,
@@ -104,21 +105,22 @@ __all__ = [
     "OOPPublicFactoryRule",
     "OrderDomainTypingRule",
     "PlatformFreezeRule",
-    "PromotionConfigBoundaryRule",
     "ProductSpecificRule",
-    "ProductionStrategyImportRule",
     "ProductionNoFakeClassRule",
     "ProductionNoTestingImportRule",
     "ProductionPlaceholderDocstringRule",
+    "ProductionStrategyImportRule",
+    "PromotionConfigBoundaryRule",
     "PromotionValueHonestyRule",
     "ProviderSdkImportRule",
     "PublicBoundaryExceptionRule",
     "PublicSurfaceRule",
+    "PyprojectQualityRule",
+    "RemovedImportNoNewUsageRule",
     "ResearchReportDecisionRequiredRule",
     "ResearchRunScriptRule",
     "ResearchStrategyStaleDocstringRule",
     "ResearchWorkflowRuntimeKeyRule",
-    "RemovedImportNoNewUsageRule",
     "RouteMetadataRequiredRule",
     "RouteNoFakeDataRule",
     "RuntimeCoordinatorDecisionRule",

@@ -24,9 +24,9 @@ def _common_assets(
     """Return assets present in every result, ordered by symbol for determinism."""
     if not results:
         return ()
-    common = set(score.asset for score in results[0].ranked)
+    common = {score.asset for score in results[0].ranked}
     for result in results[1:]:
-        common &= set(score.asset for score in result.ranked)
+        common &= {score.asset for score in result.ranked}
     return tuple(sorted(common, key=lambda asset: asset.symbol))
 
 

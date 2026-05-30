@@ -93,9 +93,7 @@ class PortfolioValuator:
         total = Decimal("0")
         for currency, balance in cash.items():
             ccy = currency.strip().upper()
-            if ccy == base:
-                rate = Decimal("1")
-            elif normalized_rates is None:
+            if ccy == base or normalized_rates is None:
                 rate = Decimal("1")
             else:
                 try:

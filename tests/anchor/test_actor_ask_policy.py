@@ -57,7 +57,7 @@ class TestAskPolicyAnchor:
 
         class RespondingActor(Actor):
             def handle(self, message: object) -> None:
-                query, response_mailbox = cast(tuple[object, Mailbox], message)
+                _query, response_mailbox = cast(tuple[object, Mailbox], message)
                 response_mailbox.put("response")
 
         class StringQuery:

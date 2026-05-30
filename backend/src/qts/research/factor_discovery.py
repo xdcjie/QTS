@@ -948,9 +948,9 @@ def _optional_int(value: Any) -> int | None:
 
 
 __all__ = [
+    "DEFAULT_FACTOR_DISCOVERY_SOURCES",
     "ArxivFactorIdeaSource",
     "CrossrefFactorIdeaSource",
-    "DEFAULT_FACTOR_DISCOVERY_SOURCES",
     "FactorDiscovery",
     "FactorDiscoveryError",
     "FactorDiscoveryHttpClient",

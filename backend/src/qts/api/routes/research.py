@@ -331,12 +331,11 @@ def _matches_run_filter(
     if idea_id and row.get("idea_id") != idea_id:
         return False
     metrics = _mapping_or_empty(row.get("metrics"))
-    if status and status.lower() not in {
+    status_values = {
         str(metrics.get("promotion_status", "")).lower(),
         str(metrics.get("status", "")).lower(),
-    }:
-        return False
-    return True
+    }
+    return not (status and status.lower() not in status_values)
 
 
 def _report_schema(

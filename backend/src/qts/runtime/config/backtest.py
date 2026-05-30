@@ -14,8 +14,8 @@ __all__ = [
     "BacktestCostModel",
     "BacktestEngineConfig",
     "BacktestMarketDataReference",
+    "BacktestRiskConfig",
     "BacktestRuntimeConfig",
     "BacktestStrategyConfig",
-    "BacktestRiskConfig",
     "RollPolicyConfig",
 ]

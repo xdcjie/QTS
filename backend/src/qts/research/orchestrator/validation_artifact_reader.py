@@ -531,10 +531,11 @@ class ResearchMetricsFromValidationArtifacts:
             return False
         if sharpe_sources.same_source and sharpe_sources.train_sharpe == sharpe_sources.oos_sharpe:
             return False
-        if sharpe_sources.train_sharpe is not None and sharpe_sources.oos_sharpe is not None:
-            if sharpe_sources.oos_sharpe <= 0:
-                return False
-        return True
+        return not (
+            sharpe_sources.train_sharpe is not None
+            and sharpe_sources.oos_sharpe is not None
+            and sharpe_sources.oos_sharpe <= 0
+        )
 
 
 __all__ = [

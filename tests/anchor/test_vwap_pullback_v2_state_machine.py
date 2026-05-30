@@ -72,7 +72,7 @@ class _StubSymbolResolver:
     def __init__(self, mapping: dict[str, InstrumentId] | None = None) -> None:
         self._mapping = mapping or {"GC": _INSTRUMENT, "SI": _SI_INSTRUMENT}
 
-    def resolve(self, user_symbol: str) -> InstrumentId:  # noqa: D401
+    def resolve(self, user_symbol: str) -> InstrumentId:
         return self._mapping.get(user_symbol, _INSTRUMENT)
 
 

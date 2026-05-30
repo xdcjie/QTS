@@ -307,7 +307,7 @@ class ResearchCampaignExecution:
             raise ValueError("execution.start and execution.end must be provided together")
         if start is None or end is None:
             return None, None
-        start_time, end_time = ResearchCampaignExecution._validated_window_times(
+        _start_time, _end_time = ResearchCampaignExecution._validated_window_times(
             start,
             end,
             "execution",
@@ -590,9 +590,10 @@ class ResearchCampaignConstraint:
             if value <= 0:
                 raise ValueError("constraints.min_profit_factor must be greater than 0")
             return
-        if name in {"max_drawdown", "max_cost_impact", "max_correlation_to_active"}:
-            if value < 0 or value > 1:
-                raise ValueError(f"constraints.{name} must be between 0 and 1")
+        if name in {"max_drawdown", "max_cost_impact", "max_correlation_to_active"} and (
+            value < 0 or value > 1
+        ):
+            raise ValueError(f"constraints.{name} must be between 0 and 1")
 
 
 @dataclass(frozen=True, slots=True)

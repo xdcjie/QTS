@@ -317,8 +317,8 @@ class IbkrOrderExecutionAdapter:
 __all__ = [
     "IbkrExecutionReport",
     "IbkrOrderCallbackEvent",
+    "IbkrOrderContractSpec",
     "IbkrOrderExecutionAdapter",
     "IbkrOrderExecutionConnection",
-    "IbkrOrderContractSpec",
     "IbkrOrderRequest",
 ]

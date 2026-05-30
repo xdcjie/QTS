@@ -474,10 +474,10 @@ VwapAdhocRunnerForbiddenRule = _VwapAdhocRunnerForbiddenRule
 VwapTaxonomyPresenceRule = _VwapTaxonomyPresenceRule
 
 __all__ = [
+    "ProductionStrategyImportRule",
     "ResearchRunScriptRule",
     "ResearchWorkflowRuntimeKeyRule",
-    "ProductionStrategyImportRule",
-    "VwapOptimizerConfigRule",
     "VwapAdhocRunnerForbiddenRule",
+    "VwapOptimizerConfigRule",
     "VwapTaxonomyPresenceRule",
 ]

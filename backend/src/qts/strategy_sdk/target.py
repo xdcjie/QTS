@@ -30,7 +30,7 @@ class TargetIntent:
     intent_type: TargetIntentType
     value: Decimal | None
     intent_id: str = field(default_factory=lambda: str(uuid4()))
-    order_spec: OrderSpec = OrderSpec()
+    order_spec: OrderSpec = field(default_factory=OrderSpec)
     metadata: Mapping[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:

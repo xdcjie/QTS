@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
 
@@ -21,7 +21,7 @@ class OrderRiskRequest:
     quantity: Decimal
     price: Decimal
     multiplier: Decimal
-    order_spec: OrderSpec = OrderSpec()
+    order_spec: OrderSpec = field(default_factory=OrderSpec)
     order_time: datetime | None = None
     current_position: Decimal = Decimal("0")
     contributing_strategy_ids: tuple[StrategyId, ...] = ()

@@ -91,7 +91,7 @@ class PublicBoundaryExceptionRule:
 
 
 class _RawRaise:
-    __slots__ = ("name", "lineno")
+    __slots__ = ("lineno", "name")
 
     def __init__(self, *, name: str, lineno: int) -> None:
         self.name = name

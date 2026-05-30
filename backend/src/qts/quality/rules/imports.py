@@ -160,7 +160,7 @@ class RemovedImportNoNewUsageRule:
 
 __all__ = [
     "ImportBoundaryRule",
-    "ProviderSdkImportRule",
     "ProductionNoTestingImportRule",
+    "ProviderSdkImportRule",
     "RemovedImportNoNewUsageRule",
 ]

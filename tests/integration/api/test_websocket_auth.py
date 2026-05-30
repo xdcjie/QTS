@@ -15,9 +15,8 @@ def test_websocket_handshake_rejects_missing_bearer_token() -> None:
 
     client = TestClient(create_app())
 
-    with pytest.raises(WebSocketDisconnect):
-        with client.websocket_connect("/ws/events"):
-            pass
+    with pytest.raises(WebSocketDisconnect), client.websocket_connect("/ws/events"):
+        pass
 
 
 def test_websocket_handshake_rejects_unknown_bearer_token() -> None:
@@ -26,12 +25,14 @@ def test_websocket_handshake_rejects_unknown_bearer_token() -> None:
 
     client = TestClient(create_app())
 
-    with pytest.raises(WebSocketDisconnect):
-        with client.websocket_connect(
+    with (
+        pytest.raises(WebSocketDisconnect),
+        client.websocket_connect(
             "/ws/events",
             headers={"Authorization": "Bearer not-a-real-token"},
-        ):
-            pass
+        ),
+    ):
+        pass
 
 
 def test_websocket_handshake_accepts_authorized_bearer_token(
@@ -75,12 +76,14 @@ def test_websocket_handshake_rejects_principal_without_read_scope(
     monkeypatch.setattr(events_module, "default_auth_backend", _no_scope_backend)
     client = TestClient(app_module.create_app())
 
-    with pytest.raises(WebSocketDisconnect):
-        with client.websocket_connect(
+    with (
+        pytest.raises(WebSocketDisconnect),
+        client.websocket_connect(
             "/ws/events",
             headers={"Authorization": "Bearer empty-token"},
-        ):
-            pass
+        ),
+    ):
+        pass
 
 
 def _local_dev_backend() -> StaticTokenAuthBackend:

@@ -569,9 +569,8 @@ class PromotionPacketV2:
 
         trading = metrics_payload.get("trading")
         oos_months_hardcoded = False
-        if isinstance(trading, Mapping):
-            if trading.get("oos_months") == 12.0:
-                oos_months_hardcoded = True
+        if isinstance(trading, Mapping) and trading.get("oos_months") == 12.0:
+            oos_months_hardcoded = True
 
         if all_research_true and stability_all_perfect and oos_months_hardcoded:
             reasons.append(

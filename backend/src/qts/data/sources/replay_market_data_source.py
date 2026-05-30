@@ -342,7 +342,7 @@ class ReplayMarketDataSource:
 
 
 __all__ = [
-    "ReplayMarketDataSource",
     "ReplayMarketDataBundle",
+    "ReplayMarketDataSource",
     "SubscriptionReplayMarketDataSource",
 ]

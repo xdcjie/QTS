@@ -243,10 +243,10 @@ class BacktestActorLoopCohesionRule:
 
 
 __all__ = [
-    "OOPPublicFactoryRule",
-    "OOPHelperOwnershipRule",
-    "BacktestRunnerCohesionRule",
-    "BacktestInputCohesionRule",
-    "BacktestEngineCohesionRule",
     "BacktestActorLoopCohesionRule",
+    "BacktestEngineCohesionRule",
+    "BacktestInputCohesionRule",
+    "BacktestRunnerCohesionRule",
+    "OOPHelperOwnershipRule",
+    "OOPPublicFactoryRule",
 ]

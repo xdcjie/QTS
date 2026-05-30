@@ -37,7 +37,57 @@ line-length = 100
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "B", "UP"]
+select = ["E", "F", "I", "B", "UP", "N", "SIM", "C4", "T20", "DTZ", "TRY", "RUF"]
+ignore = [
+    # TRY003 (raise-vanilla-args): the project deliberately raises domain/validation
+    # errors with explicit inline messages (`raise ValueError("...")`). Enabling this
+    # would force ~2100 sites into custom exception classes with templated messages,
+    # conflicting with the explicit-message style and the QTS-FINAL-008 error taxonomy.
+    # Reason: idiomatic-message style. Revisit if a structured error-message catalog lands.
+    "TRY003",
+    # TRY004 (type-check-without-type-error): many `if not isinstance(...): raise
+    # ValueError(...)` sites are intentional domain-validation errors, and flipping them
+    # to TypeError is a behaviour change that callers/tests rely on. Reason: exception-type
+    # changes need per-site domain review. Revisit per-site, not as a blanket rewrite.
+    "TRY004",
+    # N818 (error-suffix-on-exception-name): the QTS-FINAL-008 domain error taxonomy uses
+    # condition-style names that read naturally without an "Error" suffix (RiskRejectedOrder,
+    # UnknownOrder, RuntimeSafetyViolation, SingleWriterViolation, ...). Renaming them plus
+    # every call/except/test site is a churny breaking change for marginal benefit.
+    # Reason: deliberate domain-exception vocabulary.
+    "N818",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Operator-facing CLI evidence commands and the guardrail CLI entrypoint print to
+# stdout by design (their stdout IS the deliverable). Reason: CLI output is intentional.
+"backend/src/qts/application/commands/*" = ["T201"]
+"backend/src/qts/quality/suite.py" = ["T201"]
+# These build an ibapi EWrapper/EClient subclass dynamically; the real __init__ dunder
+# is flagged by N807 only because it is defined inside a factory scope. Reason: genuine
+# __init__ on a dynamically-constructed broker SDK class.
+"backend/src/qts/data/transports/ibkr_tws_market_data_transport.py" = ["N807"]
+"backend/src/qts/execution/transports/ibkr_tws_order_execution_transport.py" = ["N807"]
+# Advisory simplification/style rules (collapsible ifs, try/else shaping, ambiguous
+# math unicode like the "x" multiplication sign in docstrings) are enforced in
+# production but treated as advisory in non-production trees, where explicit/literal
+# code aids readability and edit churn carries test-breakage risk for cosmetic gain.
+# Reason: cosmetic rules are advisory outside backend/src/qts.
+# Developer/operator scripts and architecture tooling are CLIs whose stdout is the
+# deliverable. Reason: CLI output + advisory cosmetics.
+"scripts/*" = ["T201", "SIM102", "SIM108", "SIM117", "SIM118", "TRY300", "TRY301", "RUF002", "RUF003", "RUF034"]
+"tools/*" = ["T201", "SIM102", "SIM108", "SIM117", "SIM118", "TRY300", "TRY301", "RUF002", "RUF003", "RUF034"]
+# Example strategies are teaching artifacts; keep them readable rather than minimal.
+"examples/*" = ["SIM102", "SIM108", "SIM117", "SIM118", "TRY300", "TRY301", "RUF002", "RUF003", "RUF034"]
+# Tests: fake adapters implement external broker APIs whose callbacks are camelCase
+# (N802/N815/N803), fixtures use module-mimicking names (N806), pytest.raises match
+# strings are intentionally broad (RUF043), and fixture datetimes are naive for brevity
+# where timezone is not under test (DTZ). Cosmetic rules are advisory in tests.
+# Reason: test-fixture / external-API conventions + advisory cosmetics.
+"tests/*" = [
+    "N802", "N803", "N806", "N815", "RUF043", "DTZ001", "DTZ011", "DTZ007", "RUF012",
+    "SIM102", "SIM108", "SIM117", "SIM118", "TRY300", "TRY301", "RUF002", "RUF003", "RUF034",
+]
 
 [tool.mypy]
 python_version = "3.11"

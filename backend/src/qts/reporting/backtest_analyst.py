@@ -561,8 +561,8 @@ __all__ = [
     "AnalystBacktestReportRenderer",
     "ArtifactRows",
     "BacktestPdfExporter",
-    "BacktestReportMetrics",
     "BacktestReportDataset",
     "BacktestReportError",
+    "BacktestReportMetrics",
     "BacktestRunReportLoader",
 ]

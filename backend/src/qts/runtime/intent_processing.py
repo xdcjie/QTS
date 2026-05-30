@@ -26,6 +26,8 @@ if TYPE_CHECKING:
     from qts.risk.margin.calculator import MarginCalculator
     from qts.risk.risk_state import RiskStateSnapshot
 
+import contextlib
+
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.account_actor import AccountSnapshot, GetAccountSnapshot
 from qts.runtime.actors.order_manager_actor import (
@@ -357,14 +359,12 @@ class TargetIntentProcessor:
         )
         for instrument_id in positions:
             if instrument_id not in marks:
-                try:
+                with contextlib.suppress(KeyError, ValueError):
                     marks[instrument_id] = self._instrument_context.market_price_for_intent(
                         intent,
                         instrument_id=instrument_id,
                         bar=bar,
                     )
-                except (KeyError, ValueError):
-                    pass
         return marks
 
     @staticmethod

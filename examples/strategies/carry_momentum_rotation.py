@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
@@ -104,10 +105,7 @@ class CarryMomentumRotationStrategy(Strategy):
     @staticmethod
     def _lookback_tuple(value: int | Sequence[int]) -> tuple[int, ...]:
         lookbacks: tuple[int, ...]
-        if isinstance(value, int):
-            lookbacks = (value,)
-        else:
-            lookbacks = tuple(int(item) for item in value)
+        lookbacks = (value,) if isinstance(value, int) else tuple(int(item) for item in value)
         if not lookbacks or any(lookback <= 0 for lookback in lookbacks):
             raise ValueError("momentum_lookback_bars must contain positive integers")
         return tuple(dict.fromkeys(lookbacks))
@@ -243,7 +241,7 @@ class CarryMomentumRotationStrategy(Strategy):
     def _annualized_volatility(self, history: tuple[Bar, ...]) -> Decimal:
         returns: list[Decimal] = []
         volatility_slice = history[-self._volatility_lookback_bars - 1 :]
-        for previous, current in zip(volatility_slice, volatility_slice[1:], strict=False):
+        for previous, current in itertools.pairwise(volatility_slice):
             if previous.close <= Decimal("0"):
                 return Decimal("0")
             returns.append(current.close / previous.close - Decimal("1"))

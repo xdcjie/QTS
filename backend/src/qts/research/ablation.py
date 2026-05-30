@@ -85,10 +85,13 @@ class AblationPlan:
         runs_by_name = _matrix_runs_by_candidate(payload, module_map=module_map or {})
         if baseline not in runs_by_name:
             raise ValueError("ablation source_summary does not contain baseline")
-        ordered_names = [baseline] + sorted(
-            (name for name in runs_by_name if name != baseline),
-            key=lambda name: (len(runs_by_name[name].modules), name),
-        )
+        ordered_names = [
+            baseline,
+            *sorted(
+                (name for name in runs_by_name if name != baseline),
+                key=lambda name: (len(runs_by_name[name].modules), name),
+            ),
+        ]
         runs = tuple(runs_by_name[name] for name in ordered_names)
         modules = tuple(
             dict.fromkeys(module for run in runs for module in run.modules if run.name != baseline)

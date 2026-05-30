@@ -116,7 +116,7 @@ class SharedRuntimeWordingRule:
 
 
 __all__ = [
-    "LivePackageNoReplayClassRule",
     "DataLiveNoSharedContractRule",
+    "LivePackageNoReplayClassRule",
     "SharedRuntimeWordingRule",
 ]

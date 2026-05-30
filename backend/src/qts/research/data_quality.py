@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import itertools
 import json
 import re
 from collections.abc import Mapping, Sequence
@@ -417,7 +418,7 @@ class DataQualityRunner:
             seconds_to_end = int((end - unique[-1]).total_seconds())
             if seconds_to_end > step:
                 missing += max((seconds_to_end // step) - 1, 0)
-        for left, right in zip(unique, unique[1:], strict=False):
+        for left, right in itertools.pairwise(unique):
             seconds = int((right - left).total_seconds())
             if seconds > step:
                 missing += max((seconds // step) - 1, 0)
@@ -440,7 +441,7 @@ class DataQualityRunner:
         seconds_to_end = int((end - unique[-1]).total_seconds())
         if seconds_to_end > step:
             missing += max((seconds_to_end // step) - 1, 0)
-        for left, right in zip(unique, unique[1:], strict=False):
+        for left, right in itertools.pairwise(unique):
             seconds = int((right - left).total_seconds())
             if seconds > step:
                 missing += max((seconds // step) - 1, 0)

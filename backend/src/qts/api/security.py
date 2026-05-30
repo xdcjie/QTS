@@ -324,13 +324,13 @@ def _base64url_decode(value: str) -> bytes:
 
 __all__ = [
     "API_SCOPE_MATRIX",
+    "DEFAULT_SCOPES",
+    "WEBSOCKET_REQUIRED_SCOPE",
     "ApiSecurityMiddleware",
     "AuthBackend",
     "BearerJWTAuthBackend",
-    "DEFAULT_SCOPES",
     "Principal",
     "StaticTokenAuthBackend",
-    "WEBSOCKET_REQUIRED_SCOPE",
     "get_principal",
     "require_scope",
     "required_scope_for",

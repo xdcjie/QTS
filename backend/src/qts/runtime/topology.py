@@ -567,8 +567,8 @@ __all__ = [
     "BrokerRouteSpec",
     "MarketDataRouteSpec",
     "RuntimeMode",
-    "RuntimeTopologyManifest",
-    "RuntimeTopologyBuilder",
     "RuntimeTopology",
+    "RuntimeTopologyBuilder",
+    "RuntimeTopologyManifest",
     "StrategyRuntimeSpec",
 ]

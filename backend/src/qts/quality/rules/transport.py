@@ -85,4 +85,4 @@ class TransportAdapterImportRule:
         return violations
 
 
-__all__ = ["TransportCanonicalPathRule", "TransportAdapterImportRule"]
+__all__ = ["TransportAdapterImportRule", "TransportCanonicalPathRule"]

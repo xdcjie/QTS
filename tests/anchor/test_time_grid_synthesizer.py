@@ -17,6 +17,7 @@ volume of real (non-synthetic) bars.
 
 from __future__ import annotations
 
+import itertools
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
@@ -127,7 +128,7 @@ def test_synthesizer_emits_half_open_intervals() -> None:
     for bar in output:
         assert bar.end_time - bar.start_time == timedelta(minutes=1)
     # Consecutive bars are contiguous: bar[i].end_time == bar[i+1].start_time
-    for left, right in zip(output, output[1:], strict=False):
+    for left, right in itertools.pairwise(output):
         assert left.end_time == right.start_time
 
 

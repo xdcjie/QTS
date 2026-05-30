@@ -205,7 +205,7 @@ class SignalAggregatorActor(Actor):
 
 __all__ = [
     "AggregatedSignalBatch",
-    "SignalContribution",
     "SignalAggregatorActor",
+    "SignalContribution",
     "StrategySignalEvent",
 ]

@@ -203,7 +203,7 @@ class TestAskTimeout:
 
         class RespondingActor(Actor):
             def handle(self, message: object) -> None:
-                query, response_mailbox = cast(tuple[object, Mailbox], message)
+                _query, response_mailbox = cast(tuple[object, Mailbox], message)
                 response_mailbox.put("hello")
 
         class StringQuery:
@@ -244,7 +244,7 @@ class TestAskTimeout:
 
         class RespondingActor(Actor):
             def handle(self, message: object) -> None:
-                query, response_mailbox = cast(tuple[object, Mailbox], message)
+                _query, response_mailbox = cast(tuple[object, Mailbox], message)
                 response_mailbox.put("ok")
 
         class StringQuery:
@@ -506,7 +506,7 @@ class TestBackwardCompatibility:
 
         class BadActor(Actor):
             def handle(self, message: object) -> None:
-                query, response_mailbox = cast(tuple[object, Mailbox], message)
+                _query, response_mailbox = cast(tuple[object, Mailbox], message)
                 response_mailbox.put(123)
 
         ref = ActorRef(actor=BadActor(), mailbox=Mailbox())

@@ -13,6 +13,7 @@ from qts.observability.logging import REDACTED, build_log_record
 from qts.observability.metrics import MetricsRegistry, RuntimeCounterMetric, RuntimeLatencyMetric
 
 __all__ = [
+    "REDACTED",
     "AuditEvent",
     "BrokerConnectionSnapshot",
     "DashboardCashSnapshot",
@@ -21,7 +22,6 @@ __all__ = [
     "OpenOrderSnapshot",
     "OperationalDashboardSnapshot",
     "OperationalErrorCode",
-    "REDACTED",
     "RiskStatusSnapshot",
     "RuntimeCounterMetric",
     "RuntimeErrorReason",

@@ -6,9 +6,9 @@ from qts.execution.adapters.ibkr_order_map import BrokerOrderMap, BrokerOrderRec
 from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
 
 __all__ = [
+    "BrokerExecutionAdapter",
     "BrokerOrderMap",
     "BrokerOrderRecord",
-    "BrokerExecutionAdapter",
     "IbkrOrderExecutionAdapter",
     "SimulatedExecutionAdapter",
 ]

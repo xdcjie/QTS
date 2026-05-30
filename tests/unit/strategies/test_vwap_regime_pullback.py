@@ -119,23 +119,23 @@ def _feed_session(
 def test_gc_strategy_uses_best_stable_production_candidate_parameters() -> None:
     strategy = GcVwapProductionPullbackStrategy()
 
-    assert strategy._config.symbol == "GC"  # noqa: SLF001
-    assert strategy._config.target_quantity == Decimal("4")  # noqa: SLF001
-    assert strategy._config.min_volume_ratio == Decimal("1.3")  # noqa: SLF001
-    assert strategy._config.entry_window == "asia_20_02"  # noqa: SLF001
-    assert strategy._config.confirmation_profile == "session_sigma_mom120"  # noqa: SLF001
-    assert strategy._regime_config.rule == "hard_churn225"  # noqa: SLF001
+    assert strategy._config.symbol == "GC"
+    assert strategy._config.target_quantity == Decimal("4")
+    assert strategy._config.min_volume_ratio == Decimal("1.3")
+    assert strategy._config.entry_window == "asia_20_02"
+    assert strategy._config.confirmation_profile == "session_sigma_mom120"
+    assert strategy._regime_config.rule == "hard_churn225"
 
 
 def test_si_strategy_uses_best_stable_production_candidate_parameters() -> None:
     strategy = SiVwapProductionPullbackStrategy()
 
-    assert strategy._config.symbol == "SI"  # noqa: SLF001
-    assert strategy._config.target_quantity == Decimal("3")  # noqa: SLF001
-    assert strategy._config.min_volume_ratio == Decimal("1.5")  # noqa: SLF001
-    assert strategy._config.entry_window == "asia_20_02"  # noqa: SLF001
-    assert strategy._config.confirmation_profile == "trend_session_sigma"  # noqa: SLF001
-    assert strategy._regime_config.rule == "hard14_ccvol17"  # noqa: SLF001
+    assert strategy._config.symbol == "SI"
+    assert strategy._config.target_quantity == Decimal("3")
+    assert strategy._config.min_volume_ratio == Decimal("1.5")
+    assert strategy._config.entry_window == "asia_20_02"
+    assert strategy._config.confirmation_profile == "trend_session_sigma"
+    assert strategy._regime_config.rule == "hard14_ccvol17"
 
 
 def test_production_strategy_does_not_depend_on_research_strategy() -> None:

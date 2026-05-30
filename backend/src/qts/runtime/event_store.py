@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 from collections.abc import Callable, Iterable
@@ -298,10 +299,8 @@ class FileEventStore:
 
     def __del__(self) -> None:
         """Release the writer lock if the store is garbage-collected without close."""
-        try:
+        with contextlib.suppress(Exception):
             self.close()
-        except Exception:
-            pass
 
     def _acquire_writer_lock(self) -> None:
         """Acquire an exclusive advisory lock on a sidecar, held until close."""

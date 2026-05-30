@@ -352,10 +352,8 @@ class IbkrTwsMarketDataTransport:
         app = self._app
         if app is not None:
             for req_id in tuple(self._request_symbols):
-                try:
+                with suppress(Exception):
                     app.cancelMktData(req_id)
-                except Exception:  # noqa: BLE001
-                    pass
             app.disconnect()
         thread = self._thread
         if thread is not None and thread.is_alive():
@@ -648,11 +646,11 @@ class IbkrTwsMarketDataTransport:
 
 __all__ = [
     "IbkrBarPayload",
+    "IbkrMarketDataCallbackSink",
     "IbkrMarketDataContractSpec",
     "IbkrMarketDataErrorPayload",
-    "IbkrMarketDataCallbackSink",
-    "IbkrMarketDataTypePayload",
     "IbkrMarketDataTransport",
+    "IbkrMarketDataTypePayload",
     "IbkrProviderMarketDataType",
     "IbkrQuotePayload",
     "IbkrTickPayload",

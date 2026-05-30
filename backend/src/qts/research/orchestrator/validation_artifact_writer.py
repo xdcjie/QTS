@@ -16,6 +16,8 @@ delegates the artifact-building step to ``ValidationArtifactWriter``.
 
 from __future__ import annotations
 
+import contextlib
+import itertools
 import json
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime, timedelta
@@ -439,7 +441,7 @@ class ValidationArtifactWriter:
         timestamp is placed past the cutoff and the runner flags the leak.
         """
 
-        from qts.research.validation import FeatureTimingSpec as _FTS
+        from qts.research.validation import FeatureTimingSpec as _FeatureTimingSpec
 
         observed_at = (
             decision_cutoff if decision_cutoff is not None else datetime(1970, 1, 1, tzinfo=UTC)
@@ -447,7 +449,7 @@ class ValidationArtifactWriter:
         # A clearly-after-cutoff stamp for forward-looking derivations.
         after_cutoff = decision_cutoff + timedelta(days=1) if decision_cutoff is not None else None
 
-        features: list[_FTS] = []
+        features: list[_FeatureTimingSpec] = []
         research_factory = pipeline_config.get("research_factory")
         if isinstance(research_factory, Mapping):
             factor_def = research_factory.get("factor_definition")
@@ -458,12 +460,16 @@ class ValidationArtifactWriter:
                         if isinstance(inp, Mapping):
                             name = inp.get("field", inp.get("root", "unknown"))
                             features.append(
-                                _FTS(name=str(name), timestamp=observed_at, visible_at=observed_at)
+                                _FeatureTimingSpec(
+                                    name=str(name),
+                                    timestamp=observed_at,
+                                    visible_at=observed_at,
+                                )
                             )
                 forward_transform = self._forward_looking_transform(factor_def)
                 if forward_transform is not None and after_cutoff is not None:
                     features.append(
-                        _FTS(
+                        _FeatureTimingSpec(
                             name=f"transform:{forward_transform}",
                             timestamp=after_cutoff,
                             visible_at=after_cutoff,
@@ -471,7 +477,9 @@ class ValidationArtifactWriter:
                     )
         for param_name in sorted(parameters):
             features.append(
-                _FTS(name=str(param_name), timestamp=observed_at, visible_at=observed_at)
+                _FeatureTimingSpec(
+                    name=str(param_name), timestamp=observed_at, visible_at=observed_at
+                )
             )
         return tuple(features)
 
@@ -505,7 +513,7 @@ class ValidationArtifactWriter:
     ) -> Any | None:
         """Derive label policy from pipeline config."""
 
-        from qts.research.validation import LabelPolicy as _LP
+        from qts.research.validation import LabelPolicy as _LabelPolicy
 
         research_factory = pipeline_config.get("research_factory")
         if not isinstance(research_factory, Mapping):
@@ -523,7 +531,7 @@ class ValidationArtifactWriter:
             return None
         if not isinstance(visible_after, str) or not visible_after.strip():
             return None
-        return _LP(
+        return _LabelPolicy(
             horizon_bars=horizon,
             visible_after=visible_after.strip(),
             no_lookahead=bool(no_lookahead),
@@ -536,9 +544,9 @@ class ValidationArtifactWriter:
     ) -> tuple[Any, ...]:
         """Derive validation windows from backtest manifest and pipeline config."""
 
-        from qts.research.validation import ValidationWindow as _VW
+        from qts.research.validation import ValidationWindow as _ValidationWindow
 
-        windows: list[_VW] = []
+        windows: list[_ValidationWindow] = []
         for source in (pipeline_config, backtest_manifest):
             splits = source.get("splits")
             if not isinstance(splits, Mapping):
@@ -566,17 +574,15 @@ class ValidationArtifactWriter:
                     }
                     mapped_role = role_map.get(role, role)
                     if mapped_role in {"train", "test", "out_of_sample"}:
-                        try:
+                        with contextlib.suppress(ValueError, TypeError):
                             windows.append(
-                                _VW(
+                                _ValidationWindow(
                                     name=name.strip(),
                                     role=mapped_role,
                                     start=datetime.fromisoformat(start.replace("Z", "+00:00")),
                                     end=datetime.fromisoformat(end.replace("Z", "+00:00")),
                                 )
                             )
-                        except (ValueError, TypeError):
-                            pass
         return tuple(windows)
 
     def _no_lookahead_factor_snapshot_protocol(
@@ -639,11 +645,7 @@ class ValidationArtifactWriter:
             if isinstance(timestamp, str):
                 points.append((timestamp, equity))
         returns: dict[str, Decimal] = {}
-        for (_previous_time, previous_equity), (timestamp, equity) in zip(
-            points,
-            points[1:],
-            strict=False,
-        ):
+        for (_previous_time, previous_equity), (timestamp, equity) in itertools.pairwise(points):
             if previous_equity == Decimal("0"):
                 continue
             returns[timestamp] = (equity / previous_equity) - Decimal("1")

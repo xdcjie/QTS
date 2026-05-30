@@ -56,8 +56,8 @@ class MarketDataSubscribed:
 
 __all__ = [
     "MarketDataPayload",
-    "MarketDataSubscription",
     "MarketDataSourceEvent",
     "MarketDataSourceFailure",
     "MarketDataSubscribed",
+    "MarketDataSubscription",
 ]

@@ -37,7 +37,7 @@ def test_historical_market_data_adapter_is_primary_historical_source_name(
 
     adapter.subscribe(subscription)
 
-    assert tuple(adapter.events(subscription.subscription_id))[0].source_id == "historical-gc"
+    assert next(iter(adapter.events(subscription.subscription_id))).source_id == "historical-gc"
 
 
 def test_historical_adapter_has_no_replay_or_service_aliases() -> None:

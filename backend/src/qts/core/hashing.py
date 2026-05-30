@@ -38,4 +38,4 @@ def stable_json_hash(payload: Any) -> str:
     return f"sha256:{hashlib.sha256(stable_json_dumps(payload).encode()).hexdigest()}"
 
 
-__all__ = ["stable_json_dumps", "stable_json_default", "stable_json_hash"]
+__all__ = ["stable_json_default", "stable_json_dumps", "stable_json_hash"]

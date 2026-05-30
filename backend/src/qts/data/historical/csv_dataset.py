@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import csv
 import io
 from collections.abc import Iterator
@@ -244,9 +245,7 @@ class HistoricalBarStream:
     def _bar_visible_in_range(self, bar: Bar) -> bool:
         if self._start is not None and bar.end_time <= self._start:
             return False
-        if self._end is not None and bar.end_time > self._end:
-            return False
-        return True
+        return not (self._end is not None and bar.end_time > self._end)
 
     def _timestamp_groups(
         self,
@@ -322,10 +321,8 @@ def _csv_header_columns(header_line: bytes) -> tuple[str, ...]:
 
 
 def _detach_text_handle(text_handle: io.TextIOWrapper) -> None:
-    try:
+    with contextlib.suppress(ValueError):
         text_handle.detach()
-    except ValueError:
-        pass
 
 
 def iter_historical_bars(

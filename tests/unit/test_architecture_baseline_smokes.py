@@ -147,7 +147,7 @@ def test_architecture_import_graph_snapshot_smoke(tmp_path: Path) -> None:
     )
     assert isinstance(payload, dict)
     assert payload
-    assert all(isinstance(key, str) for key in payload.keys())
+    assert all(isinstance(key, str) for key in payload)
 
 
 def test_runtime_topology_private_builder_is_not_canonical() -> None:

@@ -1432,7 +1432,7 @@ def test_position_snapshot_partitioned_by_account() -> None:
     result = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC)))
 
     assert result.account_snapshot is None
-    snapshot_map = {account_id: snapshot for account_id, snapshot in result.account_snapshots}
+    snapshot_map = dict(result.account_snapshots)
     assert set(snapshot_map) == {account_a, account_b}
     assert snapshot_map[account_a].positions[
         InstrumentId("EQUITY.US.NASDAQ.AAPL")

@@ -123,10 +123,7 @@ class GcSiRatioMeanReversionStrategy(Strategy):
         mean = sum(ratios, Decimal("0")) / Decimal(len(ratios))
         variance = sum((ratio - mean) ** 2 for ratio in ratios) / Decimal(len(ratios))
         std = variance.sqrt()
-        if std < self._min_ratio_std:
-            z_score = Decimal("0")
-        else:
-            z_score = (ratios[-1] - mean) / std
+        z_score = Decimal("0") if std < self._min_ratio_std else (ratios[-1] - mean) / std
         if z_score >= self._entry_z:
             return -1
         if z_score <= -self._entry_z:

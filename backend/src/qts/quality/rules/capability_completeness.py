@@ -87,4 +87,4 @@ class CapabilityCompletenessRule:
         return None
 
 
-__all__ = ["CapabilityCompletenessRule", "RUNTIME_COMMAND_ADAPTER_METHODS"]
+__all__ = ["RUNTIME_COMMAND_ADAPTER_METHODS", "CapabilityCompletenessRule"]

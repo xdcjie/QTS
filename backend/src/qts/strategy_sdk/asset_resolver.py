@@ -129,6 +129,6 @@ __all__ = [
     "FutureContractResolver",
     "OptionContractRef",
     "OptionContractResolver",
-    "SymbolResolver",
     "StrategyAssetResolver",
+    "SymbolResolver",
 ]

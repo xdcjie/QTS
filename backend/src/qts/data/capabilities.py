@@ -88,4 +88,4 @@ class MarketDataFeedCapabilities:
         return parsed.duration or timedelta.max
 
 
-__all__ = ["MarketDataFeedCapabilities", "LiveFeedTimeframeSet"]
+__all__ = ["LiveFeedTimeframeSet", "MarketDataFeedCapabilities"]

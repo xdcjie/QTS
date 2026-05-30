@@ -28,7 +28,7 @@ def test_external_readiness_smoke_matrix_requires_ibkr_paper_evidence(
     if not evidence_dir.exists():
         pytest.skip(f"external readiness evidence directory does not exist: {evidence_dir}")
 
-    found: dict[str, bool] = {smoke_name: False for smoke_name in EXTERNAL_SMOKES}
+    found: dict[str, bool] = dict.fromkeys(EXTERNAL_SMOKES, False)
     for path in evidence_dir.glob("readiness-smoke-*.json"):
         payload = json.loads(path.read_text(encoding="utf-8"))
         smoke_name = str(payload.get("smoke_name", ""))

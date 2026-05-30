@@ -7,7 +7,7 @@ import math
 from collections.abc import Mapping, Sequence
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from itertools import product
+from itertools import pairwise, product
 from pathlib import Path
 from typing import Any
 
@@ -476,7 +476,7 @@ def _metric_indices(timeline: tuple[datetime, ...], reporting_grid: str) -> tupl
         date_key = timestamp.astimezone(UTC).date()
         if date_key != first_date:
             by_date[date_key] = index
-    metric_indices = (0,) + tuple(by_date[key] for key in sorted(by_date))
+    metric_indices = (0, *tuple(by_date[key] for key in sorted(by_date)))
     if len(metric_indices) < 2:
         raise ValueError("portfolio ensemble daily_utc reporting requires at least two days")
     return metric_indices
@@ -492,12 +492,12 @@ def _weight_vectors(
 
     def walk(index: int, remaining: int, current: list[int]) -> None:
         if index == candidate_count - 1:
-            vector = tuple(current + [remaining])
+            vector = (*current, remaining)
             if 0 < sum(1 for item in vector if item) <= max_active_legs:
                 vectors.append(tuple(Decimal(item) * weight_step for item in vector))
             return
         for value in range(remaining + 1):
-            walk(index + 1, remaining - value, current + [value])
+            walk(index + 1, remaining - value, [*current, value])
 
     walk(0, units, [])
     return tuple(vectors)
@@ -847,7 +847,7 @@ def _metric_curve(
         date_key = timestamp.astimezone(UTC).date()
         if date_key != first_date:
             by_date[date_key] = (timestamp, equity)
-    metric_curve = (equity_curve[0],) + tuple(by_date[key] for key in sorted(by_date))
+    metric_curve = (equity_curve[0], *tuple(by_date[key] for key in sorted(by_date)))
     if len(metric_curve) < 2:
         raise ValueError("portfolio ensemble daily_utc reporting requires at least two days")
     return metric_curve
@@ -874,8 +874,7 @@ def _metrics(equity_curve: tuple[tuple[datetime, Decimal], ...]) -> dict[str, De
     first = equity_curve[0][1]
     last = equity_curve[-1][1]
     returns = [
-        (current[1] / previous[1]) - Decimal("1")
-        for previous, current in zip(equity_curve, equity_curve[1:], strict=False)
+        (current[1] / previous[1]) - Decimal("1") for previous, current in pairwise(equity_curve)
     ]
     return {
         "compounding_annual_return": _compounding_annual_return(equity_curve),

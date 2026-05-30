@@ -292,6 +292,6 @@ __all__ = [
     "BrokerOrderRequest",
     "OrderType",
     "TimeInForce",
-    "normalize_broker_status",
     "normalize_broker_execution_report",
+    "normalize_broker_status",
 ]

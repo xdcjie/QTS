@@ -100,12 +100,12 @@ def test_many_trials_reject_noise_candidate_via_adjusted_score() -> None:
     candidates = (lucky, *family)
 
     # Few trials: the lucky candidate's deflated Sharpe still clears the gate.
-    few_selection, few_decisions = _select_and_gate(candidates, trial_count=1)
+    _few_selection, few_decisions = _select_and_gate(candidates, trial_count=1)
     lucky_few, lucky_few_decision = few_decisions["lucky-winner"]
     assert lucky_few_decision.accepted is True
 
     # Many trials: the same candidate is now rejected by the adjusted-score gate.
-    many_selection, many_decisions = _select_and_gate(candidates, trial_count=2000)
+    _many_selection, many_decisions = _select_and_gate(candidates, trial_count=2000)
     lucky_many, lucky_many_decision = many_decisions["lucky-winner"]
     assert lucky_many_decision.accepted is False
     assert any("deflated_sharpe_ratio" in reason for reason in lucky_many_decision.reasons)

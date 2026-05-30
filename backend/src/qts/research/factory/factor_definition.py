@@ -382,10 +382,10 @@ class FactorDefinition:
 
 
 __all__ = [
+    "SUPPORTED_FACTOR_FAMILIES",
     "FactorDefinition",
     "FactorDefinitionValidationResult",
     "FactorInput",
     "FactorLabelPolicy",
     "FactorTransform",
-    "SUPPORTED_FACTOR_FAMILIES",
 ]

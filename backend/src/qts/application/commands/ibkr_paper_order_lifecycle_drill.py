@@ -383,4 +383,4 @@ def _safe_label(label: str | None) -> str:
     return safe or "paper_order_lifecycle_drill"
 
 
-__all__ = ["run_paper_order_lifecycle_drill", "main"]
+__all__ = ["main", "run_paper_order_lifecycle_drill"]

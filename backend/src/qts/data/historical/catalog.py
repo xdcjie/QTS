@@ -303,6 +303,6 @@ class HistoricalCatalogLoadConfig:
 
 __all__ = [
     "HistoricalCatalog",
-    "HistoricalDataset",
     "HistoricalCatalogLoadConfig",
+    "HistoricalDataset",
 ]

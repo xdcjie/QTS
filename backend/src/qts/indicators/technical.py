@@ -984,6 +984,8 @@ class ChaikinMoneyFlow:
 
 __all__ = [
     "ADX",
+    "MACD",
+    "RSI",
     "AccumulationDistribution",
     "AverageTrueRange",
     "BollingerBands",
@@ -996,11 +998,9 @@ __all__ = [
     "HistoricalVolatility",
     "KeltnerChannel",
     "KeltnerChannelValue",
-    "MACD",
     "MACDValue",
     "MoneyFlowIndex",
     "OnBalanceVolume",
-    "RSI",
     "RateOfChange",
     "SessionVWAP",
     "StandardDeviation",

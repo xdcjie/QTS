@@ -10,13 +10,13 @@ import pytest
 
 
 def _evaluate_portfolio_ensemble() -> Any:
-    from qts.research.portfolio_ensemble import evaluate_portfolio_ensemble  # noqa: PLC0415
+    from qts.research.portfolio_ensemble import evaluate_portfolio_ensemble
 
     return evaluate_portfolio_ensemble
 
 
 def _scan_portfolio_ensemble_allocations() -> Any:
-    from qts.research.portfolio_ensemble import (  # noqa: PLC0415
+    from qts.research.portfolio_ensemble import (
         scan_portfolio_ensemble_allocations,
     )
 
@@ -24,7 +24,7 @@ def _scan_portfolio_ensemble_allocations() -> Any:
 
 
 def _scan_volatility_managed_allocations() -> Any:
-    from qts.research.portfolio_ensemble import (  # noqa: PLC0415
+    from qts.research.portfolio_ensemble import (
         scan_volatility_managed_allocations,
     )
 

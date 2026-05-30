@@ -243,7 +243,7 @@ class StatisticsBuilder:
     def _derive_annualization(self) -> Decimal:
         """Return the default annualization factor when none is given.
 
-        Computed as ``252 × bars_per_day`` where ``bars_per_day`` is the
+        Computed as ``252 x bars_per_day`` where ``bars_per_day`` is the
         ratio of observed equity points to distinct calendar dates in
         the equity curve. Falls back to ``252`` when only one day was
         observed (or fewer points than days, which shouldn't happen).
@@ -382,10 +382,7 @@ def _benchmark_metrics(
         Decimal("0"),
     ) / Decimal(n - 1)
     var_b = sum(((b_values[i] - mean_b) ** 2 for i in range(n)), Decimal("0")) / Decimal(n - 1)
-    if var_b == Decimal("0"):
-        beta = Decimal("0")
-    else:
-        beta = cov / var_b
+    beta = Decimal("0") if var_b == Decimal("0") else cov / var_b
     alpha_period = mean_r - beta * mean_b
     diffs = [r_values[i] - b_values[i] for i in range(n)]
     mean_diff = _mean(diffs)

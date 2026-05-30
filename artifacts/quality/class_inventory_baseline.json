@@ -1,5 +1,5 @@
 {
-  "production_class_count": 978,
+  "production_class_count": 979,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -422,6 +422,7 @@
     "qts.quality.rules.order_domain.OrderDomainTypingRule",
     "qts.quality.rules.public_boundary_exceptions.PublicBoundaryExceptionRule",
     "qts.quality.rules.public_surface.PublicSurfaceRule",
+    "qts.quality.rules.pyproject_quality.PyprojectQualityRule",
     "qts.quality.rules.research.EvidenceBundleRequiredForPromotionRule",
     "qts.quality.rules.research.IdeaRegistryRequiredForCandidateRule",
     "qts.quality.rules.research.PromotionConfigBoundaryRule",

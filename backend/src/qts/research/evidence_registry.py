@@ -517,10 +517,7 @@ def _resolve_path_texts(paths: Sequence[str], *, base_dir: Path) -> tuple[str, .
     seen: set[str] = set()
     for path_text in paths:
         path = Path(path_text)
-        if path.is_absolute() or path.exists():
-            resolved_path = path
-        else:
-            resolved_path = base_dir / path
+        resolved_path = path if path.is_absolute() or path.exists() else base_dir / path
         normalized = str(resolved_path)
         if normalized not in seen:
             seen.add(normalized)

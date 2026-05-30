@@ -192,10 +192,7 @@ def _candidate() -> dict[str, Any]:
 def _set_path(payload: dict[str, Any], path: tuple[str | int, ...], value: object) -> None:
     current: Any = payload
     for part in path[:-1]:
-        if isinstance(part, int):
-            current = current[part]
-        else:
-            current = current[part]
+        current = current[part] if isinstance(part, int) else current[part]
     last = path[-1]
     if isinstance(last, int):
         current[last] = value

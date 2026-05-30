@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
@@ -34,7 +34,7 @@ class OrderIntent:
     side: OrderSide
     quantity: Decimal
     account_id: AccountId | None = None
-    order_spec: OrderSpec = OrderSpec()
+    order_spec: OrderSpec = field(default_factory=OrderSpec)
     intent_id: str | None = None
 
     def __post_init__(self) -> None:
@@ -168,13 +168,13 @@ __all__ = [
     "CancelIntent",
     "ExecutionReport",
     "ExecutionReportStatus",
-    "OrderProcessingResult",
-    "OrderState",
-    "OrderStateSnapshot",
     "Order",
     "OrderFill",
     "OrderIntent",
+    "OrderProcessingResult",
     "OrderSide",
     "OrderSpec",
+    "OrderState",
+    "OrderStateSnapshot",
     "ReplaceIntent",
 ]

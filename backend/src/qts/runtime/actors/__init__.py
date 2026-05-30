@@ -53,10 +53,9 @@ __all__ = [
     "GetRouteMetadata",
     "MarketDataActor",
     "MarketDataEvent",
-    "OrderManagerActor",
     "OrderExecutionRequest",
+    "OrderManagerActor",
     "ReplaceOrder",
-    "SubscribeMarketData",
     "SignalAggregatorActor",
     "StrategyActor",
     "StrategyBarEvent",
@@ -65,4 +64,5 @@ __all__ = [
     "StrategyFinalized",
     "StrategySignalEvent",
     "SubmitOrder",
+    "SubscribeMarketData",
 ]

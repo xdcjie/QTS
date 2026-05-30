@@ -193,12 +193,10 @@ class ClassInventoryBudgetRule:
             return False
         if _is_protocol_class(node) or _is_small_boundary_value_class(node):
             return False
-        if (
+        return not (
             self._baseline is not None
             and f"{module_name}.{node.name}" in self._baseline.production_classes
-        ):
-            return False
-        return True
+        )
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
         """Flag production classes growing beyond the inventory baseline or boundary matrix."""
@@ -208,13 +206,14 @@ class ClassInventoryBudgetRule:
         if _class_inventory_baseline_optional(repo_root) and self._baseline is None:
             return violations
         if self._baseline is None:
-            return violations + [
+            return [
+                *violations,
                 GuardrailViolation(
                     code=self.code,
                     path=str(CLASS_INVENTORY_BASELINE_PATH),
                     line=1,
                     message="missing class inventory baseline artifact",
-                )
+                ),
             ]
         parse_violations = _class_inventory_parse_violations(self.code, self._baseline)
         if parse_violations:
@@ -593,8 +592,8 @@ class DuplicateDtoNameRule:
 
 
 __all__ = [
-    "PlatformFreezeRule",
     "ClassInventoryBudgetRule",
-    "SingleFieldDtoJustificationRule",
     "DuplicateDtoNameRule",
+    "PlatformFreezeRule",
+    "SingleFieldDtoJustificationRule",
 ]

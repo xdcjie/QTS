@@ -607,9 +607,7 @@ class VwapPullbackV2Strategy(Strategy):
         if bar.close <= bar.open:
             return False
         vol_ratio = self._decimal_value(self._volume_ratio)
-        if vol_ratio is None or vol_ratio < self._config.min_volume_ratio:
-            return False
-        return True
+        return not (vol_ratio is None or vol_ratio < self._config.min_volume_ratio)
 
     def _is_short_rejection_confirmed(self, bar: Bar, vwap: Decimal) -> bool:
         if bar.close >= vwap:
@@ -617,9 +615,7 @@ class VwapPullbackV2Strategy(Strategy):
         if bar.close >= bar.open:
             return False
         vol_ratio = self._decimal_value(self._volume_ratio)
-        if vol_ratio is None or vol_ratio < self._config.min_volume_ratio:
-            return False
-        return True
+        return not (vol_ratio is None or vol_ratio < self._config.min_volume_ratio)
 
     def _enter_position(self, ctx: StrategyContext, bar: Bar, vwap: Decimal, atr: Decimal) -> None:
         if self._asset is None:

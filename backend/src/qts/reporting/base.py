@@ -238,9 +238,9 @@ class RuntimeArtifactWriter(Protocol):
 
 __all__ = [
     "CANONICAL_RUNTIME_MANIFEST_FIELDS",
-    "PLATFORM_BASELINE_VERSION",
     "NON_BROKER_HASH_SENTINEL",
     "NON_BROKER_SOURCE_COMMIT",
+    "PLATFORM_BASELINE_VERSION",
     "RUNTIME_ARTIFACT_SCHEMA_VERSION",
     "ReportWriter",
     "RuntimeArtifactWriter",

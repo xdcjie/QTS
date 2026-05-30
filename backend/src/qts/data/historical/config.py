@@ -334,11 +334,11 @@ class HistoricalMarketDataConfig:
 
 
 __all__ = [
-    "HistoricalDataCatalogConfig",
-    "HistoricalMarketDataConfig",
-    "HistoricalDataStoreDefaults",
     "HistoricalBarFileConfig",
+    "HistoricalDataCatalogConfig",
+    "HistoricalDataStoreConfig",
+    "HistoricalDataStoreDefaults",
     "HistoricalDatasetConfig",
     "HistoricalDatasetLocation",
-    "HistoricalDataStoreConfig",
+    "HistoricalMarketDataConfig",
 ]

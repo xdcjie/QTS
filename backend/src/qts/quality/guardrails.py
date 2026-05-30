@@ -6,7 +6,7 @@ import ast
 import json
 import re
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 from typing import Protocol, cast, runtime_checkable
 
@@ -535,7 +535,7 @@ def _load_platform_freeze_config(repo_root: Path) -> PlatformFreezeConfig:
     allowed: set[tuple[str, str]] = set()
     expired: set[tuple[str, str]] = set()
     parse_violations: set[tuple[int, str]] = set()
-    today = date.today()
+    today = datetime.now(tz=UTC).date()
     horizon = today + _PLATFORM_FREEZE_MAX_HORIZON
     for index, item in enumerate(raw_exceptions, start=1):
         if not isinstance(item, dict):
@@ -1185,16 +1185,19 @@ def _check_forbidden_tokens(
                     message=f"{name!r} uses a specialized token; {description}",
                 )
             )
-        if isinstance(node, ast.Constant) and isinstance(node.value, str):
-            if _contains_forbidden_token(node.value, tokens):
-                violations.append(
-                    GuardrailViolation(
-                        code=code,
-                        path=str(relative_path),
-                        line=getattr(node, "lineno", 1),
-                        message=f"{node.value!r} uses a specialized token; {description}",
-                    )
+        if (
+            isinstance(node, ast.Constant)
+            and isinstance(node.value, str)
+            and _contains_forbidden_token(node.value, tokens)
+        ):
+            violations.append(
+                GuardrailViolation(
+                    code=code,
+                    path=str(relative_path),
+                    line=getattr(node, "lineno", 1),
+                    message=f"{node.value!r} uses a specialized token; {description}",
                 )
+            )
     return violations
 
 

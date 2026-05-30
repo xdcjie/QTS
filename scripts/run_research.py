@@ -1818,7 +1818,7 @@ def _required_mapping_text(payload: Mapping[str, Any], field_name: str) -> str:
 
 def _find_reproducibility_v2_path(bundle: ResearchEvidenceBundle) -> str | None:
     if bundle.artifact_paths:
-        for path_text in bundle.artifact_paths.keys():
+        for path_text in bundle.artifact_paths:
             if path_text.endswith("reproducibility_v2.json"):
                 return path_text
     return None

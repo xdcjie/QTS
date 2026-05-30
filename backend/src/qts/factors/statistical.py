@@ -9,6 +9,7 @@ bar.
 
 from __future__ import annotations
 
+import itertools
 from collections.abc import Callable
 from dataclasses import dataclass
 from decimal import Decimal
@@ -34,7 +35,7 @@ def _population_std(values: tuple[Decimal, ...]) -> Decimal:
 def _simple_returns(values: tuple[Decimal, ...]) -> tuple[Decimal, ...]:
     """Return period-over-period simple returns, skipping zero-price denominators."""
     returns: list[Decimal] = []
-    for previous, current in zip(values[:-1], values[1:], strict=True):
+    for previous, current in itertools.pairwise(values):
         if previous == Decimal("0"):
             raise ValueError("price must not be zero when computing returns")
         returns.append(current / previous - Decimal("1"))

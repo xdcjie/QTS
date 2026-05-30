@@ -26,6 +26,7 @@ the synthesizer's own real-time grid and never the point->bucket assignment.
 
 from __future__ import annotations
 
+import itertools
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from zoneinfo import ZoneInfo
@@ -142,7 +143,7 @@ def test_five_minute_consolidation_tiles_real_timeline_across_dst(
     for bar in completed:
         assert bar.end_time - bar.start_time == _FIVE_MINUTES
     # ...and the buckets tile the session contiguously with no gap or overlap.
-    for earlier, later in zip(completed, completed[1:], strict=False):
+    for earlier, later in itertools.pairwise(completed):
         assert earlier.end_time == later.start_time
 
     # DST occurrence accounting in exchange-local terms: the repeated fall-back

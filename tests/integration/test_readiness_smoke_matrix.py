@@ -244,9 +244,7 @@ def _runtime_two_accounts_isolation(output_dir: Path, mode: RuntimeMode) -> Smok
     result = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC)))
     sink.close()
 
-    snapshot_by_account = {
-        account_id: snapshot for account_id, snapshot in result.account_snapshots
-    }
+    snapshot_by_account = dict(result.account_snapshots)
     assert snapshot_by_account[account_a].positions[
         InstrumentId("EQUITY.US.NASDAQ.AAPL")
     ].quantity == Decimal("1")

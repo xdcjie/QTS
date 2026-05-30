@@ -757,11 +757,12 @@ class BrokerRuntimeConfig:
                 raise ValueError("live mode requires execution_environment=broker")
             if self.market_data_environment is not MarketDataEnvironment.REALTIME:
                 raise ValueError("live mode requires market_data_environment=realtime")
-            if self.broker_port is not None and self.broker_port != 4001:
-                if not self.broker_port_override_reason:
-                    raise ValueError(
-                        "live broker port override requires broker_port_override_reason"
-                    )
+            if (
+                self.broker_port is not None
+                and self.broker_port != 4001
+                and not self.broker_port_override_reason
+            ):
+                raise ValueError("live broker port override requires broker_port_override_reason")
             if not self.allow_live_orders:
                 raise ValueError("live mode requires allow_live_orders=true")
             if not self.operator_signoff_id:
@@ -800,15 +801,15 @@ class BrokerRuntimeConfig:
 
 
 __all__ = [
-    "TradingRuntimeConfig",
+    "BacktestCostModel",
+    "BacktestEngineConfig",
+    "BacktestMarketDataReference",
+    "BacktestRiskConfig",
+    "BacktestRuntimeConfig",
+    "BacktestStrategyConfig",
+    "BrokerRuntimeConfig",
     "ConfigMigration",
     "ConfigMigrationResult",
-    "BacktestMarketDataReference",
-    "BacktestRuntimeConfig",
-    "BrokerRuntimeConfig",
-    "BacktestEngineConfig",
-    "BacktestCostModel",
-    "BacktestStrategyConfig",
-    "BacktestRiskConfig",
     "RollPolicyConfig",
+    "TradingRuntimeConfig",
 ]

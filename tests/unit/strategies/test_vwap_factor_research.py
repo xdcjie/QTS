@@ -151,13 +151,11 @@ def test_ma_50_200_filter_requires_alignment_with_trade_direction() -> None:
     ctx.indicator.created[("sma", 50)].value = Decimal("105")
     ctx.indicator.created[("sma", 200)].value = Decimal("100")
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
-        "ma50_200_aligned", _bar(), Decimal("100"), Decimal("2")
-    )
+    assert strategy._factor_filter_passes("ma50_200_aligned", _bar(), Decimal("100"), Decimal("2"))
 
     ctx.indicator.created[("sma", 50)].value = Decimal("95")
 
-    assert not strategy._factor_filter_passes(  # noqa: SLF001
+    assert not strategy._factor_filter_passes(
         "ma50_200_aligned", _bar(), Decimal("100"), Decimal("2")
     )
 
@@ -167,22 +165,16 @@ def test_ma_20_80_min_filter_requires_directional_minimum_spread() -> None:
     ctx.indicator.created[("sma", 20)].value = Decimal("103")
     ctx.indicator.created[("sma", 80)].value = Decimal("100")
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
-        "ma20_80_min", _bar(), Decimal("100"), Decimal("2")
-    )
+    assert strategy._factor_filter_passes("ma20_80_min", _bar(), Decimal("100"), Decimal("2"))
 
     ctx.indicator.created[("sma", 20)].value = Decimal("101")
 
-    assert not strategy._factor_filter_passes(  # noqa: SLF001
-        "ma20_80_min", _bar(), Decimal("100"), Decimal("2")
-    )
+    assert not strategy._factor_filter_passes("ma20_80_min", _bar(), Decimal("100"), Decimal("2"))
 
-    strategy._enter_state(_State.WAIT_REJECTION, PositionSide.SHORT)  # noqa: SLF001
+    strategy._enter_state(_State.WAIT_REJECTION, PositionSide.SHORT)
     ctx.indicator.created[("sma", 20)].value = Decimal("97")
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
-        "ma20_80_min", _bar(), Decimal("100"), Decimal("2")
-    )
+    assert strategy._factor_filter_passes("ma20_80_min", _bar(), Decimal("100"), Decimal("2"))
 
 
 def test_technical_score_filter_counts_multiple_confirmation_rules() -> None:
@@ -210,7 +202,7 @@ def test_technical_score_filter_counts_multiple_confirmation_rules() -> None:
     ctx.indicator.created[("rsi", 14)].value = Decimal("50")
     ctx.indicator.created[("mfi", 14)].value = Decimal("55")
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
+    assert strategy._factor_filter_passes(
         "technical_score_min", _bar(), Decimal("100"), Decimal("2")
     )
 
@@ -219,20 +211,20 @@ def test_vwap_slope_strength_filter_requires_directional_atr_scaled_slope() -> N
     strategy, _ctx = initialized_strategy(
         VwapFactorResearchConfig(vwap_slope_min_atr=Decimal("0.2"))
     )
-    strategy._session.vwap_history.extend(  # noqa: SLF001
+    strategy._session.vwap_history.extend(
         (Decimal("100.0"), Decimal("100.1"), Decimal("100.2"), Decimal("100.4"), Decimal("100.6"))
     )
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
+    assert strategy._factor_filter_passes(
         "vwap_slope_strength", _bar(), Decimal("100"), Decimal("2")
     )
 
-    strategy._session.vwap_history.clear()  # noqa: SLF001
-    strategy._session.vwap_history.extend(  # noqa: SLF001
+    strategy._session.vwap_history.clear()
+    strategy._session.vwap_history.extend(
         (Decimal("100.0"), Decimal("100.05"), Decimal("100.1"), Decimal("100.2"), Decimal("100.3"))
     )
 
-    assert not strategy._factor_filter_passes(  # noqa: SLF001
+    assert not strategy._factor_filter_passes(
         "vwap_slope_strength", _bar(), Decimal("100"), Decimal("2")
     )
 
@@ -245,10 +237,10 @@ def test_atr_pct_range_filter_bounds_current_volatility_regime() -> None:
         )
     )
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
+    assert strategy._factor_filter_passes(
         "atr_pct_range", _bar(close=Decimal("100")), Decimal("100"), Decimal("1")
     )
-    assert not strategy._factor_filter_passes(  # noqa: SLF001
+    assert not strategy._factor_filter_passes(
         "atr_pct_range", _bar(close=Decimal("100")), Decimal("100"), Decimal("2")
     )
 
@@ -260,17 +252,17 @@ def test_session_sigma_range_filter_bounds_intraday_noise_regime() -> None:
             session_sigma_max_atr=Decimal("0.6"),
         )
     )
-    strategy._session.sum_var_x_vol = Decimal("1")  # noqa: SLF001
-    strategy._session.sum_vol = Decimal("4")  # noqa: SLF001
+    strategy._session.sum_var_x_vol = Decimal("1")
+    strategy._session.sum_vol = Decimal("4")
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
+    assert strategy._factor_filter_passes(
         "session_sigma_range", _bar(), Decimal("100"), Decimal("2")
     )
 
-    strategy._session.sum_var_x_vol = Decimal("9")  # noqa: SLF001
-    strategy._session.sum_vol = Decimal("1")  # noqa: SLF001
+    strategy._session.sum_var_x_vol = Decimal("9")
+    strategy._session.sum_vol = Decimal("1")
 
-    assert not strategy._factor_filter_passes(  # noqa: SLF001
+    assert not strategy._factor_filter_passes(
         "session_sigma_range", _bar(), Decimal("100"), Decimal("2")
     )
 
@@ -285,23 +277,23 @@ def test_session_sigma_or_ma20_80_min_keeps_sigma_cap() -> None:
     )
     ctx.indicator.created[("sma", 20)].value = Decimal("103")
     ctx.indicator.created[("sma", 80)].value = Decimal("100")
-    strategy._session.sum_var_x_vol = Decimal("1")  # noqa: SLF001
-    strategy._session.sum_vol = Decimal("1")  # noqa: SLF001
+    strategy._session.sum_var_x_vol = Decimal("1")
+    strategy._session.sum_vol = Decimal("1")
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
+    assert strategy._factor_filter_passes(
         "session_sigma_or_ma20_80_min", _bar(), Decimal("100"), Decimal("2")
     )
 
     ctx.indicator.created[("sma", 20)].value = Decimal("101")
 
-    assert not strategy._factor_filter_passes(  # noqa: SLF001
+    assert not strategy._factor_filter_passes(
         "session_sigma_or_ma20_80_min", _bar(), Decimal("100"), Decimal("2")
     )
 
     ctx.indicator.created[("sma", 20)].value = Decimal("103")
-    strategy._session.sum_var_x_vol = Decimal("16")  # noqa: SLF001
+    strategy._session.sum_var_x_vol = Decimal("16")
 
-    assert not strategy._factor_filter_passes(  # noqa: SLF001
+    assert not strategy._factor_filter_passes(
         "session_sigma_or_ma20_80_min", _bar(), Decimal("100"), Decimal("2")
     )
 
@@ -313,15 +305,13 @@ def test_vwap_acceptance_filter_requires_directional_close_acceptance() -> None:
             vwap_acceptance_min=Decimal("0.75"),
         )
     )
-    strategy._session.vwap_position_history.extend((1, 1, 1, -1))  # noqa: SLF001
+    strategy._session.vwap_position_history.extend((1, 1, 1, -1))
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
-        "vwap_acceptance", _bar(), Decimal("100"), Decimal("2")
-    )
+    assert strategy._factor_filter_passes("vwap_acceptance", _bar(), Decimal("100"), Decimal("2"))
 
-    strategy._enter_state(_State.WAIT_REJECTION, PositionSide.SHORT)  # noqa: SLF001
+    strategy._enter_state(_State.WAIT_REJECTION, PositionSide.SHORT)
 
-    assert not strategy._factor_filter_passes(  # noqa: SLF001
+    assert not strategy._factor_filter_passes(
         "vwap_acceptance", _bar(), Decimal("100"), Decimal("2")
     )
 
@@ -333,20 +323,18 @@ def test_trend_efficiency_filter_requires_directional_low_churn_vwap_path() -> N
             trend_efficiency_min=Decimal("0.80"),
         )
     )
-    strategy._session.vwap_history.extend(  # noqa: SLF001
+    strategy._session.vwap_history.extend(
         (Decimal("100"), Decimal("101"), Decimal("102"), Decimal("103"), Decimal("104"))
     )
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
-        "trend_efficiency", _bar(), Decimal("100"), Decimal("2")
-    )
+    assert strategy._factor_filter_passes("trend_efficiency", _bar(), Decimal("100"), Decimal("2"))
 
-    strategy._session.vwap_history.clear()  # noqa: SLF001
-    strategy._session.vwap_history.extend(  # noqa: SLF001
+    strategy._session.vwap_history.clear()
+    strategy._session.vwap_history.extend(
         (Decimal("100"), Decimal("102"), Decimal("101"), Decimal("103"), Decimal("102"))
     )
 
-    assert not strategy._factor_filter_passes(  # noqa: SLF001
+    assert not strategy._factor_filter_passes(
         "trend_efficiency", _bar(), Decimal("100"), Decimal("2")
     )
 
@@ -355,32 +343,24 @@ def test_trend_age_filter_rejects_too_young_and_late_trends() -> None:
     strategy, _ctx = initialized_strategy(
         VwapFactorResearchConfig(trend_age_min_bars=2, trend_age_max_bars=5)
     )
-    strategy._session.trend_direction = 1  # noqa: SLF001
-    strategy._session.trend_age_bars = 3  # noqa: SLF001
+    strategy._session.trend_direction = 1
+    strategy._session.trend_age_bars = 3
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
-        "trend_age", _bar(), Decimal("100"), Decimal("2")
-    )
+    assert strategy._factor_filter_passes("trend_age", _bar(), Decimal("100"), Decimal("2"))
 
-    strategy._session.trend_age_bars = 1  # noqa: SLF001
+    strategy._session.trend_age_bars = 1
 
-    assert not strategy._factor_filter_passes(  # noqa: SLF001
-        "trend_age", _bar(), Decimal("100"), Decimal("2")
-    )
+    assert not strategy._factor_filter_passes("trend_age", _bar(), Decimal("100"), Decimal("2"))
 
-    strategy._session.trend_age_bars = 6  # noqa: SLF001
+    strategy._session.trend_age_bars = 6
 
-    assert not strategy._factor_filter_passes(  # noqa: SLF001
-        "trend_age", _bar(), Decimal("100"), Decimal("2")
-    )
+    assert not strategy._factor_filter_passes("trend_age", _bar(), Decimal("100"), Decimal("2"))
 
-    strategy._enter_state(_State.WAIT_REJECTION, PositionSide.SHORT)  # noqa: SLF001
-    strategy._session.trend_direction = -1  # noqa: SLF001
-    strategy._session.trend_age_bars = 3  # noqa: SLF001
+    strategy._enter_state(_State.WAIT_REJECTION, PositionSide.SHORT)
+    strategy._session.trend_direction = -1
+    strategy._session.trend_age_bars = 3
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
-        "trend_age", _bar(), Decimal("100"), Decimal("2")
-    )
+    assert strategy._factor_filter_passes("trend_age", _bar(), Decimal("100"), Decimal("2"))
 
 
 def test_range_expansion_filter_uses_prior_same_minute_ranges() -> None:
@@ -391,25 +371,21 @@ def test_range_expansion_filter_uses_prior_same_minute_ranges() -> None:
         )
     )
     bar = _bar(high=Decimal("103"), low=Decimal("100"))
-    minute = strategy._et_minute(bar)  # noqa: SLF001
-    strategy._session_range_curve_history[minute] = deque(  # noqa: SLF001
+    minute = strategy._et_minute(bar)
+    strategy._session_range_curve_history[minute] = deque(
         (Decimal("2"), Decimal("2"), Decimal("2"), Decimal("2"), Decimal("2")),
-        maxlen=strategy._config.range_expansion_lookback_sessions + 1,  # noqa: SLF001
+        maxlen=strategy._config.range_expansion_lookback_sessions + 1,
     )
-    strategy._update_session_state(bar)  # noqa: SLF001
+    strategy._update_session_state(bar)
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
-        "range_expansion", bar, Decimal("100"), Decimal("2")
-    )
+    assert strategy._factor_filter_passes("range_expansion", bar, Decimal("100"), Decimal("2"))
 
-    strategy._config = VwapFactorResearchConfig(  # noqa: SLF001
+    strategy._config = VwapFactorResearchConfig(
         range_expansion_min=Decimal("1.6"),
         range_expansion_max=Decimal("2.0"),
     )
 
-    assert not strategy._factor_filter_passes(  # noqa: SLF001
-        "range_expansion", bar, Decimal("100"), Decimal("2")
-    )
+    assert not strategy._factor_filter_passes("range_expansion", bar, Decimal("100"), Decimal("2"))
 
 
 def test_vwap_acceptance_or_range_expansion_allows_trend_escape() -> None:
@@ -422,22 +398,22 @@ def test_vwap_acceptance_or_range_expansion_allows_trend_escape() -> None:
         )
     )
     bar = _bar(high=Decimal("103"), low=Decimal("100"))
-    minute = strategy._et_minute(bar)  # noqa: SLF001
-    strategy._session.vwap_position_history.extend((1, -1, -1, -1))  # noqa: SLF001
-    strategy._session_range_curve_history[minute] = deque(  # noqa: SLF001
+    minute = strategy._et_minute(bar)
+    strategy._session.vwap_position_history.extend((1, -1, -1, -1))
+    strategy._session_range_curve_history[minute] = deque(
         (Decimal("2"), Decimal("2"), Decimal("2"), Decimal("2"), Decimal("2")),
-        maxlen=strategy._config.range_expansion_lookback_sessions + 1,  # noqa: SLF001
+        maxlen=strategy._config.range_expansion_lookback_sessions + 1,
     )
-    strategy._update_session_state(bar)  # noqa: SLF001
+    strategy._update_session_state(bar)
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
+    assert strategy._factor_filter_passes(
         "vwap_acceptance_or_range_expansion", bar, Decimal("100"), Decimal("2")
     )
 
-    strategy._session.session_high = Decimal("101")  # noqa: SLF001
-    strategy._session.session_low = Decimal("100")  # noqa: SLF001
+    strategy._session.session_high = Decimal("101")
+    strategy._session.session_low = Decimal("100")
 
-    assert not strategy._factor_filter_passes(  # noqa: SLF001
+    assert not strategy._factor_filter_passes(
         "vwap_acceptance_or_range_expansion", bar, Decimal("100"), Decimal("2")
     )
 
@@ -453,22 +429,22 @@ def test_vwap_acceptance_if_bad_regime_only_tightens_blocked_regime() -> None:
             vwap_acceptance_min=Decimal("0.75"),
         )
     )
-    strategy._session.vwap_position_history.extend((1, -1, -1, -1))  # noqa: SLF001
+    strategy._session.vwap_position_history.extend((1, -1, -1, -1))
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
+    assert strategy._factor_filter_passes(
         "vwap_acceptance_if_bad_regime", _bar(), Decimal("100"), Decimal("2")
     )
 
     _feed_bad_regime_sessions(strategy)
 
-    assert not strategy._factor_filter_passes(  # noqa: SLF001
+    assert not strategy._factor_filter_passes(
         "vwap_acceptance_if_bad_regime", _bar(session_id="2026-05-23"), Decimal("100"), Decimal("2")
     )
 
-    strategy._session.vwap_position_history.clear()  # noqa: SLF001
-    strategy._session.vwap_position_history.extend((1, 1, 1, -1))  # noqa: SLF001
+    strategy._session.vwap_position_history.clear()
+    strategy._session.vwap_position_history.extend((1, 1, 1, -1))
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
+    assert strategy._factor_filter_passes(
         "vwap_acceptance_if_bad_regime", _bar(session_id="2026-05-23"), Decimal("100"), Decimal("2")
     )
 
@@ -485,19 +461,19 @@ def test_mom120_min_if_bad_regime_only_tightens_blocked_regime() -> None:
     )
     ctx.indicator.created[("roc", 120)].value = Decimal("0.5")
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
+    assert strategy._factor_filter_passes(
         "mom120_min_if_bad_regime", _bar(), Decimal("100"), Decimal("2")
     )
 
     _feed_bad_regime_sessions(strategy)
 
-    assert not strategy._factor_filter_passes(  # noqa: SLF001
+    assert not strategy._factor_filter_passes(
         "mom120_min_if_bad_regime", _bar(session_id="2026-05-23"), Decimal("100"), Decimal("2")
     )
 
     ctx.indicator.created[("roc", 120)].value = Decimal("1.5")
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
+    assert strategy._factor_filter_passes(
         "mom120_min_if_bad_regime", _bar(session_id="2026-05-23"), Decimal("100"), Decimal("2")
     )
 
@@ -512,7 +488,7 @@ def test_vwap_slope_strength_if_bad_regime_only_tightens_blocked_regime() -> Non
             vwap_slope_min_atr=Decimal("0.20"),
         )
     )
-    strategy._session.vwap_history.extend(  # noqa: SLF001
+    strategy._session.vwap_history.extend(
         (
             Decimal("100.0"),
             Decimal("100.02"),
@@ -522,21 +498,21 @@ def test_vwap_slope_strength_if_bad_regime_only_tightens_blocked_regime() -> Non
         )
     )
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
+    assert strategy._factor_filter_passes(
         "vwap_slope_strength_if_bad_regime", _bar(), Decimal("100"), Decimal("2")
     )
 
     _feed_bad_regime_sessions(strategy)
 
-    assert not strategy._factor_filter_passes(  # noqa: SLF001
+    assert not strategy._factor_filter_passes(
         "vwap_slope_strength_if_bad_regime",
         _bar(session_id="2026-05-23"),
         Decimal("100"),
         Decimal("2"),
     )
 
-    strategy._session.vwap_history.clear()  # noqa: SLF001
-    strategy._session.vwap_history.extend(  # noqa: SLF001
+    strategy._session.vwap_history.clear()
+    strategy._session.vwap_history.extend(
         (
             Decimal("100.0"),
             Decimal("100.2"),
@@ -546,7 +522,7 @@ def test_vwap_slope_strength_if_bad_regime_only_tightens_blocked_regime() -> Non
         )
     )
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
+    assert strategy._factor_filter_passes(
         "vwap_slope_strength_if_bad_regime",
         _bar(session_id="2026-05-23"),
         Decimal("100"),
@@ -558,23 +534,19 @@ def test_rth_drive_min_atr_filter_requires_directional_open_drive_strength() -> 
     strategy, _ctx = initialized_strategy(
         VwapFactorResearchConfig(rth_drive_min_atr=Decimal("0.5"))
     )
-    strategy._session.rth_drive = Decimal("2")  # noqa: SLF001
+    strategy._session.rth_drive = Decimal("2")
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
+    assert strategy._factor_filter_passes("rth_drive_min_atr", _bar(), Decimal("100"), Decimal("2"))
+
+    strategy._session.rth_drive = Decimal("-2")
+
+    assert not strategy._factor_filter_passes(
         "rth_drive_min_atr", _bar(), Decimal("100"), Decimal("2")
     )
 
-    strategy._session.rth_drive = Decimal("-2")  # noqa: SLF001
+    strategy._enter_state(_State.WAIT_REJECTION, PositionSide.SHORT)
 
-    assert not strategy._factor_filter_passes(  # noqa: SLF001
-        "rth_drive_min_atr", _bar(), Decimal("100"), Decimal("2")
-    )
-
-    strategy._enter_state(_State.WAIT_REJECTION, PositionSide.SHORT)  # noqa: SLF001
-
-    assert strategy._factor_filter_passes(  # noqa: SLF001
-        "rth_drive_min_atr", _bar(), Decimal("100"), Decimal("2")
-    )
+    assert strategy._factor_filter_passes("rth_drive_min_atr", _bar(), Decimal("100"), Decimal("2"))
 
 
 def test_rejection_quality_filter_requires_directional_close_location_and_body() -> None:
@@ -585,22 +557,22 @@ def test_rejection_quality_filter_requires_directional_close_location_and_body()
         )
     )
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
+    assert strategy._factor_filter_passes(
         "rejection_quality",
         _bar(open=Decimal("100"), high=Decimal("102"), low=Decimal("99"), close=Decimal("101.5")),
         Decimal("100"),
         Decimal("2"),
     )
-    assert not strategy._factor_filter_passes(  # noqa: SLF001
+    assert not strategy._factor_filter_passes(
         "rejection_quality",
         _bar(open=Decimal("100"), high=Decimal("102"), low=Decimal("99"), close=Decimal("100.5")),
         Decimal("100"),
         Decimal("2"),
     )
 
-    strategy._enter_state(_State.WAIT_REJECTION, PositionSide.SHORT)  # noqa: SLF001
+    strategy._enter_state(_State.WAIT_REJECTION, PositionSide.SHORT)
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
+    assert strategy._factor_filter_passes(
         "rejection_quality",
         _bar(open=Decimal("101"), high=Decimal("102"), low=Decimal("99"), close=Decimal("99.5")),
         Decimal("100"),
@@ -612,20 +584,20 @@ def test_trend_regime_filter_combines_slope_momentum_and_moving_average_alignmen
     strategy, ctx = initialized_strategy(
         VwapFactorResearchConfig(vwap_slope_min_atr=Decimal("0.2"))
     )
-    strategy._session.vwap_history.extend(  # noqa: SLF001
+    strategy._session.vwap_history.extend(
         (Decimal("100.0"), Decimal("100.1"), Decimal("100.2"), Decimal("100.4"), Decimal("100.6"))
     )
     ctx.indicator.created[("roc", 120)].value = Decimal("0.5")
     ctx.indicator.created[("sma", 20)].value = Decimal("103")
     ctx.indicator.created[("sma", 80)].value = Decimal("100")
 
-    assert strategy._factor_filter_passes(  # noqa: SLF001
+    assert strategy._factor_filter_passes(
         "trend_regime_aligned", _bar(), Decimal("100"), Decimal("2")
     )
 
     ctx.indicator.created[("sma", 20)].value = Decimal("99")
 
-    assert not strategy._factor_filter_passes(  # noqa: SLF001
+    assert not strategy._factor_filter_passes(
         "trend_regime_aligned", _bar(), Decimal("100"), Decimal("2")
     )
 
@@ -651,11 +623,11 @@ def test_factor_diagnostics_record_values_and_failed_filter() -> None:
             session_sigma_max_atr=Decimal("0.2"),
         )
     )
-    strategy._session.sum_var_x_vol = Decimal("9")  # noqa: SLF001
-    strategy._session.sum_vol = Decimal("1")  # noqa: SLF001
+    strategy._session.sum_var_x_vol = Decimal("9")
+    strategy._session.sum_vol = Decimal("1")
     ctx.indicator.created[("roc", 120)].value = Decimal("0.5")
 
-    assert not strategy._factor_filters_pass(_bar(), Decimal("100"), Decimal("2"))  # noqa: SLF001
+    assert not strategy._factor_filters_pass(_bar(), Decimal("100"), Decimal("2"))
 
     assert strategy.factor_diagnostics == (
         {
@@ -674,12 +646,12 @@ def test_entry_intent_metadata_carries_factor_diagnostics_for_artifacts() -> Non
             session_sigma_max_atr=Decimal("0.20"),
         )
     )
-    strategy._session.sum_var_x_vol = Decimal("0.04")  # noqa: SLF001
-    strategy._session.sum_vol = Decimal("1")  # noqa: SLF001
+    strategy._session.sum_var_x_vol = Decimal("0.04")
+    strategy._session.sum_vol = Decimal("1")
     ctx.indicator.created[("roc", 120)].value = Decimal("0.5")
     ctx.indicator.created[("volume_ratio", 20)].value = Decimal("2")
 
-    strategy._step_wait_rejection(  # noqa: SLF001
+    strategy._step_wait_rejection(
         cast(StrategyContext, ctx),
         _bar(open=Decimal("100"), close=Decimal("101")),
         Decimal("100"),
@@ -697,22 +669,22 @@ def test_entry_intent_metadata_carries_factor_diagnostics_for_artifacts() -> Non
 def test_overnight_research_time_windows_are_half_open_in_exchange_time() -> None:
     overnight = VwapFactorResearchStrategy(VwapFactorResearchConfig(time_window="overnight_18_06"))
 
-    assert overnight._time_allowed(_bar_at_et(23, 30))  # noqa: SLF001
-    assert overnight._time_allowed(_bar_at_et(1, 30))  # noqa: SLF001
-    assert not overnight._time_allowed(_bar_at_et(6, 0))  # noqa: SLF001
+    assert overnight._time_allowed(_bar_at_et(23, 30))
+    assert overnight._time_allowed(_bar_at_et(1, 30))
+    assert not overnight._time_allowed(_bar_at_et(6, 0))
 
     extended = VwapFactorResearchStrategy(VwapFactorResearchConfig(time_window="night_18_08"))
 
-    assert extended._time_allowed(_bar_at_et(7, 59))  # noqa: SLF001
-    assert not extended._time_allowed(_bar_at_et(8, 0))  # noqa: SLF001
-    assert not extended._time_allowed(_bar_at_et(17, 30))  # noqa: SLF001
+    assert extended._time_allowed(_bar_at_et(7, 59))
+    assert not extended._time_allowed(_bar_at_et(8, 0))
+    assert not extended._time_allowed(_bar_at_et(17, 30))
 
     late_asia = VwapFactorResearchStrategy(VwapFactorResearchConfig(time_window="asia_22_02"))
 
-    assert not late_asia._time_allowed(_bar_at_et(21, 59))  # noqa: SLF001
-    assert late_asia._time_allowed(_bar_at_et(22, 0))  # noqa: SLF001
-    assert late_asia._time_allowed(_bar_at_et(1, 59))  # noqa: SLF001
-    assert not late_asia._time_allowed(_bar_at_et(2, 0))  # noqa: SLF001
+    assert not late_asia._time_allowed(_bar_at_et(21, 59))
+    assert late_asia._time_allowed(_bar_at_et(22, 0))
+    assert late_asia._time_allowed(_bar_at_et(1, 59))
+    assert not late_asia._time_allowed(_bar_at_et(2, 0))
 
 
 def test_session_open_cooloff_blocks_new_session_opening_noise() -> None:
@@ -723,15 +695,15 @@ def test_session_open_cooloff_blocks_new_session_opening_noise() -> None:
         )
     )
 
-    assert not strategy._time_allowed(_bar_at_et(18, 29))  # noqa: SLF001
-    assert strategy._time_allowed(_bar_at_et(18, 30))  # noqa: SLF001
-    assert strategy._time_allowed(_bar_at_et(21, 59))  # noqa: SLF001
+    assert not strategy._time_allowed(_bar_at_et(18, 29))
+    assert strategy._time_allowed(_bar_at_et(18, 30))
+    assert strategy._time_allowed(_bar_at_et(21, 59))
 
 
 def test_default_session_open_cooloff_preserves_opening_hour_behavior() -> None:
     strategy = VwapFactorResearchStrategy(VwapFactorResearchConfig(time_window="evening_18_22"))
 
-    assert strategy._time_allowed(_bar_at_et(18, 0))  # noqa: SLF001
+    assert strategy._time_allowed(_bar_at_et(18, 0))
 
 
 def test_blocked_entry_session_mask_resets_setup_without_entry() -> None:
@@ -748,7 +720,7 @@ def test_blocked_entry_session_mask_resets_setup_without_entry() -> None:
     )
 
     assert ctx.intents == []
-    assert strategy._state == _State.IDLE  # noqa: SLF001
+    assert strategy._state == _State.IDLE
 
 
 def test_blocked_entry_session_mask_still_allows_existing_position_exit() -> None:
@@ -758,11 +730,11 @@ def test_blocked_entry_session_mask_still_allows_existing_position_exit() -> Non
     ctx.indicator.created[("session_vwap", None)].value = Decimal("100")
     ctx.indicator.created[("atr", 14)].value = Decimal("2")
     ctx.indicator.created[("volume_ratio", 20)].value = Decimal("2")
-    strategy._state = _State.ENTERED  # noqa: SLF001
-    strategy._direction = PositionSide.LONG  # noqa: SLF001
-    strategy._entry_price = Decimal("101")  # noqa: SLF001
-    strategy._stop_price = Decimal("98")  # noqa: SLF001
-    strategy._target_2 = Decimal("107")  # noqa: SLF001
+    strategy._state = _State.ENTERED
+    strategy._direction = PositionSide.LONG
+    strategy._entry_price = Decimal("101")
+    strategy._stop_price = Decimal("98")
+    strategy._target_2 = Decimal("107")
 
     strategy.on_bar(
         cast(StrategyContext, ctx),
@@ -780,9 +752,9 @@ def test_session_entry_limit_blocks_second_entry_in_same_session() -> None:
     ctx.indicator.created[("session_vwap", None)].value = Decimal("100")
     ctx.indicator.created[("atr", 14)].value = Decimal("2")
     ctx.indicator.created[("volume_ratio", 20)].value = Decimal("2")
-    strategy._session.session_id = "2026-05-20"  # noqa: SLF001
-    strategy._session.entries = 1  # noqa: SLF001
-    strategy._enter_state(_State.WAIT_REJECTION, PositionSide.LONG)  # noqa: SLF001
+    strategy._session.session_id = "2026-05-20"
+    strategy._session.entries = 1
+    strategy._enter_state(_State.WAIT_REJECTION, PositionSide.LONG)
 
     strategy.on_bar(
         cast(StrategyContext, ctx),
@@ -790,19 +762,19 @@ def test_session_entry_limit_blocks_second_entry_in_same_session() -> None:
     )
 
     assert ctx.intents == []
-    assert strategy._state == _State.IDLE  # noqa: SLF001
+    assert strategy._state == _State.IDLE
 
 
 def test_session_entry_limit_resets_with_new_session_state() -> None:
     strategy, ctx = initialized_strategy(VwapFactorResearchConfig(max_entries_per_session=1))
     ctx.indicator.created[("session_vwap", None)].value = Decimal("100")
-    strategy._session.session_id = "2026-05-20"  # noqa: SLF001
-    strategy._session.entries = 1  # noqa: SLF001
+    strategy._session.session_id = "2026-05-20"
+    strategy._session.entries = 1
 
-    strategy._update_session_state(_bar(session_id="2026-05-21"))  # noqa: SLF001
+    strategy._update_session_state(_bar(session_id="2026-05-21"))
 
-    assert strategy._session.session_id == "2026-05-21"  # noqa: SLF001
-    assert strategy._session.entries == 0  # noqa: SLF001
+    assert strategy._session.session_id == "2026-05-21"
+    assert strategy._session.entries == 0
 
 
 def test_long_exit_levels_use_entry_price_atr_and_r_multiple() -> None:
@@ -813,16 +785,16 @@ def test_long_exit_levels_use_entry_price_atr_and_r_multiple() -> None:
         )
     )
 
-    strategy._enter_position(  # noqa: SLF001
+    strategy._enter_position(
         cast(StrategyContext, ctx),
         _bar(close=Decimal("101"), low=Decimal("99")),
         Decimal("100"),
         Decimal("2"),
     )
 
-    assert strategy._entry_price == Decimal("101")  # noqa: SLF001
-    assert strategy._stop_price == Decimal("98.0")  # noqa: SLF001
-    assert strategy._target_2 == Decimal("107.0")  # noqa: SLF001
+    assert strategy._entry_price == Decimal("101")
+    assert strategy._stop_price == Decimal("98.0")
+    assert strategy._target_2 == Decimal("107.0")
     assert ctx.intents[-1] == ("target_quantity", ctx.symbol("GC"), Decimal("1"), None)
 
 
@@ -833,18 +805,18 @@ def test_short_exit_levels_use_entry_price_atr_and_r_multiple() -> None:
             target_r_multiple=Decimal("2"),
         )
     )
-    strategy._enter_state(_State.WAIT_REJECTION, PositionSide.SHORT)  # noqa: SLF001
+    strategy._enter_state(_State.WAIT_REJECTION, PositionSide.SHORT)
 
-    strategy._enter_position(  # noqa: SLF001
+    strategy._enter_position(
         cast(StrategyContext, ctx),
         _bar(close=Decimal("101"), high=Decimal("103")),
         Decimal("100"),
         Decimal("2"),
     )
 
-    assert strategy._entry_price == Decimal("101")  # noqa: SLF001
-    assert strategy._stop_price == Decimal("104.0")  # noqa: SLF001
-    assert strategy._target_2 == Decimal("95.0")  # noqa: SLF001
+    assert strategy._entry_price == Decimal("101")
+    assert strategy._stop_price == Decimal("104.0")
+    assert strategy._target_2 == Decimal("95.0")
     assert ctx.intents[-1] == ("target_quantity", ctx.symbol("GC"), Decimal("-1"), None)
 
 
@@ -861,14 +833,14 @@ def test_bad_regime_target_r_multiple_only_applies_when_gate_blocks() -> None:
     )
     _feed_bad_regime_sessions(strategy)
 
-    strategy._enter_position(  # noqa: SLF001
+    strategy._enter_position(
         cast(StrategyContext, ctx),
         _bar(close=Decimal("101"), low=Decimal("99")),
         Decimal("100"),
         Decimal("2"),
     )
 
-    assert strategy._target_2 == Decimal("104.0")  # noqa: SLF001
+    assert strategy._target_2 == Decimal("104.0")
 
 
 def test_sigma_momentum_entry_sizing_reduces_quantity_for_extended_high_noise_entry() -> None:
@@ -881,11 +853,11 @@ def test_sigma_momentum_entry_sizing_reduces_quantity_for_extended_high_noise_en
             entry_size_reduced_quantity=Decimal("2"),
         )
     )
-    strategy._session.sum_var_x_vol = Decimal("9")  # noqa: SLF001
-    strategy._session.sum_vol = Decimal("1")  # noqa: SLF001
+    strategy._session.sum_var_x_vol = Decimal("9")
+    strategy._session.sum_vol = Decimal("1")
     ctx.indicator.created[("roc", 120)].value = Decimal("2.5")
 
-    strategy._enter_position(  # noqa: SLF001
+    strategy._enter_position(
         cast(StrategyContext, ctx),
         _bar(close=Decimal("101"), low=Decimal("99")),
         Decimal("100"),
@@ -912,7 +884,7 @@ def test_risk_budget_entry_sizing_uses_stop_distance_and_point_value() -> None:
         )
     )
 
-    strategy._enter_position(  # noqa: SLF001
+    strategy._enter_position(
         cast(StrategyContext, ctx),
         _bar(close=Decimal("101"), low=Decimal("99")),
         Decimal("100"),
@@ -941,7 +913,7 @@ def test_risk_budget_entry_sizing_skips_entry_when_budget_is_below_one_contract_
         )
     )
 
-    strategy._enter_position(  # noqa: SLF001
+    strategy._enter_position(
         cast(StrategyContext, ctx),
         _bar(close=Decimal("101"), low=Decimal("99")),
         Decimal("100"),
@@ -949,8 +921,8 @@ def test_risk_budget_entry_sizing_skips_entry_when_budget_is_below_one_contract_
     )
 
     assert ctx.intents == []
-    assert strategy._state == _State.IDLE  # noqa: SLF001
-    assert strategy._session.entries == 0  # noqa: SLF001
+    assert strategy._state == _State.IDLE
+    assert strategy._session.entries == 0
 
 
 def test_partial_runner_reduces_at_first_target_and_keeps_runner_open() -> None:
@@ -966,14 +938,14 @@ def test_partial_runner_reduces_at_first_target_and_keeps_runner_open() -> None:
         )
     )
 
-    strategy._enter_position(  # noqa: SLF001
+    strategy._enter_position(
         cast(StrategyContext, ctx),
         _bar(close=Decimal("100"), low=Decimal("99")),
         Decimal("100"),
         Decimal("2"),
     )
 
-    strategy._step_entered(  # noqa: SLF001
+    strategy._step_entered(
         cast(StrategyContext, ctx),
         _bar(open=Decimal("100"), high=Decimal("102.1"), low=Decimal("99"), close=Decimal("102")),
         Decimal("100"),
@@ -986,8 +958,8 @@ def test_partial_runner_reduces_at_first_target_and_keeps_runner_open() -> None:
     assert metadata["partial_exit_reason"] == "long_partial_target_r_touched"
     assert metadata["runner_quantity"] == "2"
     assert metadata["entry_quantity"] == "4"
-    assert strategy._state == _State.ENTERED  # noqa: SLF001
-    assert strategy._stop_price == Decimal("100")  # noqa: SLF001
+    assert strategy._state == _State.ENTERED
+    assert strategy._stop_price == Decimal("100")
 
 
 def test_partial_runner_final_exit_records_runner_diagnostics() -> None:
@@ -1002,18 +974,18 @@ def test_partial_runner_final_exit_records_runner_diagnostics() -> None:
         )
     )
 
-    strategy._enter_position(  # noqa: SLF001
+    strategy._enter_position(
         cast(StrategyContext, ctx),
         _bar(close=Decimal("100"), low=Decimal("99")),
         Decimal("100"),
         Decimal("2"),
     )
-    strategy._step_entered(  # noqa: SLF001
+    strategy._step_entered(
         cast(StrategyContext, ctx),
         _bar(open=Decimal("100"), high=Decimal("102.1"), low=Decimal("99"), close=Decimal("102")),
         Decimal("100"),
     )
-    strategy._step_entered(  # noqa: SLF001
+    strategy._step_entered(
         cast(StrategyContext, ctx),
         _bar(open=Decimal("102"), high=Decimal("105.2"), low=Decimal("101"), close=Decimal("105")),
         Decimal("100"),
@@ -1030,19 +1002,19 @@ def test_partial_runner_final_exit_records_runner_diagnostics() -> None:
 
 def test_vwap_cross_does_not_exit_when_vwap_cross_exit_is_disabled() -> None:
     strategy, ctx = initialized_strategy(VwapFactorResearchConfig(exit_on_vwap_cross=False))
-    strategy._state = _State.ENTERED  # noqa: SLF001
-    strategy._direction = PositionSide.LONG  # noqa: SLF001
-    strategy._stop_price = Decimal("95")  # noqa: SLF001
-    strategy._target_2 = Decimal("110")  # noqa: SLF001
+    strategy._state = _State.ENTERED
+    strategy._direction = PositionSide.LONG
+    strategy._stop_price = Decimal("95")
+    strategy._target_2 = Decimal("110")
 
-    strategy._step_entered(  # noqa: SLF001
+    strategy._step_entered(
         cast(StrategyContext, ctx),
         _bar(close=Decimal("99"), low=Decimal("98"), high=Decimal("100")),
         Decimal("100"),
     )
 
     assert ctx.intents == []
-    assert strategy._state == _State.ENTERED  # noqa: SLF001
+    assert strategy._state == _State.ENTERED
 
 
 def test_early_no_progress_exit_closes_long_after_adverse_move_without_progress() -> None:
@@ -1053,13 +1025,13 @@ def test_early_no_progress_exit_closes_long_after_adverse_move_without_progress(
             early_no_progress_favorable_r=Decimal("0.25"),
         )
     )
-    strategy._state = _State.ENTERED  # noqa: SLF001
-    strategy._direction = PositionSide.LONG  # noqa: SLF001
-    strategy._entry_price = Decimal("100")  # noqa: SLF001
-    strategy._stop_price = Decimal("96")  # noqa: SLF001
-    strategy._target_2 = Decimal("106")  # noqa: SLF001
+    strategy._state = _State.ENTERED
+    strategy._direction = PositionSide.LONG
+    strategy._entry_price = Decimal("100")
+    strategy._stop_price = Decimal("96")
+    strategy._target_2 = Decimal("106")
 
-    strategy._step_entered(  # noqa: SLF001
+    strategy._step_entered(
         cast(StrategyContext, ctx),
         _bar(open=Decimal("100"), high=Decimal("100.5"), low=Decimal("98.8"), close=Decimal("99")),
         Decimal("100"),
@@ -1079,13 +1051,13 @@ def test_early_no_progress_exit_keeps_long_after_favorable_progress() -> None:
             early_no_progress_favorable_r=Decimal("0.25"),
         )
     )
-    strategy._state = _State.ENTERED  # noqa: SLF001
-    strategy._direction = PositionSide.LONG  # noqa: SLF001
-    strategy._entry_price = Decimal("100")  # noqa: SLF001
-    strategy._stop_price = Decimal("96")  # noqa: SLF001
-    strategy._target_2 = Decimal("106")  # noqa: SLF001
+    strategy._state = _State.ENTERED
+    strategy._direction = PositionSide.LONG
+    strategy._entry_price = Decimal("100")
+    strategy._stop_price = Decimal("96")
+    strategy._target_2 = Decimal("106")
 
-    strategy._step_entered(  # noqa: SLF001
+    strategy._step_entered(
         cast(StrategyContext, ctx),
         _bar(
             open=Decimal("100"),
@@ -1097,7 +1069,7 @@ def test_early_no_progress_exit_keeps_long_after_favorable_progress() -> None:
     )
 
     assert ctx.intents == []
-    assert strategy._state == _State.ENTERED  # noqa: SLF001
+    assert strategy._state == _State.ENTERED
 
 
 def test_early_no_progress_exit_closes_short_after_adverse_move_without_progress() -> None:
@@ -1108,13 +1080,13 @@ def test_early_no_progress_exit_closes_short_after_adverse_move_without_progress
             early_no_progress_favorable_r=Decimal("0.25"),
         )
     )
-    strategy._state = _State.ENTERED  # noqa: SLF001
-    strategy._direction = PositionSide.SHORT  # noqa: SLF001
-    strategy._entry_price = Decimal("100")  # noqa: SLF001
-    strategy._stop_price = Decimal("104")  # noqa: SLF001
-    strategy._target_2 = Decimal("94")  # noqa: SLF001
+    strategy._state = _State.ENTERED
+    strategy._direction = PositionSide.SHORT
+    strategy._entry_price = Decimal("100")
+    strategy._stop_price = Decimal("104")
+    strategy._target_2 = Decimal("94")
 
-    strategy._step_entered(  # noqa: SLF001
+    strategy._step_entered(
         cast(StrategyContext, ctx),
         _bar(open=Decimal("100"), high=Decimal("101.2"), low=Decimal("99.5"), close=Decimal("101")),
         Decimal("100"),
@@ -1137,18 +1109,18 @@ def test_early_no_progress_reduce_quantity_lowers_long_position_once() -> None:
             early_no_progress_reduced_quantity=Decimal("2"),
         )
     )
-    strategy._state = _State.ENTERED  # noqa: SLF001
-    strategy._direction = PositionSide.LONG  # noqa: SLF001
-    strategy._entry_price = Decimal("100")  # noqa: SLF001
-    strategy._stop_price = Decimal("96")  # noqa: SLF001
-    strategy._target_2 = Decimal("106")  # noqa: SLF001
+    strategy._state = _State.ENTERED
+    strategy._direction = PositionSide.LONG
+    strategy._entry_price = Decimal("100")
+    strategy._stop_price = Decimal("96")
+    strategy._target_2 = Decimal("106")
 
-    strategy._step_entered(  # noqa: SLF001
+    strategy._step_entered(
         cast(StrategyContext, ctx),
         _bar(open=Decimal("100"), high=Decimal("100.5"), low=Decimal("98.8"), close=Decimal("99")),
         Decimal("100"),
     )
-    strategy._step_entered(  # noqa: SLF001
+    strategy._step_entered(
         cast(StrategyContext, ctx),
         _bar(open=Decimal("99"), high=Decimal("100"), low=Decimal("98.7"), close=Decimal("99")),
         Decimal("100"),
@@ -1168,7 +1140,7 @@ def test_early_no_progress_reduce_quantity_lowers_long_position_once() -> None:
             },
         )
     ]
-    assert strategy._state == _State.ENTERED  # noqa: SLF001
+    assert strategy._state == _State.ENTERED
 
 
 def test_early_no_progress_reduce_target_lowers_long_r_target_without_flattening() -> None:
@@ -1181,23 +1153,23 @@ def test_early_no_progress_reduce_target_lowers_long_r_target_without_flattening
             early_no_progress_target_r_multiple=Decimal("1.25"),
         )
     )
-    strategy._state = _State.ENTERED  # noqa: SLF001
-    strategy._direction = PositionSide.LONG  # noqa: SLF001
-    strategy._entry_price = Decimal("100")  # noqa: SLF001
-    strategy._stop_price = Decimal("96")  # noqa: SLF001
-    strategy._target_2 = Decimal("106")  # noqa: SLF001
+    strategy._state = _State.ENTERED
+    strategy._direction = PositionSide.LONG
+    strategy._entry_price = Decimal("100")
+    strategy._stop_price = Decimal("96")
+    strategy._target_2 = Decimal("106")
 
-    strategy._step_entered(  # noqa: SLF001
+    strategy._step_entered(
         cast(StrategyContext, ctx),
         _bar(open=Decimal("100"), high=Decimal("100.5"), low=Decimal("98.8"), close=Decimal("99")),
         Decimal("100"),
     )
 
     assert ctx.intents == []
-    assert strategy._target_2 == Decimal("105.00")  # noqa: SLF001
-    assert strategy._state == _State.ENTERED  # noqa: SLF001
+    assert strategy._target_2 == Decimal("105.00")
+    assert strategy._state == _State.ENTERED
 
-    strategy._step_entered(  # noqa: SLF001
+    strategy._step_entered(
         cast(StrategyContext, ctx),
         _bar(open=Decimal("104"), high=Decimal("105.1"), low=Decimal("103"), close=Decimal("105")),
         Decimal("100"),
@@ -1214,13 +1186,13 @@ def test_early_no_progress_reduce_target_lowers_long_r_target_without_flattening
 
 def test_exit_reason_metadata_is_attached_to_close_intent() -> None:
     strategy, ctx = initialized_strategy()
-    strategy._state = _State.ENTERED  # noqa: SLF001
-    strategy._direction = PositionSide.LONG  # noqa: SLF001
-    strategy._entry_price = Decimal("101")  # noqa: SLF001
-    strategy._stop_price = Decimal("98")  # noqa: SLF001
-    strategy._target_2 = Decimal("107")  # noqa: SLF001
+    strategy._state = _State.ENTERED
+    strategy._direction = PositionSide.LONG
+    strategy._entry_price = Decimal("101")
+    strategy._stop_price = Decimal("98")
+    strategy._target_2 = Decimal("107")
 
-    strategy._step_entered(  # noqa: SLF001
+    strategy._step_entered(
         cast(StrategyContext, ctx),
         _bar(close=Decimal("106"), high=Decimal("107.1")),
         Decimal("100"),
@@ -1239,14 +1211,14 @@ def test_exit_metadata_records_trade_level_diagnostics_for_real_entries() -> Non
     strategy, ctx = initialized_strategy(
         VwapFactorResearchConfig(stop_atr_multiple=Decimal("1"), target_r_multiple=Decimal("1"))
     )
-    strategy._enter_position(  # noqa: SLF001
+    strategy._enter_position(
         cast(StrategyContext, ctx),
         _bar(close=Decimal("101"), low=Decimal("99")),
         Decimal("100"),
         Decimal("2"),
     )
 
-    strategy._step_entered(  # noqa: SLF001
+    strategy._step_entered(
         cast(StrategyContext, ctx),
         _bar(open=Decimal("101"), high=Decimal("103.1"), low=Decimal("100"), close=Decimal("103")),
         Decimal("100"),
@@ -1267,7 +1239,7 @@ def initialized_strategy(
     ctx = FakeContext()
     strategy = VwapFactorResearchStrategy(config or VwapFactorResearchConfig())
     strategy.initialize(cast(StrategyContext, ctx))
-    strategy._enter_state(_State.WAIT_REJECTION, PositionSide.LONG)  # noqa: SLF001
+    strategy._enter_state(_State.WAIT_REJECTION, PositionSide.LONG)
     return strategy, ctx
 
 
@@ -1306,7 +1278,7 @@ def _feed_bad_regime_sessions(strategy: VwapFactorResearchStrategy) -> None:
         ("2026-05-22", "101.0", "101.2", "101.0", "101.1"),
     ):
         session_date = datetime.fromisoformat(session)
-        strategy._bad_regime_gate.update_bar(  # noqa: SLF001
+        strategy._bad_regime_gate.update_bar(
             "GC",
             _bar(
                 session_id=session,

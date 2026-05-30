@@ -365,7 +365,7 @@ def test_validation_writes_audit_record_and_chain_verifies(tmp_path: Path) -> No
 
 
 def test_human_review_rejects_reviewed_at_without_timezone(tmp_path: Path) -> None:
-    registry, bundle_id = _write_verifiable_bundle(tmp_path)
+    _registry, bundle_id = _write_verifiable_bundle(tmp_path)
     audit_log = ResearchAuditLog(tmp_path / "audit.jsonl")
     packet = PromotionPacketV2.from_payload(_packet_payload(bundle_id))
 

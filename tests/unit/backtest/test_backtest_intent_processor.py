@@ -86,7 +86,7 @@ def _new_environment(
 
 def test_intent_processor_translates_quantity_intent_into_expected_order() -> None:
     bar = _bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC))
-    processor, order_manager_actor, order_manager_ref, execution_ref, _, account_ref = (
+    processor, _order_manager_actor, order_manager_ref, execution_ref, _, account_ref = (
         _new_environment(bar=bar)
     )
     result = processor.process_intent(
@@ -110,7 +110,7 @@ def test_intent_processor_translates_quantity_intent_into_expected_order() -> No
 
 def test_intent_processor_translates_value_intent_into_expected_quantity() -> None:
     bar = _bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC), close="25")
-    processor, order_manager_actor, order_manager_ref, execution_ref, _, account_ref = (
+    processor, _order_manager_actor, order_manager_ref, execution_ref, _, account_ref = (
         _new_environment(bar=bar)
     )
 
@@ -137,7 +137,7 @@ def test_intent_processor_percent_target_uses_account_equity() -> None:
     Already hold 1 → delta = 19 → buy 19.
     """
     bar = _bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC), close="100")
-    processor, order_manager_actor, order_manager_ref, execution_ref, _, account_ref = (
+    processor, _order_manager_actor, order_manager_ref, execution_ref, _, account_ref = (
         _new_environment(bar=bar)
     )
 
@@ -173,7 +173,7 @@ def test_intent_processor_percent_target_uses_account_equity() -> None:
 
 def test_intent_processor_rejects_missing_account_id() -> None:
     bar = _bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC))
-    processor, order_manager_actor, order_manager_ref, execution_ref, _, account_ref = (
+    processor, _order_manager_actor, order_manager_ref, execution_ref, _, account_ref = (
         _new_environment(bar=bar)
     )
 

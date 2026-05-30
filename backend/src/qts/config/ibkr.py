@@ -301,11 +301,11 @@ def _contains_paper_reference(secret_env_name: str) -> bool:
 __all__ = [
     "IBKR_PAPER_GATEWAY_PORT",
     "IbkrConnectionConfig",
-    "collect_validation_errors",
     "IbkrEnvironmentConfig",
     "IbkrMode",
     "IbkrOrderExecutionConfig",
     "IbkrSecretRefs",
     "IbkrTransport",
+    "collect_validation_errors",
     "validate_ibkr_environment",
 ]

@@ -44,10 +44,10 @@ __all__ = [
     "ResearchRunComparisonSchema",
     "ResearchRunListSchema",
     "ResearchRunSchema",
-    "RuntimeCommandResultResponse",
-    "RuntimeCommandResultResponseSchema",
     "RuntimeCommandResponse",
     "RuntimeCommandResponseSchema",
+    "RuntimeCommandResultResponse",
+    "RuntimeCommandResultResponseSchema",
     "StrategyLifecycleListSchema",
     "StrategyLifecycleSchema",
 ]
