@@ -1,5 +1,5 @@
 {
-  "production_class_count": 978,
+  "production_class_count": 977,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -801,7 +801,6 @@
     "qts.runtime.actors.order_manager_actor.GetRouteMetadata",
     "qts.runtime.actors.order_manager_actor.OrderManagerActor",
     "qts.runtime.actors.order_manager_actor.ReplaceOrder",
-    "qts.runtime.actors.order_manager_actor.ReplaceRejected",
     "qts.runtime.actors.order_manager_actor.SubmitOrder",
     "qts.runtime.actors.signal_aggregator_actor.AggregatedSignalBatch",
     "qts.runtime.actors.signal_aggregator_actor.SignalAggregatorActor",

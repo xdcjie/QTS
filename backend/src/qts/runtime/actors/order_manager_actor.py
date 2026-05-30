@@ -20,12 +20,17 @@ from qts.domain.orders import (
 )
 from qts.domain.risk import RiskDecision
 from qts.execution.broker import BrokerCapabilities
+from qts.execution.errors import UnsupportedOrderReplace
 from qts.execution.order_manager import OrderManager
 from qts.runtime.actor import Actor
 from qts.runtime.actor_errors import ActorUnhandledMessageError
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.account_actor import ApplyFill
-from qts.runtime.actors.execution_actor import OrderCancelRequest, OrderExecutionRequest
+from qts.runtime.actors.execution_actor import (
+    OrderCancelRequest,
+    OrderExecutionRequest,
+    OrderReplaceRequest,
+)
 from qts.runtime.execution_report_handler import ExecutionReportHandler
 from qts.runtime.order_route_metadata import OrderRouteMetadata
 
@@ -156,15 +161,6 @@ class CompactForStreaming:
     order_ids: tuple[OrderId, ...]
 
 
-@dataclass(frozen=True, slots=True)
-class ReplaceRejected:
-    """Structured rejection recorded when an order replace cannot be applied."""
-
-    order_id: OrderId
-    reason_code: str
-    reason: str
-
-
 class OrderManagerActor(Actor):
     """Actor-owned OrderManager wrapper."""
 
@@ -194,7 +190,6 @@ class OrderManagerActor(Actor):
         )
         self._fills_list: list[OrderFill] = []
         self._route_metadata_by_order_id: dict[OrderId, OrderRouteMetadata] = {}
-        self._replace_rejections: list[ReplaceRejected] = []
 
     def handle(self, message: object) -> None:
         """Perform handle."""
@@ -260,11 +255,6 @@ class OrderManagerActor(Actor):
         """Return route metadata captured for an active order."""
         return self._route_metadata_by_order_id[order_id]
 
-    @property
-    def replace_rejections(self) -> tuple[ReplaceRejected, ...]:
-        """Return structured rejections recorded for unsupported order replaces."""
-        return tuple(self._replace_rejections)
-
     def _compact_for_streaming(self, order_ids: Iterable[OrderId]) -> None:
         """Perform _compact_for_streaming."""
         for order_id in order_ids:
@@ -317,16 +307,15 @@ class OrderManagerActor(Actor):
         )
 
     def _handle_replace(self, message: ReplaceOrder) -> None:
-        """Record a structured rejection for replace requests; never raise.
+        """Route an approved replace to the execution boundary.
 
-        The replace order lifecycle is not implemented for any execution
-        boundary yet, so a replace is deterministically rejected and the order
-        is left unchanged. ``BrokerCapabilities.supports_replace`` gates the
-        rejection reason: brokers that do not advertise replace support get
-        ``REPLACE_NOT_SUPPORTED``; brokers that do are rejected with
-        ``REPLACE_NOT_IMPLEMENTED`` until the full lifecycle lands (tracked in
-        docs/plan/wiring_deferrals.md). No NotImplementedError/RuntimeError is
-        raised on this runtime path.
+        ``BrokerCapabilities.supports_replace`` gates the request: brokers that
+        do not advertise replace support are rejected with the typed
+        ``UnsupportedOrderReplace`` domain error (no pseudo-successful handled
+        message). Supported brokers transition the order to ``REPLACE_REQUESTED``
+        via ``OrderManager.request_replace`` and a broker replace request is sent
+        to the ``ExecutionActor``; the broker's ``ACCEPTED`` report confirms the
+        replace through the normal execution-report path.
         """
         current = self._manager.get_order(message.intent.order_id)
         metadata = self._route_metadata_by_order_id[message.intent.order_id]
@@ -336,19 +325,20 @@ class OrderManagerActor(Actor):
             raise ValueError("replace route metadata does not match submitted order")
         if self._account_id is not None and message.account_id != self._account_id:
             raise ValueError("replace account_id does not match OrderManagerActor account_id")
-        if self._supports_replace:
-            reason_code = "REPLACE_NOT_IMPLEMENTED"
-            reason = (
-                "broker advertises replace support but the replace lifecycle is not implemented"
-            )
-        else:
-            reason_code = "REPLACE_NOT_SUPPORTED"
-            reason = "broker does not support order replacement"
-        self._replace_rejections.append(
-            ReplaceRejected(
-                order_id=message.intent.order_id,
-                reason_code=reason_code,
-                reason=reason,
+        if not self._supports_replace:
+            raise UnsupportedOrderReplace("broker does not support order replacement")
+        if current.broker_order_id is None:
+            raise RuntimeError("order must have broker_order_id before replacement")
+        order = self._manager.request_replace(message.intent, risk_decision=message.risk_decision)
+        assert order.broker_order_id is not None
+        self._execution_ref.tell(
+            OrderReplaceRequest(
+                order_id=order.order_id,
+                broker_order_id=order.broker_order_id,
+                new_quantity=message.intent.new_quantity,
+                account_id=message.account_id,
+                strategy_id=message.strategy_id,
+                route_metadata=message.route_metadata,
             )
         )
 
@@ -377,6 +367,5 @@ __all__ = [
     "GetRouteMetadata",
     "OrderManagerActor",
     "ReplaceOrder",
-    "ReplaceRejected",
     "SubmitOrder",
 ]

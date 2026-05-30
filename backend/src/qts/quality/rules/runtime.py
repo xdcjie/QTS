@@ -32,6 +32,10 @@ RUNTIME_EXECUTION_ALLOWED_IMPORTS: frozenset[tuple[str, str]] = frozenset(
         ("qts.execution.broker", "BrokerOrderRequest"),
         ("qts.execution.broker", "BrokerCapabilities"),
         ("qts.execution.broker", "normalize_broker_execution_report"),
+        # Execution-boundary lifecycle errors the runtime catches/raises at the
+        # order-execution edge (report quarantine + replace capability gate).
+        ("qts.execution.errors", "UnknownBrokerOrder"),
+        ("qts.execution.errors", "UnsupportedOrderReplace"),
     }
 )
 

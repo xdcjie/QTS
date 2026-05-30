@@ -74,11 +74,6 @@ exceptions:
     reason: single-writer guard error for FileEventStore O(1) append + flock contract (DR-024 EventStore determinism)
     owner: platform
     expiry: 2027-05-29
-  - class_name: ReplaceRejected
-    module: qts.runtime.actors.order_manager_actor
-    reason: structured replace-rejection result owned by OrderManagerActor for capability-gated replace handling (DR-026); replaces the prior RuntimeError raise
-    owner: platform
-    expiry: 2027-05-29
   - class_name: PositionSide
     module: qts.domain.positions
     reason: domain value object for signed position direction shared by portfolio, risk, execution, and strategies

@@ -404,18 +404,23 @@ def test_order_route_metadata_is_preserved_across_submit_cancel_replace_and_fill
     assert cancel_a.route_metadata == metadata_a
     assert execution_b.empty()
 
-    actor_a.handle(
-        ReplaceOrder(
-            intent=ReplaceIntent(order_id=order_id_a, new_quantity=Decimal("12")),
-            risk_decision=RiskDecision.approve(),
-            account_id=account_a,
-            strategy_id=strategy_a,
-            route_metadata=metadata_a,
+    import pytest
+    from qts.execution.errors import UnsupportedOrderReplace
+
+    with pytest.raises(UnsupportedOrderReplace):
+        actor_a.handle(
+            ReplaceOrder(
+                intent=ReplaceIntent(order_id=order_id_a, new_quantity=Decimal("12")),
+                risk_decision=RiskDecision.approve(),
+                account_id=account_a,
+                strategy_id=strategy_a,
+                route_metadata=metadata_a,
+            )
         )
-    )
-    assert actor_a.replace_rejections[-1].order_id == order_id_a
-    assert actor_a.replace_rejections[-1].reason_code == "REPLACE_NOT_SUPPORTED"
+    # Route metadata is preserved and nothing is routed when the unsupported
+    # replace is rejected at the capability gate.
     assert actor_a.route_metadata(order_id_a) == metadata_a
+    assert execution_a.empty()
 
     actor_a.handle(
         ExecutionReport(
@@ -526,7 +531,8 @@ def test_order_route_metadata_round_trips_for_recovery() -> None:
     assert restored == metadata
 
 
-def test_replace_order_returns_structured_rejection_not_not_implemented_error() -> None:
+def test_replace_order_on_unsupported_broker_raises_typed_domain_error() -> None:
+    import pytest
     from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
     from qts.domain.orders import (
         OrderIntent,
@@ -534,6 +540,7 @@ def test_replace_order_returns_structured_rejection_not_not_implemented_error() 
         ReplaceIntent,
     )
     from qts.domain.risk import RiskDecision
+    from qts.execution.errors import UnsupportedOrderReplace
     from qts.runtime.actor_ref import ActorRef
     from qts.runtime.actors.order_manager_actor import OrderManagerActor, ReplaceOrder, SubmitOrder
     from qts.runtime.mailbox import Mailbox
@@ -571,25 +578,24 @@ def test_replace_order_returns_structured_rejection_not_not_implemented_error() 
     )
     assert execution.get() is not None
 
-    actor.handle(
-        ReplaceOrder(
-            intent=ReplaceIntent(order_id=order_id, new_quantity=Decimal("20")),
-            risk_decision=RiskDecision.approve(),
-            account_id=account_id,
-            strategy_id=strategy_id,
-            route_metadata=_route_metadata(
+    with pytest.raises(UnsupportedOrderReplace):
+        actor.handle(
+            ReplaceOrder(
+                intent=ReplaceIntent(order_id=order_id, new_quantity=Decimal("20")),
+                risk_decision=RiskDecision.approve(),
                 account_id=account_id,
                 strategy_id=strategy_id,
-                client_order_id="client-replace-reject",
-                correlation_id=CorrelationId("corr-replace-reject"),
-            ),
+                route_metadata=_route_metadata(
+                    account_id=account_id,
+                    strategy_id=strategy_id,
+                    client_order_id="client-replace-reject",
+                    correlation_id=CorrelationId("corr-replace-reject"),
+                ),
+            )
         )
-    )
 
-    rejection = actor.replace_rejections[-1]
-    assert rejection.order_id == order_id
-    assert rejection.reason_code == "REPLACE_NOT_SUPPORTED"
-
+    # Nothing is routed and the order quantity is unchanged after the gate rejects.
+    assert execution.empty()
     order = actor.get_order(order_id)
     assert order.intent.quantity == Decimal("10"), (
         "order quantity must remain unchanged after rejected replace"

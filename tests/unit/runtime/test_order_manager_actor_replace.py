@@ -1,13 +1,22 @@
-"""Gate tests: ReplaceOrder produces a capability-gated structured rejection (DR-026)."""
+"""ReplaceOrder on a broker without replace support is rejected with a domain error.
+
+QTS-FINAL-007 makes ReplaceOrder a complete capability gated by
+``BrokerCapabilities.supports_replace``. A broker that does not advertise replace
+support raises the typed ``UnsupportedOrderReplace`` domain error rather than
+recording a pseudo-successful handled rejection, and the order is left unchanged.
+"""
 
 from __future__ import annotations
 
 from decimal import Decimal
 
+import pytest
 from qts.core.ids import AccountId, BrokerId, CorrelationId, InstrumentId, OrderId, StrategyId
 from qts.domain.orders import OrderIntent, OrderSide, ReplaceIntent
 from qts.domain.risk import RiskDecision
 from qts.execution.broker import BrokerCapabilities
+from qts.execution.errors import UnsupportedOrderReplace
+from qts.execution.order_state_machine import OrderState
 from qts.runtime.actor_ref import ActorRef
 from qts.runtime.actors.order_manager_actor import (
     OrderManagerActor,
@@ -71,21 +80,12 @@ def _replace(actor: OrderManagerActor) -> None:
     )
 
 
-def test_replace_on_unsupported_broker_is_structured_rejection_without_raising() -> None:
+def test_replace_on_unsupported_broker_raises_unsupported_order_replace() -> None:
     actor = _actor(capabilities=None)
-    _replace(actor)  # must not raise
-    rejection = actor.replace_rejections[-1]
-    assert rejection.order_id == _ORDER
-    assert rejection.reason_code == "REPLACE_NOT_SUPPORTED"
-    # Order is left unchanged by a rejected replace.
-    assert actor.get_order(_ORDER).intent.quantity == Decimal("10")
 
+    with pytest.raises(UnsupportedOrderReplace, match="does not support order replacement"):
+        _replace(actor)
 
-def test_replace_on_replace_capable_broker_defers_with_not_implemented() -> None:
-    actor = _actor(
-        capabilities=BrokerCapabilities(broker_id=BrokerId("simulated"), supports_replace=True)
-    )
-    _replace(actor)  # must not raise
-    rejection = actor.replace_rejections[-1]
-    assert rejection.reason_code == "REPLACE_NOT_IMPLEMENTED"
+    # The order is left unchanged when replace is rejected at the capability gate.
     assert actor.get_order(_ORDER).intent.quantity == Decimal("10")
+    assert actor.get_order(_ORDER).state is OrderState.SENT

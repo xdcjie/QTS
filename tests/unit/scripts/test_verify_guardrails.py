@@ -1859,7 +1859,8 @@ def test_guardrails_allow_runtime_importing_whitelisted_execution_types(tmp_path
         "from qts.execution.order_manager import OrderManager\n"
         "from qts.execution.execution_adapter import ExecutionAdapter\n"
         "from qts.execution.idempotency import FillIdempotencyStore\n"
-        "from qts.execution.broker import BrokerExecutionReport\n",
+        "from qts.execution.broker import BrokerExecutionReport\n"
+        "from qts.execution.errors import UnknownBrokerOrder, UnsupportedOrderReplace\n",
     )
 
     assert _codes_by_suite(root, guardrails.RuntimeExecutionBoundaryRule()) == set()
