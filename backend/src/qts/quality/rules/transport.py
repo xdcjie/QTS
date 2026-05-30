@@ -23,7 +23,7 @@ class TransportCanonicalPathRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Flag Transport-suffixed class definitions inside adapter packages."""
         if qts_relative_path.parts[:2] not in {
             ("data", "adapters"),
             ("execution", "adapters"),
@@ -61,7 +61,7 @@ class TransportAdapterImportRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Flag transport modules importing adapter implementation modules."""
         if len(qts_relative_path.parts) < 3 or qts_relative_path.parts[1] != "transports":
             return []
         violations: list[GuardrailViolation] = []

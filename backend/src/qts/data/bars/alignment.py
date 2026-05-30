@@ -57,7 +57,7 @@ def clock_bucket_for(
 
 
 def _duration_seconds(duration: timedelta) -> int:
-    """Perform _duration_seconds."""
+    """Return the duration as positive whole seconds that evenly divide a 24-hour day."""
     seconds = int(duration.total_seconds())
     if seconds <= 0:
         raise ValueError("timeframe duration must be positive")

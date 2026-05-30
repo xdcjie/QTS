@@ -65,7 +65,7 @@ class HighestVolumeFutureContractSelector:
         self,
         candidates: tuple[FutureContractCandidate, ...],
     ) -> FutureContractCandidate:
-        """Perform select."""
+        """Return the candidate with the highest volume, breaking ties deterministically."""
         if not candidates:
             raise ValueError("candidates must not be empty")
         return max(
@@ -297,7 +297,7 @@ class FutureRollRegistry:
         selection_times.append(selection.as_of)
 
     def is_continuous(self, instrument_id: InstrumentId) -> bool:
-        """Perform is_continuous."""
+        """Return whether the instrument id refers to a registered continuous future."""
         return instrument_id in self._root_by_continuous
 
     def resolve_contract(
@@ -344,7 +344,7 @@ class FutureRollRegistry:
         return contracts[target_index]
 
     def related_contracts(self, continuous_instrument_id: InstrumentId) -> tuple[InstrumentId, ...]:
-        """Perform related_contracts."""
+        """Return the concrete contracts registered for a continuous future."""
         try:
             return self._contracts_by_continuous[continuous_instrument_id]
         except KeyError as exc:

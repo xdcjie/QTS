@@ -24,7 +24,7 @@ class IbkrConnectionConfig:
     source_id: str | None = None
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate that host, port, client_id, and any source_id are well-formed."""
         if not self.host.strip():
             raise ValueError("host must not be empty")
         if self.port <= 0:
@@ -48,7 +48,7 @@ class IbkrOrderExecutionConfig:
     broker_id: str | None = None
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate connection fields plus non-empty account_id and risk_profile."""
         if not self.host.strip():
             raise ValueError("host must not be empty")
         if self.port <= 0:
@@ -71,7 +71,7 @@ class IbkrSecretRefs:
     password_env: str
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate that the username and password env-var names are non-empty."""
         if not self.username_env.strip():
             raise ValueError("username_env must not be empty")
         if not self.password_env.strip():
@@ -231,7 +231,7 @@ def validate_ibkr_environment(
 
 
 def _as_mapping(payload: Any, path: str) -> Mapping[str, Any]:
-    """Perform _as_mapping."""
+    """Walk a dotted key path into a payload, requiring each level to be a mapping."""
     value: Any = payload
     for key in path.split("."):
         if not isinstance(value, Mapping):
@@ -245,7 +245,7 @@ def _as_mapping(payload: Any, path: str) -> Mapping[str, Any]:
 
 
 def _read_connection(payload: Mapping[str, Any], path: str) -> IbkrConnectionConfig:
-    """Perform _read_connection."""
+    """Build an IbkrConnectionConfig from a connection mapping, validating integer ports."""
     host = str(payload.get("host", ""))
     port = payload.get("port")
     client_id = payload.get("client_id")
@@ -268,7 +268,7 @@ def _read_order_execution_config(
     connection: Mapping[str, Any],
     payload: Mapping[str, Any],
 ) -> IbkrOrderExecutionConfig:
-    """Perform _read_order_execution_config."""
+    """Build an IbkrOrderExecutionConfig from its connection and order-execution payloads."""
     order_execution = _read_connection(connection, "order_execution")
     account_id = str(payload.get("account_id", ""))
     risk_profile = str(payload.get("risk_profile", ""))
@@ -286,7 +286,7 @@ def _read_order_execution_config(
 
 
 def _read_secret_refs(payload: Mapping[str, Any]) -> IbkrSecretRefs:
-    """Perform _read_secret_refs."""
+    """Build an IbkrSecretRefs from the username/password env-var names in the payload."""
     return IbkrSecretRefs(
         username_env=str(payload.get("username_env", "")),
         password_env=str(payload.get("password_env", "")),
@@ -294,7 +294,7 @@ def _read_secret_refs(payload: Mapping[str, Any]) -> IbkrSecretRefs:
 
 
 def _contains_paper_reference(secret_env_name: str) -> bool:
-    """Perform _contains_paper_reference."""
+    """Return whether a secret env-var name mentions PAPER (case-insensitive)."""
     return "PAPER" in secret_env_name.upper()
 
 

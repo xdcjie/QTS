@@ -150,7 +150,7 @@ class HistoricalCatalog:
         *,
         historical_data_config: HistoricalMarketDataConfig,
     ) -> dict[str, StaticSymbolResolver]:
-        """Perform _symbol_resolvers_for_load_config."""
+        """Build static symbol resolvers for non-chain roots from explicit instrument ids."""
         if not config.instrument_ids:
             return {}
         return {
@@ -189,13 +189,13 @@ class HistoricalCatalog:
         *,
         historical_data_config: HistoricalMarketDataConfig,
     ) -> bool:
-        """Perform _chain_path_exists."""
+        """Return True if a chain file is configured and present on disk for the root."""
         chain_path = historical_data_config.resolve_chain_path(config.catalog_name, root)
         return chain_path is not None and chain_path.exists()
 
     @staticmethod
     def _require_file(path: Path, root_path: Path) -> None:
-        """Perform _require_file."""
+        """Raise FileNotFoundError if a required historical file is missing."""
         if not path.exists():
             try:
                 display = Path("historical") / path.relative_to(root_path)
@@ -242,7 +242,7 @@ class HistoricalCatalogLoadConfig:
     requested_timeframe: str | None = None
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Normalize roots, instrument ids, paths, and validate required fields."""
         object.__setattr__(
             self,
             "roots",
@@ -283,7 +283,7 @@ class HistoricalCatalogLoadConfig:
         instrument_ids: Mapping[str, InstrumentId] | None = None,
         requested_timeframe: str | None = None,
     ) -> HistoricalCatalogLoadConfig:
-        """Perform from_historical_market_data_config."""
+        """Build a load config from a config path, catalog name, roots, and instrument ids."""
         return cls(
             roots=roots,
             instrument_ids=instrument_ids or {},
@@ -294,7 +294,7 @@ class HistoricalCatalogLoadConfig:
 
     @staticmethod
     def _normalize_symbol(symbol: str) -> str:
-        """Perform _normalize_symbol."""
+        """Return the symbol uppercased and trimmed, raising if empty."""
         normalized = symbol.strip().upper()
         if not normalized:
             raise ValueError("instrument_ids must not contain empty symbols")

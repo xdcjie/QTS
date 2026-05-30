@@ -68,16 +68,16 @@ class AssetIndicator:
 
     @property
     def ready(self) -> bool:
-        """Perform ready."""
+        """Return whether the bound indicator has enough data to produce a value."""
         return self._ready()
 
     @property
     def value(self) -> IndicatorValue | None:
-        """Perform value."""
+        """Return the bound indicator's current value, or None if not ready."""
         return self._value()
 
     def update(self, price: Decimal) -> IndicatorValue | None:
-        """Perform update."""
+        """Update the indicator from a single price, raising if it needs full bars."""
         if self._price_update is None:
             raise TypeError("indicator does not support direct price updates")
         return self._price_update(price)
@@ -94,7 +94,7 @@ class IndicatorFactory:
     _created: list[AssetIndicator] = field(default_factory=list)
 
     def sma(self, asset: AssetRef, window: int) -> AssetIndicator:
-        """Perform sma."""
+        """Create a simple moving average indicator for close prices."""
         return self._bind_price_indicator(asset, SMA(window=window))
 
     def ema(self, asset: AssetRef, window: int) -> AssetIndicator:
@@ -233,7 +233,7 @@ class IndicatorFactory:
         return self._bind_bar_indicator(asset, indicator.update_bar, indicator)
 
     def update_from_bar(self, bar: Bar) -> None:
-        """Perform update_from_bar."""
+        """Update every created indicator bound to the bar's instrument."""
         for item in self._created:
             if item.asset.instrument_id == bar.instrument_id:
                 item.update_from_bar(bar)

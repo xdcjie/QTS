@@ -30,7 +30,7 @@ class StrategyInstance:
     enabled: bool = True
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate the class path is non-empty and allocation is non-negative."""
         if not self.class_path.strip():
             raise ValueError("class_path must not be empty")
         if self.allocation < Decimal("0"):
@@ -41,11 +41,11 @@ class StrategyRegistry:
     """Safe registry for explicitly approved strategy classes."""
 
     def __init__(self) -> None:
-        """Perform __init__."""
+        """Initialize an empty registry of approved strategy classes."""
         self._classes: dict[str, type[Strategy]] = {}
 
     def register(self, class_path: str, strategy_cls: type[Strategy]) -> None:
-        """Perform register."""
+        """Register a strategy class under its class path, rejecting duplicates."""
         if not class_path.strip():
             raise ValueError("class_path must not be empty")
         if class_path in self._classes:
@@ -53,7 +53,7 @@ class StrategyRegistry:
         self._classes[class_path] = strategy_cls
 
     def resolve(self, class_path: str) -> type[Strategy]:
-        """Perform resolve."""
+        """Return the registered strategy class for a class path."""
         try:
             return self._classes[class_path]
         except KeyError as exc:

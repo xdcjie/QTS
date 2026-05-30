@@ -29,7 +29,7 @@ class StaticSymbolResolver:
     _normalized_instrument_ids: dict[str, InstrumentId] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Build the normalized symbol index, rejecting empty or colliding mappings."""
         if not self.instrument_ids:
             raise ValueError("instrument_ids must not be empty")
         normalized_ids: dict[str, InstrumentId] = {}
@@ -41,11 +41,11 @@ class StaticSymbolResolver:
         object.__setattr__(self, "_normalized_instrument_ids", normalized_ids)
 
     def is_supported_symbol(self, symbol: str) -> bool:
-        """Perform is_supported_symbol."""
+        """Return True if the normalized symbol is present in the mapping."""
         return self._normalize_symbol(symbol) in self._normalized_instrument_ids
 
     def instrument_id_for_symbol(self, symbol: str) -> InstrumentId:
-        """Perform instrument_id_for_symbol."""
+        """Return the InstrumentId mapped to the symbol, raising if unsupported."""
         normalized = self._normalize_symbol(symbol)
         try:
             return self._normalized_instrument_ids[normalized]
@@ -54,7 +54,7 @@ class StaticSymbolResolver:
 
     @staticmethod
     def _normalize_symbol(symbol: str) -> str:
-        """Perform _normalize_symbol."""
+        """Return the symbol uppercased and trimmed, raising if empty."""
         normalized = symbol.strip().upper()
         if not normalized:
             raise ValueError("symbol must not be empty")

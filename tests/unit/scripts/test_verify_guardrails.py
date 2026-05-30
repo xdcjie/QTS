@@ -1796,6 +1796,41 @@ def test_guardrails_reject_placeholder_docstrings_in_production(tmp_path: Path) 
     assert _codes(root) == {"PLACEHOLDER_DOCSTRING"}
 
 
+def test_guardrails_reject_perform_stub_docstrings_in_production(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/reporting/base.py",
+        'def handle() -> None:\n    """Perform handle."""\n',
+    )
+
+    assert _codes(root) == {"PLACEHOLDER_DOCSTRING"}
+
+
+def test_guardrails_reject_perform_stub_docstrings_in_quality_package(tmp_path: Path) -> None:
+    # The Perform-stub check applies even inside the quality package, unlike the
+    # legacy "placeholder" substring check.
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/quality/rules/example.py",
+        'def check() -> None:\n    """Perform check."""\n',
+    )
+
+    assert _codes(root) == {"PLACEHOLDER_DOCSTRING"}
+
+
+def test_guardrails_allow_descriptive_docstrings_in_production(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/reporting/base.py",
+        'def handle() -> None:\n    """Dispatch the inbound event to its handler."""\n',
+    )
+
+    assert _codes(root) == set()
+
+
 def test_guardrails_reject_stale_architecture_runtime_text(tmp_path: Path) -> None:
     root = tmp_path
     guardrails = _load_guardrails_module()

@@ -18,7 +18,7 @@ class MarketSession:
     interval: TimeInterval
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate that calendar_id and session_id are non-empty."""
         if not self.calendar_id.strip():
             raise ValueError("calendar_id must not be empty")
         if not self.session_id.strip():
@@ -26,12 +26,12 @@ class MarketSession:
 
     @property
     def open_time(self) -> datetime:
-        """Perform open_time."""
+        """Return the session's open timestamp (interval start)."""
         return self.interval.start
 
     @property
     def close_time(self) -> datetime:
-        """Perform close_time."""
+        """Return the session's close timestamp (interval end)."""
         return self.interval.end
 
 
@@ -46,17 +46,17 @@ class CalendarRegistry:
     """Lookup table for calendar providers."""
 
     def __init__(self) -> None:
-        """Perform __init__."""
+        """Initialize an empty calendar-id to provider lookup table."""
         self._providers: dict[str, CalendarProvider] = {}
 
     def register(self, calendar_id: str, provider: CalendarProvider) -> None:
-        """Perform register."""
+        """Register a calendar provider under the given calendar id."""
         if not calendar_id.strip():
             raise ValueError("calendar_id must not be empty")
         self._providers[calendar_id] = provider
 
     def session_for(self, calendar_id: str, session_date: date) -> MarketSession:
-        """Perform session_for."""
+        """Return the session for a date from the named calendar, raising if unregistered."""
         try:
             provider = self._providers[calendar_id]
         except KeyError as exc:

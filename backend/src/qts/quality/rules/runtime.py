@@ -347,11 +347,11 @@ class RuntimeSessionComplexityRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform per-file check."""
+        """Skip per-file analysis; this rule runs only repository-wide."""
         return []
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform repository-wide check."""
+        """Flag RuntimeSession exceeding M5 facade limits without evidence."""
         session_path = repo_root / QTS_ROOT / "runtime/session.py"
         if not session_path.exists():
             return []
@@ -399,11 +399,11 @@ class RuntimeCoordinatorDecisionRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform per-file check."""
+        """Skip per-file analysis; this rule runs only repository-wide."""
         return []
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform repository-wide check."""
+        """Require keep/merge/delete evidence for runtime coordinator candidates."""
         evidence = _read_runtime_coordinator_decision_evidence(repo_root)
         violations: list[GuardrailViolation] = []
         for class_name, relative_path in RUNTIME_COORDINATOR_CANDIDATES.items():
@@ -475,7 +475,7 @@ class RuntimeExecutionBoundaryRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Flag runtime modules importing non-whitelisted execution types."""
         if qts_relative_path.parts[:1] != ("runtime",):
             return []
         violations: list[GuardrailViolation] = []

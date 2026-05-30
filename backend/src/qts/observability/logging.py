@@ -40,7 +40,7 @@ def build_log_record(
 
 
 def _metadata_fields(metadata: EventMetadata) -> dict[str, object]:
-    """Perform _metadata_fields."""
+    """Flatten event metadata into string log fields, omitting unset values."""
     fields: dict[str, object] = {
         "event_id": str(metadata.event_id),
         "event_type": metadata.event_type,
@@ -66,7 +66,7 @@ def _metadata_fields(metadata: EventMetadata) -> dict[str, object]:
 
 
 def _is_secret_key(key: str) -> bool:
-    """Perform _is_secret_key."""
+    """Return whether a field key matches a known secret marker."""
     normalized = key.lower()
     return any(marker in normalized for marker in SECRET_FIELD_MARKERS)
 

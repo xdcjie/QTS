@@ -140,7 +140,7 @@ class GuardrailSuite:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check_file."""
+        """Run every per-file rule against one parsed module and collect violations."""
         violations: list[GuardrailViolation] = []
         for rule in self.rules:
             violations.extend(
@@ -153,7 +153,7 @@ class GuardrailSuite:
         return violations
 
     def check(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Run all per-file and repository rules over the source tree and sort violations."""
         source_root = repo_root / QTS_ROOT
         violations: list[GuardrailViolation] = []
         if source_root.exists():
@@ -183,7 +183,7 @@ def run_guardrails(repo_root: Path) -> list[GuardrailViolation]:
 
 
 def main() -> int:
-    """Perform main."""
+    """Run guardrails over the current directory and return a process exit code."""
     repo_root = Path.cwd()
     violations = run_guardrails(repo_root)
     if not violations:

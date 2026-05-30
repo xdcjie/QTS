@@ -22,7 +22,7 @@ from qts.observability.prometheus import PROMETHEUS_CONTENT_TYPE, render_prometh
 
 
 def create_app(*, metrics: MetricsRegistry | None = None) -> FastAPI:
-    """Perform create_app."""
+    """Build the FastAPI app with CORS, security, metrics, and all routers."""
     app = FastAPI(title="Quant Trading System")
     metrics_registry: MetricsRegistry = metrics or MetricsRegistry()
     app.state.metrics = metrics_registry

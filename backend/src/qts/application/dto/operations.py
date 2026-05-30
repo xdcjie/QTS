@@ -45,7 +45,7 @@ class KillSwitchCommandDTO:
     scope_id: str | None = None
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate that scope and reason are set and scope_id is present when scoped."""
         if not self.scope.strip():
             raise ValueError("scope must not be empty")
         if not self.reason.strip():

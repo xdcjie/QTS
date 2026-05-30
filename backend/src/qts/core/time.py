@@ -51,7 +51,7 @@ class TimeInterval:
     end: datetime
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate both bounds are timezone-aware and start precedes end."""
         require_aware_datetime(self.start, name="start")
         require_aware_datetime(self.end, name="end")
         if self.start >= self.end:
@@ -59,11 +59,11 @@ class TimeInterval:
 
     @property
     def duration(self) -> timedelta:
-        """Perform duration."""
+        """Return the interval length as a timedelta."""
         return self.end - self.start
 
     def contains(self, value: datetime) -> bool:
-        """Perform contains."""
+        """Return whether the instant falls in the half-open interval [start, end)."""
         require_aware_datetime(value, name="value")
         return self.start <= value < self.end
 

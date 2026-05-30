@@ -14,23 +14,23 @@ class Mailbox:
     """Simple in-memory FIFO mailbox with optional blocking get."""
 
     def __init__(self) -> None:
-        """Perform __init__."""
+        """Create an empty message deque guarded by a condition variable."""
         self._messages: deque[object] = deque()
         self._condition = Condition()
 
     @property
     def size(self) -> int:
-        """Perform size."""
+        """Return the number of queued messages."""
         return len(self._messages)
 
     def put(self, message: object) -> None:
-        """Perform put."""
+        """Append a message and notify any waiting consumer."""
         with self._condition:
             self._messages.append(message)
             self._condition.notify()
 
     def get(self) -> object:
-        """Perform get."""
+        """Pop and return the oldest message without blocking."""
         return self._messages.popleft()
 
     def get_with_timeout(self, timeout: float) -> object:
@@ -68,7 +68,7 @@ class Mailbox:
             raise RuntimeError("blocking mailbox wait failed (spurious wake with no message)")
 
     def empty(self) -> bool:
-        """Perform empty."""
+        """Return whether the mailbox currently holds no messages."""
         return not self._messages
 
 

@@ -49,12 +49,12 @@ class EvidenceBundleRequiredForPromotionRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform per-file check."""
+        """Return no per-file violations; this rule only checks at repository scope."""
         del relative_path, qts_relative_path, tree
         return []
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform repository-wide check."""
+        """Flag promotion specs that lack an evidence_bundle_id reference."""
         violations: list[GuardrailViolation] = []
         for path, payload in yaml_payloads(repo_root / PROMOTION_CONFIG_DIR):
             if payload.get("evidence_bundle_id"):
@@ -87,12 +87,12 @@ class IdeaRegistryRequiredForCandidateRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform per-file check."""
+        """Return no per-file violations; this rule only checks at repository scope."""
         del relative_path, qts_relative_path, tree
         return []
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform repository-wide check."""
+        """Flag candidate promotion specs that are not linked to an idea_id."""
         violations: list[GuardrailViolation] = []
         for path, payload in yaml_payloads(repo_root / PROMOTION_CONFIG_DIR):
             if str(payload.get("status", "")) not in PROMOTION_CANDIDATE_STATUSES:
@@ -127,12 +127,12 @@ class TradeDiagnosticsRequiredForPaperRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform per-file check."""
+        """Return no per-file violations; this rule only checks at repository scope."""
         del relative_path, qts_relative_path, tree
         return []
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform repository-wide check."""
+        """Flag paper/small-live candidates missing any required paper-readiness evidence."""
         violations: list[GuardrailViolation] = []
         for path, payload in yaml_payloads(repo_root / PROMOTION_CONFIG_DIR):
             if str(payload.get("status", "")) not in {"paper_candidate", "small_live_candidate"}:
@@ -170,12 +170,12 @@ class PromotionConfigBoundaryRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform per-file check."""
+        """Return no per-file violations; this rule only checks at repository scope."""
         del relative_path, qts_relative_path, tree
         return []
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform repository-wide check."""
+        """Flag promotion specs that violate source, target, or production-param boundaries."""
         violations: list[GuardrailViolation] = []
         for path, payload in yaml_payloads(repo_root / PROMOTION_CONFIG_DIR):
             source = path.read_text(encoding="utf-8")
@@ -252,12 +252,12 @@ class RouteMetadataRequiredRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform per-file check."""
+        """Return no per-file violations; this rule only checks at repository scope."""
         del relative_path, qts_relative_path, tree
         return []
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform repository-wide check."""
+        """Flag route workflow configs that do not declare route metadata."""
         violations: list[GuardrailViolation] = []
         for path, payload in yaml_payloads(repo_root / RESEARCH_WORKFLOW_ROUTE_DIR):
             if payload.get("route"):
@@ -290,12 +290,12 @@ class ResearchReportDecisionRequiredRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform per-file check."""
+        """Return no per-file violations; this rule only checks at repository scope."""
         del relative_path, qts_relative_path, tree
         return []
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform repository-wide check."""
+        """Flag generated research reports that lack a Review Decision block."""
         root = repo_root / RESEARCH_REPORT_DIR
         if not root.exists():
             return []
@@ -337,12 +337,12 @@ class ResearchStrategyStaleDocstringRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform per-file check."""
+        """Return no per-file violations; this rule only checks at repository scope."""
         del relative_path, qts_relative_path, tree
         return []
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform repository-wide check."""
+        """Flag research strategy modules whose docstrings claim examples ownership."""
         root = repo_root / RESEARCH_STRATEGY_DIR
         if not root.exists():
             return []

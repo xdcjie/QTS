@@ -31,7 +31,7 @@ class ImportBoundaryRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Return violations for imports that cross package boundaries in the wrong direction."""
         if qts_relative_path.parts[:1] == ("quality",):
             return []
         violations: list[GuardrailViolation] = []
@@ -54,7 +54,7 @@ class ProviderSdkImportRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Return violations for provider SDK imports outside adapter/transport boundaries."""
         if _has_allowed_prefix(qts_relative_path, PROVIDER_SDK_ALLOWED_PREFIXES):
             return []
         violations: list[GuardrailViolation] = []
@@ -87,7 +87,7 @@ class ProductionNoTestingImportRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Return violations for production code importing from qts.testing."""
         if qts_relative_path.parts[:1] in {("testing",), ("quality",)}:
             return []
         violations: list[GuardrailViolation] = []
@@ -117,7 +117,7 @@ class RemovedImportNoNewUsageRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Return violations for imports referencing removed module paths or symbols."""
         violations: list[GuardrailViolation] = []
         imported_name_lines: set[tuple[str, int]] = set()
         for imported_module, imported_name, line in _iter_imported_names(tree):

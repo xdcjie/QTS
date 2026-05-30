@@ -66,14 +66,14 @@ class StrategyAssetResolver:
         self.option_chain_registry = option_chain_registry
 
     def resolve_symbol(self, user_symbol: str) -> AssetRef:
-        """Perform resolve_symbol."""
+        """Resolve a user symbol to an AssetRef via the instrument registry."""
         if self.instrument_registry is None:
             raise RuntimeError("instrument registry is not configured")
         instrument_id = self.instrument_registry.resolve(user_symbol)
         return AssetRef(instrument_id=instrument_id, symbol=user_symbol)
 
     def resolve_future(self, root_symbol: str, *, contract: str = "front") -> AssetRef:
-        """Perform resolve_future."""
+        """Resolve a future root to the front-contract AssetRef via the chain registry."""
         if self.future_chain_registry is None:
             raise RuntimeError("future chain registry is not configured")
         if contract != "front":

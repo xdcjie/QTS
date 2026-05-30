@@ -31,7 +31,7 @@ class IbkrMarketDataConnection:
     source_id: str
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate that host, port, client_id, and source_id are well-formed."""
         if not self.host.strip():
             raise ValueError("host must not be empty")
         if self.port <= 0:
@@ -61,7 +61,7 @@ class IbkrMarketDataAdapter:
         symbol_mapping: BrokerSymbolMapping,
         session_window_by_instrument: Mapping[InstrumentId, RegularSessionWindow] | None = None,
     ) -> None:
-        """Perform __init__."""
+        """Initialize the adapter with its connection, symbol mapping, and session windows."""
         self.connection = connection
         self._symbol_mapping = symbol_mapping
         self._session_window_by_instrument = dict(session_window_by_instrument or {})
@@ -74,7 +74,7 @@ class IbkrMarketDataAdapter:
         return self._permission_state
 
     def subscription_for(self, instrument_id: InstrumentId) -> IbkrMarketDataSubscription:
-        """Perform subscription_for."""
+        """Build a subscription request mapping an instrument to its broker symbol."""
         return IbkrMarketDataSubscription(
             instrument_id=instrument_id,
             broker_symbol=self._symbol_mapping.to_broker_symbol(instrument_id),
@@ -89,7 +89,7 @@ class IbkrMarketDataAdapter:
         price: Decimal,
         size: Decimal = Decimal("0"),
     ) -> Tick:
-        """Perform normalize_tick."""
+        """Build a domain Tick, resolving the broker symbol to an InstrumentId."""
         return Tick(
             instrument_id=self._symbol_mapping.to_instrument_id(broker_symbol),
             time=time,
@@ -117,7 +117,7 @@ class IbkrMarketDataAdapter:
         bid_size: Decimal = Decimal("0"),
         ask_size: Decimal = Decimal("0"),
     ) -> Quote:
-        """Perform normalize_quote."""
+        """Build a domain Quote, resolving the broker symbol to an InstrumentId."""
         return Quote(
             instrument_id=self._symbol_mapping.to_instrument_id(broker_symbol),
             time=time,
@@ -158,7 +158,7 @@ class IbkrMarketDataAdapter:
         is_complete: bool = False,
         is_partial: bool = False,
     ) -> Bar:
-        """Perform normalize_bar."""
+        """Build a domain Bar, resolving the symbol and applying any session-window session id."""
         instrument_id = self._symbol_mapping.to_instrument_id(broker_symbol)
         session_window = self._session_window_by_instrument.get(instrument_id)
         if session_window is not None:

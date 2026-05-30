@@ -28,7 +28,7 @@ class MarginCalculator:
         initial_margin_rate: Decimal = Decimal("0.05"),
         maintenance_margin_rate: Decimal = Decimal("0.04"),
     ) -> None:
-        """Perform __init__."""
+        """Initialize the calculator with validated initial and maintenance rates."""
         if initial_margin_rate <= Decimal("0"):
             raise ValueError("initial_margin_rate must be positive")
         if maintenance_margin_rate <= Decimal("0"):

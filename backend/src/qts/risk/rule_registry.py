@@ -23,7 +23,7 @@ class RiskRuleRegistry:
     """Map configured rule names to executable risk rules."""
 
     def build(self, config: RiskRuleConfig) -> RiskRule:
-        """Perform build."""
+        """Construct the executable RiskRule for a configured rule name and params."""
         if config.name is RiskRuleName.POSITION_LIMIT:
             return PositionLimitRule(max_position=self._param(config, "max_position"))
         if config.name is RiskRuleName.LEVERAGE_LIMIT:
@@ -63,7 +63,7 @@ class RiskRuleRegistry:
 
     @staticmethod
     def _param(config: RiskRuleConfig, name: str) -> Decimal:
-        """Perform _param."""
+        """Return a required Decimal param from the config, raising if it is missing."""
         try:
             return config.params[name]
         except KeyError as exc:

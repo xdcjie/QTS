@@ -18,7 +18,7 @@ class TradingSessionRule:
     session_date: date
 
     def check(self, request: OrderRiskRequest) -> RiskDecision:
-        """Perform check."""
+        """Reject orders whose order time falls outside the configured session interval."""
         if request.order_time is None:
             return RiskDecision.rejected(
                 "MISSING_ORDER_TIME",

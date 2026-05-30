@@ -16,7 +16,7 @@ class DataSubscription:
     warmup: int
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Require a non-empty timeframe and a positive warmup."""
         if not self.timeframe.strip():
             raise ValueError("timeframe must not be empty")
         if self.warmup <= 0:
@@ -27,16 +27,16 @@ class StrategySubscriptionRegistry:
     """Own strategy subscriptions and enforce invariant validation."""
 
     def __init__(self) -> None:
-        """Perform __init__."""
+        """Initialize an empty list of data subscriptions."""
         self._subscriptions: list[DataSubscription] = []
 
     @property
     def subscriptions(self) -> tuple[DataSubscription, ...]:
-        """Perform subscriptions."""
+        """Return the registered subscriptions as an immutable tuple."""
         return tuple(self._subscriptions)
 
     def subscribe(self, subscription: DataSubscription) -> DataSubscription:
-        """Perform subscribe."""
+        """Register a data subscription and return it."""
         self._subscriptions.append(subscription)
         return subscription
 

@@ -13,7 +13,7 @@ class ReplayFeed:
     """Deterministic replay feed over stored bars."""
 
     def __init__(self, store: MarketDataStore) -> None:
-        """Perform __init__."""
+        """Bind the feed to the market data store it replays bars from."""
         self._store = store
 
     def events(
@@ -24,7 +24,7 @@ class ReplayFeed:
         start: datetime,
         end: datetime,
     ) -> tuple[Bar, ...]:
-        """Perform events."""
+        """Return stored bars for an instrument and timeframe within [start, end)."""
         return self._store.read_bars(
             instrument_id=instrument_id,
             timeframe=timeframe,

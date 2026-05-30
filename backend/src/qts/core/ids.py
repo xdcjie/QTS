@@ -12,7 +12,7 @@ class _StringId:
     value: str
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate that the id value is a non-empty string."""
         class_name = self.__class__.__name__
         if not isinstance(self.value, str):
             raise TypeError(f"{class_name} value must be a string")
@@ -20,7 +20,7 @@ class _StringId:
             raise ValueError(f"{class_name} must not be empty")
 
     def __str__(self) -> str:
-        """Perform __str__."""
+        """Return the raw string value of the identifier."""
         return self.value
 
 

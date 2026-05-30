@@ -18,7 +18,7 @@ class OrderFillDTO:
     price: Decimal
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Require non-empty fill, order, instrument, and side identifiers."""
         if not self.fill_id.strip():
             raise ValueError("fill_id must not be empty")
         if not self.order_id.strip():

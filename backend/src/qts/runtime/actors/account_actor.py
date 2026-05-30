@@ -61,7 +61,7 @@ class AccountActor(Actor):
         *,
         account_id: AccountId | None = None,
     ) -> None:
-        """Perform __init__."""
+        """Initialize empty cash, holdings, and fill-idempotency state for the account."""
         self._account_id = account_id
         self._cash = CashBook(initial_cash)
         self._holdings = HoldingBook()
@@ -69,7 +69,7 @@ class AccountActor(Actor):
         self._position_closed_events: list[PositionClosed] = []
 
     def handle(self, message: object) -> None:
-        """Perform handle."""
+        """Dispatch snapshot/drain queries and ApplyFill messages to their handlers."""
         if isinstance(message, tuple) and len(message) == 2:
             query, response_mailbox = message
             if isinstance(query, GetAccountSnapshot):
@@ -113,7 +113,7 @@ class AccountActor(Actor):
         return events
 
     def _apply_fill(self, message: ApplyFill) -> None:
-        """Perform _apply_fill."""
+        """Apply an idempotent fill, updating holdings, cash, and closed-position events."""
         fill = message.fill
         if self._account_id is not None and fill.account_id != self._account_id:
             raise ValueError("fill account_id does not match AccountActor account_id")

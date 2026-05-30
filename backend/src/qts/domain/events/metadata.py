@@ -37,7 +37,7 @@ class EventMetadata:
     causation_id: CausationId | None = None
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate non-empty event_type, aware timestamps, and non-negative seq."""
         if not self.event_type.strip():
             raise ValueError("event_type must not be empty")
         require_aware_datetime(self.event_time, name="event_time")

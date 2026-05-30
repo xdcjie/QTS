@@ -39,7 +39,7 @@ class RiskEngine:
         *,
         require_live_market_data: bool = False,
     ) -> None:
-        """Perform __init__."""
+        """Initialize the engine with an ordered rule set and live-data requirement flag."""
         self._rules = tuple(rules)
         self._require_live_market_data = require_live_market_data
 
@@ -93,7 +93,7 @@ class RiskEngine:
                 yield rule
 
     def check(self, request: OrderRiskRequest) -> RiskDecision:
-        """Perform check."""
+        """Evaluate rules in order and return the first rejection, else approve."""
         if self._require_live_market_data:
             live_market_data_rules: tuple[RiskRule, ...] = (
                 MarketDataPermissionRiskRule(),

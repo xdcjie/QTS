@@ -41,7 +41,7 @@ class HistoricalCsvStats:
     invalid_rows: int = 0
 
     def as_dict(self) -> dict[str, int]:
-        """Perform as_dict."""
+        """Return the validation counters as a plain dict."""
         return {
             "rows_seen": self.rows_seen,
             "bars_emitted": self.bars_emitted,
@@ -77,7 +77,7 @@ class HistoricalDatasetValidator:
         schema: HistoricalCsvSchema | None = None,
         allow_futures_outright_symbols: bool = True,
     ) -> HistoricalValidationSample:
-        """Perform validate_sample."""
+        """Validate a sampled CSV file into bars, counters, and diagnostics."""
         if sample_rows is not None and sample_rows <= 0:
             raise ValueError("sample_rows must be positive")
 
@@ -191,7 +191,7 @@ def is_futures_outright_symbol(symbol: str) -> bool:
 
 
 def _group_bars(bars: list[Bar]) -> dict[InstrumentId, list[Bar]]:
-    """Perform _group_bars."""
+    """Group bars by instrument id."""
     grouped: dict[InstrumentId, list[Bar]] = defaultdict(list)
     for bar in bars:
         grouped[bar.instrument_id].append(bar)
@@ -199,7 +199,7 @@ def _group_bars(bars: list[Bar]) -> dict[InstrumentId, list[Bar]]:
 
 
 def _is_spread_symbol(symbol: str) -> bool:
-    """Perform _is_spread_symbol."""
+    """Return whether a source symbol looks like a spread."""
     return "-" in symbol
 
 

@@ -24,7 +24,7 @@ def filter_session_bars(
 
 
 def _bar_inside_session(bar: Bar, session: MarketSession) -> bool:
-    """Perform _bar_inside_session."""
+    """Return whether the bar's interval falls within the session's open/close."""
     return (
         session.interval.contains(bar.start_time)
         and bar.end_time <= session.close_time

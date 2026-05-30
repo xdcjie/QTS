@@ -24,7 +24,7 @@ class LivePackageNoReplayClassRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Flag Replay-prefixed classes defined under the data/live package."""
         if qts_relative_path.parts[:2] != ("data", "live"):
             return []
         violations: list[GuardrailViolation] = []
@@ -55,7 +55,7 @@ class DataLiveNoSharedContractRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Flag shared market-data contract classes defined under the data/live package."""
         if qts_relative_path.parts[:2] != ("data", "live"):
             return []
         violations: list[GuardrailViolation] = []
@@ -90,7 +90,7 @@ class SharedRuntimeWordingRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Flag mode-specific wording in shared runtime docstrings."""
         if qts_relative_path.parts[:1] != ("runtime",):
             return []
         violations: list[GuardrailViolation] = []

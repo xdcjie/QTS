@@ -22,7 +22,7 @@ class BarAggregationPipeline:
         *,
         session_window: RegularSessionWindow | None = None,
     ) -> None:
-        """Perform __init__."""
+        """Initialize the pipeline with an exchange timezone and session window."""
         self._exchange_timezone = exchange_timezone
         self._session_window = session_window
         self._consolidators: dict[tuple[object, ...], Consolidator] = {}
@@ -79,12 +79,12 @@ class BarAggregationPipeline:
     def _aggregation_key(
         bar: Bar, source_timeframe: Timeframe, target_timeframe: Timeframe
     ) -> tuple[object, ...]:
-        """Perform _aggregation_key."""
+        """Build the consolidator key from instrument, session, and timeframes."""
         return (bar.instrument_id, bar.session_id, str(source_timeframe), str(target_timeframe))
 
     @staticmethod
     def _logical_key(bar: Bar, source_timeframe: str, target_timeframe: str) -> tuple[object, ...]:
-        """Perform _logical_key."""
+        """Build the consolidator key for a logical subscriber stream."""
         return (bar.instrument_id, source_timeframe, target_timeframe, bar.session_id)
 
 

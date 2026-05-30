@@ -37,7 +37,7 @@ class _RecordingBacktestSink:
 
     @property
     def order_count(self) -> int:
-        """Perform order_count."""
+        """Return the number of order events recorded by this sink."""
         return self._order_count
 
     def write(self, event: RuntimeEvent) -> None:

@@ -59,7 +59,7 @@ class HistoricalCsvRowMapper:
         )
 
     def _field(self, row: Mapping[str, str], semantic_name: str) -> str:
-        """Perform _field."""
+        """Return the row value for a semantic field via the schema's column map."""
         return row[self.schema.resolve_column(semantic_name)]
 
     @staticmethod
@@ -71,7 +71,7 @@ class HistoricalCsvRowMapper:
         close_value: str,
         volume_value: str,
     ) -> tuple[Decimal, Decimal, Decimal, Decimal, Decimal]:
-        """Perform _parse_ohlcv_values."""
+        """Parse OHLCV strings to Decimals and validate price ordering and volume."""
         open_ = Decimal(open_value)
         high = Decimal(high_value)
         low = Decimal(low_value)

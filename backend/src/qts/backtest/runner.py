@@ -28,12 +28,12 @@ class BacktestRun:
 
     @property
     def processed_bars(self) -> int:
-        """Perform processed_bars."""
+        """Return the total number of bars processed by the run."""
         return self.result.processed_bars
 
     @property
     def report_hash(self) -> str:
-        """Perform report_hash."""
+        """Return the deterministic report hash of the run result."""
         return self.result.report_hash
 
 
@@ -77,7 +77,7 @@ def _streaming_summary_payload(
     manifest_path: Path,
     dataset_stats: dict[str, dict[str, int]],
 ) -> dict[str, Any]:
-    """Perform _streaming_summary_payload."""
+    """Build the JSON summary payload aggregating dataset stats and run metrics."""
     processed_rows = sum(item["rows_seen"] for item in dataset_stats.values())
     emitted_bars = sum(item["bars_emitted"] for item in dataset_stats.values())
     excluded_spreads = sum(item["spreads_excluded"] for item in dataset_stats.values())

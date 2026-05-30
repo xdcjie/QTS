@@ -120,7 +120,7 @@ def main() -> None:
 def _read_config(
     config_path: Path,
 ) -> tuple[IbkrEnvironmentConfig | None, list[str]]:
-    """Perform _read_config."""
+    """Load the IBKR config, returning it with any parse errors."""
     try:
         return IbkrEnvironmentConfig.from_yaml(config_path), []
     except ValueError as exc:
@@ -128,7 +128,7 @@ def _read_config(
 
 
 def _summarize_config(config: IbkrEnvironmentConfig | None) -> JsonObject:
-    """Perform _summarize_config."""
+    """Build a secrets-redacted summary of the IBKR config for evidence."""
     if config is None:
         return {}
 
@@ -181,7 +181,7 @@ def _merge_validation_errors(
     parse_errors: list[str],
     config: IbkrEnvironmentConfig | None,
 ) -> list[str]:
-    """Perform _merge_validation_errors."""
+    """Combine parse errors with config validation errors into one list."""
     if parse_errors:
         return parse_errors
     if config is None:
@@ -195,7 +195,7 @@ def _collect_network_evidence(
     dry_run: bool,
     timeout_seconds: float,
 ) -> JsonObject:
-    """Perform _collect_network_evidence."""
+    """Probe the market-data and order gateways, skipping on dry run or bad config."""
     if config is None:
         return {
             "status": "skipped",
@@ -234,7 +234,7 @@ def _collect_network_evidence(
 
 
 def _tcp_probe(connection: JsonObject, timeout_seconds: float) -> JsonObject:
-    """Perform _tcp_probe."""
+    """Attempt a TCP connection to host:port and report the outcome."""
     host = str(connection.get("host", ""))
     port = connection.get("port")
     result: JsonObject = {
@@ -259,19 +259,19 @@ def _tcp_probe(connection: JsonObject, timeout_seconds: float) -> JsonObject:
 
 
 def _env_ref_status(name: str) -> JsonObject:
-    """Perform _env_ref_status."""
+    """Report an environment variable name and whether it is set."""
     return {"name": name, "is_set": bool(name and name in os.environ)}
 
 
 def _evidence_filename(generated_at: datetime, label: str | None) -> str:
-    """Perform _evidence_filename."""
+    """Build a timestamped evidence filename with an optional label."""
     timestamp = generated_at.strftime("%Y%m%dT%H%M%SZ")
     safe_label = _safe_label(label) if label else "environment_evidence"
     return f"{timestamp}_{safe_label}.json"
 
 
 def _safe_label(label: str | None) -> str:
-    """Perform _safe_label."""
+    """Sanitize a label into a filename-safe slug, with a default fallback."""
     if not label:
         return "environment_evidence"
     safe = re.sub(r"[^A-Za-z0-9_.-]+", "-", label.strip()).strip("-")

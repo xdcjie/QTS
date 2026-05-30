@@ -30,7 +30,7 @@ class HistoricalMarketDataAdapter:
     _subscriptions: dict[str, MarketDataSubscription] = field(default_factory=dict, init=False)
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate that source_id and source_timeframe are non-empty."""
         if not self.source_id.strip():
             raise ValueError("source_id must not be empty")
         if not self.source_timeframe.strip():
@@ -38,7 +38,7 @@ class HistoricalMarketDataAdapter:
 
     @property
     def capabilities(self) -> MarketDataFeedCapabilities:
-        """Perform capabilities."""
+        """Return the feed capabilities advertising bar support for the source timeframe."""
         return MarketDataFeedCapabilities(
             source_id=self.source_id,
             supports_ticks=False,
@@ -48,13 +48,13 @@ class HistoricalMarketDataAdapter:
         )
 
     def subscribe(self, subscription: MarketDataSubscription) -> MarketDataSubscribed:
-        """Perform subscribe."""
+        """Record the subscription and acknowledge it with a MarketDataSubscribed event."""
         self.capabilities.source_timeframe_for(subscription.timeframe)
         self._subscriptions[subscription.subscription_id] = subscription
         return MarketDataSubscribed(subscription=subscription, source_id=self.source_id)
 
     def events(self, subscription_id: str) -> Iterator[MarketDataSourceEvent]:
-        """Perform events."""
+        """Stream historical bars for the subscription's instrument as source events."""
         if not subscription_id.strip():
             raise ValueError("subscription_id must not be empty")
         try:

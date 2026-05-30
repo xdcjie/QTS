@@ -84,7 +84,7 @@ class OrderStateMachine:
     state: OrderState = OrderState.CREATED
 
     def apply(self, event: OrderEvent) -> OrderState:
-        """Perform apply."""
+        """Apply a lifecycle event and return the new state, rejecting invalid moves."""
         if _DUPLICATE_TERMINAL_EVENTS.get(self.state) is event:
             return self.state
         next_state = _TRANSITIONS.get(self.state, {}).get(event)

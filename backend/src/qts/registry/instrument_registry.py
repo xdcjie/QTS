@@ -12,18 +12,18 @@ class InstrumentRegistry:
     """Resolve user-facing symbols to internal instruments."""
 
     def __init__(self) -> None:
-        """Perform __init__."""
+        """Initialize empty symbol and instrument lookup maps."""
         self._symbols: dict[str, InstrumentId] = {}
         self._instruments: dict[InstrumentId, Instrument] = {}
 
     def register(self, user_symbol: str, instrument: Instrument) -> None:
-        """Perform register."""
+        """Register an instrument under a normalized user-facing symbol."""
         symbol = self._normalize_symbol(user_symbol)
         self._symbols[symbol] = instrument.instrument_id
         self._instruments[instrument.instrument_id] = instrument
 
     def resolve(self, user_symbol: str) -> InstrumentId:
-        """Perform resolve."""
+        """Resolve a user-facing symbol to its internal instrument id."""
         symbol = self._normalize_symbol(user_symbol)
         try:
             return self._symbols[symbol]
@@ -31,14 +31,14 @@ class InstrumentRegistry:
             raise KeyError(f"unknown instrument symbol: {user_symbol}") from exc
 
     def get_instrument(self, instrument_id: InstrumentId) -> Instrument:
-        """Perform get_instrument."""
+        """Return the registered instrument for the given id."""
         try:
             return self._instruments[instrument_id]
         except KeyError as exc:
             raise KeyError(f"unknown instrument id: {instrument_id}") from exc
 
     def get_contract_spec(self, instrument_id: InstrumentId) -> ContractSpec:
-        """Perform get_contract_spec."""
+        """Return the contract spec for the given instrument id."""
         return self.get_instrument(instrument_id).contract_spec
 
     def contract_specs(self) -> Iterator[ContractSpec]:
@@ -48,7 +48,7 @@ class InstrumentRegistry:
 
     @staticmethod
     def _normalize_symbol(user_symbol: str) -> str:
-        """Perform _normalize_symbol."""
+        """Return the symbol uppercased and stripped, rejecting empty values."""
         normalized = user_symbol.strip().upper()
         if not normalized:
             raise ValueError("user_symbol must not be empty")

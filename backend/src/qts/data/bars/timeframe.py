@@ -37,7 +37,7 @@ class Timeframe:
 
     @classmethod
     def parse(cls, value: str) -> Timeframe:
-        """Perform parse."""
+        """Parse a timeframe string into a Timeframe with clock or session alignment."""
         normalized = value.strip().lower()
         if normalized in _SUPPORTED_CLOCK_DURATIONS:
             return cls(
@@ -50,7 +50,7 @@ class Timeframe:
         raise ValueError(f"unsupported timeframe: {value}")
 
     def __str__(self) -> str:
-        """Perform __str__."""
+        """Return the timeframe's canonical string value."""
         return self.value
 
 

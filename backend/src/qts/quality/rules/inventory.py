@@ -95,7 +95,7 @@ class PlatformFreezeRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Flag new public classes in frozen platform modules lacking an unexpired exception."""
         if not _is_platform_freeze_module(qts_relative_path):
             return []
         if self._config.parse_violations:
@@ -131,7 +131,7 @@ class PlatformFreezeRule:
         return violations
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform repository-level check."""
+        """Surface parse errors in the platform freeze exceptions config as violations."""
         del repo_root
         violations: list[GuardrailViolation] = []
         for line, message in self._config.parse_violations:
@@ -161,7 +161,7 @@ class ClassInventoryBudgetRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform per-file check."""
+        """Flag broad-suffix classes whose docstring first line lacks an ownership verb."""
         if qts_relative_path.parts[:1] in (("quality",), ("testing",)):
             return []
         module_name = "qts." + qts_relative_path.with_suffix("").as_posix().replace("/", ".")
@@ -201,7 +201,7 @@ class ClassInventoryBudgetRule:
         return True
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform repository-wide check."""
+        """Flag production classes growing beyond the inventory baseline or boundary matrix."""
         classes = _scan_production_classes(repo_root)
         violations = _class_boundary_matrix_violations(classes, repo_root)
 
@@ -499,11 +499,11 @@ class SingleFieldDtoJustificationRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform per-file check."""
+        """Return no per-file violations; this rule only scans the repository tree."""
         return []
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform repository-wide check."""
+        """Flag single-field DTO/value objects lacking a baseline boundary justification."""
         if _class_inventory_baseline_optional(repo_root) and self._baseline is None:
             return []
         if self._baseline is None:
@@ -554,11 +554,11 @@ class DuplicateDtoNameRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform per-file check."""
+        """Return no per-file violations; this rule only scans the repository tree."""
         return []
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform repository-wide check."""
+        """Flag DTO class names duplicated across application and runtime packages."""
         by_name: dict[str, list[_ProductionClassEntry]] = {}
         for class_entry in _scan_production_classes(repo_root):
             if not class_entry.name.endswith("DTO"):

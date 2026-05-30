@@ -38,12 +38,12 @@ class _ResearchRunScriptRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform per-file check."""
+        """Return no per-file violations; this rule only scans the repository tree."""
         del relative_path, qts_relative_path, tree
         return []
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform repository-wide check."""
+        """Flag one-off research runner scripts under scripts/research."""
         scripts_path = repo_root / "scripts" / "research"
         if not scripts_path.exists():
             return []
@@ -82,12 +82,12 @@ class _VwapOptimizerConfigRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform per-file check."""
+        """Return no per-file violations; this rule only scans the repository tree."""
         del relative_path, qts_relative_path, tree
         return []
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform repository-wide check."""
+        """Flag VWAP optimizer configs under configs/optimizer."""
         optimizer_path = repo_root / "configs" / "optimizer"
         if not optimizer_path.exists():
             return []
@@ -123,12 +123,12 @@ class _ProductionStrategyImportRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform per-file check."""
+        """Return no per-file violations; this rule only scans the repository tree."""
         del relative_path, qts_relative_path, tree
         return []
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform repository-wide check."""
+        """Flag production strategies importing research or example strategy modules."""
         production_path = repo_root / "strategies" / "production"
         if not production_path.exists():
             return []
@@ -202,12 +202,12 @@ class _ResearchWorkflowRuntimeKeyRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform per-file check."""
+        """Return no per-file violations; this rule only scans the repository tree."""
         del relative_path, qts_relative_path, tree
         return []
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform repository-wide check."""
+        """Flag promotion/runtime shortcut keys in research workflow YAML configs."""
         workflow_path = repo_root / "configs" / "research" / "workflows"
         if not workflow_path.exists():
             return []
@@ -305,12 +305,12 @@ class _VwapAdhocRunnerForbiddenRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform per-file check."""
+        """Return no per-file violations; this rule only scans the repository tree."""
         del relative_path, qts_relative_path, tree
         return []
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform repository-wide check."""
+        """Flag VWAP ad-hoc runner scripts and optimizer configs that bypass Research OS."""
         violations: list[GuardrailViolation] = []
 
         # Check for ad-hoc VWAP runner scripts.
@@ -386,12 +386,12 @@ class _VwapTaxonomyPresenceRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform per-file check."""
+        """Return no per-file violations; this rule only scans the repository tree."""
         del relative_path, qts_relative_path, tree
         return []
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform repository-wide check."""
+        """Flag tracked VWAP artifacts missing an entry in the VWAP taxonomy doc."""
         artifacts = [
             artifact_path
             for artifact_path in _tracked_vwap_artifacts(repo_root)

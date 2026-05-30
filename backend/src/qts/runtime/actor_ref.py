@@ -42,7 +42,7 @@ class ActorRef:
     failure_sink: FailureSink | None = None
 
     def tell(self, message: object) -> None:
-        """Perform tell."""
+        """Enqueue a fire-and-forget message into the actor's mailbox."""
         self.mailbox.put(message)
 
     def ask(self, message: ActorQuery[T_co], ask_timeout: float | None = None) -> T_co:

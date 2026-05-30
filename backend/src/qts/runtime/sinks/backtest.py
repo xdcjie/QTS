@@ -46,7 +46,7 @@ class BacktestRuntimeEventSink(RuntimeEventSink):
 
     @property
     def order_count(self) -> int:
-        """Perform order_count."""
+        """Return the number of orders written through this sink."""
         return self._order_count
 
     def write(self, event: RuntimeEvent) -> object:
@@ -106,7 +106,7 @@ class BacktestRuntimeEventSink(RuntimeEventSink):
         fills: tuple[OrderFill, ...],
         bar: Bar,
     ) -> None:
-        """Perform write_processed."""
+        """Write processed orders, fills, and trade-ledger rows for one bar."""
         for order in orders:
             self._writer.write_order(self._order_payload(order))
         for fill in fills:
@@ -116,7 +116,7 @@ class BacktestRuntimeEventSink(RuntimeEventSink):
         self._order_count += len(orders)
 
     def write_equity_point(self, point: EquityCurvePoint) -> None:
-        """Perform write_equity_point."""
+        """Write one equity-curve point through the writer."""
         self._writer.write_equity_point(point)
 
     def write_holdings_snapshot(
@@ -135,7 +135,7 @@ class BacktestRuntimeEventSink(RuntimeEventSink):
 
     @staticmethod
     def _ledger_rows(fills: Iterable[OrderFill], *, bar: Bar) -> tuple[TradeLedgerEntry, ...]:
-        """Perform _ledger_rows."""
+        """Build trade-ledger entries from fills timed to the given bar."""
         return tuple(
             TradeLedgerEntry(
                 order_id=fill.order_id.value,
@@ -153,7 +153,7 @@ class BacktestRuntimeEventSink(RuntimeEventSink):
 
     @staticmethod
     def _order_payload(order: Order) -> dict[str, Any]:
-        """Perform _order_payload."""
+        """Build the serializable artifact payload for an order."""
         return {
             "order_id": order.order_id.value,
             "instrument_id": order.intent.instrument_id.value,
@@ -166,7 +166,7 @@ class BacktestRuntimeEventSink(RuntimeEventSink):
 
     @staticmethod
     def _fill_payload(fill: OrderFill) -> dict[str, Any]:
-        """Perform _fill_payload."""
+        """Build the serializable artifact payload for a fill."""
         return {
             "fill_id": fill.fill_id,
             "order_id": fill.order_id.value,

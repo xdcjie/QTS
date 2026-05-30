@@ -27,26 +27,26 @@ class KillSwitchScope:
 
     @classmethod
     def global_scope(cls) -> KillSwitchScope:
-        """Perform global_scope."""
+        """Return the global (system-wide) kill-switch scope."""
         return cls(KillSwitchScopeType.GLOBAL)
 
     @classmethod
     def account(cls, account_id: AccountId) -> KillSwitchScope:
-        """Perform account."""
+        """Return a kill-switch scope for the given account."""
         return cls(KillSwitchScopeType.ACCOUNT, account_id.value)
 
     @classmethod
     def strategy(cls, strategy_id: StrategyId) -> KillSwitchScope:
-        """Perform strategy."""
+        """Return a kill-switch scope for the given strategy."""
         return cls(KillSwitchScopeType.STRATEGY, strategy_id.value)
 
     @classmethod
     def broker(cls, broker_id: BrokerId) -> KillSwitchScope:
-        """Perform broker."""
+        """Return a kill-switch scope for the given broker."""
         return cls(KillSwitchScopeType.BROKER, broker_id.value)
 
     def reason_code(self) -> str:
-        """Perform reason_code."""
+        """Return the rejection reason code for this scope."""
         return f"KILL_SWITCH_{self.scope_type.value.upper()}"
 
 
@@ -82,7 +82,7 @@ class KillSwitchRegistry:
         self._states: dict[KillSwitchScope, KillSwitchState] = {}
 
     def activate(self, scope: KillSwitchScope, *, reason: str) -> KillSwitchState:
-        """Perform activate."""
+        """Activate the kill switch for the given scope and record the reason."""
         if not reason.strip():
             raise ValueError("reason must not be empty")
         state = KillSwitchState(scope=scope, active=True, reason=reason)
@@ -90,7 +90,7 @@ class KillSwitchRegistry:
         return state
 
     def deactivate(self, scope: KillSwitchScope, *, reason: str) -> KillSwitchState:
-        """Perform deactivate."""
+        """Deactivate the kill switch for the given scope and record the reason."""
         if not reason.strip():
             raise ValueError("reason must not be empty")
         state = KillSwitchState(scope=scope, active=False, reason=reason)
@@ -105,7 +105,7 @@ class KillSwitchRegistry:
         strategy_id: StrategyId | None,
         broker_id: BrokerId,
     ) -> RiskDecision:
-        """Perform check_order."""
+        """Reject the order if any matching scope's kill switch is active."""
         del request
         for scope in self._matching_scopes(account_id, strategy_id, broker_id):
             state = self._states.get(scope)

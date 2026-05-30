@@ -60,7 +60,7 @@ class DataValidationReport:
 
     @property
     def valid(self) -> bool:
-        """Perform valid."""
+        """Return True when no issue has ERROR severity."""
         return not any(issue.severity is DataValidationSeverity.ERROR for issue in self.issues)
 
     @property
@@ -72,7 +72,7 @@ class DataValidationReport:
 
     @property
     def max_severity(self) -> DataValidationSeverity | None:
-        """Perform max_severity."""
+        """Return the highest severity among issues, or None when there are none."""
         if not self.issues:
             return None
         rank = {
@@ -167,7 +167,7 @@ def validate_bars(
 
 
 def _append_ohlc_issue(issues: list[DataValidationIssue], bar: Bar) -> None:
-    """Perform _append_ohlc_issue."""
+    """Append an INVALID_OHLC issue when a bar's high/low bounds are inconsistent."""
     if (
         bar.low > bar.high
         or bar.high < max(bar.open, bar.close)

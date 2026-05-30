@@ -21,11 +21,11 @@ class ReservationBook:
     """Idempotent cash reservations keyed by order ID."""
 
     def __init__(self) -> None:
-        """Perform __init__."""
+        """Initialize an empty reservation map keyed by order ID."""
         self._reservations: dict[OrderId, Reservation] = {}
 
     def reserve(self, reservation_id: OrderId, currency: str, amount: Decimal) -> None:
-        """Perform reserve."""
+        """Record a non-negative cash reservation, ignoring duplicate order IDs."""
         if amount < Decimal("0"):
             raise ValueError("amount must be non-negative")
         if reservation_id in self._reservations:
@@ -38,11 +38,11 @@ class ReservationBook:
         )
 
     def release(self, reservation_id: OrderId) -> None:
-        """Perform release."""
+        """Drop the reservation for an order ID if one exists."""
         self._reservations.pop(reservation_id, None)
 
     def reserved(self, currency: str) -> Decimal:
-        """Perform reserved."""
+        """Return the total amount currently reserved in the given currency."""
         normalized = self._normalize_currency(currency)
         return sum(
             (
@@ -55,7 +55,7 @@ class ReservationBook:
 
     @staticmethod
     def _normalize_currency(currency: str) -> str:
-        """Perform _normalize_currency."""
+        """Return the currency code trimmed and uppercased, raising if empty."""
         normalized = currency.strip().upper()
         if not normalized:
             raise ValueError("currency must not be empty")

@@ -39,7 +39,7 @@ class OrderRiskRequest:
     available_margin: Decimal | None = None
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate sign, range, and timezone invariants on the risk request fields."""
         if self.quantity <= Decimal("0"):
             raise ValueError("quantity must be positive")
         if self.price < Decimal("0"):
@@ -75,7 +75,7 @@ class OrderRiskRequest:
 
     @property
     def notional(self) -> Decimal:
-        """Perform notional."""
+        """Return the order notional as quantity times price times multiplier."""
         return self.quantity * self.price * self.multiplier
 
 

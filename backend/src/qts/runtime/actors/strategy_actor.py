@@ -61,7 +61,7 @@ class StrategyActor(Actor):
         context: StrategyContext,
         result_ref: ActorRef,
     ) -> None:
-        """Perform __init__."""
+        """Initialize the strategy, context, and timer scheduler, then run initialize()."""
         self._strategy = strategy
         self._context = context
         self._result_ref = result_ref
@@ -71,7 +71,7 @@ class StrategyActor(Actor):
             self._timer_scheduler.register(subscription)
 
     def handle(self, message: object) -> None:
-        """Perform handle."""
+        """Dispatch bar, fill, and finalize messages to their handlers."""
         if isinstance(message, StrategyBarEvent):
             self._handle_bar(message)
             return
@@ -107,7 +107,7 @@ class StrategyActor(Actor):
             self._strategy.on_fill(self._context, _to_sdk_fill(order_fill))
 
     def _handle_finalize(self) -> None:
-        """Perform _handle_finalize."""
+        """Run strategy finalize() and emit the resulting intents and cancel intents."""
         before_intents = len(self._context.intents)
         before_cancels = len(self._context.cancel_intents)
         self._strategy.finalize(self._context)

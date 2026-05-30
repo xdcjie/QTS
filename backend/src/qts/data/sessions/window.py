@@ -22,7 +22,7 @@ class RegularSessionWindow:
     close_time: time
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate a non-empty timezone and distinct open and close times."""
         if not self.exchange_timezone.strip():
             raise ValueError("exchange_timezone must not be empty")
         if self.open_time == self.close_time:

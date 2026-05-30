@@ -20,7 +20,7 @@ class BacktestService:
         output_dir: Path | None = None,
         summary_store: BacktestSummaryStore | None = None,
     ) -> None:
-        """Perform __init__."""
+        """Initialize the service with its output directory and summary store."""
         self._output_dir = output_dir if output_dir is not None else Path("runs/backtests")
         self._summary_store = (
             summary_store if summary_store is not None else BacktestSummaryStore(self._output_dir)

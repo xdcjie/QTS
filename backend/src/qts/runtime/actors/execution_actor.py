@@ -90,7 +90,7 @@ class ExecutionActor(Actor):
         self._live_capital_decision = live_capital_decision
 
     def handle(self, message: object) -> None:
-        """Perform handle."""
+        """Dispatch order execute/cancel/replace requests to the execution adapter."""
         if isinstance(message, OrderExecutionRequest):
             if self._live_capital_decision is not None:
                 self._live_capital_decision.assert_live_order_allowed()

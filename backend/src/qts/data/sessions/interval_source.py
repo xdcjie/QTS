@@ -55,7 +55,7 @@ class CalendarSessionIntervalSource:
     """
 
     def __init__(self, provider: _IntervalCalendarProvider) -> None:
-        """Perform __init__."""
+        """Initialize the source with its backing calendar interval provider."""
         self._provider = provider
 
     def interval_for_session_id(self, session_id: str | date) -> TimeInterval | None:

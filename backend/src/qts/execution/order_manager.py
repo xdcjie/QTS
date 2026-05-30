@@ -34,7 +34,7 @@ class OrderManager:
     """Owns order lifecycle and normalized execution reports."""
 
     def __init__(self) -> None:
-        """Perform __init__."""
+        """Initialize empty order, state-machine, broker-mapping, and idempotency stores."""
         self._orders: dict[OrderId, Order] = {}
         self._machines: dict[OrderId, OrderStateMachine] = {}
         self._broker_to_order: dict[str, OrderId] = {}
@@ -71,7 +71,7 @@ class OrderManager:
         return order
 
     def request_cancel(self, intent: CancelIntent) -> Order:
-        """Perform request_cancel."""
+        """Transition the referenced order into the cancel-requested state."""
         state = self._machines[intent.order_id].apply(OrderEvent.CANCEL_REQUESTED)
         return self._replace_order(intent.order_id, state=state)
 
@@ -124,7 +124,7 @@ class OrderManager:
         return OrderProcessingResult(order=order, fills=fills)
 
     def get_order(self, order_id: OrderId) -> Order:
-        """Perform get_order."""
+        """Return the tracked order for the given order id."""
         return self._orders[order_id]
 
     def discard_terminal_order(self, order_id: OrderId) -> None:
@@ -208,7 +208,7 @@ class OrderManager:
         state: OrderState,
         broker_order_id: str | None = None,
     ) -> Order:
-        """Perform _replace_order."""
+        """Replace the stored order with an updated state and optional broker order id."""
         current = self._orders[order_id]
         order = Order(
             order_id=current.order_id,
@@ -222,7 +222,7 @@ class OrderManager:
         return order
 
     def _fills_for_report(self, order: Order, report: ExecutionReport) -> tuple[OrderFill, ...]:
-        """Perform _fills_for_report."""
+        """Build deduplicated OrderFill records from a report's filled quantity."""
         if report.filled_quantity <= Decimal("0") or report.fill_id is None:
             return ()
         if report.fill_price is None:
@@ -247,7 +247,7 @@ class OrderManager:
 
     @staticmethod
     def _event_for_report(status: ExecutionReportStatus) -> OrderEvent:
-        """Perform _event_for_report."""
+        """Map a broker execution-report status to its order state-machine event."""
         return {
             ExecutionReportStatus.ACCEPTED: OrderEvent.ACCEPTED,
             ExecutionReportStatus.PARTIALLY_FILLED: OrderEvent.PARTIALLY_FILLED,

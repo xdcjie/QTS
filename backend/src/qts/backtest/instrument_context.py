@@ -26,7 +26,7 @@ class BacktestInstrumentContext:
         contract_multipliers: Mapping[InstrumentId, Decimal] | None = None,
         execution_timing: ExecutionTimingModel | None = None,
     ) -> None:
-        """Perform __init__."""
+        """Initialize the context from roll/instrument registries, registry bars, and timing."""
         self._future_roll_registry = future_roll_registry
         self._provided_registry = instrument_registry
         self._registry_bars = tuple(registry_bars or ())
@@ -40,7 +40,7 @@ class BacktestInstrumentContext:
         return self._execution_timing
 
     def instrument_registry(self) -> InstrumentRegistry:
-        """Perform instrument_registry."""
+        """Return the provided registry or build one from the streamed registry bars."""
         if self._provided_registry is not None:
             return self._provided_registry
         if not self._registry_bars:
@@ -74,7 +74,7 @@ class BacktestInstrumentContext:
         return registry
 
     def order_instrument_for_intent(self, intent: TargetIntent, *, bar: Bar) -> InstrumentId:
-        """Perform order_instrument_for_intent."""
+        """Resolve the intent's asset to a concrete tradable contract, rolling if continuous."""
         if self.is_continuous(intent.asset.instrument_id):
             if self._future_roll_registry is None:
                 raise RuntimeError("future roll registry is required for continuous contracts")
@@ -91,7 +91,7 @@ class BacktestInstrumentContext:
         instrument_id: InstrumentId,
         bar: Bar,
     ) -> Decimal:
-        """Perform market_price_for_intent."""
+        """Return the execution price for the resolved contract, using roll prices if continuous."""
         if self.is_continuous(intent.asset.instrument_id):
             if self._future_roll_registry is None:
                 raise RuntimeError("future roll registry is required for continuous contracts")
@@ -105,7 +105,7 @@ class BacktestInstrumentContext:
     def update_rolling_prices(
         self, bar: Bar, *, latest_prices: dict[InstrumentId, Decimal]
     ) -> None:
-        """Perform update_rolling_prices."""
+        """Record the resolved contract's roll-adjusted price for a continuous-future bar."""
         if self._future_roll_registry is None:
             return
         if not self.is_continuous(bar.instrument_id):
@@ -126,7 +126,7 @@ class BacktestInstrumentContext:
     def related_contracts_for(
         self, continuous_instrument_id: InstrumentId
     ) -> frozenset[InstrumentId]:
-        """Perform related_contracts_for."""
+        """Return the cached set of concrete contracts behind a continuous instrument."""
         if not self.is_continuous(continuous_instrument_id):
             raise RuntimeError("future roll registry is not configured for this instrument")
 
@@ -142,19 +142,19 @@ class BacktestInstrumentContext:
         return related_contracts
 
     def is_continuous(self, instrument_id: InstrumentId) -> bool:
-        """Perform is_continuous."""
+        """Return whether the instrument is a continuous future tracked by the roll registry."""
         return self._future_roll_registry is not None and self._future_roll_registry.is_continuous(
             instrument_id
         )
 
     @staticmethod
     def _symbol_for(instrument_id: InstrumentId) -> str:
-        """Perform _symbol_for."""
+        """Return the trailing symbol segment of the instrument id."""
         return instrument_id.value.rsplit(".", maxsplit=1)[-1]
 
     @staticmethod
     def _exchange_for(instrument_id: InstrumentId) -> str:
-        """Perform _exchange_for."""
+        """Return the exchange segment of the instrument id, defaulting to BACKTEST."""
         parts = instrument_id.value.split(".")
         if len(parts) >= 2:
             return parts[1]

@@ -27,18 +27,18 @@ class DataView:
         object.__setattr__(self, "as_of", as_of)
 
     def close(self, asset: AssetRef) -> Decimal:
-        """Perform close."""
+        """Return the close price of the asset's latest visible bar."""
         return self.bar(asset).close
 
     def bar(self, asset: AssetRef) -> Bar:
-        """Perform bar."""
+        """Return the asset's most recent visible bar, raising if none exists."""
         history = self.history(asset, bars=1)
         if not history:
             raise KeyError(f"no bar available for asset: {asset.symbol}")
         return history[-1]
 
     def history(self, asset: AssetRef, bars: int, timeframe: str | None = None) -> tuple[Bar, ...]:
-        """Perform history."""
+        """Return up to N complete bars at or before as_of for the asset and timeframe."""
         if bars <= 0:
             raise ValueError("bars must be positive")
         values = self._bars.get(asset.instrument_id, ())

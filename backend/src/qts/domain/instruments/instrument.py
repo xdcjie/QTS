@@ -37,7 +37,7 @@ class Instrument:
     tradable: bool = True
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate non-empty exchange/currency and asset-class-appropriate derivative metadata."""
         if not self.exchange.strip():
             raise ValueError("exchange must not be empty")
         if not self.currency.strip():

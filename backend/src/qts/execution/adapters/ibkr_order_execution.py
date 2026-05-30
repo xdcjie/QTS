@@ -47,7 +47,7 @@ class IbkrOrderExecutionConnection:
     account_id: str
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate that host, port, client_id, and account_id are well-formed."""
         if not self.host.strip():
             raise ValueError("host must not be empty")
         if self.port <= 0:
@@ -71,7 +71,7 @@ class IbkrOrderExecutionAdapter:
         live_capital_decision: object | None = None,
         clock: Clock | None = None,
     ) -> None:
-        """Perform __init__."""
+        """Wire the request mapper and callback normalizer from connection and capabilities."""
         self.connection = connection
         self._order_map = order_map
         self._live_capital_decision = live_capital_decision

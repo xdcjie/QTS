@@ -227,7 +227,7 @@ class TargetIntentProcessor:
         margin_calculator: MarginCalculator | None = None,
         intraday_pnl_calculator: IntradayPnlCalculator | None = None,
     ) -> None:
-        """Perform __init__."""
+        """Initialize the processor with risk, instrument context, and id prefixes."""
         if not order_id_prefix.strip():
             raise ValueError("order_id_prefix must not be empty")
         if not broker_order_id_prefix.strip():
@@ -426,7 +426,7 @@ class TargetIntentProcessor:
         risk_state: RiskStateSnapshot | None = None,
         intent_id: str | None = None,
     ) -> ProcessedIntent:
-        """Perform _process_order_delta."""
+        """Risk-check a quantity delta and submit the resulting order, if any."""
         if quantity_delta == Decimal("0"):
             return ProcessedIntent(orders=(), fills=())
 

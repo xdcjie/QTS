@@ -38,7 +38,7 @@ class OrderIntent:
     intent_id: str | None = None
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate quantity is positive and intent_id, if present, is non-empty."""
         if self.quantity <= Decimal("0"):
             raise ValueError("quantity must be positive")
         if self.intent_id is not None and not self.intent_id.strip():
@@ -61,7 +61,7 @@ class ReplaceIntent:
     new_quantity: Decimal
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate the replacement quantity is positive."""
         if self.new_quantity <= Decimal("0"):
             raise ValueError("new_quantity must be positive")
 
@@ -101,7 +101,7 @@ class ExecutionReport:
     fill_time: datetime | None = None
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate report/order ids are non-empty and quantities are non-negative."""
         if not self.report_id.strip():
             raise ValueError("report_id must not be empty")
         if not self.broker_order_id.strip():

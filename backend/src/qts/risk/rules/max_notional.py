@@ -16,12 +16,12 @@ class MaxNotionalRule:
     rule_id = "max_notional"
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate that the configured notional limit is positive."""
         if self.max_notional <= Decimal("0"):
             raise ValueError("max_notional must be positive")
 
     def check(self, request: OrderRiskRequest) -> RiskDecision:
-        """Perform check."""
+        """Reject the order when its notional exceeds the limit, else approve."""
         if request.notional > self.max_notional:
             return RiskDecision.rejected(
                 "MAX_NOTIONAL_EXCEEDED",

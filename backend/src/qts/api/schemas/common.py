@@ -48,7 +48,7 @@ class OperationalErrorSchema(BaseModel):
         message: str,
         exc: Exception,
     ) -> OperationalErrorSchema:
-        """Perform from_exception."""
+        """Build an error schema from a code and message, hiding exception detail."""
         del exc
         return cls(code=code, message=message, detail=None)
 

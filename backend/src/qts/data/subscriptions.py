@@ -39,7 +39,7 @@ class LogicalSubscription:
     stream_type: SourceStreamType = SourceStreamType.BAR
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate subscriber_id and requested_timeframe are non-empty."""
         if not self.subscriber_id.strip():
             raise ValueError("subscriber_id must not be empty")
         if not self.requested_timeframe.strip():
@@ -117,7 +117,7 @@ class PhysicalSubscriptionKey:
     source_timeframe: str
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate source_id and source_timeframe are non-empty."""
         if not self.source_id.strip():
             raise ValueError("source_id must not be empty")
         if not self.source_timeframe.strip():

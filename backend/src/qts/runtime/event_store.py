@@ -157,7 +157,7 @@ class InMemoryEventStore:
     """Deterministic append-only in-memory event store."""
 
     def __init__(self, *, migration_registry: SchemaMigrationRegistry | None = None) -> None:
-        """Perform __init__.
+        """Initialize an empty store, defaulting to the canonical migration registry.
 
         When ``migration_registry`` is omitted, defaults to the canonical
         production registry from ``qts.runtime.event_migrations`` so a fresh
@@ -171,17 +171,17 @@ class InMemoryEventStore:
         self._migration_registry = migration_registry
 
     def append(self, event: StoredEvent) -> int:
-        """Perform append."""
+        """Append one event and return its 1-indexed sequence number."""
         self._events.append(event)
         return len(self._events)
 
     def append_many(self, events: Iterable[StoredEvent]) -> None:
-        """Perform append_many."""
+        """Append each event from the iterable in order."""
         for event in events:
             self.append(event)
 
     def replay(self, *, partition_key: str | None = None) -> tuple[StoredEvent, ...]:
-        """Perform replay."""
+        """Replay migrated events, optionally filtered by partition key."""
         if partition_key is None:
             return tuple(self._with_migration(event) for event in self._events)
         return tuple(
@@ -209,7 +209,7 @@ class InMemoryEventStore:
         )
 
     def by_correlation_id(self, correlation_id: CorrelationId) -> tuple[StoredEvent, ...]:
-        """Perform by_correlation_id."""
+        """Replay migrated events matching the given correlation identifier."""
         return tuple(
             self._with_migration(event)
             for event in self._events
@@ -324,7 +324,7 @@ class FileEventStore:
         return max(self._read_sequences(), default=0)
 
     def replay(self, *, partition_key: str | None = None) -> tuple[StoredEvent, ...]:
-        """Perform replay."""
+        """Read events from the JSONL file, optionally filtered by partition key."""
         if not self._path.exists():
             return ()
         events: list[StoredEvent] = []
@@ -362,7 +362,7 @@ class FileEventStore:
         return tuple(events)
 
     def by_correlation_id(self, correlation_id: CorrelationId) -> tuple[StoredEvent, ...]:
-        """Perform by_correlation_id."""
+        """Read all persisted events matching the given correlation identifier."""
         return tuple(event for event in self.replay() if event.correlation_id == correlation_id)
 
     @staticmethod
@@ -390,7 +390,7 @@ class FileEventStore:
 
     @staticmethod
     def _event_to_json(event: BaseEvent) -> dict[str, Any]:
-        """Perform _event_to_json."""
+        """Serialize a BaseEvent envelope into a JSON-safe dict."""
         return {
             "event_id": event.event_id.value,
             "event_type": event.event_type,
@@ -403,7 +403,7 @@ class FileEventStore:
 
     @staticmethod
     def _event_from_json(payload: dict[str, Any]) -> BaseEvent:
-        """Perform _event_from_json."""
+        """Reconstruct a BaseEvent from its serialized JSON dict."""
         correlation_id = payload["correlation_id"]
         causation_id = payload["causation_id"]
         return BaseEvent(

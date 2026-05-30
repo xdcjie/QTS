@@ -117,7 +117,7 @@ class BacktestActorLoopResult:
 
     @property
     def processed_bars(self) -> int:
-        """Perform processed_bars."""
+        """Return the total of warmup and trading bars processed."""
         return self.warmup_bars + self.trading_bars
 
 
@@ -145,7 +145,7 @@ class BacktestActorLoop:
         signal_weight: Decimal = Decimal("1"),
         conflict_group: str = "default",
     ) -> None:
-        """Perform __init__."""
+        """Initialize the loop with strategies, bars, config, and dependencies."""
         if account_id is None:
             raise ValueError("account_id is required")
         if strategies is not None:

@@ -16,7 +16,7 @@ class ComexGoldCalendarProvider:
     exchange_timezone = ZoneInfo("America/New_York")
 
     def session_for(self, session_date: date) -> MarketSession:
-        """Perform session_for."""
+        """Build the COMEX Gold [18:00 prior day, 17:00) session as a UTC interval."""
         open_date = session_date - timedelta(days=1)
         open_time = datetime.combine(
             open_date,

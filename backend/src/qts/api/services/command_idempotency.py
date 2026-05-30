@@ -12,11 +12,11 @@ class CommandIdempotencyStore:
     """Remember the first result for each command idempotency key."""
 
     def __init__(self) -> None:
-        """Perform __init__."""
+        """Initialize an empty store of cached results keyed by (scope, key)."""
         self._results: dict[tuple[str, str], object] = {}
 
     def run(self, key: str, command: Callable[[], T], *, scope: str = "runtime") -> T:
-        """Perform run."""
+        """Run the command once per scoped key, returning the cached result on repeats."""
         if not key.strip():
             raise ValueError("idempotency key must not be empty")
         if not scope.strip():

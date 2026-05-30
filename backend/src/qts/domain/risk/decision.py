@@ -43,7 +43,7 @@ class RiskDecision:
         conflict_reason: str | None = None,
         evidence: Mapping[str, object] | None = None,
     ) -> RiskDecision:
-        """Perform approve."""
+        """Build an APPROVED RiskDecision with optional rule and aggregation metadata."""
         return cls(
             status=RiskDecisionStatus.APPROVED,
             rule_id=rule_id,
@@ -69,7 +69,7 @@ class RiskDecision:
         conflict_reason: str | None = None,
         evidence: Mapping[str, object] | None = None,
     ) -> RiskDecision:
-        """Perform rejected."""
+        """Build a REJECTED RiskDecision, requiring non-empty reason code and reason."""
         if not reason_code.strip():
             raise ValueError("reason_code must not be empty")
         if not reason.strip():
@@ -90,12 +90,12 @@ class RiskDecision:
 
     @property
     def approved(self) -> bool:
-        """Perform approved."""
+        """Return whether this decision's status is APPROVED."""
         return self.status is RiskDecisionStatus.APPROVED
 
     @property
     def reason_text(self) -> str | None:
-        """Perform reason_text."""
+        """Return the human-readable rejection reason, if any."""
         return self.reason
 
 

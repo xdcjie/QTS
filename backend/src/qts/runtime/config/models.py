@@ -213,7 +213,7 @@ class BacktestRiskConfig:
     schema_version: str = "1"
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Normalize schema version and require a positive max notional."""
         if not self.schema_version.strip():
             raise ValueError("schema_version must not be empty")
         object.__setattr__(self, "schema_version", self.schema_version.strip())
@@ -222,7 +222,7 @@ class BacktestRiskConfig:
             raise ValueError("max_notional must be positive")
 
     def to_payload(self) -> dict[str, str]:
-        """Perform to_payload."""
+        """Serialize risk settings for hashing and reporting."""
         return {
             "max_notional": str(self.max_notional),
             "schema_version": self.schema_version,
@@ -238,7 +238,7 @@ class RollPolicyConfig:
     roll_sessions_before_first_notice: int = 3
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Normalize the roll method and require a positive roll lead time."""
         normalized = self.method.strip().lower()
         if normalized != "first_notice_date":
             raise ValueError("roll_policy.method must be first_notice_date")
@@ -247,7 +247,7 @@ class RollPolicyConfig:
         object.__setattr__(self, "method", normalized)
 
     def to_payload(self) -> dict[str, object]:
-        """Perform to_payload."""
+        """Serialize the roll policy for hashing and reporting."""
         return {
             "enabled": self.enabled,
             "method": self.method,
@@ -264,7 +264,7 @@ class BacktestMarketDataReference:
     source: str = "local_historical"
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Normalize paths and require config and catalog to be set together."""
         if self.config_path is not None:
             object.__setattr__(self, "config_path", Path(self.config_path))
         source = self.source.strip().lower()
@@ -283,11 +283,11 @@ class BacktestMarketDataReference:
 
     @property
     def is_configured(self) -> bool:
-        """Perform is_configured."""
+        """Return whether both config path and catalog are set."""
         return self.config_path is not None and self.catalog is not None
 
     def to_payload(self) -> dict[str, str] | None:
-        """Perform to_payload."""
+        """Serialize the market data reference, or None if unconfigured."""
         if not self.is_configured:
             return None
         if self.config_path is None or self.catalog is None:
@@ -311,7 +311,7 @@ class BacktestStrategyConfig:
     conflict_group: str = "default"
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Normalize and validate strategy identity, allocation, and signal fields."""
         if not self.class_path.strip():
             raise ValueError("strategy class_path must not be empty")
         object.__setattr__(self, "params", dict(self.params))
@@ -336,7 +336,7 @@ class BacktestStrategyConfig:
             raise ValueError("strategy conflict_group must not be empty")
 
     def to_payload(self) -> dict[str, Any]:
-        """Perform to_payload."""
+        """Serialize this strategy config for hashing and reporting."""
         return {
             "strategy_id": self.strategy_id,
             "class_path": self.class_path,
@@ -357,7 +357,7 @@ class BacktestStrategyConfig:
 
     @classmethod
     def _parse_payload(cls, payload: dict[str, Any]) -> BacktestStrategyConfig:
-        """Perform _parse_payload."""
+        """Construct a strategy config from a mutable payload dict."""
         params = payload.get("params", {})
         if not isinstance(params, dict):
             raise ValueError("strategy params must be a mapping")
@@ -417,7 +417,7 @@ class BacktestRuntimeConfig:
     optimistic_fill_waiver: bool = False
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Normalize and validate the full backtest run identity and its invariants."""
         if not self.schema_version.strip():
             raise ValueError("schema_version must not be empty")
         object.__setattr__(self, "schema_version", self.schema_version.strip())
@@ -516,11 +516,11 @@ class BacktestRuntimeConfig:
 
     @property
     def config_hash(self) -> str:
-        """Perform config_hash."""
+        """Return the stable identity hash for this backtest run."""
         return stable_json_hash(self.to_payload())
 
     def to_payload(self) -> dict[str, Any]:
-        """Perform to_payload."""
+        """Serialize the full backtest run identity for stable hashing."""
         payload: dict[str, Any] = {
             "schema_version": self.schema_version,
             "mode": RuntimeMode.from_value(self.mode).value,
@@ -569,7 +569,7 @@ class BacktestRuntimeConfig:
 
     @staticmethod
     def _normalize_symbol(symbol: str) -> str:
-        """Perform _normalize_symbol."""
+        """Return the symbol uppercased and stripped, rejecting empty values."""
         normalized = symbol.strip().upper()
         if not normalized:
             raise ValueError("instrument_ids must not contain empty symbols")

@@ -16,7 +16,7 @@ class BacktestPortfolioProjector:
     """Compute portfolio state views and equity points for streaming backtests."""
 
     def __init__(self, contract_multipliers: Mapping[InstrumentId, Decimal] | None = None) -> None:
-        """Perform __init__."""
+        """Initialize the projector with per-instrument contract multipliers."""
         self._multipliers: dict[InstrumentId, Decimal] = dict(contract_multipliers or {})
 
     def multiplier_for(self, instrument_id: InstrumentId) -> Decimal:
@@ -29,7 +29,7 @@ class BacktestPortfolioProjector:
         snapshot: AccountSnapshot,
         latest_prices: Mapping[InstrumentId, Decimal],
     ) -> PortfolioView:
-        """Perform portfolio_view."""
+        """Build a PortfolioView valuing snapshot positions at the latest prices."""
         positions = {
             instrument_id: PortfolioPosition(
                 quantity=position.quantity,
@@ -59,7 +59,7 @@ class BacktestPortfolioProjector:
         snapshot: AccountSnapshot,
         latest_prices: Mapping[InstrumentId, Decimal],
     ) -> EquityCurvePoint:
-        """Perform equity_point."""
+        """Build an equity-curve point at the bar's end time from the account equity."""
         return EquityCurvePoint(
             time=bar.end_time,
             equity=self.portfolio_view(snapshot, latest_prices=latest_prices).equity,

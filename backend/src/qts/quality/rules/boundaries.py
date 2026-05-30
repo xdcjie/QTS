@@ -33,7 +33,7 @@ class ProductSpecificRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Flag product hard-coding unless the path is an allowed product-fact prefix."""
         if _has_allowed_prefix(qts_relative_path, PRODUCT_FACT_ALLOWED_PREFIXES):
             return []
         return _check_product_specific_code(relative_path, qts_relative_path, tree)
@@ -51,7 +51,7 @@ class BrokerSpecificRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Flag broker hard-coding unless the path is an allowed broker-fact prefix."""
         if _has_allowed_prefix(qts_relative_path, BROKER_FACT_ALLOWED_PREFIXES):
             return []
         return _check_broker_specific_code(relative_path, qts_relative_path, tree)
@@ -69,7 +69,7 @@ class BrokerSymbolBoundaryRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Flag BrokerSymbolMapping imports outside approved registry/adapter prefixes."""
         if _has_allowed_prefix(qts_relative_path, BROKER_SYMBOL_MAPPING_ALLOWED_PREFIXES):
             return []
         violations: list[GuardrailViolation] = []
@@ -104,7 +104,7 @@ class TestSupportRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Flag test or anchor support code that appears in production source."""
         return _check_test_support_code(relative_path, qts_relative_path, tree)
 
 
@@ -120,7 +120,7 @@ class SharedCapabilityRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Flag shared-capability semantics placed in source-specific modules."""
         return _check_shared_capability_placement(relative_path, qts_relative_path)
 
 
@@ -136,7 +136,7 @@ class StrategySdkPublicSurfaceRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Flag internal runtime/broker/risk symbols leaking from public SDK modules."""
         return _check_strategy_sdk_internal_leak(relative_path, qts_relative_path, tree)
 
 

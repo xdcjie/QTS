@@ -25,7 +25,7 @@ class ProductionNoFakeClassRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Flag ``Fake``-prefixed classes defined in production packages."""
         if qts_relative_path.parts[:1] in {("testing",), ("quality",)}:
             return []
         violations: list[GuardrailViolation] = []
@@ -54,11 +54,11 @@ class StaleArchitectureTextRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform per-file check."""
+        """Skip per-file analysis; this rule runs only repository-wide."""
         return []
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform repository-wide check."""
+        """Flag stale architecture wording in guarded documents."""
         violations: list[GuardrailViolation] = []
         for relative_path in _iter_architecture_text_paths(repo_root):
             path = repo_root / relative_path

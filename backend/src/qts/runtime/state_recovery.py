@@ -32,7 +32,7 @@ class StateSnapshot:
     config_hash: str | None = None
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate snapshot identity, versions, timezone, and hash fields."""
         if self.snapshot_id is not None and not self.snapshot_id.strip():
             raise ValueError("snapshot_id must not be empty")
         if not self.actor_id.strip():
@@ -124,15 +124,15 @@ class InMemorySnapshotStore:
     """In-memory snapshot store for deterministic tests and local recovery."""
 
     def __init__(self) -> None:
-        """Perform __init__."""
+        """Initialize an empty in-memory snapshot store keyed by actor id."""
         self._snapshots: dict[str, StateSnapshot] = {}
 
     def save(self, snapshot: StateSnapshot) -> None:
-        """Perform save."""
+        """Store the snapshot in memory, replacing any prior one for the actor."""
         self._snapshots[snapshot.actor_id] = snapshot
 
     def load(self, actor_id: str) -> StateSnapshot | None:
-        """Perform load."""
+        """Return the in-memory snapshot for the actor, or None when absent."""
         if not actor_id.strip():
             raise ValueError("actor_id must not be empty")
         return self._snapshots.get(actor_id)
@@ -142,11 +142,11 @@ class FileSnapshotStore:
     """Append-only JSONL snapshot store for local durable recovery."""
 
     def __init__(self, path: Path) -> None:
-        """Perform __init__."""
+        """Initialize the JSONL snapshot store backed by ``path``."""
         self._path = path
 
     def save(self, snapshot: StateSnapshot) -> None:
-        """Perform save."""
+        """Atomically append the snapshot as a JSON line to the store file."""
         self._path.parent.mkdir(parents=True, exist_ok=True)
         existing = self._path.read_text(encoding="utf-8") if self._path.exists() else ""
         line = (
@@ -166,7 +166,7 @@ class FileSnapshotStore:
         os.replace(tmp_path, self._path)
 
     def load(self, actor_id: str) -> StateSnapshot | None:
-        """Perform load."""
+        """Return the latest persisted snapshot for the actor, or None."""
         if not actor_id.strip():
             raise ValueError("actor_id must not be empty")
         if not self._path.exists():

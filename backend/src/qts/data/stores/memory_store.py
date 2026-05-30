@@ -14,11 +14,11 @@ class InMemoryMarketDataStore:
     """In-memory bar store for tests and local runs."""
 
     def __init__(self) -> None:
-        """Perform __init__."""
+        """Initialize an empty bar store keyed by instrument and timeframe."""
         self._bars: dict[tuple[InstrumentId, str], list[Bar]] = defaultdict(list)
 
     def write_bars(self, bars: Iterable[Bar]) -> None:
-        """Perform write_bars."""
+        """Append bars to the store, keeping each series sorted by interval."""
         for bar in bars:
             key = (bar.instrument_id, bar.timeframe)
             self._bars[key].append(bar)
@@ -32,7 +32,7 @@ class InMemoryMarketDataStore:
         start: datetime,
         end: datetime,
     ) -> tuple[Bar, ...]:
-        """Perform read_bars."""
+        """Return bars for the instrument and timeframe within `[start, end]`."""
         return tuple(
             bar
             for bar in self._bars.get((instrument_id, timeframe), ())

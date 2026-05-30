@@ -17,16 +17,16 @@ class SMA:
     value: Decimal | None = None
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Initialize the rolling price window sized to the configured period."""
         self._values = RollingWindow[Decimal](self.window)
 
     @property
     def ready(self) -> bool:
-        """Perform ready."""
+        """Return whether the window has accumulated enough samples."""
         return self._values.ready
 
     def update(self, price: Decimal) -> Decimal | None:
-        """Perform update."""
+        """Add a price and return the new average, or None until the window fills."""
         self._values.append(price)
         if not self.ready:
             self.value = None

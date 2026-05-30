@@ -16,15 +16,15 @@ class HistoricalFutureChainSymbolResolver:
 
     @property
     def root(self) -> str:
-        """Perform root."""
+        """Return the futures root symbol of the backing chain."""
         return self.chain.root
 
     def is_supported_symbol(self, symbol: str) -> bool:
-        """Perform is_supported_symbol."""
+        """Return True if the symbol is an outright contract in the chain."""
         return self.chain.is_outright_symbol(symbol)
 
     def instrument_id_for_symbol(self, symbol: str) -> InstrumentId:
-        """Perform instrument_id_for_symbol."""
+        """Return the InstrumentId for an outright symbol via the chain metadata."""
         return self.chain.instrument_id_for_symbol(symbol)
 
 

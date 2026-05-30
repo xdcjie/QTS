@@ -57,13 +57,13 @@ class BrokerCapabilities:
             raise ValueError("supported_asset_classes must not contain empty values")
 
     def supports_asset_class(self, asset_class: str) -> bool:
-        """Perform supports_asset_class."""
+        """Return whether the broker supports trading the given asset class."""
         if not asset_class.strip():
             raise ValueError("asset_class must not be empty")
         return not self.supported_asset_classes or asset_class in self.supported_asset_classes
 
     def supports_order_type(self, order_type: OrderType) -> bool:
-        """Perform supports_order_type."""
+        """Return whether the broker supports the given order type."""
         if self.supported_order_types:
             return order_type in self.supported_order_types
         return {
@@ -81,7 +81,7 @@ class BrokerCapabilities:
         }[order_type]
 
     def supports_tif(self, time_in_force: TimeInForce) -> bool:
-        """Perform supports_tif."""
+        """Return whether the broker supports the given time-in-force."""
         return not self.supported_time_in_force or time_in_force in self.supported_time_in_force
 
     def validate_order_quantity(self, quantity: Decimal) -> None:

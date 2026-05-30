@@ -45,7 +45,7 @@ class SubscribeMarketData:
     timeframe: str
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate that subscriber_id and timeframe are non-empty."""
         if not self.subscriber_id.strip():
             raise ValueError("subscriber_id must not be empty")
         if not self.timeframe.strip():
@@ -64,7 +64,7 @@ class MarketDataActor(Actor):
         session_window: RegularSessionWindow | None = None,
         feed: MarketDataAdapter | None = None,
     ) -> None:
-        """Perform __init__."""
+        """Initialize the actor with subscribers, aggregation timeframe, and optional feed."""
         self._subscribers = tuple(subscribers)
         self._target_timeframe = (
             Timeframe.parse(aggregate_timeframe) if aggregate_timeframe is not None else None
@@ -83,7 +83,7 @@ class MarketDataActor(Actor):
         self._physical_subscriptions: set[PhysicalSubscriptionKey] = set()
 
     def handle(self, message: object) -> None:
-        """Perform handle."""
+        """Dispatch SubscribeMarketData and MarketDataEvent messages to fan-out logic."""
         if isinstance(message, SubscribeMarketData):
             self._subscribe(message)
             return
@@ -108,16 +108,16 @@ class MarketDataActor(Actor):
 
     @property
     def logical_subscription_count(self) -> int:
-        """Perform logical_subscription_count."""
+        """Return the number of distinct logical subscription keys."""
         return len(self._logical_subscribers)
 
     @property
     def physical_subscription_count(self) -> int:
-        """Perform physical_subscription_count."""
+        """Return the number of distinct physical feed subscriptions."""
         return len(self._physical_subscriptions)
 
     def _subscribe(self, message: SubscribeMarketData) -> None:
-        """Perform _subscribe."""
+        """Register a logical subscriber and plan/open the backing physical subscription."""
         subscription = LogicalSubscription(
             subscriber_id=message.subscriber_id,
             instrument_id=message.instrument_id,
@@ -148,7 +148,7 @@ class MarketDataActor(Actor):
         self._physical_subscriptions.add(physical_key)
 
     def _publish_to_logical_subscribers(self, payload: MarketDataPayload) -> None:
-        """Perform _publish_to_logical_subscribers."""
+        """Route a payload to matching logical subscribers, aggregating bars as needed."""
         if not isinstance(payload, Bar):
             self._publish(payload)
             return
@@ -175,19 +175,19 @@ class MarketDataActor(Actor):
                 self._publish_to(subscribers.values(), completed)
 
     def _publish(self, payload: MarketDataPayload) -> None:
-        """Perform _publish."""
+        """Tell the payload to every default (non-logical) subscriber."""
         for subscriber in self._subscribers:
             subscriber.tell(payload)
 
     @staticmethod
     def _publish_to(subscribers: Iterable[ActorRef], payload: MarketDataPayload) -> None:
-        """Perform _publish_to."""
+        """Tell the payload to each subscriber in the given collection."""
         for subscriber in subscribers:
             subscriber.tell(payload)
 
     @staticmethod
     def _subscription_id(key: PhysicalSubscriptionKey) -> str:
-        """Perform _subscription_id."""
+        """Build a stable subscription id string from a physical subscription key."""
         return ":".join(
             (
                 key.source_id,

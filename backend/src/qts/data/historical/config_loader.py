@@ -51,7 +51,7 @@ class HistoricalMarketDataConfigLoader:
 
     @classmethod
     def from_path(cls, path: Path) -> HistoricalMarketDataConfig:
-        """Perform from_path."""
+        """Load and parse a historical data config from a YAML file path."""
         payload = yaml.safe_load(path.read_text(encoding="utf-8"))
         if not isinstance(payload, dict):
             raise ValueError("historical data config must be a mapping")
@@ -59,7 +59,7 @@ class HistoricalMarketDataConfigLoader:
 
     @classmethod
     def from_payload(cls, payload: object) -> HistoricalMarketDataConfig:
-        """Perform from_payload."""
+        """Build a HistoricalMarketDataConfig from a parsed config mapping."""
         if not isinstance(payload, Mapping):
             raise ValueError("historical_data must be a mapping")
         raw_config = payload.get("historical_data")
@@ -73,7 +73,7 @@ class HistoricalMarketDataConfigLoader:
 
     @classmethod
     def _parse_stores(cls, payload: object) -> dict[str, HistoricalDataStoreConfig]:
-        """Perform _parse_stores."""
+        """Parse the stores mapping into named HistoricalDataStoreConfig entries."""
         if not isinstance(payload, dict):
             raise ValueError("historical_data.stores must be a mapping")
         stores: dict[str, HistoricalDataStoreConfig] = {}
@@ -101,7 +101,7 @@ class HistoricalMarketDataConfigLoader:
 
     @staticmethod
     def _parse_store_defaults(raw_store: Mapping[str, object]) -> HistoricalDataStoreDefaults:
-        """Perform _parse_store_defaults."""
+        """Parse a store's optional defaults block into HistoricalDataStoreDefaults."""
         raw_defaults = raw_store.get("defaults", {})
         if raw_defaults is None:
             raw_defaults = {}
@@ -124,7 +124,7 @@ class HistoricalMarketDataConfigLoader:
 
     @classmethod
     def _parse_catalogs(cls, payload: object) -> dict[str, HistoricalDataCatalogConfig]:
-        """Perform _parse_catalogs."""
+        """Parse the catalogs mapping into named HistoricalDataCatalogConfig entries."""
         if not isinstance(payload, dict):
             raise ValueError("historical_data.catalogs must be a mapping")
         catalogs: dict[str, HistoricalDataCatalogConfig] = {}
@@ -147,7 +147,7 @@ class HistoricalMarketDataConfigLoader:
     def _parse_datasets(
         cls, payload: Mapping[object, object]
     ) -> dict[str, HistoricalDatasetConfig]:
-        """Perform _parse_datasets."""
+        """Parse a catalog's datasets mapping into root-keyed HistoricalDatasetConfig entries."""
         datasets: dict[str, HistoricalDatasetConfig] = {}
         for root, raw_dataset in payload.items():
             if not isinstance(root, str):
@@ -182,7 +182,7 @@ class HistoricalMarketDataConfigLoader:
 
     @staticmethod
     def _parse_bar_files(payload: object) -> tuple[HistoricalBarFileConfig, ...]:
-        """Perform _parse_bar_files."""
+        """Parse a dataset's bars list into a tuple of HistoricalBarFileConfig."""
         if payload is None:
             return ()
         if not isinstance(payload, list):
@@ -235,7 +235,7 @@ class HistoricalMarketDataConfigLoader:
 
     @staticmethod
     def _parse_schemas(payload: object) -> dict[str, HistoricalCsvSchema]:
-        """Perform _parse_schemas."""
+        """Parse the schemas mapping into named HistoricalCsvSchema entries."""
         if payload is None:
             return {}
         if not isinstance(payload, dict):

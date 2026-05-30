@@ -206,7 +206,7 @@ class RuntimeCommandBus:
     """Route runtime commands through a handler with idempotent results."""
 
     def __init__(self, *, handler: Callable[[RuntimeCommand], RuntimeCommandResult]) -> None:
-        """Perform __init__."""
+        """Initialize the bus with its command handler and an empty result cache."""
         self._handler = handler
         self._results: dict[tuple[str, str, RuntimeCommandType, str], RuntimeCommandResult] = {}
 

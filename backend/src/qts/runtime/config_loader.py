@@ -47,7 +47,7 @@ class BacktestConfigLoader:
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> BacktestRuntimeConfig:
-        """Perform from_payload."""
+        """Build a BacktestRuntimeConfig from a normalized config mapping."""
         if "historical_data" in payload:
             raise ValueError("backtest run configs must use market_data")
         if "dataset_root" in payload:
@@ -154,7 +154,7 @@ class BacktestConfigLoader:
 
     @staticmethod
     def _parse_datetime(value: datetime | str) -> datetime:
-        """Perform _parse_datetime."""
+        """Parse a timezone-aware datetime and normalize it to UTC."""
         if isinstance(value, datetime):
             parsed = value
         else:
@@ -165,7 +165,7 @@ class BacktestConfigLoader:
 
     @staticmethod
     def _parse_market_data_reference(payload: object) -> BacktestMarketDataReference:
-        """Perform _parse_market_data_reference."""
+        """Build a BacktestMarketDataReference from the market_data mapping."""
         if payload is None:
             return BacktestMarketDataReference()
         if not isinstance(payload, dict):

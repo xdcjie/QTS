@@ -34,7 +34,7 @@ class HistoricalCsvSchema:
     instrument_id: str | None = "instrument_id"
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate that required column names and any instrument_id are non-empty."""
         required = (
             self.timestamp,
             self.symbol,
@@ -51,7 +51,7 @@ class HistoricalCsvSchema:
 
     @property
     def required_columns(self) -> tuple[str, ...]:
-        """Perform required_columns."""
+        """Return the tuple of CSV column names that must be present."""
         return (
             self.timestamp,
             self.symbol,
@@ -63,7 +63,7 @@ class HistoricalCsvSchema:
         )
 
     def validate_columns(self, columns: Iterable[str]) -> tuple[str, ...]:
-        """Perform validate_columns."""
+        """Return the columns, raising if any required column is missing."""
         present = tuple(columns)
         missing = tuple(column for column in self.required_columns if column not in present)
         if missing:
@@ -94,7 +94,7 @@ class HistoricalCsvSchema:
         raise ValueError(f"unsupported historical CSV semantic field: {semantic_name}")
 
     def column_indices(self, columns: Iterable[str]) -> dict[str, int]:
-        """Perform column_indices."""
+        """Map each OHLCV semantic field to its positional index in the columns."""
         present = self.validate_columns(columns)
         index = {name: position for position, name in enumerate(present)}
         return {

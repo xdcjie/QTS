@@ -253,7 +253,7 @@ def main() -> None:
 def _read_config(
     config_path: Path,
 ) -> tuple[IbkrEnvironmentConfig | None, list[str]]:
-    """Perform _read_config."""
+    """Load the IBKR config, returning it with any parse errors."""
     try:
         return IbkrEnvironmentConfig.from_yaml(config_path), []
     except ValueError as exc:
@@ -264,7 +264,7 @@ def _validate_paper_only_ibkr_config(
     config: IbkrEnvironmentConfig | None,
     parse_errors: list[str],
 ) -> None:
-    """Perform _validate_paper_only_ibkr_config."""
+    """Reject any config that is not a valid paper-account IBKR setup."""
     errors: list[str] = []
     if parse_errors:
         errors.extend(parse_errors)
@@ -288,7 +288,7 @@ def _validate_paper_only_ibkr_config(
 
 
 def _summarize_config(config: IbkrEnvironmentConfig) -> JsonObject:
-    """Perform _summarize_config."""
+    """Build an order-execution summary of the paper config for evidence."""
     order_execution = config.order_execution
     return {
         "provider": "ibkr",
@@ -304,7 +304,7 @@ def _summarize_config(config: IbkrEnvironmentConfig) -> JsonObject:
 
 
 def _execution_report_evidence(report: ExecutionReport) -> JsonObject:
-    """Perform _execution_report_evidence."""
+    """Build an evidence dict from an execution report."""
     if not isinstance(report, ExecutionReport):
         raise TypeError("report must be an ExecutionReport")
     return {
@@ -369,14 +369,14 @@ def _reconciliation_evidence(
 
 
 def _evidence_filename(generated_at: datetime, label: str | None) -> str:
-    """Perform _evidence_filename."""
+    """Build a timestamped evidence filename with an optional label."""
     timestamp = generated_at.strftime("%Y%m%dT%H%M%SZ")
     safe_label = _safe_label(label) if label else "paper_order_lifecycle_drill"
     return f"{timestamp}_{safe_label}.json"
 
 
 def _safe_label(label: str | None) -> str:
-    """Perform _safe_label."""
+    """Sanitize a label into a filename-safe slug, with a default fallback."""
     if not label:
         return "paper_order_lifecycle_drill"
     safe = re.sub(r"[^A-Za-z0-9_.-]+", "-", label.strip()).strip("-")

@@ -67,7 +67,7 @@ class DatasetMetadata:
     row_count: int | None = None
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate that identity fields are non-empty and metadata values are well-formed."""
         self._require_text(self.dataset_id, "dataset_id")
         self._require_text(self.source, "source")
         self._require_text(self.timeframe, "timeframe")
@@ -82,13 +82,13 @@ class DatasetMetadata:
 
     @property
     def reference(self) -> str:
-        """Perform reference."""
+        """Return a stable source:dataset:hash identifier string for the dataset."""
         suffix = self.content_hash if self.content_hash is not None else "unhashed"
         return f"{self.source}:{self.dataset_id}:{suffix}"
 
     @staticmethod
     def _require_text(value: str, name: str) -> None:
-        """Perform _require_text."""
+        """Raise if the named string value is blank."""
         if not value.strip():
             raise ValueError(f"{name} must not be empty")
 

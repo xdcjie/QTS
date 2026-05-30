@@ -32,7 +32,7 @@ class SyntheticMarketDataConfig:
 
 
 def generate_bars(config: SyntheticMarketDataConfig) -> tuple[Bar, ...]:
-    """Perform generate_bars."""
+    """Generate a deterministic sequence of one-minute bars from the config."""
     bars: list[Bar] = []
     current = config.start_price
     for index in range(config.count):

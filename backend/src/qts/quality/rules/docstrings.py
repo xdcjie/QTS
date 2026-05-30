@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
 
 from qts.quality.guardrails import GuardrailViolation
+
+_PERFORM_PLACEHOLDER = re.compile(r"^Perform\b")
 
 
 class ProductionPlaceholderDocstringRule:
@@ -20,21 +23,36 @@ class ProductionPlaceholderDocstringRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
-        if qts_relative_path.parts[:1] == ("quality",):
-            return []
+        """Flag placeholder docstrings: ``placeholder`` text or ``Perform <name>`` stubs."""
+        in_quality = qts_relative_path.parts[:1] == ("quality",)
         violations: list[GuardrailViolation] = []
         for node, docstring in self._iter_docstrings(tree):
-            if "placeholder" not in docstring.lower():
-                continue
-            violations.append(
-                GuardrailViolation(
-                    code=self.code,
-                    path=str(relative_path),
-                    line=getattr(node, "lineno", 1),
-                    message="production docstrings must describe the artifact contract",
+            # Auto-generated "Perform <name>." stubs describe nothing; reject
+            # everywhere, including the quality package itself.
+            if _PERFORM_PLACEHOLDER.match(docstring.strip()):
+                violations.append(
+                    GuardrailViolation(
+                        code=self.code,
+                        path=str(relative_path),
+                        line=getattr(node, "lineno", 1),
+                        message=(
+                            "production docstrings must describe the artifact contract, "
+                            "not a generated 'Perform <name>' stub"
+                        ),
+                    )
                 )
-            )
+                continue
+            # The "placeholder" substring check skips the quality package, whose
+            # rule descriptions legitimately mention the word.
+            if not in_quality and "placeholder" in docstring.lower():
+                violations.append(
+                    GuardrailViolation(
+                        code=self.code,
+                        path=str(relative_path),
+                        line=getattr(node, "lineno", 1),
+                        message="production docstrings must describe the artifact contract",
+                    )
+                )
         return violations
 
     @staticmethod

@@ -53,7 +53,7 @@ class OOPPublicFactoryRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Return violations for module-level public factory functions on stable concepts."""
         return _check_oop_public_factory_functions(relative_path, qts_relative_path, tree)
 
 
@@ -69,7 +69,7 @@ class OOPHelperOwnershipRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Return violations for module-private helpers that a public class should own."""
         return _check_oop_helper_ownership(relative_path, qts_relative_path, tree)
 
 
@@ -190,7 +190,7 @@ class BacktestRunnerCohesionRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Return violations for replay input assembly leaking into the backtest runner."""
         return _check_backtest_runner_cohesion(relative_path, qts_relative_path, tree)
 
 
@@ -206,7 +206,7 @@ class BacktestInputCohesionRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Return violations for catalog/data construction inside the backtest input builder."""
         return _check_backtest_input_cohesion(relative_path, qts_relative_path, tree)
 
 
@@ -222,7 +222,7 @@ class BacktestEngineCohesionRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Return violations for historical replay assembly inside the backtest engine."""
         return _check_backtest_engine_cohesion(relative_path, qts_relative_path, tree)
 
 
@@ -238,7 +238,7 @@ class BacktestActorLoopCohesionRule:
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Return violations for input assembly or report ownership in the backtest actor loop."""
         return _check_backtest_actor_loop_cohesion(relative_path, qts_relative_path, tree)
 
 

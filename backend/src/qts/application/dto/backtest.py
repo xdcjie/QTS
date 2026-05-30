@@ -14,7 +14,7 @@ class BacktestRequestDTO:
     config_path: str
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate config_path is non-empty and points to an existing file."""
         if not self.config_path.strip():
             raise ValueError("config_path must not be empty")
         path = Path(self.config_path)
@@ -57,7 +57,7 @@ class BacktestStrategyOptionDTO:
     config_path: str
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate both label and config_path are non-empty."""
         if not self.label.strip():
             raise ValueError("label must not be empty")
         if not self.config_path.strip():

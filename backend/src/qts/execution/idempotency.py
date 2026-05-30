@@ -16,12 +16,12 @@ class FillIdempotencyStore:
     """
 
     def __init__(self, seen: set[str] | None = None) -> None:
-        """Perform __init__."""
+        """Initialize the store from an optional set of already-seen fill ids."""
         self._seen: set[str] = set(seen or set())
         self._snapshot_cache: tuple[str, ...] | None = None
 
     def mark_seen(self, fill_id: str) -> bool:
-        """Perform mark_seen."""
+        """Record a fill id, returning True only when it was newly added."""
         if not fill_id.strip():
             raise ValueError("fill_id must not be empty")
         if fill_id in self._seen:
@@ -31,20 +31,20 @@ class FillIdempotencyStore:
         return True
 
     def discard(self, fill_id: str) -> None:
-        """Perform discard."""
+        """Forget a previously seen fill id, invalidating the snapshot cache."""
         if fill_id in self._seen:
             self._seen.discard(fill_id)
             self._snapshot_cache = None
 
     def snapshot(self) -> tuple[str, ...]:
-        """Perform snapshot."""
+        """Return the cached sorted tuple of seen fill ids."""
         if self._snapshot_cache is None:
             self._snapshot_cache = tuple(sorted(self._seen))
         return self._snapshot_cache
 
     @classmethod
     def restore(cls, seen: tuple[str, ...]) -> FillIdempotencyStore:
-        """Perform restore."""
+        """Rebuild a store from a snapshot tuple of seen fill ids."""
         return cls(set(seen))
 
 

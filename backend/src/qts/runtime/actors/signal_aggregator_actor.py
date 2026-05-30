@@ -70,12 +70,12 @@ class SignalAggregatorActor(Actor):
         result_ref: ActorRef,
         policy: SignalAggregationPolicy = SignalAggregationPolicy.SUM_TARGETS,
     ) -> None:
-        """Perform __init__."""
+        """Initialize the aggregator with its result actor ref and policy engine."""
         self._result_ref = result_ref
         self._policy_engine = SignalPolicyEngine(policy=policy)
 
     def handle(self, message: object) -> None:
-        """Perform handle."""
+        """Aggregate a StrategySignalEvent into per-group batches and emit them downstream."""
         if not isinstance(message, StrategySignalEvent):
             raise ActorUnhandledMessageError(
                 f"unsupported signal aggregation message: {type(message).__name__}"

@@ -418,7 +418,7 @@ class GuardrailViolation:
         )
 
     def format(self) -> str:
-        """Perform format."""
+        """Render the violation as a single human-readable line with remediation."""
         symbol = f" symbol: {self.symbol}" if self.symbol else ""
         return (
             f"{self.path}:{self.line}: {self.code}:{symbol} "
@@ -593,7 +593,7 @@ class Rule(Protocol):
         qts_relative_path: Path,
         tree: ast.AST,
     ) -> list[GuardrailViolation]:
-        """Perform check."""
+        """Return violations found in a single parsed module."""
         ...
 
 
@@ -605,7 +605,7 @@ class RepositoryRule(Protocol):
     """Optional guardrail rule interface for repository-wide checks."""
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform repository-wide check."""
+        """Return violations found by inspecting the repository as a whole."""
         ...
 
 

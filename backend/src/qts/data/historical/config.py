@@ -21,7 +21,7 @@ class HistoricalDataStoreDefaults:
     normalization: str = "raw"
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate that all non-None default metadata fields are non-empty."""
         if self.schema is not None and not self.schema.strip():
             raise ValueError("historical data store default schema must not be empty")
         if self.exchange_timezone is not None and not self.exchange_timezone.strip():
@@ -46,7 +46,7 @@ class HistoricalDataStoreConfig:
     defaults: HistoricalDataStoreDefaults = field(default_factory=HistoricalDataStoreDefaults)
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate that store name, type, root_dir, and file templates are non-empty."""
         if not self.name.strip():
             raise ValueError("historical data store name must not be empty")
         if not self.type.strip():
@@ -59,22 +59,22 @@ class HistoricalDataStoreConfig:
             raise ValueError("chain_file_template must not be empty")
 
     def bars_path(self, root: str, *, override: str | None = None) -> Path:
-        """Perform bars_path."""
+        """Return the absolute path to the bar file for a root, honoring any override."""
         filename = override or self._render_template(self.bars_file_template, root)
         return self._join(self.bars_dir) / filename
 
     def chain_path(self, root: str, *, override: str | None = None) -> Path:
-        """Perform chain_path."""
+        """Return the absolute path to the chain file for a root, honoring any override."""
         filename = override or self._render_template(self.chain_file_template, root)
         return self._join(self.chains_dir) / filename
 
     def _join(self, path: Path) -> Path:
-        """Perform _join."""
+        """Return the path as-is if absolute, else resolve it relative to root_dir."""
         return path if path.is_absolute() else self.root_dir / path
 
     @staticmethod
     def _render_template(template: str, root: str) -> str:
-        """Perform _render_template."""
+        """Render a filename template with the normalized root and its lowercase form."""
         normalized_root = HistoricalDatasetConfig.normalize_root(root)
         return template.format(root=normalized_root, root_lower=normalized_root.lower())
 
@@ -92,7 +92,7 @@ class HistoricalBarFileConfig:
     session_window: RegularSessionWindow | None = None
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate that all provided bar-file metadata fields are non-empty."""
         if self.file is not None and not self.file.strip():
             raise ValueError("historical bars file must not be empty")
         if self.timeframe is not None and not self.timeframe.strip():
@@ -118,7 +118,7 @@ class HistoricalDatasetConfig:
     bars: tuple[HistoricalBarFileConfig, ...] = ()
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate dataset root, asset_class, optional fields, and a non-empty bars list."""
         if not self.root.strip():
             raise ValueError("historical dataset root must not be empty")
         if not self.asset_class.strip():
@@ -132,12 +132,12 @@ class HistoricalDatasetConfig:
 
     @property
     def requires_chain(self) -> bool:
-        """Perform requires_chain."""
+        """Return True when the dataset is a future or declares an explicit chain file."""
         return self.asset_class.strip().lower() == "future" or self.chain_file is not None
 
     @staticmethod
     def normalize_root(root: str) -> str:
-        """Perform normalize_root."""
+        """Return the root trimmed and uppercased, raising if it is empty."""
         normalized = root.strip().upper()
         if not normalized:
             raise ValueError("historical dataset root must not be empty")
@@ -153,7 +153,7 @@ class HistoricalDataCatalogConfig:
     datasets: Mapping[str, HistoricalDatasetConfig]
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate that catalog name, store, and datasets mapping are non-empty."""
         if not self.name.strip():
             raise ValueError("historical data catalog name must not be empty")
         if not self.store.strip():
@@ -190,7 +190,7 @@ class HistoricalMarketDataConfig:
     schemas: Mapping[str, HistoricalCsvSchema] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Validate non-empty stores/catalogs and that each catalog references a known store."""
         if not self.stores:
             raise ValueError("historical_data.stores must not be empty")
         if not self.catalogs:
@@ -201,14 +201,14 @@ class HistoricalMarketDataConfig:
 
     @classmethod
     def from_yaml(cls, path: Path) -> HistoricalMarketDataConfig:
-        """Perform from_yaml."""
+        """Build a HistoricalMarketDataConfig by loading and parsing a YAML file."""
         from qts.data.historical.config_loader import HistoricalMarketDataConfigLoader
 
         return HistoricalMarketDataConfigLoader.from_path(path)
 
     @classmethod
     def from_payload(cls, payload: object) -> HistoricalMarketDataConfig:
-        """Perform from_payload."""
+        """Build a HistoricalMarketDataConfig from an already-parsed mapping payload."""
         from qts.data.historical.config_loader import HistoricalMarketDataConfigLoader
 
         if not isinstance(payload, dict):
@@ -216,14 +216,14 @@ class HistoricalMarketDataConfig:
         return HistoricalMarketDataConfigLoader.from_payload(payload)
 
     def catalog(self, name: str) -> HistoricalDataCatalogConfig:
-        """Perform catalog."""
+        """Return the named catalog config, raising KeyError if it is unknown."""
         try:
             return self.catalogs[name]
         except KeyError as exc:
             raise KeyError(f"unknown historical data catalog: {name}") from exc
 
     def store(self, name: str) -> HistoricalDataStoreConfig:
-        """Perform store."""
+        """Return the named store config, raising KeyError if it is unknown."""
         try:
             return self.stores[name]
         except KeyError as exc:
@@ -236,7 +236,7 @@ class HistoricalMarketDataConfig:
         *,
         requested_timeframe: str | None = None,
     ) -> HistoricalDatasetLocation:
-        """Perform resolve_dataset."""
+        """Resolve a catalog root to file paths and metadata for the requested timeframe."""
         normalized_root = HistoricalDatasetConfig.normalize_root(root)
         catalog = self.catalog(catalog_name)
         try:
@@ -291,7 +291,7 @@ class HistoricalMarketDataConfig:
         return store.chain_path(normalized_root, override=dataset.chain_file)
 
     def _csv_schema(self, name: str | None) -> HistoricalCsvSchema:
-        """Perform _csv_schema."""
+        """Return the named CSV schema, or the default when name is None."""
         if name is None:
             return DEFAULT_HISTORICAL_CSV_SCHEMA
         try:
@@ -308,7 +308,7 @@ class HistoricalMarketDataConfig:
         store: HistoricalDataStoreConfig,
         requested_timeframe: str | None,
     ) -> HistoricalBarFileConfig:
-        """Perform _select_bar_file."""
+        """Select the dataset bar file matching the requested timeframe, or the sole entry."""
         bars = dataset.bars
         if requested_timeframe is None:
             if len(bars) > 1:

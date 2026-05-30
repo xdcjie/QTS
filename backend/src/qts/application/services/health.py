@@ -9,7 +9,7 @@ class HealthService:
     """Returns platform health without exposing internals."""
 
     def status(self) -> HealthStatusDTO:
-        """Perform status."""
+        """Return an ok platform health status DTO."""
         return HealthStatusDTO(status="ok")
 
 

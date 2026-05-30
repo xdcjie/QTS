@@ -116,7 +116,7 @@ class StreamingEquityMetrics:
     """Incremental metrics for a streamed equity curve."""
 
     def __init__(self) -> None:
-        """Perform __init__."""
+        """Initialize empty streaming equity metrics state."""
         self._points = 0
         self._first: Decimal | None = None
         self._last: Decimal | None = None
@@ -124,7 +124,7 @@ class StreamingEquityMetrics:
         self._max_drawdown = Decimal("0")
 
     def update(self, equity: Decimal) -> None:
-        """Perform update."""
+        """Fold one equity observation into running peak and max-drawdown."""
         if self._first is None:
             if equity == Decimal("0"):
                 raise ValueError("first equity value must not be zero")
@@ -141,7 +141,7 @@ class StreamingEquityMetrics:
         self._points += 1
 
     def to_payload(self) -> dict[str, Decimal | int]:
-        """Perform to_payload."""
+        """Return point count, total return, and max drawdown as a payload."""
         if self._first is None or self._last is None:
             raise ValueError("equity curve must not be empty")
         return {
@@ -165,14 +165,14 @@ class _NdjsonArtifact:
     """_NdjsonArtifact."""
 
     def __init__(self, path: Path) -> None:
-        """Perform __init__."""
+        """Open an NDJSON artifact file at ``path`` for hashed writing."""
         self.path = path
         self.rows = 0
         self._hasher = hashlib.sha256()
         self._handle = path.open("w", encoding="utf-8")
 
     def write(self, payload: dict[str, Any]) -> None:
-        """Perform write."""
+        """Append one JSON line, updating the row count and content hash."""
         line = (
             json.dumps(
                 payload,
@@ -187,12 +187,12 @@ class _NdjsonArtifact:
         self.rows += 1
 
     def close(self) -> None:
-        """Perform close."""
+        """Close the underlying file handle."""
         self._handle.close()
 
     @property
     def content_hash(self) -> str:
-        """Perform content_hash."""
+        """Return the sha256 content hash of all written lines."""
         return f"sha256:{self._hasher.hexdigest()}"
 
 
@@ -231,7 +231,7 @@ class BacktestArtifactWriter:
         self._statistics = StatisticsBuilder()
 
     def write_order(self, payload: dict[str, Any]) -> None:
-        """Perform write_order."""
+        """Append one order payload to the orders artifact."""
         self._artifacts["orders"].write(payload)
 
     def write_runtime_event(self, payload: dict[str, Any]) -> None:
@@ -298,11 +298,11 @@ class BacktestArtifactWriter:
         return manifest_path
 
     def write_fill(self, payload: dict[str, Any]) -> None:
-        """Perform write_fill."""
+        """Append one fill payload to the fills artifact."""
         self._artifacts["fills"].write(payload)
 
     def write_trade_ledger(self, row: TradeLedgerEntry) -> None:
-        """Perform write_trade_ledger."""
+        """Record one ledger row in statistics and the trade-ledger artifact."""
         payload = {
             "order_id": row.order_id,
             "instrument_id": row.instrument_id,
@@ -327,7 +327,7 @@ class BacktestArtifactWriter:
         self._artifacts["trade_ledger"].write(payload)
 
     def write_equity_point(self, point: EquityCurvePoint) -> None:
-        """Perform write_equity_point."""
+        """Fold one equity point into metrics, statistics, and the artifact."""
         self._equity_metrics.update(point.equity)
         self._statistics.on_equity_point(time=point.time, equity=point.equity)
         self._artifacts["equity_curve"].write({"time": point.time, "equity": point.equity})
@@ -364,7 +364,7 @@ class BacktestArtifactWriter:
         execution_assumptions: dict[str, Any] | None = None,
         risk_config_hash: str | None = None,
     ) -> tuple[str, str, dict[str, Any], BacktestArtifacts]:
-        """Perform finalize."""
+        """Close artifacts, write the manifest, and return run id, hash, and paths."""
         finalized_at = datetime.now(UTC)
         statistics_payload = self._statistics.finalize(
             trading_bars=trading_bars,

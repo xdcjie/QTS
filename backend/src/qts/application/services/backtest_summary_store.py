@@ -15,7 +15,7 @@ class BacktestSummaryStore:
     _SCHEMA_VERSION = "1"
 
     def __init__(self, output_dir: Path) -> None:
-        """Perform __init__."""
+        """Initialize the store rooted at the backtest output directory."""
         self._output_dir = output_dir
 
     def list_runs(self) -> tuple[BacktestRunDTO, ...]:

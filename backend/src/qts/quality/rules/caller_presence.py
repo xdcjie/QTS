@@ -103,7 +103,7 @@ class CallerPresenceRule:
         return []
 
     def check_repository(self, repo_root: Path) -> list[GuardrailViolation]:
-        """Perform the repository-wide caller-presence check."""
+        """Check that baseline-listed public symbols have at least one production caller."""
         baseline = self._load_baseline(repo_root)
         if not baseline:
             return []

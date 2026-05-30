@@ -13,7 +13,7 @@ class BacktestStrategyCatalog:
     """Expose runnable backtest configurations as strategy options."""
 
     def __init__(self, *, config_dir: Path = Path("configs")) -> None:
-        """Perform __init__."""
+        """Initialize the catalog rooted at the given config directory."""
         self._config_dir = config_dir
 
     def list_options(self) -> tuple[BacktestStrategyOptionDTO, ...]:

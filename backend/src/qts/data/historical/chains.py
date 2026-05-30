@@ -45,7 +45,7 @@ class HistoricalChain:
     _contracts_by_symbol: dict[str, HistoricalContract] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        """Perform __post_init__."""
+        """Build the symbol-to-contract lookup index from the contract tuple."""
         contracts_by_symbol: dict[str, HistoricalContract] = {}
         for contract in self.contracts:
             contracts_by_symbol.setdefault(contract.symbol, contract)
@@ -90,7 +90,7 @@ class HistoricalChain:
         return time(hour=int(suffix[:2]), minute=int(suffix[2:]))
 
     def contract_for_symbol(self, symbol: str) -> HistoricalContract:
-        """Perform contract_for_symbol."""
+        """Return the contract for the given local symbol, raising if unknown."""
         try:
             return self._contracts_by_symbol[symbol]
         except KeyError as exc:
@@ -101,7 +101,7 @@ class HistoricalChain:
         symbol: str,
         expiry: datetime | date | str,
     ) -> HistoricalContract:
-        """Perform contract_for_symbol_and_expiry."""
+        """Return the contract matching the symbol and the given expiry date/datetime."""
         target = self._normalize_expiry_target(expiry)
         candidates = self.contracts_by_symbol(symbol)
         for candidate in candidates:
@@ -121,16 +121,16 @@ class HistoricalChain:
         symbol: str,
         expiry: datetime | date | str,
     ) -> InstrumentId:
-        """Perform instrument_id_for_symbol_and_expiry."""
+        """Return the InstrumentId for the contract matching the symbol and expiry."""
         _ = self.contract_for_symbol_and_expiry(symbol, expiry)
         return InstrumentId(f"FUTURE.{self.exchange}.{self.root}.{symbol}")
 
     def is_outright_symbol(self, symbol: str) -> bool:
-        """Perform is_outright_symbol."""
+        """Return True if the symbol is a known non-spread outright contract."""
         return "-" not in symbol and symbol in self._contracts_by_symbol
 
     def instrument_id_for_symbol(self, symbol: str) -> InstrumentId:
-        """Perform instrument_id_for_symbol."""
+        """Return the InstrumentId for an outright contract symbol, raising otherwise."""
         if not self.is_outright_symbol(symbol):
             raise ValueError(f"{symbol} is not an outright {self.root} historical contract")
         return InstrumentId(f"FUTURE.{self.exchange}.{self.root}.{symbol}")
@@ -191,7 +191,7 @@ class HistoricalChain:
         chain_multiplier: Decimal,
         chain_calendar: str,
     ) -> HistoricalContract:
-        """Perform _parse_contract."""
+        """Build a HistoricalContract from one raw chain-file contract entry."""
         if not isinstance(payload, dict):
             raise ValueError("contract entries must be objects")
         item: dict[str, Any] = payload
@@ -212,7 +212,7 @@ class HistoricalChain:
 
     @staticmethod
     def _required_text(payload: dict[str, Any], field: str) -> str:
-        """Perform _required_text."""
+        """Return a required non-empty string field, raising if missing or blank."""
         value = payload.get(field)
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"{field} is required")
@@ -220,7 +220,7 @@ class HistoricalChain:
 
     @staticmethod
     def _required_decimal(payload: dict[str, Any], field: str) -> Decimal:
-        """Perform _required_decimal."""
+        """Return a required positive Decimal field, raising if missing or non-positive."""
         if field not in payload:
             raise ValueError(f"{field} is required")
         value = Decimal(str(payload[field]))
@@ -261,7 +261,7 @@ class HistoricalChain:
 
     @staticmethod
     def _exchange_code(market: str) -> str:
-        """Perform _exchange_code."""
+        """Return the exchange code, stripping any trailing ``_FUT`` suffix."""
         if market.endswith("_FUT"):
             return market.removesuffix("_FUT")
         return market

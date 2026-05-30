@@ -174,7 +174,7 @@ class OrderManagerActor(Actor):
         currency: str = "USD",
         capabilities: BrokerCapabilities | None = None,
     ) -> None:
-        """Perform __init__."""
+        """Initialize the actor with execution/account refs, multipliers, and capabilities."""
         self._account_id = account_id
         self._manager = OrderManager()
         self._execution_ref = execution_ref
@@ -192,7 +192,7 @@ class OrderManagerActor(Actor):
         self._route_metadata_by_order_id: dict[OrderId, OrderRouteMetadata] = {}
 
     def handle(self, message: object) -> None:
-        """Perform handle."""
+        """Dispatch order queries and submit/cancel/replace/report messages to handlers."""
         if isinstance(message, tuple) and len(message) == 2:
             query, response_mailbox = message
             if isinstance(query, GetOrderManagerSnapshot):
@@ -256,13 +256,13 @@ class OrderManagerActor(Actor):
         return self._route_metadata_by_order_id[order_id]
 
     def _compact_for_streaming(self, order_ids: Iterable[OrderId]) -> None:
-        """Perform _compact_for_streaming."""
+        """Discard the given terminal orders and clear the buffered fills list."""
         for order_id in order_ids:
             self._manager.discard_terminal_order(order_id)
         self._fills_list.clear()
 
     def _handle_submit(self, message: SubmitOrder) -> None:
-        """Perform _handle_submit."""
+        """Create and route a new order to execution after validating account ids."""
         if message.intent.account_id != message.account_id:
             raise ValueError("order account_id does not match SubmitOrder account_id")
         if self._account_id is not None and message.intent.account_id != self._account_id:
@@ -283,7 +283,7 @@ class OrderManagerActor(Actor):
         )
 
     def _handle_cancel(self, message: CancelOrder) -> None:
-        """Perform _handle_cancel."""
+        """Validate a cancel request and route it to the execution boundary."""
         current = self._manager.get_order(message.intent.order_id)
         metadata = self._route_metadata_by_order_id[message.intent.order_id]
         if current.intent.account_id != message.account_id:
