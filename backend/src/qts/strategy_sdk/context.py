@@ -9,7 +9,7 @@ from decimal import Decimal
 
 from qts.core.ids import InstrumentId, OrderId
 from qts.domain.instruments import OptionRight
-from qts.domain.orders import BracketLeg, BracketSpec, CancelIntent, OrderType
+from qts.domain.orders import BracketLeg, BracketSpec, CancelIntent, OrderSide, OrderType
 from qts.portfolio.holdings import Holding
 from qts.strategy_sdk.asset_ref import AssetRef
 from qts.strategy_sdk.asset_resolver import (
@@ -209,19 +209,31 @@ class StrategyContext:
         quantity: Decimal = Decimal("1"),
         metadata: Mapping[str, str] | None = None,
     ) -> TargetIntent:
-        """Emit a bracket order target with take-profit and stop-loss legs."""
+        """Emit a bracket order target with take-profit and stop-loss legs.
+
+        ``quantity`` is the signed parent target: positive opens (or holds) a
+        long, negative a short. The bracket's exit legs face the opposite
+        direction of the parent position -- a long is exited by selling, a short
+        by buying -- so a positive ``quantity`` produces ``sell`` exit legs and a
+        negative ``quantity`` produces ``buy`` exit legs. The legs always carry a
+        positive (absolute) quantity.
+        """
+        if quantity == Decimal("0"):
+            raise ValueError("target_bracket quantity must be non-zero")
+        exit_side = OrderSide.SELL if quantity > Decimal("0") else OrderSide.BUY
+        leg_quantity = abs(quantity)
         bracket = BracketSpec(
             legs=(
                 BracketLeg(
                     order_type=OrderType.LIMIT,
-                    side="sell",
-                    quantity=quantity,
+                    side=exit_side,
+                    quantity=leg_quantity,
                     limit_price=take_profit_price,
                 ),
                 BracketLeg(
                     order_type=OrderType.STOP,
-                    side="sell",
-                    quantity=quantity,
+                    side=exit_side,
+                    quantity=leg_quantity,
                     stop_price=stop_loss_price,
                 ),
             )

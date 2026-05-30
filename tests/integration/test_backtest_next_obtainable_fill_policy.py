@@ -13,8 +13,8 @@ from pathlib import Path
 from typing import Any
 
 from qts.backtest.engine import BacktestEngine
-from qts.backtest.execution_timing import ExecutionTimingModel
 from qts.core.ids import InstrumentId
+from qts.domain.execution_timing import ExecutionTimingModel
 from qts.domain.market_data import Bar
 from qts.runtime.config import (
     BacktestMarketDataReference,
@@ -28,7 +28,9 @@ from tests.support.backtest_streaming import run_engine_streaming
 _INSTRUMENT = InstrumentId("EQUITY.US.NASDAQ.AAPL")
 
 
-def _make_config(*, fill_policy: str = "same_bar_close") -> BacktestRuntimeConfig:
+def _make_config(
+    *, fill_policy: str = "next_bar_open", optimistic_fill_waiver: bool = False
+) -> BacktestRuntimeConfig:
     """A minimal config-driven backtest identity (bars are injected separately)."""
     return BacktestRuntimeConfig(
         roots=("AAPL",),
@@ -42,6 +44,7 @@ def _make_config(*, fill_policy: str = "same_bar_close") -> BacktestRuntimeConfi
         instrument_ids={"AAPL": _INSTRUMENT},
         risk_config=BacktestRiskConfig(max_notional=Decimal("1000000")),
         fill_policy=fill_policy,
+        optimistic_fill_waiver=optimistic_fill_waiver,
     )
 
 
@@ -153,15 +156,31 @@ def test_config_fill_policy_next_bar_open_is_promotion_grade(tmp_path: Path) -> 
     assert assumptions["promotion_grade"] is True
 
 
-def test_config_default_fill_policy_is_optimistic_same_bar_close(tmp_path: Path) -> None:
-    # A config that does not opt into next_bar_open stays backward-compatible
-    # (same_bar_close) and the manifest flags it as not promotion-grade.
+def test_config_default_fill_policy_is_next_bar_open(tmp_path: Path) -> None:
+    # A config that does not set fill_policy uses the promotion-grade
+    # next_bar_open default and fills at the next bar's open (110).
     engine = BacktestEngine.from_config(
         _make_config(),
         bars=_bars(),
         strategy=_BuyOnceStrategy(),
     )
     captured = run_engine_streaming(engine, tmp_path / "cfg-default")
+
+    assert Decimal(captured.fills[0]["price"]) == Decimal("110")
+    assumptions = captured.manifest["execution_assumptions"]
+    assert assumptions["fill_policy"] == "next_bar_open"
+    assert assumptions["promotion_grade"] is True
+
+
+def test_config_same_bar_close_requires_waiver_and_fills_on_signal_bar(tmp_path: Path) -> None:
+    # The optimistic policy is opt-in: it must carry an explicit waiver and
+    # then fills at the signal bar's own close (105), flagged not promotion-grade.
+    engine = BacktestEngine.from_config(
+        _make_config(fill_policy="same_bar_close", optimistic_fill_waiver=True),
+        bars=_bars(),
+        strategy=_BuyOnceStrategy(),
+    )
+    captured = run_engine_streaming(engine, tmp_path / "cfg-same-bar")
 
     assert Decimal(captured.fills[0]["price"]) == Decimal("105")
     assumptions = captured.manifest["execution_assumptions"]

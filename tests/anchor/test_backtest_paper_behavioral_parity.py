@@ -44,6 +44,7 @@ from typing import Any
 
 from qts.backtest.engine import BacktestEngine
 from qts.core.ids import AccountId, InstrumentId
+from qts.domain.execution_timing import ExecutionTimingModel
 from qts.domain.instruments import AssetClass, ContractSpec, Instrument, SettlementType
 from qts.domain.market_data import Bar
 from qts.domain.orders import OrderState
@@ -220,6 +221,10 @@ def _run_backtest(bar: Bar) -> CapturedBacktestStream:
                 initial_cash=_INITIAL_CASH,
                 risk_engine=RiskEngine([MaxNotionalRule(max_notional=_MAX_NOTIONAL)]),
                 instrument_registry=_parity_registry(),
+                # Single-bar parity against the paper path, which fills on the
+                # bar it receives; pin the same-bar policy so both modes realize
+                # the fill on the same bar rather than the backtest deferring it.
+                execution_timing=ExecutionTimingModel.research_only(),
             ),
             Path(output_dir) / "parity-backtest",
         )

@@ -11,6 +11,7 @@ from typing import Any, cast
 import yaml  # type: ignore[import-untyped]
 
 from qts.core.ids import InstrumentId
+from qts.domain.execution_timing import FillPolicy
 from qts.runtime.config import (
     BacktestCostModel,
     BacktestMarketDataReference,
@@ -135,7 +136,7 @@ class BacktestConfigLoader:
             ),
             warmup_bars=int(payload.get("warmup_bars", 0)),
             schema_version=str(payload.get("schema_version", "1")),
-            fill_policy=str(payload.get("fill_policy", "same_bar_close")),
+            fill_policy=str(payload.get("fill_policy", FillPolicy.NEXT_BAR_OPEN.value)),
             optimistic_fill_waiver=bool(payload.get("optimistic_fill_waiver", False)),
         )
 

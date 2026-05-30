@@ -6,8 +6,8 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
-from qts.backtest.execution_timing import ExecutionTimingModel, FillPolicy
 from qts.core.ids import InstrumentId
+from qts.domain.execution_timing import ExecutionTimingModel, FillPolicy
 from qts.domain.market_data import Bar
 
 
@@ -67,25 +67,34 @@ def test_same_bar_close_is_flagged_optimistic_and_not_promotion_grade() -> None:
     assert payload["fill_policy"] == "same_bar_close"
     assert payload["optimistic"] is True
     assert payload["promotion_grade"] is False
-    assert payload["optimistic_waiver"] is False
+    # research_only records the explicit waiver required to use same_bar_close.
+    assert payload["optimistic_waiver"] is True
 
 
-def test_same_bar_close_with_explicit_waiver_is_promotion_grade() -> None:
+def test_same_bar_close_with_explicit_waiver_is_still_not_promotion_grade() -> None:
     model = ExecutionTimingModel.research_only(optimistic_waiver=True)
 
     assert model.is_optimistic
-    assert model.is_promotion_grade
+    # The waiver only authorizes research use of the optimistic fill; it never
+    # makes a look-ahead policy promotion-grade.
+    assert not model.is_promotion_grade
     payload = model.to_manifest_payload()
     assert payload["optimistic"] is True
     assert payload["optimistic_waiver"] is True
-    assert payload["promotion_grade"] is True
+    assert payload["promotion_grade"] is False
 
 
-def test_construction_default_is_backward_compatible_same_bar_close() -> None:
+def test_same_bar_close_without_waiver_is_rejected() -> None:
+    with pytest.raises(ValueError, match="optimistic_waiver"):
+        ExecutionTimingModel(fill_policy=FillPolicy.SAME_BAR_CLOSE)
+
+
+def test_construction_default_is_next_bar_open() -> None:
     model = ExecutionTimingModel()
 
-    assert model.fill_policy is FillPolicy.SAME_BAR_CLOSE
-    assert model.is_optimistic
+    assert model.fill_policy is FillPolicy.NEXT_BAR_OPEN
+    assert model.is_promotion_grade
+    assert not model.is_optimistic
 
 
 def test_next_bar_open_manifest_payload_is_promotion_grade() -> None:

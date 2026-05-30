@@ -35,6 +35,7 @@ SHARED_DATA_LIVE_CONTRACT_CLASSES = frozenset(
 )
 REMOVED_IMPORT_MODULES = frozenset(
     {
+        "qts.backtest.execution_timing",
         "qts.data.adapters.ibkr_async_transport",
         "qts.data.adapters.ibkr_transport",
         "qts.data.live.adapter",
@@ -59,6 +60,8 @@ REMOVED_IMPORT_MODULES = frozenset(
 )
 REMOVED_IMPORT_SYMBOLS = frozenset(
     {
+        ("qts.backtest.execution_timing", "ExecutionTimingModel"),
+        ("qts.backtest.execution_timing", "FillPolicy"),
         ("qts.reporting", "LiveEventReporter"),
         ("qts.reporting", "LiveReportManifest"),
         ("qts.reporting", "LiveReportWriter"),
@@ -683,6 +686,10 @@ def _is_forbidden_dependency(
             "runtime",
             "workers",
         }
+    if source_layer == "runtime":
+        # Runtime sits below backtest/application/api/workers; it must not take an
+        # upward dependency on them, including function-local/deferred imports.
+        return imported_layer in {"backtest", "application", "api", "workers"}
     if source_layer == "api":
         return imported_module.startswith("qts.runtime.actors") or imported_module.startswith(
             "qts.execution.order_manager"

@@ -406,11 +406,25 @@ def test_campaign_execution_fill_policy_defaults_to_next_bar_open(tmp_path: Path
     assert "fill_policy" not in config.execution.to_payload()
 
 
-def test_campaign_execution_fill_policy_same_bar_close_override(tmp_path: Path) -> None:
+def test_campaign_execution_same_bar_close_requires_optimistic_waiver(tmp_path: Path) -> None:
+    # QTS-FINAL-004: same_bar_close is optimistic look-ahead and is rejected
+    # without an explicit waiver.
     campaign_path = _write_campaign(tmp_path, {"execution": {"fill_policy": "same_bar_close"}})
+    with pytest.raises(ValueError, match="optimistic_fill_waiver"):
+        ResearchCampaignConfig.from_yaml(campaign_path)
+
+
+def test_campaign_execution_fill_policy_same_bar_close_override(tmp_path: Path) -> None:
+    campaign_path = _write_campaign(
+        tmp_path,
+        {"execution": {"fill_policy": "same_bar_close", "optimistic_fill_waiver": True}},
+    )
     config = ResearchCampaignConfig.from_yaml(campaign_path)
     assert config.execution.fill_policy == "same_bar_close"
-    assert config.execution.to_payload()["fill_policy"] == "same_bar_close"
+    assert config.execution.optimistic_fill_waiver is True
+    payload = config.execution.to_payload()
+    assert payload["fill_policy"] == "same_bar_close"
+    assert payload["optimistic_fill_waiver"] is True
 
 
 def test_campaign_execution_rejects_unknown_fill_policy(tmp_path: Path) -> None:

@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 from qts.core.hashing import stable_json_hash
 from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, RuntimeRunId, StrategyId
+from qts.domain.execution_timing import ExecutionTimingModel
 from qts.domain.market_data import Bar
 from qts.domain.orders import (
     ExecutionReport,
@@ -167,6 +168,8 @@ def _backtest_minimal(output_dir: Path) -> SmokeEvidence:
             strategy=_BuyOnceStrategy(),
             bars=(_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC)),),
             initial_cash=Decimal("10000"),
+            # Single-bar readiness smoke; pin same-bar so the order fills.
+            execution_timing=ExecutionTimingModel.research_only(),
         ),
         output_dir,
     )

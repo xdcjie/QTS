@@ -116,17 +116,32 @@ class OrderManager:
             self._seen_report_ids.discard(report_id)
 
     def snapshot(self) -> OrderStateSnapshot:
-        """Perform snapshot."""
+        """Return the full recoverable OrderManager state.
+
+        Includes the per-order idempotency maps so a restored manager keeps the
+        ownership metadata required to compact (discard) a terminal order's ids
+        without disturbing ids owned by other orders.
+        """
         return OrderStateSnapshot(
             orders=tuple(self._orders.values()),
             broker_to_order=tuple(self._broker_to_order.items()),
             seen_fill_ids=self._fill_ids.snapshot(),
             seen_report_ids=tuple(sorted(self._seen_report_ids)),
+            fill_ids_by_order=self._ids_by_order_payload(self._fill_ids_by_order),
+            report_ids_by_order=self._ids_by_order_payload(self._report_ids_by_order),
         )
 
     @classmethod
     def restore(cls, snapshot: OrderStateSnapshot) -> OrderManager:
-        """Perform restore."""
+        """Rehydrate an OrderManager from a snapshot, round-tripping all maps.
+
+        The per-order idempotency maps are restored intact. Ids present in the
+        global seen sets but absent from the per-order maps (e.g. legacy
+        snapshots that predate per-order ownership) are left unattributed:
+        ``discard_terminal_order`` will not remove them, so they remain
+        global-non-compactable rather than being silently dropped or
+        misattributed.
+        """
         manager = cls()
         manager._orders = {order.order_id: order for order in snapshot.orders}
         manager._machines = {
@@ -134,10 +149,28 @@ class OrderManager:
         }
         manager._broker_to_order = dict(snapshot.broker_to_order)
         manager._fill_ids = FillIdempotencyStore.restore(snapshot.seen_fill_ids)
-        manager._fill_ids_by_order = {}
+        manager._fill_ids_by_order = cls._ids_by_order_from_payload(snapshot.fill_ids_by_order)
         manager._seen_report_ids = set(snapshot.seen_report_ids)
-        manager._report_ids_by_order = {}
+        manager._report_ids_by_order = cls._ids_by_order_from_payload(snapshot.report_ids_by_order)
         return manager
+
+    @staticmethod
+    def _ids_by_order_payload(
+        ids_by_order: dict[OrderId, set[str]],
+    ) -> tuple[tuple[OrderId, tuple[str, ...]], ...]:
+        """Serialize a per-order id map deterministically for the snapshot."""
+        return tuple(
+            (order_id, tuple(sorted(ids)))
+            for order_id, ids in sorted(ids_by_order.items(), key=lambda item: item[0].value)
+            if ids
+        )
+
+    @staticmethod
+    def _ids_by_order_from_payload(
+        payload: tuple[tuple[OrderId, tuple[str, ...]], ...],
+    ) -> dict[OrderId, set[str]]:
+        """Rebuild a per-order id map from its snapshot payload."""
+        return {order_id: set(ids) for order_id, ids in payload}
 
     def _replace_order(
         self,

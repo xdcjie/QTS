@@ -533,13 +533,13 @@ def test_ibkr_order_request_builds_bracket_parent_and_oco_children(
         bracket_legs=(
             BracketLeg(
                 order_type=OrderType.LIMIT,
-                side=OrderSide.SELL.value,
+                side=OrderSide.SELL,
                 quantity=Decimal("1"),
                 limit_price=Decimal("9999"),
             ),
             BracketLeg(
                 order_type=OrderType.STOP,
-                side=OrderSide.SELL.value,
+                side=OrderSide.SELL,
                 quantity=Decimal("1"),
                 stop_price=Decimal("0.01"),
             ),
@@ -599,13 +599,13 @@ def test_ibkr_order_request_builds_what_if_bracket_with_transmit_enabled(
         bracket_legs=(
             BracketLeg(
                 order_type=OrderType.LIMIT,
-                side=OrderSide.SELL.value,
+                side=OrderSide.SELL,
                 quantity=Decimal("1"),
                 limit_price=Decimal("9999"),
             ),
             BracketLeg(
                 order_type=OrderType.STOP,
-                side=OrderSide.SELL.value,
+                side=OrderSide.SELL,
                 quantity=Decimal("1"),
                 stop_price=Decimal("0.01"),
             ),

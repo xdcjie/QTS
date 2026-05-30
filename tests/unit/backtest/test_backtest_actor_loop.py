@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from qts.core.ids import BrokerId
+from qts.domain.execution_timing import ExecutionTimingModel
 from qts.domain.market_data import Bar
 from qts.domain.orders import (
     Order,
@@ -19,6 +20,11 @@ from qts.runtime.sinks.base import RuntimeEvent
 from qts.strategy_sdk import Strategy
 
 from tests.support.backtest_manifest import m1_manifest_kwargs
+
+# Single-bar event-emission tests assert the same-bar fill sequence; pin the
+# optimistic policy so the decision bar fills in place instead of deferring
+# under the next_bar_open default.
+_SAME_BAR_TIMING = ExecutionTimingModel.research_only()
 
 
 class _RecordingBacktestSink:
@@ -219,7 +225,9 @@ def test_backtest_actor_loop_emits_signal_events() -> None:
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     bars = [_bar(start, "100")]
     strategy = OneOrderStrategy()
-    instrument_context = BacktestInstrumentContext(instrument_registry=None, registry_bars=bars)
+    instrument_context = BacktestInstrumentContext(
+        instrument_registry=None, registry_bars=bars, execution_timing=_SAME_BAR_TIMING
+    )
     portfolio_projector = BacktestPortfolioProjector()
     intent_processor = TargetIntentProcessor(
         risk_engine=RiskEngine([MaxNotionalRule(max_notional=Decimal("1000000"))]),
@@ -240,6 +248,7 @@ def test_backtest_actor_loop_emits_signal_events() -> None:
             portfolio_view=portfolio_projector.portfolio_view,
             equity_point=portfolio_projector.equity_point,
             update_rolling_prices=instrument_context.update_rolling_prices,
+            execution_timing=_SAME_BAR_TIMING,
         ),
         account_id=AccountId("acct-backtest"),
         strategy_id=StrategyId("strategy-backtest"),
@@ -296,7 +305,9 @@ def test_backtest_actor_loop_emits_broker_reject_event_for_capability_reject(
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     bars = [_bar(start, "100")]
-    instrument_context = BacktestInstrumentContext(instrument_registry=None, registry_bars=bars)
+    instrument_context = BacktestInstrumentContext(
+        instrument_registry=None, registry_bars=bars, execution_timing=_SAME_BAR_TIMING
+    )
     portfolio_projector = BacktestPortfolioProjector()
     intent_processor = TargetIntentProcessor(
         risk_engine=RiskEngine([MaxNotionalRule(max_notional=Decimal("1000000"))]),
@@ -322,6 +333,7 @@ def test_backtest_actor_loop_emits_broker_reject_event_for_capability_reject(
             portfolio_view=portfolio_projector.portfolio_view,
             equity_point=portfolio_projector.equity_point,
             update_rolling_prices=instrument_context.update_rolling_prices,
+            execution_timing=_SAME_BAR_TIMING,
         ),
         account_id=AccountId("acct-backtest"),
         strategy_id=StrategyId("strategy-backtest"),

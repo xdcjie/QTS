@@ -14,6 +14,7 @@ import yaml  # type: ignore[import-untyped]
 from qts.core.hashing import stable_json_hash
 from qts.core.ids import InstrumentId
 from qts.data.provenance import DatasetMetadata
+from qts.domain.execution_timing import FillPolicy
 from qts.reporting.backtest import dataset_metadata_payload
 from qts.runtime.mode import (
     AccountEnvironment,
@@ -25,13 +26,13 @@ from qts.runtime.signal_policy import SignalAggregationPolicy
 
 _SUPPORTED_MARKET_DATA_SOURCES = frozenset({"local_historical"})
 
-# Backward-compatible default fill-timing policy. Mirrors
-# ``qts.backtest.execution_timing.FillPolicy.SAME_BAR_CLOSE.value``; kept as a
-# literal here so this config module does not import the backtest layer at
-# module load time (validation uses a deferred import). ``same_bar_close`` is
-# optimistic look-ahead and is *not* promotion-grade on its own; research and
-# promotion-feeding runs select ``next_bar_open``.
-_DEFAULT_FILL_POLICY = "same_bar_close"
+# Promotion-grade default fill-timing policy. A decision made at the close of a
+# completed bar can only be acted on at the next obtainable price, so the
+# default fills at ``next_bar_open``. ``same_bar_close`` is optimistic
+# look-ahead: it requires an explicit ``optimistic_fill_waiver`` to be selected
+# at all and is never promotion-grade. ``FillPolicy`` lives in the domain layer
+# so this runtime config does not import the backtest layer.
+_DEFAULT_FILL_POLICY = FillPolicy.NEXT_BAR_OPEN.value
 
 
 @dataclass(frozen=True, slots=True)
@@ -430,11 +431,13 @@ class BacktestRuntimeConfig:
         if not self.schema_version.strip():
             raise ValueError("schema_version must not be empty")
         object.__setattr__(self, "schema_version", self.schema_version.strip())
-        # Deferred import keeps the backtest layer out of this config module's
-        # import graph (avoids a cycle: backtest.engine imports this config).
-        from qts.backtest.execution_timing import FillPolicy
-
-        object.__setattr__(self, "fill_policy", FillPolicy.from_value(self.fill_policy).value)
+        fill_policy = FillPolicy.from_value(self.fill_policy)
+        object.__setattr__(self, "fill_policy", fill_policy.value)
+        if fill_policy is FillPolicy.SAME_BAR_CLOSE and not self.optimistic_fill_waiver:
+            raise ValueError(
+                "fill_policy=same_bar_close is optimistic look-ahead and requires "
+                "optimistic_fill_waiver=true"
+            )
         mode = RuntimeMode.from_value(self.mode)
         if mode is not RuntimeMode.BACKTEST:
             raise ValueError("BacktestRuntimeConfig mode must be backtest")
@@ -573,13 +576,12 @@ class BacktestRuntimeConfig:
             payload["strategy"] = self.strategy.to_payload()
         if self.strategies:
             payload["strategies"] = [strategy.to_payload() for strategy in self.strategies]
-        # Omit the fill-timing fields from the run identity when they hold their
-        # backward-compatible defaults, so existing configs keep their hashes;
-        # an explicit non-default policy is part of the run's identity.
-        if self.fill_policy != _DEFAULT_FILL_POLICY:
-            payload["fill_policy"] = self.fill_policy
-        if self.optimistic_fill_waiver:
-            payload["optimistic_fill_waiver"] = True
+        # Fill-timing is part of every run's identity: the policy decides whether
+        # fills are next-obtainable or optimistic look-ahead and whether the run
+        # is promotion-grade, so both fields are always hashed (including
+        # defaults), never omitted.
+        payload["fill_policy"] = self.fill_policy
+        payload["optimistic_fill_waiver"] = self.optimistic_fill_waiver
         return payload
 
     @staticmethod

@@ -1,15 +1,15 @@
-"""Promotion-grade execution-timing gate on the promotion packet (C1).
+"""Promotion-grade execution-timing gate on the promotion packet (QTS-FINAL-004).
 
 A backtest that fills at the decision bar's own close (``same_bar_close``) is
-optimistic look-ahead and cannot, on its own, back paper/live promotion
-evidence. The promotion packet's machine validation must:
+optimistic look-ahead and is never promotion-grade. The promotion packet's
+machine validation must:
 
-* REJECT when the evidence backtest used optimistic same-bar fills with no
-  waiver (``research.fill_timing_promotion_grade`` is False).
-* PASS when an explicit optimistic waiver made the evidence promotion-grade,
-  but surface an explicit ``optimistic`` flag so the packet is never silently
-  treated as promotion-grade.
-* PASS as non-optimistic for promotion-grade ``next_bar_open`` evidence.
+* REJECT when the evidence backtest used optimistic same-bar fills
+  (``research.fill_timing_promotion_grade`` is False), even when a research
+  optimistic waiver was recorded.
+* PASS for promotion-grade ``next_bar_open`` evidence.
+* Stay silent when the flag is absent (``None``): the upstream
+  ``promotion_eligible`` derivation owns the unverified-evidence rejection.
 
 This is the promotion-boundary gate; it complements the upstream
 ``ResearchMetricsFromValidationArtifacts`` derivation by enforcing the
@@ -49,18 +49,23 @@ def test_same_bar_close_without_waiver_rejected(tmp_path: Path) -> None:
     )
 
     assert result.accepted is False
-    assert result.optimistic is False
     assert any("fill_timing_promotion_grade is False" in reason for reason in result.reasons)
 
 
-def test_same_bar_close_with_waiver_passes_but_flagged_optimistic(tmp_path: Path) -> None:
-    """An explicit optimistic waiver allows machine-pass with an optimistic flag."""
+def test_same_bar_close_with_waiver_still_rejected(tmp_path: Path) -> None:
+    """A research optimistic waiver never rescues same_bar_close evidence.
+
+    An honest derivation maps the optimistic ``same_bar_close`` policy to
+    ``fill_timing_promotion_grade=False`` regardless of any waiver, so the
+    packet is rejected exactly as the unwaived case is.
+    """
     registry, bundle_id = _write_verifiable_bundle(tmp_path)
     metrics = _honest_metrics()
-    # same_bar_close + waiver: manifest keeps optimistic True but flips
-    # promotion_grade to True so the derivation can mark it eligible.
+    # Even with a recorded research waiver, optimistic look-ahead is never
+    # promotion-grade, so the manifest-derived flag stays False.
     metrics["research"]["fill_timing_optimistic"] = True
-    metrics["research"]["fill_timing_promotion_grade"] = True
+    metrics["research"]["fill_timing_promotion_grade"] = False
+    metrics["research"]["promotion_eligible"] = False
 
     result = PromotionPacketV2.from_payload(
         _packet_payload(bundle_id, metrics_payload=metrics)
@@ -69,15 +74,12 @@ def test_same_bar_close_with_waiver_passes_but_flagged_optimistic(tmp_path: Path
         audit_log=ResearchAuditLog(tmp_path / "audit.jsonl"),
     )
 
-    assert result.accepted is True
-    assert result.status == "human_pending"
-    # The waived packet is explicitly optimistic and never silently promoted.
-    assert result.optimistic is True
-    assert result.to_payload()["optimistic"] is True
+    assert result.accepted is False
+    assert any("fill_timing_promotion_grade is False" in reason for reason in result.reasons)
 
 
-def test_next_bar_open_passes_not_optimistic(tmp_path: Path) -> None:
-    """Promotion-grade next_bar_open evidence passes and is not optimistic."""
+def test_next_bar_open_passes(tmp_path: Path) -> None:
+    """Promotion-grade next_bar_open evidence passes machine validation."""
     registry, bundle_id = _write_verifiable_bundle(tmp_path)
     metrics = _honest_metrics()
     metrics["research"]["fill_timing_optimistic"] = False
@@ -91,27 +93,7 @@ def test_next_bar_open_passes_not_optimistic(tmp_path: Path) -> None:
     )
 
     assert result.accepted is True
-    assert result.optimistic is False
-    assert result.to_payload()["optimistic"] is False
-
-
-def test_optimistic_flag_recorded_in_audit_payload(tmp_path: Path) -> None:
-    """The waived-optimistic decision is persisted in the audit ledger."""
-    registry, bundle_id = _write_verifiable_bundle(tmp_path)
-    metrics = _honest_metrics()
-    metrics["research"]["fill_timing_optimistic"] = True
-    metrics["research"]["fill_timing_promotion_grade"] = True
-
-    audit_log = ResearchAuditLog(tmp_path / "audit.jsonl")
-    PromotionPacketV2.from_payload(
-        _packet_payload(bundle_id, metrics_payload=metrics)
-    ).validate_machine(evidence_registry=registry, audit_log=audit_log)
-
-    validated = [
-        record for record in audit_log.list() if record.record_type == "promotion_packet_validated"
-    ]
-    assert validated, "expected a promotion_packet_validated audit record"
-    assert validated[-1].payload["optimistic"] is True
+    assert result.status == "human_pending"
 
 
 def test_missing_fill_timing_flag_not_gated_here(tmp_path: Path) -> None:
@@ -131,7 +113,6 @@ def test_missing_fill_timing_flag_not_gated_here(tmp_path: Path) -> None:
     )
 
     assert result.accepted is True
-    assert result.optimistic is False
     assert not any("fill_timing_promotion_grade" in reason for reason in result.reasons)
 
 

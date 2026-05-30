@@ -5,8 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from decimal import Decimal
 
-from qts.backtest.execution_timing import ExecutionTimingModel
 from qts.core.ids import InstrumentId
+from qts.domain.execution_timing import ExecutionTimingModel
 from qts.domain.instruments import AssetClass, ContractSpec, Instrument, SettlementType
 from qts.domain.market_data import Bar
 from qts.registry.future_roll import FutureRollRegistry

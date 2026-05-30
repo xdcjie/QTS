@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from qts.core.ids import InstrumentId
+from qts.domain.execution_timing import ExecutionTimingModel
 from qts.domain.market_data import Bar
 
 from tests.support.backtest_streaming import run_engine_streaming
@@ -53,6 +54,8 @@ def test_backtest_core_chain_smoke(tmp_path: Path) -> None:
             strategy=SmokeBuyStrategy(),
             bars=bars,
             initial_cash=Decimal("10000"),
+            # Core-chain smoke is fill-policy independent; pin same-bar fills.
+            execution_timing=ExecutionTimingModel.research_only(),
         ),
         tmp_path / "backtest-smoke",
     )

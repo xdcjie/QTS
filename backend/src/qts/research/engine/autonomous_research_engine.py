@@ -93,6 +93,7 @@ class AutonomousResearchRun:
     dataset_id: str = "research-data-contract"
     approval_policy: str = "manual_gate"
     fill_policy: str = "next_bar_open"
+    optimistic_fill_waiver: bool = False
     campaign_config: ResearchCampaignConfig | None = None
     approval_records: tuple[GenerationApprovalRecord, ...] = ()
 
@@ -118,9 +119,15 @@ class AutonomousResearchRun:
             else {str(root): Path(path) for root, path in self.data_paths.items()},
         )
         object.__setattr__(self, "approval_records", tuple(self.approval_records))
-        from qts.backtest.execution_timing import FillPolicy
+        from qts.domain.execution_timing import FillPolicy
 
-        object.__setattr__(self, "fill_policy", FillPolicy.from_value(self.fill_policy).value)
+        fill_policy = FillPolicy.from_value(self.fill_policy).value
+        object.__setattr__(self, "fill_policy", fill_policy)
+        if fill_policy == FillPolicy.SAME_BAR_CLOSE.value and not self.optimistic_fill_waiver:
+            raise ValueError(
+                "fill_policy=same_bar_close is optimistic look-ahead and requires "
+                "optimistic_fill_waiver=true"
+            )
 
     @classmethod
     def from_yaml(
@@ -151,6 +158,7 @@ class AutonomousResearchRun:
             timeframe=campaign.universe.timeframe,
             dataset_id=campaign.universe.dataset_id,
             fill_policy=campaign.execution.fill_policy,
+            optimistic_fill_waiver=campaign.execution.optimistic_fill_waiver,
             campaign_config=campaign,
             approval_records=tuple(approval_records),
         )
@@ -178,6 +186,7 @@ class AutonomousResearchRun:
                 record.approval_hash for record in self.approval_records
             ],
             "fill_policy": self.fill_policy,
+            "optimistic_fill_waiver": self.optimistic_fill_waiver,
             "output_root": str(self.output_root),
             "timeframe": self.timeframe,
             "universe": list(self.universe),
@@ -1120,8 +1129,10 @@ class AutonomousResearchEngine:
             "end": end,
             # Fill policy for promotion-grade evidence. Defaults to next_bar_open
             # (a decision at bar N fills at N+1's open); same_bar_close is
-            # look-ahead and is blocked at the promotion bar.
+            # look-ahead, requires the optimistic waiver, and is blocked at the
+            # promotion bar.
             "fill_policy": run.fill_policy,
+            "optimistic_fill_waiver": run.optimistic_fill_waiver,
             "initial_cash": "1000000",
             "market_data": {
                 "catalog": "research",

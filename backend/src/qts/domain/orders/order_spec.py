@@ -36,12 +36,25 @@ class TimeInForce(StrEnum):
     ATC = "atc"
 
 
+class OrderSide(StrEnum):
+    """Order side (direction). Owned here alongside the other execution-shape
+    enums so the bracket model can type its legs without an import cycle."""
+
+    BUY = "buy"
+    SELL = "sell"
+
+
 @dataclass(frozen=True, slots=True)
 class BracketLeg:
-    """One child leg of a bracket order."""
+    """One child leg of a bracket order.
+
+    ``side`` is the typed direction of the child exit order. It is coerced from
+    its serialized value so callers may pass either an ``OrderSide`` or its
+    string value; an unknown value is rejected.
+    """
 
     order_type: OrderType
-    side: str
+    side: OrderSide
     quantity: Decimal
     limit_price: Decimal | None = None
     stop_price: Decimal | None = None
@@ -49,8 +62,7 @@ class BracketLeg:
     def __post_init__(self) -> None:
         if self.quantity <= Decimal("0"):
             raise ValueError("bracket leg quantity must be positive")
-        if not self.side.strip():
-            raise ValueError("bracket leg side must not be empty")
+        object.__setattr__(self, "side", OrderSide(self.side))
         _validate_optional_price(self.limit_price, "limit_price")
         _validate_optional_price(self.stop_price, "stop_price")
 
@@ -106,7 +118,7 @@ class OrderSpec:
             payload["bracket_legs"] = [
                 {
                     "order_type": leg.order_type.value,
-                    "side": leg.side,
+                    "side": leg.side.value,
                     "quantity": str(leg.quantity),
                     "limit_price": None if leg.limit_price is None else str(leg.limit_price),
                     "stop_price": None if leg.stop_price is None else str(leg.stop_price),
@@ -151,6 +163,7 @@ def _validate_optional_price(value: Decimal | None, name: str) -> None:
 __all__ = [
     "BracketLeg",
     "BracketSpec",
+    "OrderSide",
     "OrderSpec",
     "OrderType",
     "TimeInForce",

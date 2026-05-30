@@ -14,7 +14,6 @@ from qts.backtest.dependencies import (
     BacktestActorLoopDependencies,
     BacktestEngineDependencies,
 )
-from qts.backtest.execution_timing import ExecutionTimingModel
 from qts.backtest.instrument_context import BacktestInstrumentContext
 from qts.backtest.portfolio_projection import BacktestPortfolioProjector
 from qts.core.hashing import stable_json_hash
@@ -27,6 +26,7 @@ from qts.core.ids import (
 )
 from qts.data.provenance import DatasetMetadata
 from qts.data.sessions import RegularSessionWindow
+from qts.domain.execution_timing import ExecutionTimingModel
 from qts.domain.market_data import Bar
 from qts.execution.adapters.brokerage_capabilities import broker_capabilities_for_model
 from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
@@ -117,10 +117,10 @@ class BacktestEngine:
         ``BacktestEngineDependencies`` when explicit objects are not supplied.
 
         ``execution_timing`` selects the fill-timing policy. It defaults to the
-        backward-compatible research-only ``same_bar_close`` model; supply
-        ``ExecutionTimingModel.promotion_grade()`` for next-obtainable
-        (``next_bar_open``) fills. The config-driven path (``from_config``)
-        defaults to the promotion-grade model.
+        promotion-grade next-obtainable (``next_bar_open``) model. Supply
+        ``ExecutionTimingModel.research_only()`` for the optimistic look-ahead
+        ``same_bar_close`` model, which requires an explicit optimistic waiver
+        and is never promotion-grade.
         """
         if strategies is not None:
             if strategy is not None:
@@ -249,10 +249,10 @@ class BacktestEngine:
         The fill-timing policy is recorded in the run manifest. An explicit
         ``execution_timing`` argument wins (used by direct callers). Otherwise
         it is derived from the config's ``fill_policy`` / ``optimistic_fill_waiver``
-        fields, which default to the backward-compatible research-only
-        ``same_bar_close``. Research and promotion-feeding configs set
-        ``fill_policy: next_bar_open``; the manifest's ``promotion_grade`` flag
-        records whether the chosen policy may back paper/live evidence.
+        fields, which default to the promotion-grade ``next_bar_open``. A config
+        selecting the optimistic ``same_bar_close`` policy must set
+        ``optimistic_fill_waiver: true``; the manifest's ``promotion_grade`` flag
+        then records that such a run may not back paper/live evidence.
         """
         cost_model = BacktestCostModel(
             fixed_commission_per_contract=config.cost_model.fixed_commission_per_contract,

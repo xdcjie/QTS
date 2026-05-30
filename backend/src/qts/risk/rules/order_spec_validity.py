@@ -14,9 +14,10 @@ two checks:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Protocol
 
-from qts.domain.orders import OrderType
+from qts.domain.orders import OrderSide, OrderType
 from qts.domain.risk import OrderRiskRequest, RiskDecision
 
 
@@ -48,6 +49,14 @@ class OrderSpecValidityRule:
                 rule_id=self.rule_id,
                 evidence=spec.to_payload(),
             )
+        bracket_reason = self._validate_bracket(request)
+        if bracket_reason is not None:
+            return RiskDecision.rejected(
+                "INVALID_BRACKET_LEGS",
+                bracket_reason,
+                rule_id=self.rule_id,
+                evidence=spec.to_payload(),
+            )
         policy = self.brokerage_policy
         if policy is not None and spec.order_type not in policy.supported_order_types:
             return RiskDecision.rejected(
@@ -57,6 +66,40 @@ class OrderSpecValidityRule:
                 evidence=spec.to_payload(),
             )
         return RiskDecision.approve(rule_id=self.rule_id)
+
+    @staticmethod
+    def _validate_bracket(request: OrderRiskRequest) -> str | None:
+        """Validate bracket exit legs against the parent intent direction/size.
+
+        Bracket child legs are OCO exits: they must share one side (you exit a
+        position in a single direction), each cover the full parent quantity, and
+        face the opposite direction of the parent. The parent direction is read
+        from ``signed_quantity_delta`` when available (positive opens long, so
+        exits sell; negative opens short, so exits buy).
+        """
+        bracket = request.order_spec.bracket
+        if bracket is None:
+            return None
+        sides = {leg.side for leg in bracket.legs}
+        if len(sides) > 1:
+            return "bracket exit legs must share a single side (OCO exits one direction)"
+        exit_side = next(iter(sides))
+        for leg in bracket.legs:
+            if leg.quantity != request.quantity:
+                return (
+                    f"bracket leg quantity {leg.quantity} must equal parent quantity "
+                    f"{request.quantity}"
+                )
+        delta = request.signed_quantity_delta
+        if delta is not None:
+            expected = OrderSide.SELL if delta > Decimal("0") else OrderSide.BUY
+            if exit_side is not expected:
+                direction = "long" if delta > Decimal("0") else "short"
+                return (
+                    f"bracket exit side {exit_side.value} must be {expected.value} "
+                    f"for a {direction} parent intent"
+                )
+        return None
 
 
 __all__ = ["BrokerageOrderTypePolicy", "OrderSpecValidityRule"]

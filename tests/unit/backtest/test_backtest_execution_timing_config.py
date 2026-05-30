@@ -6,11 +6,11 @@ fields when no explicit model is passed, and the backtest manifest records the
 fill-timing honesty facts (``optimistic`` / ``promotion_grade``) so the
 promotion path can gate on them.
 
-Domain rule: ``same_bar_close`` fills are look-ahead and are NOT promotion-grade
-on their own; ``next_bar_open`` is the promotion-grade policy. The config's
-backward-compatible default is ``same_bar_close`` (an explicit opt-in to
-``next_bar_open`` is part of a run's identity), so a config that does not set
-``fill_policy`` produces an optimistic, non-promotion-grade manifest.
+Domain rule: ``same_bar_close`` fills are look-ahead and are never
+promotion-grade; ``next_bar_open`` is the promotion-grade policy and the
+default. A config that does not set ``fill_policy`` produces a next-obtainable,
+promotion-grade manifest, and selecting ``same_bar_close`` requires an explicit
+``optimistic_fill_waiver``.
 """
 
 from __future__ import annotations
@@ -20,9 +20,10 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+import pytest
 from qts.backtest.engine import BacktestEngine
-from qts.backtest.execution_timing import ExecutionTimingModel, FillPolicy
 from qts.core.ids import InstrumentId
+from qts.domain.execution_timing import ExecutionTimingModel, FillPolicy
 from qts.domain.market_data import Bar
 from qts.runtime.config import (
     BacktestMarketDataReference,
@@ -58,21 +59,21 @@ def _make_config(**overrides: Any) -> BacktestRuntimeConfig:
 # ---------------------------------------------------------------------------
 
 
-def test_config_without_fill_policy_defaults_to_same_bar_close() -> None:
+def test_config_without_fill_policy_defaults_to_next_bar_open() -> None:
     config = _make_config()
 
-    assert config.fill_policy == "same_bar_close"
+    assert config.fill_policy == "next_bar_open"
     assert config.optimistic_fill_waiver is False
 
     # from_config derives the timing model from these fields when no explicit
-    # model is supplied; the derived model is optimistic and not promotion-grade.
+    # model is supplied; the default derived model is promotion-grade.
     derived = ExecutionTimingModel.from_value(
         config.fill_policy, optimistic_waiver=config.optimistic_fill_waiver
     )
     payload = derived.to_manifest_payload()
-    assert derived.fill_policy is FillPolicy.SAME_BAR_CLOSE
-    assert payload["optimistic"] is True
-    assert payload["promotion_grade"] is False
+    assert derived.fill_policy is FillPolicy.NEXT_BAR_OPEN
+    assert payload["optimistic"] is False
+    assert payload["promotion_grade"] is True
 
 
 def test_config_next_bar_open_derives_promotion_grade_timing() -> None:
@@ -87,18 +88,21 @@ def test_config_next_bar_open_derives_promotion_grade_timing() -> None:
     assert payload["promotion_grade"] is True
 
 
-def test_config_same_bar_close_with_waiver_derives_promotion_grade() -> None:
-    config = _make_config(fill_policy="same_bar_close", optimistic_fill_waiver=True)
+def test_config_same_bar_close_requires_waiver_and_is_never_promotion_grade() -> None:
+    # same_bar_close without the explicit waiver is rejected at config validation.
+    with pytest.raises(ValueError, match="optimistic_fill_waiver"):
+        _make_config(fill_policy="same_bar_close")
 
+    config = _make_config(fill_policy="same_bar_close", optimistic_fill_waiver=True)
     assert config.optimistic_fill_waiver is True
     derived = ExecutionTimingModel.from_value(
         config.fill_policy, optimistic_waiver=config.optimistic_fill_waiver
     )
     payload = derived.to_manifest_payload()
-    # Still optimistic same-bar fills, but the waiver makes them promotion-grade.
+    # The waiver authorizes research use; the look-ahead fill is never promotion-grade.
     assert payload["optimistic"] is True
     assert payload["optimistic_waiver"] is True
-    assert payload["promotion_grade"] is True
+    assert payload["promotion_grade"] is False
 
 
 # ---------------------------------------------------------------------------
@@ -106,7 +110,7 @@ def test_config_same_bar_close_with_waiver_derives_promotion_grade() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_from_config_default_manifest_is_optimistic_not_promotion_grade(
+def test_from_config_default_manifest_is_next_bar_open_promotion_grade(
     tmp_path: Path,
 ) -> None:
     engine = BacktestEngine.from_config(
@@ -117,16 +121,16 @@ def test_from_config_default_manifest_is_optimistic_not_promotion_grade(
     captured = run_engine_streaming(engine, tmp_path / "default")
 
     assumptions = captured.manifest["execution_assumptions"]
-    assert assumptions["fill_policy"] == "same_bar_close"
-    assert assumptions["optimistic"] is True
-    assert assumptions["promotion_grade"] is False
+    assert assumptions["fill_policy"] == "next_bar_open"
+    assert assumptions["optimistic"] is False
+    assert assumptions["promotion_grade"] is True
 
 
 def test_from_config_same_bar_close_manifest_records_not_promotion_grade(
     tmp_path: Path,
 ) -> None:
     engine = BacktestEngine.from_config(
-        _make_config(fill_policy="same_bar_close"),
+        _make_config(fill_policy="same_bar_close", optimistic_fill_waiver=True),
         bars=_bars(),
         strategy=_BuyOnceStrategy(),
     )
@@ -136,7 +140,7 @@ def test_from_config_same_bar_close_manifest_records_not_promotion_grade(
     assert assumptions["fill_policy"] == "same_bar_close"
     assert assumptions["optimistic"] is True
     assert assumptions["promotion_grade"] is False
-    assert assumptions["optimistic_waiver"] is False
+    assert assumptions["optimistic_waiver"] is True
 
 
 def test_from_config_next_bar_open_manifest_is_promotion_grade(tmp_path: Path) -> None:

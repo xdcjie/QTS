@@ -160,9 +160,7 @@ def test_promotion_packet_consumes_fill_timing_evidence() -> None:
 
 def _winner(result: SelectionResult) -> SelectedCandidate:
     return next(
-        candidate
-        for candidate in result.selected_candidates
-        if candidate.candidate_id == "winner"
+        candidate for candidate in result.selected_candidates if candidate.candidate_id == "winner"
     )
 
 

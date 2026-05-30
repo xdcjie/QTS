@@ -80,35 +80,36 @@ environment-specific.
 
 ## Fill-Timing Policy Defaults
 
-`ExecutionTimingModel` selects the fill policy at the execution-adapter boundary
-(`same_bar_close` vs `next_bar_open`). Default selection is deliberately split by
-entrypoint and gated for honesty:
+`ExecutionTimingModel` (owned by `qts.domain.execution_timing`, a lower shared
+layer so runtime/config never imports the backtest layer) selects the fill
+policy at the execution boundary (`same_bar_close` vs `next_bar_open`). The
+default is **uniformly the honest policy**, with optimistic fills opt-in,
+gated, and never promotion-grade (QTS-FINAL-004):
 
-- **Promotion-feeding entrypoints default to the honest policy.** The autonomous
-  research engine (`AutonomousResearchEngine`) and campaign config
-  (`CampaignExecutionConfig`) default `fill_policy = next_bar_open`
-  (promotion-grade: a decision at bar `N` fills at `N+1` open).
-- **The generic single-run primitive stays backward-compatible.**
-  `BacktestRuntimeConfig` / `config_loader` keep `same_bar_close` as the
-  construction default so existing ad-hoc/in-sample example configs and their
-  recorded outputs are unchanged. `same_bar_close` is optimistic (the decision
-  bar's close is not realistically obtainable) and is always an explicit,
-  identity-bearing choice once overridden.
-- **Honesty is enforced at the promotion gate, not by silent default flipping.**
-  The backtest manifest records `execution_timing.promotion_grade` /
-  `optimistic`; `PromotionPacketV2.validate_machine()` rejects evidence produced
-  with `same_bar_close` unless an explicit optimistic waiver is recorded, and a
-  waived packet is permanently stamped `optimistic`.
+- **`next_bar_open` is the default everywhere.** `ExecutionTimingModel()`,
+  `BacktestRuntimeConfig` / `config_loader`, the autonomous research engine
+  (`AutonomousResearchEngine`), and the campaign config
+  (`CampaignExecutionConfig`) all default to `next_bar_open` — a decision at the
+  close of completed bar `N` fills at `N+1`'s open, the next obtainable price.
+- **`same_bar_close` is optimistic look-ahead and opt-in only.** Selecting it
+  requires an explicit `optimistic_fill_waiver=True` (rejected at config /
+  model construction otherwise). The decision bar's close is not realistically
+  obtainable while the bar is still forming, so the waiver records an informed
+  research decision to accept the look-ahead — it does not make the run
+  honest.
+- **`same_bar_close` is never promotion-grade.** Fill timing is part of every
+  run's hash identity (`fill_policy` + `optimistic_fill_waiver` are always in
+  `BacktestRuntimeConfig.to_payload()`, and the manifest always records
+  `execution_timing.promotion_grade` / `optimistic`). `is_promotion_grade` is
+  `True` only for `next_bar_open`; `PromotionPacketV2.validate_machine()` rejects
+  any evidence whose manifest reports `fill_timing_promotion_grade=False`, so a
+  `same_bar_close` packet is rejected regardless of any waiver.
 
-Deliberate deviation from the original deep-review plan (which asked the generic
-config default to also be `next_bar_open`): flipping the generic primitive would
-change the numerical results of all existing `configs/backtest.*.yaml` runs for
-no promotion-honesty benefit (those runs cannot be promoted, and the
-research/promotion paths already default honest). The correctness intent —
-"production/promotion entrypoints never silently use optimistic fills" — is met
-by the honest research defaults plus the promotion gate. Covered by
+Covered by `tests/anchor/test_backtest_default_fill_policy_next_bar_open.py`,
 `tests/integration/test_backtest_next_obtainable_fill_policy.py`,
-`tests/unit/backtest/test_backtest_execution_timing_config.py`, and
+`tests/unit/backtest/test_backtest_execution_timing_config.py`,
+`tests/unit/research/test_same_bar_close_never_promotion_grade.py`,
+`tests/replay/test_fill_policy_part_of_report_hash.py`, and
 `tests/integration/research/test_autonomous_rejects_same_bar_close_promotion.py`.
 
 ## Margin Enforcement

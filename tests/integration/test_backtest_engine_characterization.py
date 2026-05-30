@@ -5,6 +5,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+from qts.domain.execution_timing import ExecutionTimingModel
 from qts.domain.market_data import Bar
 from qts.strategy_sdk import Strategy
 
@@ -54,6 +55,8 @@ def test_backtest_streaming_emits_stable_artifacts(tmp_path: Path) -> None:
             strategy=OneOrderStrategy(),
             bars=bars,
             initial_cash=Decimal("10000"),
+            # Characterizes artifact stability, not fill timing; pin same-bar.
+            execution_timing=ExecutionTimingModel.research_only(),
         ),
         tmp_path / "streaming-characterization",
     )

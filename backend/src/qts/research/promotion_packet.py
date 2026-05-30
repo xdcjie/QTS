@@ -27,11 +27,10 @@ from qts.research.reproducibility import ReproducibilitySnapshotV2
 class PromotionPacketValidationResult:
     """Machine-readable outcome of machine-validating a promotion packet.
 
-    ``optimistic`` records that the evidence backtest used the look-ahead
-    ``same_bar_close`` fill policy and was only allowed to pass machine
-    validation because an explicit optimistic waiver was set. It is never True
-    for promotion-grade (``next_bar_open``) evidence, so a waived packet can
-    never be silently treated as promotion-grade by downstream review or audit.
+    Evidence produced with the optimistic ``same_bar_close`` fill policy is
+    never promotion-grade, so such a packet is always rejected here regardless
+    of any research waiver; only next-obtainable (``next_bar_open``) evidence
+    can reach ``human_pending``.
     """
 
     accepted: bool
@@ -40,7 +39,6 @@ class PromotionPacketValidationResult:
     audit_record_id: str
     reasons: tuple[str, ...] = ()
     warnings: tuple[str, ...] = ()
-    optimistic: bool = False
 
     def to_payload(self) -> dict[str, Any]:
         """Return a deterministic JSON-ready validation result payload."""
@@ -48,7 +46,6 @@ class PromotionPacketValidationResult:
         return {
             "accepted": self.accepted,
             "audit_record_id": self.audit_record_id,
-            "optimistic": self.optimistic,
             "packet_hash": self.packet_hash,
             "reasons": list(self.reasons),
             "status": self.status,
@@ -183,7 +180,6 @@ class PromotionPacketV2:
         metrics_warnings: list[str] = []
         reproducibility_reasons: list[str] = []
         data_quality_reasons: list[str] = []
-        optimistic = self._optimistic_fill_waiver_active()
         self._append_metrics_reasons(metrics_schema, metrics_reasons, metrics_warnings)
         self._append_reproducibility_reasons(reproducibility_reasons)
         self._append_data_quality_reasons(data_quality_reasons)
@@ -229,14 +225,10 @@ class PromotionPacketV2:
         )
         accepted = not reasons
         status = "human_pending" if accepted else "rejected"
-        # An optimistic-waived packet is recorded as optimistic only when it
-        # actually passed; a rejected packet carries no promotion-grade claim.
-        optimistic = optimistic and accepted
         validation_payload: dict[str, Any] = {
             "accepted": accepted,
             "evidence_bundle_id": self.evidence_bundle_id,
             "human_approval_required": accepted,
-            "optimistic": optimistic,
             "packet_hash": packet_hash,
             "promotion_candidate_id": self.promotion_candidate_id,
             "reasons": reasons,
@@ -277,7 +269,6 @@ class PromotionPacketV2:
             audit_record_id=record.record_id,
             reasons=tuple(reasons),
             warnings=tuple(warnings),
-            optimistic=optimistic,
         )
 
     def human_review(
@@ -526,41 +517,20 @@ class PromotionPacketV2:
 
         ``research.fill_timing_promotion_grade`` is the manifest-derived fact
         recording whether the evidence backtest's fills may back promotion
-        evidence. It is ``False`` only for the look-ahead ``same_bar_close``
-        policy *without* an optimistic waiver; an explicit waiver flips the
-        manifest's ``promotion_grade`` to ``True`` while leaving
-        ``fill_timing_optimistic`` ``True``. So a ``False`` value means the
-        evidence used optimistic same-bar fills with no waiver and is rejected.
-        ``None`` (no manifest recorded the flag, e.g. synthetic fixtures) is not
-        gated here -- the upstream ``promotion_eligible`` derivation already
-        rejects unverified evidence.
+        evidence. It is ``True`` only for next-obtainable (``next_bar_open``)
+        fills; the optimistic ``same_bar_close`` policy is never promotion-grade,
+        even with a research waiver, so a ``False`` value means the evidence used
+        optimistic same-bar look-ahead fills and is rejected. ``None`` (no
+        manifest recorded the flag, e.g. synthetic fixtures) is not gated here --
+        the upstream ``promotion_eligible`` derivation already rejects unverified
+        evidence.
         """
         if research.get("fill_timing_promotion_grade") is False:
             reasons.append(
                 "research.fill_timing_promotion_grade is False: evidence backtest "
-                "used optimistic same_bar_close fills without an optimistic waiver"
+                "used optimistic same_bar_close look-ahead fills, which are never "
+                "promotion-grade"
             )
-
-    def _optimistic_fill_waiver_active(self) -> bool:
-        """Return whether this packet rests on waived optimistic fills.
-
-        True when the metrics evidence records optimistic (``same_bar_close``)
-        fills that an explicit waiver promoted to promotion-grade: the manifest
-        keeps ``fill_timing_optimistic`` ``True`` while flipping
-        ``fill_timing_promotion_grade`` to ``True``. The validation result
-        surfaces this flag so a waived packet is never silently treated as
-        promotion-grade.
-        """
-        payload = self.metrics.get("payload")
-        if not isinstance(payload, Mapping):
-            return False
-        research = payload.get("research")
-        if not isinstance(research, Mapping):
-            return False
-        return (
-            research.get("fill_timing_optimistic") is True
-            and research.get("fill_timing_promotion_grade") is True
-        )
 
     @classmethod
     def _check_hollow_verdict_sentinel(

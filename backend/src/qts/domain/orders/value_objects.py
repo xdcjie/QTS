@@ -8,7 +8,7 @@ from decimal import Decimal
 from enum import StrEnum
 
 from qts.core.ids import AccountId, InstrumentId, OrderId
-from qts.domain.orders.order_spec import OrderSpec
+from qts.domain.orders.order_spec import OrderSide, OrderSpec
 
 
 class OrderState(StrEnum):
@@ -23,13 +23,6 @@ class OrderState(StrEnum):
     REPLACE_REQUESTED = "replace_requested"
     CANCELLED = "cancelled"
     REJECTED = "rejected"
-
-
-class OrderSide(StrEnum):
-    """Order side."""
-
-    BUY = "buy"
-    SELL = "sell"
 
 
 @dataclass(frozen=True, slots=True)
@@ -152,12 +145,23 @@ class OrderProcessingResult:
 
 @dataclass(frozen=True, slots=True)
 class OrderStateSnapshot:
-    """Serializable OrderManager state for reconnect/recovery."""
+    """Serializable OrderManager state for reconnect/recovery.
+
+    ``seen_fill_ids`` / ``seen_report_ids`` are the global idempotency sets.
+    ``fill_ids_by_order`` / ``report_ids_by_order`` carry the per-order ownership
+    of those ids so that, after restore, compaction (``discard_terminal_order``)
+    can remove only the ids belonging to a discarded order. Both default to
+    empty for backward compatibility with snapshots produced before per-order
+    ownership was tracked; ids absent from these maps are treated as
+    global-non-compactable on restore (retained, never removed by discard).
+    """
 
     orders: tuple[Order, ...]
     broker_to_order: tuple[tuple[str, OrderId], ...]
     seen_fill_ids: tuple[str, ...] = ()
     seen_report_ids: tuple[str, ...] = ()
+    fill_ids_by_order: tuple[tuple[OrderId, tuple[str, ...]], ...] = ()
+    report_ids_by_order: tuple[tuple[OrderId, tuple[str, ...]], ...] = ()
 
 
 __all__ = [

@@ -13,6 +13,7 @@ from typing import Any, cast
 
 from qts.core.ids import InstrumentId
 from qts.data.historical.csv_dataset import EXPECTED_HISTORICAL_COLUMNS
+from qts.domain.execution_timing import ExecutionTimingModel
 from qts.domain.market_data import Bar
 from qts.runtime.config import (
     BacktestCostModel,
@@ -23,6 +24,11 @@ from qts.runtime.config import (
 from qts.strategy_sdk import Strategy
 
 from tests.support.backtest_streaming import capture_stream_result, run_engine_streaming
+
+# Multiplier/ledger/replay/roll tests assert single decision-bar fills, which is
+# fill-policy independent. Pin the optimistic same-bar policy so the decision
+# bar fills in place rather than deferring under the next_bar_open default.
+_SAME_BAR = ExecutionTimingModel.research_only()
 
 
 def _config(*, warmup_bars: int = 0) -> BacktestRuntimeConfig:
@@ -154,6 +160,7 @@ def test_backtest_engine_from_config_does_not_require_chain_for_static_instrumen
             config,
             bars=[bar],
             strategy=BuyOneAaplStrategy(),
+            execution_timing=_SAME_BAR,
         ),
         tmp_path / "static-instrument",
     )
@@ -221,6 +228,7 @@ def test_futures_multiplier_affects_backtest_fill_cash(tmp_path: Path) -> None:
             contract_multipliers={
                 InstrumentId("FUTURE.CME.GC.GCQ0"): Decimal("100"),
             },
+            execution_timing=_SAME_BAR,
         ),
         tmp_path / "multiplier",
     ).result
@@ -237,6 +245,7 @@ def test_one_order_strategy_populates_trade_ledger(tmp_path: Path) -> None:
             _config(),
             bars=[_bar(start)],
             strategy=BuyOneGcStrategy(),
+            execution_timing=_SAME_BAR,
         ),
         tmp_path / "trade-ledger",
     )
@@ -493,6 +502,8 @@ end: "2010-06-06T22:01:00Z"
 timeframe: 1m
 initial_cash: "100000"
 strategy_class: "tests.integration.test_backtest_gc_si:BuyOneAaplStrategy"
+fill_policy: same_bar_close
+optimistic_fill_waiver: true
 risk_config:
   max_notional: "100000000"
 """,
@@ -558,6 +569,8 @@ end: "2010-06-06T22:05:00Z"
 timeframe: 5m
 initial_cash: "1000000"
 strategy_class: "tests.integration.test_backtest_gc_si:BuyOneGcStrategy"
+fill_policy: same_bar_close
+optimistic_fill_waiver: true
 risk_config:
   max_notional: "100000000"
 """,
@@ -633,6 +646,8 @@ end: "2010-06-06T22:05:00Z"
 timeframe: 5m
 initial_cash: "1000000"
 strategy_class: "tests.integration.test_backtest_gc_si:BuyOneGcStrategy"
+fill_policy: same_bar_close
+optimistic_fill_waiver: true
 risk_config:
   max_notional: "100000000"
 """,
@@ -688,6 +703,8 @@ end: "2010-06-06T22:05:00Z"
 timeframe: 5m
 initial_cash: "1000000"
 strategy_class: "tests.integration.test_backtest_gc_si:BuyOneGcStrategy"
+fill_policy: same_bar_close
+optimistic_fill_waiver: true
 risk_config:
   max_notional: "100000000"
 """,
@@ -734,6 +751,8 @@ end: "2010-06-06T22:02:00Z"
 timeframe: 1m
 initial_cash: "1000000"
 strategy_class: "tests.integration.test_backtest_gc_si:RollingGcStrategy"
+fill_policy: same_bar_close
+optimistic_fill_waiver: true
 roll_policy:
   enabled: true
   method: first_notice_date

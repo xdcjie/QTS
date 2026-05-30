@@ -5,9 +5,16 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+from qts.domain.execution_timing import ExecutionTimingModel
 from qts.domain.market_data import Bar
 
 from tests.support.backtest_streaming import run_engine_streaming
+
+# These tests exercise the actor pipeline (routing, aggregation, timeframe
+# aggregation, risk gating), which is independent of fill timing. They pin the
+# optimistic same-bar policy so single decision bars fill in place rather than
+# deferring under the promotion-grade next_bar_open default.
+_SAME_BAR = ExecutionTimingModel.research_only()
 
 
 def _bar(start: datetime, close: str) -> Bar:
@@ -48,6 +55,7 @@ def test_backtest_engine_runs_strategy_through_execution_flow(tmp_path: Path) ->
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     captured = run_engine_streaming(
         BacktestEngine(
+            execution_timing=_SAME_BAR,
             strategy=BuyOnceStrategy(),
             bars=[_bar(start, "100"), _bar(start + timedelta(minutes=1), "101")],
             initial_cash=Decimal("10000"),
@@ -118,6 +126,7 @@ def test_backtest_engine_runs_multi_strategy_config_through_shared_aggregation(
 
     captured = run_engine_streaming(
         BacktestEngine(
+            execution_timing=_SAME_BAR,
             strategies=(
                 FixedTargetStrategy(Decimal("10")),
                 FixedTargetStrategy(Decimal("20")),
@@ -164,6 +173,7 @@ def test_backtest_engine_target_intents_must_pass_pre_trade_risk_before_order_ma
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     captured = run_engine_streaming(
         BacktestEngine(
+            execution_timing=_SAME_BAR,
             strategy=OversizedOrderStrategy(),
             bars=[_bar(start, "100")],
             initial_cash=Decimal("10000"),
@@ -210,6 +220,7 @@ def test_backtest_engine_applies_brokerage_model_capabilities(tmp_path: Path) ->
     with pytest.raises(ValueError, match="fractional"):
         run_engine_streaming(
             BacktestEngine(
+                execution_timing=_SAME_BAR,
                 strategy=FractionalFutureStrategy(),
                 bars=[_bar(start, "100")],
                 initial_cash=Decimal("10000"),
@@ -261,6 +272,7 @@ def test_backtest_engine_routes_bars_through_strategy_actor(
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     captured = run_engine_streaming(
         BacktestEngine(
+            execution_timing=_SAME_BAR,
             strategy=NoDirectOnBarStrategy(),
             bars=[_bar(start, "100")],
             initial_cash=Decimal("10000"),
@@ -316,6 +328,7 @@ def test_backtest_engine_routes_strategy_intents_through_signal_aggregator(
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     captured = run_engine_streaming(
         BacktestEngine(
+            execution_timing=_SAME_BAR,
             strategy=BuyOnceStrategy(),
             bars=[_bar(start, "100")],
             initial_cash=Decimal("10000"),
@@ -355,6 +368,7 @@ def test_backtest_engine_streams_source_bars_through_market_data_actor(
 
     captured = run_engine_streaming(
         BacktestEngine(
+            execution_timing=_SAME_BAR,
             strategy=BuyOnceStrategy(),
             bars=source_bars,
             initial_cash=Decimal("10000"),
@@ -397,6 +411,7 @@ def test_backtest_engine_supports_two_minute_target_timeframe(
 
     captured = run_engine_streaming(
         BacktestEngine(
+            execution_timing=_SAME_BAR,
             strategy=BuyOnceStrategy(),
             bars=source_bars,
             initial_cash=Decimal("10000"),
@@ -439,6 +454,7 @@ def test_backtest_engine_uses_strategy_subscription_timeframe_over_config_target
 
     captured = run_engine_streaming(
         BacktestEngine(
+            execution_timing=_SAME_BAR,
             strategy=SubscribedTimeframeStrategy(),
             bars=source_bars,
             initial_cash=Decimal("10000"),

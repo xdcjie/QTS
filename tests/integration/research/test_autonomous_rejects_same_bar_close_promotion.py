@@ -23,8 +23,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from qts.backtest.execution_timing import ExecutionTimingModel
 from qts.core.hashing import stable_json_hash
+from qts.domain.execution_timing import ExecutionTimingModel
 from qts.research.audit_log import ResearchAuditLog
 from qts.research.evidence_registry import EvidenceRegistry
 from qts.research.idea_spec import IdeaSpec
@@ -36,11 +36,10 @@ from qts.research.promotion_packet import PromotionPacketV2
 
 
 def test_same_bar_close_evidence_promotion_rejected(tmp_path: Path) -> None:
-    """A promotion packet backed by unwaived same_bar_close fills is rejected."""
+    """A promotion packet backed by same_bar_close fills is rejected."""
     result = _validate_promotion_for_policy(tmp_path, ExecutionTimingModel.research_only())
 
     assert result.accepted is False
-    assert result.optimistic is False
     # The rejection is driven by the fill-timing fact, not a synthetic flag.
     assert any(
         "fill_timing_promotion_grade is False" in reason for reason in result.reasons
@@ -52,19 +51,24 @@ def test_next_bar_open_evidence_promotion_accepted(tmp_path: Path) -> None:
     result = _validate_promotion_for_policy(tmp_path, ExecutionTimingModel.promotion_grade())
 
     assert result.accepted is True
-    assert result.optimistic is False
 
 
-def test_waived_same_bar_close_promotion_accepted_but_optimistic(tmp_path: Path) -> None:
-    """An explicit optimistic waiver allows promotion but the packet stays optimistic."""
+def test_waived_same_bar_close_promotion_still_rejected(tmp_path: Path) -> None:
+    """A research optimistic waiver never makes same_bar_close promotion-grade.
+
+    The waiver authorizes research use of the optimistic policy but the
+    look-ahead fills can never back paper/live promotion evidence, so the
+    packet is rejected exactly as the unwaived case is.
+    """
     result = _validate_promotion_for_policy(
         tmp_path,
         ExecutionTimingModel.research_only(optimistic_waiver=True),
     )
 
-    assert result.accepted is True
-    assert result.optimistic is True
-    assert result.to_payload()["optimistic"] is True
+    assert result.accepted is False
+    assert any(
+        "fill_timing_promotion_grade is False" in reason for reason in result.reasons
+    ) or any("promotion_eligible must be true" in reason for reason in result.reasons)
 
 
 # ---------------------------------------------------------------------------

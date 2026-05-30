@@ -45,6 +45,7 @@ from qts.quality.rules.oop import (
     OOPHelperOwnershipRule,
     OOPPublicFactoryRule,
 )
+from qts.quality.rules.order_domain import OrderDomainTypingRule
 from qts.quality.rules.research import (
     EvidenceBundleRequiredForPromotionRule,
     IdeaRegistryRequiredForCandidateRule,
@@ -59,6 +60,7 @@ from qts.quality.rules.runtime import (
     RuntimeExecutionBoundaryRule,
     RuntimeSessionComplexityRule,
 )
+from qts.quality.rules.snapshot import SnapshotCompletenessRule
 from qts.quality.rules.stale import (
     ProductionNoFakeClassRule,
     StaleArchitectureTextRule,
@@ -91,6 +93,7 @@ __all__ = [
     "LivePackageNoReplayClassRule",
     "OOPHelperOwnershipRule",
     "OOPPublicFactoryRule",
+    "OrderDomainTypingRule",
     "PlatformFreezeRule",
     "PromotionConfigBoundaryRule",
     "ProductSpecificRule",
@@ -113,6 +116,7 @@ __all__ = [
     "SharedCapabilityRule",
     "SharedRuntimeWordingRule",
     "SingleFieldDtoJustificationRule",
+    "SnapshotCompletenessRule",
     "StaleArchitectureTextRule",
     "StrategySdkPublicSurfaceRule",
     "TestSupportRule",

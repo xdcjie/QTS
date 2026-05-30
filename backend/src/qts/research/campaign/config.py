@@ -178,6 +178,7 @@ class ResearchCampaignExecution:
     end: str | None = None
     windows: tuple[Mapping[str, str], ...] = ()
     fill_policy: str = "next_bar_open"
+    optimistic_fill_waiver: bool = False
 
     _DATA_MODES = frozenset({"fixture", "full"})
 
@@ -208,9 +209,14 @@ class ResearchCampaignExecution:
         # Promotion-grade default: next_bar_open. same_bar_close is optimistic
         # look-ahead and cannot back promotion evidence (enforced at the
         # promotion bar). Deferred import avoids importing the backtest layer.
-        from qts.backtest.execution_timing import FillPolicy
+        from qts.domain.execution_timing import FillPolicy
 
         fill_policy = FillPolicy.from_value(self.fill_policy).value
+        if fill_policy == FillPolicy.SAME_BAR_CLOSE.value and not self.optimistic_fill_waiver:
+            raise ValueError(
+                "execution.fill_policy=same_bar_close is optimistic look-ahead and requires "
+                "execution.optimistic_fill_waiver=true"
+            )
         object.__setattr__(self, "default_mode", default_mode)
         object.__setattr__(self, "metrics_source", metrics_source)
         object.__setattr__(self, "data_mode", data_mode)
@@ -250,6 +256,7 @@ class ResearchCampaignExecution:
             windows=cls._windows_from_payload(payload.get("windows", ())),
             fill_policy=cls._optional_text(payload, "execution.fill_policy", "fill_policy")
             or "next_bar_open",
+            optimistic_fill_waiver=bool(payload.get("optimistic_fill_waiver", False)),
         )
 
     def to_payload(self) -> dict[str, Any]:
@@ -272,6 +279,8 @@ class ResearchCampaignExecution:
         # preserved; an explicit optimistic policy is part of the identity.
         if self.fill_policy != "next_bar_open":
             payload["fill_policy"] = self.fill_policy
+        if self.optimistic_fill_waiver:
+            payload["optimistic_fill_waiver"] = self.optimistic_fill_waiver
         return payload
 
     @classmethod

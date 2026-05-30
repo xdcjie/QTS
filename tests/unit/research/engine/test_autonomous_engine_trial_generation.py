@@ -313,6 +313,7 @@ def write_campaign(
     min_oos_months: int = 1,
     template_extra_lines: tuple[str, ...] = (),
     fill_policy: str = "next_bar_open",
+    optimistic_fill_waiver: bool = False,
 ) -> Path:
     config_dir = tmp_path / "campaign_inputs"
     config_dir.mkdir(parents=True, exist_ok=True)
@@ -403,6 +404,13 @@ def write_campaign(
                 "  default_mode: backtest_pipeline",
                 "  metrics_source: backtest_artifacts",
                 f"  fill_policy: {fill_policy}",
+                # same_bar_close is optimistic look-ahead and requires an
+                # explicit waiver; toy fixtures opt into it for their economics.
+                *(
+                    ["  optimistic_fill_waiver: true"]
+                    if optimistic_fill_waiver or fill_policy == "same_bar_close"
+                    else []
+                ),
                 f"  data_mode: {data_mode}",
                 *([] if max_rows is None else [f"  max_rows: {max_rows}"]),
                 "objective:",
