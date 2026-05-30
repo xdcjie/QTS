@@ -34,7 +34,12 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-from qts.research.selector import CandidateSelector, SelectionPolicy
+from qts.research.selector import (
+    CandidateSelector,
+    SelectedCandidate,
+    SelectionPolicy,
+    SelectionResult,
+)
 
 _ENGINE_SOURCE = Path("backend/src/qts/research/engine/autonomous_research_engine.py").read_text(
     encoding="utf-8"
@@ -153,10 +158,10 @@ def test_promotion_packet_consumes_fill_timing_evidence() -> None:
 # --- helpers -----------------------------------------------------------------
 
 
-def _winner(result: object) -> object:
-    return next(  # type: ignore[attr-defined]
+def _winner(result: SelectionResult) -> SelectedCandidate:
+    return next(
         candidate
-        for candidate in result.selected_candidates  # type: ignore[attr-defined]
+        for candidate in result.selected_candidates
         if candidate.candidate_id == "winner"
     )
 

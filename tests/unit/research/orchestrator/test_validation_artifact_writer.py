@@ -27,18 +27,14 @@ from qts.research.orchestrator.experiment_runner import (
 # Payload hashes for the artifacts whose payloads contain no absolute paths.
 # These are byte-stable and form the strongest behavior anchor.
 _EXPECTED_PAYLOAD_HASHES = {
-    "capacity_report": (
-        "sha256:a8b5f38e214789961f7043e9e07b87985251ae5648296fedbecd4a2e0f0424b9"
-    ),
+    "capacity_report": ("sha256:a8b5f38e214789961f7043e9e07b87985251ae5648296fedbecd4a2e0f0424b9"),
     "correlation_report": (
         "sha256:f5575fbfa35604753c626b87a363f2d8cac689edeba63550a2235ec537c5bf14"
     ),
     "deterministic_replay": (
         "sha256:7fa115c887e435572b53ce7c78b3c3a8bb0114ac1d750e3ecf78ccacd9d4c86a"
     ),
-    "no_lookahead": (
-        "sha256:c9d70e7b546ad2073d084a8206471745ca269aed6701fdea642b97243626593b"
-    ),
+    "no_lookahead": ("sha256:c9d70e7b546ad2073d084a8206471745ca269aed6701fdea642b97243626593b"),
 }
 
 # Source-artifact hashes that are stable across output directories. The
@@ -88,8 +84,7 @@ def test_validation_artifact_payloads_are_pinned(
     }
 
     wrappers = {
-        name: json.loads(Path(path).read_text(encoding="utf-8"))
-        for name, path in paths.items()
+        name: json.loads(Path(path).read_text(encoding="utf-8")) for name, path in paths.items()
     }
 
     # Every artifact wrapper records the same source-artifact hash map and

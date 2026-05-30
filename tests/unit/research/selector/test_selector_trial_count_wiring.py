@@ -12,7 +12,12 @@ from __future__ import annotations
 import json
 
 import pytest
-from qts.research.selector import CandidateSelector, SelectionPolicy
+from qts.research.selector import (
+    CandidateSelector,
+    SelectedCandidate,
+    SelectionPolicy,
+    SelectionResult,
+)
 
 
 def test_selection_payload_records_campaign_multiplicity_context() -> None:
@@ -89,13 +94,12 @@ def test_more_trials_lower_adjusted_score_under_identical_metrics() -> None:
     )
 
 
-def _by_id(result: object, candidate_id: str) -> object:
-    selected = next(  # type: ignore[attr-defined]
+def _by_id(result: SelectionResult, candidate_id: str) -> SelectedCandidate:
+    return next(
         candidate
-        for candidate in result.selected_candidates  # type: ignore[attr-defined]
+        for candidate in result.selected_candidates
         if candidate.candidate_id == candidate_id
     )
-    return selected
 
 
 def _candidate(
