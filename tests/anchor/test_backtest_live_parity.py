@@ -86,9 +86,13 @@ def test_backtest_live_parity_document_renders_core_flow_as_mermaid() -> None:
 
 def test_backtest_engine_order_path_uses_shared_actor_chain() -> None:
     from qts.backtest import engine
+    from qts.backtest.engine_assembly import BacktestEngineAssembler
 
     engine_source = inspect.getsource(engine.BacktestEngine)
     run_source = inspect.getsource(engine.BacktestEngine.run_streaming)
+    # QTS-FINAL-002 moved collaborator construction (incl. SimulatedExecutionAdapter)
+    # into BacktestEngineAssembler; it is still part of the shared backtest order path.
+    engine_assembly_source = inspect.getsource(BacktestEngineAssembler)
     from qts.backtest.actor_loop import BacktestActorLoop
     from qts.runtime.actors.order_manager_actor import OrderManagerActor
     from qts.runtime.execution_report_handler import ExecutionReportHandler
@@ -110,7 +114,11 @@ def test_backtest_engine_order_path_uses_shared_actor_chain() -> None:
         "ExecutionActor",
         "SimulatedExecutionAdapter",
     ):
-        assert required in actor_loop_source or required in engine_source
+        assert (
+            required in actor_loop_source
+            or required in engine_source
+            or required in engine_assembly_source
+        )
     assert "StrategyContext" in strategy_pipeline_source
     assert "StrategyActor" in strategy_pipeline_source
     assert "SignalAggregatorActor" in strategy_pipeline_source
