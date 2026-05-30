@@ -243,13 +243,13 @@ class BacktestEngine:
     ) -> BacktestEngine:
         """Build an engine from a serialized backtest run config.
 
-        ``execution_timing`` selects the fill-timing policy and is recorded in
-        the run manifest. When the config carries an explicit ``fill_policy`` it
-        is honored; otherwise the model falls back to the backward-compatible
-        research-only ``same_bar_close``. Promotion-grade runs supply
-        ``ExecutionTimingModel.promotion_grade()`` (``next_bar_open``); the
-        manifest's ``promotion_grade`` flag records whether the chosen policy
-        may back paper/live evidence.
+        The fill-timing policy is recorded in the run manifest. An explicit
+        ``execution_timing`` argument wins (used by direct callers). Otherwise
+        it is derived from the config's ``fill_policy`` / ``optimistic_fill_waiver``
+        fields, which default to the backward-compatible research-only
+        ``same_bar_close``. Research and promotion-feeding configs set
+        ``fill_policy: next_bar_open``; the manifest's ``promotion_grade`` flag
+        records whether the chosen policy may back paper/live evidence.
         """
         cost_model = BacktestCostModel(
             fixed_commission_per_contract=config.cost_model.fixed_commission_per_contract,
@@ -273,6 +273,11 @@ class BacktestEngine:
             exchange_timezone_by_instrument=exchange_timezone_by_instrument,
             session_window_by_instrument=session_window_by_instrument,
         )
+        if execution_timing is None:
+            execution_timing = ExecutionTimingModel.from_value(
+                config.fill_policy,
+                optimistic_waiver=config.optimistic_fill_waiver,
+            )
         return cls(
             strategy=strategy,
             strategies=strategies,

@@ -107,11 +107,14 @@ def test_engine_blocks_promotion_when_gauntlet_rejects_all_gates(
         return original_repro_git_output(repo_root, args)
 
     monkeypatch.setattr(ReproducibilitySnapshotV2, "_git_output", clean_repro_git_status)
+    # Toy fixture is calibrated for same_bar_close economics so a candidate
+    # reaches the gauntlet; this asserts the gauntlet blocks promotion.
     campaign_path = write_campaign(
         tmp_path,
         families=("momentum",),
         max_trials_per_generation=1,
         max_total_trials=1,
+        fill_policy="same_bar_close",
     )
     run = AutonomousResearchRun.from_yaml(
         campaign_path,

@@ -90,6 +90,7 @@ class AutonomousResearchRun:
     timeframe: str = "1m"
     dataset_id: str = "research-data-contract"
     approval_policy: str = "manual_gate"
+    fill_policy: str = "next_bar_open"
     campaign_config: ResearchCampaignConfig | None = None
     approval_records: tuple[GenerationApprovalRecord, ...] = ()
 
@@ -115,6 +116,9 @@ class AutonomousResearchRun:
             else {str(root): Path(path) for root, path in self.data_paths.items()},
         )
         object.__setattr__(self, "approval_records", tuple(self.approval_records))
+        from qts.backtest.execution_timing import FillPolicy
+
+        object.__setattr__(self, "fill_policy", FillPolicy.from_value(self.fill_policy).value)
 
     @classmethod
     def from_yaml(
@@ -144,6 +148,7 @@ class AutonomousResearchRun:
             calendar=campaign.universe.calendar,
             timeframe=campaign.universe.timeframe,
             dataset_id=campaign.universe.dataset_id,
+            fill_policy=campaign.execution.fill_policy,
             campaign_config=campaign,
             approval_records=tuple(approval_records),
         )
@@ -170,6 +175,7 @@ class AutonomousResearchRun:
             "generation_approval_hashes": [
                 record.approval_hash for record in self.approval_records
             ],
+            "fill_policy": self.fill_policy,
             "output_root": str(self.output_root),
             "timeframe": self.timeframe,
             "universe": list(self.universe),
@@ -1110,6 +1116,10 @@ class AutonomousResearchEngine:
         config_path = run.output_root / "backtest_configs" / f"{trial_id}.yaml"
         payload = {
             "end": end,
+            # Fill policy for promotion-grade evidence. Defaults to next_bar_open
+            # (a decision at bar N fills at N+1's open); same_bar_close is
+            # look-ahead and is blocked at the promotion bar.
+            "fill_policy": run.fill_policy,
             "initial_cash": "1000000",
             "market_data": {
                 "catalog": "research",

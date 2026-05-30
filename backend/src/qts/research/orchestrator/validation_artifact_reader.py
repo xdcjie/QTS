@@ -106,6 +106,7 @@ class ResearchMetricsDerivation:
 
     deterministic_replay_passed: bool | None
     no_lookahead_passed: bool | None
+    fill_timing_promotion_grade: bool | None
     walk_forward_consistency: float | None
     parameter_sensitivity: float | None
     oos_months: float | None
@@ -308,6 +309,10 @@ class ResearchMetricsFromValidationArtifacts:
         no_lookahead_passed = self._derive_no_lookahead(
             artifacts.get("no_lookahead"),
         )
+        fill_timing_promotion_grade = self._derive_fill_timing_promotion_grade(
+            test_manifest=test_manifest,
+            train_manifest=train_manifest,
+        )
         walk_forward_consistency = self._derive_walk_forward_consistency(
             artifacts.get("walk_forward_validation"),
         )
@@ -328,6 +333,7 @@ class ResearchMetricsFromValidationArtifacts:
         promotion_eligible = self._derive_promotion_eligible(
             deterministic_replay_passed=deterministic_replay_passed,
             no_lookahead_passed=no_lookahead_passed,
+            fill_timing_promotion_grade=fill_timing_promotion_grade,
             walk_forward_consistency=walk_forward_consistency,
             parameter_sensitivity=parameter_sensitivity,
             oos_months=oos_months,
@@ -337,6 +343,7 @@ class ResearchMetricsFromValidationArtifacts:
         return ResearchMetricsDerivation(
             deterministic_replay_passed=deterministic_replay_passed,
             no_lookahead_passed=no_lookahead_passed,
+            fill_timing_promotion_grade=fill_timing_promotion_grade,
             walk_forward_consistency=walk_forward_consistency,
             parameter_sensitivity=parameter_sensitivity,
             oos_months=oos_months,
@@ -359,6 +366,29 @@ class ResearchMetricsFromValidationArtifacts:
         if artifact is None:
             return None
         return bool(artifact.payload.get("passed"))
+
+    @staticmethod
+    def _derive_fill_timing_promotion_grade(
+        *,
+        test_manifest: Mapping[str, Any] | None,
+        train_manifest: Mapping[str, Any] | None,
+    ) -> bool | None:
+        """Read whether the evidence backtest used a promotion-grade fill policy.
+
+        A backtest manifest records ``execution_assumptions.promotion_grade``
+        (False for the optimistic same-bar-close look-ahead policy, True for
+        next-bar-open). The OOS/test manifest is the promotion evidence, so it
+        is preferred; the train manifest is the fallback. ``None`` when no
+        manifest records the flag (synthetic fixtures); real engine manifests
+        always carry it.
+        """
+        for manifest in (test_manifest, train_manifest):
+            if not isinstance(manifest, Mapping):
+                continue
+            assumptions = manifest.get("execution_assumptions")
+            if isinstance(assumptions, Mapping) and "promotion_grade" in assumptions:
+                return bool(assumptions["promotion_grade"])
+        return None
 
     @staticmethod
     def _derive_walk_forward_consistency(
@@ -459,6 +489,7 @@ class ResearchMetricsFromValidationArtifacts:
         *,
         deterministic_replay_passed: bool | None,
         no_lookahead_passed: bool | None,
+        fill_timing_promotion_grade: bool | None,
         walk_forward_consistency: float | None,
         parameter_sensitivity: float | None,
         oos_months: float | None,
@@ -469,6 +500,11 @@ class ResearchMetricsFromValidationArtifacts:
         if deterministic_replay_passed is not True:
             return False
         if no_lookahead_passed is not True:
+            return False
+        # Optimistic same-bar-close fills are look-ahead and cannot back
+        # promotion evidence. Reject only when the manifest explicitly says the
+        # fills were not promotion-grade (None = no manifest recorded it).
+        if fill_timing_promotion_grade is False:
             return False
         if (
             walk_forward_consistency is None

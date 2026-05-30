@@ -22,11 +22,14 @@ def test_engine_writes_candidate_selector_artifacts_and_selector_rejections(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     force_clean_reproducibility(monkeypatch)
+    # Toy fixture is calibrated for same_bar_close so a candidate is selected;
+    # this test asserts selector plumbing, not fill economics.
     campaign_path = write_campaign(
         tmp_path,
         families=("momentum",),
         max_trials_per_generation=3,
         max_total_trials=3,
+        fill_policy="same_bar_close",
     )
     run = AutonomousResearchRun.from_yaml(
         campaign_path,

@@ -28,7 +28,9 @@ def test_autonomous_gauntlet_consumes_validation_artifact_refs(
     # the candidate's own returns when no prior candidate is active. The campaign
     # still honestly rejects at the promotion bar (no faked promotion).
     force_clean_reproducibility(monkeypatch)
-    _campaign_path, result = run_engine(tmp_path)
+    # Toy fixture is calibrated for same_bar_close economics so a candidate
+    # reaches the gauntlet; this asserts gauntlet plumbing + honest rejection.
+    _campaign_path, result = run_engine(tmp_path, fill_policy="same_bar_close")
 
     payload = json.loads(
         (result.output_root / "generation-000" / "validation_gauntlet.json").read_text(
@@ -58,7 +60,9 @@ def test_correlation_artifact_reports_prior_selected_equity_curve_context(
     # "no_active_candidates" (empty active set) rather than fabricating a prior
     # portfolio, while still carrying the candidate's own return context.
     force_clean_reproducibility(monkeypatch)
-    campaign_path = write_campaign(tmp_path, max_generations=2)
+    campaign_path = write_campaign(
+        tmp_path, max_generations=2, fill_policy="same_bar_close"
+    )
     first_run = AutonomousResearchRun.from_yaml(
         campaign_path,
         data_paths=write_data_paths(tmp_path),

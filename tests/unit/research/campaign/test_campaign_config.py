@@ -397,6 +397,28 @@ def test_campaign_config_rejects_reversed_execution_window(tmp_path: Path) -> No
         ResearchCampaignConfig.from_yaml(campaign_path)
 
 
+def test_campaign_execution_fill_policy_defaults_to_next_bar_open(tmp_path: Path) -> None:
+    # Promotion-grade default: research evidence fills at the next obtainable
+    # price (next_bar_open), never the look-ahead same-bar close (C1).
+    campaign_path = _write_campaign(tmp_path, {})
+    config = ResearchCampaignConfig.from_yaml(campaign_path)
+    assert config.execution.fill_policy == "next_bar_open"
+    assert "fill_policy" not in config.execution.to_payload()
+
+
+def test_campaign_execution_fill_policy_same_bar_close_override(tmp_path: Path) -> None:
+    campaign_path = _write_campaign(tmp_path, {"execution": {"fill_policy": "same_bar_close"}})
+    config = ResearchCampaignConfig.from_yaml(campaign_path)
+    assert config.execution.fill_policy == "same_bar_close"
+    assert config.execution.to_payload()["fill_policy"] == "same_bar_close"
+
+
+def test_campaign_execution_rejects_unknown_fill_policy(tmp_path: Path) -> None:
+    campaign_path = _write_campaign(tmp_path, {"execution": {"fill_policy": "teleport"}})
+    with pytest.raises(ValueError, match="fill_policy"):
+        ResearchCampaignConfig.from_yaml(campaign_path)
+
+
 def test_campaign_config_accepts_multi_execution_windows(tmp_path: Path) -> None:
     campaign_path = _write_campaign(
         tmp_path,

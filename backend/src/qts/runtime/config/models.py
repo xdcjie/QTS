@@ -25,6 +25,14 @@ from qts.runtime.signal_policy import SignalAggregationPolicy
 
 _SUPPORTED_MARKET_DATA_SOURCES = frozenset({"local_historical"})
 
+# Backward-compatible default fill-timing policy. Mirrors
+# ``qts.backtest.execution_timing.FillPolicy.SAME_BAR_CLOSE.value``; kept as a
+# literal here so this config module does not import the backtest layer at
+# module load time (validation uses a deferred import). ``same_bar_close`` is
+# optimistic look-ahead and is *not* promotion-grade on its own; research and
+# promotion-feeding runs select ``next_bar_open``.
+_DEFAULT_FILL_POLICY = "same_bar_close"
+
 
 @dataclass(frozen=True, slots=True)
 class TradingRuntimeConfig:
@@ -414,12 +422,19 @@ class BacktestRuntimeConfig:
     market_data_environment: MarketDataEnvironment | str = MarketDataEnvironment.REPLAY
     schema_version: str = "1"
     brokerage_model: str = "CUSTOM"
+    fill_policy: str = _DEFAULT_FILL_POLICY
+    optimistic_fill_waiver: bool = False
 
     def __post_init__(self) -> None:
         """Perform __post_init__."""
         if not self.schema_version.strip():
             raise ValueError("schema_version must not be empty")
         object.__setattr__(self, "schema_version", self.schema_version.strip())
+        # Deferred import keeps the backtest layer out of this config module's
+        # import graph (avoids a cycle: backtest.engine imports this config).
+        from qts.backtest.execution_timing import FillPolicy
+
+        object.__setattr__(self, "fill_policy", FillPolicy.from_value(self.fill_policy).value)
         mode = RuntimeMode.from_value(self.mode)
         if mode is not RuntimeMode.BACKTEST:
             raise ValueError("BacktestRuntimeConfig mode must be backtest")
@@ -558,6 +573,13 @@ class BacktestRuntimeConfig:
             payload["strategy"] = self.strategy.to_payload()
         if self.strategies:
             payload["strategies"] = [strategy.to_payload() for strategy in self.strategies]
+        # Omit the fill-timing fields from the run identity when they hold their
+        # backward-compatible defaults, so existing configs keep their hashes;
+        # an explicit non-default policy is part of the run's identity.
+        if self.fill_policy != _DEFAULT_FILL_POLICY:
+            payload["fill_policy"] = self.fill_policy
+        if self.optimistic_fill_waiver:
+            payload["optimistic_fill_waiver"] = True
         return payload
 
     @staticmethod

@@ -135,6 +135,8 @@ class BacktestConfigLoader:
             ),
             warmup_bars=int(payload.get("warmup_bars", 0)),
             schema_version=str(payload.get("schema_version", "1")),
+            fill_policy=str(payload.get("fill_policy", "same_bar_close")),
+            optimistic_fill_waiver=bool(payload.get("optimistic_fill_waiver", False)),
         )
 
     @staticmethod

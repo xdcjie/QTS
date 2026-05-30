@@ -177,6 +177,7 @@ class ResearchCampaignExecution:
     start: str | None = None
     end: str | None = None
     windows: tuple[Mapping[str, str], ...] = ()
+    fill_policy: str = "next_bar_open"
 
     _DATA_MODES = frozenset({"fixture", "full"})
 
@@ -204,6 +205,12 @@ class ResearchCampaignExecution:
             raise ValueError("execution.max_rows is only allowed for fixture data_mode")
         windows = self._validated_windows(self.windows)
         start, end = self._validated_window(self.start, self.end, windows)
+        # Promotion-grade default: next_bar_open. same_bar_close is optimistic
+        # look-ahead and cannot back promotion evidence (enforced at the
+        # promotion bar). Deferred import avoids importing the backtest layer.
+        from qts.backtest.execution_timing import FillPolicy
+
+        fill_policy = FillPolicy.from_value(self.fill_policy).value
         object.__setattr__(self, "default_mode", default_mode)
         object.__setattr__(self, "metrics_source", metrics_source)
         object.__setattr__(self, "data_mode", data_mode)
@@ -211,6 +218,7 @@ class ResearchCampaignExecution:
         object.__setattr__(self, "start", start)
         object.__setattr__(self, "end", end)
         object.__setattr__(self, "windows", windows)
+        object.__setattr__(self, "fill_policy", fill_policy)
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> Self:
@@ -240,6 +248,8 @@ class ResearchCampaignExecution:
             start=cls._optional_text(payload, "execution.start", "start"),
             end=cls._optional_text(payload, "execution.end", "end"),
             windows=cls._windows_from_payload(payload.get("windows", ())),
+            fill_policy=cls._optional_text(payload, "execution.fill_policy", "fill_policy")
+            or "next_bar_open",
         )
 
     def to_payload(self) -> dict[str, Any]:
@@ -258,6 +268,10 @@ class ResearchCampaignExecution:
             payload["end"] = self.end
         if self.windows:
             payload["windows"] = [dict(window) for window in self.windows]
+        # Omit the promotion-grade default so existing campaign hashes are
+        # preserved; an explicit optimistic policy is part of the identity.
+        if self.fill_policy != "next_bar_open":
+            payload["fill_policy"] = self.fill_policy
         return payload
 
     @classmethod

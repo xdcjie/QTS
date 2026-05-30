@@ -22,11 +22,16 @@ def test_engine_requires_artifact_backed_gauntlet_before_promotion_packet(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     force_clean_reproducibility(monkeypatch)
+    # The toy price fixture is calibrated for same_bar_close economics so a
+    # candidate clears selection and reaches the gauntlet; this test exercises
+    # gauntlet plumbing + honest promotion rejection, not fill timing. (Under
+    # the production-default next_bar_open the candidate would not be selected.)
     campaign_path = write_campaign(
         tmp_path,
         families=("momentum",),
         max_trials_per_generation=1,
         max_total_trials=1,
+        fill_policy="same_bar_close",
     )
     run = AutonomousResearchRun.from_yaml(
         campaign_path,

@@ -16,11 +16,33 @@ from qts.backtest.engine import BacktestEngine
 from qts.backtest.execution_timing import ExecutionTimingModel
 from qts.core.ids import InstrumentId
 from qts.domain.market_data import Bar
+from qts.runtime.config import (
+    BacktestMarketDataReference,
+    BacktestRiskConfig,
+    BacktestRuntimeConfig,
+)
 from qts.strategy_sdk import Strategy
 
 from tests.support.backtest_streaming import run_engine_streaming
 
 _INSTRUMENT = InstrumentId("EQUITY.US.NASDAQ.AAPL")
+
+
+def _make_config(*, fill_policy: str = "same_bar_close") -> BacktestRuntimeConfig:
+    """A minimal config-driven backtest identity (bars are injected separately)."""
+    return BacktestRuntimeConfig(
+        roots=("AAPL",),
+        symbols=("AAPL",),
+        start=datetime(2026, 1, 2, tzinfo=UTC),
+        end=datetime(2026, 1, 3, tzinfo=UTC),
+        timeframe="1m",
+        initial_cash=Decimal("10000"),
+        strategy_class="tests.support.fill_policy.BuyOnce",
+        market_data=BacktestMarketDataReference(config_path=Path("md.yaml"), catalog="research"),
+        instrument_ids={"AAPL": _INSTRUMENT},
+        risk_config=BacktestRiskConfig(max_notional=Decimal("1000000")),
+        fill_policy=fill_policy,
+    )
 
 
 def _bar(minute: int, *, open_: str, close: str) -> Bar:
@@ -111,6 +133,39 @@ def test_same_bar_close_fills_on_signal_bar_close_and_is_optimistic(tmp_path: Pa
     assumptions = captured.manifest["execution_assumptions"]
     assert assumptions["fill_policy"] == "same_bar_close"
     assert assumptions["optimistic"] is True
+    assert assumptions["promotion_grade"] is False
+
+
+def test_config_fill_policy_next_bar_open_is_promotion_grade(tmp_path: Path) -> None:
+    # The config-driven path (BacktestEngine.from_config) must honor the
+    # config's fill_policy. This is the gap C1 closes: previously from_config
+    # ignored the config and always defaulted to optimistic same_bar_close.
+    engine = BacktestEngine.from_config(
+        _make_config(fill_policy="next_bar_open"),
+        bars=_bars(),
+        strategy=_BuyOnceStrategy(),
+    )
+    captured = run_engine_streaming(engine, tmp_path / "cfg-next-bar-open")
+
+    assert Decimal(captured.fills[0]["price"]) == Decimal("110")
+    assumptions = captured.manifest["execution_assumptions"]
+    assert assumptions["fill_policy"] == "next_bar_open"
+    assert assumptions["promotion_grade"] is True
+
+
+def test_config_default_fill_policy_is_optimistic_same_bar_close(tmp_path: Path) -> None:
+    # A config that does not opt into next_bar_open stays backward-compatible
+    # (same_bar_close) and the manifest flags it as not promotion-grade.
+    engine = BacktestEngine.from_config(
+        _make_config(),
+        bars=_bars(),
+        strategy=_BuyOnceStrategy(),
+    )
+    captured = run_engine_streaming(engine, tmp_path / "cfg-default")
+
+    assert Decimal(captured.fills[0]["price"]) == Decimal("105")
+    assumptions = captured.manifest["execution_assumptions"]
+    assert assumptions["fill_policy"] == "same_bar_close"
     assert assumptions["promotion_grade"] is False
 
 

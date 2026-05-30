@@ -312,6 +312,7 @@ def write_campaign(
     max_rows: int | None = 50,
     min_oos_months: int = 1,
     template_extra_lines: tuple[str, ...] = (),
+    fill_policy: str = "next_bar_open",
 ) -> Path:
     config_dir = tmp_path / "campaign_inputs"
     config_dir.mkdir(parents=True, exist_ok=True)
@@ -401,6 +402,7 @@ def write_campaign(
                 "execution:",
                 "  default_mode: backtest_pipeline",
                 "  metrics_source: backtest_artifacts",
+                f"  fill_policy: {fill_policy}",
                 f"  data_mode: {data_mode}",
                 *([] if max_rows is None else [f"  max_rows: {max_rows}"]),
                 "objective:",

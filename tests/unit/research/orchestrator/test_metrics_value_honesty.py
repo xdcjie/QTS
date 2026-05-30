@@ -184,6 +184,45 @@ class TestResearchMetricsFromValidationArtifacts:
         assert derivation.deterministic_replay_passed is False
         assert derivation.promotion_eligible is False
 
+    def test_optimistic_fill_policy_rejects_promotion(self, tmp_path: Path) -> None:
+        # An OOS manifest produced under the optimistic same_bar_close policy
+        # (promotion_grade=False) is look-ahead and cannot back promotion, even
+        # when every other validation gate passes (C1).
+        _write_all_passing_artifacts(tmp_path)
+        reader = ValidationArtifactReader(tmp_path)
+        optimistic_manifest = {"execution_assumptions": {"promotion_grade": False}}
+        derivation = ResearchMetricsFromValidationArtifacts().derive(
+            reader,
+            _workflow_summary(),
+            test_manifest=optimistic_manifest,
+        )
+        assert derivation.fill_timing_promotion_grade is False
+        assert derivation.promotion_eligible is False
+
+    def test_promotion_grade_fill_policy_allows_promotion(self, tmp_path: Path) -> None:
+        # The same passing evidence is promotable when the OOS manifest records
+        # promotion-grade (next_bar_open) fills.
+        _write_all_passing_artifacts(tmp_path)
+        reader = ValidationArtifactReader(tmp_path)
+        promotion_grade_manifest = {"execution_assumptions": {"promotion_grade": True}}
+        twelve_month_oos = {
+            "periods": [
+                {
+                    "start": "2021-01-01T00:00:00+00:00",
+                    "end": "2022-01-01T00:00:00+00:00",
+                    "name": "oos",
+                    "role": "oos",
+                }
+            ]
+        }
+        derivation = ResearchMetricsFromValidationArtifacts().derive(
+            reader,
+            twelve_month_oos,
+            test_manifest=promotion_grade_manifest,
+        )
+        assert derivation.fill_timing_promotion_grade is True
+        assert derivation.promotion_eligible is True
+
     def test_walk_forward_consistency_derives_from_artifact(self, tmp_path: Path) -> None:
         _write_artifact(tmp_path, "deterministic_replay", {"passed": True})
         _write_artifact(tmp_path, "no_lookahead", {"passed": True})
@@ -540,6 +579,7 @@ class TestResearchMetricsDerivation:
         derivation = ResearchMetricsDerivation(
             deterministic_replay_passed=True,
             no_lookahead_passed=True,
+            fill_timing_promotion_grade=True,
             walk_forward_consistency=0.8,
             parameter_sensitivity=0.9,
             oos_months=12.0,
@@ -557,6 +597,7 @@ class TestResearchMetricsDerivation:
         derivation = ResearchMetricsDerivation(
             deterministic_replay_passed=True,
             no_lookahead_passed=True,
+            fill_timing_promotion_grade=True,
             walk_forward_consistency=0.8,
             parameter_sensitivity=0.9,
             oos_months=12.0,
