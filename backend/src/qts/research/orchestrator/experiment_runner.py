@@ -1698,8 +1698,8 @@ class ResearchExperimentRunner:
         # feature-timestamp and visible_at checks run against real, in-window
         # times. A factor input declared with a forward-looking transform is
         # observable only after the decision and therefore exceeds the cutoff.
-        decision_anchor = self._no_lookahead_decision_anchor(windows, backtest_manifest)
-        features = self._no_lookahead_features(parameters, pipeline_config, decision_anchor)
+        decision_cutoff = self._no_lookahead_decision_cutoff(windows, backtest_manifest)
+        features = self._no_lookahead_features(parameters, pipeline_config, decision_cutoff)
         label_policy = self._no_lookahead_label_policy(parameters, pipeline_config)
         protocol = self._no_lookahead_factor_snapshot_protocol(backtest_manifest, parameters)
         runner = NoLookaheadValidationRunner(
@@ -1707,7 +1707,7 @@ class ResearchExperimentRunner:
             label_policy=label_policy,
             windows=windows,
             factor_snapshot_protocol=protocol,
-            decision_time=decision_anchor,
+            decision_time=decision_cutoff,
         )
         result = runner.validate()
         timing_payload = result.to_payload()
@@ -1752,7 +1752,7 @@ class ResearchExperimentRunner:
     _FORWARD_TRANSFORM_TERMS = ("forward", "future", "lead", "lookahead")
     _FORWARD_OFFSET_KEYS = ("lookback", "shift", "offset", "horizon", "window")
 
-    def _no_lookahead_decision_anchor(
+    def _no_lookahead_decision_cutoff(
         self,
         windows: Sequence[Any],
         backtest_manifest: Mapping[str, Any],
@@ -1761,8 +1761,8 @@ class ResearchExperimentRunner:
 
         Features must be observable at or before the out-of-sample boundary.
         Falls back to the backtest window end, then None when neither is present
-        (older fixtures), in which case feature timing degrades to the epoch
-        placeholder rather than failing construction.
+        (older artifacts), in which case feature timing degrades to the 1970
+        epoch sentinel rather than failing construction.
         """
         oos_starts: list[datetime] = [
             window.start for window in windows if getattr(window, "role", "") != "train"
@@ -1783,23 +1783,23 @@ class ResearchExperimentRunner:
         self,
         parameters: Mapping[str, Any],
         pipeline_config: Mapping[str, Any],
-        decision_anchor: datetime | None,
+        decision_cutoff: datetime | None,
     ) -> tuple[Any, ...]:
         """Derive feature timing specs from pipeline parameters and config.
 
-        Backward-looking inputs are observable at the decision (``decision_anchor``);
+        Backward-looking inputs are observable at the decision (``decision_cutoff``);
         a forward-looking transform is observable only after it, so its feature
         timestamp is placed past the cutoff and the runner flags the leak.
         """
 
         from qts.research.validation import FeatureTimingSpec as _FTS
 
-        observed_at = decision_anchor if decision_anchor is not None else datetime(
+        observed_at = decision_cutoff if decision_cutoff is not None else datetime(
             1970, 1, 1, tzinfo=UTC
         )
         # A clearly-after-cutoff stamp for forward-looking derivations.
         after_cutoff = (
-            decision_anchor + timedelta(days=1) if decision_anchor is not None else None
+            decision_cutoff + timedelta(days=1) if decision_cutoff is not None else None
         )
 
         features: list[_FTS] = []
