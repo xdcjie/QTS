@@ -178,6 +178,11 @@ class IbkrCallbackNormalizer:
         reports.extend(self._position_recorder.resolve_quarantined())
         return tuple(reports)
 
+    def flush_pending_executions(self, *, reason: str) -> tuple[ExecutionReport, ...]:
+        """Book staged fills whose commission has not arrived (commission deferred)."""
+
+        return self._fill_normalizer.flush_pending_executions(reason=reason)
+
 
 __all__ = [
     "IbkrCallbackNormalizer",

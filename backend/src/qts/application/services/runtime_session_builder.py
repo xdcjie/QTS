@@ -73,7 +73,13 @@ class RuntimeSessionBuilder:
         account_id = config.account_id
         dependencies = RuntimeSessionDependencies(
             strategy=strategy,
-            risk_engine=RiskEngine([]),
+            # Order-submitting paper runtimes must enforce the same mandatory risk
+            # floor as backtest, never an empty (all-orders-approved) engine. Using
+            # the shared baseline keeps the paper risk gate identical to the one the
+            # promotion-feeding backtest cleared.
+            risk_engine=RiskEngine.with_baseline_floor(
+                sum(config.initial_cash.values(), Decimal("0"))
+            ),
             instrument_context=BacktestInstrumentContext(instrument_registry=instrument_registry),
             execution_adapter=SimulatedExecutionAdapter(cost_model=BacktestCostModel()),
             account_actor=AccountActor(

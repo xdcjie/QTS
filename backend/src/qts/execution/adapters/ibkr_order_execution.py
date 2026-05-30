@@ -267,6 +267,16 @@ class IbkrOrderExecutionAdapter:
 
         return self._callback_normalizer.resolve_quarantined_callbacks()
 
+    def flush_pending_executions(self, *, reason: str) -> tuple[ExecutionReport, ...]:
+        """Book staged fills whose ``commissionReport`` has not arrived.
+
+        Invoked at lifecycle boundaries (disconnect, reconnect, shutdown) so a
+        delayed or dropped commission never strands a real fill; commission is
+        applied later via a standalone :class:`BrokerCommissionReport`.
+        """
+
+        return self._callback_normalizer.flush_pending_executions(reason=reason)
+
     def on_error(self, payload: IbkrErrorPayload) -> IbkrTransportError:
         """Normalize a raw IBKR error callback."""
 

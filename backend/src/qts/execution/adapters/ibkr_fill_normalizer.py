@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
+
 from qts.domain.orders import ExecutionReport, ExecutionReportStatus
 from qts.execution.adapters.broker_callback_quarantine import BrokerCallbackQuarantine
 from qts.execution.adapters.ibkr_callback_types import (
@@ -123,6 +125,41 @@ class IbkrFillNormalizer:
             currency=payload.currency,
         )
 
+    def flush_pending_executions(self, *, reason: str) -> tuple[ExecutionReport, ...]:
+        """Book staged executions whose commission has not arrived.
+
+        IBKR delivers ``execDetails`` and ``commissionReport`` as separate
+        callbacks; :meth:`on_execution` stages the fill and waits for the
+        commission before emitting. A delayed or dropped ``commissionReport``
+        (e.g. across a disconnect) would otherwise strand a real fill in
+        ``_pending_executions`` forever, silently losing the position/cash
+        update. This books each still-uncommissioned execution as ``FILLED``
+        with commission deferred (``Decimal("0")``) and marks it completed, so a
+        late commission is later applied as a standalone
+        :class:`BrokerCommissionReport` rather than re-booking the fill. Callers
+        invoke this at safe lifecycle points (reconnect, order completion,
+        shutdown). Already-completed and freshly-commissioned executions are
+        ignored, so repeated flushes are idempotent.
+        """
+
+        reports: list[ExecutionReport] = []
+        # Pending executions only ever hold uncommissioned fills: on_execution
+        # and on_commission both complete eagerly the moment both halves are
+        # present, popping the pair. Anything still staged here has no commission.
+        for execution_key, execution in tuple(self._pending_executions.items()):
+            self._pending_executions.pop(execution_key)
+            self._completed_execution_keys.add(execution_key)
+            record_callback_event(
+                self._callback_events,
+                "ibkr_fill_committed_without_commission",
+                report_id=execution.report_id,
+                broker_order_id=execution.broker_order_id,
+                execution_id=execution.execution_id,
+                reason=reason,
+            )
+            reports.append(self._book_execution(execution, Decimal("0")))
+        return tuple(reports)
+
     def resolve_quarantined(self) -> tuple[ExecutionReport, ...]:
         """Try to resolve quarantined executions after order mapping changes."""
         resolved: list[ExecutionReport] = []
@@ -181,6 +218,14 @@ class IbkrFillNormalizer:
         self._pending_executions.pop(execution_key)
         self._commissions.pop(execution_key[2])
         self._completed_execution_keys.add(execution_key)
+        return self._book_execution(execution, commission.commission)
+
+    def _book_execution(
+        self,
+        execution: IbkrExecutionPayload,
+        commission: Decimal,
+    ) -> ExecutionReport:
+        """Assemble a normalized FILLED report for one staged execution."""
         return normalize_ibkr_execution_report(
             IbkrExecutionReport(
                 report_id=execution.report_id,
@@ -189,7 +234,7 @@ class IbkrFillNormalizer:
                 filled_quantity=execution.filled_quantity,
                 fill_price=execution.fill_price,
                 fill_id=execution.execution_id,
-                commission=commission.commission,
+                commission=commission,
                 fill_time=execution.fill_time,
             )
         )

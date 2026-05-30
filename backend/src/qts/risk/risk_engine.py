@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import replace
+from decimal import Decimal
 from typing import Protocol
 
 from qts.domain.orders import OrderType
@@ -11,6 +12,7 @@ from qts.domain.risk import OrderRiskRequest, RiskDecision
 from qts.risk.rule import RiskRule
 from qts.risk.rules.market_data_freshness import MarketDataFreshnessRiskRule
 from qts.risk.rules.market_data_permission import MarketDataPermissionRiskRule
+from qts.risk.rules.max_notional import MaxNotionalRule
 from qts.risk.rules.order_spec_validity import OrderSpecValidityRule
 
 
@@ -40,6 +42,22 @@ class RiskEngine:
         """Perform __init__."""
         self._rules = tuple(rules)
         self._require_live_market_data = require_live_market_data
+
+    @classmethod
+    def with_baseline_floor(cls, initial_cash: Decimal) -> RiskEngine:
+        """Return an engine seeded with the mandatory baseline risk floor.
+
+        Order-submitting runtimes (backtest, paper, live) must never run with an
+        empty rule set -- an empty engine approves every order. The baseline
+        floor is a capital-scaled max-notional ceiling owned here so that every
+        execution mode shares the *same* floor by construction: the risk gate a
+        promoted strategy clears in backtest is identical to the one its
+        paper/live runtime enforces. Callers that configure an explicit rule set
+        construct ``RiskEngine`` directly instead of using this floor.
+        """
+        if initial_cash <= Decimal("0"):
+            raise ValueError("baseline risk floor requires positive initial cash")
+        return cls([MaxNotionalRule(max_notional=initial_cash * Decimal("100"))])
 
     def requiring_live_market_data(self) -> RiskEngine:
         """Return a risk engine that force-checks live market-data safety first."""

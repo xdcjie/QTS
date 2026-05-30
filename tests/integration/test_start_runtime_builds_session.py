@@ -9,6 +9,7 @@ from qts.application.commands.start_runtime import StartRuntimeCommand, start_ru
 from qts.application.services import RuntimeSessionBuilder, RuntimeStartConfig
 from qts.core.ids import AccountId, InstrumentId
 from qts.domain.instruments import AssetClass, ContractSpec, Instrument, SettlementType
+from qts.domain.risk import OrderRiskRequest
 from qts.registry.instrument_registry import InstrumentRegistry
 from qts.runtime.mode import RuntimeMode
 from qts.runtime.session import RuntimeSession
@@ -60,6 +61,17 @@ def test_start_runtime_builds_real_session_when_builder_supplied() -> None:
         strategy=_BuyOnceStrategy(),
         instrument_registry=_instrument_registry(),
     )
+
+    # The paper builder wires the mandatory baseline risk floor, never an empty
+    # (all-orders-approved) engine: with 100k capital the notional ceiling is 10M.
+    risk_engine = builder.dependencies.risk_engine
+    over_limit = OrderRiskRequest(
+        instrument_id=_INSTRUMENT_ID,
+        quantity=Decimal("10000001"),
+        price=Decimal("1"),
+        multiplier=Decimal("1"),
+    )
+    assert risk_engine.check(over_limit).approved is False
 
     result = start_runtime(
         StartRuntimeCommand(

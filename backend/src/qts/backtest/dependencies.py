@@ -15,7 +15,6 @@ from qts.domain.market_data import Bar
 from qts.registry.future_roll import FutureRollRegistry
 from qts.registry.instrument_registry import InstrumentRegistry
 from qts.risk.risk_engine import RiskEngine
-from qts.risk.rules.max_notional import MaxNotionalRule
 
 if TYPE_CHECKING:
     from qts.execution.execution_adapter import ExecutionAdapter
@@ -69,9 +68,7 @@ class BacktestEngineDependencies:
     ) -> BacktestEngineDependencies:
         """Build runtime dependencies with stable defaults."""
         resolved_risk_engine = (
-            risk_engine
-            if risk_engine is not None
-            else RiskEngine([MaxNotionalRule(max_notional=initial_cash * Decimal("100"))])
+            risk_engine if risk_engine is not None else RiskEngine.with_baseline_floor(initial_cash)
         )
         return cls(
             risk_engine=resolved_risk_engine,
