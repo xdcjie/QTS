@@ -11,6 +11,7 @@ from qts.quality.rules.boundaries import (
     TestSupportRule,
 )
 from qts.quality.rules.caller_presence import CallerPresenceRule
+from qts.quality.rules.capability_completeness import CapabilityCompletenessRule
 from qts.quality.rules.config_loader_boundary import ConfigLoaderBoundaryRule
 from qts.quality.rules.docstrings import ProductionPlaceholderDocstringRule
 from qts.quality.rules.flows import (
@@ -89,6 +90,7 @@ __all__ = [
     "BrokerSpecificRule",
     "BrokerSymbolBoundaryRule",
     "CallerPresenceRule",
+    "CapabilityCompletenessRule",
     "ClassInventoryBudgetRule",
     "ConfigLoaderBoundaryRule",
     "DataLiveNoSharedContractRule",

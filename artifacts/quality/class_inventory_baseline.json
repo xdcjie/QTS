@@ -1,5 +1,5 @@
 {
-  "production_class_count": 977,
+  "production_class_count": 978,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -398,6 +398,7 @@
     "qts.quality.rules.boundaries.StrategySdkPublicSurfaceRule",
     "qts.quality.rules.boundaries.TestSupportRule",
     "qts.quality.rules.caller_presence.CallerPresenceRule",
+    "qts.quality.rules.capability_completeness.CapabilityCompletenessRule",
     "qts.quality.rules.config_loader_boundary.ConfigLoaderBoundaryRule",
     "qts.quality.rules.docstrings.ProductionPlaceholderDocstringRule",
     "qts.quality.rules.imports.ImportBoundaryRule",

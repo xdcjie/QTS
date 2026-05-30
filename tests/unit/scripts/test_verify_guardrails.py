@@ -1878,6 +1878,46 @@ def test_guardrails_allow_non_runtime_importing_execution_types(tmp_path: Path) 
     assert _codes_by_suite(root, guardrails.RuntimeExecutionBoundaryRule()) == set()
 
 
+_COMPLETE_EXECUTION_ADAPTER = (
+    "from typing import Protocol\n\n"
+    "class ExecutionAdapter(Protocol):\n"
+    "    def execute_market_order(self) -> None: ...\n"
+    "    def cancel_order(self) -> None: ...\n"
+    "    def replace_order(self) -> None: ...\n"
+)
+
+
+def test_guardrails_reject_runtime_command_without_execution_adapter_method(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/execution/execution_adapter.py",
+        "from typing import Protocol\n\n"
+        "class ExecutionAdapter(Protocol):\n"
+        "    def execute_market_order(self) -> None: ...\n"
+        "    def cancel_order(self) -> None: ...\n",
+    )
+
+    assert _codes_by_suite(root, guardrails.CapabilityCompletenessRule()) == {
+        "CAPABILITY_COMPLETENESS"
+    }
+
+
+def test_guardrails_allow_execution_adapter_with_all_command_methods(tmp_path: Path) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/execution/execution_adapter.py",
+        _COMPLETE_EXECUTION_ADAPTER,
+    )
+
+    assert _codes_by_suite(root, guardrails.CapabilityCompletenessRule()) == set()
+
+
 def test_guardrails_pass_current_repository() -> None:
     assert run_guardrails(Path(".")) == []
 
