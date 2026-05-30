@@ -1,4 +1,14 @@
 exceptions:
+  - class_name: RuntimeSafetyState
+    module: qts.runtime.safety_port
+    reason: owns the kill-switch active flag behind the safety port so coordinators stop poking RuntimeSession privates (QTS-FINAL-012)
+    owner: platform
+    expiry: 2027-05-30
+  - class_name: RuntimeSafetySessionPort
+    module: qts.runtime.safety_port
+    reason: narrow Protocol the safety/rollback coordinators depend on instead of RuntimeSession private attributes (QTS-FINAL-012)
+    owner: platform
+    expiry: 2027-05-30
   - class_name: CancelIntentRouter
     module: qts.runtime.order_lifecycle
     reason: routes SDK cancel intents to OrderManagerActor with stored route metadata (DR-025 SDK lifecycle wiring)

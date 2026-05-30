@@ -61,6 +61,7 @@ from qts.quality.rules.runtime import (
     RuntimeExecutionBoundaryRule,
     RuntimeSessionComplexityRule,
 )
+from qts.quality.rules.runtime_private_access import RuntimePrivateAccessRule
 from qts.quality.rules.snapshot import SnapshotCompletenessRule
 from qts.quality.rules.stale import (
     ProductionNoFakeClassRule,
@@ -114,6 +115,7 @@ __all__ = [
     "RouteNoFakeDataRule",
     "RuntimeCoordinatorDecisionRule",
     "RuntimeExecutionBoundaryRule",
+    "RuntimePrivateAccessRule",
     "RuntimeSessionComplexityRule",
     "SharedCapabilityRule",
     "SharedRuntimeWordingRule",

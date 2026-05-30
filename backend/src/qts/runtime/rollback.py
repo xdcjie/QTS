@@ -2,36 +2,39 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from qts.runtime.actors.account_actor import GetAccountSnapshot
+from qts.runtime.safety_port import RuntimeSafetySessionPort
 from qts.runtime.session import RuntimeRollbackCommand, RuntimeRollbackEvidence
 
 
 class RuntimeRollbackCoordinator:
-    """Own rollback fail-closed state and audit evidence."""
+    """Own rollback fail-closed state and audit evidence.
 
-    def __init__(self, session: Any) -> None:
-        self._session = session
+    Depends on the narrow :class:`RuntimeSafetySessionPort`; it never touches
+    ``RuntimeSession`` private attributes.
+    """
+
+    def __init__(self, port: RuntimeSafetySessionPort) -> None:
+        self._port = port
 
     def rollback(self, command: RuntimeRollbackCommand) -> RuntimeRollbackEvidence:
         """Stop new orders and preserve rollback evidence."""
-        session = self._session
-        active_order_ids = session._active_order_ids()
-        session._kill_switch_active = True
-        snapshot = session._primary_partition.account_ref.ask(GetAccountSnapshot())
-        snapshot_refs = session._record_account_snapshots()
+        port = self._port
+        active_order_ids = port.active_order_ids()
+        port.safety_state.activate_kill_switch()
+        snapshot = port.primary_partition.account_ref.ask(GetAccountSnapshot())
+        snapshot_refs = port.record_account_snapshots()
         evidence = RuntimeRollbackEvidence(
-            run_id=session._dependencies.run_id.value,
+            run_id=port.run_id,
             operator_id=command.operator_id,
             reason=command.reason,
-            runtime_state=session.state.value,
+            runtime_state=port.runtime_state.value,
             event_store_paths=tuple(str(path) for path in command.event_store_paths),
             active_order_ids=active_order_ids,
             snapshot_refs=snapshot_refs,
             account_snapshot=snapshot,
         )
-        session._write_event(
+        port.write_event(
             "runtime.rollback",
             {
                 "run_id": evidence.run_id,

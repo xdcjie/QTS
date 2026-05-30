@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
@@ -42,6 +43,7 @@ from qts.runtime.market_data_flow import MarketDataFlow
 from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
 from qts.runtime.order_result import RuntimeOrderResult
 from qts.runtime.safety import RuntimeKillSwitchEvidence
+from qts.runtime.safety_port import RuntimeSafetyState
 from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventContext
 from qts.runtime.startup_gate import BrokerRuntimeStartupGate
 from qts.runtime.state import RuntimeSessionState, RuntimeStateMachine
@@ -110,7 +112,7 @@ class RuntimeSession:
         self._event_index = 0
         self._runtime_event_sequence = 0
         self._order_sequence = 0
-        self._kill_switch_active = False
+        self._safety_state = RuntimeSafetyState()
         resolved_topology = BrokerRuntimeTopologyResolver(dependencies).build()
         self._strategy_bindings = resolved_topology.strategy_bindings
         self._strategy_subscriptions = resolved_topology.strategy_subscriptions
@@ -175,8 +177,9 @@ class RuntimeSession:
 
         self._broker_lifecycle = RuntimeBrokerLifecycleCoordinator(self)
         self._recovery_coordinator = RuntimeRecoveryCoordinator(self)
-        self._rollback_coordinator = RuntimeRollbackCoordinator(self)
-        self._safety_controller = RuntimeSafetyController(self)
+        safety_port = _RuntimeSafetySessionAdapter(self)
+        self._rollback_coordinator = RuntimeRollbackCoordinator(safety_port)
+        self._safety_controller = RuntimeSafetyController(safety_port)
         self._supervision_coordinator = RuntimeSupervisionCoordinator(self)
         self._market_data_coordinator = RuntimeMarketDataCoordinator(
             RuntimeMarketDataSessionContext(self)
@@ -506,6 +509,64 @@ class RuntimeSession:
                 if order.state not in terminal:
                     active_order_ids.append(order.order_id.value)
         return tuple(active_order_ids)
+
+
+class _RuntimeSafetySessionAdapter:
+    """Adapt a ``RuntimeSession`` to ``RuntimeSafetySessionPort``.
+
+    Owned by ``RuntimeSession`` and defined in this module, so it is the single
+    place permitted to read the session's private safety collaborators on behalf
+    of the safety/rollback coordinators, which see only the narrow port.
+    """
+
+    def __init__(self, session: RuntimeSession) -> None:
+        self._session = session
+
+    @property
+    def safety_state(self) -> RuntimeSafetyState:
+        """Return the session's owned kill-switch state."""
+        return self._session._safety_state
+
+    @property
+    def runtime_state(self) -> RuntimeSessionState:
+        """Return the current runtime lifecycle state."""
+        return self._session.state
+
+    @property
+    def mode(self) -> RuntimeMode:
+        """Return the runtime mode."""
+        return self._session._dependencies.mode
+
+    @property
+    def startup_decision(self) -> object:
+        """Return the broker startup decision."""
+        return self._session._dependencies.startup_decision
+
+    @property
+    def run_id(self) -> str:
+        """Return the run identifier value."""
+        return self._session._dependencies.run_id.value
+
+    @property
+    def primary_partition(self) -> AccountRuntimePartition:
+        """Return the primary account runtime partition."""
+        return self._session._primary_partition
+
+    def account_partitions(self) -> tuple[AccountRuntimePartition, ...]:
+        """Return all account runtime partitions."""
+        return tuple(self._session._account_partitions.values())
+
+    def active_order_ids(self) -> tuple[str, ...]:
+        """Return the ids of currently active orders."""
+        return self._session._active_order_ids()
+
+    def record_account_snapshots(self) -> tuple[str, ...]:
+        """Persist account snapshots and return their evidence refs."""
+        return self._session._record_account_snapshots()
+
+    def write_event(self, kind: str, payload: Mapping[str, object]) -> None:
+        """Append a normalized runtime event to the session event stream."""
+        self._session._write_event(kind, dict(payload))
 
 
 __all__ = [

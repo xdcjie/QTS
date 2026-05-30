@@ -1,5 +1,5 @@
 {
-  "production_class_count": 946,
+  "production_class_count": 949,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -407,6 +407,7 @@
     "qts.quality.rules.runtime.RuntimeCoordinatorDecisionRule",
     "qts.quality.rules.runtime.RuntimeExecutionBoundaryRule",
     "qts.quality.rules.runtime.RuntimeSessionComplexityRule",
+    "qts.quality.rules.runtime_private_access.RuntimePrivateAccessRule",
     "qts.quality.rules.snapshot.SnapshotCompletenessRule",
     "qts.quality.rules.stale.ProductionNoFakeClassRule",
     "qts.quality.rules.stale.StaleArchitectureTextRule",
@@ -870,6 +871,8 @@
     "qts.runtime.safety.RuntimeKillSwitchDeactivateCommand",
     "qts.runtime.safety.RuntimeKillSwitchEvidence",
     "qts.runtime.safety_controller.RuntimeSafetyController",
+    "qts.runtime.safety_port.RuntimeSafetySessionPort",
+    "qts.runtime.safety_port.RuntimeSafetyState",
     "qts.runtime.session.RuntimeRollbackCommand",
     "qts.runtime.session.RuntimeRollbackEvidence",
     "qts.runtime.session.RuntimeSession",

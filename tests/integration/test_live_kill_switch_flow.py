@@ -397,7 +397,6 @@ def test_runtime_session_rejects_unauthorized_kill_switch_deactivate() -> None:
     from qts.runtime.actors.account_actor import AccountActor
     from qts.runtime.dependencies import RuntimeSessionDependencies
     from qts.runtime.safety import RuntimeKillSwitchDeactivateCommand
-    from qts.runtime.safety_controller import RuntimeSafetyController
     from qts.runtime.session import RuntimeSession
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
@@ -439,7 +438,7 @@ def test_runtime_session_rejects_unauthorized_kill_switch_deactivate() -> None:
     session.activate_kill_switch(RuntimeKillSwitchCommand(operator_id="ops-a", reason="halt"))
 
     try:
-        RuntimeSafetyController(session).deactivate_kill_switch(
+        session._safety_controller.deactivate_kill_switch(
             RuntimeKillSwitchDeactivateCommand(
                 operator_id="ops-a",
                 reason="resume",

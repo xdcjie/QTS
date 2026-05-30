@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import cast
 
 from qts.core.ids import OrderId
 from qts.domain.orders import CancelIntent, OrderState
@@ -15,34 +15,40 @@ from qts.runtime.actors.order_manager_actor import (
     GetRouteMetadata,
 )
 from qts.runtime.broker_runtime_topology import AccountRuntimePartition
+from qts.runtime.broker_startup import BrokerRuntimeStartupDecision
 from qts.runtime.order_route_metadata import OrderRouteMetadata
 from qts.runtime.safety import RuntimeKillSwitchDeactivateCommand, RuntimeKillSwitchEvidence
+from qts.runtime.safety_port import RuntimeSafetySessionPort
 from qts.runtime.startup_gate import BrokerRuntimeStartupGate
 from qts.runtime.state import RuntimeSessionState
 
 
 class RuntimeSafetyController:
-    """Own runtime safety gates that block or cancel order submission."""
+    """Own runtime safety gates that block or cancel order submission.
 
-    def __init__(self, session: Any) -> None:
-        self._session = session
+    Depends on the narrow :class:`RuntimeSafetySessionPort`; it never touches
+    ``RuntimeSession`` private attributes.
+    """
+
+    def __init__(self, port: RuntimeSafetySessionPort) -> None:
+        self._port = port
 
     def blocked_reason(self) -> str | None:
         """Return the current order-blocking reason code, if any."""
-        session = self._session
-        if session._kill_switch_active:
+        port = self._port
+        if port.safety_state.kill_switch_active:
             return "KILL_SWITCH_ACTIVE"
-        if session.state is RuntimeSessionState.PAUSED:
+        if port.runtime_state is RuntimeSessionState.PAUSED:
             return "RUNTIME_PAUSED"
-        if session.state not in {RuntimeSessionState.RUNNING, RuntimeSessionState.DEGRADED}:
+        if port.runtime_state not in {RuntimeSessionState.RUNNING, RuntimeSessionState.DEGRADED}:
             return "RUNTIME_NOT_RUNNING"
         startup_reason = BrokerRuntimeStartupGate(
-            mode=session._dependencies.mode,
-            startup_decision=session._dependencies.startup_decision,
+            mode=port.mode,
+            startup_decision=cast(BrokerRuntimeStartupDecision | None, port.startup_decision),
         ).blocked_reason()
         if startup_reason is not None:
             return startup_reason
-        if session.state is RuntimeSessionState.DEGRADED:
+        if port.runtime_state is RuntimeSessionState.DEGRADED:
             return "RUNTIME_DEGRADED"
         return None
 
@@ -51,13 +57,13 @@ class RuntimeSafetyController:
         command: RuntimeKillSwitchCommand,
     ) -> RuntimeKillSwitchEvidence:
         """Block new orders and optionally cancel active orders through actors."""
-        session = self._session
-        session._kill_switch_active = True
-        active_order_ids = session._active_order_ids()
+        port = self._port
+        port.safety_state.activate_kill_switch()
+        active_order_ids = port.active_order_ids()
         cancelled_order_ids: list[str] = []
         if command.cancel_active_orders:
             active_orders_by_partition: list[tuple[str, AccountRuntimePartition]] = []
-            for partition in session._account_partitions.values():
+            for partition in port.account_partitions():
                 om_snapshot = partition.order_manager_ref.ask(GetOrderManagerSnapshot())
                 for order in om_snapshot.orders:
                     if order.state in {
@@ -79,7 +85,7 @@ class RuntimeSafetyController:
                         route_metadata=metadata,
                     )
                 )
-            for partition in session._account_partitions.values():
+            for partition in port.account_partitions():
                 partition.order_manager_ref.process_all()
                 partition.execution_ref.process_all()
                 partition.order_manager_ref.process_all()
@@ -89,19 +95,19 @@ class RuntimeSafetyController:
                 if order.state is OrderState.CANCELLED:
                     cancelled_order_ids.append(order_id)
             active_order_ids = tuple(order_id for order_id, _ in active_orders_by_partition)
-        snapshot = session._primary_partition.account_ref.ask(GetAccountSnapshot())
-        snapshot_refs = session._record_account_snapshots()
+        snapshot = port.primary_partition.account_ref.ask(GetAccountSnapshot())
+        snapshot_refs = port.record_account_snapshots()
         evidence = RuntimeKillSwitchEvidence(
-            run_id=session._dependencies.run_id.value,
+            run_id=port.run_id,
             operator_id=command.operator_id,
             reason=command.reason,
-            runtime_state=session.state.value,
+            runtime_state=port.runtime_state.value,
             active_order_ids=tuple(active_order_ids),
             cancelled_order_ids=tuple(cancelled_order_ids),
             account_snapshot=snapshot,
             snapshot_refs=snapshot_refs,
         )
-        session._write_event(
+        port.write_event(
             "runtime.kill_switch",
             {
                 "run_id": evidence.run_id,
@@ -140,12 +146,12 @@ class RuntimeSafetyController:
         """Resume order submission only after explicit safety authorization."""
         if not command.authorized:
             raise PermissionError("kill switch deactivate requires safety authorization")
-        session = self._session
-        session._kill_switch_active = False
-        session._write_event(
+        port = self._port
+        port.safety_state.deactivate_kill_switch()
+        port.write_event(
             "runtime.kill_switch_deactivated",
             {
-                "run_id": session._dependencies.run_id.value,
+                "run_id": port.run_id,
                 "operator_id": command.operator_id,
                 "reason": command.reason,
             },
