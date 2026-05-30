@@ -43,6 +43,7 @@ with ``#`` and blank lines are ignored.
 ```
 # wiring-followup (target=OPT-NN, 3-month horizon)
 qts.application.strategy_lifecycle.StrategyRegistry  expires=2026-08-17  target=OPT-34
+qts.data.sessions.interval_source.CalendarSessionIntervalSource  expires=2026-08-30  target=OPT-65
 # framework integration (1-year horizon)
 qts.api.schemas.common.RiskRuleSchema  expires=2027-05-17  target=framework
 # library APIs (1-year horizon)
@@ -124,6 +125,7 @@ qts.runtime.state_recovery.InMemorySnapshotStore  expires=2026-08-30  target=OPT
 | `qts.core.ids.RuntimeInstanceId` | internal | StringId-style ID; passed as a string, rarely named directly. |
 | `qts.data.bars.aggregator.BarAggregator` | internal | Public caller is `aggregate_bars` in the same file. |
 | `qts.data.market_data_pipeline.MarketDataPipeline` | library | Library entry-point used by external research scripts. |
+| `qts.data.sessions.interval_source.CalendarSessionIntervalSource` | OPT-65 | Calendar-aware daily (1d) consolidation honouring half-day early closes / holidays instead of a fixed `RegularSessionWindow`. Wiring widens session-window plumbing (`BarAggregationPipeline`, `market_data_actor/flow`, runtime+backtest dependencies) to the `SessionIntervalSource` protocol and adds a replay-cache key + manifest serialization story; contract locked by `tests/integration/test_daily_consolidation_special_sessions.py`. |
 | `qts.data.sources.replay_market_data_source.ReplayClock` | internal | Used through `ReplayMarketDataSource` composition. |
 | `qts.data.sources.replay_market_data_source.ReplayEventSequencer` | internal | Same pattern as ReplayClock. |
 | `qts.observability.audit_sink.InMemoryAuditSink` | internal | Test/in-process sink; production deployments use `StderrJsonAuditSink`. |
