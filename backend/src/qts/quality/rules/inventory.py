@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import re
 from pathlib import Path
 
 from qts.quality.guardrails import (
@@ -310,6 +311,22 @@ def _class_boundary_matrix_violations(
                 )
             )
             continue
+        recorded_lines = _parse_recorded_lines(row.get("Current lines", ""))
+        if recorded_lines is not None and _line_count_drifted(recorded_lines, line_count):
+            violations.append(
+                GuardrailViolation(
+                    code="CLASS_BOUNDARY_MATRIX",
+                    path=str(BACKEND_CLASS_BOUNDARY_MATRIX_PATH),
+                    line=1,
+                    message=(
+                        f"production class {class_entry.name} matrix line count is stale "
+                        f"(recorded {recorded_lines}, measured {line_count}); refresh the "
+                        "'Current lines' cell so the retain/split decision reflects the "
+                        "class's actual size"
+                    ),
+                    symbol=class_entry.symbol,
+                )
+            )
         if line_count <= 500:
             continue
         decision = row.get("Decision", "").lower()
@@ -330,6 +347,24 @@ def _class_boundary_matrix_violations(
             )
         )
     return violations
+
+
+def _parse_recorded_lines(value: str) -> int | None:
+    """Parse the leading integer from a matrix 'Current lines' cell, or None."""
+    match = re.match(r"\s*(\d+)", value)
+    return int(match.group(1)) if match else None
+
+
+def _line_count_drifted(recorded: int, measured: int) -> bool:
+    """Return whether the recorded matrix line count is stale vs the measured span.
+
+    A class naturally grows and shrinks; the matrix is stale only when it drifts
+    materially. The tolerance is the larger of 50 lines or 15% of the measured
+    span, so small edits don't churn the matrix while a god-object that has
+    quietly tripled (e.g. recorded 715, measured 2429) is caught.
+    """
+    tolerance = max(50, int(0.15 * measured))
+    return abs(measured - recorded) > tolerance
 
 
 def _production_class_line_counts(repo_root: Path) -> dict[str, int]:
