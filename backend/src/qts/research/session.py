@@ -21,7 +21,7 @@ from qts.research.experiment_recorder import (
     ResearchExperimentRecorderConfig,
 )
 from qts.research.experiment_store import ExperimentStore, ExperimentStoreRecord
-from qts.research.factor_candidate import FactorCandidateBatch, FactorCandidateWorkflow
+from qts.research.factor_candidate import FactorCandidateBatch
 from qts.research.factor_discovery import (
     DEFAULT_FACTOR_DISCOVERY_SOURCES,
     FactorDiscovery,
@@ -30,8 +30,9 @@ from qts.research.factor_discovery import (
     FactorIdeaStore,
 )
 from qts.research.factor_evaluation_service import EvaluatedFactorSnapshot, FactorEvaluationService
-from qts.research.factor_spec import FactorSpec, FactorSpecDrafter
+from qts.research.factor_spec import FactorSpec
 from qts.research.factor_spec_store import FactorSpecReview, FactorSpecStore
+from qts.research.factor_workbench_service import FactorWorkbenchService
 from qts.research.optimizer.constraints import OptimizationConstraint
 from qts.research.optimizer.failure_veto import (
     FailureWindow,
@@ -218,6 +219,12 @@ class ResearchSession:
         self._factor_specs = factor_specs
         self._factor_evaluation = FactorEvaluationService(
             output_root=config.output_root, store=self._store
+        )
+        self._factor_workbench = FactorWorkbenchService(
+            discovery_factory=lambda: self.discovery,
+            spec_store_factory=lambda: self.factor_specs,
+            discovery_sources=config.discovery_sources,
+            discovery_max_results=config.discovery_max_results,
         )
 
     @classmethod
@@ -526,13 +533,10 @@ class ResearchSession:
         refresh: bool = False,
     ) -> FactorDiscoveryResult:
         """Discover source-backed factor ideas without creating executable behavior."""
-
-        return self.discovery.search(
+        return self._factor_workbench.discover_factors(
             query,
-            sources=self._config.discovery_sources if sources is None else sources,
-            max_results=(
-                self._config.discovery_max_results if max_results is None else max_results
-            ),
+            sources=sources,
+            max_results=max_results,
             from_year=from_year,
             to_year=to_year,
             refresh=refresh,
@@ -549,50 +553,41 @@ class ResearchSession:
         refresh: bool = False,
     ) -> Any:
         """Return discovered factor ideas as a pandas DataFrame."""
-
-        return self.discover_factors(
+        return self._factor_workbench.discover_factors_frame(
             query,
             sources=sources,
             max_results=max_results,
             from_year=from_year,
             to_year=to_year,
             refresh=refresh,
-        ).to_pandas()
+        )
 
     def draft_factor_spec(self, idea: FactorIdea) -> FactorSpec:
         """Draft a non-executable factor hypothesis from one discovered idea."""
-
-        return FactorSpecDrafter().draft(idea)
+        return self._factor_workbench.draft_factor_spec(idea)
 
     def draft_factor_specs(
         self,
         ideas: FactorDiscoveryResult | Sequence[FactorIdea],
     ) -> tuple[FactorSpec, ...]:
         """Draft non-executable factor hypotheses from discovered ideas."""
-
-        source_ideas = ideas.ideas if isinstance(ideas, FactorDiscoveryResult) else ideas
-        drafter = FactorSpecDrafter()
-        return tuple(drafter.draft(idea) for idea in source_ideas)
+        return self._factor_workbench.draft_factor_specs(ideas)
 
     def save_factor_spec(self, spec: FactorSpec) -> Path:
         """Persist one non-executable factor hypothesis draft."""
-
-        return self.factor_specs.save(spec)
+        return self._factor_workbench.save_factor_spec(spec)
 
     def save_factor_specs(self, specs: Sequence[FactorSpec]) -> tuple[Path, ...]:
         """Persist multiple non-executable factor hypothesis drafts."""
-
-        return tuple(self.factor_specs.save(spec) for spec in specs)
+        return self._factor_workbench.save_factor_specs(specs)
 
     def list_factor_specs(self) -> tuple[FactorSpec, ...]:
         """Return persisted factor hypothesis drafts sorted by name."""
-
-        return self.factor_specs.list_specs()
+        return self._factor_workbench.list_factor_specs()
 
     def load_factor_spec(self, name: str) -> FactorSpec:
         """Load one persisted factor hypothesis draft by name."""
-
-        return self.factor_specs.load(name)
+        return self._factor_workbench.load_factor_spec(name)
 
     def find_factor_candidates(
         self,
@@ -605,16 +600,10 @@ class ResearchSession:
         refresh: bool = False,
     ) -> FactorCandidateBatch:
         """Discover, draft, and persist non-executable factor candidates."""
-
-        return FactorCandidateWorkflow(
-            discovery=self.discovery,
-            spec_store=self.factor_specs,
-        ).find(
+        return self._factor_workbench.find_factor_candidates(
             query,
-            sources=self._config.discovery_sources if sources is None else sources,
-            max_results=(
-                self._config.discovery_max_results if max_results is None else max_results
-            ),
+            sources=sources,
+            max_results=max_results,
             from_year=from_year,
             to_year=to_year,
             refresh=refresh,
@@ -631,15 +620,14 @@ class ResearchSession:
         refresh: bool = False,
     ) -> Any:
         """Return discovered factor candidates as a pandas DataFrame."""
-
-        return self.find_factor_candidates(
+        return self._factor_workbench.find_factor_candidates_frame(
             query,
             sources=sources,
             max_results=max_results,
             from_year=from_year,
             to_year=to_year,
             refresh=refresh,
-        ).to_pandas()
+        )
 
     def review_factor_spec(
         self,
@@ -651,8 +639,7 @@ class ResearchSession:
         reviewed_at: datetime | None = None,
     ) -> FactorSpecReview:
         """Record a research review decision for a persisted factor spec."""
-
-        return self.factor_specs.record_review(
+        return self._factor_workbench.review_factor_spec(
             name,
             decision=decision,
             reviewer=reviewer,
@@ -666,34 +653,15 @@ class ResearchSession:
         decision: str | None = None,
     ) -> tuple[FactorSpecReview, ...]:
         """Return persisted factor spec review decisions."""
-
-        return self.factor_specs.list_reviews(decision=decision)
+        return self._factor_workbench.list_factor_reviews(decision=decision)
 
     def list_factor_specs_by_status(self, status: str) -> tuple[FactorSpec, ...]:
         """Return persisted factor specs filtered by review status."""
-
-        return self.factor_specs.list_specs_by_status(status)
+        return self._factor_workbench.list_factor_specs_by_status(status)
 
     def review_queue_frame(self, *, status: str = "draft") -> Any:
         """Return factor specs awaiting review as a pandas DataFrame."""
-
-        pandas_module: Any = importlib.import_module("pandas")
-        return pandas_module.DataFrame(
-            [
-                {
-                    "candidate_tags": ", ".join(spec.candidate_tags),
-                    "hypothesis": spec.hypothesis,
-                    "promotion_gate": spec.promotion_gate,
-                    "review_status": spec.review_status,
-                    "source_refs": ", ".join(
-                        f"{source_ref.source}:{source_ref.external_id}"
-                        for source_ref in spec.source_refs
-                    ),
-                    "spec_name": spec.name,
-                }
-                for spec in self.list_factor_specs_by_status(status)
-            ]
-        )
+        return self._factor_workbench.review_queue_frame(status=status)
 
     def evaluate_factor(
         self,

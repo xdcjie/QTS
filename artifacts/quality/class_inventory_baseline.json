@@ -1,5 +1,5 @@
 {
-  "production_class_count": 986,
+  "production_class_count": 987,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -573,6 +573,7 @@
     "qts.research.factor_spec.FactorSpecSourceRef",
     "qts.research.factor_spec_store.FactorSpecReview",
     "qts.research.factor_spec_store.FactorSpecStore",
+    "qts.research.factor_workbench_service.FactorWorkbenchService",
     "qts.research.factory.discovery_mapper.FactorDefinitionDraft",
     "qts.research.factory.discovery_mapper.FactorDefinitionDraftConstraints",
     "qts.research.factory.discovery_mapper.FactorDiscoveryDraftMapper",
