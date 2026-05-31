@@ -79,7 +79,9 @@ def test_reconciliation_report_emits_drift_without_mutating_snapshots() -> None:
 
 
 def test_operational_api_idempotency_and_kill_switch_endpoints() -> None:
-    client = TestClient(create_app())
+    from tests.support.operations import bound_operations_service
+
+    client = TestClient(create_app(operations_service=bound_operations_service()))
 
     first = client.post(
         "/operations/runtime/pause",

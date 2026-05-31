@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from qts.api.auth_backend_factory import default_auth_backend
 from qts.api.routes import (
@@ -21,6 +22,7 @@ from qts.api.websocket import events_router
 from qts.application.services import OperationsService
 from qts.observability.metrics import MetricsRegistry
 from qts.observability.prometheus import PROMETHEUS_CONTENT_TYPE, render_prometheus_text
+from qts.runtime.errors import RuntimeCommandNotBound
 
 
 def create_app(
@@ -47,6 +49,14 @@ def create_app(
         allow_headers=["Authorization", "Content-Type", "Idempotency-Key", "X-QTS-Operator"],
     )
     app.add_middleware(ApiSecurityMiddleware, auth_backend=default_auth_backend())
+
+    @app.exception_handler(RuntimeCommandNotBound)
+    def _runtime_session_not_bound(_request: Request, exc: RuntimeCommandNotBound) -> JSONResponse:
+        """Map an unbound operator command to 503 without faking success."""
+        return JSONResponse(
+            status_code=503,
+            content={"reason_code": "RUNTIME_SESSION_NOT_BOUND", "detail": str(exc)},
+        )
 
     @app.get("/metrics", include_in_schema=False)
     def _metrics_endpoint() -> Response:

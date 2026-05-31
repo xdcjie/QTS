@@ -149,9 +149,9 @@ def test_operations_service_keeps_private_mapping_logic_inside_the_service() -> 
 
 
 def test_operations_service_routes_runtime_controls_through_idempotent_commands() -> None:
-    from qts.application.services import OperationsService
+    from tests.support.operations import bound_operations_service
 
-    service = OperationsService()
+    service = bound_operations_service()
 
     paused = service.pause_runtime(operator_id="ops-a", idempotency_key="pause-key")
     running = service.resume_runtime(operator_id="ops-a", idempotency_key="resume-key")
@@ -164,9 +164,10 @@ def test_operations_service_routes_runtime_controls_through_idempotent_commands(
 
 def test_operations_service_routes_kill_switch_through_idempotent_commands() -> None:
     from qts.application.dto import KillSwitchCommandDTO
-    from qts.application.services import OperationsService
 
-    service = OperationsService()
+    from tests.support.operations import bound_operations_service
+
+    service = bound_operations_service()
 
     first = service.activate_kill_switch(
         KillSwitchCommandDTO(scope="global", reason="operator stop"),
@@ -210,9 +211,9 @@ def test_operations_service_exposes_reconcile_and_snapshot_command_results() -> 
 
 
 def test_operations_service_routes_lifecycle_and_observation_commands() -> None:
-    from qts.application.services import OperationsService
+    from tests.support.operations import bound_operations_service
 
-    service = OperationsService()
+    service = bound_operations_service()
 
     started = service.start_runtime(operator_id="ops-a", idempotency_key="start-key")
     stopped = service.stop_runtime(operator_id="ops-a", idempotency_key="stop-key")
@@ -238,9 +239,10 @@ def test_operations_service_routes_lifecycle_and_observation_commands() -> None:
 
 def test_operations_service_deactivates_kill_switch_through_idempotent_command() -> None:
     from qts.application.dto import KillSwitchCommandDTO
-    from qts.application.services import OperationsService
 
-    service = OperationsService()
+    from tests.support.operations import bound_operations_service
+
+    service = bound_operations_service()
     command = KillSwitchCommandDTO(scope="global", reason="operator stop")
 
     active = service.activate_kill_switch(
@@ -269,9 +271,10 @@ def test_operations_service_deactivates_kill_switch_through_idempotent_command()
 
 def test_operations_service_rejects_kill_switch_deactivate_without_safety_scope() -> None:
     from qts.application.dto import KillSwitchCommandDTO
-    from qts.application.services import OperationsService
 
-    service = OperationsService()
+    from tests.support.operations import bound_operations_service
+
+    service = bound_operations_service()
     service.activate_kill_switch(
         KillSwitchCommandDTO(scope="global", reason="operator stop"),
         operator_id="ops-a",

@@ -85,7 +85,9 @@ def test_operational_runtime_lifecycle_and_observation_routes() -> None:
     from fastapi.testclient import TestClient
     from qts.api.app import create_app
 
-    client = TestClient(create_app())
+    from tests.support.operations import bound_operations_service
+
+    client = TestClient(create_app(operations_service=bound_operations_service()))
 
     started = client.post(
         "/operations/runtime/start",
@@ -125,7 +127,9 @@ def test_operational_kill_switch_deactivate_route_is_idempotent() -> None:
     from fastapi.testclient import TestClient
     from qts.api.app import create_app
 
-    client = TestClient(create_app())
+    from tests.support.operations import bound_operations_service
+
+    client = TestClient(create_app(operations_service=bound_operations_service()))
 
     active = client.post(
         "/operations/kill-switches",
@@ -182,7 +186,9 @@ def test_operational_routes_scope_idempotency_by_command_kind() -> None:
     from fastapi.testclient import TestClient
     from qts.api.app import create_app
 
-    client = TestClient(create_app())
+    from tests.support.operations import bound_operations_service
+
+    client = TestClient(create_app(operations_service=bound_operations_service()))
 
     pause = client.post(
         "/operations/runtime/pause",

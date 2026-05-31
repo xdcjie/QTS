@@ -16,6 +16,7 @@ from qts.application.services.operator_dashboard import OperatorDashboardService
 from qts.application.services.runtime_lifecycle import RuntimeLifecycleService
 from qts.risk.kill_switch import KillSwitchRegistry
 from qts.runtime.commands import RuntimeCommandResult, RuntimeCommandType
+from qts.runtime.control_plane import RuntimeCommandExecutor
 
 
 class OperationsService:
@@ -26,8 +27,14 @@ class OperationsService:
         *,
         kill_switches: KillSwitchRegistry | None = None,
         operator_status: OperatorDashboardStatusDTO | None = None,
+        command_executor: RuntimeCommandExecutor | None = None,
     ) -> None:
-        """Create operational command state and idempotent command routing."""
+        """Create operational command routing bound to an optional runtime executor.
+
+        When ``command_executor`` is provided, lifecycle and kill-switch activation
+        act on the bound RuntimeSession; otherwise those commands raise
+        ``RuntimeCommandNotBound`` rather than mutating shadow state.
+        """
         self._lifecycle = RuntimeLifecycleService()
         self._runtime_mode = "paper"
         self._kill_switch_commands = KillSwitchCommandService(kill_switches=kill_switches)
@@ -35,6 +42,7 @@ class OperationsService:
         self._command_handler = OperationsCommandHandler(
             lifecycle=self._lifecycle,
             kill_switch_commands=self._kill_switch_commands,
+            command_executor=command_executor,
         )
         self._commands = OperationsCommandRouter(handler=self._command_handler.handle)
 
