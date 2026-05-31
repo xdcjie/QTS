@@ -6,7 +6,7 @@ promotion-grade validation.
 
 The strongest coverage lives in ``TestRealProducerLookaheadRejection``: rather
 than hand-authoring a failing ``no_lookahead`` payload, it drives the *real*
-autonomous producer (``ValidationArtifactWriter._no_lookahead_payload``, which
+autonomous producer (``NoLookaheadValidationArtifact.payload``, which
 anchors feature timestamps to the OOS cutoff and flags forward transforms via
 ``_forward_looking_transform`` / ``NoLookaheadValidationRunner``) with a
 forward-looking factor definition, then runs the produced artifact through the
@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from qts.core.hashing import stable_json_hash
-from qts.research.orchestrator.validation_artifact_writer import ValidationArtifactWriter
+from qts.research.orchestrator.no_lookahead_artifact import NoLookaheadValidationArtifact
 from qts.research.selector import (
     CorrelationGate,
     CostStressGate,
@@ -407,7 +407,7 @@ def _candidate_from_real_no_lookahead(
     protocol that the real producer ran against the supplied transform.
     """
 
-    no_lookahead = ValidationArtifactWriter()._no_lookahead_payload(
+    no_lookahead = NoLookaheadValidationArtifact().payload(
         backtest_manifest=_REAL_BACKTEST_MANIFEST,
         parameters={"lookback": 5},
         pipeline_config=_pipeline_config_with_transform(transform),
@@ -450,7 +450,7 @@ class TestRealProducerLookaheadRejection:
 
     def test_forward_transform_no_lookahead_artifact_fails(self) -> None:
         """The real producer marks a forward-transform factor's evidence as failed."""
-        no_lookahead = ValidationArtifactWriter()._no_lookahead_payload(
+        no_lookahead = NoLookaheadValidationArtifact().payload(
             backtest_manifest=_REAL_BACKTEST_MANIFEST,
             parameters={"lookback": 5},
             pipeline_config=_pipeline_config_with_transform(

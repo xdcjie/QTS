@@ -12,13 +12,13 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from qts.research.orchestrator.validation_artifact_writer import ValidationArtifactWriter
+from qts.research.orchestrator.no_lookahead_artifact import NoLookaheadValidationArtifact
 
 _ANCHOR = datetime(2026, 3, 1, tzinfo=UTC)
 
 
-def _writer() -> ValidationArtifactWriter:
-    return ValidationArtifactWriter()
+def _writer() -> NoLookaheadValidationArtifact:
+    return NoLookaheadValidationArtifact()
 
 
 def test_forward_transform_detected_by_type() -> None:
