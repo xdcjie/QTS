@@ -1871,6 +1871,57 @@ def test_guardrails_allow_canonical_architecture_runtime_text(tmp_path: Path) ->
     assert _codes_by_suite(root, guardrails.StaleArchitectureTextRule()) == set()
 
 
+def test_guardrails_reject_operations_handler_without_runtime_executor(tmp_path: Path) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/application/services/operations_command_handler.py",
+        "class OperationsCommandHandler:\n"
+        "    def handle(self, command):\n"
+        '        return {"state": "running"}\n',
+    )
+
+    assert _codes_by_suite(root, guardrails.OperationsCommandRealityRule()) == {
+        "OPERATIONS_COMMAND_REALITY"
+    }
+
+
+def test_guardrails_reject_operations_route_module_global_service(tmp_path: Path) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/api/routes/operations.py",
+        "from qts.application.services import OperationsService\n\n"
+        "_operations = OperationsService()\n",
+    )
+
+    assert _codes_by_suite(root, guardrails.OperationsCommandRealityRule()) == {
+        "OPERATIONS_COMMAND_REALITY"
+    }
+
+
+def test_guardrails_allow_operations_handler_routing_through_executor(tmp_path: Path) -> None:
+    root = tmp_path
+    guardrails = _load_guardrails_module()
+    _write(
+        root,
+        "backend/src/qts/application/services/operations_command_handler.py",
+        "from qts.runtime.control_plane import RuntimeCommandExecutor\n"
+        "from qts.runtime.errors import RuntimeCommandNotBound\n\n"
+        "class OperationsCommandHandler:\n"
+        "    def __init__(self, *, command_executor: RuntimeCommandExecutor | None = None):\n"
+        "        self._command_executor = command_executor\n"
+        "    def handle(self, command):\n"
+        "        if self._command_executor is None:\n"
+        "            raise RuntimeCommandNotBound('RUNTIME_SESSION_NOT_BOUND')\n"
+        "        return self._command_executor.start()\n",
+    )
+
+    assert _codes_by_suite(root, guardrails.OperationsCommandRealityRule()) == set()
+
+
 def test_guardrails_reject_runtime_importing_execution_internal_types(tmp_path: Path) -> None:
     root = tmp_path
     guardrails = _load_guardrails_module()

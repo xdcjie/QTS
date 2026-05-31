@@ -48,6 +48,7 @@ from qts.quality.rules.oop import (
     OOPHelperOwnershipRule,
     OOPPublicFactoryRule,
 )
+from qts.quality.rules.operations_reality import OperationsCommandRealityRule
 from qts.quality.rules.order_domain import OrderDomainTypingRule
 from qts.quality.rules.public_boundary_exceptions import PublicBoundaryExceptionRule
 from qts.quality.rules.public_surface import PublicSurfaceRule
@@ -103,6 +104,7 @@ __all__ = [
     "LivePackageNoReplayClassRule",
     "OOPHelperOwnershipRule",
     "OOPPublicFactoryRule",
+    "OperationsCommandRealityRule",
     "OrderDomainTypingRule",
     "PlatformFreezeRule",
     "ProductSpecificRule",

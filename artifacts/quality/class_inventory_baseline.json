@@ -1,5 +1,5 @@
 {
-  "production_class_count": 982,
+  "production_class_count": 983,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -419,6 +419,7 @@
     "qts.quality.rules.oop.BacktestRunnerCohesionRule",
     "qts.quality.rules.oop.OOPHelperOwnershipRule",
     "qts.quality.rules.oop.OOPPublicFactoryRule",
+    "qts.quality.rules.operations_reality.OperationsCommandRealityRule",
     "qts.quality.rules.order_domain.OrderDomainTypingRule",
     "qts.quality.rules.public_boundary_exceptions.PublicBoundaryExceptionRule",
     "qts.quality.rules.public_surface.PublicSurfaceRule",
