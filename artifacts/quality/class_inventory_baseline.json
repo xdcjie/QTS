@@ -1,5 +1,5 @@
 {
-  "production_class_count": 994,
+  "production_class_count": 995,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -530,10 +530,11 @@
     "qts.research.data_quality.DataQualityArtifactWriter",
     "qts.research.data_quality.DataQualityIssue",
     "qts.research.data_quality.DataQualityRunner",
+    "qts.research.engine.autonomous_campaign_support.AutonomousResearchCampaignSupport",
     "qts.research.engine.autonomous_research_engine.AutonomousResearchEngine",
-    "qts.research.engine.autonomous_research_engine.AutonomousResearchGeneration",
-    "qts.research.engine.autonomous_research_engine.AutonomousResearchResult",
-    "qts.research.engine.autonomous_research_engine.AutonomousResearchRun",
+    "qts.research.engine.autonomous_research_types.AutonomousResearchGeneration",
+    "qts.research.engine.autonomous_research_types.AutonomousResearchResult",
+    "qts.research.engine.autonomous_research_types.AutonomousResearchRun",
     "qts.research.evidence_policy.EvidenceCompletenessPolicy",
     "qts.research.evidence_policy.EvidenceCompletenessResult",
     "qts.research.evidence_policy.PromotionEvidenceSpec",

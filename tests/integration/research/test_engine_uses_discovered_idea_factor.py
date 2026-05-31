@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from pathlib import Path
 
+import qts.research.engine.autonomous_engine_orchestration as engine_orchestration
 from qts.research.engine.autonomous_research_engine import (
     AutonomousResearchEngine,
     AutonomousResearchRun,
@@ -53,7 +54,8 @@ def test_discovered_idea_drives_generated_candidate_factor_definition(tmp_path: 
         output_root=tmp_path / "run",
     )
 
-    trials = AutonomousResearchEngine(repo_root=Path.cwd())._generated_trials(
+    trials = engine_orchestration._generated_trials(
+        AutonomousResearchEngine(repo_root=Path.cwd())._support,
         run,
         "generation-000",
         0,
@@ -96,7 +98,9 @@ def test_unmappable_idea_falls_back_to_static_template_factor(tmp_path: Path) ->
     )
     engine = AutonomousResearchEngine(repo_root=Path.cwd())
 
-    trials = engine._generated_trials(run, "generation-000", 0, proposal=None)
+    trials = engine_orchestration._generated_trials(
+        engine._support, run, "generation-000", 0, proposal=None
+    )
 
     no_discovery_campaign = write_campaign(tmp_path / "static", families=("momentum",))
     static_run = AutonomousResearchRun.from_yaml(
@@ -104,7 +108,9 @@ def test_unmappable_idea_falls_back_to_static_template_factor(tmp_path: Path) ->
         data_paths=write_data_paths(tmp_path / "static"),
         output_root=tmp_path / "static" / "run",
     )
-    static_trials = engine._generated_trials(static_run, "generation-000", 0, proposal=None)
+    static_trials = engine_orchestration._generated_trials(
+        engine._support, static_run, "generation-000", 0, proposal=None
+    )
 
     assert {trial["factor_hash"] for trial in trials} == {
         trial["factor_hash"] for trial in static_trials
@@ -143,7 +149,11 @@ def test_full_campaign_run_records_discovered_idea_factor(tmp_path: Path) -> Non
     assert {row["factor_family"] for row in landscape_rows} == {"momentum"}
     assert any(
         trial["factor_hash"] == expected_factor_hash
-        for trial in AutonomousResearchEngine(repo_root=Path.cwd())._generated_trials(
-            run, "generation-000", 0, proposal=None
+        for trial in engine_orchestration._generated_trials(
+            AutonomousResearchEngine(repo_root=Path.cwd())._support,
+            run,
+            "generation-000",
+            0,
+            proposal=None,
         )
     )

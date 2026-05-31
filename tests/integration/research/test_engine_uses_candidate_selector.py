@@ -6,7 +6,7 @@ from typing import Any
 
 import pytest
 import qts.research.engine.autonomous_engine_helpers as engine_helpers
-import qts.research.engine.autonomous_research_engine as engine_module
+import qts.research.engine.autonomous_engine_orchestration as engine_orchestration
 from qts.research.audit_log import ResearchAuditLog
 from qts.research.engine.autonomous_research_engine import (
     AutonomousResearchEngine,
@@ -75,7 +75,7 @@ def test_engine_selector_applies_metrics_schema_before_promotion(
         return payload
 
     monkeypatch.setattr(
-        engine_module,
+        engine_orchestration,
         "_metrics_from_trial_result",
         metrics_without_promotion_flag,
     )

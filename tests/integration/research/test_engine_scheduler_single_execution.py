@@ -28,7 +28,7 @@ def test_engine_executes_generation_job_once_through_scheduler(
 
     monkeypatch.setattr(ExperimentWorker, "run", counting_worker_run)
     monkeypatch.setattr(
-        "qts.research.engine.autonomous_research_engine.ExperimentScheduler",
+        "qts.research.engine.autonomous_campaign_support.ExperimentScheduler",
         CountingScheduler,
     )
 

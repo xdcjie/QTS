@@ -9,7 +9,7 @@ from typing import Any
 
 import pytest
 import qts.research.engine.autonomous_engine_helpers as engine_helpers
-import qts.research.engine.autonomous_research_engine as engine_module
+import qts.research.engine.autonomous_engine_orchestration as engine_orchestration
 import yaml  # type: ignore[import-untyped]
 from qts.backtest.pipeline import BacktestPipeline
 from qts.core.ids import InstrumentId
@@ -62,7 +62,7 @@ def test_engine_selection_policy_uses_campaign_profit_factor_constraint(tmp_path
     )
     engine = AutonomousResearchEngine(repo_root=Path.cwd())
 
-    policy = engine._selection_policy(run)
+    policy = engine._support._selection_policy(run)
 
     assert policy.min_profit_factor == 1.15
     assert policy.profit_factor_metric == "quality.profit_factor"
@@ -134,16 +134,18 @@ def test_full_backtest_data_materialization_reuses_shared_csv(
             contract_symbol_for=contract_symbol_for,
         )
 
-    monkeypatch.setattr(engine_module, "_materialize_backtest_csv", counted_materialize)
+    monkeypatch.setattr(engine_orchestration, "_materialize_backtest_csv", counted_materialize)
     monkeypatch.setattr(engine_helpers, "_materialize_backtest_csv", counted_materialize)
 
-    _first_config, first_csv = engine._write_backtest_data_config(
+    _first_config, first_csv = engine_orchestration._write_backtest_data_config(
+        engine._support,
         run=run,
         trial_id="generation-000-trial-000",
         root="GC",
         data_path=data_paths["GC"],
     )
-    _second_config, second_csv = engine._write_backtest_data_config(
+    _second_config, second_csv = engine_orchestration._write_backtest_data_config(
+        engine._support,
         run=run,
         trial_id="generation-000-trial-001",
         root="GC",
@@ -168,7 +170,8 @@ def test_backtest_pipeline_template_maps_research_parameters_to_strategy_config(
     )
     engine = AutonomousResearchEngine(repo_root=Path.cwd())
 
-    payload = engine._backtest_pipeline_payload(
+    payload = engine_orchestration._backtest_pipeline_payload(
+        engine._support,
         run=run,
         trial_id="generation-000-trial-000",
         root="GC",
@@ -219,7 +222,8 @@ def test_generated_trials_use_template_backtest_pipeline_mapping(tmp_path: Path)
     )
     engine = AutonomousResearchEngine(repo_root=Path.cwd())
 
-    trials = engine._generated_trials(
+    trials = engine_orchestration._generated_trials(
+        engine._support,
         run,
         "generation-000",
         0,
@@ -262,7 +266,8 @@ def test_autonomous_future_backtest_config_preserves_chain_and_contract_symbols(
     )
     engine = AutonomousResearchEngine(repo_root=Path.cwd())
 
-    payload = engine._backtest_pipeline_payload(
+    payload = engine_orchestration._backtest_pipeline_payload(
+        engine._support,
         run=run,
         trial_id="generation-000-trial-000",
         root="GC",
