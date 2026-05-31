@@ -1,5 +1,5 @@
 {
-  "production_class_count": 993,
+  "production_class_count": 994,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -648,6 +648,7 @@
     "qts.research.orchestrator.queue.ExperimentScheduleResult",
     "qts.research.orchestrator.queue.ExperimentScheduler",
     "qts.research.orchestrator.queue.ExperimentWorker",
+    "qts.research.orchestrator.trial_evidence_support.TrialEvidenceSupport",
     "qts.research.orchestrator.validation_artifact_reader.PromotionThresholds",
     "qts.research.orchestrator.validation_artifact_reader.ResearchMetricsDerivation",
     "qts.research.orchestrator.validation_artifact_reader.ResearchMetricsFromValidationArtifacts",

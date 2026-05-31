@@ -4,15 +4,15 @@ from typing import Any
 
 import pytest
 from qts.core.hashing import stable_json_hash
-from qts.research.orchestrator.experiment_runner import ResearchExperimentRunner
+from qts.research.orchestrator.trial_evidence_support import TrialEvidenceSupport
 
 
 def force_clean_reproducibility(monkeypatch: pytest.MonkeyPatch) -> None:
-    original = ResearchExperimentRunner._reproducibility_payload
-    original_git_output = ResearchExperimentRunner._git_output
+    original = TrialEvidenceSupport._reproducibility_payload
+    original_git_output = TrialEvidenceSupport._git_output
 
     def clean_payload(
-        self: ResearchExperimentRunner,
+        self: TrialEvidenceSupport,
         *,
         job: Any,
         manifest_hash: str,
@@ -33,7 +33,7 @@ def force_clean_reproducibility(monkeypatch: pytest.MonkeyPatch) -> None:
         return payload
 
     def clean_git_output(
-        self: ResearchExperimentRunner,
+        self: TrialEvidenceSupport,
         args: tuple[str, ...],
     ) -> str:
         if args == ("status", "--short"):
@@ -41,12 +41,12 @@ def force_clean_reproducibility(monkeypatch: pytest.MonkeyPatch) -> None:
         return original_git_output(self, args)
 
     monkeypatch.setattr(
-        ResearchExperimentRunner,
+        TrialEvidenceSupport,
         "_reproducibility_payload",
         clean_payload,
     )
     monkeypatch.setattr(
-        ResearchExperimentRunner,
+        TrialEvidenceSupport,
         "_git_output",
         clean_git_output,
     )

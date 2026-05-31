@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-import qts.research.orchestrator.experiment_runner as experiment_runner_module
+import qts.research.orchestrator.trial_evidence_support as trial_evidence_support_module
 import qts.research.orchestrator.validation_artifact_writer as validation_artifact_writer_module
 from qts.core.hashing import stable_json_hash
 from qts.research.engine.autonomous_research_engine import (
@@ -28,7 +28,7 @@ def test_engine_blocks_promotion_when_gauntlet_rejects_all_gates(
     original_write_validation_artifacts = (
         validation_artifact_writer_module.ValidationArtifactWriter.write
     )
-    original_git_output = experiment_runner_module.ResearchExperimentRunner._git_output
+    original_git_output = trial_evidence_support_module.TrialEvidenceSupport._git_output
     original_repro_git_output = ReproducibilitySnapshotV2._git_output
 
     def failing_validation_artifacts(
@@ -97,7 +97,7 @@ def test_engine_blocks_promotion_when_gauntlet_rejects_all_gates(
         return original_git_output(self, args)
 
     monkeypatch.setattr(
-        experiment_runner_module.ResearchExperimentRunner,
+        trial_evidence_support_module.TrialEvidenceSupport,
         "_git_output",
         clean_git_status,
     )

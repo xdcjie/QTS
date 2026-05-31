@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-import qts.research.orchestrator.experiment_runner as experiment_runner
+import qts.research.orchestrator.experiment_orchestration as experiment_orchestration
 from qts.research.optimizer.result import OptimizationResult
 from qts.research.orchestrator.experiment_runner import (
     ResearchExperimentJob,
@@ -28,7 +28,7 @@ def test_experiment_runner_fails_when_backtest_manifest_is_missing(
                 ),
             )
 
-    monkeypatch.setattr(experiment_runner, "BacktestPipelineRunner", MissingManifestRunner)
+    monkeypatch.setattr(experiment_orchestration, "BacktestPipelineRunner", MissingManifestRunner)
     backtest_config_path = tmp_path / "backtest.yaml"
     backtest_config_path.write_text("mode: backtest\n", encoding="utf-8")
     job = ResearchExperimentJob(

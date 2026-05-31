@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-import qts.research.orchestrator.experiment_runner as experiment_runner
+import qts.research.orchestrator.experiment_orchestration as experiment_orchestration
 import qts.research.orchestrator.trial_helpers as trial_helpers
 from qts.research.optimizer.result import OptimizationResult
 from qts.research.orchestrator.experiment_runner import (
@@ -283,6 +283,8 @@ def _patch_backtest_pipeline_runner(monkeypatch: pytest.MonkeyPatch) -> None:
                 ),
             )
 
-    monkeypatch.setattr(experiment_runner, "BacktestPipelineRunner", FakeBacktestPipelineRunner)
+    monkeypatch.setattr(
+        experiment_orchestration, "BacktestPipelineRunner", FakeBacktestPipelineRunner
+    )
     # QTS-FINAL-011 moved the validation-rerun invocation into trial_helpers
     monkeypatch.setattr(trial_helpers, "BacktestPipelineRunner", FakeBacktestPipelineRunner)

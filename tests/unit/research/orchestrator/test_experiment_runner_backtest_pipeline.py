@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-import qts.research.orchestrator.experiment_runner as experiment_runner
+import qts.research.orchestrator.experiment_orchestration as experiment_orchestration
 from qts.research.optimizer.result import OptimizationResult
 from qts.research.orchestrator.experiment_runner import (
     ResearchExperimentJob,
@@ -50,7 +50,9 @@ def test_backtest_pipeline_mode_derives_metrics_from_backtest_manifest(
                 ),
             )
 
-    monkeypatch.setattr(experiment_runner, "BacktestPipelineRunner", FakeBacktestPipelineRunner)
+    monkeypatch.setattr(
+        experiment_orchestration, "BacktestPipelineRunner", FakeBacktestPipelineRunner
+    )
 
     backtest_config_path = tmp_path / "backtest.yaml"
     backtest_config_path.write_text("mode: backtest\n", encoding="utf-8")

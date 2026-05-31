@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-import qts.research.orchestrator.experiment_runner as experiment_runner
+import qts.research.orchestrator.experiment_orchestration as experiment_orchestration
 from qts.research.audit_log import ResearchAuditLog
 from qts.research.optimizer.result import OptimizationResult
 from qts.research.orchestrator.experiment_runner import ResearchExperimentJob
@@ -182,4 +182,6 @@ def _patch_backtest_pipeline_runner(monkeypatch: pytest.MonkeyPatch) -> None:
                 ),
             )
 
-    monkeypatch.setattr(experiment_runner, "BacktestPipelineRunner", FakeBacktestPipelineRunner)
+    monkeypatch.setattr(
+        experiment_orchestration, "BacktestPipelineRunner", FakeBacktestPipelineRunner
+    )
