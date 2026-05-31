@@ -53,6 +53,12 @@ _ENGINE_ASSEMBLY_SOURCE = Path("backend/src/qts/backtest/engine_assembly.py").re
 _PROMOTION_PACKET_SOURCE = Path("backend/src/qts/research/promotion_packet.py").read_text(
     encoding="utf-8"
 )
+# QTS-FINAL-011 moved the machine-validation engine out of PromotionPacketV2 into
+# PromotionPacketValidator, and the packet-independent metrics-integrity checks
+# (including the fill-timing gate) into promotion_metrics_integrity.
+_PROMOTION_METRICS_INTEGRITY_SOURCE = Path(
+    "backend/src/qts/research/promotion_metrics_integrity.py"
+).read_text(encoding="utf-8")
 
 
 def _selector_select_calls(tree: ast.AST) -> list[ast.Call]:
@@ -152,8 +158,8 @@ def test_selector_haircut_responds_to_trial_count() -> None:
 def test_promotion_packet_consumes_fill_timing_evidence() -> None:
     # The consumer references the manifest-derived execution-timing fact when
     # ruling on eligibility; behavior is locked by the dedicated gate test.
-    assert "fill_timing_promotion_grade" in _PROMOTION_PACKET_SOURCE
-    tree = ast.parse(_PROMOTION_PACKET_SOURCE)
+    assert "fill_timing_promotion_grade" in _PROMOTION_METRICS_INTEGRITY_SOURCE
+    tree = ast.parse(_PROMOTION_METRICS_INTEGRITY_SOURCE)
     gate = next(
         node
         for node in ast.walk(tree)

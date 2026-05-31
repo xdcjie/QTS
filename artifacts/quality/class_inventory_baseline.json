@@ -1,5 +1,5 @@
 {
-  "production_class_count": 989,
+  "production_class_count": 990,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -666,6 +666,7 @@
     "qts.research.promotion.ResearchPromotionPolicy",
     "qts.research.promotion_packet.PromotionPacketV2",
     "qts.research.promotion_packet.PromotionPacketValidationResult",
+    "qts.research.promotion_packet_validator.PromotionPacketValidator",
     "qts.research.readiness.HumanApprovalRecord",
     "qts.research.readiness.PaperLiveReadinessDecision",
     "qts.research.readiness.PaperLiveReadinessEvidence",
