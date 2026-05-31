@@ -8,8 +8,7 @@ import json
 import subprocess
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, date, datetime
-from decimal import Decimal
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -18,32 +17,16 @@ import yaml  # type: ignore[import-untyped]
 from qts.research.ablation import AblationPlan, AblationReport, AblationReportWriter, AblationRun
 from qts.research.coercion import (
     float_mapping,
-    iso_date,
     iso_datetime,
     nested_float_mapping,
-    optional_bool,
-    optional_decimal,
     optional_float,
     optional_int,
     optional_mapping,
-    optional_non_negative_int,
     optional_string_tuple,
-    required_mapping,
     string_tuple,
 )
 from qts.research.idea_registry import IdeaRegistry
 from qts.research.idea_spec import IdeaSpec
-from qts.research.optimizer import (
-    FailureWindow,
-    MetricConstraint,
-    OptimizerValidationSummary,
-    OptimizerValidationSummaryWriter,
-    ResearchValidationPolicy,
-    WalkForwardPlan,
-    WalkForwardRobustnessPolicy,
-    WalkForwardSplit,
-    derive_capital_metrics,
-)
 from qts.research.portfolio_ensemble import (
     evaluate_portfolio_ensemble,
     scan_portfolio_ensemble_allocations,
@@ -58,6 +41,11 @@ from qts.research.trade_diagnostics import (
     TradeDiagnostic,
     TradeDiagnosticsArtifactWriter,
     TradeDiagnosticsReport,
+)
+from qts.research.workflow_optimize import optimize_step
+from qts.research.workflow_support import (
+    json_ready,
+    materialized_replay_cache_dir,
 )
 
 
@@ -190,7 +178,7 @@ class ResearchRouteMetadata:
             "owner": self.owner,
             "route_id": self.route_id,
             "route_name": self.route_name,
-            "selection_policy": _json_ready(self.selection_policy),
+            "selection_policy": json_ready(self.selection_policy),
             "status": self.status,
         }
 
@@ -912,7 +900,7 @@ class ResearchWorkflowStepResult:
             "id": self.step_id,
             "kind": self.kind,
             "message": self.message,
-            "outputs": _json_ready(self.outputs),
+            "outputs": json_ready(self.outputs),
             "status": self.status,
         }
 
@@ -949,9 +937,9 @@ class ResearchWorkflowResult:
         if self.route is not None:
             payload["route"] = self.route.to_payload()
         if self.idea_metadata is not None:
-            payload["idea_metadata"] = _json_ready(self.idea_metadata)
+            payload["idea_metadata"] = json_ready(self.idea_metadata)
         if self.decision is not None:
-            payload["decision"] = _json_ready(self.decision)
+            payload["decision"] = json_ready(self.decision)
         if self.periods:
             period_payloads = [
                 ResearchWorkflowRunner._declared_period_payload(period) for period in self.periods
@@ -1121,7 +1109,7 @@ class ResearchWorkflowRunner:
             if step.kind == "backtest_matrix":
                 return self._backtest_matrix(session, config, step)
             if step.kind == "optimize":
-                return self._optimize(session, config, step)
+                return optimize_step(session, config, step)
             if step.kind == "portfolio_ensemble":
                 return self._portfolio_ensemble(config, step)
             if step.kind == "portfolio_ensemble_scan":
@@ -1251,7 +1239,7 @@ class ResearchWorkflowRunner:
             resolved_snapshots.append(
                 {
                     **_snapshot_protocol_payload(snapshot),
-                    "as_of": _json_ready(snapshot.get("as_of")),
+                    "as_of": json_ready(snapshot.get("as_of")),
                     "factor_scores": str(config.resolve_path(factor_scores)),
                     "forward_returns": str(config.resolve_path(forward_returns)),
                 }
@@ -1449,7 +1437,7 @@ class ResearchWorkflowRunner:
         )
         summary_path.parent.mkdir(parents=True, exist_ok=True)
         summary_path.write_text(
-            json.dumps(_json_ready(result), sort_keys=True, indent=2) + "\n",
+            json.dumps(json_ready(result), sort_keys=True, indent=2) + "\n",
             encoding="utf-8",
         )
         return ResearchWorkflowStepResult(
@@ -1499,7 +1487,7 @@ class ResearchWorkflowRunner:
         )
         summary_path.parent.mkdir(parents=True, exist_ok=True)
         summary_path.write_text(
-            json.dumps(_json_ready(summary_payload), sort_keys=True, indent=2) + "\n",
+            json.dumps(json_ready(summary_payload), sort_keys=True, indent=2) + "\n",
             encoding="utf-8",
         )
         outputs: dict[str, Any] = {
@@ -1553,7 +1541,7 @@ class ResearchWorkflowRunner:
         )
         summary_path.parent.mkdir(parents=True, exist_ok=True)
         summary_path.write_text(
-            json.dumps(_json_ready(summary_payload), sort_keys=True, indent=2) + "\n",
+            json.dumps(json_ready(summary_payload), sort_keys=True, indent=2) + "\n",
             encoding="utf-8",
         )
         outputs = {
@@ -1680,7 +1668,7 @@ class ResearchWorkflowRunner:
         output_dir = step.payload.get("output_dir")
         if output_dir is not None:
             kwargs["output_dir"] = config.resolve_path(str(output_dir))
-        materialized_cache_dir = self._materialized_replay_cache_dir(config, step.payload)
+        materialized_cache_dir = materialized_replay_cache_dir(config, step.payload)
         if materialized_cache_dir is not None:
             kwargs["materialized_replay_cache_dir"] = materialized_cache_dir
         result = session.run_backtest(**kwargs)
@@ -1731,7 +1719,7 @@ class ResearchWorkflowRunner:
         backtest_config = step.payload.get("backtest_config")
         if backtest_config is not None:
             kwargs["backtest_config_path"] = config.resolve_path(str(backtest_config))
-        materialized_cache_dir = self._materialized_replay_cache_dir(config, step.payload)
+        materialized_cache_dir = materialized_replay_cache_dir(config, step.payload)
         if materialized_cache_dir is not None:
             kwargs["materialized_replay_cache_dir"] = materialized_cache_dir
         rows = list(session.run_backtest_matrix(**kwargs))
@@ -1756,7 +1744,7 @@ class ResearchWorkflowRunner:
         )
         summary_path.parent.mkdir(parents=True, exist_ok=True)
         summary_path.write_text(
-            json.dumps(_json_ready(summary_payload), sort_keys=True, indent=2) + "\n",
+            json.dumps(json_ready(summary_payload), sort_keys=True, indent=2) + "\n",
             encoding="utf-8",
         )
         outputs: dict[str, Any] = {
@@ -1776,422 +1764,6 @@ class ResearchWorkflowRunner:
             message="backtest matrix completed",
             outputs=outputs,
         )
-
-    def _optimize(
-        self,
-        session: Any,
-        config: ResearchWorkflowConfig,
-        step: ResearchWorkflowStepConfig,
-    ) -> ResearchWorkflowStepResult:
-        parameters = required_mapping(step.payload, "parameters")
-        kwargs: dict[str, Any] = {
-            "parameters": {str(key): list(value) for key, value in parameters.items()},
-        }
-        objective_metric = step.payload.get("objective_metric")
-        if objective_metric is not None:
-            kwargs["objective_metric"] = str(objective_metric)
-        output_root = step.payload.get("output_root")
-        if output_root is not None:
-            kwargs["output_root"] = config.resolve_path(str(output_root))
-        materialized_cache_dir = self._materialized_replay_cache_dir(config, step.payload)
-        if materialized_cache_dir is not None:
-            kwargs["materialized_replay_cache_dir"] = materialized_cache_dir
-        results = session.optimize(**kwargs)
-        capital_metric_config = optional_mapping(step.payload.get("capital_metrics"))
-        constraints = self._validation_constraints(step.payload.get("validation"))
-        validation_summary = OptimizerValidationSummary.from_results(
-            results,
-            constraints,
-            capital_metric_config=capital_metric_config,
-        )
-        validation_policy = self._research_validation_policy(step.payload)
-        validation_output = step.payload.get("validation_output")
-        validation_output_path: Path | None = None
-        if validation_output is not None:
-            validation_output_path = config.resolve_path(str(validation_output))
-            OptimizerValidationSummaryWriter().write(validation_output_path, validation_summary)
-        walk_forward_payload = self._walk_forward_payload(step.payload.get("validation"))
-        walk_forward_summary_payload: dict[str, Any] | None = None
-        walk_forward_robustness_payload: dict[str, Any] | None = None
-        walk_forward_output_path: Path | None = None
-        failure_veto_payload = self._failure_window_veto_payload(step.payload.get("validation"))
-        failure_veto_summary_payload: dict[str, Any] | None = None
-        failure_veto_output_path: Path | None = None
-        failure_veto_blocked = False
-        if walk_forward_payload is not None:
-            plan = self._walk_forward_plan(walk_forward_payload)
-            top_n = int(walk_forward_payload.get("top_n", 1))
-            if top_n <= 0:
-                raise ValueError("validation.walk_forward.top_n must be positive")
-            walk_forward_output_root = walk_forward_payload.get("output_root")
-            walk_forward_summary = session.validate_optimizer_walk_forward(
-                candidate_parameters=tuple(dict(result.parameters) for result in results[:top_n]),
-                constraints=constraints,
-                capital_metric_config=capital_metric_config,
-                objective_metric=(None if objective_metric is None else str(objective_metric)),
-                output_root=(
-                    None
-                    if walk_forward_output_root is None
-                    else config.resolve_path(str(walk_forward_output_root))
-                ),
-                plan=plan,
-                materialized_replay_cache_dir=materialized_cache_dir,
-            )
-            walk_forward_summary_payload = walk_forward_summary.to_payload()
-            robustness_policy = self._walk_forward_robustness_policy(
-                walk_forward_payload.get("robustness")
-            )
-            if robustness_policy is not None:
-                walk_forward_robustness_payload = robustness_policy.evaluate(
-                    walk_forward_summary
-                ).to_payload()
-            raw_walk_forward_output = walk_forward_payload.get("summary_output")
-            if raw_walk_forward_output is not None:
-                walk_forward_output_path = config.resolve_path(str(raw_walk_forward_output))
-                output_payload = dict(walk_forward_summary_payload)
-                if walk_forward_robustness_payload is not None:
-                    output_payload["robustness"] = walk_forward_robustness_payload
-                walk_forward_output_path.parent.mkdir(parents=True, exist_ok=True)
-                walk_forward_output_path.write_text(
-                    json.dumps(
-                        _json_ready(output_payload),
-                        sort_keys=True,
-                        indent=2,
-                    )
-                    + "\n",
-                    encoding="utf-8",
-                )
-        if failure_veto_payload is not None:
-            top_n = int(failure_veto_payload.get("top_n", 1))
-            if top_n <= 0:
-                raise ValueError("validation.failure_window_veto.top_n must be positive")
-            require_passing_candidate = self._failure_veto_require_passing_candidate(
-                failure_veto_payload
-            )
-            failure_veto_output_root = failure_veto_payload.get("output_root")
-            failure_veto_summary = session.validate_optimizer_failure_window_veto(
-                candidate_parameters=tuple(dict(result.parameters) for result in results[:top_n]),
-                constraints=self._failure_veto_constraints(failure_veto_payload),
-                capital_metric_config=capital_metric_config,
-                objective_metric=(None if objective_metric is None else str(objective_metric)),
-                output_root=(
-                    None
-                    if failure_veto_output_root is None
-                    else config.resolve_path(str(failure_veto_output_root))
-                ),
-                windows=self._failure_windows(
-                    failure_veto_payload,
-                    field_name="windows",
-                    report_only=False,
-                ),
-                report_only_windows=self._failure_windows(
-                    failure_veto_payload,
-                    field_name="report_only_windows",
-                    report_only=True,
-                ),
-                materialized_replay_cache_dir=materialized_cache_dir,
-            )
-            failure_veto_summary_payload = failure_veto_summary.to_payload()
-            raw_failure_veto_output = failure_veto_payload.get("summary_output")
-            if raw_failure_veto_output is not None:
-                failure_veto_output_path = config.resolve_path(str(raw_failure_veto_output))
-                failure_veto_output_path.parent.mkdir(parents=True, exist_ok=True)
-                failure_veto_output_path.write_text(
-                    json.dumps(
-                        _json_ready(failure_veto_summary_payload),
-                        sort_keys=True,
-                        indent=2,
-                    )
-                    + "\n",
-                    encoding="utf-8",
-                )
-            decision = failure_veto_summary_payload.get("decision", {})
-            failure_veto_blocked = (
-                require_passing_candidate
-                and isinstance(decision, Mapping)
-                and decision.get("accepted") is False
-            )
-        validation_payload = optional_mapping(step.payload.get("validation")) or {}
-        validation_policy_payload = validation_policy.evaluate(
-            validation_summary,
-            walk_forward_present=walk_forward_summary_payload is not None,
-            failure_window_present=failure_veto_summary_payload is not None,
-            cost_stress_present=validation_payload.get("cost_stress") is not None,
-        )
-        ranked_results = []
-        for result in results:
-            ranked_result = {
-                "manifest_hash": result.manifest_hash,
-                "manifest_path": str(result.manifest_path),
-                "objective_value": str(result.objective_value),
-                "parameters": dict(result.parameters),
-            }
-            if capital_metric_config is not None:
-                ranked_result["capital_metrics"] = derive_capital_metrics(
-                    result,
-                    capital_metric_config,
-                )
-            ranked_results.append(ranked_result)
-        outputs: dict[str, Any] = {
-            "ranked_results": ranked_results,
-            "run_count": len(results),
-            "validation_output": (
-                None if validation_output_path is None else str(validation_output_path)
-            ),
-            "validation_summary": validation_summary.to_payload(),
-            "validation_policy": validation_policy_payload,
-            "validation_scorecard": self._validation_scorecard(
-                validation_policy_payload=validation_policy_payload,
-                validation=validation_payload,
-            ),
-        }
-        if walk_forward_summary_payload is not None:
-            outputs["walk_forward_validation"] = walk_forward_summary_payload
-            outputs["walk_forward_validation_output"] = (
-                None if walk_forward_output_path is None else str(walk_forward_output_path)
-            )
-            if walk_forward_robustness_payload is not None:
-                outputs["walk_forward_robustness"] = walk_forward_robustness_payload
-        if failure_veto_summary_payload is not None:
-            outputs["failure_window_veto"] = failure_veto_summary_payload
-            outputs["failure_window_veto_output"] = (
-                None if failure_veto_output_path is None else str(failure_veto_output_path)
-            )
-        validation_policy_blocked = bool(validation_policy_payload.get("blocked", False))
-        blocked = failure_veto_blocked or validation_policy_blocked
-        message = "optimization completed"
-        if failure_veto_blocked:
-            message = "failure-window veto blocked workflow"
-        elif validation_policy_blocked:
-            message = "optimizer validation policy blocked workflow"
-        return ResearchWorkflowStepResult(
-            step_id=step.step_id,
-            kind=step.kind,
-            status="blocked" if blocked else "passed",
-            message=message,
-            outputs=outputs,
-        )
-
-    def _research_validation_policy(
-        self, step_payload: Mapping[str, Any]
-    ) -> ResearchValidationPolicy:
-        raw_policy = optional_mapping(step_payload.get("validation_policy")) or {}
-        validation = optional_mapping(step_payload.get("validation")) or {}
-        raw_required = raw_policy.get(
-            "require_passing_candidate",
-            validation.get("require_passing_candidate", False),
-        )
-        if not isinstance(raw_required, bool):
-            raise ValueError("validation_policy.require_passing_candidate must be a boolean")
-        return ResearchValidationPolicy(
-            require_passing_candidate=raw_required,
-            min_accepted_count=optional_non_negative_int(
-                raw_policy.get("min_accepted_count"),
-                field_name="validation_policy.min_accepted_count",
-            ),
-            min_robustness_score=optional_decimal(
-                raw_policy.get("min_robustness_score"),
-                field_name="validation_policy.min_robustness_score",
-            ),
-            require_walk_forward=optional_bool(
-                raw_policy.get("require_walk_forward", False),
-                field_name="validation_policy.require_walk_forward",
-            ),
-            require_failure_window=optional_bool(
-                raw_policy.get("require_failure_window", False),
-                field_name="validation_policy.require_failure_window",
-            ),
-            require_cost_stress=optional_bool(
-                raw_policy.get("require_cost_stress", False),
-                field_name="validation_policy.require_cost_stress",
-            ),
-            max_rejected_count=optional_non_negative_int(
-                raw_policy.get("max_rejected_count"),
-                field_name="validation_policy.max_rejected_count",
-            ),
-        )
-
-    def _validation_scorecard(
-        self,
-        *,
-        validation_policy_payload: Mapping[str, Any],
-        validation: Any,
-    ) -> dict[str, Any]:
-        validation_payload = optional_mapping(validation) or {}
-        return {
-            "cost_stress_status": (
-                "configured"
-                if validation_payload.get("cost_stress") is not None
-                else "not_configured"
-            ),
-            "failure_window_status": (
-                "configured"
-                if validation_payload.get("failure_window_veto") is not None
-                else "not_configured"
-            ),
-            "rejection_reasons": list(validation_policy_payload.get("rejection_reasons", ())),
-            "validation_policy_missing_evidence": list(
-                validation_policy_payload.get("missing_evidence", ())
-            ),
-            "validation_policy_reasons": list(validation_policy_payload.get("reasons", ())),
-            "robustness_score": validation_policy_payload.get("robustness_score", "0"),
-            "walk_forward_status": (
-                "configured"
-                if validation_payload.get("walk_forward") is not None
-                else "not_configured"
-            ),
-        }
-
-    def _validation_constraints(self, value: Any) -> tuple[MetricConstraint, ...]:
-        validation = optional_mapping(value)
-        if validation is None:
-            return ()
-        raw_constraints = validation.get("constraints")
-        if raw_constraints is None:
-            return ()
-        return self._metric_constraints_from_sequence(
-            raw_constraints,
-            field_name="validation.constraints",
-        )
-
-    def _materialized_replay_cache_dir(
-        self,
-        config: ResearchWorkflowConfig,
-        payload: Mapping[str, Any],
-    ) -> Path | None:
-        value = payload.get("materialized_replay_cache")
-        if value is None or value is False:
-            return None
-        if isinstance(value, str):
-            if not value.strip():
-                raise ValueError("materialized_replay_cache must not be empty")
-            return config.resolve_path(value)
-        if isinstance(value, Mapping):
-            if not bool(value.get("enabled", False)):
-                return None
-            raw_cache_dir = value.get("cache_dir")
-            if not isinstance(raw_cache_dir, str) or not raw_cache_dir.strip():
-                raise ValueError("materialized_replay_cache.cache_dir is required")
-            return config.resolve_path(raw_cache_dir)
-        raise ValueError("materialized_replay_cache must be a path or mapping")
-
-    def _metric_constraints_from_sequence(
-        self,
-        value: Any,
-        *,
-        field_name: str,
-    ) -> tuple[MetricConstraint, ...]:
-        if not isinstance(value, list):
-            raise ValueError(f"{field_name} must be a list")
-        constraints: list[MetricConstraint] = []
-        for index, raw_constraint in enumerate(value):
-            if not isinstance(raw_constraint, Mapping):
-                raise ValueError(f"{field_name}[{index}] must be a mapping")
-            constraint = dict(raw_constraint)
-            constraints.append(
-                MetricConstraint(
-                    metric_name=str(constraint["metric"]),
-                    operator=str(constraint["operator"]),
-                    threshold=Decimal(str(constraint["threshold"])),
-                )
-            )
-        return tuple(constraints)
-
-    def _walk_forward_payload(self, value: Any) -> dict[str, Any] | None:
-        validation = optional_mapping(value)
-        if validation is None:
-            return None
-        raw_walk_forward = validation.get("walk_forward")
-        if raw_walk_forward is None:
-            return None
-        if not isinstance(raw_walk_forward, Mapping):
-            raise ValueError("validation.walk_forward must be a mapping")
-        return dict(raw_walk_forward)
-
-    def _failure_window_veto_payload(self, value: Any) -> dict[str, Any] | None:
-        validation = optional_mapping(value)
-        if validation is None:
-            return None
-        raw_veto = validation.get("failure_window_veto")
-        if raw_veto is None:
-            return None
-        if not isinstance(raw_veto, Mapping):
-            raise ValueError("validation.failure_window_veto must be a mapping")
-        return dict(raw_veto)
-
-    def _failure_veto_constraints(
-        self,
-        value: Mapping[str, Any],
-    ) -> tuple[MetricConstraint, ...]:
-        raw_constraints = value.get("constraints")
-        if raw_constraints is None or not isinstance(raw_constraints, list) or not raw_constraints:
-            raise ValueError("validation.failure_window_veto.constraints must be a non-empty list")
-        return self._metric_constraints_from_sequence(
-            raw_constraints,
-            field_name="validation.failure_window_veto.constraints",
-        )
-
-    @staticmethod
-    def _failure_veto_require_passing_candidate(value: Mapping[str, Any]) -> bool:
-        raw_value = value.get("require_passing_candidate", False)
-        if not isinstance(raw_value, bool):
-            raise ValueError(
-                "validation.failure_window_veto.require_passing_candidate must be a boolean"
-            )
-        return raw_value
-
-    def _failure_windows(
-        self,
-        value: Mapping[str, Any],
-        *,
-        field_name: str,
-        report_only: bool,
-    ) -> tuple[FailureWindow, ...]:
-        raw_windows = value.get(field_name)
-        if raw_windows is None:
-            if field_name == "windows":
-                raise ValueError("validation.failure_window_veto.windows must be a non-empty list")
-            return ()
-        if field_name == "windows" and (not isinstance(raw_windows, list) or not raw_windows):
-            raise ValueError("validation.failure_window_veto.windows must be a non-empty list")
-        if not isinstance(raw_windows, list):
-            raise ValueError(f"validation.failure_window_veto.{field_name} must be a list")
-        windows: list[FailureWindow] = []
-        for index, raw_window in enumerate(raw_windows):
-            if not isinstance(raw_window, Mapping):
-                raise ValueError(
-                    f"validation.failure_window_veto.{field_name}[{index}] must be a mapping"
-                )
-            window = dict(raw_window)
-            windows.append(
-                FailureWindow(
-                    name=str(window["name"]),
-                    start=iso_date(window["start"], "start"),
-                    end=iso_date(window["end"], "end"),
-                    report_only=report_only,
-                )
-            )
-        return tuple(windows)
-
-    def _walk_forward_plan(self, value: Mapping[str, Any]) -> WalkForwardPlan:
-        raw_splits = value.get("splits")
-        if not isinstance(raw_splits, list) or not raw_splits:
-            raise ValueError("validation.walk_forward.splits must be a non-empty list")
-        splits: list[WalkForwardSplit] = []
-        for index, raw_split in enumerate(raw_splits):
-            if not isinstance(raw_split, Mapping):
-                raise ValueError(f"validation.walk_forward.splits[{index}] must be a mapping")
-            split = dict(raw_split)
-            splits.append(
-                WalkForwardSplit(
-                    name=str(split["name"]),
-                    train_start=iso_date(split["train_start"], "train_start"),
-                    train_end=iso_date(split["train_end"], "train_end"),
-                    test_start=iso_date(split["test_start"], "test_start"),
-                    test_end=iso_date(split["test_end"], "test_end"),
-                )
-            )
-        return WalkForwardPlan(tuple(splits))
 
     def _matrix_periods(
         self,
@@ -2288,23 +1860,6 @@ class ResearchWorkflowRunner:
             raise ValueError(f"{field_name} must be filename-safe")
         return value
 
-    def _walk_forward_robustness_policy(
-        self,
-        value: Any,
-    ) -> WalkForwardRobustnessPolicy | None:
-        payload = optional_mapping(value)
-        if payload is None:
-            return None
-        phases = string_tuple(payload.get("phases", ["test"]))
-        return WalkForwardRobustnessPolicy(
-            phases=phases,
-            min_windows=optional_int(payload.get("min_windows")),
-            max_losing_windows=optional_int(payload.get("max_losing_windows")),
-            min_window_pnl_usd=optional_decimal(payload.get("min_window_pnl_usd")),
-            min_window_best_objective=optional_decimal(payload.get("min_window_best_objective")),
-            min_total_pnl_usd=optional_decimal(payload.get("min_total_pnl_usd")),
-        )
-
     @classmethod
     def _module_map(cls, value: Any) -> dict[str, tuple[str, ...]]:
         if value is None:
@@ -2393,25 +1948,6 @@ def _load_json_mapping(path: Path) -> dict[str, Any]:
     return payload
 
 
-def _json_ready(value: Any) -> Any:
-    if isinstance(value, Path):
-        return str(value)
-    if isinstance(value, Decimal):
-        return str(value)
-    if isinstance(value, datetime):
-        return value.isoformat()
-    if isinstance(value, date):
-        return value.isoformat()
-    to_payload = getattr(value, "to_payload", None)
-    if callable(to_payload):
-        return _json_ready(to_payload())
-    if isinstance(value, dict):
-        return {str(key): _json_ready(item) for key, item in value.items()}
-    if isinstance(value, list | tuple):
-        return [_json_ready(item) for item in value]
-    return value
-
-
 def _snapshot_protocol_payload(snapshot: Mapping[str, Any]) -> dict[str, Any]:
     fields = (
         "available_at",
@@ -2419,7 +1955,7 @@ def _snapshot_protocol_payload(snapshot: Mapping[str, Any]) -> dict[str, Any]:
         "forward_return_start",
         "source_data_end",
     )
-    return {field: _json_ready(snapshot[field]) for field in fields if field in snapshot}
+    return {field: json_ready(snapshot[field]) for field in fields if field in snapshot}
 
 
 def _path_text(value: Any) -> str:
