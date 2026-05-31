@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
 from qts.api.mappers import (
     map_kill_switch_state_dto,
@@ -23,8 +23,31 @@ from qts.application.dto import KillSwitchCommandDTO
 from qts.application.services import OperationsService
 
 router = APIRouter(prefix="/operations")
-_idempotency = CommandIdempotencyStore()
-_operations = OperationsService()
+
+
+def get_operations_service(request: Request) -> OperationsService:
+    """Resolve the request-scoped OperationsService from application state.
+
+    The service is bound in ``create_app`` (and overridable by tests via
+    ``app.state``); routes never reach for a module-global instance, so the
+    operational control plane can be wired to a real runtime at app construction.
+    """
+    service = getattr(request.app.state, "operations_service", None)
+    if not isinstance(service, OperationsService):
+        raise HTTPException(status_code=503, detail="operations service is not configured")
+    return service
+
+
+def get_command_idempotency(request: Request) -> CommandIdempotencyStore:
+    """Resolve the request-scoped command idempotency store from application state."""
+    store = getattr(request.app.state, "command_idempotency", None)
+    if not isinstance(store, CommandIdempotencyStore):
+        raise HTTPException(status_code=503, detail="command idempotency store is not configured")
+    return store
+
+
+OperationsServiceDep = Annotated[OperationsService, Depends(get_operations_service)]
+CommandIdempotencyDep = Annotated[CommandIdempotencyStore, Depends(get_command_idempotency)]
 
 
 def _require_operator(operator: str | None) -> None:
@@ -35,16 +58,19 @@ def _require_operator(operator: str | None) -> None:
 
 @router.get("/operator-status")
 def operator_status(
+    operations: OperationsServiceDep,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
 ) -> dict[str, object]:
     """Return application-owned operator dashboard status."""
 
     _require_operator(operator)
-    return map_operator_dashboard_status_dto(_operations.operator_status())
+    return map_operator_dashboard_status_dto(operations.operator_status())
 
 
 @router.post("/runtime/start", response_model=RuntimeCommandResponseSchema)
 def start_runtime(
+    operations: OperationsServiceDep,
+    idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
 ) -> RuntimeCommandResponseSchema:
@@ -55,7 +81,7 @@ def start_runtime(
     def command() -> RuntimeCommandResponseSchema:
         """Execute start command and return updated runtime state."""
         assert operator is not None
-        state = _operations.start_runtime(
+        state = operations.start_runtime(
             operator_id=operator.strip(),
             idempotency_key=idempotency_key,
         )
@@ -64,11 +90,13 @@ def start_runtime(
 
     if idempotency_key is None:
         return command()
-    return _idempotency.run(idempotency_key, command, scope="runtime.start")
+    return idempotency.run(idempotency_key, command, scope="runtime.start")
 
 
 @router.post("/runtime/stop", response_model=RuntimeCommandResponseSchema)
 def stop_runtime(
+    operations: OperationsServiceDep,
+    idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
 ) -> RuntimeCommandResponseSchema:
@@ -79,7 +107,7 @@ def stop_runtime(
     def command() -> RuntimeCommandResponseSchema:
         """Execute stop command and return updated runtime state."""
         assert operator is not None
-        state = _operations.stop_runtime(
+        state = operations.stop_runtime(
             operator_id=operator.strip(),
             idempotency_key=idempotency_key,
         )
@@ -88,11 +116,13 @@ def stop_runtime(
 
     if idempotency_key is None:
         return command()
-    return _idempotency.run(idempotency_key, command, scope="runtime.stop")
+    return idempotency.run(idempotency_key, command, scope="runtime.stop")
 
 
 @router.post("/runtime/pause", response_model=RuntimeCommandResponseSchema)
 def pause_runtime(
+    operations: OperationsServiceDep,
+    idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
 ) -> RuntimeCommandResponseSchema:
@@ -103,7 +133,7 @@ def pause_runtime(
     def command() -> RuntimeCommandResponseSchema:
         """Execute pause command and return updated runtime state."""
         assert operator is not None
-        state = _operations.pause_runtime(
+        state = operations.pause_runtime(
             operator_id=operator.strip(),
             idempotency_key=idempotency_key,
         )
@@ -112,11 +142,13 @@ def pause_runtime(
 
     if idempotency_key is None:
         return command()
-    return _idempotency.run(idempotency_key, command, scope="runtime.pause")
+    return idempotency.run(idempotency_key, command, scope="runtime.pause")
 
 
 @router.post("/runtime/resume", response_model=RuntimeCommandResponseSchema)
 def resume_runtime(
+    operations: OperationsServiceDep,
+    idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
 ) -> RuntimeCommandResponseSchema:
@@ -127,7 +159,7 @@ def resume_runtime(
     def command() -> RuntimeCommandResponseSchema:
         """Execute resume command and return updated runtime state."""
         assert operator is not None
-        state = _operations.resume_runtime(
+        state = operations.resume_runtime(
             operator_id=operator.strip(),
             idempotency_key=idempotency_key,
         )
@@ -136,11 +168,13 @@ def resume_runtime(
 
     if idempotency_key is None:
         return command()
-    return _idempotency.run(idempotency_key, command, scope="runtime.resume")
+    return idempotency.run(idempotency_key, command, scope="runtime.resume")
 
 
 @router.post("/runtime/enter-observation", response_model=RuntimeCommandResponseSchema)
 def enter_observation(
+    operations: OperationsServiceDep,
+    idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
 ) -> RuntimeCommandResponseSchema:
@@ -151,7 +185,7 @@ def enter_observation(
     def command() -> RuntimeCommandResponseSchema:
         """Execute enter-observation command and return updated runtime state."""
         assert operator is not None
-        state = _operations.enter_observation(
+        state = operations.enter_observation(
             operator_id=operator.strip(),
             idempotency_key=idempotency_key,
         )
@@ -160,11 +194,13 @@ def enter_observation(
 
     if idempotency_key is None:
         return command()
-    return _idempotency.run(idempotency_key, command, scope="runtime.enter_observation")
+    return idempotency.run(idempotency_key, command, scope="runtime.enter_observation")
 
 
 @router.post("/runtime/exit-observation", response_model=RuntimeCommandResponseSchema)
 def exit_observation(
+    operations: OperationsServiceDep,
+    idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
 ) -> RuntimeCommandResponseSchema:
@@ -175,7 +211,7 @@ def exit_observation(
     def command() -> RuntimeCommandResponseSchema:
         """Execute exit-observation command and return updated runtime state."""
         assert operator is not None
-        state = _operations.exit_observation(
+        state = operations.exit_observation(
             operator_id=operator.strip(),
             idempotency_key=idempotency_key,
         )
@@ -184,11 +220,13 @@ def exit_observation(
 
     if idempotency_key is None:
         return command()
-    return _idempotency.run(idempotency_key, command, scope="runtime.exit_observation")
+    return idempotency.run(idempotency_key, command, scope="runtime.exit_observation")
 
 
 @router.post("/runtime/reconcile", response_model=RuntimeCommandResultResponseSchema)
 def reconcile_runtime(
+    operations: OperationsServiceDep,
+    idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
 ) -> RuntimeCommandResultResponseSchema:
@@ -199,7 +237,7 @@ def reconcile_runtime(
     def command() -> RuntimeCommandResultResponseSchema:
         """Execute reconcile command and return audit evidence."""
         assert operator is not None
-        result = _operations.reconcile_runtime(
+        result = operations.reconcile_runtime(
             operator_id=operator.strip(),
             idempotency_key=idempotency_key,
         )
@@ -208,11 +246,13 @@ def reconcile_runtime(
 
     if idempotency_key is None:
         return command()
-    return _idempotency.run(idempotency_key, command, scope="runtime.reconcile")
+    return idempotency.run(idempotency_key, command, scope="runtime.reconcile")
 
 
 @router.post("/runtime/snapshot", response_model=RuntimeCommandResultResponseSchema)
 def snapshot_runtime(
+    operations: OperationsServiceDep,
+    idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
 ) -> RuntimeCommandResultResponseSchema:
@@ -223,7 +263,7 @@ def snapshot_runtime(
     def command() -> RuntimeCommandResultResponseSchema:
         """Execute snapshot command and return audit evidence."""
         assert operator is not None
-        result = _operations.snapshot_runtime(
+        result = operations.snapshot_runtime(
             operator_id=operator.strip(),
             idempotency_key=idempotency_key,
         )
@@ -232,12 +272,14 @@ def snapshot_runtime(
 
     if idempotency_key is None:
         return command()
-    return _idempotency.run(idempotency_key, command, scope="runtime.snapshot")
+    return idempotency.run(idempotency_key, command, scope="runtime.snapshot")
 
 
 @router.post("/kill-switches", response_model=KillSwitchResponseSchema)
 def activate_kill_switch(
     command: KillSwitchCommandSchema,
+    operations: OperationsServiceDep,
+    idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
 ) -> KillSwitchResponseSchema:
@@ -248,7 +290,7 @@ def activate_kill_switch(
 
     def runtime_command() -> KillSwitchResponseSchema:
         """Execute kill-switch command and return updated switch state."""
-        state = _operations.activate_kill_switch(
+        state = operations.activate_kill_switch(
             KillSwitchCommandDTO(
                 scope=command.scope.value,
                 scope_id=command.scope_id,
@@ -262,12 +304,14 @@ def activate_kill_switch(
 
     if idempotency_key is None:
         return runtime_command()
-    return _idempotency.run(idempotency_key, runtime_command, scope="runtime.kill_switch")
+    return idempotency.run(idempotency_key, runtime_command, scope="runtime.kill_switch")
 
 
 @router.post("/kill-switches/deactivate", response_model=KillSwitchResponseSchema)
 def deactivate_kill_switch(
     command: KillSwitchCommandSchema,
+    operations: OperationsServiceDep,
+    idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
 ) -> KillSwitchResponseSchema:
@@ -278,7 +322,7 @@ def deactivate_kill_switch(
 
     def runtime_command() -> KillSwitchResponseSchema:
         """Execute kill-switch deactivation and return updated switch state."""
-        state = _operations.deactivate_kill_switch(
+        state = operations.deactivate_kill_switch(
             KillSwitchCommandDTO(
                 scope=command.scope.value,
                 scope_id=command.scope_id,
@@ -293,11 +337,11 @@ def deactivate_kill_switch(
 
     if idempotency_key is None:
         return runtime_command()
-    return _idempotency.run(
+    return idempotency.run(
         idempotency_key,
         runtime_command,
         scope="runtime.kill_switch_deactivate",
     )
 
 
-__all__ = ["router"]
+__all__ = ["get_command_idempotency", "get_operations_service", "router"]

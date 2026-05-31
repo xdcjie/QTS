@@ -16,16 +16,29 @@ from qts.api.routes import (
     strategies_router,
 )
 from qts.api.security import ApiSecurityMiddleware
+from qts.api.services import CommandIdempotencyStore
 from qts.api.websocket import events_router
+from qts.application.services import OperationsService
 from qts.observability.metrics import MetricsRegistry
 from qts.observability.prometheus import PROMETHEUS_CONTENT_TYPE, render_prometheus_text
 
 
-def create_app(*, metrics: MetricsRegistry | None = None) -> FastAPI:
-    """Build the FastAPI app with CORS, security, metrics, and all routers."""
+def create_app(
+    *,
+    metrics: MetricsRegistry | None = None,
+    operations_service: OperationsService | None = None,
+) -> FastAPI:
+    """Build the FastAPI app with CORS, security, metrics, and all routers.
+
+    ``operations_service`` is bound to ``app.state`` so operator control-plane
+    routes resolve it through dependency injection rather than a module global;
+    production wiring passes a runtime-bound service, and tests may override it.
+    """
     app = FastAPI(title="Quant Trading System")
     metrics_registry: MetricsRegistry = metrics or MetricsRegistry()
     app.state.metrics = metrics_registry
+    app.state.operations_service = operations_service or OperationsService()
+    app.state.command_idempotency = CommandIdempotencyStore()
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[],

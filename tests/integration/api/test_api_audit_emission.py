@@ -16,7 +16,9 @@ from qts.api.routes import (
     strategies_router,
 )
 from qts.api.security import ApiSecurityMiddleware
+from qts.api.services import CommandIdempotencyStore
 from qts.api.websocket import events_router
+from qts.application.services import OperationsService
 from qts.observability.audit_sink import InMemoryAuditSink
 
 
@@ -46,6 +48,8 @@ def _app_with_sink(sink: InMemoryAuditSink) -> FastAPI:
     app.include_router(orders_router)
     app.include_router(operations_router)
     app.include_router(events_router)
+    app.state.operations_service = OperationsService()
+    app.state.command_idempotency = CommandIdempotencyStore()
     return app
 
 
