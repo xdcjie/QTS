@@ -9,12 +9,12 @@ from types import SimpleNamespace
 from typing import Any, Protocol, TypeAlias
 
 from qts.backtest.dependencies import BacktestActorLoopConfig, BacktestActorLoopDependencies
+from qts.backtest.signal_event_writer import BacktestSignalEventWriter
 from qts.core.ids import AccountId, CorrelationId, InstrumentId, StrategyId
 from qts.domain.market_data import Bar
 from qts.domain.orders import Order, OrderFill
 from qts.reporting.backtest import (
     EquityCurvePoint,
-    broker_capability_payload,
     is_broker_capability_reject,
 )
 from qts.runtime.actor_ref import ActorRef
@@ -203,6 +203,11 @@ class BacktestActorLoop:
         self._signal_priority = signal_priority
         self._signal_weight = Decimal(signal_weight)
         self._conflict_group = conflict_group
+        self._signal_event_writer = BacktestSignalEventWriter(
+            account_id=self._account_id,
+            execution_adapter=self._execution_adapter,
+            market_data_provenance_for=self._market_data_provenance_for,
+        )
 
     @staticmethod
     def _resolve_actor_classes() -> tuple[type, type]:
@@ -384,11 +389,13 @@ class BacktestActorLoop:
         for bar in state.market_data_flow.publish_bar(source_bar):
             state.last_bar = bar
             correlation_id = self.market_data_correlation_id(bar)
-            self.write_market_data_event(state, bar, correlation_id)
+            self._signal_event_writer.write_market_data_event(state, bar, correlation_id)
             self._update_rolling_prices(bar, latest_prices=state.latest_prices)
             self.flush_pending_fills(state, bar)
             strategy_result = self.execute_strategy_bar(state, bar, correlation_id)
-            self.write_strategy_signal_events(state, strategy_result, correlation_id)
+            self._signal_event_writer.write_strategy_signal_events(
+                state, strategy_result, correlation_id
+            )
             self.route_strategy_cancels(state, strategy_result)
             if state.event_index < self._warmup_bars:
                 self.process_warmup_phase(state, bar)
@@ -435,7 +442,7 @@ class BacktestActorLoop:
             correlation_id,
         )
         for batch in signal_batches:
-            self.write_signal_batch_events(state, batch, correlation_id)
+            self._signal_event_writer.write_signal_batch_events(state, batch, correlation_id)
         for batch in signal_batches:
             for intent in batch.intents:
                 if self._execution_timing.defers_to_next_bar:
@@ -467,29 +474,6 @@ class BacktestActorLoop:
         """Create the stable correlation id for one strategy-facing bar."""
         return CorrelationId(
             f"md:{bar.instrument_id.value}:{bar.timeframe}:{bar.end_time.isoformat()}"
-        )
-
-    def write_market_data_event(
-        self,
-        state: BacktestActorLoopState,
-        bar: Bar,
-        correlation_id: CorrelationId,
-    ) -> None:
-        """Update latest price state and emit the normalized market-data event."""
-        state.latest_prices[bar.instrument_id] = bar.close
-        market_data_payload: dict[str, object] = {
-            "instrument_id": bar.instrument_id.value,
-            "timeframe": bar.timeframe,
-            "end_time": bar.end_time.isoformat(),
-        }
-        market_data_payload.update(self._market_data_provenance_for(bar))
-        state.sink.write(
-            RuntimeEvent(
-                kind="runtime.market_data",
-                payload=market_data_payload,
-                correlation_id=correlation_id,
-                instrument_id=bar.instrument_id,
-            )
         )
 
     def execute_strategy_bar(
@@ -571,69 +555,6 @@ class BacktestActorLoop:
             raise RuntimeError("signal aggregator actor did not emit a batch")
         return tuple(batches)
 
-    def write_strategy_signal_events(
-        self,
-        state: BacktestActorLoopState,
-        strategy_result: BacktestStrategyBarExecution,
-        correlation_id: CorrelationId,
-    ) -> None:
-        """Emit raw strategy signal and intent events."""
-        for execution in strategy_result:
-            self.write_strategy_binding_signal_events(
-                state,
-                execution,
-                correlation_id,
-            )
-
-    def write_strategy_binding_signal_events(
-        self,
-        state: BacktestActorLoopState,
-        execution: BacktestStrategyExecution,
-        correlation_id: CorrelationId,
-    ) -> None:
-        """Emit raw strategy signal and intent events for one binding."""
-        binding, result = execution
-        for intent in result.raw_intents:
-            signal_payload = {
-                "instrument_id": intent.asset.instrument_id.value,
-                "intent_type": intent.intent_type.value,
-                "value": str(intent.value) if intent.value is not None else None,
-                "aggregation_policy": binding.signal_aggregation_policy.value,
-                "signal_weight": str(binding.signal_weight),
-                "signal_priority": binding.signal_priority,
-                "conflict_group": binding.conflict_group,
-                "order_spec": intent.order_spec.to_payload(),
-            }
-            intent_payload = {
-                "instrument_id": intent.asset.instrument_id.value,
-                "intent_type": intent.intent_type.value,
-                "value": str(intent.value) if intent.value is not None else None,
-                "order_spec": intent.order_spec.to_payload(),
-            }
-            if intent.metadata:
-                signal_payload["metadata"] = dict(intent.metadata)
-                intent_payload["metadata"] = dict(intent.metadata)
-            state.sink.write(
-                RuntimeEvent(
-                    kind="runtime.signal_received",
-                    payload=signal_payload,
-                    correlation_id=correlation_id,
-                    instrument_id=intent.asset.instrument_id,
-                    account_id=binding.account_id,
-                    strategy_id=binding.strategy_id,
-                )
-            )
-            state.sink.write(
-                RuntimeEvent(
-                    kind="runtime.strategy_intent",
-                    payload=intent_payload,
-                    correlation_id=correlation_id,
-                    instrument_id=intent.asset.instrument_id,
-                    account_id=binding.account_id,
-                    strategy_id=binding.strategy_id,
-                )
-            )
-
     def route_strategy_cancels(
         self,
         state: BacktestActorLoopState,
@@ -648,112 +569,6 @@ class BacktestActorLoop:
             if not result.cancel_intents:
                 continue
             router.route(result.cancel_intents)
-
-    def write_signal_batch_events(
-        self,
-        state: BacktestActorLoopState,
-        batch: Any,
-        correlation_id: CorrelationId,
-    ) -> None:
-        """Emit aggregation, conflict, and rejection events for a signal batch."""
-        state.sink.write(
-            RuntimeEvent(
-                kind="runtime.signal_aggregated",
-                payload={
-                    "aggregation_decision_id": batch.aggregation_decision_id,
-                    "aggregation_policy": batch.aggregation_policy.value,
-                    "contributing_strategy_ids": [
-                        strategy_id.value for strategy_id in batch.contributing_strategy_ids
-                    ],
-                    "conflict_group": batch.conflict_group,
-                    "intent_count": len(batch.intents),
-                    "target_before_risk": (
-                        str(batch.target_before_risk)
-                        if batch.target_before_risk is not None
-                        else None
-                    ),
-                    "target_after_aggregation": (
-                        str(batch.target_after_aggregation)
-                        if batch.target_after_aggregation is not None
-                        else None
-                    ),
-                },
-                correlation_id=correlation_id,
-                instrument_id=batch.instrument_id,
-                account_id=self._account_id,
-                strategy_id=(
-                    batch.contributing_strategy_ids[0]
-                    if len(batch.contributing_strategy_ids) == 1
-                    else None
-                ),
-            )
-        )
-        if batch.conflict_reason:
-            self.write_batch_conflict_events(state, batch, correlation_id)
-
-    def write_batch_conflict_events(
-        self,
-        state: BacktestActorLoopState,
-        batch: Any,
-        correlation_id: CorrelationId,
-    ) -> None:
-        """Emit conflict and rejection evidence for a rejected signal batch."""
-        state.sink.write(
-            RuntimeEvent(
-                kind="runtime.signal_conflict_detected",
-                payload={
-                    "conflict_reason": batch.conflict_reason,
-                    "aggregation_decision_id": batch.aggregation_decision_id,
-                    "rejected_strategy_ids": [
-                        strategy_id.value for strategy_id in batch.rejected_strategy_ids
-                    ],
-                    "conflicts": [
-                        {
-                            "instrument_key": conflict.instrument_key,
-                            "strategy_ids": [
-                                strategy_id.value for strategy_id in conflict.strategy_ids
-                            ],
-                            "reason": conflict.reason,
-                        }
-                        for conflict in batch.conflicts
-                    ],
-                    "conflict_group": batch.conflict_group,
-                    "aggregation_policy": batch.aggregation_policy.value,
-                },
-                correlation_id=correlation_id,
-                instrument_id=batch.instrument_id,
-                account_id=self._account_id,
-                strategy_id=None,
-            )
-        )
-        state.sink.write(
-            RuntimeEvent(
-                kind="runtime.signal_rejected",
-                payload={
-                    "conflict_reason": batch.conflict_reason,
-                    "aggregation_decision_id": batch.aggregation_decision_id,
-                    "rejected_strategy_ids": [
-                        strategy_id.value for strategy_id in batch.rejected_strategy_ids
-                    ],
-                    "conflict_group": batch.conflict_group,
-                    "aggregation_policy": batch.aggregation_policy.value,
-                    "target_before_risk": (
-                        str(batch.target_before_risk)
-                        if batch.target_before_risk is not None
-                        else None
-                    ),
-                    "target_after_aggregation": (
-                        str(batch.target_after_aggregation)
-                        if batch.target_after_aggregation is not None
-                        else None
-                    ),
-                },
-                correlation_id=correlation_id,
-                instrument_id=batch.instrument_id,
-                account_id=self._account_id,
-                strategy_id=None,
-            )
-        )
 
     def defer_strategy_intent(
         self,
@@ -814,7 +629,9 @@ class BacktestActorLoop:
         except ValueError as exc:
             if not is_broker_capability_reject(exc):
                 raise
-            self.write_broker_reject_event(state, intent, correlation_id, exc, strategy_id)
+            self._signal_event_writer.write_broker_reject_event(
+                state, intent, correlation_id, exc, strategy_id
+            )
             return
         order_payload = processed.orders
         fill_payload = processed.fills
@@ -860,30 +677,6 @@ class BacktestActorLoop:
             if binding.strategy_id == strategy_id:
                 binding.pipeline.deliver_fills(fills)
                 return
-
-    def write_broker_reject_event(
-        self,
-        state: BacktestActorLoopState,
-        intent: Any,
-        correlation_id: CorrelationId,
-        exc: ValueError,
-        strategy_id: StrategyId,
-    ) -> None:
-        """Emit a normalized broker capability rejection event."""
-        state.sink.write(
-            RuntimeEvent(
-                kind="runtime.broker_rejected",
-                payload={
-                    "reason_code": "unsupported_order_type",
-                    "reason": str(exc),
-                    "broker_capability_model": broker_capability_payload(self._execution_adapter),
-                },
-                correlation_id=correlation_id,
-                instrument_id=intent.asset.instrument_id,
-                account_id=self._account_id,
-                strategy_id=strategy_id,
-            )
-        )
 
     def write_equity_and_account_snapshot(
         self,

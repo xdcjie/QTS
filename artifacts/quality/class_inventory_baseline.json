@@ -1,5 +1,5 @@
 {
-  "production_class_count": 991,
+  "production_class_count": 992,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -91,6 +91,7 @@
     "qts.backtest.runner.BacktestRun",
     "qts.backtest.runtime_manifest.BacktestRuntimeTopologyManifestBuilder",
     "qts.backtest.runtime_manifest.ResolvedBacktestTopology",
+    "qts.backtest.signal_event_writer.BacktestSignalEventWriter",
     "qts.config.ibkr.IbkrConnectionConfig",
     "qts.config.ibkr.IbkrEnvironmentConfig",
     "qts.config.ibkr.IbkrOrderExecutionConfig",
