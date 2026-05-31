@@ -501,7 +501,7 @@ def test_guardrails_require_large_production_classes_in_boundary_matrix(
     assert "over 300 lines" in violations[0].message
 
 
-def test_guardrails_require_split_or_retain_evidence_for_very_large_classes(
+def test_guardrails_enforce_hard_500_line_class_budget(
     tmp_path: Path,
 ) -> None:
     root = tmp_path
@@ -516,26 +516,30 @@ def test_guardrails_require_split_or_retain_evidence_for_very_large_classes(
         )
         + "\n",
     )
+    # QTS-FINAL-011: the 500-line class budget is a HARD ceiling. Even a present
+    # matrix row with a Split-complete decision AND evidence does not exempt the class.
     _write(
         root,
         "docs/plan/backend_class_boundary_review_status_matrix.md",
         "# Backend Class Boundary Review Status Matrix\n\n"
         "| Class | Current lines | Owner | Risk | Decision | Target | Evidence | Status |\n"
         "| --- | ---: | --- | --- | --- | --- | --- | --- |\n"
-        "| LargeService | 522 | runtime | High | Review | "
-        "Split into lifecycle and routing owners |  | Open |\n",
+        "| LargeService | 522 | runtime | High | Split complete | "
+        "Split into lifecycle and routing owners | tests/unit/large_service_test.py | Complete |\n",
     )
 
     violations = run_guardrails(root)
 
     assert {violation.code for violation in violations} == {"CLASS_BOUNDARY_MATRIX"}
     assert violations[0].symbol == "qts.domain.large_service.LargeService"
-    assert "split/retain decision and evidence" in violations[0].message
+    assert "over the 500-line budget" in violations[0].message
 
 
-def test_guardrails_allow_large_classes_with_matrix_decision_and_evidence(
+def test_guardrails_allow_300_to_500_classes_with_matrix_row(
     tmp_path: Path,
 ) -> None:
+    # 300 < lines <= 500 classes are allowed when recorded in the boundary matrix
+    # (the hard budget only rejects >500); this keeps mid-size classes documented.
     root = tmp_path
     _write_platform_freeze_stub(root)
     _write(
@@ -544,7 +548,7 @@ def test_guardrails_allow_large_classes_with_matrix_decision_and_evidence(
         "class LargeService:\n"
         '    """Owns runtime test behavior for matrix coverage."""\n'
         + "\n".join(
-            f"    def method_{index}(self):\n        return {index}" for index in range(260)
+            f"    def method_{index}(self):\n        return {index}" for index in range(180)
         )
         + "\n",
     )
@@ -554,7 +558,7 @@ def test_guardrails_allow_large_classes_with_matrix_decision_and_evidence(
         "# Backend Class Boundary Review Status Matrix\n\n"
         "| Class | Current lines | Owner | Risk | Decision | Target | Evidence | Status |\n"
         "| --- | ---: | --- | --- | --- | --- | --- | --- |\n"
-        "| LargeService | 522 | runtime | High | Retain | Keep as facade pending split | "
+        "| LargeService | 362 | runtime | High | Retain | Keep as a cohesive owner | "
         "`tests/unit/scripts/test_verify_guardrails.py` | Complete |\n",
     )
 

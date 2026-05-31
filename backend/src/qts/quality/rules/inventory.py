@@ -326,25 +326,22 @@ def _class_boundary_matrix_violations(
                     symbol=class_entry.symbol,
                 )
             )
-        if line_count <= 500:
-            continue
-        decision = row.get("Decision", "").lower()
-        evidence = row.get("Evidence", "").strip()
-        if ("split" in decision or "retain" in decision) and evidence:
-            continue
-        violations.append(
-            GuardrailViolation(
-                code="CLASS_BOUNDARY_MATRIX",
-                path=str(BACKEND_CLASS_BOUNDARY_MATRIX_PATH),
-                line=1,
-                message=(
-                    f"production class {class_entry.name} is over 500 lines "
-                    f"({line_count}) and must have a split/retain decision "
-                    "and evidence"
-                ),
-                symbol=class_entry.symbol,
+        if line_count > 500:
+            # QTS-FINAL-011 closed every oversized research/runtime class; the 500-line
+            # class budget is now a HARD ceiling (no split/retain plan exception).
+            violations.append(
+                GuardrailViolation(
+                    code="CLASS_BOUNDARY_MATRIX",
+                    path=str(class_entry.relative_path),
+                    line=class_entry.line,
+                    message=(
+                        f"production class {class_entry.name} is over the 500-line budget "
+                        f"({line_count}); split it into cohesive owners — QTS-FINAL-011 "
+                        "enforces a hard 500-line class budget"
+                    ),
+                    symbol=class_entry.symbol,
+                )
             )
-        )
     return violations
 
 
