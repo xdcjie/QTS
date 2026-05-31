@@ -41,9 +41,12 @@ from qts.research.selector import (
     SelectionResult,
 )
 
-_ENGINE_SOURCE = Path("backend/src/qts/research/engine/autonomous_research_engine.py").read_text(
-    encoding="utf-8"
-)
+# QTS-FINAL-011 split AutonomousResearchEngine: the CandidateSelector(...).select(...)
+# generation step moved out of the engine facade into autonomous_engine_orchestration,
+# which the engine now delegates to. The static lock follows the call to its new owner.
+_ENGINE_SOURCE = Path(
+    "backend/src/qts/research/engine/autonomous_engine_orchestration.py"
+).read_text(encoding="utf-8")
 _BACKTEST_ENGINE_SOURCE = Path("backend/src/qts/backtest/engine.py").read_text(encoding="utf-8")
 # QTS-FINAL-002 moved the config->timing derivation out of BacktestEngine.from_config and
 # into BacktestEngineAssembler.runtime_config_inputs, which from_config now delegates to.

@@ -22,5 +22,15 @@ class TargetIntentEmitter:
         self._intents.append(intent)
         return intent
 
+    def drain(self) -> tuple[TargetIntent, ...]:
+        """Return the emitted target intents and clear the buffer.
+
+        Long-running live sessions must not retain emissions indefinitely; callers
+        drain per event instead of slicing an ever-growing buffer.
+        """
+        drained = tuple(self._intents)
+        self._intents.clear()
+        return drained
+
 
 __all__ = ["TargetIntentEmitter"]

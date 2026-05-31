@@ -69,6 +69,8 @@ class StrategyActor(Actor):
         self._timer_scheduler = TimerScheduler()
         for subscription in self._context.timer_subscriptions:
             self._timer_scheduler.register(subscription)
+        # Timer subscriptions are initialization-only; freeze them after initialize.
+        self._context.freeze_timers()
 
     def handle(self, message: object) -> None:
         """Dispatch bar, fill, and finalize messages to their handlers."""
@@ -88,16 +90,14 @@ class StrategyActor(Actor):
         self._context.data = message.data
         self._context.portfolio = message.portfolio
         self._context.indicator.update_from_bar(message.bar)
-        before_intents = len(self._context.intents)
-        before_cancels = len(self._context.cancel_intents)
         for timer in self._timer_scheduler.due(message.bar.end_time):
             self._strategy.on_timer(self._context, timer)
         self._strategy.on_bar(self._context, message.bar)
         self._result_ref.tell(
             StrategyBarResult(
                 bar=message.bar,
-                intents=self._context.intents[before_intents:],
-                cancel_intents=self._context.cancel_intents[before_cancels:],
+                intents=self._context.drain_intents(),
+                cancel_intents=self._context.drain_cancels(),
             )
         )
 
@@ -108,13 +108,11 @@ class StrategyActor(Actor):
 
     def _handle_finalize(self) -> None:
         """Run strategy finalize() and emit the resulting intents and cancel intents."""
-        before_intents = len(self._context.intents)
-        before_cancels = len(self._context.cancel_intents)
         self._strategy.finalize(self._context)
         self._result_ref.tell(
             StrategyFinalized(
-                intents=self._context.intents[before_intents:],
-                cancel_intents=self._context.cancel_intents[before_cancels:],
+                intents=self._context.drain_intents(),
+                cancel_intents=self._context.drain_cancels(),
             )
         )
 

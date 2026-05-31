@@ -1,5 +1,5 @@
 {
-  "production_class_count": 995,
+  "production_class_count": 1003,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -440,6 +440,7 @@
     "qts.quality.rules.snapshot.SnapshotCompletenessRule",
     "qts.quality.rules.stale.ProductionNoFakeClassRule",
     "qts.quality.rules.stale.StaleArchitectureTextRule",
+    "qts.quality.rules.strategy_context_boundary.StrategyContextStateBoundaryRule",
     "qts.quality.rules.transport.TransportAdapterImportRule",
     "qts.quality.rules.transport.TransportCanonicalPathRule",
     "qts.quality.rules.value_honesty.PromotionValueHonestyRule",
@@ -986,6 +987,13 @@
     "qts.strategy_sdk.signals.Signal",
     "qts.strategy_sdk.signals.SignalDirection",
     "qts.strategy_sdk.strategy.Strategy",
+    "qts.strategy_sdk.subcontexts.AssetContext",
+    "qts.strategy_sdk.subcontexts.PortfolioContext",
+    "qts.strategy_sdk.subcontexts.SignalContext",
+    "qts.strategy_sdk.subcontexts.SubscriptionContext",
+    "qts.strategy_sdk.subcontexts.TargetContext",
+    "qts.strategy_sdk.subcontexts.TimerContext",
+    "qts.strategy_sdk.subcontexts.UniverseContext",
     "qts.strategy_sdk.subscription_registry.DataSubscription",
     "qts.strategy_sdk.subscription_registry.StrategySubscriptionRegistry",
     "qts.strategy_sdk.target.TargetIntent",

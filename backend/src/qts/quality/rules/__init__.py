@@ -73,6 +73,7 @@ from qts.quality.rules.stale import (
     ProductionNoFakeClassRule,
     StaleArchitectureTextRule,
 )
+from qts.quality.rules.strategy_context_boundary import StrategyContextStateBoundaryRule
 from qts.quality.rules.transport import (
     TransportAdapterImportRule,
     TransportCanonicalPathRule,
@@ -134,6 +135,7 @@ __all__ = [
     "SingleFieldDtoJustificationRule",
     "SnapshotCompletenessRule",
     "StaleArchitectureTextRule",
+    "StrategyContextStateBoundaryRule",
     "StrategySdkPublicSurfaceRule",
     "TestSupportRule",
     "TradeDiagnosticsRequiredForPaperRule",
