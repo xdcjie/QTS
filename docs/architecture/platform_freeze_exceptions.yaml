@@ -669,6 +669,21 @@ exceptions:
     reason: QTS-FINAL-007 full ReplaceOrder lifecycle execution-boundary message
     owner: platform
     expiry: 2027-05-30
+  - class_name: RuntimeSessionRegistry
+    module: qts.runtime.control_plane
+    reason: QTS-FINAL-001 operator control-plane binding of live RuntimeSessions
+    owner: platform
+    expiry: 2027-05-30
+  - class_name: RuntimeCommandExecutor
+    module: qts.runtime.control_plane
+    reason: QTS-FINAL-001 executes operator commands against a bound RuntimeSession
+    owner: platform
+    expiry: 2027-05-30
+  - class_name: RuntimeSessionKey
+    module: qts.runtime.control_plane
+    reason: QTS-FINAL-001 identity key for registered RuntimeSessions
+    owner: platform
+    expiry: 2027-05-30
   - class_name: ExecutionActor
     module: qts.runtime.actors.execution_actor
     reason: baseline allowance

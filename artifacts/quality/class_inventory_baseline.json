@@ -1,5 +1,5 @@
 {
-  "production_class_count": 979,
+  "production_class_count": 982,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -845,6 +845,9 @@
     "qts.runtime.config.models.TradingRuntimeConfig",
     "qts.runtime.config.paper.PaperSimulatedRuntimeConfig",
     "qts.runtime.config_loader.BacktestConfigLoader",
+    "qts.runtime.control_plane.RuntimeCommandExecutor",
+    "qts.runtime.control_plane.RuntimeSessionKey",
+    "qts.runtime.control_plane.RuntimeSessionRegistry",
     "qts.runtime.dependencies.RuntimeSessionDependencies",
     "qts.runtime.durability.DurableEventStore",
     "qts.runtime.durability.RuntimeDurabilityDrill",
