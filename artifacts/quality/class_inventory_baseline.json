@@ -748,7 +748,7 @@
     "qts.research.workflow.ResearchWorkflowRunContext",
     "qts.research.workflow.ResearchWorkflowRunner",
     "qts.research.workflow.ResearchWorkflowStepConfig",
-    "qts.research.workflow.ResearchWorkflowStepResult",
+    "qts.research.workflow_support.ResearchWorkflowStepResult",
     "qts.risk.config.RiskConfig",
     "qts.risk.config.RiskRuleConfig",
     "qts.risk.config.RiskRuleName",
