@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import qts.research.engine.autonomous_engine_helpers as engine_helpers
 import qts.research.engine.autonomous_research_engine as engine_module
 from qts.research.audit_log import ResearchAuditLog
 from qts.research.engine.autonomous_research_engine import (
@@ -64,20 +65,17 @@ def test_engine_selector_applies_metrics_schema_before_promotion(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    original = engine_module.AutonomousResearchEngine._metrics_from_trial_result
+    original = engine_helpers._metrics_from_trial_result
 
-    def metrics_without_promotion_flag(
-        self: engine_module.AutonomousResearchEngine,
-        result: Any,
-    ) -> dict[str, Any]:
-        payload = dict(original(self, result))
+    def metrics_without_promotion_flag(result: Any) -> dict[str, Any]:
+        payload = dict(original(result))
         research = dict(payload["research"])
         research.pop("promotion_eligible")
         payload["research"] = research
         return payload
 
     monkeypatch.setattr(
-        engine_module.AutonomousResearchEngine,
+        engine_module,
         "_metrics_from_trial_result",
         metrics_without_promotion_flag,
     )

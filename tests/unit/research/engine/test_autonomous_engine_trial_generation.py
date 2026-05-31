@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import qts.research.engine.autonomous_engine_helpers as engine_helpers
+import qts.research.engine.autonomous_research_engine as engine_module
 import yaml  # type: ignore[import-untyped]
 from qts.backtest.pipeline import BacktestPipeline
 from qts.core.ids import InstrumentId
@@ -76,18 +78,17 @@ def test_backtest_data_materialization_mode_controls_truncation(tmp_path: Path) 
         ),
         encoding="utf-8",
     )
-    engine = AutonomousResearchEngine(repo_root=Path.cwd())
 
     fixture_target = tmp_path / "fixture.csv"
-    engine._materialize_backtest_csv(source, fixture_target, symbol="GC", max_rows=10)
+    engine_helpers._materialize_backtest_csv(source, fixture_target, symbol="GC", max_rows=10)
     assert len(fixture_target.read_text(encoding="utf-8").splitlines()) == 11
 
     full_target = tmp_path / "full.csv"
-    engine._materialize_backtest_csv(source, full_target, symbol="GC", max_rows=None)
+    engine_helpers._materialize_backtest_csv(source, full_target, symbol="GC", max_rows=None)
     assert len(full_target.read_text(encoding="utf-8").splitlines()) == 61
 
     window_target = tmp_path / "window.csv"
-    engine._materialize_backtest_csv(
+    engine_helpers._materialize_backtest_csv(
         source,
         window_target,
         symbol="GC",
@@ -110,7 +111,7 @@ def test_full_backtest_data_materialization_reuses_shared_csv(
     )
     engine = AutonomousResearchEngine(repo_root=Path.cwd())
     calls: list[Path] = []
-    original = engine._materialize_backtest_csv
+    original = engine_helpers._materialize_backtest_csv
 
     def counted_materialize(
         source_path: Path,
@@ -133,7 +134,8 @@ def test_full_backtest_data_materialization_reuses_shared_csv(
             contract_symbol_for=contract_symbol_for,
         )
 
-    monkeypatch.setattr(engine, "_materialize_backtest_csv", counted_materialize)
+    monkeypatch.setattr(engine_module, "_materialize_backtest_csv", counted_materialize)
+    monkeypatch.setattr(engine_helpers, "_materialize_backtest_csv", counted_materialize)
 
     _first_config, first_csv = engine._write_backtest_data_config(
         run=run,
