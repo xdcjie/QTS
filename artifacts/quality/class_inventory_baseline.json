@@ -1,5 +1,5 @@
 {
-  "production_class_count": 988,
+  "production_class_count": 989,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -516,6 +516,7 @@
     "qts.research.artifact_graph.ResearchArtifactNode",
     "qts.research.audit_log.ResearchAuditLog",
     "qts.research.audit_log.ResearchAuditRecord",
+    "qts.research.backtest_optimization_service.BacktestOptimizationService",
     "qts.research.campaign.config.ResearchCampaignBudget",
     "qts.research.campaign.config.ResearchCampaignConfig",
     "qts.research.campaign.config.ResearchCampaignConstraint",

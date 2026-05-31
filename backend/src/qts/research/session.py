@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
@@ -12,8 +11,8 @@ from typing import Any
 import yaml  # type: ignore[import-untyped]
 
 from qts.backtest.engine import BacktestStreamResult
-from qts.backtest.pipeline import BacktestPipeline
 from qts.core.ids import InstrumentId
+from qts.research.backtest_optimization_service import BacktestOptimizationService
 from qts.research.experiment_recorder import (
     ResearchExperimentRecorder,
     ResearchExperimentRecorderConfig,
@@ -35,16 +34,11 @@ from qts.research.factor_workbench_service import FactorWorkbenchService
 from qts.research.optimizer.constraints import OptimizationConstraint
 from qts.research.optimizer.failure_veto import (
     FailureWindow,
-    FailureWindowVetoJob,
-    FailureWindowVetoRunner,
     FailureWindowVetoSummary,
 )
-from qts.research.optimizer.parameter_space import ParameterGrid, ParameterSpace
-from qts.research.optimizer.pipeline import BacktestPipelineJob, BacktestPipelineRunner
+from qts.research.optimizer.parameter_space import ParameterGrid
 from qts.research.optimizer.result import OptimizationResult
 from qts.research.optimizer.walk_forward import (
-    BacktestWalkForwardValidationJob,
-    BacktestWalkForwardValidationRunner,
     WalkForwardPlan,
     WalkForwardValidationSummary,
 )
@@ -226,6 +220,11 @@ class ResearchSession:
             discovery_max_results=config.discovery_max_results,
         )
         self._experiment_runs = ExperimentRunService(store=self._store)
+        self._backtest_optimization = BacktestOptimizationService(
+            backtest_config_path=config.backtest_config_path,
+            output_root=config.output_root,
+            objective_metric=config.objective_metric,
+        )
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> ResearchSession:
@@ -283,14 +282,7 @@ class ResearchSession:
 
     def parameter_grid(self, parameters: Mapping[str, Sequence[Any]]) -> ParameterGrid:
         """Return a stable optimizer parameter grid from notebook inputs."""
-
-        spaces: list[ParameterSpace] = []
-        for name, values in parameters.items():
-            value_tuple = tuple(values)
-            if not value_tuple:
-                raise ValueError("parameter values must not be empty")
-            spaces.append(ParameterSpace(name=str(name), values=value_tuple))
-        return ParameterGrid(*spaces)
+        return self._backtest_optimization.parameter_grid(parameters)
 
     def run_backtest(
         self,
@@ -303,24 +295,13 @@ class ResearchSession:
         output_dir: Path | None = None,
     ) -> BacktestStreamResult:
         """Run one backtest through the shared ``BacktestPipeline``."""
-
-        if (start is None) != (end is None):
-            raise ValueError("start and end must be provided together")
-        pipeline = BacktestPipeline.from_yaml(
-            Path(backtest_config_path)
-            if backtest_config_path is not None
-            else self._config.backtest_config_path
-        )
-        if materialized_replay_cache_dir is not None:
-            pipeline = pipeline.with_materialized_replay_cache(materialized_replay_cache_dir)
-        if start is not None and end is not None:
-            pipeline = pipeline.with_date_range(start=start, end=end)
-        if strategy_params:
-            pipeline = pipeline.with_strategy_params(strategy_params)
-        engine, _bundle = pipeline.build_engine()
-        return engine.run_streaming(
-            output_dir or self._config.output_root / "single-run",
-            compact_events=True,
+        return self._backtest_optimization.run_backtest(
+            backtest_config_path=backtest_config_path,
+            end=end,
+            materialized_replay_cache_dir=materialized_replay_cache_dir,
+            start=start,
+            strategy_params=strategy_params,
+            output_dir=output_dir,
         )
 
     def run_backtest_matrix(
@@ -335,60 +316,15 @@ class ResearchSession:
         materialized_replay_cache_dir: Path | None = None,
     ) -> tuple[dict[str, Any], ...]:
         """Run a candidate/period backtest matrix through one cached pipeline."""
-
-        base_pipeline = BacktestPipeline.from_yaml(
-            Path(backtest_config_path)
-            if backtest_config_path is not None
-            else self._config.backtest_config_path
+        return self._backtest_optimization.run_backtest_matrix(
+            base_strategy_params=base_strategy_params,
+            candidates=candidates,
+            metrics=metrics,
+            output_root=output_root,
+            periods=periods,
+            backtest_config_path=backtest_config_path,
+            materialized_replay_cache_dir=materialized_replay_cache_dir,
         )
-        if materialized_replay_cache_dir is not None:
-            base_pipeline = base_pipeline.with_materialized_replay_cache(
-                materialized_replay_cache_dir
-            )
-        base_pipeline.catalog()
-        rows: list[dict[str, Any]] = []
-        for period in periods:
-            period_name = str(period["name"])
-            start = period["start"]
-            end = period["end"]
-            if not isinstance(start, datetime) or not isinstance(end, datetime):
-                raise TypeError("backtest matrix periods must contain datetime start/end")
-            period_pipeline = base_pipeline.with_date_range(start=start, end=end)
-            for candidate in candidates:
-                candidate_name = str(candidate["name"])
-                candidate_params = candidate.get("strategy_params", {})
-                if not isinstance(candidate_params, Mapping):
-                    raise TypeError("backtest matrix candidate strategy_params must be a mapping")
-                strategy_params = {**dict(base_strategy_params), **dict(candidate_params)}
-                run_pipeline = period_pipeline.with_strategy_params(strategy_params)
-                engine, _bundle = run_pipeline.build_engine()
-                result = engine.run_streaming(
-                    output_root / period_name / candidate_name,
-                    compact_events=True,
-                )
-                manifest_path = Path(result.manifest_path)
-                manifest_metrics = self._manifest_metrics(manifest_path)
-                row = {
-                    "candidate": candidate_name,
-                    "manifest_path": str(manifest_path),
-                    "period": period_name,
-                    "processed_bars": result.processed_bars,
-                    "strategy_params": strategy_params,
-                    "trading_bars": result.trading_bars,
-                }
-                row.update({metric: manifest_metrics.get(metric) for metric in metrics})
-                rows.append(row)
-        return tuple(rows)
-
-    @staticmethod
-    def _manifest_metrics(manifest_path: Path) -> dict[str, str]:
-        if not manifest_path.exists():
-            return {}
-        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-        metrics = payload.get("metrics", {})
-        if not isinstance(metrics, Mapping):
-            return {}
-        return {str(key): str(value) for key, value in metrics.items()}
 
     def optimize(
         self,
@@ -399,15 +335,11 @@ class ResearchSession:
         materialized_replay_cache_dir: Path | None = None,
     ) -> tuple[OptimizationResult, ...]:
         """Run a parameter sweep through ``BacktestPipelineRunner``."""
-
-        return BacktestPipelineRunner().run(
-            BacktestPipelineJob(
-                base_config_path=self._config.backtest_config_path,
-                parameter_grid=self.parameter_grid(parameters),
-                output_root=output_root or self._config.output_root / "optimizer",
-                objective_metric=objective_metric or self._config.objective_metric,
-                materialized_replay_cache_dir=materialized_replay_cache_dir,
-            )
+        return self._backtest_optimization.optimize(
+            parameters=parameters,
+            objective_metric=objective_metric,
+            output_root=output_root,
+            materialized_replay_cache_dir=materialized_replay_cache_dir,
         )
 
     def validate_optimizer_walk_forward(
@@ -422,22 +354,14 @@ class ResearchSession:
         materialized_replay_cache_dir: Path | None = None,
     ) -> WalkForwardValidationSummary:
         """Rerun selected optimizer candidates across walk-forward windows."""
-        results = BacktestWalkForwardValidationRunner().run(
-            BacktestWalkForwardValidationJob(
-                base_config_path=self._config.backtest_config_path,
-                candidate_parameters=tuple(dict(parameters) for parameters in candidate_parameters),
-                objective_metric=objective_metric or self._config.objective_metric,
-                output_root=output_root or self._config.output_root / "walk-forward",
-                plan=plan,
-                materialized_replay_cache_dir=materialized_replay_cache_dir,
-            )
-        )
-        return WalkForwardValidationSummary.from_results(
-            results,
+        return self._backtest_optimization.validate_optimizer_walk_forward(
+            candidate_parameters=candidate_parameters,
+            plan=plan,
             constraints=constraints,
-            capital_metric_config=(
-                None if capital_metric_config is None else dict(capital_metric_config)
-            ),
+            capital_metric_config=capital_metric_config,
+            objective_metric=objective_metric,
+            output_root=output_root,
+            materialized_replay_cache_dir=materialized_replay_cache_dir,
         )
 
     def validate_optimizer_failure_window_veto(
@@ -453,23 +377,15 @@ class ResearchSession:
         materialized_replay_cache_dir: Path | None = None,
     ) -> FailureWindowVetoSummary:
         """Rerun selected optimizer candidates across failure-veto windows."""
-        results = FailureWindowVetoRunner().run(
-            FailureWindowVetoJob(
-                base_config_path=self._config.backtest_config_path,
-                candidate_parameters=tuple(dict(parameters) for parameters in candidate_parameters),
-                objective_metric=objective_metric or self._config.objective_metric,
-                output_root=output_root or self._config.output_root / "failure-veto",
-                windows=tuple(windows),
-                report_only_windows=tuple(report_only_windows),
-                materialized_replay_cache_dir=materialized_replay_cache_dir,
-            )
-        )
-        return FailureWindowVetoSummary.from_results(
-            results,
+        return self._backtest_optimization.validate_optimizer_failure_window_veto(
+            candidate_parameters=candidate_parameters,
+            windows=windows,
+            report_only_windows=report_only_windows,
             constraints=constraints,
-            capital_metric_config=(
-                None if capital_metric_config is None else dict(capital_metric_config)
-            ),
+            capital_metric_config=capital_metric_config,
+            objective_metric=objective_metric,
+            output_root=output_root,
+            materialized_replay_cache_dir=materialized_replay_cache_dir,
         )
 
     def record_manifest(

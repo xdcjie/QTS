@@ -188,7 +188,7 @@ def test_research_session_run_backtest_uses_override_config_path(
             calls.append({"build_engine": self._path})
             return FakeEngine(), object()
 
-    monkeypatch.setattr("qts.research.session.BacktestPipeline", FakePipeline)
+    monkeypatch.setattr("qts.research.backtest_optimization_service.BacktestPipeline", FakePipeline)
 
     session.run_backtest(
         backtest_config_path=override_config,
@@ -231,7 +231,7 @@ def test_research_session_run_backtest_delegates_date_range(
             calls.append({"build_engine": True})
             return FakeEngine(), object()
 
-    monkeypatch.setattr("qts.research.session.BacktestPipeline", FakePipeline)
+    monkeypatch.setattr("qts.research.backtest_optimization_service.BacktestPipeline", FakePipeline)
     start = datetime(2022, 1, 1, tzinfo=UTC)
     end = datetime(2025, 1, 1, tzinfo=UTC)
 
@@ -297,7 +297,9 @@ def test_research_session_delegates_walk_forward_validation_to_backtest_runner(
                 ),
             )
 
-    monkeypatch.setattr("qts.research.session.BacktestWalkForwardValidationRunner", FakeRunner)
+    monkeypatch.setattr(
+        "qts.research.backtest_optimization_service.BacktestWalkForwardValidationRunner", FakeRunner
+    )
     plan = WalkForwardPlan(
         (
             WalkForwardSplit(
@@ -349,7 +351,9 @@ def test_research_session_passes_materialized_replay_cache_to_optimizer_runner(
             )
             return ()
 
-    monkeypatch.setattr("qts.research.session.BacktestPipelineRunner", FakeRunner)
+    monkeypatch.setattr(
+        "qts.research.backtest_optimization_service.BacktestPipelineRunner", FakeRunner
+    )
 
     session.optimize(
         parameters={"quantity": ["1"]},
@@ -413,8 +417,12 @@ def test_research_session_delegates_failure_window_veto_to_backtest_runner(
         def to_payload(self) -> dict[str, object]:
             return {"decision": {"accepted": True, "reasons": ()}}
 
-    monkeypatch.setattr("qts.research.session.FailureWindowVetoRunner", FakeRunner)
-    monkeypatch.setattr("qts.research.session.FailureWindowVetoSummary", FakeSummary)
+    monkeypatch.setattr(
+        "qts.research.backtest_optimization_service.FailureWindowVetoRunner", FakeRunner
+    )
+    monkeypatch.setattr(
+        "qts.research.backtest_optimization_service.FailureWindowVetoSummary", FakeSummary
+    )
     window = FailureWindow("failure-2024", date(2024, 1, 1), date(2025, 1, 1))
     report_window = FailureWindow(
         "report-2025-2026",
