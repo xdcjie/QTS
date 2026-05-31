@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import importlib
 import json
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +18,7 @@ from qts.research.experiment_recorder import (
     ResearchExperimentRecorder,
     ResearchExperimentRecorderConfig,
 )
+from qts.research.experiment_run_service import ExperimentRunService
 from qts.research.experiment_store import ExperimentStore, ExperimentStoreRecord
 from qts.research.factor_candidate import FactorCandidateBatch
 from qts.research.factor_discovery import (
@@ -226,6 +225,7 @@ class ResearchSession:
             discovery_sources=config.discovery_sources,
             discovery_max_results=config.discovery_max_results,
         )
+        self._experiment_runs = ExperimentRunService(store=self._store)
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> ResearchSession:
@@ -480,47 +480,22 @@ class ResearchSession:
     ) -> ExperimentStoreRecord:
         """Record a completed experiment manifest in the session store."""
 
-        return self._store.record_manifest(manifest_path, recorded_at=recorded_at)
+        return self._experiment_runs.record_manifest(manifest_path, recorded_at=recorded_at)
 
     def list_runs(self, *, limit: int | None = None) -> tuple[ExperimentStoreRecord, ...]:
         """Return indexed experiment records, newest first."""
 
-        return self._store.list_runs(limit=limit)
+        return self._experiment_runs.list_runs(limit=limit)
 
     def compare_runs(self, metric: str) -> tuple[ExperimentStoreRecord, ...]:
         """Return records sorted descending by a Decimal-parseable metric."""
 
-        scored: list[tuple[Decimal, ExperimentStoreRecord]] = []
-        for record in self._store.list_runs():
-            raw_metric = record.metrics.get(metric)
-            if raw_metric is None:
-                continue
-            try:
-                scored.append((Decimal(str(raw_metric)), record))
-            except (InvalidOperation, ValueError):
-                continue
-        return tuple(
-            record for _score, record in sorted(scored, key=lambda item: item[0], reverse=True)
-        )
+        return self._experiment_runs.compare_runs(metric)
 
     def compare_frame(self, metric: str) -> Any:
         """Return a pandas DataFrame comparing stored experiment runs."""
 
-        pandas_module: Any = importlib.import_module("pandas")
-        return pandas_module.DataFrame(
-            [
-                {
-                    "experiment_id": record.experiment_id,
-                    "manifest_path": str(record.manifest_path),
-                    "metric": metric,
-                    "metric_value": Decimal(str(record.metrics[metric])),
-                    "recorded_at": record.recorded_at,
-                    "strategy_name": record.strategy_name,
-                    "strategy_version": record.strategy_version,
-                }
-                for record in self.compare_runs(metric)
-            ]
-        )
+        return self._experiment_runs.compare_frame(metric)
 
     def discover_factors(
         self,

@@ -1,5 +1,5 @@
 {
-  "production_class_count": 987,
+  "production_class_count": 988,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -542,6 +542,7 @@
     "qts.research.experiment_manifest.ExperimentManifestWriter",
     "qts.research.experiment_recorder.ResearchExperimentRecorder",
     "qts.research.experiment_recorder.ResearchExperimentRecorderConfig",
+    "qts.research.experiment_run_service.ExperimentRunService",
     "qts.research.experiment_store.ExperimentStore",
     "qts.research.experiment_store.ExperimentStoreRecord",
     "qts.research.factor_candidate.FactorCandidate",
