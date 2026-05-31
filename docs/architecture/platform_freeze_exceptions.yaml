@@ -2144,3 +2144,8 @@ exceptions:
     reason: Actor runtime hardening requires a minimal supervisor that registers actors, records failures, and marks failed paths for observability
     owner: platform
     expiry: 2027-05-29
+  - class_name: RuntimeSignalEventWriter
+    module: qts.runtime.signal_event_writer
+    reason: writes strategy-signal/conflict/aggregation evidence events split out of RuntimeMarketDataCoordinator to bring it under the 500-line boundary (QTS-FINAL-011)
+    owner: platform
+    expiry: 2027-05-30

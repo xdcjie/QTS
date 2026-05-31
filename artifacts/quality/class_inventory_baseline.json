@@ -1,5 +1,5 @@
 {
-  "production_class_count": 990,
+  "production_class_count": 991,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -917,6 +917,7 @@
     "qts.runtime.session.RuntimeRollbackEvidence",
     "qts.runtime.session.RuntimeSession",
     "qts.runtime.session.RuntimeSessionResult",
+    "qts.runtime.signal_event_writer.RuntimeSignalEventWriter",
     "qts.runtime.signal_policy.SignalAggregationDecision",
     "qts.runtime.signal_policy.SignalAggregationPolicy",
     "qts.runtime.signal_policy.SignalConflict",
