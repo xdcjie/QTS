@@ -8,7 +8,7 @@ import json
 import subprocess
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -16,6 +16,21 @@ from typing import Any
 import yaml  # type: ignore[import-untyped]
 
 from qts.research.ablation import AblationPlan, AblationReport, AblationReportWriter, AblationRun
+from qts.research.coercion import (
+    float_mapping,
+    iso_date,
+    iso_datetime,
+    nested_float_mapping,
+    optional_bool,
+    optional_decimal,
+    optional_float,
+    optional_int,
+    optional_mapping,
+    optional_non_negative_int,
+    optional_string_tuple,
+    required_mapping,
+    string_tuple,
+)
 from qts.research.idea_registry import IdeaRegistry
 from qts.research.idea_spec import IdeaSpec
 from qts.research.optimizer import (
@@ -368,9 +383,9 @@ def _periods_from_payload(value: Any) -> tuple[dict[str, Any], ...]:
             raise ValueError("period name must be filename-safe")
         if not isinstance(raw_period, Mapping):
             raise ValueError(f"research workflow periods.{name} must be a mapping")
-        start = ResearchWorkflowRunner._iso_datetime(raw_period.get("start"), "start")
+        start = iso_datetime(raw_period.get("start"), "start")
         raw_end = raw_period.get("end")
-        end = None if raw_end is None else ResearchWorkflowRunner._iso_datetime(raw_end, "end")
+        end = None if raw_end is None else iso_datetime(raw_end, "end")
         if end is not None and start >= end:
             raise ValueError(f"period {name} start must be before end")
         if previous_period is not None:
@@ -603,8 +618,8 @@ def _reject_report_only_window_overlaps(
             raise ValueError(f"{field_name}[{index}] must be a mapping")
         if "start" not in item or "end" not in item:
             continue
-        window_start = ResearchWorkflowRunner._iso_datetime(item["start"], "start")
-        window_end = ResearchWorkflowRunner._iso_datetime(item["end"], "end")
+        window_start = iso_datetime(item["start"], "start")
+        window_end = iso_datetime(item["end"], "end")
         if window_start >= window_end:
             raise ValueError(f"{field_name}[{index}] start must be before end")
         _reject_interval_report_only_overlaps(
@@ -629,8 +644,8 @@ def _reject_report_only_walk_forward_overlaps(
     for index, item in enumerate(value):
         if not isinstance(item, Mapping):
             raise ValueError(f"{field_name}[{index}] must be a mapping")
-        train_start = ResearchWorkflowRunner._iso_datetime(item.get("train_start"), "train_start")
-        train_end = ResearchWorkflowRunner._iso_datetime(item.get("train_end"), "train_end")
+        train_start = iso_datetime(item.get("train_start"), "train_start")
+        train_end = iso_datetime(item.get("train_end"), "train_end")
         if train_start >= train_end:
             raise ValueError(f"{field_name}[{index}] train_start must be before train_end")
         _reject_interval_report_only_overlaps(
@@ -639,8 +654,8 @@ def _reject_report_only_walk_forward_overlaps(
             periods=report_only_periods,
             field_name=field_name,
         )
-        test_start = ResearchWorkflowRunner._iso_datetime(item.get("test_start"), "test_start")
-        test_end = ResearchWorkflowRunner._iso_datetime(item.get("test_end"), "test_end")
+        test_start = iso_datetime(item.get("test_start"), "test_start")
+        test_end = iso_datetime(item.get("test_end"), "test_end")
         if test_start >= test_end:
             raise ValueError(f"{field_name}[{index}] test_start must be before test_end")
         _reject_interval_report_only_overlaps(
@@ -692,8 +707,8 @@ def _validate_backtest_matrix_period_roles(
             continue
         if "start" not in item or "end" not in item:
             continue
-        inline_start = ResearchWorkflowRunner._iso_datetime(item["start"], "start")
-        inline_end = ResearchWorkflowRunner._iso_datetime(item["end"], "end")
+        inline_start = iso_datetime(item["start"], "start")
+        inline_end = iso_datetime(item["end"], "end")
         if inline_start >= inline_end:
             raise ValueError(f"{field_name}[{index}] start must be before end")
         _reject_interval_report_only_overlaps(
@@ -726,8 +741,8 @@ def _validate_named_inline_period_bounds(
 ) -> None:
     if "start" not in value or "end" not in value:
         return
-    inline_start = ResearchWorkflowRunner._iso_datetime(value["start"], "start")
-    inline_end = ResearchWorkflowRunner._iso_datetime(value["end"], "end")
+    inline_start = iso_datetime(value["start"], "start")
+    inline_end = iso_datetime(value["end"], "end")
     if inline_start >= inline_end:
         raise ValueError(f"{field_name} period {declared_period['name']} start must be before end")
     declared_start = declared_period["start"]
@@ -1139,10 +1154,10 @@ class ResearchWorkflowRunner:
         query = _required_text(step.payload, "query")
         batch = session.find_factor_candidates(
             query,
-            sources=self._optional_string_tuple(step.payload.get("sources")),
-            max_results=self._optional_int(step.payload.get("max_results")),
-            from_year=self._optional_int(step.payload.get("from_year")),
-            to_year=self._optional_int(step.payload.get("to_year")),
+            sources=optional_string_tuple(step.payload.get("sources")),
+            max_results=optional_int(step.payload.get("max_results")),
+            from_year=optional_int(step.payload.get("from_year")),
+            to_year=optional_int(step.payload.get("to_year")),
             refresh=bool(step.payload.get("refresh", False)),
         )
         specs = tuple(getattr(batch, "specs", ()))
@@ -1186,7 +1201,7 @@ class ResearchWorkflowRunner:
         )
 
     def _implementation_gate(self, step: ResearchWorkflowStepConfig) -> ResearchWorkflowStepResult:
-        required_modules = self._string_tuple(step.payload.get("required_modules", ()))
+        required_modules = string_tuple(step.payload.get("required_modules", ()))
         required_strategy = step.payload.get("required_strategy")
         missing_modules = [module for module in required_modules if not self._can_import(module)]
         missing_strategies: list[str] = []
@@ -1275,7 +1290,7 @@ class ResearchWorkflowRunner:
         step: ResearchWorkflowStepConfig,
     ) -> ResearchWorkflowStepResult:
         baseline = _required_text(step.payload, "baseline")
-        modules = self._string_tuple(step.payload.get("modules", ()))
+        modules = string_tuple(step.payload.get("modules", ()))
         primary_metric = _required_text(step.payload, "primary_metric")
         higher_is_better = step.payload.get("higher_is_better", True)
         if not isinstance(higher_is_better, bool):
@@ -1457,7 +1472,7 @@ class ResearchWorkflowRunner:
         step: ResearchWorkflowStepConfig,
     ) -> ResearchWorkflowStepResult:
         payload = dict(step.payload)
-        scan_periods = self._string_tuple(payload.get("periods"))
+        scan_periods = string_tuple(payload.get("periods"))
         period_roles = config.period_roles_for(scan_periods)
         if period_roles:
             payload["period_roles"] = period_roles
@@ -1511,7 +1526,7 @@ class ResearchWorkflowRunner:
         step: ResearchWorkflowStepConfig,
     ) -> ResearchWorkflowStepResult:
         payload = dict(step.payload)
-        scan_periods = self._string_tuple(payload.get("periods"))
+        scan_periods = string_tuple(payload.get("periods"))
         period_roles = config.period_roles_for(scan_periods)
         if period_roles:
             payload["period_roles"] = period_roles
@@ -1618,7 +1633,7 @@ class ResearchWorkflowRunner:
             step.payload.get("artifacts", ()),
         )
         artifact_paths = tuple(
-            config.resolve_path(path) for path in self._string_tuple(raw_artifact_paths)
+            config.resolve_path(path) for path in string_tuple(raw_artifact_paths)
         )
         if not artifact_paths:
             raise ValueError("factor_tearsheet requires artifact_paths")
@@ -1636,7 +1651,7 @@ class ResearchWorkflowRunner:
                 experiment_id=str(experiment_id),
                 strategy_name=str(step.payload.get("strategy_name", "factor-tearsheet")),
                 strategy_version=str(step.payload.get("strategy_version", "1")),
-                dataset_ids=self._string_tuple(step.payload.get("dataset_ids", ())),
+                dataset_ids=string_tuple(step.payload.get("dataset_ids", ())),
             )
             outputs = {
                 "experiment_id": record.experiment_id,
@@ -1657,7 +1672,7 @@ class ResearchWorkflowRunner:
         config: ResearchWorkflowConfig,
         step: ResearchWorkflowStepConfig,
     ) -> ResearchWorkflowStepResult:
-        strategy_params = self._optional_mapping(step.payload.get("strategy_params")) or {}
+        strategy_params = optional_mapping(step.payload.get("strategy_params")) or {}
         kwargs: dict[str, Any] = {"strategy_params": strategy_params}
         backtest_config = step.payload.get("backtest_config")
         if backtest_config is not None:
@@ -1693,10 +1708,8 @@ class ResearchWorkflowRunner:
         selection_basis = self._selection_basis(period_payloads)
         report_only_periods = self._report_only_period_names(period_payloads)
         candidates = self._matrix_candidates(step.payload.get("candidates"))
-        base_strategy_params = (
-            self._optional_mapping(step.payload.get("base_strategy_params")) or {}
-        )
-        metrics = self._string_tuple(
+        base_strategy_params = optional_mapping(step.payload.get("base_strategy_params")) or {}
+        metrics = string_tuple(
             step.payload.get(
                 "metrics",
                 [
@@ -1770,7 +1783,7 @@ class ResearchWorkflowRunner:
         config: ResearchWorkflowConfig,
         step: ResearchWorkflowStepConfig,
     ) -> ResearchWorkflowStepResult:
-        parameters = self._required_mapping(step.payload, "parameters")
+        parameters = required_mapping(step.payload, "parameters")
         kwargs: dict[str, Any] = {
             "parameters": {str(key): list(value) for key, value in parameters.items()},
         }
@@ -1784,7 +1797,7 @@ class ResearchWorkflowRunner:
         if materialized_cache_dir is not None:
             kwargs["materialized_replay_cache_dir"] = materialized_cache_dir
         results = session.optimize(**kwargs)
-        capital_metric_config = self._optional_mapping(step.payload.get("capital_metrics"))
+        capital_metric_config = optional_mapping(step.payload.get("capital_metrics"))
         constraints = self._validation_constraints(step.payload.get("validation"))
         validation_summary = OptimizerValidationSummary.from_results(
             results,
@@ -1898,7 +1911,7 @@ class ResearchWorkflowRunner:
                 and isinstance(decision, Mapping)
                 and decision.get("accepted") is False
             )
-        validation_payload = self._optional_mapping(step.payload.get("validation")) or {}
+        validation_payload = optional_mapping(step.payload.get("validation")) or {}
         validation_policy_payload = validation_policy.evaluate(
             validation_summary,
             walk_forward_present=walk_forward_summary_payload is not None,
@@ -1962,8 +1975,8 @@ class ResearchWorkflowRunner:
     def _research_validation_policy(
         self, step_payload: Mapping[str, Any]
     ) -> ResearchValidationPolicy:
-        raw_policy = self._optional_mapping(step_payload.get("validation_policy")) or {}
-        validation = self._optional_mapping(step_payload.get("validation")) or {}
+        raw_policy = optional_mapping(step_payload.get("validation_policy")) or {}
+        validation = optional_mapping(step_payload.get("validation")) or {}
         raw_required = raw_policy.get(
             "require_passing_candidate",
             validation.get("require_passing_candidate", False),
@@ -1972,27 +1985,27 @@ class ResearchWorkflowRunner:
             raise ValueError("validation_policy.require_passing_candidate must be a boolean")
         return ResearchValidationPolicy(
             require_passing_candidate=raw_required,
-            min_accepted_count=self._optional_non_negative_int(
+            min_accepted_count=optional_non_negative_int(
                 raw_policy.get("min_accepted_count"),
                 field_name="validation_policy.min_accepted_count",
             ),
-            min_robustness_score=self._optional_decimal(
+            min_robustness_score=optional_decimal(
                 raw_policy.get("min_robustness_score"),
                 field_name="validation_policy.min_robustness_score",
             ),
-            require_walk_forward=self._optional_bool(
+            require_walk_forward=optional_bool(
                 raw_policy.get("require_walk_forward", False),
                 field_name="validation_policy.require_walk_forward",
             ),
-            require_failure_window=self._optional_bool(
+            require_failure_window=optional_bool(
                 raw_policy.get("require_failure_window", False),
                 field_name="validation_policy.require_failure_window",
             ),
-            require_cost_stress=self._optional_bool(
+            require_cost_stress=optional_bool(
                 raw_policy.get("require_cost_stress", False),
                 field_name="validation_policy.require_cost_stress",
             ),
-            max_rejected_count=self._optional_non_negative_int(
+            max_rejected_count=optional_non_negative_int(
                 raw_policy.get("max_rejected_count"),
                 field_name="validation_policy.max_rejected_count",
             ),
@@ -2004,7 +2017,7 @@ class ResearchWorkflowRunner:
         validation_policy_payload: Mapping[str, Any],
         validation: Any,
     ) -> dict[str, Any]:
-        validation_payload = self._optional_mapping(validation) or {}
+        validation_payload = optional_mapping(validation) or {}
         return {
             "cost_stress_status": (
                 "configured"
@@ -2030,7 +2043,7 @@ class ResearchWorkflowRunner:
         }
 
     def _validation_constraints(self, value: Any) -> tuple[MetricConstraint, ...]:
-        validation = self._optional_mapping(value)
+        validation = optional_mapping(value)
         if validation is None:
             return ()
         raw_constraints = validation.get("constraints")
@@ -2085,7 +2098,7 @@ class ResearchWorkflowRunner:
         return tuple(constraints)
 
     def _walk_forward_payload(self, value: Any) -> dict[str, Any] | None:
-        validation = self._optional_mapping(value)
+        validation = optional_mapping(value)
         if validation is None:
             return None
         raw_walk_forward = validation.get("walk_forward")
@@ -2096,7 +2109,7 @@ class ResearchWorkflowRunner:
         return dict(raw_walk_forward)
 
     def _failure_window_veto_payload(self, value: Any) -> dict[str, Any] | None:
-        validation = self._optional_mapping(value)
+        validation = optional_mapping(value)
         if validation is None:
             return None
         raw_veto = validation.get("failure_window_veto")
@@ -2153,8 +2166,8 @@ class ResearchWorkflowRunner:
             windows.append(
                 FailureWindow(
                     name=str(window["name"]),
-                    start=self._iso_date(window["start"], "start"),
-                    end=self._iso_date(window["end"], "end"),
+                    start=iso_date(window["start"], "start"),
+                    end=iso_date(window["end"], "end"),
                     report_only=report_only,
                 )
             )
@@ -2172,10 +2185,10 @@ class ResearchWorkflowRunner:
             splits.append(
                 WalkForwardSplit(
                     name=str(split["name"]),
-                    train_start=self._iso_date(split["train_start"], "train_start"),
-                    train_end=self._iso_date(split["train_end"], "train_end"),
-                    test_start=self._iso_date(split["test_start"], "test_start"),
-                    test_end=self._iso_date(split["test_end"], "test_end"),
+                    train_start=iso_date(split["train_start"], "train_start"),
+                    train_end=iso_date(split["train_end"], "train_end"),
+                    test_start=iso_date(split["test_start"], "test_start"),
+                    test_end=iso_date(split["test_end"], "test_end"),
                 )
             )
         return WalkForwardPlan(tuple(splits))
@@ -2216,10 +2229,10 @@ class ResearchWorkflowRunner:
                 raise ValueError(f"unsupported period role: {role}")
             periods.append(
                 {
-                    "end": self._iso_datetime(period["end"], "end"),
+                    "end": iso_datetime(period["end"], "end"),
                     "name": name,
                     "role": None if role is None else str(role),
-                    "start": self._iso_datetime(period["start"], "start"),
+                    "start": iso_datetime(period["start"], "start"),
                 }
             )
         return tuple(periods)
@@ -2259,7 +2272,7 @@ class ResearchWorkflowRunner:
             if not isinstance(raw_candidate, Mapping):
                 raise ValueError(f"backtest_matrix.candidates[{index}] must be a mapping")
             candidate = dict(raw_candidate)
-            strategy_params = self._optional_mapping(candidate.get("strategy_params")) or {}
+            strategy_params = optional_mapping(candidate.get("strategy_params")) or {}
             candidates.append(
                 {
                     "name": self._safe_token(candidate, "name"),
@@ -2279,61 +2292,18 @@ class ResearchWorkflowRunner:
         self,
         value: Any,
     ) -> WalkForwardRobustnessPolicy | None:
-        payload = self._optional_mapping(value)
+        payload = optional_mapping(value)
         if payload is None:
             return None
-        phases = self._string_tuple(payload.get("phases", ["test"]))
+        phases = string_tuple(payload.get("phases", ["test"]))
         return WalkForwardRobustnessPolicy(
             phases=phases,
-            min_windows=self._optional_int(payload.get("min_windows")),
-            max_losing_windows=self._optional_int(payload.get("max_losing_windows")),
-            min_window_pnl_usd=self._optional_decimal(payload.get("min_window_pnl_usd")),
-            min_window_best_objective=self._optional_decimal(
-                payload.get("min_window_best_objective")
-            ),
-            min_total_pnl_usd=self._optional_decimal(payload.get("min_total_pnl_usd")),
+            min_windows=optional_int(payload.get("min_windows")),
+            max_losing_windows=optional_int(payload.get("max_losing_windows")),
+            min_window_pnl_usd=optional_decimal(payload.get("min_window_pnl_usd")),
+            min_window_best_objective=optional_decimal(payload.get("min_window_best_objective")),
+            min_total_pnl_usd=optional_decimal(payload.get("min_total_pnl_usd")),
         )
-
-    @staticmethod
-    def _iso_date(value: Any, field_name: str) -> date:
-        if isinstance(value, date):
-            return value
-        try:
-            return date.fromisoformat(str(value))
-        except ValueError as exc:
-            raise ValueError(f"{field_name} must be an ISO date") from exc
-
-    @staticmethod
-    def _iso_datetime(value: Any, field_name: str) -> datetime:
-        if isinstance(value, datetime):
-            return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
-        if isinstance(value, date):
-            return datetime.combine(value, time.min, tzinfo=UTC)
-        text = str(value)
-        if len(text) == len("YYYY-MM-DD"):
-            return datetime.combine(date.fromisoformat(text), time.min, tzinfo=UTC)
-        if text.endswith("Z"):
-            text = f"{text[:-1]}+00:00"
-        try:
-            parsed = datetime.fromisoformat(text)
-        except ValueError as exc:
-            raise ValueError(f"{field_name} must be an ISO datetime or date") from exc
-        return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
-
-    @staticmethod
-    def _required_mapping(payload: Mapping[str, Any], field_name: str) -> dict[str, Any]:
-        value = payload.get(field_name)
-        if not isinstance(value, dict):
-            raise ValueError(f"{field_name} must be a mapping")
-        return dict(value)
-
-    @staticmethod
-    def _optional_mapping(value: Any) -> dict[str, Any] | None:
-        if value is None:
-            return None
-        if not isinstance(value, dict):
-            raise ValueError("value must be a mapping")
-        return dict(value)
 
     @classmethod
     def _module_map(cls, value: Any) -> dict[str, tuple[str, ...]]:
@@ -2341,7 +2311,7 @@ class ResearchWorkflowRunner:
             return {}
         if not isinstance(value, Mapping):
             raise ValueError("module_map must be a mapping")
-        return {str(key): cls._string_tuple(item) for key, item in value.items()}
+        return {str(key): string_tuple(item) for key, item in value.items()}
 
     @classmethod
     def _ablation_run(cls, value: Any, *, index: int) -> AblationRun:
@@ -2349,14 +2319,14 @@ class ResearchWorkflowRunner:
             raise ValueError(f"ablation runs[{index}] must be a mapping")
         return AblationRun(
             name=_required_text(value, "name"),
-            modules=cls._string_tuple(value.get("modules", ())),
-            metrics=cls._float_mapping(value.get("metrics"), field_name=f"runs[{index}].metrics"),
-            split_metrics=cls._nested_float_mapping(
+            modules=string_tuple(value.get("modules", ())),
+            metrics=float_mapping(value.get("metrics"), field_name=f"runs[{index}].metrics"),
+            split_metrics=nested_float_mapping(
                 value.get("split_metrics"),
                 field_name=f"runs[{index}].split_metrics",
             ),
-            trade_count=cls._optional_int(value.get("trade_count")),
-            cost_stress_metrics=cls._nested_float_mapping(
+            trade_count=optional_int(value.get("trade_count")),
+            cost_stress_metrics=nested_float_mapping(
                 value.get("cost_stress_metrics"),
                 field_name=f"runs[{index}].cost_stress_metrics",
             ),
@@ -2373,91 +2343,21 @@ class ResearchWorkflowRunner:
             symbol=_required_text(value, "symbol"),
             direction=_required_text(value, "direction"),
             quantity=value.get("quantity"),
-            entry_time=cls._iso_datetime(value.get("entry_time"), "entry_time"),
-            exit_time=cls._iso_datetime(value.get("exit_time"), "exit_time"),
-            entry_price=cls._optional_float(value.get("entry_price")),
-            exit_price=cls._optional_float(value.get("exit_price")),
-            r_pnl=cls._optional_float(value.get("r_pnl")),
-            mae_r=cls._optional_float(value.get("mae_r")),
-            mfe_r=cls._optional_float(value.get("mfe_r")),
-            holding_bars=cls._optional_int(value.get("holding_bars")),
+            entry_time=iso_datetime(value.get("entry_time"), "entry_time"),
+            exit_time=iso_datetime(value.get("exit_time"), "exit_time"),
+            entry_price=optional_float(value.get("entry_price")),
+            exit_price=optional_float(value.get("exit_price")),
+            r_pnl=optional_float(value.get("r_pnl")),
+            mae_r=optional_float(value.get("mae_r")),
+            mfe_r=optional_float(value.get("mfe_r")),
+            holding_bars=optional_int(value.get("holding_bars")),
             exit_reason=_required_text(value, "exit_reason"),
             time_bucket=_required_text(value, "time_bucket"),
-            factor_snapshot=cls._float_mapping(
+            factor_snapshot=float_mapping(
                 value.get("factor_snapshot"),
                 field_name=f"trade_diagnostics.trades[{index}].factor_snapshot",
             ),
         )
-
-    @staticmethod
-    def _float_mapping(value: Any, *, field_name: str) -> dict[str, float]:
-        if not isinstance(value, Mapping) or not value:
-            raise ValueError(f"{field_name} must be a non-empty mapping")
-        return {str(key): float(item) for key, item in value.items()}
-
-    @classmethod
-    def _nested_float_mapping(
-        cls,
-        value: Any,
-        *,
-        field_name: str,
-    ) -> dict[str, dict[str, float]] | None:
-        if value is None:
-            return None
-        if not isinstance(value, Mapping):
-            raise ValueError(f"{field_name} must be a mapping")
-        return {
-            str(key): cls._float_mapping(item, field_name=f"{field_name}.{key}")
-            for key, item in value.items()
-        }
-
-    @staticmethod
-    def _optional_int(value: Any) -> int | None:
-        if value is None:
-            return None
-        return int(value)
-
-    @staticmethod
-    def _optional_bool(value: Any, *, field_name: str = "value") -> bool:
-        if not isinstance(value, bool):
-            raise ValueError(f"{field_name} must be a boolean")
-        return value
-
-    @classmethod
-    def _optional_non_negative_int(cls, value: Any, *, field_name: str = "value") -> int | None:
-        parsed = cls._optional_int(value)
-        if parsed is not None and parsed < 0:
-            raise ValueError(f"{field_name} must be non-negative")
-        return parsed
-
-    @staticmethod
-    def _optional_decimal(value: Any, *, field_name: str = "value") -> Decimal | None:
-        if value is None:
-            return None
-        try:
-            return Decimal(str(value))
-        except Exception as exc:
-            raise ValueError(f"{field_name} must be a decimal") from exc
-
-    @staticmethod
-    def _optional_float(value: Any) -> float | None:
-        if value is None:
-            return None
-        return float(value)
-
-    @staticmethod
-    def _string_tuple(value: Any) -> tuple[str, ...]:
-        if value is None:
-            return ()
-        if not isinstance(value, list | tuple):
-            raise ValueError("value must be a sequence")
-        return tuple(str(item) for item in value)
-
-    @classmethod
-    def _optional_string_tuple(cls, value: Any) -> tuple[str, ...] | None:
-        if value is None:
-            return None
-        return cls._string_tuple(value)
 
     @staticmethod
     def _can_import(module_name: str) -> bool:
