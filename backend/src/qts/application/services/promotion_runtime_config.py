@@ -1,13 +1,9 @@
 """Convert an approved promotion packet into a runtime start configuration.
 
 :class:`PromotionPacketV2` is validation-only by design: it never constructs
-runtime configuration or starts paper/live behavior. This builder is the
-separate owner that reads an *approved* packet's ``runtime`` mapping and
-produces a :class:`StartRuntimeCommand` consumable by ``start_runtime``.
-
-The builder enforces that only the paper modes
-(``paper_simulated`` / ``paper_broker``) are converted here; live promotion
-requires the additional operator/risk gates that live outside the paper path.
+runtime dependencies or starts paper/live behavior. This builder is the separate
+owner that reads an *approved* packet's ``runtime`` mapping and produces a
+:class:`StartRuntimeCommand` consumable by ``start_runtime``.
 """
 
 from __future__ import annotations
@@ -17,14 +13,18 @@ from typing import ClassVar, cast
 
 from qts.application.commands.start_runtime import StartRuntimeCommand
 from qts.research.promotion_packet import PromotionPacketV2
+from qts.runtime.broker_startup import BrokerRuntimeStartupDecision
 from qts.runtime.mode import RuntimeMode
 
 
 class PromotionRuntimeConfigBuilder:
-    """Build a paper runtime start command from an approved promotion packet."""
+    """Build runtime start commands from approved promotion packets."""
 
     _PAPER_MODES: ClassVar[frozenset[str]] = frozenset(
         {RuntimeMode.PAPER_SIMULATED.value, RuntimeMode.PAPER_BROKER.value}
+    )
+    _LIVE_MODES: ClassVar[frozenset[str]] = frozenset(
+        {RuntimeMode.LIVE_OBSERVATION.value, RuntimeMode.LIVE.value}
     )
 
     def paper_start_command(
@@ -39,7 +39,12 @@ class PromotionRuntimeConfigBuilder:
         if packet.target_mode not in self._PAPER_MODES:
             raise ValueError(f"promotion target_mode is not a paper mode: {packet.target_mode}")
         runtime = packet.runtime
-        runtime_mode = self._runtime_mode(packet, runtime)
+        runtime_mode = self._runtime_mode(
+            packet,
+            runtime,
+            allowed_modes=self._PAPER_MODES,
+            mode_label="paper",
+        )
         config_ref = self._config_ref(packet)
         return StartRuntimeCommand(
             runtime_mode=runtime_mode,
@@ -49,15 +54,49 @@ class PromotionRuntimeConfigBuilder:
             reason=reason,
         )
 
+    def live_start_command(
+        self,
+        packet: PromotionPacketV2,
+        *,
+        operator_id: str,
+        idempotency_key: str,
+        reason: str,
+        startup_decision: BrokerRuntimeStartupDecision,
+    ) -> StartRuntimeCommand:
+        """Return a live-capable ``StartRuntimeCommand`` derived from the packet runtime."""
+        if packet.target_mode not in self._LIVE_MODES:
+            raise ValueError(f"promotion target_mode is not a live mode: {packet.target_mode}")
+        runtime = packet.runtime
+        runtime_mode = self._runtime_mode(
+            packet,
+            runtime,
+            allowed_modes=self._LIVE_MODES,
+            mode_label="live",
+        )
+        if startup_decision.mode is not runtime_mode:
+            raise ValueError("startup_decision mode must match promotion runtime_mode")
+        config_ref = self._config_ref(packet)
+        return StartRuntimeCommand(
+            runtime_mode=runtime_mode,
+            config_ref=config_ref,
+            operator_id=operator_id,
+            idempotency_key=idempotency_key,
+            reason=reason,
+            startup_decision=startup_decision,
+        )
+
     def _runtime_mode(
         self,
         packet: PromotionPacketV2,
         runtime: Mapping[str, object],
+        *,
+        allowed_modes: frozenset[str],
+        mode_label: str,
     ) -> RuntimeMode:
         declared = runtime.get("runtime_mode", packet.target_mode)
         mode = RuntimeMode.from_value(cast(str, declared))
-        if mode.value not in self._PAPER_MODES:
-            raise ValueError(f"promotion runtime_mode is not a paper mode: {mode.value}")
+        if mode.value not in allowed_modes:
+            raise ValueError(f"promotion runtime_mode is not a {mode_label} mode: {mode.value}")
         if mode.value != packet.target_mode:
             raise ValueError(
                 "promotion runtime.runtime_mode must match target_mode: "

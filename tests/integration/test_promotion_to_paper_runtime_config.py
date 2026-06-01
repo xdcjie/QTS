@@ -23,6 +23,8 @@ from qts.domain.instruments import AssetClass, ContractSpec, Instrument, Settlem
 from qts.registry.instrument_registry import InstrumentRegistry
 from qts.research.audit_log import ResearchAuditLog
 from qts.research.promotion_packet import PromotionPacketV2
+from qts.runtime.broker_startup import validate_live_startup
+from qts.runtime.config import BrokerRuntimeConfig
 from qts.runtime.mode import RuntimeMode
 from qts.runtime.session import RuntimeSession
 from qts.strategy_sdk import Strategy
@@ -86,6 +88,29 @@ def _approved_paper_packet(tmp_path: Path) -> PromotionPacketV2:
     return packet
 
 
+def _approved_live_observation_packet(tmp_path: Path) -> PromotionPacketV2:
+    registry, bundle_id = _write_verifiable_bundle(tmp_path)
+    audit_log = ResearchAuditLog(tmp_path / "audit-live.jsonl")
+    packet = PromotionPacketV2.from_payload(
+        _packet_payload(
+            bundle_id,
+            target_mode="live_observation",
+            artifact_root=tmp_path,
+        )
+    )
+    machine = packet.validate_machine(evidence_registry=registry, audit_log=audit_log)
+    assert machine.accepted is True
+    human = packet.human_review(
+        audit_log=audit_log,
+        decision="approved",
+        reviewer="risk",
+        reviewed_at=datetime(2026, 5, 28, tzinfo=UTC),
+        expected_packet_hash=machine.packet_hash,
+    )
+    assert human.status == "human_approved"
+    return packet
+
+
 def test_approved_packet_runtime_config_builds_session(tmp_path: Path) -> None:
     packet = _approved_paper_packet(tmp_path)
 
@@ -116,3 +141,32 @@ def test_approved_packet_runtime_config_builds_session(tmp_path: Path) -> None:
     assert result.status == "started"
     assert result.evidence["session_constructed"] is True
     assert isinstance(result.session, RuntimeSession)
+
+
+def test_approved_live_observation_packet_builds_start_command_with_startup_decision(
+    tmp_path: Path,
+) -> None:
+    packet = _approved_live_observation_packet(tmp_path)
+    startup_decision = validate_live_startup(
+        BrokerRuntimeConfig(
+            mode=RuntimeMode.LIVE_OBSERVATION,
+            broker_configured=True,
+            account_configured=True,
+            risk_configured=True,
+            calendar_configured=True,
+            kill_switch_configured=True,
+        )
+    )
+
+    command = PromotionRuntimeConfigBuilder().live_start_command(
+        packet,
+        operator_id="ops",
+        idempotency_key="promotion-live-observation-1",
+        reason="promotion to live observation",
+        startup_decision=startup_decision,
+    )
+
+    assert isinstance(command, StartRuntimeCommand)
+    assert command.runtime_mode is RuntimeMode.LIVE_OBSERVATION
+    assert command.startup_decision == startup_decision
+    assert command.config_ref.startswith("promotion://")

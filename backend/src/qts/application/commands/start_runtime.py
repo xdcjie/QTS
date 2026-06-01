@@ -88,6 +88,11 @@ def start_runtime(
     live_order_submission_enabled = _live_order_submission_enabled(command)
     session = None
     if session_builder is not None:
+        _validate_session_builder(
+            command,
+            session_builder=session_builder,
+            order_submission_enabled=order_submission_enabled,
+        )
         session = session_builder.build()
         session.start()
         construction_reason = "runtime session constructed and started"
@@ -128,6 +133,21 @@ def _order_submission_enabled(command: StartRuntimeCommand) -> bool:
             and command.startup_decision.order_permission.allows_order_submission
         )
     return False
+
+
+def _validate_session_builder(
+    command: StartRuntimeCommand,
+    *,
+    session_builder: RuntimeSessionBuilder,
+    order_submission_enabled: bool,
+) -> None:
+    dependencies = session_builder.dependencies
+    if dependencies.mode is not command.runtime_mode:
+        raise ValueError("session builder mode must match command runtime_mode")
+    if dependencies.startup_decision != command.startup_decision:
+        raise ValueError("session builder startup_decision must match command startup_decision")
+    if dependencies.order_submission_enabled != order_submission_enabled:
+        raise ValueError("session builder order_submission_enabled must match command order gate")
 
 
 def _live_order_submission_enabled(command: StartRuntimeCommand) -> bool:
