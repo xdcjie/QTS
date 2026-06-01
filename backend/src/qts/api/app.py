@@ -46,7 +46,13 @@ def create_app(
         allow_origins=[],
         allow_credentials=False,
         allow_methods=["GET", "POST"],
-        allow_headers=["Authorization", "Content-Type", "Idempotency-Key", "X-QTS-Operator"],
+        allow_headers=[
+            "Authorization",
+            "Content-Type",
+            "Idempotency-Key",
+            "X-QTS-Operator",
+            "X-QTS-Runtime-Instance-Id",
+        ],
     )
     app.add_middleware(ApiSecurityMiddleware, auth_backend=default_auth_backend())
 

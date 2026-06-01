@@ -21,7 +21,7 @@ def test_operator_pause_blocks_new_orders() -> None:
     session.start()
     session.on_market_data(_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC)))
 
-    paused = service.pause_runtime(operator_id="ops-a")
+    paused = service.pause_runtime(operator_id="ops-a", runtime_instance_id="ops-rt")
     blocked = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 31, tzinfo=UTC)))
 
     assert paused.state == "paused"

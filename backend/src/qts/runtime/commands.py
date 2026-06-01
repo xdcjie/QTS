@@ -57,7 +57,7 @@ class RuntimeCommand:
     command_type: RuntimeCommandType
     idempotency_key: str
     operator_id: str
-    runtime_instance_id: str = "local-runtime"
+    runtime_instance_id: str
     operator_role: str = "operator"
     authorization_scope: str = "runtime:operator"
     requested_at: datetime | None = None

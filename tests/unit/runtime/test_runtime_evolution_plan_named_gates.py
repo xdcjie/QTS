@@ -895,6 +895,7 @@ def test_duplicate_kill_switch_command_returns_same_result() -> None:
         command_id="cmd-kill",
         command_type=RuntimeCommandType.ACTIVATE_KILL_SWITCH,
         idempotency_key="same",
+        runtime_instance_id="runtime-1",
         operator_id="ops",
     )
 

@@ -67,7 +67,7 @@ class _RecordingSession:
 def _executor_with_session() -> tuple[RuntimeCommandExecutor, _RecordingSession, RuntimeSessionKey]:
     registry = RuntimeSessionRegistry()
     session = _RecordingSession()
-    key = RuntimeSessionKey(runtime_instance_id="rt-1", environment="paper")
+    key = RuntimeSessionKey(runtime_instance_id="rt-1")
     registry.register(key, cast(RuntimeSession, session))
     return RuntimeCommandExecutor(registry), session, key
 

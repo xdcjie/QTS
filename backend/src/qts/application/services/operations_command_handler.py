@@ -16,7 +16,7 @@ from qts.runtime.commands import (
     RuntimeCommandResultStatus,
     RuntimeCommandType,
 )
-from qts.runtime.control_plane import RuntimeCommandExecutor
+from qts.runtime.control_plane import RuntimeCommandExecutor, RuntimeSessionKey
 from qts.runtime.errors import RuntimeCommandNotBound
 from qts.runtime.safety import RuntimeKillSwitchDeactivateCommand
 from qts.runtime.state import RuntimeSessionState
@@ -78,14 +78,14 @@ class OperationsCommandHandler:
         self, command: RuntimeCommand, *, accepted_at: datetime
     ) -> RuntimeCommandResult:
         """Apply a lifecycle command to the bound runtime session, or fail unbound."""
-        executor = self._require_executor(command)
+        executor, key = self._require_executor(command)
         lifecycle_methods: dict[RuntimeCommandType, Callable[[], RuntimeSessionState]] = {
-            RuntimeCommandType.START: executor.start,
-            RuntimeCommandType.STOP: executor.stop,
-            RuntimeCommandType.PAUSE: executor.pause,
-            RuntimeCommandType.RESUME: executor.resume,
-            RuntimeCommandType.ENTER_OBSERVATION: executor.enter_observation,
-            RuntimeCommandType.EXIT_OBSERVATION: executor.exit_observation,
+            RuntimeCommandType.START: lambda: executor.start(key=key),
+            RuntimeCommandType.STOP: lambda: executor.stop(key=key),
+            RuntimeCommandType.PAUSE: lambda: executor.pause(key=key),
+            RuntimeCommandType.RESUME: lambda: executor.resume(key=key),
+            RuntimeCommandType.ENTER_OBSERVATION: lambda: executor.enter_observation(key=key),
+            RuntimeCommandType.EXIT_OBSERVATION: lambda: executor.exit_observation(key=key),
         }
         state = lifecycle_methods[command.command_type]()
         return RuntimeCommandResult(
@@ -101,10 +101,11 @@ class OperationsCommandHandler:
         self, command: RuntimeCommand, *, accepted_at: datetime
     ) -> RuntimeCommandResult:
         """Activate the kill switch on the bound runtime session, or fail unbound."""
-        executor = self._require_executor(command)
+        executor, key = self._require_executor(command)
         reason = command.reason or str(command.payload.get("reason") or "operator kill switch")
         evidence = executor.activate_kill_switch(
-            RuntimeKillSwitchCommand(operator_id=command.operator_id, reason=reason)
+            RuntimeKillSwitchCommand(operator_id=command.operator_id, reason=reason),
+            key=key,
         )
         return RuntimeCommandResult(
             command_id=command.command_id,
@@ -132,14 +133,15 @@ class OperationsCommandHandler:
         accepted_at: datetime,
     ) -> RuntimeCommandResult:
         """Deactivate the kill switch on the bound runtime session, or fail unbound."""
-        executor = self._require_executor(command)
+        executor, key = self._require_executor(command)
         reason = command.reason or str(command.payload.get("reason") or "operator resume")
         state = executor.deactivate_kill_switch(
             RuntimeKillSwitchDeactivateCommand(
                 operator_id=command.operator_id,
                 reason=reason,
                 authorized=True,
-            )
+            ),
+            key=key,
         )
         return RuntimeCommandResult(
             command_id=command.command_id,
@@ -166,7 +168,8 @@ class OperationsCommandHandler:
         accepted_at: datetime,
     ) -> RuntimeCommandResult:
         """Reconcile the bound runtime session, or fail unbound."""
-        state = self._require_executor(command).reconcile()
+        executor, key = self._require_executor(command)
+        state = executor.reconcile(key=key)
         return RuntimeCommandResult(
             command_id=command.command_id,
             idempotency_key=command.idempotency_key,
@@ -186,7 +189,8 @@ class OperationsCommandHandler:
         accepted_at: datetime,
     ) -> RuntimeCommandResult:
         """Snapshot the bound runtime session, or fail unbound."""
-        snapshot = self._require_executor(command).snapshot()
+        executor, key = self._require_executor(command)
+        snapshot = executor.snapshot(key=key)
         return RuntimeCommandResult(
             command_id=command.command_id,
             idempotency_key=command.idempotency_key,
@@ -196,13 +200,17 @@ class OperationsCommandHandler:
             evidence=self._command_evidence(command, self._snapshot_evidence(snapshot)),
         )
 
-    def _require_executor(self, command: RuntimeCommand) -> RuntimeCommandExecutor:
+    def _require_executor(
+        self, command: RuntimeCommand
+    ) -> tuple[RuntimeCommandExecutor, RuntimeSessionKey]:
         if self._command_executor is None:
             raise RuntimeCommandNotBound(
                 "RUNTIME_SESSION_NOT_BOUND: no runtime session is bound to apply "
                 f"{command.command_type.value}"
             )
-        return self._command_executor
+        return self._command_executor, RuntimeSessionKey(
+            runtime_instance_id=command.runtime_instance_id
+        )
 
     @staticmethod
     def _command_evidence(

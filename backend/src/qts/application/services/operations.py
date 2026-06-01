@@ -49,12 +49,14 @@ class OperationsService:
     def start_runtime(
         self,
         *,
+        runtime_instance_id: str,
         operator_id: str = "system",
         idempotency_key: str | None = None,
     ) -> RuntimeStateDTO:
         """Start runtime processing through the command bus."""
         return self._submit_runtime_state_command(
             RuntimeCommandType.START,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
         )
@@ -62,12 +64,14 @@ class OperationsService:
     def start_runtime_result(
         self,
         *,
+        runtime_instance_id: str,
         operator_id: str = "system",
         idempotency_key: str | None = None,
     ) -> RuntimeCommandResultDTO:
         """Start runtime processing and return the auditable command result."""
         return self._submit_runtime_command_result(
             RuntimeCommandType.START,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
         )
@@ -75,12 +79,14 @@ class OperationsService:
     def stop_runtime(
         self,
         *,
+        runtime_instance_id: str,
         operator_id: str = "system",
         idempotency_key: str | None = None,
     ) -> RuntimeStateDTO:
         """Stop runtime processing through the command bus."""
         return self._submit_runtime_state_command(
             RuntimeCommandType.STOP,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
         )
@@ -88,12 +94,14 @@ class OperationsService:
     def stop_runtime_result(
         self,
         *,
+        runtime_instance_id: str,
         operator_id: str = "system",
         idempotency_key: str | None = None,
     ) -> RuntimeCommandResultDTO:
         """Stop runtime processing and return the auditable command result."""
         return self._submit_runtime_command_result(
             RuntimeCommandType.STOP,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
         )
@@ -101,12 +109,14 @@ class OperationsService:
     def pause_runtime(
         self,
         *,
+        runtime_instance_id: str,
         operator_id: str = "system",
         idempotency_key: str | None = None,
     ) -> RuntimeStateDTO:
         """Pause runtime processing through the command bus."""
         return self._submit_runtime_state_command(
             RuntimeCommandType.PAUSE,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
         )
@@ -114,12 +124,14 @@ class OperationsService:
     def pause_runtime_result(
         self,
         *,
+        runtime_instance_id: str,
         operator_id: str = "system",
         idempotency_key: str | None = None,
     ) -> RuntimeCommandResultDTO:
         """Pause runtime processing and return the auditable command result."""
         return self._submit_runtime_command_result(
             RuntimeCommandType.PAUSE,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
         )
@@ -127,12 +139,14 @@ class OperationsService:
     def resume_runtime(
         self,
         *,
+        runtime_instance_id: str,
         operator_id: str = "system",
         idempotency_key: str | None = None,
     ) -> RuntimeStateDTO:
         """Resume runtime processing through the command bus."""
         return self._submit_runtime_state_command(
             RuntimeCommandType.RESUME,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
         )
@@ -140,12 +154,14 @@ class OperationsService:
     def resume_runtime_result(
         self,
         *,
+        runtime_instance_id: str,
         operator_id: str = "system",
         idempotency_key: str | None = None,
     ) -> RuntimeCommandResultDTO:
         """Resume runtime processing and return the auditable command result."""
         return self._submit_runtime_command_result(
             RuntimeCommandType.RESUME,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
         )
@@ -153,12 +169,14 @@ class OperationsService:
     def enter_observation(
         self,
         *,
+        runtime_instance_id: str,
         operator_id: str = "system",
         idempotency_key: str | None = None,
     ) -> RuntimeStateDTO:
         """Enter observation mode through the command bus."""
         return self._submit_runtime_state_command(
             RuntimeCommandType.ENTER_OBSERVATION,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
         )
@@ -166,12 +184,14 @@ class OperationsService:
     def enter_observation_result(
         self,
         *,
+        runtime_instance_id: str,
         operator_id: str = "system",
         idempotency_key: str | None = None,
     ) -> RuntimeCommandResultDTO:
         """Enter observation mode and return the auditable command result."""
         return self._submit_runtime_command_result(
             RuntimeCommandType.ENTER_OBSERVATION,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
         )
@@ -179,12 +199,14 @@ class OperationsService:
     def exit_observation(
         self,
         *,
+        runtime_instance_id: str,
         operator_id: str = "system",
         idempotency_key: str | None = None,
     ) -> RuntimeStateDTO:
         """Exit observation mode through the command bus."""
         return self._submit_runtime_state_command(
             RuntimeCommandType.EXIT_OBSERVATION,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
         )
@@ -192,12 +214,14 @@ class OperationsService:
     def exit_observation_result(
         self,
         *,
+        runtime_instance_id: str,
         operator_id: str = "system",
         idempotency_key: str | None = None,
     ) -> RuntimeCommandResultDTO:
         """Exit observation mode and return the auditable command result."""
         return self._submit_runtime_command_result(
             RuntimeCommandType.EXIT_OBSERVATION,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
         )
@@ -206,12 +230,14 @@ class OperationsService:
         self,
         command: KillSwitchCommandDTO,
         *,
+        runtime_instance_id: str,
         operator_id: str = "system",
         idempotency_key: str | None = None,
     ) -> KillSwitchStateDTO:
         """Activate a kill switch through the command bus."""
         result = self._commands.submit(
             RuntimeCommandType.ACTIVATE_KILL_SWITCH,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
             reason=command.reason,
@@ -227,12 +253,14 @@ class OperationsService:
         self,
         command: KillSwitchCommandDTO,
         *,
+        runtime_instance_id: str,
         operator_id: str = "system",
         idempotency_key: str | None = None,
     ) -> RuntimeCommandResultDTO:
         """Activate a kill switch and return the auditable command result."""
         result = self._commands.submit(
             RuntimeCommandType.ACTIVATE_KILL_SWITCH,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
             reason=command.reason,
@@ -248,6 +276,7 @@ class OperationsService:
         self,
         command: KillSwitchCommandDTO,
         *,
+        runtime_instance_id: str,
         operator_id: str = "system",
         operator_role: str = "operator",
         authorization_scope: str = "runtime:operator",
@@ -256,6 +285,7 @@ class OperationsService:
         """Deactivate a kill switch through the command bus."""
         result = self._submit_deactivate_kill_switch_command(
             command,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             operator_role=operator_role,
             authorization_scope=authorization_scope,
@@ -267,6 +297,7 @@ class OperationsService:
         self,
         command: KillSwitchCommandDTO,
         *,
+        runtime_instance_id: str,
         operator_id: str = "system",
         operator_role: str = "operator",
         authorization_scope: str = "runtime:operator",
@@ -275,6 +306,7 @@ class OperationsService:
         """Deactivate a kill switch and return the auditable command result."""
         result = self._submit_deactivate_kill_switch_command(
             command,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             operator_role=operator_role,
             authorization_scope=authorization_scope,
@@ -286,6 +318,7 @@ class OperationsService:
         self,
         command: KillSwitchCommandDTO,
         *,
+        runtime_instance_id: str,
         operator_id: str,
         operator_role: str,
         authorization_scope: str,
@@ -293,6 +326,7 @@ class OperationsService:
     ) -> RuntimeCommandResult:
         return self._commands.submit(
             RuntimeCommandType.DEACTIVATE_KILL_SWITCH,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             operator_role=operator_role,
             authorization_scope=authorization_scope,
@@ -308,12 +342,14 @@ class OperationsService:
     def reconcile_runtime(
         self,
         *,
+        runtime_instance_id: str,
         operator_id: str = "system",
         idempotency_key: str | None = None,
     ) -> RuntimeCommandResultDTO:
         """Request a runtime reconciliation through the command bus."""
         result = self._commands.submit(
             RuntimeCommandType.RECONCILE,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
         )
@@ -322,12 +358,14 @@ class OperationsService:
     def snapshot_runtime(
         self,
         *,
+        runtime_instance_id: str,
         operator_id: str = "system",
         idempotency_key: str | None = None,
     ) -> RuntimeCommandResultDTO:
         """Request a runtime snapshot through the command bus."""
         result = self._commands.submit(
             RuntimeCommandType.SNAPSHOT,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
         )
@@ -345,11 +383,13 @@ class OperationsService:
         self,
         command_type: RuntimeCommandType,
         *,
+        runtime_instance_id: str,
         operator_id: str,
         idempotency_key: str | None,
     ) -> RuntimeStateDTO:
         return self._commands.submit_state(
             command_type,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
         )
@@ -358,11 +398,13 @@ class OperationsService:
         self,
         command_type: RuntimeCommandType,
         *,
+        runtime_instance_id: str,
         operator_id: str,
         idempotency_key: str | None,
     ) -> RuntimeCommandResultDTO:
         result = self._commands.submit(
             command_type,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
         )

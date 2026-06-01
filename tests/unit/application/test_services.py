@@ -150,13 +150,25 @@ def test_operations_service_keeps_private_mapping_logic_inside_the_service() -> 
 
 
 def test_operations_service_routes_runtime_controls_through_idempotent_commands() -> None:
-    from tests.support.operations import bound_operations_service
+    from tests.support.operations import DEFAULT_RUNTIME_INSTANCE_ID, bound_operations_service
 
     service = bound_operations_service()
 
-    paused = service.pause_runtime(operator_id="ops-a", idempotency_key="pause-key")
-    running = service.resume_runtime(operator_id="ops-a", idempotency_key="resume-key")
-    duplicate_pause = service.pause_runtime(operator_id="ops-a", idempotency_key="pause-key")
+    paused = service.pause_runtime(
+        runtime_instance_id=DEFAULT_RUNTIME_INSTANCE_ID,
+        operator_id="ops-a",
+        idempotency_key="pause-key",
+    )
+    running = service.resume_runtime(
+        runtime_instance_id=DEFAULT_RUNTIME_INSTANCE_ID,
+        operator_id="ops-a",
+        idempotency_key="resume-key",
+    )
+    duplicate_pause = service.pause_runtime(
+        runtime_instance_id=DEFAULT_RUNTIME_INSTANCE_ID,
+        operator_id="ops-a",
+        idempotency_key="pause-key",
+    )
 
     assert paused.state == "paused"
     assert running.state == "running"
@@ -166,18 +178,20 @@ def test_operations_service_routes_runtime_controls_through_idempotent_commands(
 def test_operations_service_routes_kill_switch_through_idempotent_commands() -> None:
     from qts.application.dto import KillSwitchCommandDTO
 
-    from tests.support.operations import bound_operations_service
+    from tests.support.operations import DEFAULT_RUNTIME_INSTANCE_ID, bound_operations_service
 
     service = bound_operations_service()
 
     first = service.activate_kill_switch(
         KillSwitchCommandDTO(scope="global", reason="operator stop"),
         operator_id="ops-a",
+        runtime_instance_id=DEFAULT_RUNTIME_INSTANCE_ID,
         idempotency_key="kill-switch-key",
     )
     duplicate = service.activate_kill_switch(
         KillSwitchCommandDTO(scope="global", reason="different reason"),
         operator_id="ops-a",
+        runtime_instance_id=DEFAULT_RUNTIME_INSTANCE_ID,
         idempotency_key="kill-switch-key",
     )
 
@@ -187,20 +201,26 @@ def test_operations_service_routes_kill_switch_through_idempotent_commands() -> 
 
 
 def test_operations_service_exposes_reconcile_and_snapshot_command_results() -> None:
-    from tests.support.operations import bound_operations_service
+    from tests.support.operations import (
+        DEFAULT_RUNTIME_INSTANCE_ID,
+        bound_operations_service,
+    )
 
     service = bound_operations_service()
 
     reconcile = service.reconcile_runtime(
         operator_id="ops-a",
+        runtime_instance_id=DEFAULT_RUNTIME_INSTANCE_ID,
         idempotency_key="reconcile-key",
     )
     duplicate_reconcile = service.reconcile_runtime(
         operator_id="ops-a",
+        runtime_instance_id=DEFAULT_RUNTIME_INSTANCE_ID,
         idempotency_key="reconcile-key",
     )
     snapshot = service.snapshot_runtime(
         operator_id="ops-a",
+        runtime_instance_id=DEFAULT_RUNTIME_INSTANCE_ID,
         idempotency_key="snapshot-key",
     )
 
@@ -212,21 +232,32 @@ def test_operations_service_exposes_reconcile_and_snapshot_command_results() -> 
 
 
 def test_operations_service_routes_lifecycle_and_observation_commands() -> None:
-    from tests.support.operations import bound_operations_service
+    from tests.support.operations import DEFAULT_RUNTIME_INSTANCE_ID, bound_operations_service
 
     service = bound_operations_service()
 
-    started = service.start_runtime(operator_id="ops-a", idempotency_key="start-key")
-    stopped = service.stop_runtime(operator_id="ops-a", idempotency_key="stop-key")
+    started = service.start_runtime(
+        runtime_instance_id=DEFAULT_RUNTIME_INSTANCE_ID,
+        operator_id="ops-a",
+        idempotency_key="start-key",
+    )
+    stopped = service.stop_runtime(
+        runtime_instance_id=DEFAULT_RUNTIME_INSTANCE_ID,
+        operator_id="ops-a",
+        idempotency_key="stop-key",
+    )
     observation = service.enter_observation(
+        runtime_instance_id=DEFAULT_RUNTIME_INSTANCE_ID,
         operator_id="ops-a",
         idempotency_key="observation-key",
     )
     running = service.exit_observation(
+        runtime_instance_id=DEFAULT_RUNTIME_INSTANCE_ID,
         operator_id="ops-a",
         idempotency_key="exit-observation-key",
     )
     duplicate_observation = service.enter_observation(
+        runtime_instance_id=DEFAULT_RUNTIME_INSTANCE_ID,
         operator_id="ops-a",
         idempotency_key="observation-key",
     )
@@ -241,7 +272,7 @@ def test_operations_service_routes_lifecycle_and_observation_commands() -> None:
 def test_operations_service_deactivates_kill_switch_through_idempotent_command() -> None:
     from qts.application.dto import KillSwitchCommandDTO
 
-    from tests.support.operations import bound_operations_service
+    from tests.support.operations import DEFAULT_RUNTIME_INSTANCE_ID, bound_operations_service
 
     service = bound_operations_service()
     command = KillSwitchCommandDTO(scope="global", reason="operator stop")
@@ -249,17 +280,20 @@ def test_operations_service_deactivates_kill_switch_through_idempotent_command()
     active = service.activate_kill_switch(
         command,
         operator_id="ops-a",
+        runtime_instance_id=DEFAULT_RUNTIME_INSTANCE_ID,
         idempotency_key="kill-switch-on",
     )
     inactive = service.deactivate_kill_switch(
         KillSwitchCommandDTO(scope="global", reason="operator resume"),
         operator_id="ops-a",
+        runtime_instance_id=DEFAULT_RUNTIME_INSTANCE_ID,
         idempotency_key="kill-switch-off",
         authorization_scope="runtime:safety:write",
     )
     duplicate_inactive = service.deactivate_kill_switch(
         KillSwitchCommandDTO(scope="global", reason="different reason"),
         operator_id="ops-a",
+        runtime_instance_id=DEFAULT_RUNTIME_INSTANCE_ID,
         idempotency_key="kill-switch-off",
         authorization_scope="runtime:safety:write",
     )
@@ -273,18 +307,20 @@ def test_operations_service_deactivates_kill_switch_through_idempotent_command()
 def test_operations_service_rejects_kill_switch_deactivate_without_safety_scope() -> None:
     from qts.application.dto import KillSwitchCommandDTO
 
-    from tests.support.operations import bound_operations_service
+    from tests.support.operations import DEFAULT_RUNTIME_INSTANCE_ID, bound_operations_service
 
     service = bound_operations_service()
     service.activate_kill_switch(
         KillSwitchCommandDTO(scope="global", reason="operator stop"),
         operator_id="ops-a",
+        runtime_instance_id=DEFAULT_RUNTIME_INSTANCE_ID,
         idempotency_key="kill-switch-on",
     )
 
     result = service.deactivate_kill_switch_result(
         KillSwitchCommandDTO(scope="global", reason="operator resume"),
         operator_id="ops-a",
+        runtime_instance_id=DEFAULT_RUNTIME_INSTANCE_ID,
         idempotency_key="kill-switch-off",
     )
 
@@ -297,8 +333,16 @@ def test_operations_service_scopes_runtime_command_idempotency_by_operator() -> 
 
     service = OperationsService()
 
-    first = service.reconcile_runtime(operator_id="ops-a", idempotency_key="shared-key")
-    second = service.reconcile_runtime(operator_id="ops-b", idempotency_key="shared-key")
+    first = service.reconcile_runtime(
+        runtime_instance_id="rt-idempotency",
+        operator_id="ops-a",
+        idempotency_key="shared-key",
+    )
+    second = service.reconcile_runtime(
+        runtime_instance_id="rt-idempotency",
+        operator_id="ops-b",
+        idempotency_key="shared-key",
+    )
 
     assert first.command_id != second.command_id
     assert first.evidence["operator_id"] == "ops-a"
@@ -415,6 +459,7 @@ def test_runtime_lifecycle_service_owns_state_command_results() -> None:
         RuntimeCommand(
             command_id="pause-1",
             command_type=RuntimeCommandType.PAUSE,
+            runtime_instance_id="rt-lifecycle-service",
             idempotency_key="pause-key",
             operator_id="ops-a",
         ),
@@ -440,6 +485,7 @@ def test_kill_switch_command_service_owns_scope_state_and_evidence() -> None:
         RuntimeCommand(
             command_id="kill-1",
             command_type=RuntimeCommandType.ACTIVATE_KILL_SWITCH,
+            runtime_instance_id="rt-kill-switch-service",
             idempotency_key="kill-key",
             operator_id="ops-a",
             payload={"scope": "global", "reason": "operator stop"},
@@ -503,16 +549,19 @@ def test_operations_command_router_owns_idempotent_command_submission() -> None:
 
     first = router.submit(
         RuntimeCommandType.RECONCILE,
+        runtime_instance_id="rt-router",
         operator_id="ops-a",
         idempotency_key="shared-key",
     )
     duplicate = router.submit(
         RuntimeCommandType.RECONCILE,
+        runtime_instance_id="rt-router",
         operator_id="ops-a",
         idempotency_key="shared-key",
     )
     other_operator = router.submit(
         RuntimeCommandType.RECONCILE,
+        runtime_instance_id="rt-router",
         operator_id="ops-b",
         idempotency_key="shared-key",
     )
@@ -541,6 +590,7 @@ def test_operations_command_handler_owns_reconcile_and_snapshot_results() -> Non
                 command_id="reconcile-1",
                 command_type=RuntimeCommandType.RECONCILE,
                 idempotency_key="reconcile-key",
+                runtime_instance_id="rt-handler",
                 operator_id="ops-a",
             )
         )

@@ -76,9 +76,7 @@ def build_operator_runtime() -> tuple[
         )
     )
     session_registry = RuntimeSessionRegistry()
-    session_registry.register(
-        RuntimeSessionKey(runtime_instance_id="ops-rt", environment="paper"), session
-    )
+    session_registry.register(RuntimeSessionKey(runtime_instance_id="ops-rt"), session)
     service = OperationsService(command_executor=RuntimeCommandExecutor(session_registry))
     return service, session, adapter
 
@@ -91,6 +89,7 @@ def test_operator_kill_switch_blocks_and_cancels_real_runtime_orders() -> None:
     state = service.activate_kill_switch(
         KillSwitchCommandDTO(scope="global", reason="operator halt"),
         operator_id="ops-a",
+        runtime_instance_id="ops-rt",
     )
     blocked = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 31, tzinfo=UTC)))
 

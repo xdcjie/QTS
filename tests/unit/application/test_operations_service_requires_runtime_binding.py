@@ -18,12 +18,13 @@ def test_unbound_service_returns_rejected_results_for_operator_commands() -> Non
     service = OperationsService()  # no command_executor bound
 
     results = [
-        service.start_runtime_result(operator_id="ops-a"),
-        service.stop_runtime_result(operator_id="ops-a"),
-        service.pause_runtime_result(operator_id="ops-a"),
+        service.start_runtime_result(operator_id="ops-a", runtime_instance_id="rt-unbound"),
+        service.stop_runtime_result(operator_id="ops-a", runtime_instance_id="rt-unbound"),
+        service.pause_runtime_result(operator_id="ops-a", runtime_instance_id="rt-unbound"),
         service.activate_kill_switch_result(
             KillSwitchCommandDTO(scope="global", reason="halt"),
             operator_id="ops-a",
+            runtime_instance_id="rt-unbound",
         ),
     ]
 
@@ -35,10 +36,13 @@ def test_bound_service_acts_on_the_runtime_session() -> None:
     session = FakeControlPlaneSession()
     service = bound_operations_service(session)
 
-    paused = service.pause_runtime(operator_id="ops-a", idempotency_key="p1")
+    paused = service.pause_runtime(
+        runtime_instance_id="rt-test", operator_id="ops-a", idempotency_key="p1"
+    )
     halt = service.activate_kill_switch(
         KillSwitchCommandDTO(scope="global", reason="halt"),
         operator_id="ops-a",
+        runtime_instance_id="rt-test",
         idempotency_key="k1",
     )
 

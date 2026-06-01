@@ -47,7 +47,9 @@ def test_operational_routes_validate_non_global_scope_id() -> None:
     response = client.post(
         "/operations/kill-switches",
         json={"scope": "account", "reason": "halt"},
-        headers=_auth_headers(**{"X-QTS-Operator": "tester"}),
+        headers=_auth_headers(
+            **{"X-QTS-Operator": "tester", "X-QTS-Runtime-Instance-Id": "rt-ops-1"}
+        ),
     )
 
     assert response.status_code == 422
@@ -61,15 +63,33 @@ def test_operational_runtime_command_routes_return_command_evidence() -> None:
 
     reconcile = client.post(
         "/operations/runtime/reconcile",
-        headers=_auth_headers(**{"Idempotency-Key": "reconcile-1", "X-QTS-Operator": "tester"}),
+        headers=_auth_headers(
+            **{
+                "Idempotency-Key": "reconcile-1",
+                "X-QTS-Operator": "tester",
+                "X-QTS-Runtime-Instance-Id": "rt-ops-1",
+            }
+        ),
     )
     duplicate = client.post(
         "/operations/runtime/reconcile",
-        headers=_auth_headers(**{"Idempotency-Key": "reconcile-1", "X-QTS-Operator": "tester"}),
+        headers=_auth_headers(
+            **{
+                "Idempotency-Key": "reconcile-1",
+                "X-QTS-Operator": "tester",
+                "X-QTS-Runtime-Instance-Id": "rt-ops-1",
+            }
+        ),
     )
     snapshot = client.post(
         "/operations/runtime/snapshot",
-        headers=_auth_headers(**{"Idempotency-Key": "snapshot-1", "X-QTS-Operator": "tester"}),
+        headers=_auth_headers(
+            **{
+                "Idempotency-Key": "snapshot-1",
+                "X-QTS-Operator": "tester",
+                "X-QTS-Runtime-Instance-Id": "rt-ops-1",
+            }
+        ),
     )
 
     assert reconcile.status_code == 200
@@ -92,24 +112,52 @@ def test_operational_runtime_lifecycle_and_observation_routes() -> None:
 
     started = client.post(
         "/operations/runtime/start",
-        headers=_auth_headers(**{"Idempotency-Key": "start-1", "X-QTS-Operator": "tester"}),
+        headers=_auth_headers(
+            **{
+                "Idempotency-Key": "start-1",
+                "X-QTS-Operator": "tester",
+                "X-QTS-Runtime-Instance-Id": "rt-test",
+            }
+        ),
     )
     stopped = client.post(
         "/operations/runtime/stop",
-        headers=_auth_headers(**{"Idempotency-Key": "stop-1", "X-QTS-Operator": "tester"}),
+        headers=_auth_headers(
+            **{
+                "Idempotency-Key": "stop-1",
+                "X-QTS-Operator": "tester",
+                "X-QTS-Runtime-Instance-Id": "rt-test",
+            }
+        ),
     )
     observation = client.post(
         "/operations/runtime/enter-observation",
-        headers=_auth_headers(**{"Idempotency-Key": "observation-1", "X-QTS-Operator": "tester"}),
+        headers=_auth_headers(
+            **{
+                "Idempotency-Key": "observation-1",
+                "X-QTS-Operator": "tester",
+                "X-QTS-Runtime-Instance-Id": "rt-test",
+            }
+        ),
     )
     duplicate_observation = client.post(
         "/operations/runtime/enter-observation",
-        headers=_auth_headers(**{"Idempotency-Key": "observation-1", "X-QTS-Operator": "tester"}),
+        headers=_auth_headers(
+            **{
+                "Idempotency-Key": "observation-1",
+                "X-QTS-Operator": "tester",
+                "X-QTS-Runtime-Instance-Id": "rt-test",
+            }
+        ),
     )
     running = client.post(
         "/operations/runtime/exit-observation",
         headers=_auth_headers(
-            **{"Idempotency-Key": "exit-observation-1", "X-QTS-Operator": "tester"}
+            **{
+                "Idempotency-Key": "exit-observation-1",
+                "X-QTS-Operator": "tester",
+                "X-QTS-Runtime-Instance-Id": "rt-test",
+            }
         ),
     )
 
@@ -135,7 +183,13 @@ def test_operational_kill_switch_deactivate_route_is_idempotent() -> None:
     active = client.post(
         "/operations/kill-switches",
         json={"scope": "global", "reason": "operator stop"},
-        headers=_auth_headers(**{"Idempotency-Key": "kill-on-1", "X-QTS-Operator": "tester"}),
+        headers=_auth_headers(
+            **{
+                "Idempotency-Key": "kill-on-1",
+                "X-QTS-Operator": "tester",
+                "X-QTS-Runtime-Instance-Id": "rt-test",
+            }
+        ),
     )
     inactive = client.post(
         "/operations/kill-switches/deactivate",
@@ -144,6 +198,7 @@ def test_operational_kill_switch_deactivate_route_is_idempotent() -> None:
             "Authorization": "Bearer dev-token",
             "Idempotency-Key": "kill-off-1",
             "X-QTS-Operator": "tester",
+            "X-QTS-Runtime-Instance-Id": "rt-test",
         },
     )
     duplicate = client.post(
@@ -153,6 +208,7 @@ def test_operational_kill_switch_deactivate_route_is_idempotent() -> None:
             "Authorization": "Bearer dev-token",
             "Idempotency-Key": "kill-off-1",
             "X-QTS-Operator": "tester",
+            "X-QTS-Runtime-Instance-Id": "rt-test",
         },
     )
 
@@ -177,6 +233,7 @@ def test_operational_kill_switch_deactivate_route_requires_safety_scope() -> Non
             "Authorization": "Bearer read-token",
             "Idempotency-Key": "kill-off-denied",
             "X-QTS-Operator": "tester",
+            "X-QTS-Runtime-Instance-Id": "rt-test",
         },
     )
 
@@ -194,13 +251,21 @@ def test_operational_routes_scope_idempotency_by_command_kind() -> None:
     pause = client.post(
         "/operations/runtime/pause",
         headers=_auth_headers(
-            **{"Idempotency-Key": "shared-command-key", "X-QTS-Operator": "tester"}
+            **{
+                "Idempotency-Key": "shared-command-key",
+                "X-QTS-Operator": "tester",
+                "X-QTS-Runtime-Instance-Id": "rt-test",
+            }
         ),
     )
     reconcile = client.post(
         "/operations/runtime/reconcile",
         headers=_auth_headers(
-            **{"Idempotency-Key": "shared-command-key", "X-QTS-Operator": "tester"}
+            **{
+                "Idempotency-Key": "shared-command-key",
+                "X-QTS-Operator": "tester",
+                "X-QTS-Runtime-Instance-Id": "rt-test",
+            }
         ),
     )
 

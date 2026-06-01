@@ -90,26 +90,35 @@ class FakeControlPlaneSession:
 
 def bound_command_executor(
     session: FakeControlPlaneSession | None = None,
-) -> tuple[RuntimeCommandExecutor, FakeControlPlaneSession]:
+    runtime_instance_id: str = "rt-test",
+) -> tuple[RuntimeCommandExecutor, FakeControlPlaneSession, str]:
     """Return an executor bound to a fake control-plane session."""
     bound_session = session or FakeControlPlaneSession()
     registry = RuntimeSessionRegistry()
     registry.register(
-        RuntimeSessionKey(runtime_instance_id="rt-test", environment="paper"),
+        RuntimeSessionKey(runtime_instance_id=runtime_instance_id),
         cast(RuntimeSession, bound_session),
     )
-    return RuntimeCommandExecutor(registry), bound_session
+    return RuntimeCommandExecutor(registry), bound_session, runtime_instance_id
 
 
 def bound_operations_service(
     session: FakeControlPlaneSession | None = None,
+    runtime_instance_id: str = "rt-test",
 ) -> OperationsService:
     """Return an OperationsService whose commands act on a bound fake session."""
-    executor, _ = bound_command_executor(session)
+    executor, _, _ = bound_command_executor(
+        session=session,
+        runtime_instance_id=runtime_instance_id,
+    )
     return OperationsService(command_executor=executor)
 
 
+DEFAULT_RUNTIME_INSTANCE_ID = "rt-test"
+
+
 __all__ = [
+    "DEFAULT_RUNTIME_INSTANCE_ID",
     "FakeControlPlaneSession",
     "bound_command_executor",
     "bound_operations_service",

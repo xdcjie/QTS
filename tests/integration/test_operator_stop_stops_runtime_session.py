@@ -21,7 +21,7 @@ def test_operator_stop_stops_runtime_session() -> None:
     session.start()
     session.on_market_data(_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC)))
 
-    stopped = service.stop_runtime(operator_id="ops-a")
+    stopped = service.stop_runtime(operator_id="ops-a", runtime_instance_id="ops-rt")
     blocked = session.on_market_data(_bar(datetime(2026, 1, 2, 14, 31, tzinfo=UTC)))
 
     assert stopped.state == "stopped"

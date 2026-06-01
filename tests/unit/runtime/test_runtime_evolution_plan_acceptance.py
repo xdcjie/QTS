@@ -318,6 +318,7 @@ def test_snapshot_command_writes_snapshot() -> None:
         command_id="cmd-snapshot-1",
         command_type=RuntimeCommandType.SNAPSHOT,
         idempotency_key="snap-1",
+        runtime_instance_id="runtime-1",
         operator_id="ops",
     )
     result = RuntimeCommandResult(
@@ -349,6 +350,7 @@ def test_reconcile_command_emits_result_event() -> None:
         command_id="cmd-reconcile-1",
         command_type=RuntimeCommandType.RECONCILE,
         idempotency_key="reconcile-1",
+        runtime_instance_id="runtime-1",
         operator_id="ops",
     )
     result = RuntimeCommandResult(

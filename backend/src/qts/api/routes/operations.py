@@ -62,6 +62,16 @@ def _require_operator(operator: str | None) -> None:
         raise HTTPException(status_code=403, detail="operator permission required")
 
 
+def _require_runtime_instance_id(runtime_instance_id: str | None) -> str:
+    """Validate X-QTS-Runtime-Instance-Id header is present."""
+    if runtime_instance_id is None or not runtime_instance_id.strip():
+        raise HTTPException(
+            status_code=403,
+            detail="runtime instance id required; provide X-QTS-Runtime-Instance-Id",
+        )
+    return runtime_instance_id.strip()
+
+
 @router.get("/operator-status")
 def operator_status(
     operations: OperationsServiceDep,
@@ -79,6 +89,7 @@ def start_runtime(
     idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
+    runtime_instance_id: Annotated[str | None, Header(alias="X-QTS-Runtime-Instance-Id")] = None,
 ) -> RuntimeCommandResponseSchema:
     """Start runtime processing."""
 
@@ -89,6 +100,7 @@ def start_runtime(
         assert operator is not None
         state = operations.start_runtime(
             operator_id=operator.strip(),
+            runtime_instance_id=_require_runtime_instance_id(runtime_instance_id),
             idempotency_key=idempotency_key,
         )
         payload = map_runtime_state_dto(state)
@@ -105,6 +117,7 @@ def stop_runtime(
     idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
+    runtime_instance_id: Annotated[str | None, Header(alias="X-QTS-Runtime-Instance-Id")] = None,
 ) -> RuntimeCommandResponseSchema:
     """Stop runtime processing."""
 
@@ -115,6 +128,7 @@ def stop_runtime(
         assert operator is not None
         state = operations.stop_runtime(
             operator_id=operator.strip(),
+            runtime_instance_id=_require_runtime_instance_id(runtime_instance_id),
             idempotency_key=idempotency_key,
         )
         payload = map_runtime_state_dto(state)
@@ -131,6 +145,7 @@ def pause_runtime(
     idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
+    runtime_instance_id: Annotated[str | None, Header(alias="X-QTS-Runtime-Instance-Id")] = None,
 ) -> RuntimeCommandResponseSchema:
     """Pause runtime execution for all strategies and data actors."""
 
@@ -141,6 +156,7 @@ def pause_runtime(
         assert operator is not None
         state = operations.pause_runtime(
             operator_id=operator.strip(),
+            runtime_instance_id=_require_runtime_instance_id(runtime_instance_id),
             idempotency_key=idempotency_key,
         )
         payload = map_runtime_state_dto(state)
@@ -157,6 +173,7 @@ def resume_runtime(
     idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
+    runtime_instance_id: Annotated[str | None, Header(alias="X-QTS-Runtime-Instance-Id")] = None,
 ) -> RuntimeCommandResponseSchema:
     """Resume runtime execution after an operator pause."""
 
@@ -167,6 +184,7 @@ def resume_runtime(
         assert operator is not None
         state = operations.resume_runtime(
             operator_id=operator.strip(),
+            runtime_instance_id=_require_runtime_instance_id(runtime_instance_id),
             idempotency_key=idempotency_key,
         )
         payload = map_runtime_state_dto(state)
@@ -183,6 +201,7 @@ def enter_observation(
     idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
+    runtime_instance_id: Annotated[str | None, Header(alias="X-QTS-Runtime-Instance-Id")] = None,
 ) -> RuntimeCommandResponseSchema:
     """Enter observation mode while keeping runtime visibility."""
 
@@ -193,6 +212,7 @@ def enter_observation(
         assert operator is not None
         state = operations.enter_observation(
             operator_id=operator.strip(),
+            runtime_instance_id=_require_runtime_instance_id(runtime_instance_id),
             idempotency_key=idempotency_key,
         )
         payload = map_runtime_state_dto(state)
@@ -209,6 +229,7 @@ def exit_observation(
     idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
+    runtime_instance_id: Annotated[str | None, Header(alias="X-QTS-Runtime-Instance-Id")] = None,
 ) -> RuntimeCommandResponseSchema:
     """Exit observation mode after operator approval."""
 
@@ -219,6 +240,7 @@ def exit_observation(
         assert operator is not None
         state = operations.exit_observation(
             operator_id=operator.strip(),
+            runtime_instance_id=_require_runtime_instance_id(runtime_instance_id),
             idempotency_key=idempotency_key,
         )
         payload = map_runtime_state_dto(state)
@@ -235,6 +257,7 @@ def reconcile_runtime(
     idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
+    runtime_instance_id: Annotated[str | None, Header(alias="X-QTS-Runtime-Instance-Id")] = None,
 ) -> RuntimeCommandResultResponseSchema:
     """Request runtime reconciliation through the operational command boundary."""
 
@@ -245,6 +268,7 @@ def reconcile_runtime(
         assert operator is not None
         result = operations.reconcile_runtime(
             operator_id=operator.strip(),
+            runtime_instance_id=_require_runtime_instance_id(runtime_instance_id),
             idempotency_key=idempotency_key,
         )
         payload = map_runtime_command_result_dto(result)
@@ -261,6 +285,7 @@ def snapshot_runtime(
     idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
+    runtime_instance_id: Annotated[str | None, Header(alias="X-QTS-Runtime-Instance-Id")] = None,
 ) -> RuntimeCommandResultResponseSchema:
     """Request a runtime snapshot through the operational command boundary."""
 
@@ -271,6 +296,7 @@ def snapshot_runtime(
         assert operator is not None
         result = operations.snapshot_runtime(
             operator_id=operator.strip(),
+            runtime_instance_id=_require_runtime_instance_id(runtime_instance_id),
             idempotency_key=idempotency_key,
         )
         payload = map_runtime_command_result_dto(result)
@@ -288,6 +314,7 @@ def activate_kill_switch(
     idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
+    runtime_instance_id: Annotated[str | None, Header(alias="X-QTS-Runtime-Instance-Id")] = None,
 ) -> KillSwitchResponseSchema:
     """Activate or refresh a kill-switch for a runtime scope."""
 
@@ -303,6 +330,7 @@ def activate_kill_switch(
                 reason=command.reason,
             ),
             operator_id=operator.strip(),
+            runtime_instance_id=_require_runtime_instance_id(runtime_instance_id),
             idempotency_key=idempotency_key,
         )
         payload = map_kill_switch_state_dto(state)
@@ -320,6 +348,7 @@ def deactivate_kill_switch(
     idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
+    runtime_instance_id: Annotated[str | None, Header(alias="X-QTS-Runtime-Instance-Id")] = None,
 ) -> KillSwitchResponseSchema:
     """Deactivate or refresh an inactive kill-switch state for a runtime scope."""
 
@@ -335,6 +364,7 @@ def deactivate_kill_switch(
                 reason=command.reason,
             ),
             operator_id=operator.strip(),
+            runtime_instance_id=_require_runtime_instance_id(runtime_instance_id),
             authorization_scope="runtime:safety:write",
             idempotency_key=idempotency_key,
         )

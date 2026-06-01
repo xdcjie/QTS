@@ -25,6 +25,7 @@ def test_all_operator_commands_reject_without_bound_runtime_session() -> None:
             command_id=f"{command_type.value}-1",
             command_type=command_type,
             idempotency_key=f"{command_type.value}-key",
+            runtime_instance_id="rt-unbound",
             operator_id="ops-a",
             authorization_scope=(
                 "runtime:safety:write"
@@ -39,4 +40,4 @@ def test_all_operator_commands_reject_without_bound_runtime_session() -> None:
 
         assert result.result_status is RuntimeCommandResultStatus.REJECTED, command_type
         assert result.reason_code == "RUNTIME_SESSION_NOT_BOUND", command_type
-        assert result.evidence["runtime_instance_id"] == "local-runtime"
+        assert result.evidence["runtime_instance_id"] == "rt-unbound"

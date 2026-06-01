@@ -24,12 +24,14 @@ class OperationsCommandRouter:
         self,
         command_type: RuntimeCommandType,
         *,
+        runtime_instance_id: str,
         operator_id: str,
         idempotency_key: str | None,
     ) -> RuntimeStateDTO:
         """Submit a lifecycle command and return the stable state DTO."""
         result = self.submit(
             command_type,
+            runtime_instance_id=runtime_instance_id,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
         )
@@ -42,6 +44,7 @@ class OperationsCommandRouter:
         self,
         command_type: RuntimeCommandType,
         *,
+        runtime_instance_id: str,
         operator_id: str,
         operator_role: str = "operator",
         authorization_scope: str = "runtime:operator",
@@ -57,6 +60,7 @@ class OperationsCommandRouter:
             RuntimeCommand(
                 command_id=command_id,
                 command_type=command_type,
+                runtime_instance_id=runtime_instance_id,
                 idempotency_key=idempotency_key or command_id,
                 operator_id=operator_id,
                 operator_role=operator_role,

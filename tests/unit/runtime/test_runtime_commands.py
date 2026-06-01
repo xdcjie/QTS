@@ -31,6 +31,7 @@ def test_runtime_command_bus_returns_same_result_for_duplicate_command_key() -> 
             command_id="cmd-001",
             command_type=RuntimeCommandType.PAUSE,
             idempotency_key="pause-key",
+            runtime_instance_id="runtime-1",
             operator_id="ops-a",
         )
     )
@@ -39,6 +40,7 @@ def test_runtime_command_bus_returns_same_result_for_duplicate_command_key() -> 
             command_id="cmd-002",
             command_type=RuntimeCommandType.PAUSE,
             idempotency_key="pause-key",
+            runtime_instance_id="runtime-1",
             operator_id="ops-a",
         )
     )
@@ -88,6 +90,7 @@ def test_runtime_command_bus_scopes_idempotency_by_command_type() -> None:
             command_id="cmd-001",
             command_type=RuntimeCommandType.PAUSE,
             idempotency_key="shared-key",
+            runtime_instance_id="runtime-1",
             operator_id="ops-a",
         )
     )
@@ -96,6 +99,7 @@ def test_runtime_command_bus_scopes_idempotency_by_command_type() -> None:
             command_id="cmd-002",
             command_type=RuntimeCommandType.RECONCILE,
             idempotency_key="shared-key",
+            runtime_instance_id="runtime-1",
             operator_id="ops-a",
         )
     )
@@ -184,6 +188,7 @@ def test_runtime_command_bus_rejects_unauthorized_kill_switch_deactivation() -> 
             command_id="cmd-001",
             command_type=RuntimeCommandType.DEACTIVATE_KILL_SWITCH,
             idempotency_key="kill-off",
+            runtime_instance_id="runtime-1",
             operator_id="ops-a",
             operator_role="trader",
             authorization_scope="runtime:read",
@@ -212,6 +217,7 @@ def test_runtime_command_bus_rejects_live_enablement_without_dual_control() -> N
             command_id="cmd-001",
             command_type=RuntimeCommandType.EXIT_OBSERVATION,
             idempotency_key="enable-live",
+            runtime_instance_id="runtime-1",
             operator_id="ops-a",
             operator_role="safety_officer",
             authorization_scope="runtime:safety:write",
@@ -251,6 +257,7 @@ def test_runtime_command_bus_allows_approved_live_enablement() -> None:
             command_id="cmd-001",
             command_type=RuntimeCommandType.EXIT_OBSERVATION,
             idempotency_key="enable-live",
+            runtime_instance_id="runtime-1",
             operator_id="ops-a",
             operator_role="safety_officer",
             authorization_scope="runtime:safety:write",
@@ -282,6 +289,7 @@ def test_runtime_command_bus_rejects_live_enablement_self_approval() -> None:
             command_id="cmd-001",
             command_type=RuntimeCommandType.EXIT_OBSERVATION,
             idempotency_key="enable-live",
+            runtime_instance_id="runtime-1",
             operator_id="ops-a",
             operator_role="safety_officer",
             authorization_scope="runtime:safety:write",
@@ -334,6 +342,7 @@ def test_runtime_command_control_types_emit_audit_events() -> None:
         command = RuntimeCommand(
             command_id=f"cmd-{command_type.value}",
             command_type=command_type,
+            runtime_instance_id="runtime-1",
             idempotency_key=f"key-{command_type.value}",
             operator_id="ops-a",
             authorization_scope="runtime:safety:write",
@@ -364,6 +373,7 @@ def test_runtime_command_bus_rejects_resume_after_reconnect_without_reconciliati
             command_id="cmd-001",
             command_type=RuntimeCommandType.RESUME,
             idempotency_key="resume-key",
+            runtime_instance_id="runtime-1",
             operator_id="ops-a",
             payload={
                 "reconnect_reconciliation_required": True,

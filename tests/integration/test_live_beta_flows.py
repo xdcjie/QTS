@@ -81,7 +81,12 @@ def test_reconciliation_report_emits_drift_without_mutating_snapshots() -> None:
 def test_operational_api_idempotency_and_kill_switch_endpoints() -> None:
     from tests.support.operations import bound_operations_service
 
-    client = TestClient(create_app(operations_service=bound_operations_service()))
+    runtime_instance_id = "rt-ops-1"
+    client = TestClient(
+        create_app(
+            operations_service=bound_operations_service(runtime_instance_id=runtime_instance_id)
+        )
+    )
 
     first = client.post(
         "/operations/runtime/pause",
@@ -89,6 +94,7 @@ def test_operational_api_idempotency_and_kill_switch_endpoints() -> None:
             "Authorization": "Bearer dev-token",
             "Idempotency-Key": "pause-1",
             "X-QTS-Operator": "tester",
+            "X-QTS-Runtime-Instance-Id": runtime_instance_id,
         },
     )
     duplicate = client.post(
@@ -97,12 +103,17 @@ def test_operational_api_idempotency_and_kill_switch_endpoints() -> None:
             "Authorization": "Bearer dev-token",
             "Idempotency-Key": "pause-1",
             "X-QTS-Operator": "tester",
+            "X-QTS-Runtime-Instance-Id": runtime_instance_id,
         },
     )
     halt = client.post(
         "/operations/kill-switches",
         json={"scope": "global", "scope_id": None, "reason": "test halt"},
-        headers={"Authorization": "Bearer dev-token", "X-QTS-Operator": "tester"},
+        headers={
+            "Authorization": "Bearer dev-token",
+            "X-QTS-Operator": "tester",
+            "X-QTS-Runtime-Instance-Id": runtime_instance_id,
+        },
     )
 
     assert first.status_code == 200
