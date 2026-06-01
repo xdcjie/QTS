@@ -8,7 +8,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 import yaml  # type: ignore[import-untyped]
 
@@ -46,6 +46,14 @@ from qts.research.workflow_support import (
     _string_sequence,
     json_ready,
 )
+
+
+class _ResearchWorkflowSessionConfig(Protocol):
+    """Config surface required by research workflow provenance."""
+
+    research_config_path: Path
+    backtest_config_path: Path
+    dataset_ids: Sequence[str]
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,9 +97,13 @@ class ResearchWorkflowRunContext:
     ) -> ResearchWorkflowRunContext:
         """Build run provenance from workflow/session config with explicit unknown fallbacks."""
 
-        session_config = getattr(session, "config", None)
-        research_config_path = getattr(session_config, "research_config_path", None)
-        backtest_config_path = getattr(session_config, "backtest_config_path", None)
+        session_config = session.config
+        research_config_path = (
+            None if session_config is None else session_config.research_config_path
+        )
+        backtest_config_path = (
+            None if session_config is None else session_config.backtest_config_path
+        )
         return cls(
             workflow_config_path=str(config.workflow_config_path),
             workflow_config_hash=_sha256_path(config.workflow_config_path),
@@ -850,6 +862,7 @@ class ResearchWorkflowResult:
     run_context: ResearchWorkflowRunContext | None = None
     route: ResearchRouteMetadata | None = None
     idea_metadata: Mapping[str, Any] | None = None
+    projection_refs: Mapping[str, Any] | None = None
     decision: Any | None = None
 
     @property
@@ -872,6 +885,8 @@ class ResearchWorkflowResult:
             payload["route"] = self.route.to_payload()
         if self.idea_metadata is not None:
             payload["idea_metadata"] = json_ready(self.idea_metadata)
+        if self.projection_refs is not None:
+            payload["projection_refs"] = json_ready(self.projection_refs)
         if self.decision is not None:
             payload["decision"] = json_ready(self.decision)
         if self.periods:
@@ -1122,20 +1137,10 @@ def _call_git(
     return completed.stdout
 
 
-def _dataset_ids(session_config: Any) -> tuple[str, ...]:
+def _dataset_ids(session_config: _ResearchWorkflowSessionConfig | None) -> tuple[str, ...]:
     if session_config is None:
         return ()
-    explicit = getattr(session_config, "dataset_ids", None)
-    if explicit is not None:
-        return tuple(str(item) for item in explicit)
-    catalog_name = getattr(session_config, "catalog_name", None)
-    roots = getattr(session_config, "roots", ())
-    timeframe = getattr(session_config, "timeframe", None)
-    if not isinstance(catalog_name, str) or not isinstance(timeframe, str):
-        return ()
-    if not isinstance(roots, Sequence) or isinstance(roots, str):
-        return ()
-    return tuple(f"{catalog_name}:{root}:{timeframe}" for root in roots)
+    return tuple(str(item) for item in session_config.dataset_ids)
 
 
 __all__ = [

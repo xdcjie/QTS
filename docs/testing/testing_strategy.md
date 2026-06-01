@@ -113,6 +113,8 @@ where written standards are otherwise easy to miss:
   class-owned construction APIs;
 - module-private helpers beside a single public class when the helper should be
   owned by that class.
+- runtime `getattr`/`hasattr` probing in production QTS modules where typed
+  internal contracts should be called directly.
 
 Guardrail exceptions must be narrow and expressed in `scripts/verify_guardrails.py`
 with tests that prove both the allowed boundary and the forbidden shortcut.

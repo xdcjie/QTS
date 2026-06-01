@@ -12,6 +12,7 @@ from typing import Any, cast
 import pytest
 from qts.backtest.pipeline import BacktestPipeline
 from qts.core.ids import InstrumentId
+from qts.data.historical.catalog import HistoricalCatalog
 from qts.data.provenance import DatasetMetadata
 from qts.data.sources.replay_market_data_source import ReplayMarketDataBundle
 from qts.domain.market_data import Bar
@@ -203,7 +204,8 @@ def test_materialized_replay_cache_reuses_aggregated_bars_without_consuming_sour
     )
     monkeypatch.setattr("qts.backtest.assembly.BacktestEngine.from_config", fake_from_config)
     monkeypatch.setattr(
-        "qts.backtest.replay_input.HistoricalCatalog.load", lambda _config: object()
+        "qts.backtest.replay_input.HistoricalCatalog.load",
+        lambda _config: HistoricalCatalog(root_path=tmp_path, roots=(), datasets={}),
     )
 
     pipeline = BacktestPipeline(_backtest_config(tmp_path)).with_materialized_replay_cache(

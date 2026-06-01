@@ -58,16 +58,27 @@ class SessionRegimeGateConfig:
             raise ValueError("min_history_sessions must be <= lookback_sessions")
         if not self.timeframe.strip():
             raise ValueError("timeframe must be non-empty")
-        for name in (
-            "range_min",
+        object.__setattr__(self, "range_min", self._decimal_value("range_min", self.range_min))
+        object.__setattr__(
+            self,
             "asia_share_max",
+            self._decimal_value("asia_share_max", self.asia_share_max),
+        )
+        object.__setattr__(
+            self,
             "min_return_floor",
+            self._decimal_value("min_return_floor", self.min_return_floor),
+        )
+        object.__setattr__(
+            self,
             "mean_churn_min",
+            self._decimal_value("mean_churn_min", self.mean_churn_min),
+        )
+        object.__setattr__(
+            self,
             "mean_realized_vol_max",
-        ):
-            value = getattr(self, name)
-            if not isinstance(value, Decimal):
-                object.__setattr__(self, name, Decimal(str(value)))
+            self._decimal_value("mean_realized_vol_max", self.mean_realized_vol_max),
+        )
         if self.range_min <= Decimal("0"):
             raise ValueError("range_min must be positive")
         if not Decimal("0") <= self.asia_share_max <= Decimal("1"):
@@ -82,6 +93,15 @@ class SessionRegimeGateConfig:
             raise ValueError("asia_end_et_hour must be 0..24")
         if self.asia_start_et_hour == self.asia_end_et_hour:
             raise ValueError("asia_start_et_hour must differ from asia_end_et_hour")
+
+    @staticmethod
+    def _decimal_value(field_name: str, value: Decimal) -> Decimal:
+        if isinstance(value, Decimal):
+            return value
+        parsed = Decimal(str(value))
+        if not parsed.is_finite():
+            raise ValueError(f"{field_name} must be finite")
+        return parsed
 
 
 @dataclass(frozen=True, slots=True)

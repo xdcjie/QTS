@@ -268,21 +268,33 @@ class WalkForwardRobustnessPolicy:
         if not phases or any(not phase for phase in phases):
             raise ValueError("walk-forward robustness phases must not be empty")
         object.__setattr__(self, "phases", phases)
-        for name in ("min_windows", "max_losing_windows"):
-            value = getattr(self, name)
+        for name, value in (
+            ("min_windows", self.min_windows),
+            ("max_losing_windows", self.max_losing_windows),
+        ):
             if value is not None and value < 0:
                 raise ValueError(f"{name} must be non-negative")
-        for name in (
+        min_window_pnl_usd = self._optional_decimal(
             "min_window_pnl_usd",
+            self.min_window_pnl_usd,
+        )
+        min_window_best_objective = self._optional_decimal(
             "min_window_best_objective",
-            "min_total_pnl_usd",
-        ):
-            value = getattr(self, name)
-            if value is not None:
-                parsed = Decimal(str(value))
-                if not parsed.is_finite():
-                    raise ValueError(f"{name} must be finite")
-                object.__setattr__(self, name, parsed)
+            self.min_window_best_objective,
+        )
+        min_total_pnl_usd = self._optional_decimal("min_total_pnl_usd", self.min_total_pnl_usd)
+        object.__setattr__(self, "min_window_pnl_usd", min_window_pnl_usd)
+        object.__setattr__(self, "min_window_best_objective", min_window_best_objective)
+        object.__setattr__(self, "min_total_pnl_usd", min_total_pnl_usd)
+
+    @staticmethod
+    def _optional_decimal(name: str, value: Decimal | None) -> Decimal | None:
+        if value is None:
+            return None
+        parsed = Decimal(str(value))
+        if not parsed.is_finite():
+            raise ValueError(f"{name} must be finite")
+        return parsed
 
     def evaluate(self, summary: WalkForwardValidationSummary) -> WalkForwardRobustnessDecision:
         """Return an aggregate robustness decision for selected windows."""

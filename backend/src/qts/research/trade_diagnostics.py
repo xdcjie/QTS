@@ -88,8 +88,21 @@ class TradeDiagnostic:
         """Return fields required for standard research diagnostics artifacts."""
 
         missing: list[str] = []
-        for field_name in _STANDARD_TRADE_DIAGNOSTIC_FIELDS:
-            value = getattr(self, field_name)
+        standard_fields = (
+            ("trade_id", self.trade_id),
+            ("strategy_id", self.strategy_id),
+            ("idea_id", self.idea_id),
+            ("symbol", self.symbol),
+            ("direction", self.direction),
+            ("quantity", self.quantity),
+            ("entry_time", self.entry_time),
+            ("exit_time", self.exit_time),
+            ("entry_price", self.entry_price),
+            ("exit_price", self.exit_price),
+            ("holding_bars", self.holding_bars),
+            ("time_bucket", self.time_bucket),
+        )
+        for field_name, value in standard_fields:
             if isinstance(value, str):
                 if not value.strip():
                     missing.append(field_name)

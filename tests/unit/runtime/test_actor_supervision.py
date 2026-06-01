@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from typing import cast
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -26,6 +27,7 @@ from qts.runtime.actor_supervisor import (
     SupervisorDecision,
 )
 from qts.runtime.mailbox import Mailbox
+from qts.runtime.state import RuntimeSessionState
 
 # ---------------------------------------------------------------------------
 # ActorFailureEvent
@@ -746,18 +748,17 @@ class _FakeSessionState:
     """Minimal session double for coordinator wiring tests."""
 
     def __init__(self) -> None:
-        from qts.runtime.state import RuntimeSessionState
-
         self.state = RuntimeSessionState.RUNNING
         self.events: list[tuple[str, dict[str, object]]] = []
         self.degraded = False
 
-    def _write_event(self, kind: str, payload: dict[str, object]) -> None:
-        self.events.append((kind, payload))
+    def supervised_actor_partitions(self) -> tuple[tuple[Any, Any], ...]:
+        return ()
 
-    def degrade(self) -> object:
-        from qts.runtime.state import RuntimeSessionState
+    def write_supervisor_event(self, kind: str, payload: Mapping[str, object]) -> None:
+        self.events.append((kind, dict(payload)))
 
+    def degrade(self) -> RuntimeSessionState:
         self.degraded = True
         self.state = RuntimeSessionState.DEGRADED
         return self.state

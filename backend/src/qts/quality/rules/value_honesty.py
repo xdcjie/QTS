@@ -195,7 +195,7 @@ class PromotionValueHonestyRule:
         results: list[tuple[str, int]] = []
         if isinstance(node, ast.keyword):
             if node.arg is not None and cls._is_verdict_field(node.arg) and _is_true(node.value):
-                results.append((node.arg, getattr(node.value, "lineno", 1)))
+                results.append((node.arg, _node_line(node.value)))
         elif isinstance(node, ast.Assign):
             if _is_true(node.value):
                 for target in node.targets:
@@ -214,7 +214,7 @@ class PromotionValueHonestyRule:
                     and cls._is_verdict_field(key.value)
                     and _is_true(dict_value)
                 ):
-                    results.append((key.value, getattr(dict_value, "lineno", 1)))
+                    results.append((key.value, _node_line(dict_value)))
         return results
 
     @staticmethod
@@ -232,6 +232,13 @@ class PromotionValueHonestyRule:
 
 def _is_true(value: ast.expr | None) -> bool:
     return isinstance(value, ast.Constant) and value.value is True
+
+
+def _node_line(node: ast.AST) -> int:
+    try:
+        return int(object.__getattribute__(node, "lineno"))
+    except AttributeError:
+        return 1
 
 
 __all__ = ["PromotionValueHonestyRule", "RouteNoFakeDataRule"]

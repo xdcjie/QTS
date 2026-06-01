@@ -41,8 +41,10 @@ class ResearchMetricDefinition:
         object.__setattr__(self, "unit", unit)
         object.__setattr__(self, "direction", direction)
         object.__setattr__(self, "required_for", tuple(str(item) for item in self.required_for))
-        for field_name in ("minimum", "maximum"):
-            value = getattr(self, field_name)
+        for field_name, value in (
+            ("minimum", self.minimum),
+            ("maximum", self.maximum),
+        ):
             if isinstance(value, int | float) and not math.isfinite(value):
                 raise ValueError(f"{path} {field_name} must be finite")
 

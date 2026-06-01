@@ -9,9 +9,10 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from importlib import import_module
+from operator import attrgetter
 from pathlib import Path
 from time import monotonic
-from typing import Any, Literal, Protocol
+from typing import Any, Literal, Protocol, cast
 
 from qts.core.ids import AccountId, OrderId, StrategyId
 from qts.domain.orders import BracketLeg, ExecutionReport, ExecutionReportStatus
@@ -1003,11 +1004,15 @@ def _ibapi_attr(module_name: str, attribute_name: str) -> Any:
     try:
         module = import_module(module_name)
     except ModuleNotFoundError as exc:
-        raise RuntimeError(
-            "official IBKR TWS Python API package is required; install ibapi from "
-            "the Interactive Brokers TWS API download"
-        ) from exc
-    return getattr(module, attribute_name)
+        raise _missing_ibapi_error() from exc
+    return cast(type[Any], attrgetter(attribute_name)(module))
+
+
+def _missing_ibapi_error() -> RuntimeError:
+    return RuntimeError(
+        "official IBKR TWS Python API package is required; install ibapi from "
+        "the Interactive Brokers TWS API download"
+    )
 
 
 def _connect_ibapi_app(

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 
 import pytest
 from qts.backtest.risk_policy import BacktestMarginPolicyResolver, BacktestRiskPolicyFactory
+from qts.core.ids import InstrumentId
+from qts.domain.instruments import AssetClass, ContractSpec, FutureSpec, Instrument, SettlementType
 from qts.registry.instrument_registry import InstrumentRegistry
 from qts.risk.config import RiskRuleName
 
@@ -52,15 +55,32 @@ def test_engine_no_longer_owns_risk_rule_helpers() -> None:
     assert not hasattr(BacktestEngine, "_resolved_initial_margin_rate")
 
 
-def test_resolver_rejects_conflicting_rates(monkeypatch: pytest.MonkeyPatch) -> None:
-    class _Spec:
-        def __init__(self, rate: Decimal) -> None:
-            self.initial_margin_rate = rate
-
-    class _Registry:
-        def contract_specs(self) -> list[_Spec]:
-            return [_Spec(Decimal("0.1")), _Spec(Decimal("0.2"))]
-
+def test_resolver_rejects_conflicting_rates() -> None:
+    registry = InstrumentRegistry()
+    registry.register("GCM6", _future_instrument("GCM6", Decimal("0.1")))
+    registry.register("GCQ6", _future_instrument("GCQ6", Decimal("0.2")))
     resolver = BacktestMarginPolicyResolver()
     with pytest.raises(ValueError, match="single rate"):
-        resolver.resolve_initial_margin_rate(_Registry())  # type: ignore[arg-type]
+        resolver.resolve_initial_margin_rate(registry)
+
+
+def _future_instrument(symbol: str, margin_rate: Decimal) -> Instrument:
+    return Instrument(
+        instrument_id=InstrumentId(f"FUTURE.CME.GC.{symbol}"),
+        asset_class=AssetClass.FUTURE,
+        exchange="CME",
+        currency="USD",
+        contract_spec=ContractSpec(
+            tick_size=Decimal("0.1"),
+            lot_size=Decimal("1"),
+            multiplier=Decimal("100"),
+            settlement=SettlementType.CASH,
+            calendar_id="CMES",
+            initial_margin_rate=margin_rate,
+        ),
+        derivative=FutureSpec(
+            expiry=date(2026, 6, 26),
+            underlying=InstrumentId("FUTURE_ROOT.CME.GC"),
+            root_symbol="GC",
+        ),
+    )

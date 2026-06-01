@@ -136,8 +136,14 @@ class PromotionDecision:
     evidence_refs: tuple[str, ...]
 
     def __post_init__(self) -> None:
-        for field_name in ("decision_id", "run_id", "strategy_id", "gate", "approved_by"):
-            if not str(getattr(self, field_name)).strip():
+        for field_name, value in (
+            ("decision_id", self.decision_id),
+            ("run_id", self.run_id),
+            ("strategy_id", self.strategy_id),
+            ("gate", self.gate),
+            ("approved_by", self.approved_by),
+        ):
+            if not str(value).strip():
                 raise ValueError(f"{field_name} is required")
         if not self.evidence_refs or any(not str(ref).strip() for ref in self.evidence_refs):
             raise ValueError("evidence_refs must be a non-empty list")

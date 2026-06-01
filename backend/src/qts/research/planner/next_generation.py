@@ -27,8 +27,12 @@ class GenerationMutation:
     mutation_type: ClassVar[str] = "generation"
 
     def __post_init__(self) -> None:
-        for field_name in ("mutation_id", "target", "action", "reason"):
-            value = getattr(self, field_name)
+        for field_name, value in (
+            ("mutation_id", self.mutation_id),
+            ("target", self.target),
+            ("action", self.action),
+            ("reason", self.reason),
+        ):
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{field_name} is required")
         if not self.evidence_refs:
@@ -102,13 +106,12 @@ class NextGenerationProposal:
     mutations: tuple[GenerationMutation, ...]
 
     def __post_init__(self) -> None:
-        for field_name in (
-            "proposal_id",
-            "campaign_id",
-            "previous_generation_id",
-            "next_generation_id",
+        for field_name, value in (
+            ("proposal_id", self.proposal_id),
+            ("campaign_id", self.campaign_id),
+            ("previous_generation_id", self.previous_generation_id),
+            ("next_generation_id", self.next_generation_id),
         ):
-            value = getattr(self, field_name)
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{field_name} is required")
         if self.trial_budget < 0:
@@ -330,8 +333,12 @@ class GenerationApprovalRecord:
     def __post_init__(self) -> None:
         if self.decision not in {"approved", "rejected"}:
             raise ValueError("decision must be approved or rejected")
-        for field_name in ("proposal_id", "proposal_hash", "reviewer", "reason"):
-            value = getattr(self, field_name)
+        for field_name, value in (
+            ("proposal_id", self.proposal_id),
+            ("proposal_hash", self.proposal_hash),
+            ("reviewer", self.reviewer),
+            ("reason", self.reason),
+        ):
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{field_name} is required")
         if (

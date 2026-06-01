@@ -34,14 +34,15 @@ class RuntimeLaunchPlan:
     schema_version: int = 1
 
     def __post_init__(self) -> None:
-        for field_name in (
-            "promotion_candidate_id",
-            "target_mode",
-            "strategy_id",
-            "target_module",
-            "evidence_bundle_id",
-        ):
-            if not str(getattr(self, field_name)).strip():
+        required_values = {
+            "promotion_candidate_id": self.promotion_candidate_id,
+            "target_mode": self.target_mode,
+            "strategy_id": self.strategy_id,
+            "target_module": self.target_module,
+            "evidence_bundle_id": self.evidence_bundle_id,
+        }
+        for field_name, value in required_values.items():
+            if not str(value).strip():
                 raise ValueError(f"{field_name} is required for RuntimeLaunchPlan")
         object.__setattr__(self, "runtime", self._canonical_mapping(self.runtime))
         object.__setattr__(self, "operations", self._canonical_mapping(self.operations))

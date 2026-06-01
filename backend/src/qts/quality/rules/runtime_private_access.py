@@ -60,7 +60,7 @@ class RuntimePrivateAccessRule:
                 GuardrailViolation(
                     code=self.code,
                     path=str(relative_path),
-                    line=getattr(node, "lineno", 1),
+                    line=self._node_line(node),
                     message=(
                         f"{attr} is encapsulated RuntimeSession safety state; reach it through "
                         "RuntimeSafetySessionPort / RuntimeSafetyState, not as a private attribute"
@@ -74,6 +74,13 @@ class RuntimePrivateAccessRule:
         if isinstance(node, ast.Attribute) and node.attr in _ENCAPSULATED_SESSION_ATTRS:
             return node.attr
         return None
+
+    @staticmethod
+    def _node_line(node: ast.AST) -> int:
+        try:
+            return int(object.__getattribute__(node, "lineno"))
+        except AttributeError:
+            return 1
 
 
 __all__ = ["RuntimePrivateAccessRule"]

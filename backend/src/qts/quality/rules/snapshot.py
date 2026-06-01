@@ -140,7 +140,9 @@ class SnapshotCompletenessRule:
             return True
         if isinstance(value, ast.Call):
             func = value.func
-            name = func.id if isinstance(func, ast.Name) else getattr(func, "attr", "")
+            name = func.id if isinstance(func, ast.Name) else ""
+            if isinstance(func, ast.Attribute):
+                name = func.attr
             if name in {"dict", "set", "defaultdict"}:
                 return True
             return name.endswith(_COLLECTION_CALL_SUFFIXES)

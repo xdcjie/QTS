@@ -265,6 +265,52 @@ def test_guardrails_reject_broker_specific_identifiers_outside_boundaries(
     assert _codes(root) == {"BROKER_SPECIFIC_IMPLEMENTATION"}
 
 
+def test_guardrails_reject_optional_getattr_contract_probe_in_core_boundary(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/backtest/bad.py",
+        "def resolve(registry):\n"
+        "    instruments = getattr(registry, 'instruments', None)\n"
+        "    if instruments is None:\n"
+        "        return ()\n"
+        "    return instruments()\n",
+    )
+
+    assert "STRICT_CORE_CONTRACT" in _codes(root)
+
+
+def test_guardrails_reject_dynamic_getattr_contract_probe_in_core_boundary(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/runtime/bad.py",
+        "def resolve(plan, field_name):\n    return getattr(plan, field_name)\n",
+    )
+
+    assert "STRICT_CORE_CONTRACT" in _codes(root)
+
+
+def test_guardrails_reject_hasattr_contract_probe_in_production_qts(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/research/bad.py",
+        "def resolve(result):\n"
+        "    if hasattr(result, 'to_payload'):\n"
+        "        return result.to_payload()\n"
+        "    return result\n",
+    )
+
+    assert "STRICT_CORE_CONTRACT" in _codes(root)
+
+
 def test_guardrails_reject_broker_symbol_mapping_outside_boundary(
     tmp_path: Path,
 ) -> None:

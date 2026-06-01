@@ -207,15 +207,15 @@ class PromotionPacketValidator:
             reasons.append("schema_version must be 2")
         if self._packet.target_mode not in self._TARGET_MODES:
             reasons.append(f"target_mode is unsupported: {self._packet.target_mode}")
-        for field_name in (
-            "promotion_candidate_id",
-            "strategy_id",
-            "source_module",
-            "target_module",
-            "idea_id",
-            "evidence_bundle_id",
+        for field_name, value in (
+            ("promotion_candidate_id", self._packet.promotion_candidate_id),
+            ("strategy_id", self._packet.strategy_id),
+            ("source_module", self._packet.source_module),
+            ("target_module", self._packet.target_module),
+            ("idea_id", self._packet.idea_id),
+            ("evidence_bundle_id", self._packet.evidence_bundle_id),
         ):
-            if not self._has_value(getattr(self._packet, field_name)):
+            if not self._has_value(value):
                 reasons.append(f"{field_name} is required")
         if self._packet.source_module == self._packet.target_module:
             reasons.append("source_module and target_module must differ")

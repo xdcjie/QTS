@@ -70,6 +70,12 @@ class ResearchSessionConfig:
     discovery_sources: tuple[str, ...] = DEFAULT_FACTOR_DISCOVERY_SOURCES
     discovery_max_results: int = 10
 
+    @property
+    def dataset_ids(self) -> tuple[str, ...]:
+        """Return canonical dataset IDs implied by the configured catalog roots."""
+
+        return tuple(f"{self.catalog_name}:{root}:{self.timeframe}" for root in self.roots)
+
     @classmethod
     def from_yaml(cls, path: str | Path) -> ResearchSessionConfig:
         """Load and validate a research session YAML config."""

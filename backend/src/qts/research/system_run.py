@@ -96,7 +96,7 @@ class ResearchDryRunRunner:
             data_hashes=self._data_hashes(data_snapshot),
             command_argv=tuple(argv),
             random_seeds=self._random_seeds(manifest),
-            calendar_version=getattr(manifest, "calendar", "unknown"),
+            calendar_version=manifest.calendar,
         )
 
         _write_json(artifact_dir / "resolved_manifest.json", resolved_manifest)
@@ -296,7 +296,7 @@ class ResearchDryRunRunner:
             timeframe=manifest.timeframe,
             start=manifest.start,
             end=manifest.end,
-            calendar=getattr(manifest, "calendar", None),
+            calendar=manifest.calendar,
         ).run(data_snapshot)
 
     def _dependency_hashes(self) -> dict[str, str]:

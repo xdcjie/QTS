@@ -7,6 +7,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from qts.core.ids import InstrumentId
+from qts.data.historical.catalog import HistoricalCatalog
 from qts.data.sources.materialized_replay_cache import materialized_replay_inputs
 from qts.data.sources.replay_market_data_source import ReplayMarketDataBundle
 from qts.domain.market_data import Bar
@@ -60,7 +61,7 @@ def test_materialized_replay_manifest_compacts_roll_history_to_cached_bars(
 
     materialized_replay_inputs(
         config=config,
-        catalog=object(),
+        catalog=_catalog(tmp_path),
         inputs=inputs,
         cache_dir=tmp_path,
     )
@@ -77,7 +78,7 @@ def test_materialized_replay_manifest_compacts_roll_history_to_cached_bars(
     )
     restored = materialized_replay_inputs(
         config=config,
-        catalog=object(),
+        catalog=_catalog(tmp_path),
         inputs=_replay_bundle(bars=(), roll_registry=restored_registry),
         cache_dir=tmp_path,
     )
@@ -102,6 +103,10 @@ def _cache_config(*, continuous_id: InstrumentId, end: datetime) -> _CacheConfig
         market_data=_PayloadOwner({"source": "fixture"}),
         roll_policy=_PayloadOwner({"enabled": True}),
     )
+
+
+def _catalog(root_path: Path) -> HistoricalCatalog:
+    return HistoricalCatalog(root_path=root_path, roots=(), datasets={})
 
 
 def _roll_registry(

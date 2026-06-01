@@ -20,7 +20,7 @@ from qts.runtime.strategy_execution_pipeline import (
 )
 
 if TYPE_CHECKING:
-    from qts.execution.execution_adapter import ExecutionAdapter
+    from qts.execution.execution_adapter import ExecutionEvidenceProvider
 
 BacktestActorLoopState: TypeAlias = SimpleNamespace
 BacktestStrategyExecution: TypeAlias = tuple[StrategyRuntimeBinding, StrategyExecutionResult]
@@ -34,7 +34,7 @@ class BacktestSignalEventWriter:
         self,
         *,
         account_id: AccountId,
-        execution_adapter: ExecutionAdapter,
+        execution_adapter: ExecutionEvidenceProvider,
         market_data_provenance_for: MarketDataProvenanceProvider,
     ) -> None:
         """Bind the writer to the backtest run's account, adapter, and provenance source."""

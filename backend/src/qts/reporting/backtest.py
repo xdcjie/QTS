@@ -8,11 +8,12 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 from qts.core.hashing import stable_json_default, stable_json_hash
 from qts.core.ids import RuntimeRunId
 from qts.data.provenance import DatasetMetadata
+from qts.execution.execution_adapter import ExecutionEvidenceProvider
 from qts.reporting.base import (
     NON_BROKER_HASH_SENTINEL,
     NON_BROKER_SOURCE_COMMIT,
@@ -55,12 +56,9 @@ def is_broker_capability_reject(exc: ValueError) -> bool:
     return "not supported by broker capabilities" in str(exc)
 
 
-def broker_capability_payload(execution_adapter: object) -> dict[str, object]:
+def broker_capability_payload(execution_adapter: ExecutionEvidenceProvider) -> dict[str, object]:
     """Return broker capability evidence for a runtime rejection event."""
-    payload = getattr(execution_adapter, "broker_capability_payload", None)
-    if payload is None:
-        return {}
-    return cast(dict[str, object], payload())
+    return execution_adapter.broker_capability_payload()
 
 
 def dataset_metadata_payload(item: DatasetMetadata) -> dict[str, str | int | None]:

@@ -6,6 +6,7 @@ import json
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -308,7 +309,7 @@ class LiveCapitalOrderDecision:
 
     @staticmethod
     def _status_value(value: object) -> str:
-        raw_value = getattr(value, "value", value)
+        raw_value = value.value if isinstance(value, Enum) else value
         return str(raw_value).strip().lower()
 
 

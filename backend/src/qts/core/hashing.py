@@ -6,7 +6,34 @@ import hashlib
 import json
 from datetime import datetime
 from decimal import Decimal
+from enum import Enum
 from typing import Any
+
+from qts.core.ids import (
+    AccountId,
+    BrokerId,
+    CausationId,
+    CorrelationId,
+    EventId,
+    InstrumentId,
+    OrderId,
+    RuntimeInstanceId,
+    RuntimeRunId,
+    StrategyId,
+)
+
+_STRING_ID_TYPES = (
+    AccountId,
+    BrokerId,
+    CausationId,
+    CorrelationId,
+    EventId,
+    InstrumentId,
+    OrderId,
+    RuntimeInstanceId,
+    RuntimeRunId,
+    StrategyId,
+)
 
 
 def stable_json_default(value: object) -> object:
@@ -16,7 +43,9 @@ def stable_json_default(value: object) -> object:
         return str(value)
     if isinstance(value, datetime):
         return value.isoformat()
-    if hasattr(value, "value") and isinstance(value.value, str):
+    if isinstance(value, Enum) and isinstance(value.value, str):
+        return value.value
+    if isinstance(value, _STRING_ID_TYPES):
         return value.value
     raise TypeError(f"object of type {type(value).__name__} is not JSON serializable")
 

@@ -74,6 +74,7 @@ from qts.quality.rules.stale import (
     StaleArchitectureTextRule,
 )
 from qts.quality.rules.strategy_context_boundary import StrategyContextStateBoundaryRule
+from qts.quality.rules.strict_contracts import StrictCoreContractRule
 from qts.quality.rules.transport import (
     TransportAdapterImportRule,
     TransportCanonicalPathRule,
@@ -137,6 +138,7 @@ __all__ = [
     "StaleArchitectureTextRule",
     "StrategyContextStateBoundaryRule",
     "StrategySdkPublicSurfaceRule",
+    "StrictCoreContractRule",
     "TestSupportRule",
     "TradeDiagnosticsRequiredForPaperRule",
     "TransportAdapterImportRule",

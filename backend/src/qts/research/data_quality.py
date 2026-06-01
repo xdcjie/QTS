@@ -74,13 +74,13 @@ class DataQualityArtifact:
             raise ValueError("dataset_id is required")
         if any(not path.strip() for path in self.checked_paths):
             raise ValueError("checked_paths must contain non-empty strings")
-        for field_name in (
-            "duplicate_timestamps",
-            "missing_bars",
-            "stale_prices",
-            "halted_sessions",
+        for field_name, value in (
+            ("duplicate_timestamps", self.duplicate_timestamps),
+            ("missing_bars", self.missing_bars),
+            ("stale_prices", self.stale_prices),
+            ("halted_sessions", self.halted_sessions),
         ):
-            if int(getattr(self, field_name)) < 0:
+            if int(value) < 0:
                 raise ValueError(f"{field_name} must be non-negative")
 
     @classmethod

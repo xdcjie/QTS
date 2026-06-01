@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from enum import Enum, auto
 from logging import getLogger
-from typing import Any
+from typing import TYPE_CHECKING, Protocol
 
 from qts.runtime.actor_events import ActorFailureEvent
 from qts.runtime.actor_path import ActorPath
@@ -16,6 +16,11 @@ from qts.runtime.actor_policies import (
     RestartPolicy,
 )
 from qts.runtime.actor_ref import ActorRef
+
+if TYPE_CHECKING:
+    from qts.core.ids import AccountId
+    from qts.runtime.broker_runtime_topology import AccountRuntimePartition
+    from qts.runtime.state import RuntimeSessionState
 
 logger = getLogger(__name__)
 
@@ -28,6 +33,29 @@ class SupervisorDecision(Enum):
     RESTART = auto()
     DEGRADE = auto()
     ESCALATE = auto()
+
+
+class _RuntimeSupervisionSessionPort(Protocol):
+    """Runtime-session surface required by actor supervision."""
+
+    @property
+    def state(self) -> RuntimeSessionState:
+        """Return the current runtime lifecycle state."""
+        ...
+
+    def supervised_actor_partitions(
+        self,
+    ) -> tuple[tuple[AccountId | None, AccountRuntimePartition], ...]:
+        """Return account partitions whose actors should be supervised."""
+        ...
+
+    def write_supervisor_event(self, kind: str, payload: Mapping[str, object]) -> None:
+        """Record a runtime supervision event."""
+        ...
+
+    def degrade(self) -> RuntimeSessionState:
+        """Degrade the session after unrecoverable actor failure."""
+        ...
 
 
 class ActorSupervisor:
@@ -195,15 +223,14 @@ class RuntimeSupervisionCoordinator:
     transitions a running/paused session to ``DEGRADED`` so it stops accepting
     new work while observability stays alive.
 
-    The session is held as ``Any`` to mirror the other runtime coordinators
-    (:class:`~qts.runtime.broker_lifecycle.RuntimeBrokerLifecycleCoordinator`,
-    :class:`~qts.runtime.recovery.RuntimeRecoveryCoordinator`) and avoid a
-    circular import with :mod:`qts.runtime.session`.
+    The coordinator depends on ``_RuntimeSupervisionSessionPort`` instead of
+    reaching through ``RuntimeSession`` private attributes; ``RuntimeSession``
+    owns the explicit port methods.
     """
 
     def __init__(
         self,
-        session: Any,
+        session: _RuntimeSupervisionSessionPort,
         *,
         supervisor: ActorSupervisor | None = None,
     ) -> None:
@@ -228,10 +255,7 @@ class RuntimeSupervisionCoordinator:
         Each partition contributes its account, order-manager, and execution
         actors under a stable ``/<account>/<role>`` path.
         """
-        partitions = getattr(self._session, "_account_partitions", None)
-        if not partitions:
-            return
-        for account_id, partition in partitions.items():
+        for account_id, partition in self._session.supervised_actor_partitions():
             account_segment = account_id.value if account_id is not None else "default"
             root = ActorPath.root(account_segment)
             self._supervisor.supervise(partition.account_ref, path=root.child("account"))
@@ -252,7 +276,7 @@ class RuntimeSupervisionCoordinator:
 
         decision = self._supervisor.handle_failure(event)
         session = self._session
-        session._write_event(
+        session.write_supervisor_event(
             "runtime.actor_failure",
             {
                 "actor_name": event.actor_name,
@@ -271,4 +295,8 @@ class RuntimeSupervisionCoordinator:
         return decision
 
 
-__all__ = ["ActorSupervisor", "RuntimeSupervisionCoordinator", "SupervisorDecision"]
+__all__ = [
+    "ActorSupervisor",
+    "RuntimeSupervisionCoordinator",
+    "SupervisorDecision",
+]

@@ -10,8 +10,9 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from enum import IntEnum
 from importlib import import_module
+from operator import attrgetter
 from time import monotonic
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 from qts.core.time import Clock, SystemClock
 from qts.domain.market_data import Bar, Quote, Tick
@@ -740,11 +741,15 @@ def _ibapi_attr(module_name: str, attribute_name: str) -> Any:
     try:
         module = import_module(module_name)
     except ModuleNotFoundError as exc:
-        raise RuntimeError(
-            "official IBKR TWS Python API package is required; install ibapi from "
-            "the Interactive Brokers TWS API download"
-        ) from exc
-    return getattr(module, attribute_name)
+        raise _missing_ibapi_error() from exc
+    return cast(type[Any], attrgetter(attribute_name)(module))
+
+
+def _missing_ibapi_error() -> RuntimeError:
+    return RuntimeError(
+        "official IBKR TWS Python API package is required; install ibapi from "
+        "the Interactive Brokers TWS API download"
+    )
 
 
 def _connect_ibapi_app(

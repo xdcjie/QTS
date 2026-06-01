@@ -6,7 +6,7 @@ import json
 import os
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import yaml  # type: ignore[import-untyped]
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -239,10 +239,30 @@ def _artifact_registry(request: Request) -> ResearchRunRegistry:
 
 
 def _root_path(request: Request, state_name: str, env_name: str, default: Path) -> Path:
-    value = getattr(request.app.state, state_name, None)
+    value = _state_root_value(request, state_name)
     if value is None:
         value = os.getenv(env_name)
     return default if value is None else Path(value)
+
+
+def _state_root_value(request: Request, state_name: str) -> str | Path | None:
+    state = request.app.state
+    try:
+        if state_name == "research_experiment_store_root":
+            return cast(str | Path, state.research_experiment_store_root)
+        if state_name == "research_evidence_root":
+            return cast(str | Path, state.research_evidence_root)
+        if state_name == "research_idea_registry_root":
+            return cast(str | Path, state.research_idea_registry_root)
+        if state_name == "research_promotion_root":
+            return cast(str | Path, state.research_promotion_root)
+        if state_name == "research_readiness_root":
+            return cast(str | Path, state.research_readiness_root)
+        if state_name == "research_artifact_root":
+            return cast(str | Path, state.research_artifact_root)
+    except AttributeError:
+        return None
+    raise ValueError(f"unsupported research state root: {state_name}")
 
 
 def _research_run_rows(request: Request) -> tuple[dict[str, Any], ...]:

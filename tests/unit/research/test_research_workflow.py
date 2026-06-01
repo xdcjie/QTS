@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -36,6 +37,19 @@ def _assert_margin_sized_quantities(
     for quantity in quantities:
         margin_ratio = Decimal(quantity) * margin_proxy / initial_cash
         assert Decimal("0.30") <= margin_ratio <= Decimal("0.50")
+
+
+@dataclass(frozen=True, slots=True)
+class _FakeSessionConfig:
+    backtest_config_path: Path
+    catalog_name: str
+    research_config_path: Path
+    roots: tuple[str, ...]
+    timeframe: str
+
+    @property
+    def dataset_ids(self) -> tuple[str, ...]:
+        return tuple(f"{self.catalog_name}:{root}:{self.timeframe}" for root in self.roots)
 
 
 def test_workflow_config_loads_steps_and_rejects_trading_promotion_keys(
@@ -1053,7 +1067,7 @@ steps:
     backtest_config = tmp_path / "backtest.yaml"
     backtest_config.write_text("runtime: backtest\n", encoding="utf-8")
     session = _FakeSession(accepted_specs=())
-    session.config = SimpleNamespace(
+    session.config = _FakeSessionConfig(
         backtest_config_path=backtest_config,
         catalog_name="fixture",
         research_config_path=research_config,
@@ -2613,7 +2627,7 @@ class _FakeSession:
         self.failure_veto_calls: list[dict[str, object]] = []
         self.failure_veto_accepted = True
         self.evaluate_factor_calls: list[dict[str, object]] = []
-        self.config: SimpleNamespace | None = None
+        self.config: _FakeSessionConfig | None = None
         self._evaluation_output_dir: Path = (
             evaluation_output_dir
             if evaluation_output_dir is not None

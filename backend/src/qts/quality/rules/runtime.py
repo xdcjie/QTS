@@ -96,8 +96,12 @@ def _runtime_session_metrics(source: str, class_node: ast.ClassDef) -> _RuntimeS
 
 def _runtime_session_metric_violations(metrics: _RuntimeSessionMetrics) -> list[str]:
     violations: list[str] = []
-    for metric_name in ("public_methods", "private_helpers", "decision_branches", "file_lines"):
-        value = getattr(metrics, metric_name)
+    for metric_name, value in (
+        ("public_methods", metrics.public_methods),
+        ("private_helpers", metrics.private_helpers),
+        ("decision_branches", metrics.decision_branches),
+        ("file_lines", metrics.file_lines),
+    ):
         limit = RUNTIME_SESSION_LIMITS[metric_name]
         if value > limit:
             violations.append(f"{metric_name}={value}>{limit}")
@@ -121,8 +125,26 @@ def _is_property_method(method: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
 
 
 def _node_line_count(node: ast.AST) -> int:
-    end_lineno = getattr(node, "end_lineno", getattr(node, "lineno", 1))
-    return int(end_lineno) - int(getattr(node, "lineno", 1)) + 1
+    lineno = _node_line(node)
+    end_lineno = _node_end_line(node, lineno)
+    return end_lineno - lineno + 1
+
+
+def _node_line(node: ast.AST) -> int:
+    try:
+        return int(object.__getattribute__(node, "lineno"))
+    except AttributeError:
+        return 1
+
+
+def _node_end_line(node: ast.AST, default: int) -> int:
+    try:
+        end_lineno = object.__getattribute__(node, "end_lineno")
+    except AttributeError:
+        return default
+    if not isinstance(end_lineno, int):
+        return default
+    return end_lineno
 
 
 def _cyclomatic_complexity(node: ast.AST) -> int:

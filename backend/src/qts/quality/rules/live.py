@@ -108,11 +108,18 @@ class SharedRuntimeWordingRule:
                 GuardrailViolation(
                     code=self.code,
                     path=str(relative_path),
-                    line=getattr(node, "lineno", 1),
+                    line=self._node_line(node),
                     message="shared runtime docstrings must be mode-neutral",
                 )
             )
         return violations
+
+    @staticmethod
+    def _node_line(node: ast.AST) -> int:
+        try:
+            return int(object.__getattribute__(node, "lineno"))
+        except AttributeError:
+            return 1
 
 
 __all__ = [

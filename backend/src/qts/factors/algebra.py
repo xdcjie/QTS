@@ -212,9 +212,8 @@ class ThresholdFactor:
 
 
 def _factor_lookback(factor: factor_contract.Factor) -> int:
-    """Return a factor's declared lookback, defaulting to 1 when absent."""
-    lookback = getattr(factor, "lookback", 1)
-    return int(lookback)
+    """Return a factor's declared lookback."""
+    return int(factor.lookback)
 
 
 __all__ = [

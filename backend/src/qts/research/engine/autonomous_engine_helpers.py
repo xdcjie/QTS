@@ -359,7 +359,7 @@ def _family_candidate_budget(
         return budget
     for mutation in proposal.mutations:
         if (
-            getattr(mutation, "mutation_type", "") == "family_budget"
+            mutation.mutation_type == "family_budget"
             and mutation.action == "reduce_family_budget"
             and mutation.target == family_id
         ):
@@ -372,10 +372,7 @@ def _focused_family_order(proposal: NextGenerationProposal | None) -> tuple[str,
         return ()
     focused: list[str] = []
     for mutation in proposal.mutations:
-        if (
-            getattr(mutation, "mutation_type", "") != "search_space"
-            or mutation.action != "focus_best_family"
-        ):
+        if mutation.mutation_type != "search_space" or mutation.action != "focus_best_family":
             continue
         payload_family = mutation.payload.get("strategy_family")
         family_id = str(payload_family or mutation.target.split(".", maxsplit=1)[0])
@@ -719,7 +716,7 @@ def _proposal_adjusted_template(
     execution_assumptions = dict(template.execution_assumptions)
     changed = False
     for mutation in proposal.mutations:
-        if getattr(mutation, "mutation_type", "") != "strategy_variant":
+        if mutation.mutation_type != "strategy_variant":
             continue
         if mutation.action == "add_stop_or_vol_target":
             risk_assumptions["proposal_risk_control"] = mutation.mutation_id

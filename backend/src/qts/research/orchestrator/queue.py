@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 from qts.research.audit_log import ResearchAuditLog
 from qts.research.clock import ResearchClock, system_research_clock
@@ -14,6 +14,11 @@ from qts.research.orchestrator.experiment_runner import (
     ResearchExperimentResult,
     ResearchExperimentRunner,
 )
+
+
+@runtime_checkable
+class _PayloadConvertible(Protocol):
+    def to_payload(self) -> Mapping[str, Any]: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -351,7 +356,7 @@ class ExperimentScheduler:
         return False
 
     def _result_payload(self, result: Any) -> Mapping[str, Any]:
-        if hasattr(result, "to_payload"):
+        if isinstance(result, _PayloadConvertible):
             payload = result.to_payload()
             if isinstance(payload, Mapping):
                 return payload

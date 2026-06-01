@@ -385,7 +385,7 @@ def _production_class_line_counts(repo_root: Path) -> dict[str, int]:
 
 
 def _class_line_count(node: ast.ClassDef) -> int:
-    end_lineno = getattr(node, "end_lineno", None)
+    end_lineno = node.end_lineno
     if not isinstance(end_lineno, int):
         return 1
     return max(1, end_lineno - node.lineno + 1)

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Protocol, cast
 
 from qts.domain.orders import ExecutionReport
 from qts.execution.broker import BrokerCommissionReport
@@ -26,6 +26,29 @@ from qts.execution.transports.ibkr_tws_order_execution_transport import (
 
 _ORDER_STATUS_REPORT_PREFIX = "ibkr-status"
 _EXECUTION_REPORT_PREFIX = "ibkr-exec"
+
+
+class _IbkrContract(Protocol):
+    symbol: object
+
+
+class _IbkrOpenOrder(Protocol):
+    orderRef: object  # noqa: N815 - IBKR external field name
+    permId: object  # noqa: N815 - IBKR external field name
+    action: object
+    totalQuantity: object  # noqa: N815 - IBKR external field name
+
+
+class _IbkrOpenOrderState(Protocol):
+    status: object
+
+
+class _IbkrExecution(Protocol):
+    acctNumber: object  # noqa: N815 - IBKR external field name
+    execId: object  # noqa: N815 - IBKR external field name
+    orderId: object  # noqa: N815 - IBKR external field name
+    shares: object
+    price: object
 
 
 class IbkrTwsCallbackDispatcher:
@@ -122,10 +145,20 @@ class IbkrTwsCallbackDispatcher:
     ) -> None:
         """Handle an IBKR openOrder callback."""
 
-        order_ref = str(getattr(order, "orderRef", "")).strip()
-        perm_id = getattr(order, "permId", None)
-        status = str(getattr(order_state, "status", "")).strip()
-        total_quantity = order.totalQuantity if hasattr(order, "totalQuantity") else None
+        open_order = cast(_IbkrOpenOrder, order)
+        open_order_state = cast(_IbkrOpenOrderState, order_state)
+        contract_spec = None if contract is None else cast(_IbkrContract, contract)
+        order_ref = str(open_order.orderRef).strip()
+        perm_id = open_order.permId
+        status = str(open_order_state.status).strip()
+        try:
+            total_quantity = open_order.totalQuantity
+        except AttributeError:
+            total_quantity = None
+        try:
+            side = open_order.action
+        except AttributeError:
+            side = None
         self.dispatch_open_order(
             IbkrOpenOrderPayload(
                 report_id=f"ibkr-open-order-{order_id}",
@@ -133,11 +166,10 @@ class IbkrTwsCallbackDispatcher:
                 client_order_id=order_ref or None,
                 perm_id=None if perm_id in {None, 0, ""} else str(perm_id),
                 status=status or None,
-                broker_symbol=(
-                    str(getattr(contract, "symbol", "")).strip() if contract is not None else None
-                )
-                or None,
-                side=str(getattr(order, "action", "")).strip() or None,
+                broker_symbol=None
+                if contract_spec is None
+                else str(contract_spec.symbol).strip() or None,
+                side=None if side is None else str(side).strip() or None,
                 quantity=None if total_quantity in {None, ""} else _to_decimal(total_quantity),
             )
         )
@@ -148,7 +180,7 @@ class IbkrTwsCallbackDispatcher:
         self.dispatch_position(
             IbkrPositionPayload(
                 account_id=account_id,
-                broker_symbol=str(getattr(contract, "symbol", "")).strip(),
+                broker_symbol=str(cast(_IbkrContract, contract).symbol).strip(),
                 quantity=_to_decimal(position),
             )
         )
@@ -175,30 +207,25 @@ class IbkrTwsCallbackDispatcher:
     def handle_execution(self, execution: Any) -> ExecutionReport | None:
         """Handle an IBKR execDetails callback."""
 
+        execution_payload = cast(_IbkrExecution, execution)
         return self.dispatch_execution(
             IbkrExecutionPayload(
-                report_id=f"{_EXECUTION_REPORT_PREFIX}-{execution.execId}",
-                broker_order_id=str(execution.orderId),
-                execution_id=str(execution.execId),
-                filled_quantity=_to_decimal(execution.shares),
-                fill_price=_to_decimal(execution.price),
-                account_id=(
-                    str(getattr(execution, "acctNumber", "")).strip()
-                    if hasattr(execution, "acctNumber")
-                    else None
-                )
-                or None,
+                report_id=f"{_EXECUTION_REPORT_PREFIX}-{execution_payload.execId}",
+                broker_order_id=str(execution_payload.orderId),
+                execution_id=str(execution_payload.execId),
+                filled_quantity=_to_decimal(execution_payload.shares),
+                fill_price=_to_decimal(execution_payload.price),
+                account_id=str(execution_payload.acctNumber).strip() or None,
             )
         )
 
     def handle_commission_report(self, commission_report: Any) -> None:
         """Handle an IBKR commission callback."""
 
-        commission = (
-            commission_report.commissionAndFees
-            if hasattr(commission_report, "commissionAndFees")
-            else commission_report.commission
-        )
+        try:
+            commission = commission_report.commissionAndFees
+        except AttributeError:
+            commission = commission_report.commission
         self.dispatch_commission(
             IbkrCommissionPayload(
                 execution_id=str(commission_report.execId),

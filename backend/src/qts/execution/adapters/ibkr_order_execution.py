@@ -97,6 +97,11 @@ class IbkrOrderExecutionAdapter:
         )
 
     @property
+    def capabilities(self) -> BrokerCapabilities:
+        """Return the IBKR capabilities enforced before request mapping."""
+        return self._capabilities
+
+    @property
     def quarantined_executions(self) -> tuple[IbkrExecutionPayload, ...]:
         """Read-only unresolved IBKR execution callbacks."""
         return self._callback_normalizer.quarantined_executions

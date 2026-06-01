@@ -280,11 +280,21 @@ class TrialEvidenceSupport:
         path = output_dir / filename
         rows = []
         for trial in trial_results:
-            source_path = getattr(trial, path_attribute)
+            source_path = self._trial_payload_path(trial, path_attribute)
             payload = json.loads(source_path.read_text(encoding="utf-8"))
             rows.append({"payload": payload, "trial_id": trial.trial_id})
         _write_json(path, {"trials": rows})
         return path
+
+    @staticmethod
+    def _trial_payload_path(trial: ResearchTrialResult, path_attribute: str) -> Path:
+        if path_attribute == "metrics_path":
+            return trial.metrics_path
+        if path_attribute == "data_quality_path":
+            return trial.data_quality_path
+        if path_attribute == "reproducibility_path":
+            return trial.reproducibility_path
+        raise ValueError(f"unsupported trial aggregate path: {path_attribute}")
 
 
 __all__ = ["TrialEvidenceSupport"]

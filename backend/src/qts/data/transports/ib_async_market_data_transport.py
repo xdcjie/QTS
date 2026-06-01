@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from math import isfinite
 from time import monotonic
-from typing import Any
+from typing import Any, Protocol, cast
 
 from qts.core.time import Clock, SystemClock
 from qts.data.transports.ibkr_tws_market_data_transport import (
@@ -40,6 +40,20 @@ _IBKR_INFO_ERROR_CODES = frozenset(
         2158,
     }
 )
+
+
+class _IbAsyncContract(Protocol):
+    symbol: str
+
+
+class _IbAsyncTicker(Protocol):
+    contract: _IbAsyncContract
+    bid: object | None
+    ask: object | None
+    bidSize: object | None  # noqa: N815 - ib_async external field name
+    askSize: object | None  # noqa: N815 - ib_async external field name
+    last: object | None
+    lastSize: object | None  # noqa: N815 - ib_async external field name
 
 
 @dataclass(frozen=True, slots=True)
@@ -189,15 +203,16 @@ class IbAsyncMarketDataTransport:
             self._require_connected_ib().sleep(min(0.05, remaining))
 
     def _emit_ticker_if_ready(self, req_id: int, ticker: Any) -> None:
-        bid = getattr(ticker, "bid", None)
-        ask = getattr(ticker, "ask", None)
+        ticker_snapshot = cast(_IbAsyncTicker, ticker)
+        bid = ticker_snapshot.bid
+        ask = ticker_snapshot.ask
         if _has_price(bid) and _has_price(ask):
             snapshot: tuple[str, ...] = (
                 "quote",
                 str(bid),
                 str(ask),
-                str(getattr(ticker, "bidSize", 0) or 0),
-                str(getattr(ticker, "askSize", 0) or 0),
+                str(ticker_snapshot.bidSize or 0),
+                str(ticker_snapshot.askSize or 0),
             )
             if self._emitted_snapshots_by_request_id.get(req_id) == snapshot:
                 return
@@ -205,22 +220,22 @@ class IbAsyncMarketDataTransport:
             self._events.put(
                 self._sink.on_quote(
                     IbkrQuotePayload(
-                        broker_symbol=ticker.contract.symbol,
+                        broker_symbol=ticker_snapshot.contract.symbol,
                         time=self._clock.now(),
                         bid_price=Decimal(str(bid)),
                         ask_price=Decimal(str(ask)),
-                        bid_size=Decimal(str(getattr(ticker, "bidSize", 0) or 0)),
-                        ask_size=Decimal(str(getattr(ticker, "askSize", 0) or 0)),
+                        bid_size=Decimal(str(ticker_snapshot.bidSize or 0)),
+                        ask_size=Decimal(str(ticker_snapshot.askSize or 0)),
                     )
                 )
             )
             return
-        last = getattr(ticker, "last", None)
+        last = ticker_snapshot.last
         if _has_price(last):
             snapshot = (
                 "tick",
                 str(last),
-                str(getattr(ticker, "lastSize", 0) or 0),
+                str(ticker_snapshot.lastSize or 0),
             )
             if self._emitted_snapshots_by_request_id.get(req_id) == snapshot:
                 return
@@ -228,10 +243,10 @@ class IbAsyncMarketDataTransport:
             self._events.put(
                 self._sink.on_tick(
                     IbkrTickPayload(
-                        broker_symbol=ticker.contract.symbol,
+                        broker_symbol=ticker_snapshot.contract.symbol,
                         time=self._clock.now(),
                         price=Decimal(str(last)),
-                        size=Decimal(str(getattr(ticker, "lastSize", 0) or 0)),
+                        size=Decimal(str(ticker_snapshot.lastSize or 0)),
                     )
                 )
             )

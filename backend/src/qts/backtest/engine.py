@@ -6,7 +6,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import tzinfo
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 from qts.backtest.actor_loop import BacktestActorLoop
 from qts.backtest.artifacts import BacktestArtifactService
@@ -282,10 +282,7 @@ class BacktestEngine:
         optimistic same-bar close, and whether an optimistic waiver was set.
         """
         timing_payload = self._execution_timing.to_manifest_payload()
-        payload = getattr(self._execution_adapter, "execution_assumptions_payload", None)
-        if payload is None:
-            return dict(timing_payload)
-        assumptions = cast(dict[str, Any], payload())
+        assumptions = self._execution_adapter.execution_assumptions_payload()
         assumptions.update(timing_payload)
         return assumptions
 

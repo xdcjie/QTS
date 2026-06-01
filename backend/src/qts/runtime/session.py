@@ -180,7 +180,9 @@ class RuntimeSession:
         safety_port = _RuntimeSafetySessionAdapter(self)
         self._rollback_coordinator = RuntimeRollbackCoordinator(safety_port)
         self._safety_controller = RuntimeSafetyController(safety_port)
-        self._supervision_coordinator = RuntimeSupervisionCoordinator(self)
+        self._supervision_coordinator = RuntimeSupervisionCoordinator(
+            _RuntimeSupervisionSessionAdapter(self)
+        )
         self._market_data_coordinator = RuntimeMarketDataCoordinator(
             RuntimeMarketDataSessionContext(self)
         )
@@ -529,6 +531,32 @@ class RuntimeSession:
                 if order.state not in terminal:
                     active_order_ids.append(order.order_id.value)
         return tuple(active_order_ids)
+
+
+class _RuntimeSupervisionSessionAdapter:
+    """Adapt ``RuntimeSession`` to the actor-supervision port."""
+
+    def __init__(self, session: RuntimeSession) -> None:
+        self._session = session
+
+    @property
+    def state(self) -> RuntimeSessionState:
+        """Return the current runtime lifecycle state."""
+        return self._session.state
+
+    def supervised_actor_partitions(
+        self,
+    ) -> tuple[tuple[AccountId | None, AccountRuntimePartition], ...]:
+        """Return account partitions whose actors are supervised."""
+        return tuple(self._session._account_partitions.items())
+
+    def write_supervisor_event(self, kind: str, payload: Mapping[str, object]) -> None:
+        """Append a normalized supervision event to the runtime stream."""
+        self._session._write_event(kind, dict(payload))
+
+    def degrade(self) -> RuntimeSessionState:
+        """Degrade the runtime session."""
+        return self._session.degrade()
 
 
 class _RuntimeSafetySessionAdapter:

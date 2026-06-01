@@ -6,7 +6,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Protocol, cast
+from typing import Any, Protocol, cast, runtime_checkable
 
 from qts.core.hashing import stable_json_hash
 from qts.research.artifact_graph import ResearchArtifactGraphWriter
@@ -32,6 +32,13 @@ class _WorkflowStepResult(Protocol):
     def outputs(self) -> Mapping[str, Any]: ...
 
 
+@runtime_checkable
+class _PayloadConvertible(Protocol):
+    """Explicit protocol for value objects that own their payload projection."""
+
+    def to_payload(self) -> Mapping[str, Any]: ...
+
+
 class _WorkflowResult(Protocol):
     """Protocol for workflow result read access."""
 
@@ -45,7 +52,22 @@ class _WorkflowResult(Protocol):
     def steps(self) -> Sequence[_WorkflowStepResult]: ...
 
     @property
+    def periods(self) -> Sequence[Mapping[str, Any]]: ...
+
+    @property
+    def run_context(self) -> Mapping[str, Any] | _PayloadConvertible | None: ...
+
+    @property
+    def route(self) -> Mapping[str, Any] | _PayloadConvertible | None: ...
+
+    @property
     def idea_metadata(self) -> Mapping[str, Any] | None: ...
+
+    @property
+    def projection_refs(self) -> Mapping[str, Any] | None: ...
+
+    @property
+    def decision(self) -> ResearchReviewDecision | Mapping[str, Any] | None: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -108,14 +130,14 @@ class ResearchWorkflowReport:
         """Build a deterministic report from a workflow execution result."""
 
         return cls(
-            periods=_normalize_periods(getattr(result, "periods", ())),
-            run_context=_normalize_run_context(getattr(result, "run_context", None)),
-            route=_normalize_route(getattr(result, "route", None)),
-            idea_metadata=_normalize_idea_metadata(getattr(result, "idea_metadata", None)),
-            projection_refs=_normalize_projection_refs(getattr(result, "projection_refs", None)),
-            decision=_normalize_decision(getattr(result, "decision", None)),
-            workflow_id=_required_text(result, "workflow_id"),
-            workflow_status=_required_text(result, "status"),
+            periods=_normalize_periods(result.periods),
+            run_context=_normalize_run_context(result.run_context),
+            route=_normalize_route(result.route),
+            idea_metadata=_normalize_idea_metadata(result.idea_metadata),
+            projection_refs=_normalize_projection_refs(result.projection_refs),
+            decision=_normalize_decision(result.decision),
+            workflow_id=_required_text_value(result.workflow_id, "workflow_id"),
+            workflow_status=_required_text_value(result.status, "status"),
             steps=tuple(_normalize_step(step) for step in result.steps),
         )
 
@@ -721,42 +743,27 @@ def _normalize_periods(periods: Any) -> tuple[dict[str, str], ...]:
 
 
 def _normalize_run_context(value: Any) -> Mapping[str, Any]:
-    if value is None:
-        return {}
-    if isinstance(value, Mapping):
-        return cast(Mapping[str, Any], _json_ready(value))
-    to_payload = getattr(value, "to_payload", None)
-    if callable(to_payload):
-        payload = to_payload()
-        if isinstance(payload, Mapping):
-            return cast(Mapping[str, Any], _json_ready(payload))
-    raise ValueError("run_context must be a mapping-like payload")
+    return _normalize_optional_payload_mapping(value, "run_context")
 
 
 def _normalize_route(value: Any) -> Mapping[str, Any]:
-    if value is None:
-        return {}
-    if isinstance(value, Mapping):
-        return cast(Mapping[str, Any], _json_ready(value))
-    to_payload = getattr(value, "to_payload", None)
-    if callable(to_payload):
-        payload = to_payload()
-        if isinstance(payload, Mapping):
-            return cast(Mapping[str, Any], _json_ready(payload))
-    raise ValueError("route must be a mapping-like payload")
+    return _normalize_optional_payload_mapping(value, "route")
 
 
 def _normalize_idea_metadata(value: Any) -> Mapping[str, Any]:
+    return _normalize_optional_payload_mapping(value, "idea_metadata")
+
+
+def _normalize_optional_payload_mapping(value: Any, label: str) -> Mapping[str, Any]:
     if value is None:
         return {}
     if isinstance(value, Mapping):
         return cast(Mapping[str, Any], _json_ready(value))
-    to_payload = getattr(value, "to_payload", None)
-    if callable(to_payload):
-        payload = to_payload()
+    if isinstance(value, _PayloadConvertible):
+        payload = value.to_payload()
         if isinstance(payload, Mapping):
             return cast(Mapping[str, Any], _json_ready(payload))
-    raise ValueError("idea_metadata must be a mapping-like payload")
+    raise ValueError(f"{label} must be a mapping-like payload")
 
 
 def _normalize_projection_refs(value: Any) -> Mapping[str, Any]:
@@ -804,9 +811,10 @@ def _normalize_decision(value: Any) -> ResearchReviewDecision:
 
 
 def _format_period_bound(value: Any) -> str:
-    if hasattr(value, "isoformat"):
+    try:
         return str(value.isoformat())
-    return str(value)
+    except AttributeError:
+        return str(value)
 
 
 def _string_set(value: Any) -> set[str]:
@@ -914,11 +922,11 @@ def _normalize_step(step: _WorkflowStepResult) -> dict[str, Any]:
         step_map: Mapping[str, Any] = step
     else:
         step_map = {
-            "kind": getattr(step, "kind", None),
-            "status": getattr(step, "status", None),
-            "step_id": getattr(step, "step_id", None),
-            "message": getattr(step, "message", None),
-            "outputs": getattr(step, "outputs", None),
+            "kind": step.kind,
+            "status": step.status,
+            "step_id": step.step_id,
+            "message": step.message,
+            "outputs": step.outputs,
         }
     return {
         "kind": _required_text_from_mapping(step_map, "kind"),
@@ -929,10 +937,9 @@ def _normalize_step(step: _WorkflowStepResult) -> dict[str, Any]:
     }
 
 
-def _required_text(payload: _WorkflowResult, field_name: str) -> str:
+def _required_text_value(value: object, field_name: str) -> str:
     """Return a required string value from a protocol payload."""
 
-    value = getattr(payload, field_name, None)
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{field_name} is required")
     return value.strip()

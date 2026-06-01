@@ -34,7 +34,7 @@ class ProductionPlaceholderDocstringRule:
                     GuardrailViolation(
                         code=self.code,
                         path=str(relative_path),
-                        line=getattr(node, "lineno", 1),
+                        line=self._node_line(node),
                         message=(
                             "production docstrings must describe the artifact contract, "
                             "not a generated 'Perform <name>' stub"
@@ -49,7 +49,7 @@ class ProductionPlaceholderDocstringRule:
                     GuardrailViolation(
                         code=self.code,
                         path=str(relative_path),
-                        line=getattr(node, "lineno", 1),
+                        line=self._node_line(node),
                         message="production docstrings must describe the artifact contract",
                     )
                 )
@@ -68,3 +68,10 @@ class ProductionPlaceholderDocstringRule:
             if docstring is not None:
                 docstrings.append((node, docstring))
         return docstrings
+
+    @staticmethod
+    def _node_line(node: ast.AST) -> int:
+        try:
+            return int(object.__getattribute__(node, "lineno"))
+        except AttributeError:
+            return 1

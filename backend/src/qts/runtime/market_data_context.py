@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import MutableMapping
 from decimal import Decimal
-from typing import TYPE_CHECKING, Protocol, TypeAlias
+from typing import TYPE_CHECKING, Protocol, TypeAlias, runtime_checkable
 
 from qts.core.ids import AccountId, CausationId, CorrelationId, InstrumentId, StrategyId
 from qts.data.permissions import MarketDataPermissionEvent
@@ -41,6 +41,7 @@ MarketDataSourceEvent: TypeAlias = (
 )
 
 
+@runtime_checkable
 class RuntimeMarketDataCoordinatorContext(Protocol):
     """Session operations required by runtime market-data coordination."""
 

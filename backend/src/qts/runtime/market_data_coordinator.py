@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from types import SimpleNamespace
-from typing import TYPE_CHECKING, Any, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, Protocol, TypeAlias, cast, runtime_checkable
 
 from qts.core.ids import AccountId, CorrelationId, InstrumentId, StrategyId
 from qts.data.permissions import MarketDataPermissionEvent
@@ -36,6 +36,21 @@ if TYPE_CHECKING:
 MarketDataDispatchState: TypeAlias = SimpleNamespace
 
 
+@runtime_checkable
+class _RuntimeMarketDataSubscriptionContext(Protocol):
+    """Narrow context required for strategy universe subscription changes."""
+
+    @property
+    def strategy_subscriptions(self) -> tuple[InstrumentId, ...]: ...
+
+    def replace_strategy_subscriptions(
+        self,
+        subscriptions: tuple[InstrumentId, ...],
+    ) -> None: ...
+
+    def write(self, event: object) -> None: ...
+
+
 class RuntimeMarketDataCoordinator:
     """Own market-data source events and strategy/order actor coordination."""
 
@@ -46,16 +61,11 @@ class RuntimeMarketDataCoordinator:
 
     @classmethod
     def _coerce_context(cls, context: object) -> RuntimeMarketDataCoordinatorContext:
-        if cls._looks_like_context(context):
+        if isinstance(context, RuntimeMarketDataCoordinatorContext):
+            return context
+        if isinstance(context, _RuntimeMarketDataSubscriptionContext):
             return cast(RuntimeMarketDataCoordinatorContext, context)
         return RuntimeMarketDataSessionContext(cast("RuntimeSession", context))
-
-    @staticmethod
-    def _looks_like_context(context: object) -> bool:
-        return all(
-            hasattr(context, attribute)
-            for attribute in ("strategy_subscriptions", "replace_strategy_subscriptions", "write")
-        )
 
     def materialize_universe_subscription_delta(
         self,

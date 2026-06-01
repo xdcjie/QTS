@@ -236,7 +236,7 @@ def _source_success_rate(
 def _edge_type_distribution(ideas: Sequence[IdeaSpec]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for idea in ideas:
-        edge_types = getattr(idea, "edge_types", ()) or (idea.edge_type,)
+        edge_types = idea.edge_types or (idea.edge_type,)
         for edge_type in edge_types:
             counts[str(edge_type)] = counts.get(str(edge_type), 0) + 1
     return dict(sorted(counts.items()))

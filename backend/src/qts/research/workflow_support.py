@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from qts.research.report import (
     ResearchReviewDecision,
@@ -21,6 +21,14 @@ from qts.research.report import (
 
 if TYPE_CHECKING:
     from qts.research.workflow import ResearchWorkflowConfig
+
+
+@runtime_checkable
+class _JsonPayloadConvertible(Protocol):
+    """Explicit protocol for values that own their JSON payload projection."""
+
+    def to_payload(self) -> Any: ...
+
 
 _FILENAME_SAFE_CHARS = frozenset(
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
@@ -39,9 +47,8 @@ def json_ready(value: Any) -> Any:
         return value.isoformat()
     if isinstance(value, date):
         return value.isoformat()
-    to_payload = getattr(value, "to_payload", None)
-    if callable(to_payload):
-        return json_ready(to_payload())
+    if isinstance(value, _JsonPayloadConvertible):
+        return json_ready(value.to_payload())
     if isinstance(value, dict):
         return {str(key): json_ready(item) for key, item in value.items()}
     if isinstance(value, list | tuple):

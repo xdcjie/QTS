@@ -32,7 +32,10 @@ def get_operations_service(request: Request) -> OperationsService:
     ``app.state``); routes never reach for a module-global instance, so the
     operational control plane can be wired to a real runtime at app construction.
     """
-    service = getattr(request.app.state, "operations_service", None)
+    try:
+        service = request.app.state.operations_service
+    except AttributeError:
+        service = None
     if not isinstance(service, OperationsService):
         raise HTTPException(status_code=503, detail="operations service is not configured")
     return service
@@ -40,7 +43,10 @@ def get_operations_service(request: Request) -> OperationsService:
 
 def get_command_idempotency(request: Request) -> CommandIdempotencyStore:
     """Resolve the request-scoped command idempotency store from application state."""
-    store = getattr(request.app.state, "command_idempotency", None)
+    try:
+        store = request.app.state.command_idempotency
+    except AttributeError:
+        store = None
     if not isinstance(store, CommandIdempotencyStore):
         raise HTTPException(status_code=503, detail="command idempotency store is not configured")
     return store

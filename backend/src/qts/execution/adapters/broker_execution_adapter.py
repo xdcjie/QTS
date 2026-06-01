@@ -11,6 +11,7 @@ from qts.core.ids import AccountId, CorrelationId, OrderId, StrategyId
 from qts.domain.orders import ExecutionReport, OrderIntent, OrderStateSnapshot
 from qts.execution.broker import (
     BrokerAdapter,
+    BrokerCapabilities,
     BrokerExecutionReport,
     BrokerOrderRequest,
     normalize_broker_execution_report,
@@ -34,6 +35,11 @@ class BrokerExecutionAdapter:
         self._strategy_id = strategy_id
         self._live_capital_decision = live_capital_decision
         self._runtime_broker_order_id_by_broker_order_id: dict[str, str] = {}
+
+    @property
+    def capabilities(self) -> BrokerCapabilities:
+        """Return the broker capabilities enforced by the wrapped adapter."""
+        return self._broker.capabilities
 
     def execute_market_order(
         self,

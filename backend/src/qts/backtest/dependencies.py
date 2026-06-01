@@ -17,7 +17,7 @@ from qts.registry.instrument_registry import InstrumentRegistry
 from qts.risk.risk_engine import RiskEngine
 
 if TYPE_CHECKING:
-    from qts.execution.execution_adapter import ExecutionAdapter
+    from qts.execution.execution_adapter import ExecutionEvidenceProvider
     from qts.reporting.backtest import EquityCurvePoint
     from qts.risk.margin.calculator import MarginCalculator
     from qts.runtime.intent_processing import ProcessedIntent
@@ -49,7 +49,7 @@ class BacktestEngineDependencies:
     session_window_by_instrument: Mapping[InstrumentId, RegularSessionWindow] = field(
         default_factory=dict
     )
-    execution_adapter: ExecutionAdapter | None = None
+    execution_adapter: ExecutionEvidenceProvider | None = None
     margin_calculator: MarginCalculator | None = None
 
     @classmethod
@@ -63,7 +63,7 @@ class BacktestEngineDependencies:
         contract_multipliers: Mapping[InstrumentId, Decimal] | None = None,
         exchange_timezone_by_instrument: Mapping[InstrumentId, str | tzinfo] | None = None,
         session_window_by_instrument: Mapping[InstrumentId, RegularSessionWindow] | None = None,
-        execution_adapter: ExecutionAdapter | None = None,
+        execution_adapter: ExecutionEvidenceProvider | None = None,
         margin_calculator: MarginCalculator | None = None,
     ) -> BacktestEngineDependencies:
         """Build runtime dependencies with stable defaults."""
@@ -113,7 +113,7 @@ class BacktestActorLoopDependencies:
     """Runtime collaborators and policy objects used by ``BacktestActorLoop``."""
 
     instrument_registry: InstrumentRegistry
-    execution_adapter: ExecutionAdapter
+    execution_adapter: ExecutionEvidenceProvider
     process_intent: ProcessIntentHandler
     portfolio_view: PortfolioViewBuilder
     equity_point: EquityPointBuilder

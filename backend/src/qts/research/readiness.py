@@ -33,15 +33,15 @@ class PaperLiveReadinessEvidence:
         """Return required evidence fields that are not populated."""
 
         missing: list[str] = []
-        for field_name in (
-            "reconciliation_evidence_ref",
-            "risk_limits_ref",
-            "kill_switch_ref",
-            "runbook_ref",
-            "alerting_checks_ref",
-            "monitoring_checks_ref",
+        for field_name, value in (
+            ("reconciliation_evidence_ref", self.reconciliation_evidence_ref),
+            ("risk_limits_ref", self.risk_limits_ref),
+            ("kill_switch_ref", self.kill_switch_ref),
+            ("runbook_ref", self.runbook_ref),
+            ("alerting_checks_ref", self.alerting_checks_ref),
+            ("monitoring_checks_ref", self.monitoring_checks_ref),
         ):
-            if not str(getattr(self, field_name)).strip():
+            if not str(value).strip():
                 missing.append(field_name)
         return tuple(missing)
 
@@ -69,8 +69,12 @@ class HumanApprovalRecord:
     approval_ref: str
 
     def __post_init__(self) -> None:
-        for field_name in ("approved_by", "approved_at", "approval_ref"):
-            if not str(getattr(self, field_name)).strip():
+        for field_name, value in (
+            ("approved_by", self.approved_by),
+            ("approved_at", self.approved_at),
+            ("approval_ref", self.approval_ref),
+        ):
+            if not str(value).strip():
                 raise ValueError(f"{field_name} is required")
 
     def to_payload(self) -> dict[str, str]:
@@ -94,8 +98,12 @@ class PaperLiveReadinessDecision:
     approval: HumanApprovalRecord
 
     def __post_init__(self) -> None:
-        for field_name in ("strategy_id", "decision_date", "target_status"):
-            if not str(getattr(self, field_name)).strip():
+        for field_name, value in (
+            ("strategy_id", self.strategy_id),
+            ("decision_date", self.decision_date),
+            ("target_status", self.target_status),
+        ):
+            if not str(value).strip():
                 raise ValueError(f"{field_name} is required")
         try:
             lifecycle_status = LifecycleStatus(self.target_status)

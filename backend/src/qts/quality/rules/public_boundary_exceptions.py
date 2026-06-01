@@ -83,7 +83,9 @@ class PublicBoundaryExceptionRule:
             return
         if isinstance(node, ast.Raise) and isinstance(node.exc, ast.Call):
             func = node.exc.func
-            name = func.id if isinstance(func, ast.Name) else getattr(func, "attr", "")
+            name = func.id if isinstance(func, ast.Name) else ""
+            if isinstance(func, ast.Attribute):
+                name = func.attr
             if name in _RAW_BOUNDARY_ERRORS:
                 yield _RawRaise(name=name, lineno=node.lineno)
         for child in ast.iter_child_nodes(node):

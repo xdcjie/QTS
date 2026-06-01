@@ -39,16 +39,22 @@ class PromotionEvidenceSpec:
     idea_id: str | None = None
 
     def __post_init__(self) -> None:
-        for field_name in (
-            "promotion_candidate_id",
-            "strategy_id",
-            "evidence_bundle_id",
-            "status",
+        promotion_candidate_id = str(self.promotion_candidate_id).strip()
+        strategy_id = str(self.strategy_id).strip()
+        evidence_bundle_id = str(self.evidence_bundle_id).strip()
+        status = str(self.status).strip()
+        for field_name, value in (
+            ("promotion_candidate_id", promotion_candidate_id),
+            ("strategy_id", strategy_id),
+            ("evidence_bundle_id", evidence_bundle_id),
+            ("status", status),
         ):
-            value = str(getattr(self, field_name)).strip()
             if not value:
                 raise ValueError(f"{field_name} is required")
-            object.__setattr__(self, field_name, value)
+        object.__setattr__(self, "promotion_candidate_id", promotion_candidate_id)
+        object.__setattr__(self, "strategy_id", strategy_id)
+        object.__setattr__(self, "evidence_bundle_id", evidence_bundle_id)
+        object.__setattr__(self, "status", status)
         if self.idea_id is not None:
             idea_id = self.idea_id.strip()
             object.__setattr__(self, "idea_id", idea_id or None)

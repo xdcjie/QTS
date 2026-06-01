@@ -11,6 +11,7 @@ from __future__ import annotations
 import importlib
 import json
 from collections.abc import Mapping
+from operator import attrgetter
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -74,12 +75,12 @@ def _factor_candidates(
         to_year=optional_int(step.payload.get("to_year")),
         refresh=bool(step.payload.get("refresh", False)),
     )
-    specs = tuple(getattr(batch, "specs", ()))
-    result_query = getattr(getattr(batch, "result", None), "query", None)
+    specs = batch.specs
+    result_query = batch.result.query
     outputs = {
         "candidate_count": len(specs),
-        "query_id": getattr(result_query, "query_id", ""),
-        "spec_names": [getattr(spec, "name", "") for spec in specs],
+        "query_id": result_query.query_id,
+        "spec_names": [spec.name for spec in specs],
     }
     return ResearchWorkflowStepResult(
         step_id=step.step_id,
@@ -102,7 +103,7 @@ def _factor_review_gate(
     outputs = {
         "matched_count": len(specs),
         "min_count": min_count,
-        "spec_names": [getattr(spec, "name", "") for spec in specs],
+        "spec_names": [spec.name for spec in specs],
         "status": status,
     }
     passed = len(specs) >= min_count
@@ -850,7 +851,11 @@ def _can_resolve_attribute(value: str) -> bool:
         module = importlib.import_module(module_name)
     except ImportError:
         return False
-    return hasattr(module, attribute_name)
+    try:
+        attrgetter(attribute_name)(module)
+    except AttributeError:
+        return False
+    return True
 
 
 __all__ = [

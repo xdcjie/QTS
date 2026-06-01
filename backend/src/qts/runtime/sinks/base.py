@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
+from enum import Enum
 from typing import Any, ClassVar
 
 from qts.core.ids import (
@@ -217,7 +218,7 @@ class RuntimeEventContext:
 
     @staticmethod
     def _normalize_label(value: object) -> str:
-        raw_value = getattr(value, "value", value)
+        raw_value = value.value if isinstance(value, Enum) else value
         normalized = str(raw_value).strip().lower().replace("-", "_")
         if not normalized:
             raise ValueError("runtime context labels must not be empty")

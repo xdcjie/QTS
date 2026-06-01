@@ -83,7 +83,7 @@ class LayerDependencyRule:
             if not is_type_checking:
                 continue
             for inner in ast.walk(node):
-                line = getattr(inner, "lineno", None)
+                line = LayerDependencyRule._node_line_optional(inner)
                 if line is not None:
                     lines.add(line)
         return lines
@@ -93,6 +93,13 @@ class LayerDependencyRule:
         return imported_module == RUNTIME_IMPORT_PREFIX or imported_module.startswith(
             f"{RUNTIME_IMPORT_PREFIX}."
         )
+
+    @staticmethod
+    def _node_line_optional(node: ast.AST) -> int | None:
+        try:
+            return int(object.__getattribute__(node, "lineno"))
+        except AttributeError:
+            return None
 
 
 __all__ = ["LayerDependencyRule"]

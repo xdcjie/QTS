@@ -108,5 +108,6 @@ markers = [
     "anchor: domain correctness invariant tests",
     "slow: slow tests not required for quick local feedback",
     "external: tests requiring externally collected broker or service evidence",
+    "full_data: release-grade tests that use full historical datasets",
     "benchmark: performance benchmarks measured under pytest-benchmark",
 ]

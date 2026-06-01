@@ -35,14 +35,14 @@ from qts.runtime.config import BacktestCostModel, BacktestEngineConfig, Backtest
 from qts.runtime.intent_processing import TargetIntentProcessor
 
 if TYPE_CHECKING:
-    from qts.execution.execution_adapter import ExecutionAdapter
+    from qts.execution.execution_adapter import ExecutionEvidenceProvider
 
 
 @dataclass(frozen=True, slots=True)
 class BacktestEngineCollaborators:
     """Runtime collaborators the backtest engine orchestrates over replay bars."""
 
-    execution_adapter: ExecutionAdapter
+    execution_adapter: ExecutionEvidenceProvider
     execution_timing: ExecutionTimingModel
     instrument_context: BacktestInstrumentContext
     portfolio_projector: BacktestPortfolioProjector
@@ -68,9 +68,12 @@ class BacktestEngineAssembler:
             if backtest_runtime_config is not None
             else "CUSTOM"
         )
-        execution_adapter = dependencies.execution_adapter or SimulatedExecutionAdapter(
-            engine_config.cost_model,
-            capabilities=broker_capabilities_for_model(brokerage_model),
+        execution_adapter: ExecutionEvidenceProvider = (
+            dependencies.execution_adapter
+            or SimulatedExecutionAdapter(
+                engine_config.cost_model,
+                capabilities=broker_capabilities_for_model(brokerage_model),
+            )
         )
         resolved_timing = execution_timing or ExecutionTimingModel()
         contract_multipliers = dict(dependencies.contract_multipliers)
@@ -157,10 +160,8 @@ class BacktestEngineAssembler:
         return engine_config, dependencies, resolved_timing
 
     @staticmethod
-    def _broker_id(execution_adapter: ExecutionAdapter) -> BrokerId:
-        capabilities = getattr(execution_adapter, "capabilities", None)
-        if capabilities is None:
-            return BrokerId("simulated")
+    def _broker_id(execution_adapter: ExecutionEvidenceProvider) -> BrokerId:
+        capabilities = execution_adapter.capabilities
         broker_id = capabilities.broker_id
         if isinstance(broker_id, BrokerId):
             return broker_id

@@ -1,5 +1,5 @@
 {
-  "production_class_count": 1003,
+  "production_class_count": 1005,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -272,6 +272,7 @@
     "qts.execution.errors.UnknownOrder",
     "qts.execution.errors.UnsupportedOrderReplace",
     "qts.execution.execution_adapter.ExecutionAdapter",
+    "qts.execution.execution_adapter.ExecutionEvidenceProvider",
     "qts.execution.idempotency.FillIdempotencyStore",
     "qts.execution.order_manager.OrderManager",
     "qts.execution.order_state_machine.OrderEvent",
@@ -441,6 +442,7 @@
     "qts.quality.rules.stale.ProductionNoFakeClassRule",
     "qts.quality.rules.stale.StaleArchitectureTextRule",
     "qts.quality.rules.strategy_context_boundary.StrategyContextStateBoundaryRule",
+    "qts.quality.rules.strict_contracts.StrictCoreContractRule",
     "qts.quality.rules.transport.TransportAdapterImportRule",
     "qts.quality.rules.transport.TransportCanonicalPathRule",
     "qts.quality.rules.value_honesty.PromotionValueHonestyRule",

@@ -2,33 +2,66 @@
 
 from __future__ import annotations
 
-_RISK_SUBMODULES = {
-    "KillSwitchRegistry": "qts.risk.kill_switch",
-    "KillSwitchScope": "qts.risk.kill_switch",
-    "KillSwitchState": "qts.risk.kill_switch",
-    "RiskConfig": "qts.risk.config",
-    "RiskEngine": "qts.risk.risk_engine",
-    "RiskRule": "qts.risk.rule",
-    "RiskRuleConfig": "qts.risk.config",
-    "RiskRuleName": "qts.risk.config",
-    "RiskRuleRegistry": "qts.risk.rule_registry",
-    "RiskStateSnapshot": "qts.risk.risk_state",
-    "MarginCalculator": "qts.risk.margin",
-    "MarginRequirement": "qts.risk.margin",
-    "MarginRule": "qts.risk.rules.margin_limit",
-    "IntradayPnlCalculator": "qts.risk.intraday_pnl",
-}
-
 
 def __getattr__(name: str) -> object:
     """Lazy-import public names to avoid circular import with qts.runtime."""
-    module_path = _RISK_SUBMODULES.get(name)
-    if module_path is None:
-        raise AttributeError(f"module 'qts.risk' has no attribute {name}")
-    import importlib
+    if name == "IntradayPnlCalculator":
+        from qts.risk.intraday_pnl import IntradayPnlCalculator
 
-    module = importlib.import_module(module_path)
-    return getattr(module, name)
+        return IntradayPnlCalculator
+    if name == "KillSwitchRegistry":
+        from qts.risk.kill_switch import KillSwitchRegistry
+
+        return KillSwitchRegistry
+    if name == "KillSwitchScope":
+        from qts.risk.kill_switch import KillSwitchScope
+
+        return KillSwitchScope
+    if name == "KillSwitchState":
+        from qts.risk.kill_switch import KillSwitchState
+
+        return KillSwitchState
+    if name == "MarginCalculator":
+        from qts.risk.margin import MarginCalculator
+
+        return MarginCalculator
+    if name == "MarginRequirement":
+        from qts.risk.margin import MarginRequirement
+
+        return MarginRequirement
+    if name == "MarginRule":
+        from qts.risk.rules.margin_limit import MarginRule
+
+        return MarginRule
+    if name == "RiskConfig":
+        from qts.risk.config import RiskConfig
+
+        return RiskConfig
+    if name == "RiskEngine":
+        from qts.risk.risk_engine import RiskEngine
+
+        return RiskEngine
+    if name == "RiskRule":
+        from qts.risk.rule import RiskRule
+
+        return RiskRule
+    if name == "RiskRuleConfig":
+        from qts.risk.config import RiskRuleConfig
+
+        return RiskRuleConfig
+    if name == "RiskRuleName":
+        from qts.risk.config import RiskRuleName
+
+        return RiskRuleName
+    if name == "RiskRuleRegistry":
+        from qts.risk.rule_registry import RiskRuleRegistry
+
+        return RiskRuleRegistry
+    if name == "RiskStateSnapshot":
+        from qts.risk.risk_state import RiskStateSnapshot
+
+        return RiskStateSnapshot
+    raise AttributeError(f"module 'qts.risk' has no attribute {name}")
 
 
 __all__ = [

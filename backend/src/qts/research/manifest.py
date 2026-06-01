@@ -8,6 +8,7 @@ import random
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from operator import attrgetter
 from pathlib import Path
 from typing import Any
 
@@ -520,10 +521,8 @@ def _resolve_strategy_entrypoint(source_module: str, entrypoint: str) -> str:
         module = importlib.import_module(module_name)
     except ImportError as exc:
         raise ValueError("strategy entrypoint is not resolvable") from exc
-    target: Any = module
     try:
-        for part in attribute.split("."):
-            target = getattr(target, part)
+        attrgetter(attribute)(module)
     except AttributeError as exc:
         raise ValueError("strategy entrypoint is not resolvable") from exc
     return f"{module_name}:{attribute}"

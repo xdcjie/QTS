@@ -4,11 +4,13 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
 import yaml  # type: ignore[import-untyped]
 
 from scripts import run_research
 
 
+@pytest.mark.full_data
 def test_gc_vwap_trend_robust_production_acceptance(
     tmp_path: Path,
     capsys: Any,

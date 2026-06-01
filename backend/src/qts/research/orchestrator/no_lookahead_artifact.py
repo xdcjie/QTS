@@ -17,6 +17,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from qts.core.hashing import stable_json_dumps, stable_json_hash
+from qts.research.validation import ValidationWindow
 
 
 class NoLookaheadValidationArtifact:
@@ -77,9 +78,7 @@ class NoLookaheadValidationArtifact:
             "string_scan_only": False,
             "string_scan_violations": list(string_violations),
             "timing_validation": timing_payload,
-            "violations": [
-                v.to_payload() if hasattr(v, "to_payload") else v for v in result.violations
-            ],
+            "violations": [violation.to_payload() for violation in result.violations],
             "window_overlaps": list(result.window_overlaps),
             **{
                 k: timing_payload[k]
@@ -95,7 +94,7 @@ class NoLookaheadValidationArtifact:
 
     def _no_lookahead_decision_cutoff(
         self,
-        windows: Sequence[Any],
+        windows: Sequence[ValidationWindow],
         backtest_manifest: Mapping[str, Any],
     ) -> datetime | None:
         """Return the no-lookahead decision cutoff: the earliest OOS window start.
@@ -105,9 +104,7 @@ class NoLookaheadValidationArtifact:
         (older artifacts), in which case feature timing degrades to the 1970
         epoch sentinel rather than failing construction.
         """
-        oos_starts: list[datetime] = [
-            window.start for window in windows if getattr(window, "role", "") != "train"
-        ]
+        oos_starts: list[datetime] = [window.start for window in windows if window.role != "train"]
         if oos_starts:
             return min(oos_starts)
         window = backtest_manifest.get("window")
@@ -233,12 +230,10 @@ class NoLookaheadValidationArtifact:
         self,
         backtest_manifest: Mapping[str, Any],
         pipeline_config: Mapping[str, Any],
-    ) -> tuple[Any, ...]:
+    ) -> tuple[ValidationWindow, ...]:
         """Derive validation windows from backtest manifest and pipeline config."""
 
-        from qts.research.validation import ValidationWindow as _ValidationWindow
-
-        windows: list[_ValidationWindow] = []
+        windows: list[ValidationWindow] = []
         for source in (pipeline_config, backtest_manifest):
             splits = source.get("splits")
             if not isinstance(splits, Mapping):
@@ -268,7 +263,7 @@ class NoLookaheadValidationArtifact:
                     if mapped_role in {"train", "test", "out_of_sample"}:
                         with contextlib.suppress(ValueError, TypeError):
                             windows.append(
-                                _ValidationWindow(
+                                ValidationWindow(
                                     name=name.strip(),
                                     role=mapped_role,
                                     start=datetime.fromisoformat(start.replace("Z", "+00:00")),

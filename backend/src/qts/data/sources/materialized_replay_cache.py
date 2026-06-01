@@ -14,6 +14,7 @@ from qts.core.hashing import stable_json_hash
 from qts.core.ids import InstrumentId
 from qts.data.bars.pipeline import BarAggregationPipeline
 from qts.data.bars.timeframe import Timeframe
+from qts.data.historical.catalog import HistoricalCatalog
 from qts.data.provenance import DatasetMetadata
 from qts.data.sessions import RegularSessionWindow
 from qts.data.sources.replay_market_data_source import (
@@ -27,7 +28,7 @@ from qts.registry.future_roll import FutureRollRegistry, FutureRollSelection
 def materialized_replay_inputs(
     *,
     config: Any,
-    catalog: Any,
+    catalog: HistoricalCatalog,
     inputs: ReplayMarketDataBundle,
     cache_dir: Path,
 ) -> ReplayMarketDataBundle:
@@ -62,7 +63,7 @@ def materialized_replay_inputs(
 def _materialized_replay_cache_paths(
     *,
     config: Any,
-    catalog: Any,
+    catalog: HistoricalCatalog,
     cache_dir: Path,
     inputs: ReplayMarketDataBundle,
 ) -> tuple[Path, Path, dict[str, Any]]:
@@ -74,7 +75,7 @@ def _materialized_replay_cache_paths(
 def _materialized_replay_identity(
     *,
     config: Any,
-    catalog: Any,
+    catalog: HistoricalCatalog,
     inputs: ReplayMarketDataBundle,
 ) -> dict[str, Any]:
     return {
@@ -101,26 +102,24 @@ def _materialized_replay_identity(
     }
 
 
-def _catalog_dataset_identity(catalog: Any) -> list[dict[str, Any]]:
-    datasets = getattr(catalog, "datasets", {})
-    if not isinstance(datasets, Mapping):
-        return []
+def _catalog_dataset_identity(catalog: HistoricalCatalog) -> list[dict[str, Any]]:
+    datasets = catalog.datasets
     entries: list[dict[str, Any]] = []
     for root, dataset in sorted(datasets.items(), key=lambda item: str(item[0])):
         entry: dict[str, Any] = {
             "root": str(root),
-            "source_timeframe": getattr(dataset, "source_timeframe", None),
-            "exchange_timezone": getattr(dataset, "exchange_timezone", None),
-            "schema_name": getattr(dataset, "schema_name", None),
-            "timezone_policy": getattr(dataset, "timezone_policy", None),
-            "normalization": getattr(dataset, "normalization", None),
+            "source_timeframe": dataset.source_timeframe,
+            "exchange_timezone": dataset.exchange_timezone,
+            "schema_name": dataset.schema_name,
+            "timezone_policy": dataset.timezone_policy,
+            "normalization": dataset.normalization,
         }
-        csv_path = getattr(dataset, "csv_path", None)
-        if isinstance(csv_path, Path) and csv_path.exists():
+        csv_path = dataset.csv_path
+        if csv_path.exists():
             entry["csv_path"] = str(csv_path.resolve())
             entry["csv_hash"] = ReplayMarketDataSource._file_content_hash(csv_path)
-        chain_path = getattr(dataset, "chain_path", None)
-        if isinstance(chain_path, Path) and chain_path.exists():
+        chain_path = dataset.chain_path
+        if chain_path is not None and chain_path.exists():
             entry["chain_path"] = str(chain_path.resolve())
             entry["chain_hash"] = ReplayMarketDataSource._file_content_hash(chain_path)
         entries.append(entry)

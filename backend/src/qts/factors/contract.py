@@ -85,6 +85,11 @@ class Factor(Protocol):
     name: ClassVar[str]
     version: ClassVar[str]
 
+    @property
+    def lookback(self) -> int:
+        """Return the trailing observation count required by this factor."""
+        ...
+
     def compute(self, window: FactorWindow) -> FactorResult:
         """Compute factor scores for a time-sliced input window."""
 

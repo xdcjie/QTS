@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import Decimal
 from typing import Protocol
@@ -55,29 +55,29 @@ _SIM_SUPPORTED_ORDER_TYPES: frozenset[OrderType] = (
 )
 
 
+def _default_simulated_capabilities() -> BrokerCapabilities:
+    return BrokerCapabilities(
+        broker_id=BrokerId("simulated"),
+        supports_fractional=True,
+        supports_stop_orders=True,
+        supported_order_types=_SIM_SUPPORTED_ORDER_TYPES,
+        supported_time_in_force=frozenset(TimeInForce),
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class SimulatedExecutionAdapter:
     """Apply deterministic commission and slippage assumptions for backtests."""
 
     cost_model: SimulatedExecutionCostModel
-    capabilities: BrokerCapabilities | None = None
+    capabilities: BrokerCapabilities = field(default_factory=_default_simulated_capabilities)
 
     def __post_init__(self) -> None:
         """Validate and normalize cost-model-backed configuration."""
         if self.cost_model is None:
             raise ValueError("cost_model is required")
         if self.capabilities is None:
-            object.__setattr__(
-                self,
-                "capabilities",
-                BrokerCapabilities(
-                    broker_id=BrokerId("simulated"),
-                    supports_fractional=True,
-                    supports_stop_orders=True,
-                    supported_order_types=_SIM_SUPPORTED_ORDER_TYPES,
-                    supported_time_in_force=frozenset(TimeInForce),
-                ),
-            )
+            raise ValueError("capabilities is required")
 
     def execute_market_order(
         self,
@@ -196,8 +196,6 @@ class SimulatedExecutionAdapter:
     def execution_assumptions_payload(self) -> dict[str, object]:
         """Serialize simulated execution assumptions for report manifests."""
         capabilities = self.capabilities
-        if capabilities is None:
-            raise RuntimeError("simulated execution capabilities are not configured")
         payload = ImmediateFillModel().to_manifest_payload()
         payload.update(
             {
@@ -216,14 +214,10 @@ class SimulatedExecutionAdapter:
     def broker_capability_payload(self) -> dict[str, object]:
         """Serialize broker capability assumptions used by this adapter."""
         capabilities = self.capabilities
-        if capabilities is None:
-            raise RuntimeError("simulated execution capabilities are not configured")
         return capabilities.to_manifest_payload()
 
     def _validate_order(self, intent: OrderIntent) -> None:
         capabilities = self.capabilities
-        if capabilities is None:
-            raise RuntimeError("simulated execution capabilities are not configured")
         if not capabilities.supports_order_type(intent.order_spec.order_type):
             if intent.order_spec.order_type is OrderType.MARKET:
                 raise ValueError("market orders are not supported by broker capabilities")

@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from qts.core.hashing import stable_json_dumps, stable_json_hash
+from qts.research.optimizer.result import OptimizationResult
 from qts.research.orchestrator.no_lookahead_artifact import NoLookaheadValidationArtifact
 
 
@@ -145,13 +146,13 @@ class ValidationArtifactWriter:
     def _walk_forward_validation_payload(
         self,
         *,
-        train_result: Any,
+        train_result: OptimizationResult,
         train_manifest: Mapping[str, Any],
-        test_result: Any,
+        test_result: OptimizationResult,
         test_manifest: Mapping[str, Any],
     ) -> dict[str, Any]:
-        train = manifest_decimal(getattr(train_result, "objective_value", 0))
-        test = manifest_decimal(getattr(test_result, "objective_value", 0))
+        train = manifest_decimal(train_result.objective_value)
+        test = manifest_decimal(test_result.objective_value)
         gap = abs(train - test)
         allowed_gap = max(abs(train), abs(test), Decimal("1")) * Decimal("0.25")
         accepted = test >= Decimal("0") and gap <= allowed_gap
@@ -164,11 +165,11 @@ class ValidationArtifactWriter:
                 {
                     "accepted": accepted,
                     "manifest_hash": str(test_manifest.get("manifest_hash", "")),
-                    "manifest_path": str(getattr(test_result, "manifest_path", "")),
+                    "manifest_path": str(test_result.manifest_path),
                     "name": "split-001-test",
                     "score": float(test),
                     "train_manifest_hash": str(train_manifest.get("manifest_hash", "")),
-                    "train_manifest_path": str(getattr(train_result, "manifest_path", "")),
+                    "train_manifest_path": str(train_result.manifest_path),
                     "train_score": float(train),
                 }
             ],
@@ -177,7 +178,7 @@ class ValidationArtifactWriter:
     def _failure_window_payload(
         self,
         *,
-        failure_result: Any,
+        failure_result: OptimizationResult,
         failure_manifest: Mapping[str, Any],
     ) -> dict[str, Any]:
         drawdown = abs(self._manifest_stat_decimal(failure_manifest, "max_drawdown"))
@@ -190,7 +191,7 @@ class ValidationArtifactWriter:
                         "equity_curve",
                     ),
                     "manifest_hash": str(failure_manifest.get("manifest_hash", "")),
-                    "manifest_path": str(getattr(failure_result, "manifest_path", "")),
+                    "manifest_path": str(failure_result.manifest_path),
                     "max_drawdown": float(drawdown),
                     "name": "adverse-validation-window",
                     "report_only": False,
@@ -202,7 +203,7 @@ class ValidationArtifactWriter:
         self,
         *,
         backtest_manifest: Mapping[str, Any],
-        stress_result: Any,
+        stress_result: OptimizationResult,
         stress_manifest: Mapping[str, Any],
     ) -> dict[str, Any]:
         baseline_return = self._manifest_stat_decimal(backtest_manifest, "total_return")
@@ -211,14 +212,14 @@ class ValidationArtifactWriter:
         initial_cash = self._initial_cash_from_manifest(stress_manifest)
         total_slippage = abs(self._manifest_stat_decimal(stress_manifest, "total_slippage"))
         slippage = Decimal("0") if initial_cash == Decimal("0") else total_slippage / initial_cash
-        score = manifest_decimal(getattr(stress_result, "objective_value", 0))
+        score = manifest_decimal(stress_result.objective_value)
         return {
             "degradation": float(degradation),
             "baseline_manifest_hash": str(backtest_manifest.get("manifest_hash", "")),
             "baseline_statistics_hash": str(backtest_manifest.get("statistics_hash", "")),
             "fills_hash": self._manifest_artifact_hash(stress_manifest, "fills"),
             "stress_manifest_hash": str(stress_manifest.get("manifest_hash", "")),
-            "stress_manifest_path": str(getattr(stress_result, "manifest_path", "")),
+            "stress_manifest_path": str(stress_result.manifest_path),
             "stress_statistics_hash": str(stress_manifest.get("statistics_hash", "")),
             "slippage_sensitivity": float(slippage),
             "stressed_score": float(score),

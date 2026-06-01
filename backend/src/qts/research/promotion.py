@@ -18,40 +18,16 @@ from qts.research.metrics_schema import ResearchMetricsSchema
 
 _DEFAULT_METRICS_SCHEMA_PATH = Path("configs/research/metrics/schema_v2.yaml")
 _PROMOTION_THRESHOLD_GATE_SPECS = (
-    ("min", "minimum_oos_months", "trading", "oos_months", "min_oos_months"),
-    ("min", "minimum_oos_trade_count", "trading", "oos_trade_count", "min_oos_trade_count"),
-    ("min", "oos_sharpe", "quality", "sharpe", "min_oos_sharpe"),
-    ("min", "profit_factor", "quality", "profit_factor", "min_profit_factor"),
-    ("max", "max_drawdown", "risk", "max_drawdown", "max_drawdown"),
-    ("max", "cost_impact", "execution", "cost_impact", "max_cost_impact"),
-    (
-        "max",
-        "slippage_stress",
-        "execution",
-        "slippage_sensitivity",
-        "max_slippage_sensitivity",
-    ),
-    (
-        "min",
-        "parameter_neighborhood_stability",
-        "stability",
-        "parameter_sensitivity",
-        "min_parameter_stability",
-    ),
-    (
-        "min",
-        "walk_forward_consistency",
-        "stability",
-        "walk_forward_consistency",
-        "min_walk_forward_consistency",
-    ),
-    (
-        "max",
-        "correlation_to_active_strategies",
-        "portfolio",
-        "correlation_to_active",
-        "max_correlation_to_active",
-    ),
+    ("min", "minimum_oos_months", "trading", "oos_months"),
+    ("min", "minimum_oos_trade_count", "trading", "oos_trade_count"),
+    ("min", "oos_sharpe", "quality", "sharpe"),
+    ("min", "profit_factor", "quality", "profit_factor"),
+    ("max", "max_drawdown", "risk", "max_drawdown"),
+    ("max", "cost_impact", "execution", "cost_impact"),
+    ("max", "slippage_stress", "execution", "slippage_sensitivity"),
+    ("min", "parameter_neighborhood_stability", "stability", "parameter_sensitivity"),
+    ("min", "walk_forward_consistency", "stability", "walk_forward_consistency"),
+    ("max", "correlation_to_active_strategies", "portfolio", "correlation_to_active"),
 )
 _PROMOTION_BOOL_GATE_SPECS = (
     ("deterministic_replay", "research", "deterministic_replay_passed"),
@@ -242,7 +218,11 @@ class ResearchPromotionPolicy:
             )
 
         gate_results: list[PromotionGateResult] = []
-        for gate_kind, name, group, field_name, threshold_attr in _PROMOTION_THRESHOLD_GATE_SPECS:
+        for (gate_kind, name, group, field_name), threshold in zip(
+            _PROMOTION_THRESHOLD_GATE_SPECS,
+            _promotion_thresholds(self),
+            strict=True,
+        ):
             gate_fn = self._min_gate if gate_kind == "min" else self._max_gate
             gate_results.append(
                 gate_fn(
@@ -251,7 +231,7 @@ class ResearchPromotionPolicy:
                     name,
                     group,
                     field_name,
-                    float(getattr(self, threshold_attr)),
+                    threshold,
                 )
             )
         for name, group, field_name in _PROMOTION_BOOL_GATE_SPECS:
@@ -417,6 +397,21 @@ def _optional_float(value: Any) -> float | None:
     if value is None:
         return None
     return float(value)
+
+
+def _promotion_thresholds(policy: ResearchPromotionPolicy) -> tuple[float, ...]:
+    return (
+        float(policy.min_oos_months),
+        float(policy.min_oos_trade_count),
+        float(policy.min_oos_sharpe),
+        float(policy.min_profit_factor),
+        float(policy.max_drawdown),
+        float(policy.max_cost_impact),
+        float(policy.max_slippage_sensitivity),
+        float(policy.min_parameter_stability),
+        float(policy.min_walk_forward_consistency),
+        float(policy.max_correlation_to_active),
+    )
 
 
 def _metric_schema_metadata(

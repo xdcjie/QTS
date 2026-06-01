@@ -59,10 +59,12 @@ class ExchangeCalendarProvider:
     @staticmethod
     def _to_datetime(value: Any) -> datetime:
         """Convert a calendar-library timestamp into a stdlib datetime."""
-        if hasattr(value, "to_pydatetime"):
+        try:
             converted = value.to_pydatetime()
-            if isinstance(converted, datetime):
-                return converted
+        except AttributeError:
+            converted = None
+        if converted is not None and isinstance(converted, datetime):
+            return converted
         if isinstance(value, datetime):
             return value
         raise TypeError(f"expected datetime-like calendar value, got {type(value).__name__}")

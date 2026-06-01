@@ -39,20 +39,19 @@ class FitnessLandscapePoint:
     trial_count_at_selection: int | None = None
 
     def __post_init__(self) -> None:
-        for field_name in (
-            "trial_id",
-            "campaign_id",
-            "generation_id",
-            "strategy_family",
-            "factor_family",
-            "root",
-            "timeframe",
-            "regime",
-            "session",
-            "parameter_hash",
-            "lifecycle_status",
+        for field_name, value in (
+            ("trial_id", self.trial_id),
+            ("campaign_id", self.campaign_id),
+            ("generation_id", self.generation_id),
+            ("strategy_family", self.strategy_family),
+            ("factor_family", self.factor_family),
+            ("root", self.root),
+            ("timeframe", self.timeframe),
+            ("regime", self.regime),
+            ("session", self.session),
+            ("parameter_hash", self.parameter_hash),
+            ("lifecycle_status", self.lifecycle_status),
         ):
-            value = getattr(self, field_name)
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"{field_name} is required")
         if self.retry_id is not None and not self.retry_id.strip():
@@ -250,16 +249,16 @@ class FitnessQuery:
         """Return whether a point satisfies every non-empty filter."""
 
         return all(
-            expected is None or getattr(point, field_name) == expected
-            for field_name, expected in (
-                ("campaign_id", self.campaign_id),
-                ("generation_id", self.generation_id),
-                ("trial_id", self.trial_id),
-                ("strategy_family", self.strategy_family),
-                ("factor_family", self.factor_family),
-                ("root", self.root),
-                ("regime", self.regime),
-                ("session", self.session),
+            expected is None or actual == expected
+            for actual, expected in (
+                (point.campaign_id, self.campaign_id),
+                (point.generation_id, self.generation_id),
+                (point.trial_id, self.trial_id),
+                (point.strategy_family, self.strategy_family),
+                (point.factor_family, self.factor_family),
+                (point.root, self.root),
+                (point.regime, self.regime),
+                (point.session, self.session),
             )
         )
 

@@ -9,7 +9,9 @@ from pathlib import Path
 from typing import Any
 
 from qts.core.hashing import stable_json_dumps, stable_json_hash
+from qts.research.data_quality import DataQualityArtifact
 from qts.research.metrics_schema import ResearchMetricsSchema
+from qts.research.reproducibility import ReproducibilitySnapshotV2
 from qts.research.selector.multiplicity_adjustment import (
     CandidateStatistics,
     MultiplicityAdjustmentResult,
@@ -581,15 +583,17 @@ class CandidateSelector:
     def _data_quality_reasons(data_quality: Any) -> tuple[str, ...]:
         if data_quality is None:
             return ("data_quality: artifact missing",)
-        accepted = bool(getattr(data_quality, "accepted", False))
         blockers: Sequence[Any] = ()
         if isinstance(data_quality, Mapping):
             accepted = bool(data_quality.get("accepted", False))
             raw_blockers = data_quality.get("blockers", ())
             if isinstance(raw_blockers, Sequence) and not isinstance(raw_blockers, str):
                 blockers = raw_blockers
-        elif hasattr(data_quality, "blockers"):
+        elif isinstance(data_quality, DataQualityArtifact):
+            accepted = data_quality.accepted
             blockers = data_quality.blockers()
+        else:
+            raise ValueError("data_quality must be a mapping or DataQualityArtifact")
         if not accepted:
             return ("data_quality: artifact rejected",)
         return tuple(
@@ -603,7 +607,7 @@ class CandidateSelector:
         if reproducibility is None:
             return ("reproducibility: snapshot missing",)
         blockers: tuple[str, ...] = ()
-        if hasattr(reproducibility, "promotion_blockers"):
+        if isinstance(reproducibility, ReproducibilitySnapshotV2):
             blockers = tuple(str(reason) for reason in reproducibility.promotion_blockers())
         elif isinstance(reproducibility, Mapping):
             blockers = tuple(str(reason) for reason in reproducibility.get("blockers", ()))

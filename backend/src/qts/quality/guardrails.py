@@ -374,6 +374,10 @@ GUARDRAIL_REMEDIATIONS = {
         "Merge pass-through wrappers or add boundary justification to the class inventory baseline."
     ),
     "STALE_ARCHITECTURE_TEXT": "Update architecture text to the canonical M0 runtime boundary.",
+    "STRICT_CORE_CONTRACT": (
+        "Use the typed public contract or introduce an explicit protocol/port at the owning "
+        "boundary instead of runtime getattr/hasattr probing."
+    ),
     "STRATEGY_SDK_INTERNAL_LEAK": (
         "Expose only Strategy SDK public facades and readonly value types."
     ),
@@ -818,7 +822,7 @@ def _check_test_support_code(
             GuardrailViolation(
                 code="TEST_SUPPORT_IN_PRODUCTION",
                 path=str(relative_path),
-                line=getattr(node, "lineno", 1),
+                line=_node_line(node),
                 message=f"{name!r} is test/anchor support code; put it under tests",
             )
         )
@@ -1146,7 +1150,7 @@ def _check_strategy_sdk_internal_leak(
                 GuardrailViolation(
                     code="STRATEGY_SDK_INTERNAL_LEAK",
                     path=str(relative_path),
-                    line=getattr(node, "lineno", 1),
+                    line=_node_line(node),
                     message=(
                         "Strategy SDK, factor, and research public modules must not reference "
                         f"internal actor/broker/risk symbol {node.id}"
@@ -1181,7 +1185,7 @@ def _check_forbidden_tokens(
                 GuardrailViolation(
                     code=code,
                     path=str(relative_path),
-                    line=getattr(node, "lineno", 1),
+                    line=_node_line(node),
                     message=f"{name!r} uses a specialized token; {description}",
                 )
             )
@@ -1194,7 +1198,7 @@ def _check_forbidden_tokens(
                 GuardrailViolation(
                     code=code,
                     path=str(relative_path),
-                    line=getattr(node, "lineno", 1),
+                    line=_node_line(node),
                     message=f"{node.value!r} uses a specialized token; {description}",
                 )
             )
@@ -1262,7 +1266,7 @@ def _type_checking_block_lines(tree: ast.AST) -> set[int]:
         if not is_type_checking:
             continue
         for inner in ast.walk(node):
-            line = getattr(inner, "lineno", None)
+            line = _node_line_optional(inner)
             if line is not None:
                 lines.add(line)
     return lines
@@ -1280,6 +1284,20 @@ def _iter_docstrings(tree: ast.AST) -> list[tuple[ast.AST, str]]:
         if docstring is not None:
             docstrings.append((node, docstring))
     return docstrings
+
+
+def _node_line(node: ast.AST) -> int:
+    try:
+        return int(object.__getattribute__(node, "lineno"))
+    except AttributeError:
+        return 1
+
+
+def _node_line_optional(node: ast.AST) -> int | None:
+    try:
+        return int(object.__getattribute__(node, "lineno"))
+    except AttributeError:
+        return None
 
 
 def _iter_architecture_text_paths(repo_root: Path) -> list[Path]:

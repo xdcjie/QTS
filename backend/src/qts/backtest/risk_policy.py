@@ -35,20 +35,18 @@ class BacktestMarginPolicyResolver:
         """
         if instrument_registry is None:
             return None
-        instruments = getattr(instrument_registry, "instruments", None)
-        if callable(instruments):
-            missing_futures_margin = [
-                instrument.instrument_id.value
-                for instrument in instruments()
-                if instrument.asset_class is AssetClass.FUTURE
-                and instrument.tradable
-                and instrument.contract_spec.initial_margin_rate is None
-            ]
-            if missing_futures_margin:
-                raise ValueError(
-                    "futures instruments missing initial_margin_rate: "
-                    + ", ".join(sorted(missing_futures_margin))
-                )
+        missing_futures_margin = [
+            instrument.instrument_id.value
+            for instrument in instrument_registry.instruments()
+            if instrument.asset_class is AssetClass.FUTURE
+            and instrument.tradable
+            and instrument.contract_spec.initial_margin_rate is None
+        ]
+        if missing_futures_margin:
+            raise ValueError(
+                "futures instruments missing initial_margin_rate: "
+                + ", ".join(sorted(missing_futures_margin))
+            )
         specs = instrument_registry.contract_specs()
         if not isinstance(specs, Iterable):
             raise TypeError("instrument_registry.contract_specs() must return an iterable")

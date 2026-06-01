@@ -282,7 +282,10 @@ def get_principal(
     authorization: str | None = Header(default=None, alias="Authorization"),
 ) -> Principal:
     """FastAPI dependency returning the authenticated principal."""
-    principal = getattr(request.state, "principal", None)
+    try:
+        principal = request.state.principal
+    except AttributeError:
+        principal = None
     if isinstance(principal, Principal):
         return principal
     from qts.api.auth_backend_factory import default_auth_backend

@@ -8,6 +8,7 @@ from typing import Protocol
 
 from qts.core.ids import AccountId, CorrelationId, OrderId, StrategyId
 from qts.domain.orders import ExecutionReport, OrderIntent
+from qts.execution.broker import BrokerCapabilities
 
 
 class ExecutionAdapter(Protocol):
@@ -61,4 +62,21 @@ class ExecutionAdapter(Protocol):
         ...
 
 
-__all__ = ["ExecutionAdapter"]
+class ExecutionEvidenceProvider(ExecutionAdapter, Protocol):
+    """Backtest/reporting execution adapter contract with auditable evidence."""
+
+    @property
+    def capabilities(self) -> BrokerCapabilities:
+        """Return the broker/simulation capabilities enforced by this adapter."""
+        ...
+
+    def execution_assumptions_payload(self) -> dict[str, object]:
+        """Serialize execution assumptions for deterministic run manifests."""
+        ...
+
+    def broker_capability_payload(self) -> dict[str, object]:
+        """Serialize broker capability assumptions for runtime evidence."""
+        ...
+
+
+__all__ = ["ExecutionAdapter", "ExecutionEvidenceProvider"]

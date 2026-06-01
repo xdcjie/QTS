@@ -195,6 +195,10 @@ prove every design decision, but it should block obvious placement mistakes:
   `docs/plan/backend_class_boundary_review_status_matrix.md`;
 - production classes over 500 lines must have a split/retain decision and
   evidence in that matrix.
+- production QTS modules must not use runtime `getattr`/`hasattr` probing to
+  discover or normalize internal contracts; introduce an explicit public API,
+  protocol, concrete type check, or structured resolver at the owning boundary
+  instead.
 
 ### Value-honesty guardrails (C3 / C5)
 
