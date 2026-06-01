@@ -5,7 +5,6 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-from qts.backtest.engine import BacktestEngine
 from qts.core.ids import InstrumentId
 from qts.domain.market_data import Bar
 from qts.strategy_sdk import (
@@ -15,6 +14,7 @@ from qts.strategy_sdk import (
     Strategy,
 )
 
+from tests.support.backtest_engine import backtest_engine_from_inputs
 from tests.support.backtest_streaming import run_engine_streaming
 
 _INSTRUMENT = InstrumentId("EQUITY.US.NASDAQ.AAPL")
@@ -65,7 +65,7 @@ def test_signal_portfolio_construction_targets_enter_existing_backtest_path(
 ) -> None:
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=SignalDrivenStrategy(),
             bars=[_bar(start), _bar(start + timedelta(minutes=1))],
             initial_cash=Decimal("1000"),

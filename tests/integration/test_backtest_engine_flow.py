@@ -36,9 +36,10 @@ def _bar(start: datetime, close: str) -> Bar:
 
 
 def test_backtest_engine_runs_strategy_through_execution_flow(tmp_path: Path) -> None:
-    from qts.backtest.engine import BacktestEngine
     from qts.core.ids import InstrumentId
     from qts.strategy_sdk import Strategy
+
+    from tests.support.backtest_engine import backtest_engine_from_inputs
 
     class BuyOnceStrategy(Strategy):
         def initialize(self, ctx: Any) -> None:
@@ -54,7 +55,7 @@ def test_backtest_engine_runs_strategy_through_execution_flow(tmp_path: Path) ->
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             execution_timing=_SAME_BAR,
             strategy=BuyOnceStrategy(),
             bars=[_bar(start, "100"), _bar(start + timedelta(minutes=1), "101")],
@@ -74,7 +75,6 @@ def test_backtest_engine_runs_strategy_through_execution_flow(tmp_path: Path) ->
 def test_backtest_engine_runs_multi_strategy_config_through_shared_aggregation(
     tmp_path: Path,
 ) -> None:
-    from qts.backtest.engine import BacktestEngine
     from qts.core.ids import AccountId, InstrumentId
     from qts.runtime.config import (
         BacktestMarketDataReference,
@@ -82,6 +82,8 @@ def test_backtest_engine_runs_multi_strategy_config_through_shared_aggregation(
         BacktestStrategyConfig,
     )
     from qts.strategy_sdk import Strategy
+
+    from tests.support.backtest_engine import backtest_engine_from_inputs
 
     class FixedTargetStrategy(Strategy):
         def __init__(self, quantity: Decimal) -> None:
@@ -125,7 +127,7 @@ def test_backtest_engine_runs_multi_strategy_config_through_shared_aggregation(
     )
 
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             execution_timing=_SAME_BAR,
             strategies=(
                 FixedTargetStrategy(Decimal("10")),
@@ -158,10 +160,11 @@ def test_backtest_engine_runs_multi_strategy_config_through_shared_aggregation(
 def test_backtest_engine_target_intents_must_pass_pre_trade_risk_before_order_manager(
     tmp_path: Path,
 ) -> None:
-    from qts.backtest.engine import BacktestEngine
     from qts.risk.risk_engine import RiskEngine
     from qts.risk.rules.max_notional import MaxNotionalRule
     from qts.strategy_sdk import Strategy
+
+    from tests.support.backtest_engine import backtest_engine_from_inputs
 
     class OversizedOrderStrategy(Strategy):
         def initialize(self, ctx: Any) -> None:
@@ -172,7 +175,7 @@ def test_backtest_engine_target_intents_must_pass_pre_trade_risk_before_order_ma
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             execution_timing=_SAME_BAR,
             strategy=OversizedOrderStrategy(),
             bars=[_bar(start, "100")],
@@ -190,9 +193,10 @@ def test_backtest_engine_target_intents_must_pass_pre_trade_risk_before_order_ma
 
 def test_backtest_engine_applies_brokerage_model_capabilities(tmp_path: Path) -> None:
     import pytest
-    from qts.backtest.engine import BacktestEngine
     from qts.runtime.config import BacktestMarketDataReference, BacktestRuntimeConfig
     from qts.strategy_sdk import Strategy
+
+    from tests.support.backtest_engine import backtest_engine_from_inputs
 
     class FractionalFutureStrategy(Strategy):
         def initialize(self, ctx: Any) -> None:
@@ -219,7 +223,7 @@ def test_backtest_engine_applies_brokerage_model_capabilities(tmp_path: Path) ->
 
     with pytest.raises(ValueError, match="fractional"):
         run_engine_streaming(
-            BacktestEngine(
+            backtest_engine_from_inputs(
                 execution_timing=_SAME_BAR,
                 strategy=FractionalFutureStrategy(),
                 bars=[_bar(start, "100")],
@@ -235,7 +239,6 @@ def test_backtest_engine_routes_bars_through_strategy_actor(
     tmp_path: Path,
 ) -> None:
     from qts.backtest import actor_loop as actor_loop_module
-    from qts.backtest.engine import BacktestEngine
     from qts.runtime.actors.strategy_actor import (
         StrategyBarEvent,
         StrategyBarResult,
@@ -243,6 +246,8 @@ def test_backtest_engine_routes_bars_through_strategy_actor(
         StrategyFinalized,
     )
     from qts.strategy_sdk import Strategy
+
+    from tests.support.backtest_engine import backtest_engine_from_inputs
 
     class NoDirectOnBarStrategy(Strategy):
         def initialize(self, ctx: Any) -> None:
@@ -271,7 +276,7 @@ def test_backtest_engine_routes_bars_through_strategy_actor(
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             execution_timing=_SAME_BAR,
             strategy=NoDirectOnBarStrategy(),
             bars=[_bar(start, "100")],
@@ -289,12 +294,13 @@ def test_backtest_engine_routes_strategy_intents_through_signal_aggregator(
     tmp_path: Path,
 ) -> None:
     from qts.backtest import actor_loop as actor_loop_module
-    from qts.backtest.engine import BacktestEngine
     from qts.runtime.actors.signal_aggregator_actor import (
         AggregatedSignalBatch,
         StrategySignalEvent,
     )
     from qts.strategy_sdk import Strategy
+
+    from tests.support.backtest_engine import backtest_engine_from_inputs
 
     class BuyOnceStrategy(Strategy):
         def initialize(self, ctx: Any) -> None:
@@ -327,7 +333,7 @@ def test_backtest_engine_routes_strategy_intents_through_signal_aggregator(
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             execution_timing=_SAME_BAR,
             strategy=BuyOnceStrategy(),
             bars=[_bar(start, "100")],
@@ -343,9 +349,10 @@ def test_backtest_engine_routes_strategy_intents_through_signal_aggregator(
 def test_backtest_engine_streams_source_bars_through_market_data_actor(
     tmp_path: Path,
 ) -> None:
-    from qts.backtest.engine import BacktestEngine
     from qts.core.ids import InstrumentId
     from qts.strategy_sdk import Strategy
+
+    from tests.support.backtest_engine import backtest_engine_from_inputs
 
     class BuyOnceStrategy(Strategy):
         def initialize(self, ctx: Any) -> None:
@@ -367,7 +374,7 @@ def test_backtest_engine_streams_source_bars_through_market_data_actor(
     ]
 
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             execution_timing=_SAME_BAR,
             strategy=BuyOnceStrategy(),
             bars=source_bars,
@@ -388,9 +395,10 @@ def test_backtest_engine_streams_source_bars_through_market_data_actor(
 def test_backtest_engine_supports_two_minute_target_timeframe(
     tmp_path: Path,
 ) -> None:
-    from qts.backtest.engine import BacktestEngine
     from qts.core.ids import InstrumentId
     from qts.strategy_sdk import Strategy
+
+    from tests.support.backtest_engine import backtest_engine_from_inputs
 
     class BuyOnceStrategy(Strategy):
         def initialize(self, ctx: Any) -> None:
@@ -410,7 +418,7 @@ def test_backtest_engine_supports_two_minute_target_timeframe(
     source_bars = [_bar(start, "100"), _bar(start + timedelta(minutes=1), "101")]
 
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             execution_timing=_SAME_BAR,
             strategy=BuyOnceStrategy(),
             bars=source_bars,
@@ -430,9 +438,10 @@ def test_backtest_engine_supports_two_minute_target_timeframe(
 def test_backtest_engine_uses_strategy_subscription_timeframe_over_config_target(
     tmp_path: Path,
 ) -> None:
-    from qts.backtest.engine import BacktestEngine
     from qts.core.ids import InstrumentId
     from qts.strategy_sdk import Strategy
+
+    from tests.support.backtest_engine import backtest_engine_from_inputs
 
     class SubscribedTimeframeStrategy(Strategy):
         def initialize(self, ctx: Any) -> None:
@@ -453,7 +462,7 @@ def test_backtest_engine_uses_strategy_subscription_timeframe_over_config_target
     source_bars = [_bar(start, "100"), _bar(start + timedelta(minutes=1), "101")]
 
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             execution_timing=_SAME_BAR,
             strategy=SubscribedTimeframeStrategy(),
             bars=source_bars,

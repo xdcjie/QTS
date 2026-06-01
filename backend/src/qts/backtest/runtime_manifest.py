@@ -25,6 +25,7 @@ class ResolvedBacktestTopology:
     account_id: AccountId
     strategy_id: StrategyId | None
     strategy_specs: tuple[StrategyRuntimeSpec, ...] | None
+    initial_cash_by_account: dict[AccountId, Any]
 
 
 class BacktestRuntimeTopologyManifestBuilder:
@@ -49,6 +50,7 @@ class BacktestRuntimeTopologyManifestBuilder:
                 account_id=default_account_id,
                 strategy_id=default_strategy_id,
                 strategy_specs=None,
+                initial_cash_by_account={},
             )
         topology = RuntimeTopologyBuilder.from_backtest_config(
             backtest_runtime_config, runtime_run_id
@@ -65,6 +67,9 @@ class BacktestRuntimeTopologyManifestBuilder:
             account_id=account_id,
             strategy_id=strategy_id,
             strategy_specs=topology.strategies,
+            initial_cash_by_account={
+                account.account_id: account.initial_cash for account in topology.accounts
+            },
         )
 
     @staticmethod

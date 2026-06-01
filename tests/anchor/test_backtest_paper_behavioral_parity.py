@@ -42,7 +42,6 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-from qts.backtest.engine import BacktestEngine
 from qts.core.ids import AccountId, InstrumentId
 from qts.domain.execution_timing import ExecutionTimingModel
 from qts.domain.instruments import AssetClass, ContractSpec, Instrument, SettlementType
@@ -58,6 +57,7 @@ from qts.runtime.dependencies import RuntimeSessionDependencies
 from qts.runtime.session import RuntimeSession, RuntimeSessionResult
 from qts.strategy_sdk import PortfolioPosition, PortfolioView, TargetIntent
 
+from tests.support.backtest_engine import backtest_engine_from_inputs
 from tests.support.backtest_streaming import CapturedBacktestStream, run_engine_streaming
 from tests.support.parity_strategy import ParityTargetQuantityStrategy
 
@@ -215,7 +215,7 @@ def _run_backtest(bar: Bar) -> CapturedBacktestStream:
 
     with tempfile.TemporaryDirectory() as output_dir:
         return run_engine_streaming(
-            BacktestEngine(
+            backtest_engine_from_inputs(
                 strategy=ParityTargetQuantityStrategy(symbol=_SYMBOL, quantity=_TARGET_QUANTITY),
                 bars=[bar],
                 initial_cash=_INITIAL_CASH,

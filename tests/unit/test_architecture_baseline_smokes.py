@@ -32,8 +32,9 @@ def _bar(start: datetime, close: str) -> Bar:
 
 
 def test_backtest_core_chain_smoke(tmp_path: Path) -> None:
-    from qts.backtest.engine import BacktestEngine
     from qts.strategy_sdk import Strategy
+
+    from tests.support.backtest_engine import backtest_engine_from_inputs
 
     class SmokeBuyStrategy(Strategy):
         def initialize(self, ctx: Any) -> None:
@@ -50,7 +51,7 @@ def test_backtest_core_chain_smoke(tmp_path: Path) -> None:
         _bar(datetime(2026, 1, 2, 14, 31, tzinfo=UTC), "101"),
     ]
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=SmokeBuyStrategy(),
             bars=bars,
             initial_cash=Decimal("10000"),

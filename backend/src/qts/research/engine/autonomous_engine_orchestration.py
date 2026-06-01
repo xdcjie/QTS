@@ -12,7 +12,6 @@ import json
 import shutil
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
-from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, cast
 
@@ -118,7 +117,7 @@ def run(
             audit_log.append(
                 "generation_approval_decided",
                 approval_payload,
-                created_at=datetime(2026, 5, 26, tzinfo=UTC) + timedelta(seconds=generation_index),
+                created_at=support._clock.now(offset_seconds=generation_index),
             )
             if approval_payload["accepted"] is not True:
                 stop_status = "pending_human_approval"
@@ -258,6 +257,7 @@ def _run_generation(
     )
     _append_trial_audit_records(
         audit_log=audit_log,
+        clock=support._clock,
         generation_index=generation_index,
         trial_evidence_rows=trial_evidence_rows,
     )
@@ -297,7 +297,7 @@ def _run_generation(
     audit_log.append(
         "next_generation_proposed",
         next_proposal.to_payload(),
-        created_at=datetime(2026, 5, 26, tzinfo=UTC) + timedelta(seconds=500 + generation_index),
+        created_at=support._clock.now(offset_seconds=500 + generation_index),
     )
     return {
         "generation": AutonomousResearchGeneration(
@@ -394,7 +394,7 @@ def _select_generation_candidates(
     audit_log.append(
         "selection_completed",
         selection.to_payload(),
-        created_at=datetime(2026, 5, 26, tzinfo=UTC) + timedelta(seconds=250),
+        created_at=support._clock.now(offset_seconds=250),
     )
 
     for rejected in selection.rejected_candidates:
@@ -428,7 +428,7 @@ def _select_generation_candidates(
         gauntlet = support._validation_gauntlet(run).validate(
             candidate_payload,
             audit_log=audit_log,
-            created_at=datetime(2026, 5, 26, tzinfo=UTC) + timedelta(seconds=300),
+            created_at=support._clock.now(offset_seconds=300),
         )
         gauntlet_results.append(gauntlet.to_payload())
         if not gauntlet.accepted:
@@ -546,9 +546,7 @@ def _trials(
         proposal=proposal,
     )
     for generated_index, generated_trial in enumerate(generated_trials):
-        created_at = datetime(2026, 5, 26, tzinfo=UTC) + timedelta(
-            seconds=(generation_index * 1000) + generated_index
-        )
+        created_at = support._clock.now(offset_seconds=(generation_index * 1000) + generated_index)
         if len(trials) >= run.trials_per_generation:
             decision_reason = (
                 "generation trial budget exceeded: "
@@ -957,7 +955,7 @@ def _manifest_payload(
             "windows": data_windows,
         },
         "run": {
-            "created_at": "2026-05-26T00:00:00+00:00",
+            "created_at": support._clock.now().isoformat(),
             "id": run.campaign_id,
             "owner": "research",
             "question": "bounded autonomous research campaign",

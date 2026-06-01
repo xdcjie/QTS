@@ -7,6 +7,7 @@ into a StartRuntimeCommand, and that command drives a real RuntimeSession build.
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -114,7 +115,8 @@ def _approved_live_observation_packet(tmp_path: Path) -> PromotionPacketV2:
 def test_approved_packet_runtime_config_builds_session(tmp_path: Path) -> None:
     packet = _approved_paper_packet(tmp_path)
 
-    command = PromotionRuntimeConfigBuilder().paper_start_command(
+    launch_plan_dir = tmp_path / "launch-plans"
+    command = PromotionRuntimeConfigBuilder(launch_plan_dir=launch_plan_dir).paper_start_command(
         packet,
         operator_id="ops",
         idempotency_key="promotion-paper-1",
@@ -123,8 +125,14 @@ def test_approved_packet_runtime_config_builds_session(tmp_path: Path) -> None:
 
     assert isinstance(command, StartRuntimeCommand)
     assert command.runtime_mode is RuntimeMode.PAPER_SIMULATED
-    assert command.config_ref.startswith("promotion://")
+    assert command.config_ref.startswith("launch-plan://")
     assert packet.promotion_candidate_id in command.config_ref
+    launch_plans = tuple(launch_plan_dir.glob("*.json"))
+    assert len(launch_plans) == 1
+    plan_payload = json.loads(launch_plans[0].read_text(encoding="utf-8"))
+    assert plan_payload["promotion_candidate_id"] == packet.promotion_candidate_id
+    assert plan_payload["target_module"] == packet.target_module
+    assert plan_payload["runtime"]["runtime_mode"] == RuntimeMode.PAPER_SIMULATED.value
 
     builder = RuntimeSessionBuilder.from_runtime_config(
         RuntimeStartConfig(
@@ -158,7 +166,8 @@ def test_approved_live_observation_packet_builds_start_command_with_startup_deci
         )
     )
 
-    command = PromotionRuntimeConfigBuilder().live_start_command(
+    launch_plan_dir = tmp_path / "live-launch-plans"
+    command = PromotionRuntimeConfigBuilder(launch_plan_dir=launch_plan_dir).live_start_command(
         packet,
         operator_id="ops",
         idempotency_key="promotion-live-observation-1",
@@ -169,4 +178,5 @@ def test_approved_live_observation_packet_builds_start_command_with_startup_deci
     assert isinstance(command, StartRuntimeCommand)
     assert command.runtime_mode is RuntimeMode.LIVE_OBSERVATION
     assert command.startup_decision == startup_decision
-    assert command.config_ref.startswith("promotion://")
+    assert command.config_ref.startswith("launch-plan://")
+    assert tuple(launch_plan_dir.glob("*.json"))

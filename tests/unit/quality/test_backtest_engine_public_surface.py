@@ -67,6 +67,7 @@ def test_production_backtest_engine_all_has_no_runtime_actors() -> None:
     assert set(engine_module.__all__) == {
         "BacktestCostModel",
         "BacktestEngine",
+        "BacktestRunPlan",
         "BacktestStreamResult",
     }
 

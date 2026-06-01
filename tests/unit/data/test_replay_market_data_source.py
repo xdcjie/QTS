@@ -455,6 +455,9 @@ historical_data:
         synthetic.instrument_id,
         as_of=synthetic.end_time,
     ) == InstrumentId("FUTURE.CME.GC.GCQ0")
+    contract = bundle.instrument_registry.get_instrument(InstrumentId("FUTURE.CME.GC.GCQ0"))
+    assert contract.asset_class.value == "future"
+    assert contract.contract_spec.initial_margin_rate == Decimal("0.10")
 
 
 def test_replay_bundle_synthesizes_source_grid_before_coarser_target_aggregation(

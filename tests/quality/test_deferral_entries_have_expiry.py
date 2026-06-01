@@ -1,8 +1,7 @@
-"""Anchor: every wiring deferral has expires_on + target_pr; no past dates.
+"""Anchor: every wiring deferral has expires_on + target category; no past dates.
 
 Domain fact: a deferral without an expiry becomes a permanent exemption.
-The lesson from OPT-18 platform_freeze_exceptions applies: every entry
-must carry a clock, and the ``wiring_followup`` category gets a tighter
+Every entry must carry a clock, and the ``production`` category gets a tighter
 3-month horizon than library / framework entries.
 
 Owner: ``docs/plan/wiring_deferrals.md`` (data) +
@@ -66,14 +65,17 @@ def test_no_entry_exceeds_one_year_horizon() -> None:
     assert overshoot == [], f"deferrals beyond 1-year horizon: {overshoot}"
 
 
-def test_wiring_followup_entries_expire_within_three_months() -> None:
+def test_production_entries_expire_within_three_months() -> None:
     today = date.today()
     horizon = today + _WIRING_FOLLOWUP_HORIZON
     overshoot = [
         entry
         for entry in _parse_entries()
-        if entry["target"].startswith("OPT-") and date.fromisoformat(entry["expires"]) > horizon
+        if entry["target"] == "production" and date.fromisoformat(entry["expires"]) > horizon
     ]
-    assert overshoot == [], (
-        f"wiring_followup deferrals (target=OPT-*) must expire within 3 months: {overshoot}"
-    )
+    assert overshoot == [], f"production wiring deferrals must expire within 3 months: {overshoot}"
+
+
+def test_no_roadmap_targets_are_allowed() -> None:
+    forbidden = [entry for entry in _parse_entries() if entry["target"].startswith("OPT-")]
+    assert forbidden == [], f"roadmap deferral targets are forbidden: {forbidden}"

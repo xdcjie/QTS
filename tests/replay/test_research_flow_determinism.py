@@ -11,6 +11,8 @@ from typing import Any, cast
 
 from tests.integration.test_research_session_facade import _write_research_session_config
 
+_CANONICAL_MANIFEST = "configs/research/manifests/gc_si_smoke_v2.yaml"
+
 
 def test_identical_canonical_research_workflows_match_ranked_results_and_metrics(
     tmp_path: Path,
@@ -51,6 +53,8 @@ steps:
             str(config_path),
             "workflow",
             str(workflow_path),
+            "--manifest",
+            _CANONICAL_MANIFEST,
         ],
         capture_output=True,
         text=True,

@@ -455,8 +455,9 @@ class GenerationApprovalPolicy:
                 "proposal_id": proposal.proposal_id,
                 "reasons": (f"proposal approval decision is {approval.decision}",),
             }
+        accepted = approval.decision == "approved"
         return {
-            "accepted": True,
+            "accepted": accepted,
             "approval_hash": approval.approval_hash,
             "proposal_hash": proposal.proposal_hash,
             "proposal_id": proposal.proposal_id,

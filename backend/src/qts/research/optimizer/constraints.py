@@ -88,7 +88,7 @@ class MetricConstraint:
         comparison = f"{self.operator} {self.threshold}"
         if accepted:
             return ConstraintDecision(
-                accepted=True,
+                accepted=accepted,
                 reason=f"{self.metric_name}={metric} satisfied {comparison}",
             )
         return ConstraintDecision(

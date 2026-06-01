@@ -32,11 +32,12 @@ class FakePdfExporter:
 def test_analyst_report_generator_writes_html_and_pdf_from_completed_backtest(
     tmp_path: Path,
 ) -> None:
-    from qts.backtest.engine import BacktestEngine
     from qts.reporting.backtest_analyst import AnalystBacktestReportGenerator
 
+    from tests.support.backtest_engine import backtest_engine_from_inputs
+
     run_dir = tmp_path / "run"
-    result = BacktestEngine(
+    result = backtest_engine_from_inputs(
         strategy=BuyOnceStrategy(),
         bars=[
             _bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC), "100"),

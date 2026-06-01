@@ -6,12 +6,12 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from qts.backtest.engine import BacktestEngine
 from qts.core.ids import InstrumentId
 from qts.data.provenance import DatasetMetadata
 from qts.domain.market_data import Bar
 from qts.strategy_sdk import Strategy
 
+from tests.support.backtest_engine import backtest_engine_from_inputs
 from tests.support.backtest_streaming import run_engine_streaming
 
 
@@ -61,7 +61,7 @@ def test_backtest_report_includes_run_identity_dataset_and_cost_assumptions(
     tmp_path: Path,
 ) -> None:
     stream = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=BuyOnceStrategy(),
             bars=[_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC), "100")],
             initial_cash=Decimal("10000"),
@@ -98,7 +98,7 @@ def test_backtest_manifest_includes_simulated_execution_assumptions(
     from qts.runtime.config import BacktestCostModel
 
     stream = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=BuyOnceStrategy(),
             bars=[_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC), "100")],
             initial_cash=Decimal("10000"),
@@ -230,7 +230,7 @@ def test_backtest_report_hash_changes_with_execution_assumptions(tmp_path: Path)
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
 
     zero_cost = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=BuyOnceStrategy(),
             bars=[_bar(start, "100")],
             initial_cash=Decimal("10000"),
@@ -239,7 +239,7 @@ def test_backtest_report_hash_changes_with_execution_assumptions(tmp_path: Path)
         tmp_path / "zero-cost",
     )
     nonzero_cost = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=BuyOnceStrategy(),
             bars=[_bar(start, "100")],
             initial_cash=Decimal("10000"),
@@ -262,7 +262,7 @@ def test_backtest_report_hash_changes_when_dataset_changes(tmp_path: Path) -> No
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
 
     left = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=BuyOnceStrategy(),
             bars=[_bar(start, "100")],
             initial_cash=Decimal("10000"),
@@ -271,7 +271,7 @@ def test_backtest_report_hash_changes_when_dataset_changes(tmp_path: Path) -> No
         tmp_path / "dataset-a",
     ).result
     right = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=BuyOnceStrategy(),
             bars=[_bar(start, "100")],
             initial_cash=Decimal("10000"),

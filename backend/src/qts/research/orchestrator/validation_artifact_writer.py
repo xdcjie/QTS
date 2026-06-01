@@ -153,13 +153,16 @@ class ValidationArtifactWriter:
         train = manifest_decimal(getattr(train_result, "objective_value", 0))
         test = manifest_decimal(getattr(test_result, "objective_value", 0))
         gap = abs(train - test)
+        allowed_gap = max(abs(train), abs(test), Decimal("1")) * Decimal("0.25")
+        accepted = test >= Decimal("0") and gap <= allowed_gap
         return {
-            "consistent": True,
+            "consistent": accepted,
             "manifest_statistics_hash": str(test_manifest.get("statistics_hash", "")),
+            "max_allowed_train_test_gap": float(allowed_gap),
             "max_train_test_gap": float(gap),
             "test_windows": [
                 {
-                    "accepted": True,
+                    "accepted": accepted,
                     "manifest_hash": str(test_manifest.get("manifest_hash", "")),
                     "manifest_path": str(getattr(test_result, "manifest_path", "")),
                     "name": "split-001-test",

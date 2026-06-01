@@ -13,12 +13,12 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-from qts.backtest.engine import BacktestEngine
 from qts.core.ids import InstrumentId
 from qts.domain.execution_timing import ExecutionTimingModel
 from qts.domain.market_data import Bar
 from qts.strategy_sdk import Strategy
 
+from tests.support.backtest_engine import backtest_engine_from_inputs
 from tests.support.backtest_streaming import run_engine_streaming
 
 _INSTRUMENT = InstrumentId("EQUITY.US.NASDAQ.AAPL")
@@ -63,7 +63,7 @@ class _BuyOnce(Strategy):
 
 
 def _run(timing: ExecutionTimingModel, output_dir: Path) -> Any:
-    engine = BacktestEngine(
+    engine = backtest_engine_from_inputs(
         strategy=_BuyOnce(),
         bars=_bars(),
         initial_cash=Decimal("100000"),

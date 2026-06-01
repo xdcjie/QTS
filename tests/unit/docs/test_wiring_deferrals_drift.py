@@ -88,7 +88,7 @@ def test_c5a_batch_prose_accounts_for_batch_entries() -> None:
     batch_count = sum(1 for in_batch in _code_block_symbols().values() if in_batch)
     text = _read()
     assert _C5A_BATCH_MARKER in text
-    # The prose states the batch is split into `library` (8) and `OPT-65` (35).
+    # The prose states the batch is split into `library` (8) and `production` (35).
     assert "**`library` (8)**" in text
-    assert "**`OPT-65` (35)**" in text
+    assert "**`production` (35)**" in text
     assert batch_count == 8 + 35

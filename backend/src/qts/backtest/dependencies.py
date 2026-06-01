@@ -8,7 +8,7 @@ from datetime import tzinfo
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from qts.core.ids import InstrumentId
+from qts.core.ids import AccountId, InstrumentId
 from qts.data.sessions import RegularSessionWindow
 from qts.domain.execution_timing import ExecutionTimingModel
 from qts.domain.market_data import Bar
@@ -89,6 +89,7 @@ class BacktestActorLoopConfig:
     initial_cash: Decimal
     target_timeframe: str | None = None
     warmup_bars: int = 0
+    initial_cash_by_account: Mapping[AccountId, Decimal] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Normalize and validate loop runtime settings."""
@@ -97,6 +98,14 @@ class BacktestActorLoopConfig:
             raise ValueError("initial_cash must be non-negative")
         if self.warmup_bars < 0:
             raise ValueError("warmup_bars must be non-negative")
+        object.__setattr__(
+            self,
+            "initial_cash_by_account",
+            {
+                account_id: Decimal(str(initial_cash))
+                for account_id, initial_cash in self.initial_cash_by_account.items()
+            },
+        )
 
 
 @dataclass(frozen=True, slots=True)

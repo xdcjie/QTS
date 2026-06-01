@@ -159,7 +159,7 @@ class BacktestSignalEventWriter:
                 },
                 correlation_id=correlation_id,
                 instrument_id=batch.instrument_id,
-                account_id=self._account_id,
+                account_id=batch.account_id if batch.account_id is not None else self._account_id,
                 strategy_id=(
                     batch.contributing_strategy_ids[0]
                     if len(batch.contributing_strategy_ids) == 1
@@ -201,7 +201,7 @@ class BacktestSignalEventWriter:
                 },
                 correlation_id=correlation_id,
                 instrument_id=batch.instrument_id,
-                account_id=self._account_id,
+                account_id=batch.account_id if batch.account_id is not None else self._account_id,
                 strategy_id=None,
             )
         )
@@ -229,7 +229,7 @@ class BacktestSignalEventWriter:
                 },
                 correlation_id=correlation_id,
                 instrument_id=batch.instrument_id,
-                account_id=self._account_id,
+                account_id=batch.account_id if batch.account_id is not None else self._account_id,
                 strategy_id=None,
             )
         )
@@ -241,6 +241,7 @@ class BacktestSignalEventWriter:
         correlation_id: CorrelationId,
         exc: ValueError,
         strategy_id: StrategyId,
+        account_id: AccountId,
     ) -> None:
         """Emit a normalized broker capability rejection event."""
         state.sink.write(
@@ -253,7 +254,7 @@ class BacktestSignalEventWriter:
                 },
                 correlation_id=correlation_id,
                 instrument_id=intent.asset.instrument_id,
-                account_id=self._account_id,
+                account_id=account_id,
                 strategy_id=strategy_id,
             )
         )

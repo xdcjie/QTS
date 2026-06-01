@@ -83,11 +83,10 @@ def _selector_select_calls(tree: ast.AST) -> list[ast.Call]:
 
 
 def test_backtest_engine_from_config_derives_timing_from_fill_policy() -> None:
-    # The config->timing derivation now lives in BacktestEngineAssembler.runtime_config_inputs,
-    # which BacktestEngine.from_config delegates to (QTS-FINAL-002). Verify the wiring there,
-    # and that from_config still routes through the assembler.
-    assert "runtime_config_inputs" in _BACKTEST_ENGINE_SOURCE, (
-        "from_config must delegate config translation to BacktestEngineAssembler"
+    # The config->timing derivation lives in BacktestEngineAssembler.runtime_config_inputs,
+    # and BacktestEngine.from_config now reaches it through BacktestRunPlan.from_runtime_config.
+    assert "from_runtime_config" in _BACKTEST_ENGINE_SOURCE, (
+        "from_config must delegate config translation through BacktestRunPlan"
     )
     tree = ast.parse(_ENGINE_ASSEMBLY_SOURCE)
     deriver = next(

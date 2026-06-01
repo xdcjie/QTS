@@ -414,7 +414,8 @@ class TrialBudgetManager:
         compute_decision = self._compute_budget_decision(accepted_payloads, payload)
         if compute_decision is not None:
             return compute_decision
-        return TrialBudgetDecision(accepted=True, reason="accepted within trial budget")
+        accepted = compute_decision is None
+        return TrialBudgetDecision(accepted=accepted, reason="accepted within trial budget")
 
     def _accepted_payloads(self, campaign_id: str) -> tuple[Mapping[str, Any], ...]:
         return tuple(

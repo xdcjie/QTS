@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
 from pytest import MonkeyPatch
 
 
@@ -186,9 +187,9 @@ def test_operations_service_routes_kill_switch_through_idempotent_commands() -> 
 
 
 def test_operations_service_exposes_reconcile_and_snapshot_command_results() -> None:
-    from qts.application.services import OperationsService
+    from tests.support.operations import bound_operations_service
 
-    service = OperationsService()
+    service = bound_operations_service()
 
     reconcile = service.reconcile_runtime(
         operator_id="ops-a",
@@ -204,10 +205,10 @@ def test_operations_service_exposes_reconcile_and_snapshot_command_results() -> 
     )
 
     assert reconcile.status == "completed"
-    assert reconcile.evidence["reconciliation"] == "requested"
+    assert reconcile.evidence["reconciliation"] == "completed"
     assert duplicate_reconcile == reconcile
     assert snapshot.status == "completed"
-    assert snapshot.evidence["snapshot"] == "requested"
+    assert snapshot.evidence["snapshot"] == "captured"
 
 
 def test_operations_service_routes_lifecycle_and_observation_commands() -> None:
@@ -527,21 +528,19 @@ def test_operations_command_handler_owns_reconcile_and_snapshot_results() -> Non
     from qts.application.services.operations_command_handler import OperationsCommandHandler
     from qts.application.services.runtime_lifecycle import RuntimeLifecycleService
     from qts.runtime.commands import RuntimeCommand, RuntimeCommandType
+    from qts.runtime.errors import RuntimeCommandNotBound
 
     handler = OperationsCommandHandler(
         lifecycle=RuntimeLifecycleService(initial_state="paused"),
         kill_switch_commands=KillSwitchCommandService(),
     )
 
-    result = handler.handle(
-        RuntimeCommand(
-            command_id="reconcile-1",
-            command_type=RuntimeCommandType.RECONCILE,
-            idempotency_key="reconcile-key",
-            operator_id="ops-a",
+    with pytest.raises(RuntimeCommandNotBound):
+        handler.handle(
+            RuntimeCommand(
+                command_id="reconcile-1",
+                command_type=RuntimeCommandType.RECONCILE,
+                idempotency_key="reconcile-key",
+                operator_id="ops-a",
+            )
         )
-    )
-
-    assert result.evidence["state"] == "paused"
-    assert result.evidence["reconciliation"] == "requested"
-    assert result.evidence["operator_id"] == "ops-a"

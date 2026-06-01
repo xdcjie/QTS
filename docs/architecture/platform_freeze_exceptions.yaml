@@ -1,4 +1,29 @@
 exceptions:
+  - class_name: ActorAskFailed
+    module: qts.runtime.actor_errors
+    reason: domain exception for supervised actor ask failures returning to bounded ask callers (FTS-P0-006)
+    owner: platform
+    expiry: 2027-06-01
+  - class_name: RuntimeInstrumentContext
+    module: qts.runtime.instrument_context
+    reason: shared runtime/backtest instrument and roll-resolution context removing application coupling to qts.backtest (FTS-P1-002)
+    owner: platform
+    expiry: 2027-06-01
+  - class_name: RuntimeLaunchPlan
+    module: qts.runtime.launch_plan
+    reason: immutable content-addressed launch plan materialized from approved promotion packets (FTS-P1-001)
+    owner: platform
+    expiry: 2027-06-01
+  - class_name: BacktestRunPlan
+    module: qts.backtest.run_plan
+    reason: canonical immutable BacktestEngine input that replaces the broad constructor surface (FTS-P1-003)
+    owner: platform
+    expiry: 2027-06-01
+  - class_name: DeterministicResearchClock
+    module: qts.research.clock
+    reason: injectable deterministic timestamp provider for reproducible research audit evidence (FTS-P1-005)
+    owner: platform
+    expiry: 2027-06-01
   - class_name: RuntimeCommandNotBound
     module: qts.runtime.errors
     reason: runtime control-plane domain error replacing raw RuntimeError on unbound commands (QTS-FINAL-008)

@@ -6,6 +6,7 @@ import hashlib
 import heapq
 from collections.abc import Iterator
 from dataclasses import dataclass
+from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar
@@ -17,7 +18,7 @@ from qts.data.historical.catalog import HistoricalCatalog, HistoricalDataset
 from qts.data.historical.csv_dataset import HistoricalBarStream, iter_historical_bars
 from qts.data.provenance import DatasetMetadata
 from qts.data.sessions import RegularSessionWindow
-from qts.domain.instruments import AssetClass, ContractSpec, Instrument, SettlementType
+from qts.domain.instruments import AssetClass, ContractSpec, FutureSpec, Instrument, SettlementType
 from qts.domain.market_data import Bar
 from qts.registry.future_roll import (
     FirstNoticeDateFutureContractSelector,
@@ -312,6 +313,11 @@ class ReplayMarketDataBundleBuilder:
                             tick_size=chain.tick_size,
                             multiplier=chain.multiplier,
                             calendar_id=chain.trading_calendar,
+                            asset_class=AssetClass.FUTURE,
+                            root_symbol=chain.root,
+                            expiry=chain.contracts[0].expiry if chain.contracts else None,
+                            initial_margin_rate=chain.initial_margin_rate,
+                            tradable=False,
                         ),
                     )
                 for contract in chain.contracts:
@@ -324,6 +330,10 @@ class ReplayMarketDataBundleBuilder:
                             tick_size=contract.tick_size,
                             multiplier=contract.multiplier,
                             calendar_id=contract.trading_calendar,
+                            asset_class=AssetClass.FUTURE,
+                            root_symbol=contract.root,
+                            expiry=contract.expiry,
+                            initial_margin_rate=contract.initial_margin_rate,
                         ),
                     )
         for symbol, instrument_id in self._config.instrument_ids.items():
@@ -351,7 +361,23 @@ class ReplayMarketDataBundleBuilder:
         multiplier: Decimal,
         calendar_id: str,
         asset_class: AssetClass = AssetClass.EQUITY,
+        root_symbol: str | None = None,
+        expiry: datetime | date | None = None,
+        initial_margin_rate: Decimal | None = None,
+        tradable: bool = True,
     ) -> Instrument:
+        derivative = None
+        settlement = SettlementType.CASH
+        if asset_class is AssetClass.FUTURE:
+            if root_symbol is None or expiry is None:
+                raise ValueError("future instruments require root_symbol and expiry")
+            expiry_date = expiry.date() if isinstance(expiry, datetime) else expiry
+            derivative = FutureSpec(
+                expiry=expiry_date,
+                underlying=InstrumentId(f"FUTURE_ROOT.{exchange}.{root_symbol}"),
+                root_symbol=root_symbol,
+            )
+            settlement = SettlementType.PHYSICAL
         return Instrument(
             instrument_id=instrument_id,
             asset_class=asset_class,
@@ -361,9 +387,12 @@ class ReplayMarketDataBundleBuilder:
                 tick_size=tick_size,
                 lot_size=Decimal("1"),
                 multiplier=multiplier,
-                settlement=SettlementType.CASH,
+                settlement=settlement,
                 calendar_id=calendar_id,
+                initial_margin_rate=initial_margin_rate,
             ),
+            derivative=derivative,
+            tradable=tradable,
         )
 
     def _dataset_metadata(

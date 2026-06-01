@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from qts.backtest.engine import BacktestEngine
+from qts.backtest.run_plan import BacktestRunPlan
 from qts.research.optimizer.job import OptimizationJob
 from qts.research.optimizer.result import OptimizationResult
 
@@ -56,9 +57,11 @@ class OptimizationRunner:
         for index, combination in enumerate(job.parameter_grid):
             run_dir = job.output_root / f"run-{index:04d}"
             engine = BacktestEngine(
-                strategy=job.strategy_factory(combination),
-                bars=list(job.bars_factory()),
-                initial_cash=job.initial_cash,
+                BacktestRunPlan.from_inputs(
+                    strategy=job.strategy_factory(combination),
+                    bars=list(job.bars_factory()),
+                    initial_cash=job.initial_cash,
+                )
             )
             stream_result = engine.run_streaming(run_dir, compact_events=True)
             manifest_path = Path(stream_result.manifest_path)

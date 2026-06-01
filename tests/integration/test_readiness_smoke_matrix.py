@@ -161,10 +161,10 @@ def _assert_smoke_evidence(evidence: SmokeEvidence) -> None:
 
 
 def _backtest_minimal(output_dir: Path) -> SmokeEvidence:
-    from qts.backtest.engine import BacktestEngine
+    from tests.support.backtest_engine import backtest_engine_from_inputs
 
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=_BuyOnceStrategy(),
             bars=(_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC)),),
             initial_cash=Decimal("10000"),

@@ -115,7 +115,12 @@ def build_derivation(reader):
 
 
 def build_payload():
-    return {"cost_stress_accepted": True}
+    return {
+        "accepted": True,
+        "consistent": True,
+        "cost_stress_accepted": True,
+        "passed": True,
+    }
 """
 
 _DERIVED_PROMOTION = """
@@ -134,9 +139,12 @@ def test_hardcoded_true_verdict_fields_are_flagged() -> None:
     violations = _check_promotion(_FAKE_PROMOTION, "research/orchestrator/x.py")
     flagged = sorted({v.symbol for v in violations})
     assert flagged == [
+        "accepted",
+        "consistent",
         "cost_stress_accepted",
         "deterministic_replay_passed",
         "no_lookahead_passed",
+        "passed",
         "promotion_eligible",
     ]
     assert all(v.code == "PROMOTION_VALUE_HONESTY" for v in violations)

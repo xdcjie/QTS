@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
+from decimal import Decimal
 
 from qts.application.services.kill_switch_commands import KillSwitchCommandService
 from qts.application.services.runtime_lifecycle import RuntimeLifecycleService
+from qts.portfolio.account_snapshot import AccountSnapshot
 from qts.risk.kill_switch import RuntimeKillSwitchCommand
 from qts.runtime.commands import (
     RuntimeCommand,
@@ -16,6 +18,7 @@ from qts.runtime.commands import (
 )
 from qts.runtime.control_plane import RuntimeCommandExecutor
 from qts.runtime.errors import RuntimeCommandNotBound
+from qts.runtime.safety import RuntimeKillSwitchDeactivateCommand
 from qts.runtime.state import RuntimeSessionState
 
 _RUNTIME_LIFECYCLE_COMMANDS = frozenset(
@@ -24,6 +27,8 @@ _RUNTIME_LIFECYCLE_COMMANDS = frozenset(
         RuntimeCommandType.STOP,
         RuntimeCommandType.PAUSE,
         RuntimeCommandType.RESUME,
+        RuntimeCommandType.ENTER_OBSERVATION,
+        RuntimeCommandType.EXIT_OBSERVATION,
     }
 )
 
@@ -31,12 +36,11 @@ _RUNTIME_LIFECYCLE_COMMANDS = frozenset(
 class OperationsCommandHandler:
     """Owns operation command dispatch after idempotency and authorization.
 
-    Lifecycle (start/stop/pause/resume) and kill-switch *activation* are routed to
-    a real RuntimeSession through ``RuntimeCommandExecutor`` so a COMPLETED result
-    always reflects a runtime effect; with no runtime bound they raise
-    ``RuntimeCommandNotBound`` (surfaced as ``RUNTIME_SESSION_NOT_BOUND``) rather
-    than mutating shadow state. Observation, kill-switch deactivation, reconcile,
-    and snapshot keep their application-owned command handling.
+    Every operator command is routed to a real RuntimeSession through
+    ``RuntimeCommandExecutor`` so a COMPLETED result always reflects a runtime
+    effect; with no runtime bound the handler raises ``RuntimeCommandNotBound``
+    and ``RuntimeCommandBus`` surfaces ``RUNTIME_SESSION_NOT_BOUND`` rather than
+    mutating shadow application state.
     """
 
     def __init__(
@@ -57,36 +61,18 @@ class OperationsCommandHandler:
             return self._execute_runtime_lifecycle(command, accepted_at=accepted_at)
         if command.command_type is RuntimeCommandType.ACTIVATE_KILL_SWITCH:
             return self._execute_kill_switch(command, accepted_at=accepted_at)
-        lifecycle_result = self._lifecycle.handle(command, accepted_at=accepted_at)
-        if lifecycle_result is not None:
-            return lifecycle_result
-        kill_switch_result = self._kill_switch_commands.handle(command, accepted_at=accepted_at)
-        if kill_switch_result is not None:
-            return kill_switch_result
         if command.command_type is RuntimeCommandType.RECONCILE:
-            evidence = self._command_evidence(
-                command,
-                {"state": self._lifecycle.state, "reconciliation": "requested"},
-            )
+            return self._execute_reconcile(command, accepted_at=accepted_at)
         elif command.command_type is RuntimeCommandType.SNAPSHOT:
-            evidence = self._command_evidence(
-                command,
-                {"state": self._lifecycle.state, "snapshot": "requested"},
-            )
+            return self._execute_snapshot(command, accepted_at=accepted_at)
+        elif command.command_type is RuntimeCommandType.DEACTIVATE_KILL_SWITCH:
+            return self._execute_kill_switch_deactivation(command, accepted_at=accepted_at)
         else:
             return self._rejected_result(
                 command,
                 accepted_at=accepted_at,
                 failure_reason=f"unsupported runtime command: {command.command_type.value}",
             )
-        return RuntimeCommandResult(
-            command_id=command.command_id,
-            idempotency_key=command.idempotency_key,
-            accepted_at=accepted_at,
-            completed_at=datetime.now(UTC),
-            result_status=RuntimeCommandResultStatus.COMPLETED,
-            evidence=evidence,
-        )
 
     def _execute_runtime_lifecycle(
         self, command: RuntimeCommand, *, accepted_at: datetime
@@ -98,6 +84,8 @@ class OperationsCommandHandler:
             RuntimeCommandType.STOP: executor.stop,
             RuntimeCommandType.PAUSE: executor.pause,
             RuntimeCommandType.RESUME: executor.resume,
+            RuntimeCommandType.ENTER_OBSERVATION: executor.enter_observation,
+            RuntimeCommandType.EXIT_OBSERVATION: executor.exit_observation,
         }
         state = lifecycle_methods[command.command_type]()
         return RuntimeCommandResult(
@@ -137,6 +125,77 @@ class OperationsCommandHandler:
             ),
         )
 
+    def _execute_kill_switch_deactivation(
+        self,
+        command: RuntimeCommand,
+        *,
+        accepted_at: datetime,
+    ) -> RuntimeCommandResult:
+        """Deactivate the kill switch on the bound runtime session, or fail unbound."""
+        executor = self._require_executor(command)
+        reason = command.reason or str(command.payload.get("reason") or "operator resume")
+        state = executor.deactivate_kill_switch(
+            RuntimeKillSwitchDeactivateCommand(
+                operator_id=command.operator_id,
+                reason=reason,
+                authorized=True,
+            )
+        )
+        return RuntimeCommandResult(
+            command_id=command.command_id,
+            idempotency_key=command.idempotency_key,
+            accepted_at=accepted_at,
+            completed_at=datetime.now(UTC),
+            result_status=RuntimeCommandResultStatus.COMPLETED,
+            evidence=self._command_evidence(
+                command,
+                {
+                    "scope": command.payload.get("scope"),
+                    "scope_id": command.payload.get("scope_id"),
+                    "active": False,
+                    "reason": reason,
+                    "runtime_state": state.value,
+                },
+            ),
+        )
+
+    def _execute_reconcile(
+        self,
+        command: RuntimeCommand,
+        *,
+        accepted_at: datetime,
+    ) -> RuntimeCommandResult:
+        """Reconcile the bound runtime session, or fail unbound."""
+        state = self._require_executor(command).reconcile()
+        return RuntimeCommandResult(
+            command_id=command.command_id,
+            idempotency_key=command.idempotency_key,
+            accepted_at=accepted_at,
+            completed_at=datetime.now(UTC),
+            result_status=RuntimeCommandResultStatus.COMPLETED,
+            evidence=self._command_evidence(
+                command,
+                {"state": state.value, "reconciliation": "completed"},
+            ),
+        )
+
+    def _execute_snapshot(
+        self,
+        command: RuntimeCommand,
+        *,
+        accepted_at: datetime,
+    ) -> RuntimeCommandResult:
+        """Snapshot the bound runtime session, or fail unbound."""
+        snapshot = self._require_executor(command).snapshot()
+        return RuntimeCommandResult(
+            command_id=command.command_id,
+            idempotency_key=command.idempotency_key,
+            accepted_at=accepted_at,
+            completed_at=datetime.now(UTC),
+            result_status=RuntimeCommandResultStatus.COMPLETED,
+            evidence=self._command_evidence(command, self._snapshot_evidence(snapshot)),
+        )
+
     def _require_executor(self, command: RuntimeCommand) -> RuntimeCommandExecutor:
         if self._command_executor is None:
             raise RuntimeCommandNotBound(
@@ -157,6 +216,33 @@ class OperationsCommandHandler:
             "authorization_scope": command.authorization_scope,
             **dict(evidence),
         }
+
+    @staticmethod
+    def _snapshot_evidence(snapshot: object) -> dict[str, object]:
+        if isinstance(snapshot, AccountSnapshot):
+            payload: dict[str, object] = {
+                "snapshot": "captured",
+                "cash": {
+                    currency: OperationsCommandHandler._evidence_scalar(balance)
+                    for currency, balance in snapshot.cash.items()
+                },
+                "positions": {
+                    instrument_id.value: OperationsCommandHandler._evidence_scalar(holding.quantity)
+                    for instrument_id, holding in snapshot.positions.items()
+                },
+            }
+            if snapshot.account_id is not None:
+                payload["account_id"] = snapshot.account_id.value
+            return payload
+        if isinstance(snapshot, Mapping):
+            return {"snapshot": "captured", "account_snapshot": dict(snapshot)}
+        return {"snapshot": "captured", "account_snapshot": repr(snapshot)}
+
+    @staticmethod
+    def _evidence_scalar(value: object) -> object:
+        if isinstance(value, Decimal):
+            return str(value)
+        return value
 
     @staticmethod
     def _rejected_result(

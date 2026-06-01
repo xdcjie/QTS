@@ -14,7 +14,6 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal
 
-from qts.backtest.instrument_context import BacktestInstrumentContext
 from qts.core.ids import AccountId, InstrumentId
 from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
 from qts.execution.execution_adapter import ExecutionAdapter
@@ -25,6 +24,7 @@ from qts.runtime.actors.account_actor import AccountActor
 from qts.runtime.broker_startup import BrokerRuntimeStartupDecision
 from qts.runtime.config import BacktestCostModel
 from qts.runtime.dependencies import RuntimeSessionDependencies
+from qts.runtime.instrument_context import RuntimeInstrumentContext
 from qts.runtime.live_capital import LiveCapitalOrderDecision
 from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
 from qts.runtime.session import RuntimeSession
@@ -93,7 +93,7 @@ class RuntimeSessionBuilder:
             risk_engine=RiskEngine.with_baseline_floor(
                 sum(config.initial_cash.values(), Decimal("0"))
             ),
-            instrument_context=BacktestInstrumentContext(instrument_registry=instrument_registry),
+            instrument_context=RuntimeInstrumentContext(instrument_registry=instrument_registry),
             execution_adapter=SimulatedExecutionAdapter(cost_model=BacktestCostModel()),
             account_actor=AccountActor(
                 initial_cash=dict(config.initial_cash),
@@ -134,7 +134,7 @@ class RuntimeSessionBuilder:
         dependencies = RuntimeSessionDependencies(
             strategy=strategy,
             risk_engine=RiskEngine.with_baseline_floor(initial_equity),
-            instrument_context=BacktestInstrumentContext(instrument_registry=instrument_registry),
+            instrument_context=RuntimeInstrumentContext(instrument_registry=instrument_registry),
             execution_adapter=execution_adapter,
             account_actor=AccountActor(
                 initial_cash=dict(config.initial_cash),

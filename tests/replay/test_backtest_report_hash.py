@@ -5,11 +5,11 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-from qts.backtest.engine import BacktestEngine
 from qts.core.ids import InstrumentId
 from qts.domain.market_data import Bar
 from qts.strategy_sdk import Strategy
 
+from tests.support.backtest_engine import backtest_engine_from_inputs
 from tests.support.backtest_streaming import run_engine_streaming
 
 
@@ -44,7 +44,7 @@ def test_same_backtest_inputs_produce_same_report_hash(tmp_path: Path) -> None:
     bars = [_bar(start), _bar(start + timedelta(minutes=1))]
 
     left = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=BuyOnceStrategy(),
             bars=bars,
             initial_cash=Decimal("10000"),
@@ -54,7 +54,7 @@ def test_same_backtest_inputs_produce_same_report_hash(tmp_path: Path) -> None:
         tmp_path / "left",
     ).result
     right = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=BuyOnceStrategy(),
             bars=bars,
             initial_cash=Decimal("10000"),

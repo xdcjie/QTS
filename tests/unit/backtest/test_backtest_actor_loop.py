@@ -278,6 +278,88 @@ def test_backtest_actor_loop_emits_signal_events() -> None:
     assert fill_event.correlation_id == order_event.correlation_id
 
 
+def test_backtest_actor_loop_routes_multi_account_strategies_to_account_partitions() -> None:
+    from qts.backtest.actor_loop import BacktestActorLoop
+    from qts.backtest.dependencies import BacktestActorLoopConfig, BacktestActorLoopDependencies
+    from qts.backtest.engine import BacktestCostModel
+    from qts.backtest.instrument_context import BacktestInstrumentContext
+    from qts.backtest.portfolio_projection import BacktestPortfolioProjector
+    from qts.core.ids import AccountId, BrokerId, StrategyId
+    from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
+    from qts.risk.risk_engine import RiskEngine
+    from qts.risk.rules.max_notional import MaxNotionalRule
+    from qts.runtime.intent_processing import TargetIntentProcessor
+    from qts.runtime.topology import StrategyRuntimeSpec
+
+    class QuantityStrategy(Strategy):
+        def __init__(self, quantity: str) -> None:
+            self._quantity = Decimal(quantity)
+
+        def initialize(self, ctx: Any) -> None:
+            self.asset = ctx.symbol("AAPL")
+
+        def on_bar(self, ctx: Any, bar: object) -> None:
+            ctx.target_quantity(self.asset, self._quantity)
+
+    account_a = AccountId("acct-a")
+    account_b = AccountId("acct-b")
+    start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
+    bars = [_bar(start, "100")]
+    instrument_context = BacktestInstrumentContext(
+        instrument_registry=None,
+        registry_bars=bars,
+        execution_timing=_SAME_BAR_TIMING,
+    )
+    portfolio_projector = BacktestPortfolioProjector()
+    intent_processor = TargetIntentProcessor(
+        risk_engine=RiskEngine([MaxNotionalRule(max_notional=Decimal("1000000"))]),
+        instrument_context=instrument_context,
+        multiplier_for=portfolio_projector.multiplier_for,
+        broker_id=BrokerId("simulated"),
+    )
+    strategy_specs = (
+        StrategyRuntimeSpec(
+            strategy_id=StrategyId("strat-a"),
+            strategy_class="QuantityStrategy",
+            account_id=account_a,
+        ),
+        StrategyRuntimeSpec(
+            strategy_id=StrategyId("strat-b"),
+            strategy_class="QuantityStrategy",
+            account_id=account_b,
+        ),
+    )
+    loop = BacktestActorLoop(
+        strategies=(QuantityStrategy("1"), QuantityStrategy("2")),
+        bars=bars,
+        config=BacktestActorLoopConfig(initial_cash=Decimal("10000"), warmup_bars=0),
+        dependencies=BacktestActorLoopDependencies(
+            instrument_registry=instrument_context.instrument_registry(),
+            contract_multipliers={},
+            execution_adapter=SimulatedExecutionAdapter(BacktestCostModel()),
+            process_intent=intent_processor.process_intent,
+            portfolio_view=portfolio_projector.portfolio_view,
+            equity_point=portfolio_projector.equity_point,
+            update_rolling_prices=instrument_context.update_rolling_prices,
+            execution_timing=_SAME_BAR_TIMING,
+        ),
+        account_id=account_a,
+        strategy_specs=strategy_specs,
+    )
+    sink = _RecordingBacktestSink()
+
+    runtime = loop.run(sink=sink, prune_history=True, compact_orders=True)
+
+    snapshots = dict(runtime.account_snapshots)
+    instrument_id = bars[0].instrument_id
+    assert snapshots[account_a].positions[instrument_id].quantity == Decimal("1")
+    assert snapshots[account_b].positions[instrument_id].quantity == Decimal("2")
+    order_account_ids = [
+        event.account_id for event in sink.events if event.kind == "runtime.order_submitted"
+    ]
+    assert order_account_ids == [account_a, account_b]
+
+
 def test_backtest_actor_loop_emits_broker_reject_event_for_capability_reject(
     tmp_path: Path,
 ) -> None:

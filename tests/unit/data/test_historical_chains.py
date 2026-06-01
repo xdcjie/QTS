@@ -27,6 +27,7 @@ def test_historical_chain_load_parses_gc_contract_metadata() -> None:
     assert contract.exchange == "CME"
     assert contract.tick_size == Decimal("0.1")
     assert contract.multiplier == Decimal("100.0")
+    assert contract.initial_margin_rate == Decimal("0.10")
 
 
 def test_historical_chain_maps_outright_symbols_to_internal_instrument_ids() -> None:

@@ -7,7 +7,6 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
-from qts.backtest.engine import BacktestEngine
 from qts.core.ids import AccountId, CorrelationId, InstrumentId, OrderId, StrategyId
 from qts.data.events import MarketDataSubscription
 from qts.data.historical.adapter import HistoricalMarketDataAdapter
@@ -36,6 +35,7 @@ from qts.runtime.mailbox import Mailbox
 from qts.strategy_sdk import Strategy
 from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter
 
+from tests.support.backtest_engine import backtest_engine_from_inputs
 from tests.support.order_route import order_route_metadata
 
 
@@ -185,7 +185,7 @@ def test_backtest_risk_rejection_does_not_submit_order_or_mutate_account(
     )
 
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=BuyOnce(),
             bars=[bar],
             initial_cash=Decimal("1000"),

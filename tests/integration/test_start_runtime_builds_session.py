@@ -466,6 +466,9 @@ def test_start_runtime_without_builder_reports_unconstructed_session() -> None:
         )
     )
 
-    assert result.status == "started"
+    assert result.status == "rejected"
     assert result.evidence["session_constructed"] is False
+    assert result.evidence["reason_code"] == "RUNTIME_SESSION_BUILDER_REQUIRED"
+    assert result.order_submission_enabled is False
+    assert result.live_order_submission_enabled is False
     assert result.session is None

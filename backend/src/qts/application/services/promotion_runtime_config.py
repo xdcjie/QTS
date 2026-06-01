@@ -9,11 +9,14 @@ owner that reads an *approved* packet's ``runtime`` mapping and produces a
 from __future__ import annotations
 
 from collections.abc import Mapping
+from pathlib import Path
 from typing import ClassVar, cast
 
 from qts.application.commands.start_runtime import StartRuntimeCommand
+from qts.core.hashing import stable_json_hash
 from qts.research.promotion_packet import PromotionPacketV2
 from qts.runtime.broker_startup import BrokerRuntimeStartupDecision
+from qts.runtime.launch_plan import RuntimeLaunchPlan
 from qts.runtime.mode import RuntimeMode
 
 
@@ -26,6 +29,9 @@ class PromotionRuntimeConfigBuilder:
     _LIVE_MODES: ClassVar[frozenset[str]] = frozenset(
         {RuntimeMode.LIVE_OBSERVATION.value, RuntimeMode.LIVE.value}
     )
+
+    def __init__(self, *, launch_plan_dir: Path | None = None) -> None:
+        self._launch_plan_dir = launch_plan_dir or Path("runs") / "promotion_launch_plans"
 
     def paper_start_command(
         self,
@@ -45,7 +51,7 @@ class PromotionRuntimeConfigBuilder:
             allowed_modes=self._PAPER_MODES,
             mode_label="paper",
         )
-        config_ref = self._config_ref(packet)
+        config_ref = self._materialize_launch_plan(packet).config_ref
         return StartRuntimeCommand(
             runtime_mode=runtime_mode,
             config_ref=config_ref,
@@ -75,7 +81,7 @@ class PromotionRuntimeConfigBuilder:
         )
         if startup_decision.mode is not runtime_mode:
             raise ValueError("startup_decision mode must match promotion runtime_mode")
-        config_ref = self._config_ref(packet)
+        config_ref = self._materialize_launch_plan(packet).config_ref
         return StartRuntimeCommand(
             runtime_mode=runtime_mode,
             config_ref=config_ref,
@@ -104,13 +110,25 @@ class PromotionRuntimeConfigBuilder:
             )
         return mode
 
-    @staticmethod
-    def _config_ref(packet: PromotionPacketV2) -> str:
-        """Derive a stable config reference from the promoted target module."""
+    def _materialize_launch_plan(self, packet: PromotionPacketV2) -> RuntimeLaunchPlan:
+        """Write and return the immutable launch plan for a promotion packet."""
         target_module = packet.target_module.strip()
         if not target_module:
             raise ValueError("promotion target_module is required to build a runtime config")
-        return f"promotion://{packet.promotion_candidate_id}/{target_module}"
+        plan = RuntimeLaunchPlan(
+            promotion_candidate_id=packet.promotion_candidate_id,
+            target_mode=packet.target_mode,
+            strategy_id=packet.strategy_id,
+            source_module=packet.source_module,
+            target_module=target_module,
+            idea_id=packet.idea_id,
+            evidence_bundle_id=packet.evidence_bundle_id,
+            runtime=packet.runtime,
+            operations=packet.operations,
+            source_packet_hash=stable_json_hash(packet.to_payload()),
+        )
+        plan.write_to(self._launch_plan_dir)
+        return plan
 
 
 __all__ = ["PromotionRuntimeConfigBuilder"]

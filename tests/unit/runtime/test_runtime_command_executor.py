@@ -47,9 +47,21 @@ class _RecordingSession:
         self.calls.append("recover")
         return "RECOVERED"
 
+    def enter_observation(self) -> str:
+        self.calls.append("enter_observation")
+        return "OBSERVATION"
+
+    def exit_observation(self) -> str:
+        self.calls.append("exit_observation")
+        return "RESUMED"
+
     def activate_kill_switch(self, command: Any) -> str:
         self.calls.append("activate_kill_switch")
         return f"evidence:{command}"
+
+    def deactivate_kill_switch(self, command: Any) -> str:
+        self.calls.append("deactivate_kill_switch")
+        return f"deactivated:{command}"
 
 
 def _executor_with_session() -> tuple[RuntimeCommandExecutor, _RecordingSession, RuntimeSessionKey]:
@@ -76,6 +88,12 @@ def test_unbound_executor_raises_runtime_command_not_bound() -> None:
         executor.snapshot()
     with pytest.raises(RuntimeCommandNotBound, match="RUNTIME_SESSION_NOT_BOUND"):
         executor.activate_kill_switch(command)
+    with pytest.raises(RuntimeCommandNotBound, match="RUNTIME_SESSION_NOT_BOUND"):
+        executor.deactivate_kill_switch(command)
+    with pytest.raises(RuntimeCommandNotBound, match="RUNTIME_SESSION_NOT_BOUND"):
+        executor.enter_observation()
+    with pytest.raises(RuntimeCommandNotBound, match="RUNTIME_SESSION_NOT_BOUND"):
+        executor.exit_observation()
 
 
 def test_bound_executor_delegates_lifecycle_to_the_session() -> None:
@@ -86,8 +104,18 @@ def test_bound_executor_delegates_lifecycle_to_the_session() -> None:
     assert executor.pause() == "PAUSED"
     assert executor.resume() == "RESUMED"
     assert executor.reconcile() == "RECOVERED"
+    assert executor.enter_observation() == "OBSERVATION"
+    assert executor.exit_observation() == "RESUMED"
     assert cast(object, executor.snapshot()) == "snapshot-sentinel"
-    assert session.calls == ["start", "stop", "pause", "resume", "recover"]
+    assert session.calls == [
+        "start",
+        "stop",
+        "pause",
+        "resume",
+        "recover",
+        "enter_observation",
+        "exit_observation",
+    ]
 
 
 def test_bound_executor_routes_kill_switch_to_the_session() -> None:
@@ -97,9 +125,12 @@ def test_bound_executor_routes_kill_switch_to_the_session() -> None:
     )
 
     evidence = executor.activate_kill_switch(command)
+    deactivated = executor.deactivate_kill_switch(command)
 
     assert "activate_kill_switch" in session.calls
+    assert "deactivate_kill_switch" in session.calls
     assert str(evidence).startswith("evidence:")
+    assert str(deactivated).startswith("deactivated:")
 
 
 def test_registry_resolves_by_key_and_primary_only_when_single() -> None:

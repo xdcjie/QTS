@@ -9,9 +9,10 @@ This document is the durable registry of production symbols that are
 Add a fully-qualified symbol to the code block below when one of the
 following is true and ``make guardrails`` currently rejects the symbol:
 
-1. **Documented deferral (target=OPT-NN)** — the wiring work belongs
-   to a follow-up PR. The deferral must be removed in the same PR that
-   adds the caller. **Maximum horizon: 3 months** from today.
+1. **Production wiring exception (target=production)** — the symbol is part
+   of the production surface but is temporarily accepted as unwired while the
+   owning runtime path is being closed. The deferral must be removed in the
+   same PR that adds the caller. **Maximum horizon: 3 months** from today.
 2. **Library API (target=library)** — a public class exposed for
    external consumers (user notebooks / strategies). Maximum horizon:
    1 year.
@@ -37,13 +38,13 @@ Items that **must not** appear here:
 
 Inside the fenced code block: one entry per line. Each entry has three
 whitespace-separated tokens: ``<symbol>``, ``expires=<YYYY-MM-DD>``,
-``target=<OPT-NN | library | framework | internal>``. Lines starting
+``target=<production | library | framework | internal>``. Lines starting
 with ``#`` and blank lines are ignored.
 
 ```
-# wiring-followup (target=OPT-NN, 3-month horizon)
-qts.application.strategy_lifecycle.StrategyRegistry  expires=2026-08-17  target=OPT-34
-qts.data.sessions.interval_source.CalendarSessionIntervalSource  expires=2026-08-30  target=OPT-65
+# production wiring exceptions (3-month horizon)
+qts.application.strategy_lifecycle.StrategyRegistry  expires=2026-08-17  target=production
+qts.data.sessions.interval_source.CalendarSessionIntervalSource  expires=2026-08-30  target=production
 # framework integration (1-year horizon)
 qts.api.schemas.common.RiskRuleSchema  expires=2027-05-17  target=framework
 # library APIs (1-year horizon)
@@ -74,43 +75,42 @@ qts.strategy_sdk.portfolio_construction.HorizonAwareSignalPortfolioConstruction 
 qts.strategy_sdk.portfolio_construction.VolatilityTargetedSignalPortfolioConstruction  expires=2027-05-30  target=library
 qts.strategy_sdk.universe.FundamentalTopNSelector  expires=2027-05-30  target=library
 qts.strategy_sdk.universe.TopNVolumeSelector  expires=2027-05-30  target=library
-# Live/paper/research subsystems pending their roadmap milestone wiring
-# (M8 paper, M10 live, research deploy). OPT-65 batch; 3-month review fuse.
-qts.application.services.promotion_runtime_config.PromotionRuntimeConfigBuilder  expires=2026-08-30  target=OPT-65
-qts.data.feeds.replay_feed.ReplayFeed  expires=2026-08-30  target=OPT-65
-qts.data.historical.adapter.HistoricalMarketDataAdapter  expires=2026-08-30  target=OPT-65
-qts.data.live.reconnect.ReconnectPolicy  expires=2026-08-30  target=OPT-65
-qts.data.sources.replay_market_data_source.SubscriptionReplayMarketDataSource  expires=2026-08-30  target=OPT-65
-qts.data.stores.memory_store.InMemoryMarketDataStore  expires=2026-08-30  target=OPT-65
-qts.data.stores.parquet_store.ParquetMarketDataStore  expires=2026-08-30  target=OPT-65
-qts.data.transports.ib_async_market_data_transport.IbAsyncMarketDataTransport  expires=2026-08-30  target=OPT-65
-qts.execution.adapters.broker_execution_adapter.BrokerExecutionAdapter  expires=2026-08-30  target=OPT-65
-qts.execution.adapters.ibkr_order_execution.IbkrOrderExecutionAdapter  expires=2026-08-30  target=OPT-65
-qts.execution.transports.ib_async_order_execution_transport.IbAsyncOrderExecutionTransport  expires=2026-08-30  target=OPT-65
-qts.indicators.session_regime.SessionRegimeGateConfig  expires=2026-08-30  target=OPT-65
-qts.indicators.session_regime.TrailingSessionRegimeGate  expires=2026-08-30  target=OPT-65
-qts.observability.dashboard.OperationalDashboardSnapshot  expires=2026-08-30  target=OPT-65
-qts.observability.errors.RuntimeErrorReason  expires=2026-08-30  target=OPT-65
-qts.registry.back_adjusted_series.BackAdjustedContinuousSeriesBuilder  expires=2026-08-30  target=OPT-65
-qts.registry.calendar_registry.CalendarRegistry  expires=2026-08-30  target=OPT-65
-qts.registry.future_chain_registry.FutureChainRegistry  expires=2026-08-30  target=OPT-65
-qts.registry.future_roll.HighestVolumeFutureContractSelector  expires=2026-08-30  target=OPT-65
-qts.registry.option_chain_registry.OptionChainRegistry  expires=2026-08-30  target=OPT-65
-qts.reporting.backtest.BacktestReportWriter  expires=2026-08-30  target=OPT-65
-qts.reporting.broker_runtime.BrokerRuntimeEventReporter  expires=2026-08-30  target=OPT-65
-qts.reporting.broker_runtime.BrokerRuntimeReportWriter  expires=2026-08-30  target=OPT-65
-qts.research.readiness.PaperLiveReadinessDecision  expires=2026-08-30  target=OPT-65
-qts.research.trade_diagnostics.PaperCandidateDiagnosticsGate  expires=2026-08-30  target=OPT-65
-qts.research.validation.NoLookaheadArtifactWriter  expires=2026-08-30  target=OPT-65
-qts.risk.rules.trading_session_rule.TradingSessionRule  expires=2026-08-30  target=OPT-65
-qts.runtime.config.models.ConfigMigration  expires=2026-08-30  target=OPT-65
-qts.runtime.config.models.TradingRuntimeConfig  expires=2026-08-30  target=OPT-65
-qts.runtime.config.paper.PaperSimulatedRuntimeConfig  expires=2026-08-30  target=OPT-65
-qts.runtime.partitioning.AccountBrokerMapping  expires=2026-08-30  target=OPT-65
-qts.runtime.partitioning.AccountPartitionPolicy  expires=2026-08-30  target=OPT-65
-qts.runtime.partitioning.AccountRiskConfig  expires=2026-08-30  target=OPT-65
-qts.runtime.router.EventRouter  expires=2026-08-30  target=OPT-65
-qts.runtime.state_recovery.InMemorySnapshotStore  expires=2026-08-30  target=OPT-65
+# Live/paper/research production subsystems pending their owning entrypoint.
+qts.application.services.promotion_runtime_config.PromotionRuntimeConfigBuilder  expires=2026-08-30  target=production
+qts.data.feeds.replay_feed.ReplayFeed  expires=2026-08-30  target=production
+qts.data.historical.adapter.HistoricalMarketDataAdapter  expires=2026-08-30  target=production
+qts.data.live.reconnect.ReconnectPolicy  expires=2026-08-30  target=production
+qts.data.sources.replay_market_data_source.SubscriptionReplayMarketDataSource  expires=2026-08-30  target=production
+qts.data.stores.memory_store.InMemoryMarketDataStore  expires=2026-08-30  target=production
+qts.data.stores.parquet_store.ParquetMarketDataStore  expires=2026-08-30  target=production
+qts.data.transports.ib_async_market_data_transport.IbAsyncMarketDataTransport  expires=2026-08-30  target=production
+qts.execution.adapters.broker_execution_adapter.BrokerExecutionAdapter  expires=2026-08-30  target=production
+qts.execution.adapters.ibkr_order_execution.IbkrOrderExecutionAdapter  expires=2026-08-30  target=production
+qts.execution.transports.ib_async_order_execution_transport.IbAsyncOrderExecutionTransport  expires=2026-08-30  target=production
+qts.indicators.session_regime.SessionRegimeGateConfig  expires=2026-08-30  target=production
+qts.indicators.session_regime.TrailingSessionRegimeGate  expires=2026-08-30  target=production
+qts.observability.dashboard.OperationalDashboardSnapshot  expires=2026-08-30  target=production
+qts.observability.errors.RuntimeErrorReason  expires=2026-08-30  target=production
+qts.registry.back_adjusted_series.BackAdjustedContinuousSeriesBuilder  expires=2026-08-30  target=production
+qts.registry.calendar_registry.CalendarRegistry  expires=2026-08-30  target=production
+qts.registry.future_chain_registry.FutureChainRegistry  expires=2026-08-30  target=production
+qts.registry.future_roll.HighestVolumeFutureContractSelector  expires=2026-08-30  target=production
+qts.registry.option_chain_registry.OptionChainRegistry  expires=2026-08-30  target=production
+qts.reporting.backtest.BacktestReportWriter  expires=2026-08-30  target=production
+qts.reporting.broker_runtime.BrokerRuntimeEventReporter  expires=2026-08-30  target=production
+qts.reporting.broker_runtime.BrokerRuntimeReportWriter  expires=2026-08-30  target=production
+qts.research.readiness.PaperLiveReadinessDecision  expires=2026-08-30  target=production
+qts.research.trade_diagnostics.PaperCandidateDiagnosticsGate  expires=2026-08-30  target=production
+qts.research.validation.NoLookaheadArtifactWriter  expires=2026-08-30  target=production
+qts.risk.rules.trading_session_rule.TradingSessionRule  expires=2026-08-30  target=production
+qts.runtime.config.models.ConfigMigration  expires=2026-08-30  target=production
+qts.runtime.config.models.TradingRuntimeConfig  expires=2026-08-30  target=production
+qts.runtime.config.paper.PaperSimulatedRuntimeConfig  expires=2026-08-30  target=production
+qts.runtime.partitioning.AccountBrokerMapping  expires=2026-08-30  target=production
+qts.runtime.partitioning.AccountPartitionPolicy  expires=2026-08-30  target=production
+qts.runtime.partitioning.AccountRiskConfig  expires=2026-08-30  target=production
+qts.runtime.router.EventRouter  expires=2026-08-30  target=production
+qts.runtime.state_recovery.InMemorySnapshotStore  expires=2026-08-30  target=production
 ```
 
 ## Rationale for current entries
@@ -119,13 +119,13 @@ qts.runtime.state_recovery.InMemorySnapshotStore  expires=2026-08-30  target=OPT
 |---|---|---|
 | `qts.api.schemas.common.RiskRuleSchema` | framework | Pydantic schema; fastapi instantiates via reflection during request validation. |
 | `qts.application.commands.start_runtime.RuntimeStartResult` | internal | Application command result; consumed via DI through dynamic dispatch in tests / API layer. |
-| `qts.application.strategy_lifecycle.StrategyRegistry` | OPT-34 | Planned hub for scheduler integration. |
+| `qts.application.strategy_lifecycle.StrategyRegistry` | production | Planned hub for scheduler integration. |
 | `qts.backtest.actor_loop.PendingFill` | internal | Next-bar-open deferred-fill record; only caller is `defer_strategy_intent`/`flush_pending_fills` in the same backtest actor loop. |
 | `qts.backtest.runner.BacktestRun` | internal | Application-layer DTO; same pattern as RuntimeStartResult. |
 | `qts.core.ids.RuntimeInstanceId` | internal | StringId-style ID; passed as a string, rarely named directly. |
 | `qts.data.bars.aggregator.BarAggregator` | internal | Public caller is `aggregate_bars` in the same file. |
 | `qts.data.market_data_pipeline.MarketDataPipeline` | library | Library entry-point used by external research scripts. |
-| `qts.data.sessions.interval_source.CalendarSessionIntervalSource` | OPT-65 | Calendar-aware daily (1d) consolidation honouring half-day early closes / holidays instead of a fixed `RegularSessionWindow`. Wiring widens session-window plumbing (`BarAggregationPipeline`, `market_data_actor/flow`, runtime+backtest dependencies) to the `SessionIntervalSource` protocol and adds a replay-cache key + manifest serialization story; contract locked by `tests/integration/test_daily_consolidation_special_sessions.py`. |
+| `qts.data.sessions.interval_source.CalendarSessionIntervalSource` | production | Calendar-aware daily (1d) consolidation honouring half-day early closes / holidays instead of a fixed `RegularSessionWindow`. Wiring widens session-window plumbing (`BarAggregationPipeline`, `market_data_actor/flow`, runtime+backtest dependencies) to the `SessionIntervalSource` protocol and adds a replay-cache key + manifest serialization story; contract locked by `tests/integration/test_daily_consolidation_special_sessions.py`. |
 | `qts.data.sources.replay_market_data_source.ReplayClock` | internal | Used through `ReplayMarketDataSource` composition. |
 | `qts.data.sources.replay_market_data_source.ReplayEventSequencer` | internal | Same pattern as ReplayClock. |
 | `qts.observability.audit_sink.InMemoryAuditSink` | internal | Test/in-process sink; production deployments use `StderrJsonAuditSink`. |
@@ -145,15 +145,14 @@ caller surfaced. They fall into two groups:
 - **`library` (8)** — Strategy SDK portfolio-construction and universe-selector
   classes exposed for user strategies. Wired by an example strategy; 1-year
   horizon.
-- **`OPT-65` (35)** — real, test-exercised components of the live/paper/research
-  subsystems that are not yet driven by a production entrypoint (IBKR/replay
+- **`production` (35)** — real, test-exercised components of the live/paper/research
+  subsystems that are not yet driven by their owning production entrypoint (IBKR/replay
   market-data + execution transports and adapters, runtime router/partitioning/
   snapshot/config scaffolding, registry chain/calendar/roll/back-adjustment
   capabilities, broker/backtest report writers, research readiness/diagnostics/
-  no-lookahead writers, the session/observability/risk gates). The wiring is
-  blocked on the roadmap milestones (M8 paper, M10 live, research deploy); the
-  3-month fuse forces a conscious re-defer-or-wire at each review rather than
-  letting the debt hide.
+  no-lookahead writers, the session/observability/risk gates). The 3-month fuse
+  forces a conscious wire-or-remove decision at each review rather than letting
+  the debt hide.
 
 ## How the rule reads this file
 

@@ -13,6 +13,7 @@ class RuntimeSessionState(StrEnum):
     STARTING = "starting"
     RUNNING = "running"
     PAUSED = "paused"
+    OBSERVATION = "observation"
     DEGRADED = "degraded"
 
 
@@ -24,17 +25,25 @@ _TRANSITIONS: dict[RuntimeSessionState, dict[str, RuntimeSessionState]] = {
     },
     RuntimeSessionState.RUNNING: {
         "pause": RuntimeSessionState.PAUSED,
+        "enter_observation": RuntimeSessionState.OBSERVATION,
         "degrade": RuntimeSessionState.DEGRADED,
         "stop": RuntimeSessionState.STOPPED,
     },
     RuntimeSessionState.PAUSED: {
         "resume": RuntimeSessionState.RUNNING,
+        "enter_observation": RuntimeSessionState.OBSERVATION,
+        "degrade": RuntimeSessionState.DEGRADED,
+        "stop": RuntimeSessionState.STOPPED,
+    },
+    RuntimeSessionState.OBSERVATION: {
+        "exit_observation": RuntimeSessionState.RUNNING,
         "degrade": RuntimeSessionState.DEGRADED,
         "stop": RuntimeSessionState.STOPPED,
     },
     RuntimeSessionState.DEGRADED: {
         "recover": RuntimeSessionState.RUNNING,
         "pause": RuntimeSessionState.PAUSED,
+        "enter_observation": RuntimeSessionState.OBSERVATION,
         "stop": RuntimeSessionState.STOPPED,
     },
 }

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from decimal import Decimal
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, TypeAlias
@@ -37,6 +38,18 @@ BacktestStrategyExecution: TypeAlias = tuple[StrategyRuntimeBinding, StrategyExe
 BacktestStrategyBarExecution: TypeAlias = tuple[BacktestStrategyExecution, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class _BacktestAccountPartition:
+    """Per-account actor partition for backtest account/order/execution state."""
+
+    account_id: AccountId
+    account_actor: AccountActor
+    account_ref: ActorRef
+    order_manager_actor: OrderManagerActor
+    order_manager_ref: ActorRef
+    execution_ref: ActorRef
+
+
 class BacktestActorLoopAssembler:
     """Build the backtest run's actor topology, strategy bindings, and run state."""
 
@@ -51,6 +64,7 @@ class BacktestActorLoopAssembler:
     ) -> None:
         """Bind the assembler to the run's config, dependencies, strategies, and account."""
         self._initial_cash = config.initial_cash
+        self._initial_cash_by_account = dict(config.initial_cash_by_account)
         self._target_timeframe = config.target_timeframe
         self._exchange_timezone_by_instrument = dict(dependencies.exchange_timezone_by_instrument)
         self._session_window_by_instrument = dict(dependencies.session_window_by_instrument)
@@ -62,6 +76,9 @@ class BacktestActorLoopAssembler:
         self._strategies = strategies
         self._strategy_specs = strategy_specs
         self._account_id = account_id
+        self._account_ids = tuple(
+            dict.fromkeys(spec.account_id for spec in self._strategy_specs)
+        ) or (account_id,)
 
     def initialize_run_phase(
         self,
@@ -73,27 +90,13 @@ class BacktestActorLoopAssembler:
         signal_aggregator_actor: type,
     ) -> BacktestActorLoopState:
         """Initialize actors, pipeline, market-data flow, and run state."""
-        account_actor = AccountActor(
-            initial_cash={"USD": self._initial_cash},
-            account_id=self._account_id,
-        )
-        account_ref = ActorRef(actor=account_actor, mailbox=Mailbox())
-        execution_mailbox = Mailbox()
-        order_manager_mailbox = Mailbox()
-        order_manager_actor = OrderManagerActor(
-            execution_ref=ActorRef(mailbox=execution_mailbox),
-            account_ref=account_ref,
-            multiplier_by_instrument=self._contract_multipliers,
-            account_id=self._account_id,
-        )
-        order_manager_ref = ActorRef(actor=order_manager_actor, mailbox=order_manager_mailbox)
-        execution_ref = ActorRef(
-            actor=ExecutionActor(
-                order_manager_ref=order_manager_ref,
-                execution_adapter=self._execution_adapter,
-            ),
-            mailbox=execution_mailbox,
-        )
+        account_partitions = {
+            account_id: self._build_account_partition(account_id)
+            for account_id in self._account_ids
+        }
+        primary_partition = account_partitions.get(self._account_id)
+        if primary_partition is None:
+            primary_partition = next(iter(account_partitions.values()))
         event_writer = RuntimeEventWriter(write=sink.write)
 
         strategy_bindings = self.build_strategy_bindings(
@@ -121,9 +124,10 @@ class BacktestActorLoopAssembler:
         return BacktestActorLoopState(
             sink=sink,
             compact_orders=compact_orders,
-            account_ref=account_ref,
-            order_manager_ref=order_manager_ref,
-            execution_ref=execution_ref,
+            account_partitions=account_partitions,
+            account_ref=primary_partition.account_ref,
+            order_manager_ref=primary_partition.order_manager_ref,
+            execution_ref=primary_partition.execution_ref,
             event_writer=event_writer,
             strategy_bindings=strategy_bindings,
             signal_aggregator_ref=signal_aggregator_ref,
@@ -135,6 +139,38 @@ class BacktestActorLoopAssembler:
             trading_processed=0,
             event_index=0,
             last_bar=None,
+        )
+
+    def _build_account_partition(self, account_id: AccountId) -> _BacktestAccountPartition:
+        initial_cash = self._initial_cash_by_account.get(account_id, self._initial_cash)
+        account_actor = AccountActor(
+            initial_cash={"USD": initial_cash},
+            account_id=account_id,
+        )
+        account_ref = ActorRef(actor=account_actor, mailbox=Mailbox())
+        execution_mailbox = Mailbox()
+        order_manager_mailbox = Mailbox()
+        order_manager_actor = OrderManagerActor(
+            execution_ref=ActorRef(mailbox=execution_mailbox),
+            account_ref=account_ref,
+            multiplier_by_instrument=self._contract_multipliers,
+            account_id=account_id,
+        )
+        order_manager_ref = ActorRef(actor=order_manager_actor, mailbox=order_manager_mailbox)
+        execution_ref = ActorRef(
+            actor=ExecutionActor(
+                order_manager_ref=order_manager_ref,
+                execution_adapter=self._execution_adapter,
+            ),
+            mailbox=execution_mailbox,
+        )
+        return _BacktestAccountPartition(
+            account_id=account_id,
+            account_actor=account_actor,
+            account_ref=account_ref,
+            order_manager_actor=order_manager_actor,
+            order_manager_ref=order_manager_ref,
+            execution_ref=execution_ref,
         )
 
     def build_strategy_bindings(

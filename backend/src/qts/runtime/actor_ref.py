@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Protocol, TypeVar
 
 from qts.runtime.actor import Actor
-from qts.runtime.actor_errors import ActorAskTimeoutError
+from qts.runtime.actor_errors import ActorAskFailed, ActorAskTimeoutError
 from qts.runtime.actor_events import ActorFailureEvent
 from qts.runtime.actor_path import ActorPath
 from qts.runtime.mailbox import Mailbox, MailboxTimeoutError
@@ -16,6 +16,15 @@ T_co = TypeVar("T_co", covariant=True)
 
 # Type alias for the failure-sink callback used by ActorRef.
 FailureSink = Callable[[ActorFailureEvent], None]
+DEFAULT_ACTOR_ASK_TIMEOUT_SECONDS = 5.0
+
+
+@dataclass(frozen=True, slots=True)
+class _ActorAskFailure:
+    """Failure response written to ask mailboxes after supervised actor failure."""
+
+    actor_name: str
+    message: str
 
 
 class ActorQuery(Protocol[T_co]):
@@ -45,7 +54,11 @@ class ActorRef:
         """Enqueue a fire-and-forget message into the actor's mailbox."""
         self.mailbox.put(message)
 
-    def ask(self, message: ActorQuery[T_co], ask_timeout: float | None = None) -> T_co:
+    def ask(
+        self,
+        message: ActorQuery[T_co],
+        ask_timeout: float | None = DEFAULT_ACTOR_ASK_TIMEOUT_SECONDS,
+    ) -> T_co:
         """Send *message* and block until the actor produces a response.
 
         The ask pattern wraps the caller's message together with a fresh
@@ -55,29 +68,27 @@ class ActorRef:
         mailbox (synchronous model) and then blocks on the response
         mailbox.
 
-        When *ask_timeout* is ``None`` (default), the call blocks
-        indefinitely until the response arrives.  This is safe in the
-        synchronous model because ``process_all()`` ensures the actor
-        processes the query before we wait.
-
         When *ask_timeout* is a float, the call raises
         :class:`ActorAskTimeoutError` if the response does not arrive
         within the given seconds.  This prevents unbounded blocking in
         live-critical broker callbacks.
         """
+        if ask_timeout is None:
+            raise ValueError("ask_timeout=None is not allowed")
         response_mailbox = Mailbox()
         self.mailbox.put((message, response_mailbox))
         if self.actor is not None:
             self.process_all()
-        if ask_timeout is None:
-            response = response_mailbox.get_blocking()
-        else:
-            try:
-                response = response_mailbox.get_with_timeout(ask_timeout)
-            except MailboxTimeoutError as exc:
-                raise ActorAskTimeoutError(
-                    f"ask() timed out after {ask_timeout}s for actor {self.path or '(unnamed)'}"
-                ) from exc
+        try:
+            response = response_mailbox.get_with_timeout(ask_timeout)
+        except MailboxTimeoutError as exc:
+            raise ActorAskTimeoutError(
+                f"ask() timed out after {ask_timeout}s for actor {self.path or '(unnamed)'}"
+            ) from exc
+        if isinstance(response, _ActorAskFailure):
+            raise ActorAskFailed(
+                f"ask() failed for actor {response.actor_name}: {response.message}"
+            )
         return message.validate_response(response)
 
     def process_one(self) -> bool:
@@ -96,6 +107,14 @@ class ActorRef:
         try:
             self.actor.handle(message)
         except Exception as exc:
+            if isinstance(message, tuple) and len(message) == 2 and isinstance(message[1], Mailbox):
+                actor_name = str(self.path) if self.path is not None else "(unnamed)"
+                message[1].put(
+                    _ActorAskFailure(
+                        actor_name=actor_name,
+                        message=str(exc) or type(exc).__name__,
+                    )
+                )
             if self.failure_sink is not None:
                 actor_name = str(self.path) if self.path is not None else "(unnamed)"
                 event = ActorFailureEvent.from_exception(
@@ -121,4 +140,9 @@ class ActorRef:
         return processed
 
 
-__all__ = ["ActorQuery", "ActorRef", "FailureSink"]
+__all__ = [
+    "DEFAULT_ACTOR_ASK_TIMEOUT_SECONDS",
+    "ActorQuery",
+    "ActorRef",
+    "FailureSink",
+]

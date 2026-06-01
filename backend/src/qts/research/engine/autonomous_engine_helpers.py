@@ -12,7 +12,7 @@ import hashlib
 import json
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, cast
@@ -33,6 +33,7 @@ from qts.research.artifact_graph import (
     ResearchArtifactNode,
 )
 from qts.research.audit_log import ResearchAuditLog
+from qts.research.clock import ResearchClock
 from qts.research.evidence_registry import EvidenceRegistry
 from qts.research.factory.strategy_template import StrategyTemplate
 from qts.research.idea_spec import IdeaSpec
@@ -76,6 +77,7 @@ def _active_correlation_context_from_selected(
 def _append_trial_audit_records(
     *,
     audit_log: ResearchAuditLog,
+    clock: ResearchClock,
     generation_index: int,
     trial_evidence_rows: Sequence[Mapping[str, Any]],
 ) -> None:
@@ -90,8 +92,7 @@ def _append_trial_audit_records(
                 "status": row["status"],
                 "trial_id": row["trial_id"],
             },
-            created_at=datetime(2026, 5, 26, tzinfo=UTC)
-            + timedelta(seconds=(generation_index * 100) + trial_index),
+            created_at=clock.now(offset_seconds=(generation_index * 100) + trial_index),
         )
 
 

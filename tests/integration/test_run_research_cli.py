@@ -6,7 +6,7 @@ import json
 import os
 import subprocess
 import sys
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from hashlib import sha256
 from pathlib import Path
@@ -881,7 +881,10 @@ def test_research_cli_idea_record_trial_and_meta_summary(tmp_path: Path) -> None
             idea_id="idea-momentum",
         )
     )
-    ExperimentStore(experiment_store_root).record_manifest(manifest.manifest_path)
+    ExperimentStore(experiment_store_root).record_manifest(
+        manifest.manifest_path,
+        recorded_at=datetime(2026, 5, 20, tzinfo=UTC),
+    )
     evidence_records_path = tmp_path / "evidence-records.json"
     evidence_records_path.write_text(
         json.dumps(

@@ -23,6 +23,7 @@ from qts.runtime.config import (
 )
 from qts.strategy_sdk import Strategy
 
+from tests.support.backtest_engine import backtest_engine_from_inputs
 from tests.support.backtest_streaming import run_engine_streaming
 
 _INSTRUMENT = InstrumentId("EQUITY.US.NASDAQ.AAPL")
@@ -91,7 +92,7 @@ def _bars() -> list[Bar]:
 
 def test_promotion_grade_default_fills_on_next_bar_open(tmp_path: Path) -> None:
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=_BuyOnceStrategy(),
             bars=_bars(),
             initial_cash=Decimal("10000"),
@@ -120,7 +121,7 @@ def test_same_bar_close_fills_on_signal_bar_close_and_is_optimistic(tmp_path: Pa
     # The research-only policy is the contrast case: it fills at the signal
     # bar's own close (105) and the manifest flags it as optimistic.
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=_BuyOnceStrategy(),
             bars=_bars(),
             initial_cash=Decimal("10000"),
@@ -202,7 +203,7 @@ def test_next_bar_open_decision_on_final_bar_has_no_fill(tmp_path: Path) -> None
                 ctx.target_quantity(self.asset, Decimal("10"))
 
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=_BuyOnLastBar(),
             bars=_bars(),
             initial_cash=Decimal("10000"),

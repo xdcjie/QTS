@@ -198,8 +198,8 @@ class TestAskTimeout:
         with pytest.raises(ActorAskTimeoutError, match="timed out"):
             ref.ask(StringQuery(), ask_timeout=0.05)
 
-    def test_ask_with_none_timeout_blocks_until_response(self) -> None:
-        """When ask_timeout is None, ask blocks until the response arrives (synchronous model)."""
+    def test_ask_with_none_timeout_is_rejected(self) -> None:
+        """ask_timeout=None is rejected so actor asks are always bounded."""
 
         class RespondingActor(Actor):
             def handle(self, message: object) -> None:
@@ -213,8 +213,8 @@ class TestAskTimeout:
                 raise TypeError("expected str response")
 
         ref = ActorRef(actor=RespondingActor(), mailbox=Mailbox())
-        result = ref.ask(StringQuery(), ask_timeout=None)
-        assert result == "hello"
+        with pytest.raises(ValueError, match="ask_timeout=None is not allowed"):
+            ref.ask(StringQuery(), ask_timeout=None)
 
     def test_actor_ask_timeout_error_carries_actor_path(self) -> None:
         """ActorAskTimeoutError message includes the actor path for debugging."""

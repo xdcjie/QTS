@@ -19,7 +19,7 @@ from qts.runtime.errors import RuntimeCommandNotBound
 if TYPE_CHECKING:
     from qts.risk.kill_switch import RuntimeKillSwitchCommand
     from qts.runtime.actors.account_actor import AccountSnapshot
-    from qts.runtime.safety import RuntimeKillSwitchEvidence
+    from qts.runtime.safety import RuntimeKillSwitchDeactivateCommand, RuntimeKillSwitchEvidence
     from qts.runtime.session import RuntimeSession
     from qts.runtime.state import RuntimeSessionState
 
@@ -100,6 +100,14 @@ class RuntimeCommandExecutor:
         """Resume strategy intent processing on the bound runtime session."""
         return self._require_session(key).resume()
 
+    def enter_observation(self, *, key: RuntimeSessionKey | None = None) -> RuntimeSessionState:
+        """Put the bound runtime session into observation mode."""
+        return self._require_session(key).enter_observation()
+
+    def exit_observation(self, *, key: RuntimeSessionKey | None = None) -> RuntimeSessionState:
+        """Return the bound runtime session from observation mode."""
+        return self._require_session(key).exit_observation()
+
     def reconcile(self, *, key: RuntimeSessionKey | None = None) -> RuntimeSessionState:
         """Recover (reconcile) the bound runtime session after degradation."""
         return self._require_session(key).recover()
@@ -116,6 +124,15 @@ class RuntimeCommandExecutor:
     ) -> RuntimeKillSwitchEvidence:
         """Activate the kill switch on the bound runtime session and return its evidence."""
         return self._require_session(key).activate_kill_switch(command)
+
+    def deactivate_kill_switch(
+        self,
+        command: RuntimeKillSwitchDeactivateCommand,
+        *,
+        key: RuntimeSessionKey | None = None,
+    ) -> RuntimeSessionState:
+        """Deactivate the kill switch on the bound runtime session."""
+        return self._require_session(key).deactivate_kill_switch(command)
 
 
 __all__ = [

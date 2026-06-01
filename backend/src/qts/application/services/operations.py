@@ -59,6 +59,19 @@ class OperationsService:
             idempotency_key=idempotency_key,
         )
 
+    def start_runtime_result(
+        self,
+        *,
+        operator_id: str = "system",
+        idempotency_key: str | None = None,
+    ) -> RuntimeCommandResultDTO:
+        """Start runtime processing and return the auditable command result."""
+        return self._submit_runtime_command_result(
+            RuntimeCommandType.START,
+            operator_id=operator_id,
+            idempotency_key=idempotency_key,
+        )
+
     def stop_runtime(
         self,
         *,
@@ -67,6 +80,19 @@ class OperationsService:
     ) -> RuntimeStateDTO:
         """Stop runtime processing through the command bus."""
         return self._submit_runtime_state_command(
+            RuntimeCommandType.STOP,
+            operator_id=operator_id,
+            idempotency_key=idempotency_key,
+        )
+
+    def stop_runtime_result(
+        self,
+        *,
+        operator_id: str = "system",
+        idempotency_key: str | None = None,
+    ) -> RuntimeCommandResultDTO:
+        """Stop runtime processing and return the auditable command result."""
+        return self._submit_runtime_command_result(
             RuntimeCommandType.STOP,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
@@ -85,6 +111,19 @@ class OperationsService:
             idempotency_key=idempotency_key,
         )
 
+    def pause_runtime_result(
+        self,
+        *,
+        operator_id: str = "system",
+        idempotency_key: str | None = None,
+    ) -> RuntimeCommandResultDTO:
+        """Pause runtime processing and return the auditable command result."""
+        return self._submit_runtime_command_result(
+            RuntimeCommandType.PAUSE,
+            operator_id=operator_id,
+            idempotency_key=idempotency_key,
+        )
+
     def resume_runtime(
         self,
         *,
@@ -93,6 +132,19 @@ class OperationsService:
     ) -> RuntimeStateDTO:
         """Resume runtime processing through the command bus."""
         return self._submit_runtime_state_command(
+            RuntimeCommandType.RESUME,
+            operator_id=operator_id,
+            idempotency_key=idempotency_key,
+        )
+
+    def resume_runtime_result(
+        self,
+        *,
+        operator_id: str = "system",
+        idempotency_key: str | None = None,
+    ) -> RuntimeCommandResultDTO:
+        """Resume runtime processing and return the auditable command result."""
+        return self._submit_runtime_command_result(
             RuntimeCommandType.RESUME,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
@@ -111,6 +163,19 @@ class OperationsService:
             idempotency_key=idempotency_key,
         )
 
+    def enter_observation_result(
+        self,
+        *,
+        operator_id: str = "system",
+        idempotency_key: str | None = None,
+    ) -> RuntimeCommandResultDTO:
+        """Enter observation mode and return the auditable command result."""
+        return self._submit_runtime_command_result(
+            RuntimeCommandType.ENTER_OBSERVATION,
+            operator_id=operator_id,
+            idempotency_key=idempotency_key,
+        )
+
     def exit_observation(
         self,
         *,
@@ -119,6 +184,19 @@ class OperationsService:
     ) -> RuntimeStateDTO:
         """Exit observation mode through the command bus."""
         return self._submit_runtime_state_command(
+            RuntimeCommandType.EXIT_OBSERVATION,
+            operator_id=operator_id,
+            idempotency_key=idempotency_key,
+        )
+
+    def exit_observation_result(
+        self,
+        *,
+        operator_id: str = "system",
+        idempotency_key: str | None = None,
+    ) -> RuntimeCommandResultDTO:
+        """Exit observation mode and return the auditable command result."""
+        return self._submit_runtime_command_result(
             RuntimeCommandType.EXIT_OBSERVATION,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
@@ -144,6 +222,27 @@ class OperationsService:
             },
         )
         return self._kill_switch_state_from_result(result)
+
+    def activate_kill_switch_result(
+        self,
+        command: KillSwitchCommandDTO,
+        *,
+        operator_id: str = "system",
+        idempotency_key: str | None = None,
+    ) -> RuntimeCommandResultDTO:
+        """Activate a kill switch and return the auditable command result."""
+        result = self._commands.submit(
+            RuntimeCommandType.ACTIVATE_KILL_SWITCH,
+            operator_id=operator_id,
+            idempotency_key=idempotency_key,
+            reason=command.reason,
+            payload={
+                "scope": command.scope,
+                "scope_id": command.scope_id,
+                "reason": command.reason,
+            },
+        )
+        return OperationsCommandRouter.result_dto(result)
 
     def deactivate_kill_switch(
         self,
@@ -254,6 +353,20 @@ class OperationsService:
             operator_id=operator_id,
             idempotency_key=idempotency_key,
         )
+
+    def _submit_runtime_command_result(
+        self,
+        command_type: RuntimeCommandType,
+        *,
+        operator_id: str,
+        idempotency_key: str | None,
+    ) -> RuntimeCommandResultDTO:
+        result = self._commands.submit(
+            command_type,
+            operator_id=operator_id,
+            idempotency_key=idempotency_key,
+        )
+        return OperationsCommandRouter.result_dto(result)
 
     @staticmethod
     def _kill_switch_state_from_result(result: RuntimeCommandResult) -> KillSwitchStateDTO:

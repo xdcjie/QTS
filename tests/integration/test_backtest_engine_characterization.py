@@ -42,7 +42,7 @@ class OneOrderStrategy(Strategy):
 
 
 def test_backtest_streaming_emits_stable_artifacts(tmp_path: Path) -> None:
-    from qts.backtest.engine import BacktestEngine
+    from tests.support.backtest_engine import backtest_engine_from_inputs
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     bars = [
@@ -51,7 +51,7 @@ def test_backtest_streaming_emits_stable_artifacts(tmp_path: Path) -> None:
     ]
 
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=OneOrderStrategy(),
             bars=bars,
             initial_cash=Decimal("10000"),

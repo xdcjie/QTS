@@ -35,6 +35,8 @@ neutral domain `OrderType`. Broker-specific support remains an execution and
 risk boundary concern.
 
 ```python
+from qts.strategy_sdk.orders import OrderSpec, OrderType
+
 ctx.target_quantity(
     asset,
     100,
@@ -48,6 +50,9 @@ Strategies may separate forecasts from target construction by emitting
 `Signal` values and then running a `PortfolioConstructionModel`.
 
 ```python
+from qts.strategy_sdk.signals import Signal, SignalDirection
+from qts.strategy_sdk.portfolio_construction import EqualWeightSignalPortfolioConstruction
+
 ctx.emit_signal(
     Signal(
         asset=asset,

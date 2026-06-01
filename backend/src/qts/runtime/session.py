@@ -42,7 +42,7 @@ from qts.runtime.mailbox import Mailbox
 from qts.runtime.market_data_flow import MarketDataFlow
 from qts.runtime.mode import ExecutionEnvironment, RuntimeMode
 from qts.runtime.order_result import RuntimeOrderResult
-from qts.runtime.safety import RuntimeKillSwitchEvidence
+from qts.runtime.safety import RuntimeKillSwitchDeactivateCommand, RuntimeKillSwitchEvidence
 from qts.runtime.safety_port import RuntimeSafetyState
 from qts.runtime.sinks.base import RuntimeEvent, RuntimeEventContext
 from qts.runtime.startup_gate import BrokerRuntimeStartupGate
@@ -260,6 +260,18 @@ class RuntimeSession:
         self._write_event("runtime.state_transition", {"state": state.value})
         return state
 
+    def enter_observation(self) -> RuntimeSessionState:
+        """Enter observation mode and block new order submission."""
+        state = self._machine.apply("enter_observation")
+        self._write_event("runtime.state_transition", {"state": state.value})
+        return state
+
+    def exit_observation(self) -> RuntimeSessionState:
+        """Exit observation mode after operator approval."""
+        state = self._machine.apply("exit_observation")
+        self._write_event("runtime.state_transition", {"state": state.value})
+        return state
+
     def degrade(self) -> RuntimeSessionState:
         """Degrade the session while keeping observability alive."""
         state = self._machine.apply("degrade")
@@ -311,6 +323,14 @@ class RuntimeSession:
     def activate_kill_switch(self, command: RuntimeKillSwitchCommand) -> RuntimeKillSwitchEvidence:
         """Block new orders and optionally cancel active orders through actors."""
         return self._safety_controller.activate_kill_switch(command)
+
+    def deactivate_kill_switch(
+        self,
+        command: RuntimeKillSwitchDeactivateCommand,
+    ) -> RuntimeSessionState:
+        """Resume order submission after explicit safety authorization."""
+        self._safety_controller.deactivate_kill_switch(command)
+        return self.state
 
     def rollback(self, command: RuntimeRollbackCommand) -> RuntimeRollbackEvidence:
         """Stop new orders and preserve rollback evidence."""

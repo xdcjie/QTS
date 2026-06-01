@@ -2,19 +2,20 @@
 
 These tests lock the registry-driven risk-rule construction in
 ``BacktestEngine.from_config``: ``MaxNotionalRule`` is always present, and the
-per-contract margin gate (``MarginRule``) is appended only when a margin rate is
-resolvable from the instrument registry. Runs without a configured rate keep
-their historical rule set (no fail-closed margin rejection).
+per-contract margin gate (``MarginRule``) is appended when a futures margin rate
+is resolvable from the instrument registry. Futures without a configured rate
+fail closed instead of silently disabling margin risk.
 """
 
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 
 import pytest
 from qts.backtest.risk_policy import BacktestMarginPolicyResolver, BacktestRiskPolicyFactory
 from qts.core.ids import InstrumentId
-from qts.domain.instruments import AssetClass, ContractSpec, Instrument, SettlementType
+from qts.domain.instruments import AssetClass, ContractSpec, FutureSpec, Instrument, SettlementType
 from qts.registry.instrument_registry import InstrumentRegistry
 from qts.risk.rule_registry import RiskRuleRegistry
 from qts.risk.rules.margin_limit import MarginRule
@@ -41,6 +42,33 @@ def _registry(*margin_rates: Decimal | None) -> InstrumentRegistry:
                 ),
             ),
         )
+    return registry
+
+
+def _future_registry(*, margin_rate: Decimal | None) -> InstrumentRegistry:
+    registry = InstrumentRegistry()
+    registry.register(
+        "GC",
+        Instrument(
+            instrument_id=InstrumentId("FUTURE.CME.GC.GCM6"),
+            asset_class=AssetClass.FUTURE,
+            exchange="CME",
+            currency="USD",
+            contract_spec=ContractSpec(
+                tick_size=Decimal("0.1"),
+                lot_size=Decimal("1"),
+                multiplier=Decimal("100"),
+                settlement=SettlementType.CASH,
+                calendar_id="CMES",
+                initial_margin_rate=margin_rate,
+            ),
+            derivative=FutureSpec(
+                expiry=date(2026, 6, 26),
+                underlying=InstrumentId("FUTURE_ROOT.CME.GC"),
+                root_symbol="GC",
+            ),
+        ),
+    )
     return registry
 
 
@@ -72,8 +100,15 @@ def test_resolved_rate_is_none_when_no_contract_configures_one() -> None:
     assert BacktestMarginPolicyResolver().resolve_initial_margin_rate(registry) is None
 
 
+def test_futures_without_configured_margin_rate_fail_closed() -> None:
+    with pytest.raises(ValueError, match="missing initial_margin_rate"):
+        BacktestMarginPolicyResolver().resolve_initial_margin_rate(
+            _future_registry(margin_rate=None)
+        )
+
+
 def test_resolved_rate_returns_the_single_configured_rate() -> None:
-    registry = _registry(None, Decimal("0.05"))
+    registry = _future_registry(margin_rate=Decimal("0.05"))
     assert BacktestMarginPolicyResolver().resolve_initial_margin_rate(registry) == Decimal("0.05")
 
 

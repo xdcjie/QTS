@@ -62,7 +62,7 @@ def test_runtime_session_public_surface_stays_thin() -> None:
         if not name.startswith("_") and (inspect.isfunction(member) or isinstance(member, property))
     ]
 
-    assert len(public_members) <= 16
+    assert len(public_members) <= 19
 
 
 def _bar(start: datetime) -> Bar:

@@ -332,6 +332,44 @@ def test_backtest_topology_builder_uses_multi_strategy_specs() -> None:
     }
 
 
+def test_backtest_topology_builder_preserves_multi_account_strategy_specs() -> None:
+    config = BacktestRuntimeConfig(
+        roots=("SI",),
+        symbols=("SI",),
+        start=datetime(2026, 1, 2, 14, 30, tzinfo=UTC),
+        end=datetime(2026, 1, 2, 14, 31, tzinfo=UTC),
+        timeframe="1m",
+        initial_cash=Decimal("100000"),
+        market_data=BacktestMarketDataReference(
+            config_path=Path("configs/data/historical.local.yaml"),
+            catalog="research_futures",
+        ),
+        strategies=(
+            BacktestStrategyConfig(
+                strategy_id="trend-si",
+                class_path="tests.StrategyA",
+                account_id="acct-a",
+            ),
+            BacktestStrategyConfig(
+                strategy_id="orb-si",
+                class_path="tests.StrategyB",
+                account_id="acct-b",
+            ),
+        ),
+    )
+
+    topology = RuntimeTopologyBuilder.from_backtest_config(
+        config,
+        RuntimeRunId("bt-multi-account"),
+    )
+
+    assert [account.account_id.value for account in topology.accounts] == ["acct-a", "acct-b"]
+    assert [strategy.account_id.value for strategy in topology.strategies] == [
+        "acct-a",
+        "acct-b",
+    ]
+
+
 def test_strategy_referencing_missing_account_fails() -> None:
     with pytest.raises(ValueError, match="missing account"):
         RuntimeTopology(

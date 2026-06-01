@@ -12,7 +12,7 @@ import json
 import math
 import sys
 from collections.abc import Mapping, Sequence
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -20,6 +20,7 @@ from typing import Any
 import yaml  # type: ignore[import-untyped]
 
 from qts.core.hashing import stable_json_dumps
+from qts.research.clock import ResearchClock
 from qts.research.optimizer.parameter_space import ParameterGrid, ParameterSpace
 from qts.research.optimizer.pipeline import BacktestPipelineJob, BacktestPipelineRunner
 from qts.research.orchestrator.validation_artifact_writer import (
@@ -57,8 +58,8 @@ def _attach_validation_artifacts_to_workflow_summary(
     _write_json(workflow_summary_path, {**dict(summary), "steps": steps})
 
 
-def _audit_time(trial_index: int, event_index: int) -> datetime:
-    return datetime(2026, 5, 26, tzinfo=UTC) + timedelta(seconds=(trial_index * 10) + event_index)
+def _audit_time(trial_index: int, event_index: int, clock: ResearchClock) -> datetime:
+    return clock.now(offset_seconds=(trial_index * 10) + event_index)
 
 
 def _backtest_config_window(base_config_path: Path) -> tuple[datetime, datetime]:

@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from enum import StrEnum
 
 from qts.core.time import require_aware_datetime
+from qts.runtime.errors import RuntimeCommandNotBound
 
 
 class RuntimeCommandType(StrEnum):
@@ -234,7 +235,23 @@ class RuntimeCommandBus:
             )
             self._results[result_key] = result
             return result
-        result = self._handler(command)
+        try:
+            result = self._handler(command)
+        except RuntimeCommandNotBound as exc:
+            result = RuntimeCommandResult(
+                command_id=command.command_id,
+                idempotency_key=command.idempotency_key,
+                accepted_at=datetime.now(UTC),
+                result_status=RuntimeCommandResultStatus.REJECTED,
+                failure_reason=str(exc),
+                reason_code="RUNTIME_SESSION_NOT_BOUND",
+                evidence={
+                    "runtime_instance_id": command.runtime_instance_id,
+                    "operator_id": command.operator_id,
+                    "operator_role": command.operator_role,
+                    "authorization_scope": command.authorization_scope,
+                },
+            )
         self._results[result_key] = result
         return result
 

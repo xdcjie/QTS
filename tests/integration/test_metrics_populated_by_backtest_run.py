@@ -46,8 +46,9 @@ def _bar(start: datetime, close: str) -> Bar:
 
 
 def test_backtest_run_populates_metrics_registry(tmp_path: Path) -> None:
-    from qts.backtest.engine import BacktestEngine
     from qts.strategy_sdk import Strategy
+
+    from tests.support.backtest_engine import backtest_engine_from_inputs
 
     class _BuyOnce(Strategy):
         def initialize(self, ctx: Any) -> None:
@@ -62,7 +63,7 @@ def test_backtest_run_populates_metrics_registry(tmp_path: Path) -> None:
 
     metrics = MetricsRegistry()
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
-    engine = BacktestEngine(
+    engine = backtest_engine_from_inputs(
         strategy=_BuyOnce(),
         bars=[_bar(start + timedelta(minutes=i), "100") for i in range(3)],
         initial_cash=Decimal("100000"),

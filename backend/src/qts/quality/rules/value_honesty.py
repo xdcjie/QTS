@@ -8,9 +8,10 @@ invariant (CLAUDE.md §6 backtest/live parity and §11 production wiring):
   any injected service. Such a handler ships a hardcoded answer that bypasses
   the application/service boundary.
 - ``PromotionValueHonestyRule`` rejects assigning a promotion-verdict field
-  (``*_passed``, ``*_accepted``, ``promotion_eligible``) to the literal ``True``
-  in production research metric/evidence code. Verdicts must be derived from
-  artifacts/inputs, never asserted as a constant.
+  (``*_passed``, ``*_accepted``, ``accepted``, ``consistent``, ``passed``,
+  ``promotion_eligible``) to the literal ``True`` in production research
+  metric/evidence code. Verdicts must be derived from artifacts/inputs, never
+  asserted as a constant.
 """
 
 from __future__ import annotations
@@ -32,7 +33,7 @@ _BUSINESS_VALUE_SUFFIXES = ("Schema", "DTO")
 
 # Promotion-verdict fields must be derived, never set to a literal ``True``.
 _VERDICT_FIELD_SUFFIXES = ("_passed", "_accepted")
-_VERDICT_FIELD_NAMES = frozenset({"promotion_eligible"})
+_VERDICT_FIELD_NAMES = frozenset({"accepted", "consistent", "passed", "promotion_eligible"})
 
 
 class RouteNoFakeDataRule:
@@ -180,8 +181,8 @@ class PromotionValueHonestyRule:
                         ),
                         remediation=(
                             "Derive promotion verdicts from validation artifacts or upstream "
-                            "metrics; never assign a constant True to a *_passed / *_accepted / "
-                            "promotion_eligible field."
+                            "metrics; never assign a constant True to an accepted / consistent / "
+                            "passed / *_passed / *_accepted / promotion_eligible field."
                         ),
                         symbol=field_name,
                     )

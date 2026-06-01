@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 
-def test_start_runtime_accepts_paper_simulated_without_real_broker_credentials() -> None:
+def test_start_runtime_rejects_paper_simulated_without_session_builder() -> None:
     from qts.application.commands.start_runtime import StartRuntimeCommand, start_runtime
     from qts.runtime.mode import RuntimeMode
 
@@ -17,22 +17,24 @@ def test_start_runtime_accepts_paper_simulated_without_real_broker_credentials()
         )
     )
 
-    assert runtime.status == "started"
+    assert runtime.status == "rejected"
     assert runtime.runtime_mode is RuntimeMode.PAPER_SIMULATED
-    assert runtime.order_submission_enabled
+    assert runtime.evidence["reason_code"] == "RUNTIME_SESSION_BUILDER_REQUIRED"
+    assert runtime.evidence["session_constructed"] is False
+    assert not runtime.order_submission_enabled
     assert not runtime.live_order_submission_enabled
 
 
 @pytest.mark.parametrize(
-    "runtime_mode, order_enabled",
+    "runtime_mode",
     [
-        ("backtest", True),
-        ("paper_broker", True),
-        ("paper_simulated", True),
-        ("live_observation", False),
+        "backtest",
+        "paper_broker",
+        "paper_simulated",
+        "live_observation",
     ],
 )
-def test_start_runtime_supports_required_modes(runtime_mode: str, order_enabled: bool) -> None:
+def test_start_runtime_rejects_sessionless_modes(runtime_mode: str) -> None:
     from qts.application.commands.start_runtime import StartRuntimeCommand, start_runtime
 
     runtime = start_runtime(
@@ -45,12 +47,12 @@ def test_start_runtime_supports_required_modes(runtime_mode: str, order_enabled:
         )
     )
 
-    assert runtime.status == "started"
-    assert runtime.order_submission_enabled is order_enabled
-    assert runtime.evidence["startup_gate_checked"] is False
+    assert runtime.status == "rejected"
+    assert runtime.evidence["reason_code"] == "RUNTIME_SESSION_BUILDER_REQUIRED"
+    assert runtime.evidence["session_constructed"] is False
 
 
-def test_start_runtime_live_orders_require_startup_decision() -> None:
+def test_start_runtime_live_orders_require_session_builder_before_order_enablement() -> None:
     from qts.application.commands.start_runtime import StartRuntimeCommand, start_runtime
 
     runtime = start_runtime(
@@ -63,6 +65,7 @@ def test_start_runtime_live_orders_require_startup_decision() -> None:
         )
     )
 
-    assert runtime.status == "started"
+    assert runtime.status == "rejected"
+    assert runtime.evidence["reason_code"] == "RUNTIME_SESSION_BUILDER_REQUIRED"
     assert not runtime.order_submission_enabled
     assert not runtime.live_order_submission_enabled

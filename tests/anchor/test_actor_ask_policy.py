@@ -2,7 +2,7 @@
 
 These tests verify durable invariants of the actor runtime hardening:
 
-1. ask() in live-critical paths has bounded timeout or explicit no-timeout documentation
+1. ask() in live-critical paths has a bounded timeout; unbounded waits are rejected
 2. Actor failure emits structured ActorFailureEvent, not silent crash
 3. ActorUnhandledMessageError replaces TypeError in message dispatch
 """
@@ -10,20 +10,18 @@ These tests verify durable invariants of the actor runtime hardening:
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import cast
 
 import pytest
 from qts.runtime.actor import Actor
 from qts.runtime.actor_errors import ActorAskTimeoutError, ActorUnhandledMessageError
 from qts.runtime.actor_events import ActorFailureEvent
 from qts.runtime.actor_path import ActorPath
-from qts.runtime.actor_ref import ActorRef
+from qts.runtime.actor_ref import DEFAULT_ACTOR_ASK_TIMEOUT_SECONDS, ActorRef
 from qts.runtime.actor_supervisor import ActorSupervisor
 from qts.runtime.mailbox import Mailbox
 
 # ---------------------------------------------------------------------------
-# Anchor: ask() in live-critical path has bounded timeout or explicit
-# no-timeout documentation
+# Anchor: ask() in live-critical path has bounded timeout
 # ---------------------------------------------------------------------------
 
 
@@ -50,24 +48,22 @@ class TestAskPolicyAnchor:
         with pytest.raises(ActorAskTimeoutError):
             ref.ask(StringQuery(), ask_timeout=0.05)
 
-    def test_ask_timeout_none_is_explicit_blocking_choice(self) -> None:
-        """When ask_timeout=None, the caller explicitly opts into blocking
-        wait.  This is acceptable in the synchronous model where the
-        response is immediately available after process_all()."""
-
-        class RespondingActor(Actor):
-            def handle(self, message: object) -> None:
-                _query, response_mailbox = cast(tuple[object, Mailbox], message)
-                response_mailbox.put("response")
+    def test_ask_timeout_none_is_rejected(self) -> None:
+        """ask_timeout=None would create an unbounded actor wait, so the
+        runtime rejects it before the message reaches the actor."""
 
         class StringQuery:
             def validate_response(self, response: object) -> str:
                 return str(response)
 
-        ref = ActorRef(actor=RespondingActor(), mailbox=Mailbox())
-        # ask_timeout=None is an explicit, documented blocking choice
-        result = ref.ask(StringQuery(), ask_timeout=None)
-        assert result == "response"
+        class SilentActor(Actor):
+            def handle(self, message: object) -> None:
+                pass
+
+        ref = ActorRef(actor=SilentActor(), mailbox=Mailbox())
+
+        with pytest.raises(ValueError, match="ask_timeout=None is not allowed"):
+            ref.ask(StringQuery(), ask_timeout=None)
 
     def test_actor_ask_timeout_error_is_distinct_from_mailbox_timeout(self) -> None:
         """ActorAskTimeoutError is a domain-specific error, not a
@@ -88,8 +84,7 @@ class TestAskPolicyAnchor:
         sig = inspect.signature(ActorRef.ask)
         assert "ask_timeout" in sig.parameters
         param = sig.parameters["ask_timeout"]
-        # Default is None (blocking), which is the documented choice
-        assert param.default is None
+        assert param.default == DEFAULT_ACTOR_ASK_TIMEOUT_SECONDS
 
 
 # ---------------------------------------------------------------------------

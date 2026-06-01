@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from qts.research.audit_log import ResearchAuditLog
+from qts.research.clock import ResearchClock, system_research_clock
 from qts.research.orchestrator.experiment_runner import (
     ResearchExperimentJob,
     ResearchExperimentResult,
@@ -216,6 +216,7 @@ class ExperimentRetryPolicy:
     """Own retry eligibility and deterministic retry job construction."""
 
     max_attempts: int = 1
+    clock: ResearchClock = field(default_factory=system_research_clock)
 
     def __post_init__(self) -> None:
         if self.max_attempts < 1:
@@ -259,7 +260,7 @@ class ExperimentRetryPolicy:
                     "job_id": retry_job.job_id,
                     "parent_job_id": parent_job_id,
                 },
-                created_at=datetime(2026, 5, 26, tzinfo=UTC) + timedelta(seconds=attempt),
+                created_at=self.clock.now(offset_seconds=attempt),
             )
         return retry_job
 
@@ -272,8 +273,9 @@ class ExperimentWorker:
         *,
         repo_root: Path,
         runner: ResearchExperimentRunner | None = None,
+        clock: ResearchClock | None = None,
     ) -> None:
-        self._runner = runner or ResearchExperimentRunner(repo_root=repo_root)
+        self._runner = runner or ResearchExperimentRunner(repo_root=repo_root, clock=clock)
 
     def run(self, job: ResearchExperimentJob) -> ResearchExperimentResult:
         """Run one experiment job."""

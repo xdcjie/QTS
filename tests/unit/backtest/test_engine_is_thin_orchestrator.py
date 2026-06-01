@@ -22,6 +22,8 @@ from qts.core.ids import InstrumentId
 from qts.domain.market_data import Bar
 from qts.strategy_sdk import Strategy
 
+from tests.support.backtest_engine import backtest_engine_from_inputs
+
 
 def _bar() -> Bar:
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
@@ -49,7 +51,7 @@ class _NoopStrategy(Strategy):
 
 
 def _engine() -> BacktestEngine:
-    return BacktestEngine(
+    return backtest_engine_from_inputs(
         strategy=_NoopStrategy(),
         bars=[_bar()],
         initial_cash=Decimal("10000"),

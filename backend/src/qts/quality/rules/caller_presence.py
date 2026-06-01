@@ -221,6 +221,11 @@ class CallerPresenceRule:
                 expires_on=date.fromisoformat(match.group("expires")),
                 target=match.group("target"),
             )
+            if entry.target.startswith("OPT-"):
+                raise ValueError(
+                    "target=OPT-* wiring deferrals are forbidden; use a durable "
+                    "owner category such as production, library, framework, or internal"
+                )
             entries[entry.symbol] = entry
         return entries
 

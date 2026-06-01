@@ -44,8 +44,9 @@ def _bar(start: datetime, close: str) -> Bar:
 
 
 def test_replaying_fills_reproduces_byte_identical_account_state(tmp_path: Path) -> None:
-    from qts.backtest.engine import BacktestEngine
     from qts.strategy_sdk import Strategy
+
+    from tests.support.backtest_engine import backtest_engine_from_inputs
 
     class HoldAndCloseStrategy(Strategy):
         def initialize(self, ctx: Any) -> None:
@@ -64,7 +65,7 @@ def test_replaying_fills_reproduces_byte_identical_account_state(tmp_path: Path)
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=HoldAndCloseStrategy(),
             bars=[
                 _bar(start, "100"),

@@ -10,11 +10,11 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping, Sequence
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from qts.core.hashing import stable_json_hash
+from qts.research.clock import ResearchClock, system_research_clock
 from qts.research.data_quality import DataQualityArtifactWriter, DataQualityRunner
 from qts.research.idea_spec import IdeaSpec
 from qts.research.orchestrator.experiment_types import (
@@ -50,10 +50,12 @@ class TrialEvidenceSupport:
         *,
         repo_root: Path,
         promotion_thresholds: PromotionThresholds | None = None,
+        clock: ResearchClock | None = None,
     ) -> None:
         """Bind the support to the run's repo root and promotion thresholds."""
         self._repo_root = Path(repo_root)
         self._promotion_thresholds = promotion_thresholds or PromotionThresholds()
+        self._clock = clock or system_research_clock()
 
     def _resolve_path(self, value: Any) -> Path:
         path = Path(str(value))
@@ -158,7 +160,7 @@ class TrialEvidenceSupport:
             hypothesis=f"{family} evidence remains research-only until human approval.",
             edge_type=_edge_type(family),
             source="research_experiment_runner",
-            created_at=datetime(2026, 5, 26, tzinfo=UTC),
+            created_at=self._clock.now(),
         )
 
     def _strategy_id(self, job: ResearchExperimentJob) -> str:

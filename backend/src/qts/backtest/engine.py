@@ -13,9 +13,9 @@ from qts.backtest.artifacts import BacktestArtifactService
 from qts.backtest.dependencies import (
     BacktestActorLoopConfig,
     BacktestActorLoopDependencies,
-    BacktestEngineDependencies,
 )
 from qts.backtest.engine_assembly import BacktestEngineAssembler
+from qts.backtest.run_plan import BacktestRunPlan
 from qts.backtest.runtime_manifest import BacktestRuntimeTopologyManifestBuilder
 from qts.core.hashing import stable_json_hash
 from qts.core.ids import (
@@ -31,8 +31,7 @@ from qts.domain.market_data import Bar
 from qts.observability.metrics import MetricsRegistry
 from qts.registry.future_roll import FutureRollRegistry
 from qts.registry.instrument_registry import InstrumentRegistry
-from qts.risk.risk_engine import RiskEngine
-from qts.runtime.config import BacktestCostModel, BacktestEngineConfig, BacktestRuntimeConfig
+from qts.runtime.config import BacktestCostModel, BacktestRuntimeConfig
 from qts.strategy_sdk import Strategy
 
 if TYPE_CHECKING:
@@ -62,34 +61,11 @@ class BacktestStreamResult:
 class BacktestEngine:
     """Single-process backtest engine using the Strategy SDK and actor order flow."""
 
-    def __init__(
-        self,
-        *,
-        strategy: Strategy | None = None,
-        strategies: Sequence[Strategy] | None = None,
-        bars: Iterable[Bar],
-        initial_cash: Decimal | None = None,
-        engine_config: BacktestEngineConfig | None = None,
-        dependencies: BacktestEngineDependencies | None = None,
-        risk_engine: RiskEngine | None = None,
-        dataset_metadata: Iterable[DatasetMetadata] = (),
-        config: dict[str, Any] | None = None,
-        strategy_version: str | None = None,
-        cost_model: BacktestCostModel | None = None,
-        contract_multipliers: Mapping[InstrumentId, Decimal] | None = None,
-        future_roll_registry: FutureRollRegistry | None = None,
-        warmup_bars: int = 0,
-        target_timeframe: str | None = None,
-        exchange_timezone_by_instrument: Mapping[InstrumentId, str | tzinfo] | None = None,
-        session_window_by_instrument: Mapping[InstrumentId, RegularSessionWindow] | None = None,
-        instrument_registry: InstrumentRegistry | None = None,
-        backtest_runtime_config: BacktestRuntimeConfig | None = None,
-        execution_timing: ExecutionTimingModel | None = None,
-    ) -> None:
-        """Create an engine from explicit config and dependency objects.
+    def __init__(self, plan: BacktestRunPlan) -> None:
+        """Create an engine from a normalized run plan.
 
-        Keyword arguments are normalized into ``BacktestEngineConfig`` and
-        ``BacktestEngineDependencies`` when explicit objects are not supplied.
+        Callers that still hold legacy keyword inputs must normalize them with
+        ``BacktestRunPlan.from_inputs(...)`` before constructing the engine.
 
         ``execution_timing`` selects the fill-timing policy. It defaults to the
         promotion-grade next-obtainable (``next_bar_open``) model. Supply
@@ -97,82 +73,33 @@ class BacktestEngine:
         ``same_bar_close`` model, which requires an explicit optimistic waiver
         and is never promotion-grade.
         """
-        if strategies is not None:
-            if strategy is not None:
-                raise ValueError("provide either strategy or strategies, not both")
-            strategy_set = tuple(strategies)
-        elif strategy is not None:
-            strategy_set = (strategy,)
-        else:
-            raise ValueError("strategy or strategies is required")
-        if not strategy_set:
-            raise ValueError("strategies must not be empty")
-        self._strategies = strategy_set
-        self._strategy = strategy_set[0]
-        self._backtest_runtime_config = backtest_runtime_config
-        if instrument_registry is None and isinstance(bars, Sequence):
-            self._registry_bars = tuple(bars)
-            self._bars = iter(self._registry_bars)
-        else:
-            self._registry_bars = ()
-            self._bars = iter(bars)
+        self._strategies = plan.strategies
+        self._strategy = plan.strategies[0]
+        self._backtest_runtime_config = plan.backtest_runtime_config
+        self._registry_bars = plan.registry_bars
+        self._bars = iter(plan.bars)
 
-        if engine_config is None:
-            if initial_cash is None:
-                raise ValueError("initial_cash is required when engine_config is not provided")
-            engine_config = BacktestEngineConfig(
-                initial_cash=initial_cash,
-                warmup_bars=warmup_bars,
-                target_timeframe=target_timeframe,
-                strategy_version=strategy_version or "",
-                config_payload=dict(config or {}),
-                dataset_metadata=tuple(dataset_metadata),
-                cost_model=cost_model or BacktestCostModel(),
-            )
-        elif initial_cash is not None and Decimal(str(initial_cash)) != engine_config.initial_cash:
-            raise ValueError("initial_cash must match engine_config.initial_cash")
-
-        if not engine_config.strategy_version:
-            engine_config = BacktestEngineConfig(
-                initial_cash=engine_config.initial_cash,
-                warmup_bars=engine_config.warmup_bars,
-                target_timeframe=engine_config.target_timeframe,
-                strategy_version=self._strategy.__class__.__qualname__,
-                config_payload=engine_config.config_payload,
-                dataset_metadata=engine_config.dataset_metadata,
-                cost_model=engine_config.cost_model,
-            )
-
-        if dependencies is None:
-            dependencies = BacktestEngineDependencies.with_defaults(
-                initial_cash=engine_config.initial_cash,
-                risk_engine=risk_engine,
-                instrument_registry=instrument_registry,
-                future_roll_registry=future_roll_registry,
-                contract_multipliers=contract_multipliers,
-                exchange_timezone_by_instrument=exchange_timezone_by_instrument,
-                session_window_by_instrument=session_window_by_instrument,
-            )
-
-        self._config = engine_config
-        self._initial_cash = engine_config.initial_cash
-        self._dataset_metadata = engine_config.dataset_metadata
-        self._config_hash_payload = engine_config.config_payload
-        self._strategy_version = engine_config.strategy_version
-        self._cost_model = engine_config.cost_model
-        self._contract_multipliers = dict(dependencies.contract_multipliers)
-        self._future_roll_registry = dependencies.future_roll_registry
-        self._warmup_bars = engine_config.warmup_bars
-        self._target_timeframe = engine_config.target_timeframe
-        self._exchange_timezone_by_instrument = dict(dependencies.exchange_timezone_by_instrument)
-        self._session_window_by_instrument = dict(dependencies.session_window_by_instrument)
-        self._risk_engine = dependencies.risk_engine
+        self._config = plan.engine_config
+        self._initial_cash = plan.engine_config.initial_cash
+        self._dataset_metadata = plan.engine_config.dataset_metadata
+        self._config_hash_payload = plan.engine_config.config_payload
+        self._strategy_version = plan.engine_config.strategy_version
+        self._cost_model = plan.engine_config.cost_model
+        self._contract_multipliers = dict(plan.dependencies.contract_multipliers)
+        self._future_roll_registry = plan.dependencies.future_roll_registry
+        self._warmup_bars = plan.engine_config.warmup_bars
+        self._target_timeframe = plan.engine_config.target_timeframe
+        self._exchange_timezone_by_instrument = dict(
+            plan.dependencies.exchange_timezone_by_instrument
+        )
+        self._session_window_by_instrument = dict(plan.dependencies.session_window_by_instrument)
+        self._risk_engine = plan.dependencies.risk_engine
         collaborators = BacktestEngineAssembler().collaborators(
-            engine_config=engine_config,
-            dependencies=dependencies,
+            engine_config=plan.engine_config,
+            dependencies=plan.dependencies,
             registry_bars=self._registry_bars,
-            backtest_runtime_config=backtest_runtime_config,
-            execution_timing=execution_timing,
+            backtest_runtime_config=plan.backtest_runtime_config,
+            execution_timing=plan.execution_timing,
         )
         self._execution_adapter = collaborators.execution_adapter
         self._execution_timing = collaborators.execution_timing
@@ -207,27 +134,27 @@ class BacktestEngine:
         ``optimistic_fill_waiver: true``; the manifest's ``promotion_grade`` flag
         then records that such a run may not back paper/live evidence.
         """
-        engine_config, dependencies, resolved_timing = (
-            BacktestEngineAssembler().runtime_config_inputs(
+        return cls.from_run_plan(
+            BacktestRunPlan.from_runtime_config(
                 config,
-                dataset_metadata=dataset_metadata,
+                bars=bars,
+                strategy=strategy,
+                strategies=strategies,
                 instrument_registry=instrument_registry,
+                dataset_metadata=dataset_metadata,
                 future_roll_registry=future_roll_registry,
-                contract_multipliers=contract_multipliers,
                 exchange_timezone_by_instrument=exchange_timezone_by_instrument,
                 session_window_by_instrument=session_window_by_instrument,
+                contract_multipliers=contract_multipliers,
                 execution_timing=execution_timing,
             )
         )
-        return cls(
-            strategy=strategy,
-            strategies=strategies,
-            bars=bars,
-            engine_config=engine_config,
-            dependencies=dependencies,
-            backtest_runtime_config=config,
-            execution_timing=resolved_timing,
-        )
+
+    @classmethod
+    def from_run_plan(cls, run_plan: BacktestRunPlan) -> BacktestEngine:
+        """Build an engine from a normalized backtest run plan."""
+
+        return cls(run_plan)
 
     def run_streaming(
         self,
@@ -277,6 +204,7 @@ class BacktestEngine:
                 initial_cash=self._initial_cash,
                 target_timeframe=self._target_timeframe,
                 warmup_bars=self._warmup_bars,
+                initial_cash_by_account=resolved_topology.initial_cash_by_account,
             ),
             dependencies=BacktestActorLoopDependencies(
                 instrument_registry=self._instrument_context.instrument_registry(),
@@ -365,5 +293,6 @@ class BacktestEngine:
 __all__ = [
     "BacktestCostModel",
     "BacktestEngine",
+    "BacktestRunPlan",
     "BacktestStreamResult",
 ]

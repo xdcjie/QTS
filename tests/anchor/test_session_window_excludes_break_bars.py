@@ -47,6 +47,7 @@ def _write_chain_json(
         "timezone_id": timezone_id,
         "tick_size": "0.1",
         "multiplier": "100",
+        "initial_margin_rate": "0.05",
         "trading_calendar": "CMES",
         "trading_hours": trading_hours,
         "contracts": [

@@ -7,8 +7,10 @@ itself does not own risk-rule-registry or margin-calculator construction.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from decimal import Decimal
 
+from qts.domain.instruments import AssetClass
 from qts.registry.instrument_registry import InstrumentRegistry
 from qts.risk.config import RiskRuleConfig, RiskRuleName
 from qts.risk.margin.calculator import MarginCalculator
@@ -33,11 +35,24 @@ class BacktestMarginPolicyResolver:
         """
         if instrument_registry is None:
             return None
-        rates = {
-            spec.initial_margin_rate
-            for spec in instrument_registry.contract_specs()
-            if spec.initial_margin_rate is not None
-        }
+        instruments = getattr(instrument_registry, "instruments", None)
+        if callable(instruments):
+            missing_futures_margin = [
+                instrument.instrument_id.value
+                for instrument in instruments()
+                if instrument.asset_class is AssetClass.FUTURE
+                and instrument.tradable
+                and instrument.contract_spec.initial_margin_rate is None
+            ]
+            if missing_futures_margin:
+                raise ValueError(
+                    "futures instruments missing initial_margin_rate: "
+                    + ", ".join(sorted(missing_futures_margin))
+                )
+        specs = instrument_registry.contract_specs()
+        if not isinstance(specs, Iterable):
+            raise TypeError("instrument_registry.contract_specs() must return an iterable")
+        rates = {spec.initial_margin_rate for spec in specs if spec.initial_margin_rate is not None}
         if not rates:
             return None
         if len(rates) > 1:

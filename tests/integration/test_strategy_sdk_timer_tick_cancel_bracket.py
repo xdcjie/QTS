@@ -21,7 +21,6 @@ from decimal import Decimal
 import pytest
 from qts.backtest.actor_loop import BacktestActorLoop, BacktestActorLoopState
 from qts.backtest.dependencies import BacktestActorLoopConfig, BacktestActorLoopDependencies
-from qts.backtest.engine import BacktestEngine
 from qts.core.ids import AccountId, InstrumentId, StrategyId
 from qts.domain.market_data import Bar
 from qts.domain.orders import Order, OrderFill, OrderState, OrderType
@@ -37,6 +36,8 @@ from qts.strategy_sdk.asset_ref import AssetRef
 from qts.strategy_sdk.events import Fill, TimerEvent
 from qts.strategy_sdk.portfolio_view import PortfolioView
 from qts.strategy_sdk.target import OrderSpec
+
+from tests.support.backtest_engine import backtest_engine_from_inputs
 
 _INSTRUMENT = InstrumentId("EQUITY.US.NASDAQ.AAPL")
 _RESTING_LIMIT_ORDER = "bt-000001"
@@ -150,7 +151,7 @@ def _run_lifecycle_strategy() -> tuple[LifecycleStrategy, RecordingSink, Backtes
     # BacktestEngine assembles the production collaborators; we drive the loop
     # with compact_orders=False so a resting (non-terminal) order survives to be
     # cancelled on the next bar.
-    engine = BacktestEngine(
+    engine = backtest_engine_from_inputs(
         strategy=strategy,
         bars=bars,
         initial_cash=Decimal("100000"),

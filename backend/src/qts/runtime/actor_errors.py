@@ -12,6 +12,10 @@ class ActorAskTimeoutError(Exception):
     """
 
 
+class ActorAskFailed(Exception):
+    """Raised when an actor fails while processing an ask query."""
+
+
 class ActorUnhandledMessageError(Exception):
     """Raised when an actor cannot handle a message type.
 
@@ -21,4 +25,4 @@ class ActorUnhandledMessageError(Exception):
     """
 
 
-__all__ = ["ActorAskTimeoutError", "ActorUnhandledMessageError"]
+__all__ = ["ActorAskFailed", "ActorAskTimeoutError", "ActorUnhandledMessageError"]

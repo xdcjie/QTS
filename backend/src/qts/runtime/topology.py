@@ -305,10 +305,18 @@ class RuntimeTopologyBuilder:
                 default_account_id=account_id_value,
                 subscriptions=subscriptions,
             )
-            strategy_account_ids = {strategy.account_id for strategy in strategy_specs}
-            if len(strategy_account_ids) != 1:
-                raise ValueError("backtest multi-strategy topology requires one account")
-            account_id_value = next(iter(strategy_account_ids)).value
+            strategy_account_ids = tuple(
+                dict.fromkeys(strategy.account_id for strategy in strategy_specs)
+            )
+            account_specs = tuple(
+                AccountRuntimeSpec(
+                    account_id=strategy_account_id,
+                    initial_cash=config.initial_cash,
+                    account_environment=AccountEnvironment.SIMULATED,
+                )
+                for strategy_account_id in strategy_account_ids
+            )
+            account_id_value = strategy_account_ids[0].value
         else:
             strategy_specs = (
                 StrategyRuntimeSpec(
@@ -320,16 +328,17 @@ class RuntimeTopologyBuilder:
                     enabled=strategy_enabled,
                 ),
             )
-        return RuntimeTopology(
-            run_id=run_id,
-            mode=RuntimeMode.BACKTEST,
-            accounts=(
+            account_specs = (
                 AccountRuntimeSpec(
                     account_id=AccountId(account_id_value),
                     initial_cash=config.initial_cash,
                     account_environment=AccountEnvironment.SIMULATED,
                 ),
-            ),
+            )
+        return RuntimeTopology(
+            run_id=run_id,
+            mode=RuntimeMode.BACKTEST,
+            accounts=account_specs,
             strategies=strategy_specs,
             broker_routes=(),
             market_data_routes=(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -9,6 +10,7 @@ import pytest
 import qts.research.orchestrator.experiment_orchestration as experiment_orchestration
 import qts.research.orchestrator.trial_helpers as trial_helpers
 from qts.research.audit_log import ResearchAuditLog
+from qts.research.clock import DeterministicResearchClock
 from qts.research.optimizer.result import OptimizationResult
 from qts.research.orchestrator.experiment_runner import (
     ResearchExperimentJob,
@@ -23,7 +25,10 @@ def test_experiment_runner_writes_required_trial_artifacts(
     _patch_backtest_pipeline_runner(monkeypatch)
     data_path = _write_bars(tmp_path)
     job = _job(tmp_path, data_path)
-    runner = ResearchExperimentRunner(repo_root=Path.cwd())
+    runner = ResearchExperimentRunner(
+        repo_root=Path.cwd(),
+        clock=DeterministicResearchClock(datetime(2026, 5, 26, tzinfo=UTC)),
+    )
 
     result = runner.run(job)
 
@@ -106,7 +111,10 @@ def test_experiment_runner_outputs_are_deterministic_for_same_job(
 ) -> None:
     _patch_backtest_pipeline_runner(monkeypatch)
     data_path = _write_bars(tmp_path)
-    runner = ResearchExperimentRunner(repo_root=Path.cwd())
+    runner = ResearchExperimentRunner(
+        repo_root=Path.cwd(),
+        clock=DeterministicResearchClock(datetime(2026, 5, 26, tzinfo=UTC)),
+    )
     job = _job(tmp_path, data_path)
 
     first = runner.run(job)

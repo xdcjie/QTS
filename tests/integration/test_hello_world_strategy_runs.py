@@ -19,9 +19,10 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
-from qts.backtest.engine import BacktestEngine
 from qts.core.ids import InstrumentId
 from qts.domain.market_data import Bar
+
+from tests.support.backtest_engine import backtest_engine_from_inputs
 
 _INSTRUMENT = InstrumentId("EQUITY.US.NASDAQ.AAPL")
 
@@ -49,7 +50,7 @@ def _uptrend_bars() -> list[Bar]:
 def test_hello_world_strategy_produces_backtest_manifest(tmp_path: Path) -> None:
     from examples.strategies.hello_world import HelloWorldStrategy
 
-    engine = BacktestEngine(
+    engine = backtest_engine_from_inputs(
         strategy=HelloWorldStrategy(),
         bars=_uptrend_bars(),
         initial_cash=Decimal("100000"),

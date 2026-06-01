@@ -26,6 +26,7 @@ class HistoricalContract:
     expiry: datetime
     first_notice_day: date
     trading_calendar: str
+    initial_margin_rate: Decimal | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,6 +43,7 @@ class HistoricalChain:
     contracts: tuple[HistoricalContract, ...]
     active_months: tuple[int, ...] = ()
     trading_hours: str = ""
+    initial_margin_rate: Decimal | None = None
     _contracts_by_symbol: dict[str, HistoricalContract] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -146,6 +148,7 @@ class HistoricalChain:
         timezone = cls._required_text(payload, "timezone_id")
         tick_size = cls._required_decimal(payload, "tick_size")
         multiplier = cls._required_decimal(payload, "multiplier")
+        initial_margin_rate = cls._optional_decimal(payload, "initial_margin_rate")
         trading_calendar = cls._required_text(payload, "trading_calendar")
         raw_trading_hours = payload.get("trading_hours")
         trading_hours = str(raw_trading_hours) if isinstance(raw_trading_hours, str) else ""
@@ -163,6 +166,7 @@ class HistoricalChain:
                 chain_tick_size=tick_size,
                 chain_multiplier=multiplier,
                 chain_calendar=trading_calendar,
+                chain_initial_margin_rate=initial_margin_rate,
             )
             for item in raw_contracts
         )
@@ -177,6 +181,7 @@ class HistoricalChain:
             contracts=contracts,
             active_months=active_months,
             trading_hours=trading_hours,
+            initial_margin_rate=initial_margin_rate,
         )
 
     @classmethod
@@ -190,6 +195,7 @@ class HistoricalChain:
         chain_tick_size: Decimal,
         chain_multiplier: Decimal,
         chain_calendar: str,
+        chain_initial_margin_rate: Decimal | None,
     ) -> HistoricalContract:
         """Build a HistoricalContract from one raw chain-file contract entry."""
         if not isinstance(payload, dict):
@@ -198,6 +204,9 @@ class HistoricalChain:
         symbol = cls._required_text(item, "local_symbol")
         expiry = datetime.fromisoformat(cls._required_text(item, "expiry")).astimezone(UTC)
         first_notice_day = date.fromisoformat(cls._required_text(item, "first_notice_day"))
+        initial_margin_rate = (
+            cls._optional_decimal(item, "initial_margin_rate") or chain_initial_margin_rate
+        )
         return HistoricalContract(
             symbol=symbol,
             root=root,
@@ -208,6 +217,7 @@ class HistoricalChain:
             expiry=expiry,
             first_notice_day=first_notice_day,
             trading_calendar=str(item.get("trading_calendar") or chain_calendar),
+            initial_margin_rate=initial_margin_rate,
         )
 
     @staticmethod
@@ -227,6 +237,19 @@ class HistoricalChain:
         if value <= Decimal("0"):
             raise ValueError(f"{field} must be positive")
         return value
+
+    @staticmethod
+    def _optional_decimal(payload: dict[str, Any], field: str) -> Decimal | None:
+        """Return an optional positive Decimal field, rejecting invalid values."""
+        value = payload.get(field)
+        if value is None:
+            return None
+        decimal = Decimal(str(value))
+        if decimal <= Decimal("0"):
+            raise ValueError(f"{field} must be positive")
+        if decimal > Decimal("1"):
+            raise ValueError(f"{field} must not exceed 1")
+        return decimal
 
     @staticmethod
     def _parse_active_months(payload: object) -> tuple[int, ...]:

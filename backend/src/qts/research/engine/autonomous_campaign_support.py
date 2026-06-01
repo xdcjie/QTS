@@ -10,13 +10,14 @@ from __future__ import annotations
 
 import shutil
 from collections.abc import Mapping, Sequence
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from qts.data.historical.chains import HistoricalChain
 from qts.research.audit_log import ResearchAuditLog
 from qts.research.campaign import ResearchCampaignFamily
+from qts.research.clock import ResearchClock, system_research_clock
 from qts.research.engine.autonomous_engine_helpers import (
     _edge_type,
     _parse_timestamp,
@@ -67,9 +68,10 @@ from qts.research.selector import (
 class AutonomousResearchCampaignSupport:
     """Owns campaign evidence resolution, config/window builders, and policy payloads."""
 
-    def __init__(self, *, repo_root: Path) -> None:
+    def __init__(self, *, repo_root: Path, clock: ResearchClock | None = None) -> None:
         """Bind the support to the campaign repo root; init the data-window cache."""
         self._repo_root = Path(repo_root)
+        self._clock = clock or system_research_clock()
         self._data_window_cache: dict[tuple[str, int | None], tuple[str, str]] = {}
 
     def _run_experiment_job(
@@ -81,8 +83,8 @@ class AutonomousResearchCampaignSupport:
         queue = ExperimentQueue(jobs=(job,))
         schedule = ExperimentScheduler(
             queue=queue,
-            worker=ExperimentWorker(repo_root=self._repo_root),
-            retry_policy=ExperimentRetryPolicy(max_attempts=1),
+            worker=ExperimentWorker(repo_root=self._repo_root, clock=self._clock),
+            retry_policy=ExperimentRetryPolicy(max_attempts=1, clock=self._clock),
         ).run(audit_log=audit_log)
         if schedule.status != "completed":
             raise RuntimeError(f"experiment scheduler failed: {schedule.to_payload()}")
@@ -432,7 +434,7 @@ class AutonomousResearchCampaignSupport:
             hypothesis=f"{family} candidate remains research-only until human approval.",
             edge_type=_edge_type(family),
             source="autonomous_research_engine",
-            created_at=datetime(2026, 5, 26, tzinfo=UTC),
+            created_at=self._clock.now(),
         )
 
 

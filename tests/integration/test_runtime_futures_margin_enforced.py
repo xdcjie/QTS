@@ -7,6 +7,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+import pytest
 from qts.backtest.engine import BacktestEngine
 from qts.core.ids import InstrumentId
 from qts.domain.instruments import AssetClass, ContractSpec, FutureSpec, Instrument, SettlementType
@@ -167,8 +168,11 @@ def test_config_driven_backtest_rejects_over_margin_future_order(tmp_path: Path)
     assert result.final_account.cash["USD"] == Decimal("10000")
 
 
-def test_config_driven_backtest_without_margin_rate_fills_as_before(tmp_path: Path) -> None:
-    # Identical run but no configured margin rate: MarginRule is NOT wired, so the
-    # historical behavior is preserved and the order fills (non-breaking).
-    result = _run(tmp_path, initial_margin_rate=None)
-    assert result.final_account.positions[_FUTURE_ID].quantity == Decimal("30")
+def test_config_driven_backtest_without_margin_rate_fails_closed(tmp_path: Path) -> None:
+    # Tradable futures must carry product-owned margin economics. Missing margin
+    # data now rejects the run before orders can bypass the margin gate.
+    with pytest.raises(
+        ValueError,
+        match="futures instruments missing initial_margin_rate: FUTURE\\.CMES\\.GC\\.202606",
+    ):
+        _run(tmp_path, initial_margin_rate=None)

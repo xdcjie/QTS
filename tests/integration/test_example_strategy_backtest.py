@@ -38,13 +38,13 @@ def _bar(start: datetime, close: Decimal) -> Bar:
 
 
 def test_example_moving_average_strategy_runs_in_backtest_mode(tmp_path: Path) -> None:
-    from qts.backtest.engine import BacktestEngine
+    from tests.support.backtest_engine import backtest_engine_from_inputs
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     bars = [_bar(start + timedelta(minutes=i), Decimal("100") + Decimal(i)) for i in range(65)]
 
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=_load_moving_average_cross()(),
             bars=bars,
             initial_cash=Decimal("100000"),

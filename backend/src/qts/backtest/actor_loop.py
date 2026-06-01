@@ -14,6 +14,7 @@ from qts.backtest.signal_event_writer import BacktestSignalEventWriter
 from qts.core.ids import AccountId, CorrelationId, InstrumentId, StrategyId
 from qts.domain.market_data import Bar
 from qts.domain.orders import Order, OrderFill
+from qts.portfolio.holdings import Holding
 from qts.reporting.backtest import (
     EquityCurvePoint,
     is_broker_capability_reject,
@@ -106,6 +107,7 @@ class BacktestActorLoopResult:
     warmup_bars: int
     trading_bars: int
     last_bar: Bar | None
+    account_snapshots: tuple[tuple[AccountId, AccountSnapshot], ...] = ()
 
     @property
     def processed_bars(self) -> int:
@@ -173,9 +175,7 @@ class BacktestActorLoop:
         )
         if len(self._strategy_specs) != len(self._strategies):
             raise ValueError("strategy spec count must match strategy instance count")
-        strategy_account_ids = {spec.account_id for spec in self._strategy_specs}
-        if strategy_account_ids != {account_id}:
-            raise ValueError("backtest actor loop supports one account")
+        self._account_ids = tuple(dict.fromkeys(spec.account_id for spec in self._strategy_specs))
         if len(self._strategy_specs) > 1 and strategy_id is not None:
             raise ValueError("strategy_id must be omitted for multi-strategy backtests")
         self._strategy_id = (
@@ -329,11 +329,13 @@ class BacktestActorLoop:
         """Finalize the strategy pipeline and return the run summary."""
         for binding in state.strategy_bindings:
             _ = binding.pipeline.finalize()
+        account_snapshots = _account_snapshots(state)
         return BacktestActorLoopResult(
-            final_account=state.account_ref.ask(GetAccountSnapshot()),
+            final_account=_aggregate_account_snapshots(account_snapshots),
             warmup_bars=state.warmup_processed,
             trading_bars=state.trading_processed,
             last_bar=state.last_bar,
+            account_snapshots=account_snapshots,
         )
 
     def market_data_correlation_id(self, bar: Bar) -> CorrelationId:
@@ -360,12 +362,13 @@ class BacktestActorLoop:
                 and bar.instrument_id not in binding.subscriptions
             ):
                 continue
+            partition = _partition_for_account(state, binding.account_id)
             result = binding.pipeline.execute_bar(
                 bar,
-                account_snapshot=state.account_ref.ask(GetAccountSnapshot()),
+                account_snapshot=partition.account_ref.ask(GetAccountSnapshot()),
                 latest_prices=state.latest_prices,
                 aggregate_signals=False,
-                account_id=self._account_id,
+                account_id=binding.account_id,
                 correlation_id=correlation_id,
             )
             executions.append((binding, result))
@@ -379,10 +382,10 @@ class BacktestActorLoop:
         correlation_id: CorrelationId,
     ) -> tuple[AggregatedSignalBatch, ...]:
         """Aggregate raw strategy intents across all backtest bindings."""
-        contributions: list[SignalContribution] = []
+        contributions_by_account: dict[AccountId | None, list[SignalContribution]] = {}
         for binding, result in strategy_result:
             for intent in result.raw_intents:
-                contributions.append(
+                contributions_by_account.setdefault(binding.account_id, []).append(
                     SignalContribution(
                         strategy_id=binding.strategy_id,
                         intent=intent,
@@ -392,17 +395,18 @@ class BacktestActorLoop:
                         conflict_group=binding.conflict_group,
                     )
                 )
-        if not contributions:
+        if not contributions_by_account:
             return ()
-        state.signal_aggregator_ref.tell(
-            StrategySignalEvent(
-                bar=bar,
-                intents=tuple(contribution.intent for contribution in contributions),
-                contributions=tuple(contributions),
-                account_id=self._account_id,
-                correlation_id=correlation_id,
+        for account_id, contributions in contributions_by_account.items():
+            state.signal_aggregator_ref.tell(
+                StrategySignalEvent(
+                    bar=bar,
+                    intents=tuple(contribution.intent for contribution in contributions),
+                    contributions=tuple(contributions),
+                    account_id=account_id,
+                    correlation_id=correlation_id,
+                )
             )
-        )
         state.signal_aggregator_ref.process_all()
         return self.take_signal_batches(state)
 
@@ -427,13 +431,14 @@ class BacktestActorLoop:
         strategy_result: BacktestStrategyBarExecution,
     ) -> None:
         """Route strategy-emitted cancel intents to the order manager actor."""
-        router = CancelIntentRouter(
-            order_manager_ref=state.order_manager_ref,
-            execution_ref=state.execution_ref,
-        )
-        for _binding, result in strategy_result:
+        for binding, result in strategy_result:
             if not result.cancel_intents:
                 continue
+            partition = _partition_for_account(state, binding.account_id)
+            router = CancelIntentRouter(
+                order_manager_ref=partition.order_manager_ref,
+                execution_ref=partition.execution_ref,
+            )
             router.route(result.cancel_intents)
 
     def defer_strategy_intent(
@@ -477,14 +482,16 @@ class BacktestActorLoop:
         )
         if strategy_id is None:
             raise ValueError("strategy_id is required")
+        account_id = batch.account_id if batch.account_id is not None else self._account_id
+        partition = _partition_for_account(state, account_id)
         try:
             processed = self._process_intent(
                 intent,
                 bar=bar,
-                account_ref=state.account_ref,
-                order_manager_ref=state.order_manager_ref,
-                execution_ref=state.execution_ref,
-                account_id=self._account_id,
+                account_ref=partition.account_ref,
+                order_manager_ref=partition.order_manager_ref,
+                execution_ref=partition.execution_ref,
+                account_id=account_id,
                 strategy_id=strategy_id,
                 correlation_id=correlation_id,
                 order_number=state.sink.order_count + 1,
@@ -496,7 +503,7 @@ class BacktestActorLoop:
             if not is_broker_capability_reject(exc):
                 raise
             self._signal_event_writer.write_broker_reject_event(
-                state, intent, correlation_id, exc, strategy_id
+                state, intent, correlation_id, exc, strategy_id, account_id
             )
             return
         order_payload = processed.orders
@@ -504,21 +511,21 @@ class BacktestActorLoop:
         state.event_writer.write_risk_decision_events(
             processed.risk_decisions,
             correlation_id=correlation_id,
-            account_id=self._account_id,
+            account_id=account_id,
             instrument_id=intent.asset.instrument_id,
             strategy_id=strategy_id,
         )
         state.sink.write_processed(orders=order_payload, fills=fill_payload, bar=bar)
         state.event_writer.write_order_events(
             order_payload,
-            state.order_manager_ref,
+            partition.order_manager_ref,
             fallback_contributing_strategy_ids=batch.contributing_strategy_ids,
         )
-        state.event_writer.write_fill_events(fill_payload, state.order_manager_ref)
+        state.event_writer.write_fill_events(fill_payload, partition.order_manager_ref)
         self.deliver_fills_to_strategy(state, strategy_id, fill_payload)
-        closed_events = state.account_ref.ask(DrainPositionClosedEvents())
+        closed_events = partition.account_ref.ask(DrainPositionClosedEvents())
         if closed_events:
-            account_snapshot = state.account_ref.ask(GetAccountSnapshot())
+            account_snapshot = partition.account_ref.ask(GetAccountSnapshot())
             state.event_writer.write_position_closed_events(
                 closed_events,
                 account_id=account_snapshot.account_id,
@@ -526,7 +533,7 @@ class BacktestActorLoop:
                 correlation_id=correlation_id,
             )
         if state.compact_orders:
-            state.order_manager_ref.tell(
+            partition.order_manager_ref.tell(
                 CompactForStreaming(order_ids=tuple(order.order_id for order in order_payload))
             )
 
@@ -550,7 +557,8 @@ class BacktestActorLoop:
         bar: Bar,
     ) -> None:
         """Emit end-of-bar equity and account snapshot artifacts."""
-        snapshot = state.account_ref.ask(GetAccountSnapshot())
+        account_snapshots = _account_snapshots(state)
+        snapshot = _aggregate_account_snapshots(account_snapshots)
         state.sink.write_equity_point(
             self._equity_point(bar, snapshot, latest_prices=state.latest_prices)
         )
@@ -563,34 +571,59 @@ class BacktestActorLoop:
             gross_notional=gross_notional,
             net_notional=net_notional,
         )
-        self._write_account_snapshot(state.sink, snapshot)
+        for _, account_snapshot in account_snapshots:
+            _write_account_snapshot(state.sink, account_snapshot)
 
-    @staticmethod
-    def _write_account_snapshot(
-        sink: BacktestRuntimeSink,
-        snapshot: AccountSnapshot,
-    ) -> None:
-        """Emit a normalized account snapshot event."""
-        sink.write(
-            RuntimeEvent(
-                kind="runtime.account_snapshot",
-                payload={
-                    "cash": {currency: str(balance) for currency, balance in snapshot.cash.items()},
-                    "positions": {
-                        instrument_id.value: str(position.quantity)
-                        for instrument_id, position in snapshot.positions.items()
-                    },
-                    "holdings": {
-                        instrument_id.value: {
-                            "quantity": str(holding.quantity),
-                            "average_cost": str(holding.average_cost),
-                            "realized_pnl": str(holding.realized_pnl),
-                        }
-                        for instrument_id, holding in snapshot.holdings.items()
-                    },
+
+def _account_snapshots(
+    state: BacktestActorLoopState,
+) -> tuple[tuple[AccountId, AccountSnapshot], ...]:
+    return tuple(
+        (account_id, partition.account_ref.ask(GetAccountSnapshot()))
+        for account_id, partition in state.account_partitions.items()
+    )
+
+
+def _partition_for_account(
+    state: BacktestActorLoopState,
+    account_id: AccountId | None,
+) -> Any:
+    if len(state.account_partitions) == 1:
+        return next(iter(state.account_partitions.values()))
+    if account_id is None:
+        raise ValueError("account_id is required for multi-account backtest")
+    try:
+        return state.account_partitions[account_id]
+    except KeyError as exc:
+        raise ValueError(f"unknown backtest account partition: {account_id}") from exc
+
+
+def _write_account_snapshot(
+    sink: BacktestRuntimeSink,
+    snapshot: AccountSnapshot,
+) -> None:
+    """Emit a normalized account snapshot event."""
+    sink.write(
+        RuntimeEvent(
+            kind="runtime.account_snapshot",
+            payload={
+                "cash": {currency: str(balance) for currency, balance in snapshot.cash.items()},
+                "positions": {
+                    instrument_id.value: str(position.quantity)
+                    for instrument_id, position in snapshot.positions.items()
                 },
-            )
+                "holdings": {
+                    instrument_id.value: {
+                        "quantity": str(holding.quantity),
+                        "average_cost": str(holding.average_cost),
+                        "realized_pnl": str(holding.realized_pnl),
+                    }
+                    for instrument_id, holding in snapshot.holdings.items()
+                },
+            },
+            account_id=snapshot.account_id,
         )
+    )
 
 
 def _holdings_notional(
@@ -617,6 +650,66 @@ def _holdings_notional(
         gross += abs(signed_notional)
         net += signed_notional
     return gross, net
+
+
+def _aggregate_account_snapshots(
+    account_snapshots: tuple[tuple[AccountId, AccountSnapshot], ...],
+) -> AccountSnapshot:
+    """Return a portfolio-level snapshot across backtest account partitions."""
+    if not account_snapshots:
+        raise ValueError("at least one account snapshot is required")
+    if len(account_snapshots) == 1:
+        return account_snapshots[0][1]
+    cash: dict[str, Decimal] = {}
+    holdings_by_instrument: dict[InstrumentId, list[Holding]] = {}
+    seen_fill_ids: list[str] = []
+    for _, snapshot in account_snapshots:
+        for currency, balance in snapshot.cash.items():
+            cash[currency] = cash.get(currency, Decimal("0")) + balance
+        for instrument_id, holding in snapshot.holdings.items():
+            holdings_by_instrument.setdefault(instrument_id, []).append(holding)
+        seen_fill_ids.extend(snapshot.seen_fill_ids)
+    holdings = {
+        instrument_id: _aggregate_holding(instrument_id, instrument_holdings)
+        for instrument_id, instrument_holdings in holdings_by_instrument.items()
+    }
+    return AccountSnapshot(
+        cash=cash,
+        holdings=holdings,
+        account_id=None,
+        seen_fill_ids=tuple(dict.fromkeys(seen_fill_ids)),
+    )
+
+
+def _aggregate_holding(
+    instrument_id: InstrumentId,
+    holdings: list[Holding],
+) -> Holding:
+    quantity = sum((holding.quantity for holding in holdings), Decimal("0"))
+    realized_pnl = sum((holding.realized_pnl for holding in holdings), Decimal("0"))
+    total_abs_quantity = sum((abs(holding.quantity) for holding in holdings), Decimal("0"))
+    if total_abs_quantity == Decimal("0"):
+        average_cost = Decimal("0")
+    else:
+        average_cost = (
+            sum(
+                (abs(holding.quantity) * holding.average_cost for holding in holdings), Decimal("0")
+            )
+            / total_abs_quantity
+        )
+    opened_at_values = [holding.opened_at for holding in holdings if holding.opened_at is not None]
+    last_fill_at_values = [
+        holding.last_fill_at for holding in holdings if holding.last_fill_at is not None
+    ]
+    return Holding(
+        instrument_id=instrument_id,
+        quantity=quantity,
+        average_cost=average_cost,
+        realized_pnl=realized_pnl,
+        opened_at=min(opened_at_values) if opened_at_values else None,
+        last_fill_at=max(last_fill_at_values) if last_fill_at_values else None,
+        lots=tuple(lot for holding in holdings for lot in holding.lots),
+    )
 
 
 __all__ = ["BacktestActorLoop", "BacktestActorLoopResult"]

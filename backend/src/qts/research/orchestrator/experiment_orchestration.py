@@ -342,7 +342,7 @@ def _run_trial(
             "manifest_hash": manifest_hash,
             "trial_id": trial_id,
         },
-        created_at=_audit_time(trial_index, 0),
+        created_at=_audit_time(trial_index, 0, support._clock),
     )
 
     status = _trial_status(trial)
@@ -402,7 +402,7 @@ def _run_trial(
             "status": status,
             "trial_id": trial_id,
         },
-        created_at=_audit_time(trial_index, 1),
+        created_at=_audit_time(trial_index, 1, support._clock),
     )
     return ResearchTrialResult(
         trial_id=trial_id,

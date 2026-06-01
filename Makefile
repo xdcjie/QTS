@@ -1,4 +1,4 @@
-.PHONY: install install-ibkr-api format lint guardrails typecheck test-unit test-integration test-anchor test-replay test-backtest-replay test-reconciliation test-soak test quick-check check load-test soak-test readiness-smoke-local readiness-smoke-external readiness-check validate-historical-sample backtest-full-smoke backtest-vwap-report-smoke backtest-acceptance backtest-gc-full
+.PHONY: install install-ibkr-api format lint guardrails typecheck test-unit test-integration test-anchor test-replay test-backtest-replay test-reconciliation test-soak test quick-check check load-test soak-test readiness-smoke-local readiness-smoke-external readiness-check final-readiness validate-historical-sample backtest-full-smoke backtest-vwap-report-smoke backtest-acceptance backtest-gc-full
 
 QTS_EXTERNAL_EVIDENCE_DIR ?= evidence/ibkr
 
@@ -65,6 +65,8 @@ readiness-smoke-external:
 	QTS_RUN_EXTERNAL_READINESS_SMOKES=1 uv run pytest tests/anchor/test_readiness_smoke_matrix_external.py -q -m external --evidence-dir $(QTS_EXTERNAL_EVIDENCE_DIR)
 
 readiness-check: check test-replay test-reconciliation test-soak
+
+final-readiness: readiness-check
 
 validate-historical-sample:
 	PYTHONPATH=backend/src uv run python scripts/validate_historical.py --config configs/data/historical.local.yaml --catalog research_futures --roots GC SI --sample-rows 1000

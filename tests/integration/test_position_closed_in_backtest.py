@@ -31,8 +31,9 @@ def _bar(start: datetime, close: str) -> Bar:
 
 
 def test_round_trip_emits_account_position_closed_runtime_event(tmp_path: Path) -> None:
-    from qts.backtest.engine import BacktestEngine
     from qts.strategy_sdk import Strategy
+
+    from tests.support.backtest_engine import backtest_engine_from_inputs
 
     class RoundTripStrategy(Strategy):
         def initialize(self, ctx: Any) -> None:
@@ -51,7 +52,7 @@ def test_round_trip_emits_account_position_closed_runtime_event(tmp_path: Path) 
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=RoundTripStrategy(),
             bars=[
                 _bar(start, "100"),
@@ -75,8 +76,9 @@ def test_round_trip_emits_account_position_closed_runtime_event(tmp_path: Path) 
 
 
 def test_close_reason_metadata_is_written_to_backtest_events(tmp_path: Path) -> None:
-    from qts.backtest.engine import BacktestEngine
     from qts.strategy_sdk import Strategy
+
+    from tests.support.backtest_engine import backtest_engine_from_inputs
 
     class ReasonedExitStrategy(Strategy):
         def initialize(self, ctx: Any) -> None:
@@ -103,7 +105,7 @@ def test_close_reason_metadata_is_written_to_backtest_events(tmp_path: Path) -> 
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=ReasonedExitStrategy(),
             bars=[
                 _bar(start, "100"),

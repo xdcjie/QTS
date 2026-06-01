@@ -10,6 +10,8 @@ from qts.domain.execution_timing import ExecutionTimingModel
 from qts.domain.market_data import Bar
 from qts.strategy_sdk import Strategy
 
+from tests.support.backtest_engine import backtest_engine_from_inputs
+
 # Cost-model mechanics (commission/slippage) are fill-policy independent. These
 # tests pin the optimistic same-bar policy so a single decision bar fills
 # deterministically on that bar, isolating the cost behavior under test from the
@@ -80,12 +82,12 @@ def test_streaming_equity_metrics_rejects_empty_curve() -> None:
 
 
 def test_zero_cost_backtest_fill_preserves_existing_cash_behavior(tmp_path: Path) -> None:
-    from qts.backtest.engine import BacktestCostModel, BacktestEngine
+    from qts.backtest.engine import BacktestCostModel
 
     from tests.support.backtest_streaming import run_engine_streaming
 
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=BuyOnceStrategy(),
             bars=[_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC))],
             initial_cash=Decimal("10000"),
@@ -100,12 +102,12 @@ def test_zero_cost_backtest_fill_preserves_existing_cash_behavior(tmp_path: Path
 
 
 def test_fixed_commission_reduces_cash_and_is_recorded_in_report(tmp_path: Path) -> None:
-    from qts.backtest.engine import BacktestCostModel, BacktestEngine
+    from qts.backtest.engine import BacktestCostModel
 
     from tests.support.backtest_streaming import run_engine_streaming
 
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=BuyOnceStrategy(),
             bars=[_bar(datetime(2026, 1, 2, 14, 30, tzinfo=UTC))],
             initial_cash=Decimal("10000"),
@@ -120,13 +122,13 @@ def test_fixed_commission_reduces_cash_and_is_recorded_in_report(tmp_path: Path)
 
 
 def test_slippage_moves_buy_fill_up_and_sell_fill_down(tmp_path: Path) -> None:
-    from qts.backtest.engine import BacktestCostModel, BacktestEngine
+    from qts.backtest.engine import BacktestCostModel
 
     from tests.support.backtest_streaming import run_engine_streaming
 
     start = datetime(2026, 1, 2, 14, 30, tzinfo=UTC)
     captured = run_engine_streaming(
-        BacktestEngine(
+        backtest_engine_from_inputs(
             strategy=RoundTripStrategy(),
             bars=[_bar(start), _bar(start + timedelta(minutes=1))],
             initial_cash=Decimal("10000"),

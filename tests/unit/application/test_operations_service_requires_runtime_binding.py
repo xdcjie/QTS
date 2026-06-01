@@ -8,28 +8,27 @@ mutate shadow state and report success. With a runtime bound through
 
 from __future__ import annotations
 
-import pytest
 from qts.application.dto import KillSwitchCommandDTO
 from qts.application.services import OperationsService
-from qts.runtime.errors import RuntimeCommandNotBound
 
 from tests.support.operations import FakeControlPlaneSession, bound_operations_service
 
 
-def test_unbound_service_raises_on_lifecycle_and_kill_switch() -> None:
+def test_unbound_service_returns_rejected_results_for_operator_commands() -> None:
     service = OperationsService()  # no command_executor bound
 
-    with pytest.raises(RuntimeCommandNotBound, match="RUNTIME_SESSION_NOT_BOUND"):
-        service.start_runtime(operator_id="ops-a")
-    with pytest.raises(RuntimeCommandNotBound, match="RUNTIME_SESSION_NOT_BOUND"):
-        service.stop_runtime(operator_id="ops-a")
-    with pytest.raises(RuntimeCommandNotBound, match="RUNTIME_SESSION_NOT_BOUND"):
-        service.pause_runtime(operator_id="ops-a")
-    with pytest.raises(RuntimeCommandNotBound, match="RUNTIME_SESSION_NOT_BOUND"):
-        service.activate_kill_switch(
+    results = [
+        service.start_runtime_result(operator_id="ops-a"),
+        service.stop_runtime_result(operator_id="ops-a"),
+        service.pause_runtime_result(operator_id="ops-a"),
+        service.activate_kill_switch_result(
             KillSwitchCommandDTO(scope="global", reason="halt"),
             operator_id="ops-a",
-        )
+        ),
+    ]
+
+    assert {result.status for result in results} == {"rejected"}
+    assert {result.reason_code for result in results} == {"RUNTIME_SESSION_NOT_BOUND"}
 
 
 def test_bound_service_acts_on_the_runtime_session() -> None:

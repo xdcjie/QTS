@@ -46,6 +46,10 @@ class InstrumentRegistry:
         for instrument in self._instruments.values():
             yield instrument.contract_spec
 
+    def instruments(self) -> Iterator[Instrument]:
+        """Yield all registered instruments."""
+        yield from self._instruments.values()
+
     @staticmethod
     def _normalize_symbol(user_symbol: str) -> str:
         """Return the symbol uppercased and stripped, rejecting empty values."""

@@ -6,6 +6,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from qts.research.clock import ResearchClock
 from qts.research.orchestrator import experiment_orchestration
 from qts.research.orchestrator.experiment_types import (
     ResearchExperimentJob,
@@ -26,9 +27,10 @@ class ResearchExperimentRunner:
         *,
         repo_root: Path,
         promotion_thresholds: PromotionThresholds | None = None,
+        clock: ResearchClock | None = None,
     ) -> None:
         self._support = TrialEvidenceSupport(
-            repo_root=repo_root, promotion_thresholds=promotion_thresholds
+            repo_root=repo_root, promotion_thresholds=promotion_thresholds, clock=clock
         )
 
     def run(self, job: ResearchExperimentJob) -> ResearchExperimentResult:

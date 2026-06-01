@@ -99,6 +99,8 @@ class ExecutionReport:
     commission: Decimal = Decimal("0")
     slippage: Decimal = Decimal("0")
     fill_time: datetime | None = None
+    reason_code: str | None = None
+    failure_reason: str | None = None
 
     def __post_init__(self) -> None:
         """Validate report/order ids are non-empty and quantities are non-negative."""
@@ -112,6 +114,11 @@ class ExecutionReport:
             raise ValueError("commission must be non-negative")
         if self.slippage < Decimal("0"):
             raise ValueError("slippage must be non-negative")
+        if self.status is ExecutionReportStatus.REJECTED:
+            if self.reason_code is None or not self.reason_code.strip():
+                raise ValueError("reason_code is required for rejected execution reports")
+            if self.failure_reason is None or not self.failure_reason.strip():
+                raise ValueError("failure_reason is required for rejected execution reports")
 
 
 @dataclass(frozen=True, slots=True)

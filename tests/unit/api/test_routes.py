@@ -73,12 +73,13 @@ def test_operational_runtime_command_routes_return_command_evidence() -> None:
     )
 
     assert reconcile.status_code == 200
-    assert reconcile.json()["status"] == "completed"
+    assert reconcile.json()["status"] == "rejected"
     assert reconcile.json()["idempotency_key"] == "reconcile-1"
-    assert reconcile.json()["evidence"]["reconciliation"] == "requested"
+    assert reconcile.json()["reason_code"] == "RUNTIME_SESSION_NOT_BOUND"
     assert duplicate.json() == reconcile.json()
     assert snapshot.status_code == 200
-    assert snapshot.json()["evidence"]["snapshot"] == "requested"
+    assert snapshot.json()["status"] == "rejected"
+    assert snapshot.json()["reason_code"] == "RUNTIME_SESSION_NOT_BOUND"
 
 
 def test_operational_runtime_lifecycle_and_observation_routes() -> None:
@@ -206,7 +207,7 @@ def test_operational_routes_scope_idempotency_by_command_kind() -> None:
     assert pause.status_code == 200
     assert reconcile.status_code == 200
     assert reconcile.json()["idempotency_key"] == "shared-command-key"
-    assert reconcile.json()["evidence"]["reconciliation"] == "requested"
+    assert reconcile.json()["evidence"]["reconciliation"] == "completed"
 
 
 def test_operator_status_route_returns_timestamped_dashboard_dto() -> None:

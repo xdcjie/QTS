@@ -100,19 +100,23 @@ class SimulatedExecutionAdapter:
         treated as a single-tick bar. LIMIT/STOP variants emit an ACCEPTED
         no-fill report when the bar's range did not cross the trigger price.
         Order types that need persistent state (trailing stop, MOO/MOC,
-        iceberg) raise :class:`NotImplementedError` rather than masquerading as
-        market orders.
+        iceberg) return structured ``REJECTED`` reports rather than crashing the
+        actor hot path.
         """
         _ = account_id, strategy_id, client_order_id, correlation_id
         if market_price < Decimal("0"):
             raise ValueError("market_price must be non-negative")
-        self._validate_order(intent)
-
         spec = intent.order_spec
         if spec.order_type in _UNSUPPORTED_SIM_ORDER_TYPES:
-            raise NotImplementedError(
-                f"simulated execution does not yet support {spec.order_type.value} orders"
+            return self._rejected_report(
+                broker_order_id=broker_order_id,
+                reason_code="UNSUPPORTED_ORDER_TYPE",
+                failure_reason=(
+                    f"simulated execution does not support {spec.order_type.value} orders"
+                ),
+                fill_time=bar_time,
             )
+        self._validate_order(intent)
 
         high, low = self._resolve_bar_range(market_price, bar_high, bar_low)
         decision = self._evaluate_fill(
@@ -276,8 +280,23 @@ class SimulatedExecutionAdapter:
         if order_type is OrderType.STOP_LIMIT:
             return self._evaluate_stop_limit(intent, bar_high=bar_high, bar_low=bar_low)
 
-        raise NotImplementedError(
-            f"simulated execution does not yet support {order_type.value} orders"
+        return _FillDecision(triggered=False, fill_price=market_price)
+
+    @staticmethod
+    def _rejected_report(
+        *,
+        broker_order_id: str,
+        reason_code: str,
+        failure_reason: str,
+        fill_time: datetime | None,
+    ) -> ExecutionReport:
+        return ExecutionReport(
+            report_id=f"{broker_order_id}-reject-1",
+            broker_order_id=broker_order_id,
+            status=ExecutionReportStatus.REJECTED,
+            fill_time=fill_time,
+            reason_code=reason_code,
+            failure_reason=failure_reason,
         )
 
     @staticmethod

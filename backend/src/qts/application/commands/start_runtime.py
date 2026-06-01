@@ -45,12 +45,9 @@ class StartRuntimeCommand:
 class RuntimeStartResult:
     """Result of a start-runtime command.
 
-    ``status`` is ``started`` when the command was accepted; ``session`` carries
-    the real :class:`RuntimeSession` only when a session builder was supplied and
-    a session was actually constructed and started. ``evidence`` reports
-    ``session_constructed`` honestly so callers cannot mistake an accepted-but-
-    unbuilt command for a running session. ``order_submission_enabled`` /
-    ``live_order_submission_enabled`` always report the computed gating.
+    ``status`` is ``started`` only when a real :class:`RuntimeSession` was built
+    and started. Sessionless production requests are rejected rather than
+    reported as a soft start.
     """
 
     runtime_mode: RuntimeMode
@@ -66,6 +63,8 @@ class RuntimeStartResult:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "evidence", dict(self.evidence))
+        if self.status == "started" and self.session is None:
+            raise ValueError("started requires a RuntimeSession")
 
 
 def start_runtime(
@@ -73,31 +72,41 @@ def start_runtime(
     *,
     session_builder: RuntimeSessionBuilder | None = None,
 ) -> RuntimeStartResult:
-    """Accept a start-runtime command, constructing a real session when possible.
-
-    When ``session_builder`` is supplied the real :class:`RuntimeSession` is
-    built and started, and the started session is returned on the result with
-    ``session_constructed`` evidence set to ``True``. When no builder is supplied
-    the command is accepted (gating is computed) but no session is built, and the
-    evidence reports ``session_constructed=False`` so callers never mistake the
-    acceptance for a running session.
-    """
+    """Start a runtime only when a real session can be built and started."""
 
     runtime_mode = RuntimeMode.from_value(command.runtime_mode)
     order_submission_enabled = _order_submission_enabled(command)
     live_order_submission_enabled = _live_order_submission_enabled(command)
-    session = None
-    if session_builder is not None:
-        _validate_session_builder(
-            command,
-            session_builder=session_builder,
-            order_submission_enabled=order_submission_enabled,
+    if session_builder is None:
+        return RuntimeStartResult(
+            runtime_mode=runtime_mode,
+            config_ref=command.config_ref,
+            operator_id=command.operator_id,
+            idempotency_key=command.idempotency_key,
+            status="rejected",
+            order_submission_enabled=False,
+            live_order_submission_enabled=False,
+            reason=command.reason,
+            evidence={
+                "runtime_mode": runtime_mode.value,
+                "config_ref": command.config_ref,
+                "operator_id": command.operator_id,
+                "idempotency_key": command.idempotency_key,
+                "reason": command.reason,
+                "startup_gate_checked": command.startup_decision is not None,
+                "session_constructed": False,
+                "construction_reason": "session builder not supplied",
+                "reason_code": "RUNTIME_SESSION_BUILDER_REQUIRED",
+            },
         )
-        session = session_builder.build()
-        session.start()
-        construction_reason = "runtime session constructed and started"
-    else:
-        construction_reason = "session builder not supplied; start command accepted only"
+    _validate_session_builder(
+        command,
+        session_builder=session_builder,
+        order_submission_enabled=order_submission_enabled,
+    )
+    session = session_builder.build()
+    session.start()
+    construction_reason = "runtime session constructed and started"
     return RuntimeStartResult(
         runtime_mode=runtime_mode,
         config_ref=command.config_ref,

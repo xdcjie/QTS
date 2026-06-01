@@ -59,6 +59,16 @@ class FakeControlPlaneSession:
         self.state_value = RuntimeSessionState.RUNNING
         return self.state_value
 
+    def enter_observation(self) -> RuntimeSessionState:
+        self.calls.append("enter_observation")
+        self.state_value = RuntimeSessionState.OBSERVATION
+        return self.state_value
+
+    def exit_observation(self) -> RuntimeSessionState:
+        self.calls.append("exit_observation")
+        self.state_value = RuntimeSessionState.RUNNING
+        return self.state_value
+
     def recover(self) -> RuntimeSessionState:
         self.calls.append("recover")
         self.state_value = RuntimeSessionState.RUNNING
@@ -72,6 +82,10 @@ class FakeControlPlaneSession:
         self.calls.append("activate_kill_switch")
         self.state_value = RuntimeSessionState.STOPPED
         return _FakeKillSwitchEvidence(runtime_state=self.state_value.value)
+
+    def deactivate_kill_switch(self, command: object) -> RuntimeSessionState:
+        self.calls.append("deactivate_kill_switch")
+        return self.state_value
 
 
 def bound_command_executor(

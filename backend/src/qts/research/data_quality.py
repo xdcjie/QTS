@@ -107,7 +107,16 @@ class DataQualityArtifact:
                 )
         artifact = cls(
             dataset_id=dataset_id,
-            accepted=True,
+            accepted=_accepted_from_quality_checks(
+                checked_paths=checked_paths,
+                issues=tuple(issues),
+                duplicate_timestamps=duplicate_timestamps,
+                missing_bars=missing_bars,
+                session_alignment=session_alignment,
+                stale_prices=stale_prices,
+                halted_sessions=halted_sessions,
+                label_visibility=label_visibility,
+            ),
             checked_paths=checked_paths,
             issues=tuple(issues),
             duplicate_timestamps=duplicate_timestamps,
@@ -328,7 +337,16 @@ class DataQualityRunner:
         halted_sessions = int(snapshot.get("halted_sessions", 0) or 0)
         artifact = DataQualityArtifact(
             dataset_id=self.dataset_id,
-            accepted=True,
+            accepted=_accepted_from_quality_checks(
+                checked_paths=checked_paths,
+                issues=tuple(issues),
+                duplicate_timestamps=duplicate_timestamps,
+                missing_bars=missing_bars,
+                session_alignment=session_alignment,
+                stale_prices=stale_prices,
+                halted_sessions=halted_sessions,
+                label_visibility=label_visibility,
+            ),
             checked_paths=checked_paths,
             issues=tuple(issues),
             duplicate_timestamps=duplicate_timestamps,
@@ -602,6 +620,31 @@ def _non_negative_int(value: Any) -> int:
     if result < 0:
         raise ValueError("quality counts must be non-negative")
     return result
+
+
+def _accepted_from_quality_checks(
+    *,
+    checked_paths: tuple[str, ...],
+    issues: tuple[DataQualityIssue, ...],
+    duplicate_timestamps: int,
+    missing_bars: int,
+    session_alignment: bool,
+    stale_prices: int,
+    halted_sessions: int,
+    label_visibility: bool,
+) -> bool:
+    """Derive the data-quality verdict from raw blocker inputs."""
+
+    return (
+        bool(checked_paths)
+        and not any(issue.blocker for issue in issues)
+        and duplicate_timestamps == 0
+        and missing_bars == 0
+        and session_alignment
+        and stale_prices == 0
+        and halted_sessions == 0
+        and label_visibility
+    )
 
 
 def _bool_field(
