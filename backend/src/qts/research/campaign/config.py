@@ -179,8 +179,10 @@ class ResearchCampaignExecution:
     windows: tuple[Mapping[str, str], ...] = ()
     fill_policy: str = "next_bar_open"
     optimistic_fill_waiver: bool = False
+    missing_bar_policy: str = "block"
 
     _DATA_MODES = frozenset({"fixture", "full"})
+    _MISSING_BAR_POLICIES = frozenset({"block", "record_only"})
 
     def __post_init__(self) -> None:
         default_mode = ResearchCampaignConfig.required_text_value(
@@ -217,6 +219,12 @@ class ResearchCampaignExecution:
                 "execution.fill_policy=same_bar_close is optimistic look-ahead and requires "
                 "execution.optimistic_fill_waiver=true"
             )
+        missing_bar_policy = ResearchCampaignConfig.required_text_value(
+            self.missing_bar_policy,
+            "execution.missing_bar_policy",
+        )
+        if missing_bar_policy not in self._MISSING_BAR_POLICIES:
+            raise ValueError("execution.missing_bar_policy must be block or record_only")
         object.__setattr__(self, "default_mode", default_mode)
         object.__setattr__(self, "metrics_source", metrics_source)
         object.__setattr__(self, "data_mode", data_mode)
@@ -225,6 +233,7 @@ class ResearchCampaignExecution:
         object.__setattr__(self, "end", end)
         object.__setattr__(self, "windows", windows)
         object.__setattr__(self, "fill_policy", fill_policy)
+        object.__setattr__(self, "missing_bar_policy", missing_bar_policy)
 
     @classmethod
     def from_payload(cls, payload: Mapping[str, Any]) -> Self:
@@ -257,6 +266,12 @@ class ResearchCampaignExecution:
             fill_policy=cls._optional_text(payload, "execution.fill_policy", "fill_policy")
             or "next_bar_open",
             optimistic_fill_waiver=bool(payload.get("optimistic_fill_waiver", False)),
+            missing_bar_policy=cls._optional_text(
+                payload,
+                "execution.missing_bar_policy",
+                "missing_bar_policy",
+            )
+            or "block",
         )
 
     def to_payload(self) -> dict[str, Any]:
@@ -281,6 +296,8 @@ class ResearchCampaignExecution:
             payload["fill_policy"] = self.fill_policy
         if self.optimistic_fill_waiver:
             payload["optimistic_fill_waiver"] = self.optimistic_fill_waiver
+        if self.missing_bar_policy != "block":
+            payload["missing_bar_policy"] = self.missing_bar_policy
         return payload
 
     @classmethod

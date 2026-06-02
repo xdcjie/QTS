@@ -172,6 +172,29 @@ def test_from_payload_derives_accepted_from_blockers() -> None:
     )
 
 
+def test_from_payload_accepts_record_only_missing_bars() -> None:
+    restored = DataQualityArtifact.from_payload(
+        {
+            "schema_version": 2,
+            "dataset_id": "dataset-001",
+            "accepted": True,
+            "checked_paths": ["datasets/dataset-001/bars.csv"],
+            "issues": [],
+            "duplicate_timestamps": 0,
+            "missing_bars": 3,
+            "missing_bar_policy": "record_only",
+            "session_alignment": True,
+            "stale_prices": 0,
+            "halted_sessions": 0,
+            "label_visibility": True,
+        }
+    )
+
+    assert restored.accepted is True
+    assert restored.missing_bars == 3
+    assert restored.blockers() == ()
+
+
 def test_from_payload_preserves_manual_rejection_as_blocker() -> None:
     restored = DataQualityArtifact.from_payload(
         {

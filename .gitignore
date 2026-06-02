@@ -66,3 +66,4 @@ frontend/tests/routes/
 .code-review-graph/
 evidence/benchmarks/latest.json
 .understand-anything/
+.codegraph/

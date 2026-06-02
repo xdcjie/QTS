@@ -62,6 +62,31 @@ def test_data_quality_runner_detects_duplicate_and_missing_bars(tmp_path: Path) 
     assert {"code": "missing_bars", "message": "missing bars detected: 2"} in artifact.blockers()
 
 
+def test_data_quality_runner_records_trusted_sparse_missing_bars(tmp_path: Path) -> None:
+    bars_path = tmp_path / "bars.csv"
+    bars_path.write_text(
+        "timestamp,close\n"
+        "2026-01-02T14:30:00Z,100\n"
+        "2026-01-02T14:31:00Z,101\n"
+        "2026-01-02T14:34:00Z,103\n",
+        encoding="utf-8",
+    )
+
+    artifact = DataQualityRunner(
+        dataset_id="dataset-001",
+        timeframe="1m",
+        start="2026-01-02T14:30:00Z",
+        end="2026-01-02T14:35:00Z",
+        calendar="TEST",
+        missing_bar_policy="record_only",
+    ).run({"dataset_files": [{"path": str(bars_path), "exists": True}]})
+
+    assert artifact.accepted is True
+    assert artifact.missing_bars == 2
+    assert artifact.missing_bar_policy == "record_only"
+    assert artifact.blockers() == ()
+
+
 def test_data_quality_runner_counts_missing_start_and_end_boundary_bars(
     tmp_path: Path,
 ) -> None:

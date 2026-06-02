@@ -30,6 +30,7 @@ execution:
   metrics_source: backtest_artifacts
   data_mode: fixture
   max_rows: 50
+  missing_bar_policy: record_only
 
 selection:
   selector: CandidateSelector

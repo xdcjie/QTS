@@ -404,6 +404,8 @@ def test_campaign_execution_fill_policy_defaults_to_next_bar_open(tmp_path: Path
     config = ResearchCampaignConfig.from_yaml(campaign_path)
     assert config.execution.fill_policy == "next_bar_open"
     assert "fill_policy" not in config.execution.to_payload()
+    assert config.execution.missing_bar_policy == "block"
+    assert "missing_bar_policy" not in config.execution.to_payload()
 
 
 def test_campaign_execution_same_bar_close_requires_optimistic_waiver(tmp_path: Path) -> None:
@@ -430,6 +432,28 @@ def test_campaign_execution_fill_policy_same_bar_close_override(tmp_path: Path) 
 def test_campaign_execution_rejects_unknown_fill_policy(tmp_path: Path) -> None:
     campaign_path = _write_campaign(tmp_path, {"execution": {"fill_policy": "teleport"}})
     with pytest.raises(ValueError, match="fill_policy"):
+        ResearchCampaignConfig.from_yaml(campaign_path)
+
+
+def test_campaign_execution_accepts_record_only_missing_bar_policy(tmp_path: Path) -> None:
+    campaign_path = _write_campaign(
+        tmp_path,
+        {"execution": {"missing_bar_policy": "record_only"}},
+    )
+
+    config = ResearchCampaignConfig.from_yaml(campaign_path)
+
+    assert config.execution.missing_bar_policy == "record_only"
+    assert config.execution.to_payload()["missing_bar_policy"] == "record_only"
+
+
+def test_campaign_execution_rejects_unknown_missing_bar_policy(tmp_path: Path) -> None:
+    campaign_path = _write_campaign(
+        tmp_path,
+        {"execution": {"missing_bar_policy": "ignore"}},
+    )
+
+    with pytest.raises(ValueError, match="missing_bar_policy"):
         ResearchCampaignConfig.from_yaml(campaign_path)
 
 

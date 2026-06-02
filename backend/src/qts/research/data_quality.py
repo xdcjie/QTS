@@ -18,6 +18,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+_MISSING_BAR_POLICIES = frozenset({"block", "record_only"})
+
 
 @dataclass(frozen=True, slots=True)
 class DataQualityIssue:
@@ -67,6 +69,7 @@ class DataQualityArtifact:
     stale_prices: int = 0
     halted_sessions: int = 0
     label_visibility: bool = True
+    missing_bar_policy: str = "block"
     schema_version: int = field(default=2, init=False)
 
     def __post_init__(self) -> None:
@@ -82,6 +85,11 @@ class DataQualityArtifact:
         ):
             if int(value) < 0:
                 raise ValueError(f"{field_name} must be non-negative")
+        object.__setattr__(
+            self,
+            "missing_bar_policy",
+            _missing_bar_policy(self.missing_bar_policy),
+        )
 
     @classmethod
     def from_dataset_snapshot(cls, snapshot: Mapping[str, Any]) -> DataQualityArtifact:
@@ -95,6 +103,7 @@ class DataQualityArtifact:
         stale_prices = _non_negative_int(snapshot.get("stale_prices", 0))
         halted_sessions = _non_negative_int(snapshot.get("halted_sessions", 0))
         label_visibility = _bool_field(snapshot, "label_visibility", default=True)
+        missing_bar_policy = _missing_bar_policy(snapshot.get("missing_bar_policy", "block"))
         issues = list(_issues(snapshot.get("issues", ())))
 
         for checked_path in checked_paths:
@@ -116,6 +125,7 @@ class DataQualityArtifact:
                 stale_prices=stale_prices,
                 halted_sessions=halted_sessions,
                 label_visibility=label_visibility,
+                missing_bar_policy=missing_bar_policy,
             ),
             checked_paths=checked_paths,
             issues=tuple(issues),
@@ -125,6 +135,7 @@ class DataQualityArtifact:
             stale_prices=stale_prices,
             halted_sessions=halted_sessions,
             label_visibility=label_visibility,
+            missing_bar_policy=missing_bar_policy,
         )
         return cls(
             dataset_id=artifact.dataset_id,
@@ -137,6 +148,7 @@ class DataQualityArtifact:
             stale_prices=artifact.stale_prices,
             halted_sessions=artifact.halted_sessions,
             label_visibility=artifact.label_visibility,
+            missing_bar_policy=artifact.missing_bar_policy,
         )
 
     @classmethod
@@ -163,6 +175,7 @@ class DataQualityArtifact:
             stale_prices=_non_negative_int(payload.get("stale_prices", 0)),
             halted_sessions=_non_negative_int(payload.get("halted_sessions", 0)),
             label_visibility=_bool_field(payload, "label_visibility", default=True),
+            missing_bar_policy=_missing_bar_policy(payload.get("missing_bar_policy", "block")),
         )
         return cls(
             dataset_id=artifact.dataset_id,
@@ -175,6 +188,7 @@ class DataQualityArtifact:
             stale_prices=artifact.stale_prices,
             halted_sessions=artifact.halted_sessions,
             label_visibility=artifact.label_visibility,
+            missing_bar_policy=artifact.missing_bar_policy,
         )
 
     def blockers(self) -> tuple[dict[str, str], ...]:
@@ -209,6 +223,7 @@ class DataQualityArtifact:
             "issues": [issue.to_payload() for issue in self.issues],
             "label_visibility": self.label_visibility,
             "missing_bars": self.missing_bars,
+            "missing_bar_policy": self.missing_bar_policy,
             "schema_version": self.schema_version,
             "session_alignment": self.session_alignment,
             "stale_prices": self.stale_prices,
@@ -240,7 +255,7 @@ class DataQualityArtifact:
                     message=f"duplicate timestamps detected: {self.duplicate_timestamps}",
                 )
             )
-        if self.missing_bars:
+        if self.missing_bars and self.missing_bar_policy == "block":
             issues.append(
                 DataQualityIssue(
                     code="missing_bars",
@@ -289,6 +304,7 @@ class DataQualityRunner:
     calendar: str | None = None
     stale_price_max_repeats: int | None = None
     windows: tuple[Mapping[str, str], ...] = ()
+    missing_bar_policy: str = "block"
 
     def __post_init__(self) -> None:
         if not self.dataset_id.strip():
@@ -299,6 +315,11 @@ class DataQualityRunner:
             raise ValueError("calendar is required when provided")
         if self.stale_price_max_repeats is not None and self.stale_price_max_repeats < 1:
             raise ValueError("stale_price_max_repeats must be positive")
+        object.__setattr__(
+            self,
+            "missing_bar_policy",
+            _missing_bar_policy(self.missing_bar_policy),
+        )
         self._validated_windows()
 
     def run(self, snapshot: Mapping[str, Any]) -> DataQualityArtifact:
@@ -346,6 +367,7 @@ class DataQualityRunner:
                 stale_prices=stale_prices,
                 halted_sessions=halted_sessions,
                 label_visibility=label_visibility,
+                missing_bar_policy=self.missing_bar_policy,
             ),
             checked_paths=checked_paths,
             issues=tuple(issues),
@@ -355,6 +377,7 @@ class DataQualityRunner:
             stale_prices=stale_prices,
             halted_sessions=halted_sessions,
             label_visibility=label_visibility,
+            missing_bar_policy=self.missing_bar_policy,
         )
         return DataQualityArtifact(
             dataset_id=artifact.dataset_id,
@@ -367,6 +390,7 @@ class DataQualityRunner:
             stale_prices=artifact.stale_prices,
             halted_sessions=artifact.halted_sessions,
             label_visibility=artifact.label_visibility,
+            missing_bar_policy=artifact.missing_bar_policy,
         )
 
     def _checked_paths(self, snapshot: Mapping[str, Any]) -> tuple[str, ...]:
@@ -632,6 +656,7 @@ def _accepted_from_quality_checks(
     stale_prices: int,
     halted_sessions: int,
     label_visibility: bool,
+    missing_bar_policy: str,
 ) -> bool:
     """Derive the data-quality verdict from raw blocker inputs."""
 
@@ -639,12 +664,21 @@ def _accepted_from_quality_checks(
         bool(checked_paths)
         and not any(issue.blocker for issue in issues)
         and duplicate_timestamps == 0
-        and missing_bars == 0
+        and (missing_bars == 0 or missing_bar_policy == "record_only")
         and session_alignment
         and stale_prices == 0
         and halted_sessions == 0
         and label_visibility
     )
+
+
+def _missing_bar_policy(value: Any) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("missing_bar_policy is required")
+    policy = value.strip()
+    if policy not in _MISSING_BAR_POLICIES:
+        raise ValueError(f"missing_bar_policy must be one of {sorted(_MISSING_BAR_POLICIES)}")
+    return policy
 
 
 def _bool_field(

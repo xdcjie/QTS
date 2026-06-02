@@ -935,25 +935,30 @@ def _manifest_payload(
         if execution_windows
         else [data_window]
     )
+    data_payload: dict[str, Any] = {
+        "calendar": run.calendar,
+        "checked_paths": list(checked_paths),
+        "dataset_id": run.dataset_id,
+        "end": data_window["end"],
+        "materialization": {
+            "data_mode": (
+                None if run.campaign_config is None else run.campaign_config.execution.data_mode
+            ),
+            "max_rows": (
+                None if run.campaign_config is None else run.campaign_config.execution.max_rows
+            ),
+        },
+        "start": data_window["start"],
+        "timeframe": run.timeframe,
+        "windows": data_windows,
+    }
+    if execution is not None and execution.missing_bar_policy != "block":
+        data_payload["quality"] = {
+            "missing_bar_policy": execution.missing_bar_policy,
+        }
     return {
         "campaign_id": run.campaign_id,
-        "data": {
-            "calendar": run.calendar,
-            "checked_paths": list(checked_paths),
-            "dataset_id": run.dataset_id,
-            "end": data_window["end"],
-            "materialization": {
-                "data_mode": (
-                    None if run.campaign_config is None else run.campaign_config.execution.data_mode
-                ),
-                "max_rows": (
-                    None if run.campaign_config is None else run.campaign_config.execution.max_rows
-                ),
-            },
-            "start": data_window["start"],
-            "timeframe": run.timeframe,
-            "windows": data_windows,
-        },
+        "data": data_payload,
         "run": {
             "created_at": support._clock.now().isoformat(),
             "id": run.campaign_id,

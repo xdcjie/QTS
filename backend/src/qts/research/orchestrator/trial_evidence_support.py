@@ -206,6 +206,7 @@ class TrialEvidenceSupport:
         manifest_hash: str,
     ) -> dict[str, Any]:
         data = _mapping(job.manifest_payload.get("data", {}), "data")
+        quality = _mapping(data.get("quality", {}), "data.quality")
         checked_paths = self._data_quality_checked_paths(job, trial)
         artifact = DataQualityRunner(
             dataset_id=str(data.get("dataset_id", job.job_id)),
@@ -214,6 +215,7 @@ class TrialEvidenceSupport:
             end=None if data.get("end") is None else str(data["end"]),
             calendar=None if data.get("calendar") is None else str(data["calendar"]),
             windows=_data_quality_windows(data.get("windows", ())),
+            missing_bar_policy=str(quality.get("missing_bar_policy", "block")),
         ).run({"checked_paths": checked_paths})
         result = DataQualityArtifactWriter(trial_dir).write(artifact)
         payload = json.loads(result.path.read_text(encoding="utf-8"))
