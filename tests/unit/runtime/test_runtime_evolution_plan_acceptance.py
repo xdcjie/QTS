@@ -163,26 +163,26 @@ def test_runtime_session_canonical_names_are_mode_neutral() -> None:
 
 
 def test_transport_canonical_modules_are_under_transports() -> None:
-    from qts.data.transports.ib_async_market_data_transport import IbAsyncMarketDataTransport
     from qts.data.transports.ibkr_tws_market_data_transport import IbkrTwsMarketDataTransport
-    from qts.execution.transports.ib_async_order_execution_transport import (
-        IbAsyncOrderExecutionTransport,
-    )
     from qts.execution.transports.ibkr_tws_order_execution_transport import (
         IbkrTwsOrderExecutionTransport,
+    )
+    from qts.experimental.ibkr.ib_async_market_data_transport import IbAsyncMarketDataTransport
+    from qts.experimental.ibkr.ib_async_order_execution_transport import (
+        IbAsyncOrderExecutionTransport,
     )
 
     assert IbkrTwsMarketDataTransport.__module__ == (
         "qts.data.transports.ibkr_tws_market_data_transport"
     )
     assert IbAsyncMarketDataTransport.__module__ == (
-        "qts.data.transports.ib_async_market_data_transport"
+        "qts.experimental.ibkr.ib_async_market_data_transport"
     )
     assert IbkrTwsOrderExecutionTransport.__module__ == (
         "qts.execution.transports.ibkr_tws_order_execution_transport"
     )
     assert IbAsyncOrderExecutionTransport.__module__ == (
-        "qts.execution.transports.ib_async_order_execution_transport"
+        "qts.experimental.ibkr.ib_async_order_execution_transport"
     )
 
 

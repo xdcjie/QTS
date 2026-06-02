@@ -1140,7 +1140,7 @@ def test_default_guardrails_reject_removed_transport_import_usage(
     _write(
         root,
         "backend/src/qts/execution/adapters/ibkr_async_transport.py",
-        "from qts.execution.transports.ib_async_order_execution_transport import "
+        "from qts.experimental.ibkr.ib_async_order_execution_transport import "
         "IbAsyncOrderExecutionTransport\n",
     )
 
@@ -1228,6 +1228,17 @@ def test_guardrails_reject_provider_sdk_import_in_runtime(tmp_path: Path) -> Non
     )
 
     assert _codes(root) == {"PROVIDER_SDK_IMPORT"}
+
+
+def test_guardrails_allow_provider_sdk_import_in_experimental_ibkr(tmp_path: Path) -> None:
+    root = tmp_path
+    _write(
+        root,
+        "backend/src/qts/experimental/ibkr/validation_transport.py",
+        "from ib_async import IB\n",
+    )
+
+    assert "PROVIDER_SDK_IMPORT" not in _codes(root)
 
 
 def test_guardrails_reject_research_run_research_scripts(tmp_path: Path) -> None:

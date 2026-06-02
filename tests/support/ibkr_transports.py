@@ -115,7 +115,7 @@ def market_data_transport(
     market_data_type: int = 3,
 ) -> IbkrGatewayMarketDataTransport:
     if transport_name == "async":
-        from qts.data.transports.ib_async_market_data_transport import (
+        from qts.experimental.ibkr.ib_async_market_data_transport import (
             IbAsyncMarketDataTransport,
             IbAsyncMarketDataTransportConfig,
         )
@@ -158,7 +158,7 @@ def order_execution_transport(
     timeout_seconds: float = 25,
 ) -> IbkrGatewayOrderExecutionTransport:
     if transport_name == "async":
-        from qts.execution.transports.ib_async_order_execution_transport import (
+        from qts.experimental.ibkr.ib_async_order_execution_transport import (
             IbAsyncOrderExecutionTransport,
             IbAsyncOrderExecutionTransportConfig,
         )

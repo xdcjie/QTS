@@ -12,13 +12,13 @@ Selected Python clients:
 
 - default: the official Interactive Brokers TWS API Python client distributed
   with the IBKR TWS API download;
-- alternate validation path: `ib_async`, exposed through separate transport
-  modules with the same adapter-facing contracts.
+- alternate validation path: `ib_async`, exposed under `qts.experimental.ibkr`
+  with the same adapter-facing contracts.
 
 Both SDKs are exposed to this codebase only from IBKR transport modules.
-Selection must be explicit through configuration or test parameters. Runtime
-configuration uses `transport: official` or `transport: async`; real Gateway
-anchors use `--ibkr-transport=official` or `--ibkr-transport=async`. The default
+Selection must be explicit through configuration or test parameters. Production
+runtime configuration uses `transport: official`; real Gateway anchors may use
+`--ibkr-transport=async` only as experimental validation. The production default
 remains `official`.
 
 Rationale:
@@ -43,10 +43,9 @@ Dependency decision for this milestone:
   distribution as the direct TWS API download. The official source URL, version,
   ZIP subdirectory, and SHA256 are recorded in `pyproject.toml` under
   `tool.qts.ibkr_api`; deployments install it with `make install-ibkr-api`.
-- Include `ib-async` in `project.dependencies` as a supported alternate SDK for
-  independent Gateway validation and operational cross-checks. Its imports must
-  stay isolated inside `qts.data.transports.ib_async_market_data_transport` and
-  `qts.execution.transports.ib_async_order_execution_transport`.
+- Include `ib-async` in `project.dependencies` as an experimental alternate SDK
+  for independent Gateway validation and operational cross-checks. Its imports
+  must stay isolated inside `qts.experimental.ibkr` modules.
 
 The actual SDK imports must stay isolated inside `qts.data.adapters` or
 `qts.execution.adapters` transport modules when enabled, so core domain,

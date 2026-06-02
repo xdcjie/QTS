@@ -114,6 +114,7 @@ BROKER_FACT_ALLOWED_PREFIXES = (
     ("data", "transports"),
     ("execution", "adapters"),
     ("execution", "transports"),
+    ("experimental", "ibkr"),
     ("application", "commands"),
 )
 BROKER_SYMBOL_MAPPING_ALLOWED_PREFIXES = (
@@ -127,6 +128,7 @@ PROVIDER_SDK_ALLOWED_PREFIXES = (
     ("data", "transports"),
     ("execution", "adapters"),
     ("execution", "transports"),
+    ("experimental", "ibkr"),
 )
 BROKER_ADAPTER_FORBIDDEN_IMPORT_PREFIXES = (
     "qts.portfolio",

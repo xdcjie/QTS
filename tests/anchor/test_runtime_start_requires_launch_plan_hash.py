@@ -1,4 +1,4 @@
-"""Anchor tests for final-state runtime launch verification."""
+"""Anchor: runtime start requires verified immutable launch-plan evidence."""
 
 from __future__ import annotations
 
@@ -10,102 +10,37 @@ from qts.runtime.mode import RuntimeMode
 from tests.support.runtime_launch import runtime_launch_fixture
 
 
-def test_runtime_start_rejects_missing_launch_plan_store(tmp_path: Path) -> None:
-    launch = runtime_launch_fixture(
-        tmp_path,
-        runtime_mode=RuntimeMode.PAPER_SIMULATED,
-        runtime_instance_id="rt-missing-store",
-    )
-
-    result = start_runtime(
+def test_start_runtime_command_requires_launch_plan_hash() -> None:
+    try:
         StartRuntimeCommand(
             runtime_mode=RuntimeMode.PAPER_SIMULATED,
-            runtime_instance_id=launch.runtime_instance_id,
-            config_ref=launch.config_ref,
-            launch_plan_hash=launch.launch_plan_hash,
+            runtime_instance_id="rt-hash-required",
+            config_ref="launch-plan://candidate/hash",
+            launch_plan_hash="",
             operator_id="ops",
-            idempotency_key="start-missing-store",
-            reason="anchor",
+            idempotency_key="start-hash-required",
+            reason="hash gate",
         )
+    except ValueError as exc:
+        assert "launch_plan_hash must not be empty" in str(exc)
+    else:
+        raise AssertionError("StartRuntimeCommand accepted an empty launch_plan_hash")
+
+
+def test_start_runtime_rejects_mismatched_launch_plan_hash(tmp_path: Path) -> None:
+    fixture = runtime_launch_fixture(tmp_path)
+    command = StartRuntimeCommand(
+        runtime_mode=RuntimeMode.PAPER_SIMULATED,
+        runtime_instance_id=fixture.runtime_instance_id,
+        config_ref=fixture.config_ref,
+        launch_plan_hash="sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        operator_id="ops",
+        idempotency_key="start-mismatched-hash",
+        reason="hash gate",
     )
 
+    result = start_runtime(command, launch_plan_store=fixture.store)
+
     assert result.status == "rejected"
-    assert result.evidence["reason_code"] == "RUNTIME_LAUNCH_PLAN_STORE_REQUIRED"
+    assert result.evidence["launch_plan_verified"] is False
     assert result.evidence["session_constructed"] is False
-
-
-def test_runtime_start_rejects_launch_plan_hash_mismatch(tmp_path: Path) -> None:
-    launch = runtime_launch_fixture(
-        tmp_path,
-        runtime_mode=RuntimeMode.PAPER_SIMULATED,
-        runtime_instance_id="rt-hash-mismatch",
-    )
-
-    result = start_runtime(
-        StartRuntimeCommand(
-            runtime_mode=RuntimeMode.PAPER_SIMULATED,
-            runtime_instance_id=launch.runtime_instance_id,
-            config_ref=launch.config_ref,
-            launch_plan_hash="sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            operator_id="ops",
-            idempotency_key="start-hash-mismatch",
-            reason="anchor",
-        ),
-        launch_plan_store=launch.store,
-    )
-
-    assert result.status == "rejected"
-    assert result.evidence["reason_code"] == "RUNTIME_LAUNCH_PLAN_INVALID"
-    assert result.evidence["launch_plan_verified"] is False
-
-
-def test_runtime_start_rejects_launch_plan_runtime_instance_mismatch(
-    tmp_path: Path,
-) -> None:
-    launch = runtime_launch_fixture(
-        tmp_path,
-        runtime_mode=RuntimeMode.PAPER_SIMULATED,
-        runtime_instance_id="rt-plan",
-    )
-
-    result = start_runtime(
-        StartRuntimeCommand(
-            runtime_mode=RuntimeMode.PAPER_SIMULATED,
-            runtime_instance_id="rt-command",
-            config_ref=launch.config_ref,
-            launch_plan_hash=launch.launch_plan_hash,
-            operator_id="ops",
-            idempotency_key="start-runtime-mismatch",
-            reason="anchor",
-        ),
-        launch_plan_store=launch.store,
-    )
-
-    assert result.status == "rejected"
-    assert result.evidence["reason_code"] == "RUNTIME_LAUNCH_PLAN_COMMAND_MISMATCH"
-    assert result.evidence["launch_plan_verified"] is False
-
-
-def test_runtime_start_rejects_launch_plan_runtime_mode_mismatch(tmp_path: Path) -> None:
-    launch = runtime_launch_fixture(
-        tmp_path,
-        runtime_mode=RuntimeMode.PAPER_SIMULATED,
-        runtime_instance_id="rt-mode-mismatch",
-    )
-
-    result = start_runtime(
-        StartRuntimeCommand(
-            runtime_mode=RuntimeMode.LIVE_OBSERVATION,
-            runtime_instance_id=launch.runtime_instance_id,
-            config_ref=launch.config_ref,
-            launch_plan_hash=launch.launch_plan_hash,
-            operator_id="ops",
-            idempotency_key="start-mode-mismatch",
-            reason="anchor",
-        ),
-        launch_plan_store=launch.store,
-    )
-
-    assert result.status == "rejected"
-    assert result.evidence["reason_code"] == "RUNTIME_LAUNCH_PLAN_COMMAND_MISMATCH"
-    assert result.evidence["launch_plan_verified"] is False

@@ -11,6 +11,17 @@ from pathlib import Path
 from qts.quality.guardrails import GuardrailViolation
 
 _DEFERRAL_PATTERN = re.compile(r"^(?P<symbol>\S+)\s+expires=\d{4}-\d{2}-\d{2}\s+target=production$")
+_SUBSYSTEM_DEFERRAL_PATTERN = re.compile(
+    r"^(?P<symbol>\S+)\s+expires=\d{4}-\d{2}-\d{2}\s+target=subsystem$"
+)
+_SUBSYSTEM_DECISION_PATTERN = re.compile(
+    r"^\|\s*`(?P<symbol>[^`]+)`\s*\|\s*"
+    r"(?P<decision>keep-owned|wire-entrypoint|move-experimental|delete)\s*\|\s*"
+    r"(?P<owner>[^|]+?)\s*\|\s*(?P<evidence>[^|]+?)\s*\|"
+)
+_VALID_SUBSYSTEM_DECISIONS = frozenset(
+    {"keep-owned", "wire-entrypoint", "move-experimental", "delete"}
+)
 _LIFECYCLE_ROUTE_RESPONSE_PATTERN = re.compile(
     r"@router\.post\(\"/runtime/(?:start|stop|pause|resume|enter-observation|exit-observation)\","
     r"\s*response_model=RuntimeCommandResponseSchema"
@@ -37,9 +48,12 @@ class FinalReadinessRuleSet:
 
         checks: tuple[Iterable[GuardrailViolation], ...] = (
             self._production_wiring_deferrals(repo_root),
+            self._subsystem_deferral_owner_use(repo_root),
             self._runtime_start_contract(repo_root),
             self._operator_lifecycle_routes(repo_root),
             self._walk_forward_writer_ownership(repo_root),
+            self._canonical_no_lookahead_artifact_path(repo_root),
+            self._canonical_boundary_docs(repo_root),
             self._hot_path_not_implemented(repo_root),
             self._actor_ask_bounded(repo_root),
             self._shared_cost_model_naming(repo_root),
@@ -69,6 +83,75 @@ class FinalReadinessRuleSet:
                     symbol=match.group("symbol"),
                 )
             )
+        return violations
+
+    def _subsystem_deferral_owner_use(self, repo_root: Path) -> list[GuardrailViolation]:
+        path = repo_root / "docs/plan/wiring_deferrals.md"
+        if not path.exists():
+            return []
+        lines = path.read_text(encoding="utf-8").splitlines()
+        subsystem_lines: dict[str, int] = {}
+        for line_no, line in enumerate(lines, start=1):
+            match = _SUBSYSTEM_DEFERRAL_PATTERN.match(line.strip())
+            if match is not None:
+                subsystem_lines[match.group("symbol")] = line_no
+        decisions: dict[str, tuple[str, str, str, int]] = {}
+        for line_no, line in enumerate(lines, start=1):
+            match = _SUBSYSTEM_DECISION_PATTERN.match(line.strip())
+            if match is None:
+                continue
+            decisions[match.group("symbol")] = (
+                match.group("decision").strip(),
+                match.group("owner").strip(),
+                match.group("evidence").strip(),
+                line_no,
+            )
+        violations: list[GuardrailViolation] = []
+        for symbol, line_no in subsystem_lines.items():
+            decision = decisions.get(symbol)
+            if decision is None:
+                violations.append(
+                    GuardrailViolation(
+                        code="FINAL_SUBSYSTEM_DEFERRAL_UNOWNED",
+                        path=str(path.relative_to(repo_root)),
+                        line=line_no,
+                        message="target=subsystem deferral requires an owner-use decision row",
+                        symbol=symbol,
+                    )
+                )
+                continue
+            decision_value, owner, evidence, decision_line = decision
+            if decision_value not in _VALID_SUBSYSTEM_DECISIONS or not owner or not evidence:
+                violations.append(
+                    GuardrailViolation(
+                        code="FINAL_SUBSYSTEM_DEFERRAL_UNOWNED",
+                        path=str(path.relative_to(repo_root)),
+                        line=decision_line,
+                        message="target=subsystem decision must name owner and evidence",
+                        symbol=symbol,
+                    )
+                )
+            elif "tbd" in owner.lower() or "tbd" in evidence.lower():
+                violations.append(
+                    GuardrailViolation(
+                        code="FINAL_SUBSYSTEM_DEFERRAL_UNOWNED",
+                        path=str(path.relative_to(repo_root)),
+                        line=decision_line,
+                        message="target=subsystem owner-use evidence cannot be TBD",
+                        symbol=symbol,
+                    )
+                )
+        for symbol, (_decision, _owner, _evidence, line_no) in decisions.items():
+            if symbol not in subsystem_lines:
+                violations.append(
+                    GuardrailViolation(
+                        code="FINAL_SUBSYSTEM_DEFERRAL_STALE_DECISION",
+                        path=str(path.relative_to(repo_root)),
+                        line=line_no,
+                        message="subsystem deferral decision has no live target=subsystem entry",
+                        symbol=symbol,
+                    )
+                )
         return violations
 
     def _runtime_start_contract(self, repo_root: Path) -> list[GuardrailViolation]:
@@ -158,6 +241,53 @@ class FinalReadinessRuleSet:
                                         repo_root=repo_root,
                                     )
                                 )
+        return violations
+
+    def _canonical_no_lookahead_artifact_path(self, repo_root: Path) -> list[GuardrailViolation]:
+        forbidden_paths = (
+            repo_root / "backend/src/qts/research/validation.py",
+            repo_root / "backend/src/qts/research/__init__.py",
+            repo_root / "docs/plan/wiring_deferrals.md",
+        )
+        violations: list[GuardrailViolation] = []
+        for path in forbidden_paths:
+            source = self._read_text(path)
+            if "NoLookaheadArtifactWriter" not in source:
+                continue
+            violations.append(
+                self._violation(
+                    path,
+                    self._line_of(source, "NoLookaheadArtifactWriter"),
+                    "FINAL_DUPLICATE_NO_LOOKAHEAD_WRITER",
+                    "canonical no-lookahead artifacts must flow through "
+                    "NoLookaheadValidationArtifact and ValidationArtifactWriter",
+                    "NoLookaheadArtifactWriter",
+                    repo_root=repo_root,
+                )
+            )
+        return violations
+
+    def _canonical_boundary_docs(self, repo_root: Path) -> list[GuardrailViolation]:
+        required_docs = {
+            Path("docs/architecture/broker_adapters.md"): "Canonical IBKR stack",
+            Path("docs/architecture/replay_data_flow.md"): "Canonical replay flow",
+            Path("docs/architecture/reporting_boundary.md"): "Machine artifacts",
+        }
+        violations: list[GuardrailViolation] = []
+        for relative, marker in required_docs.items():
+            path = repo_root / relative
+            source = self._read_text(path)
+            if marker in source:
+                continue
+            violations.append(
+                GuardrailViolation(
+                    code="FINAL_CANONICAL_BOUNDARY_DOC_MISSING",
+                    path=str(relative),
+                    line=1,
+                    message=f"final-readiness requires canonical boundary doc marker: {marker}",
+                    symbol=marker,
+                )
+            )
         return violations
 
     def _hot_path_not_implemented(self, repo_root: Path) -> list[GuardrailViolation]:
@@ -251,14 +381,26 @@ class FinalReadinessRuleSet:
 
     def _required_final_tests(self, repo_root: Path) -> list[GuardrailViolation]:
         required_paths = (
+            Path("tests/unit/docs/test_wiring_deferrals_have_deletion_decisions.py"),
+            Path("tests/unit/quality/test_subsystem_deferrals_require_owner_use.py"),
+            Path("tests/unit/quality/test_validation_writer_is_wrapper_only.py"),
+            Path("tests/unit/quality/test_no_backtest_named_runtime_shared_concepts.py"),
+            Path("tests/unit/backtest/test_contract_economics_manifest_hash.py"),
             Path("tests/integration/test_catalog_futures_margin_enforced.py"),
             Path("tests/integration/test_operator_command_targets_registered_runtime.py"),
             Path("tests/integration/test_operations_unbound_lifecycle_returns_rejected.py"),
             Path("tests/integration/test_promotion_to_paper_runtime_config.py"),
+            Path("tests/integration/test_start_registers_runtime_session.py"),
             Path("tests/anchor/test_runtime_start_requires_launch_plan_hash.py"),
+            Path("tests/anchor/test_futures_margin_backtest_paper_parity.py"),
             Path("tests/anchor/test_multi_account_final_readiness_gate.py"),
             Path("tests/unit/research/orchestrator/test_walk_forward_validation_artifact.py"),
             Path("tests/unit/quality/test_final_readiness_rule_set.py"),
+            Path("tests/integration/test_research_quickstart_workflow.py"),
+            Path("tests/integration/test_research_workflow_backtest_optimize_smoke.py"),
+            Path("tests/unit/docs/test_automated_research_runbook.py"),
+            Path("tests/unit/research/test_research_run_index.py"),
+            Path("tests/unit/research/test_run_research_implementation_cli.py"),
         )
         return [
             GuardrailViolation(

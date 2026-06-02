@@ -1,0 +1,22 @@
+# Research-only factor evaluation template. Fill in snapshot paths after human
+# review; this workflow does not generate executable code or promotion packets.
+
+version: 1
+workflow_id: factor-only-template
+steps:
+  - id: evaluate
+    kind: factor_evaluation
+    factor_name: reviewed_factor_name
+    factor_version: "1"
+    output_dir: ../../../runs/research/factor-only/evaluations
+    snapshots: []
+
+  - id: tearsheet
+    kind: factor_tearsheet
+    experiment_id: reviewed-factor-tearsheet
+    artifact_paths: []
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/factor-only/reports
+

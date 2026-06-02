@@ -1,26 +1,16 @@
 # Quickstart gate-based research workflow for scripts/run_research.py.
 #
-# The workflow can advance research evidence, but it intentionally stops at
-# review and implementation gates. Accepted specs are not runtime promotion.
+# This runnable smoke starts at reviewed implementation evidence so it can
+# complete deterministically from a clean checkout. Factor discovery/review
+# templates live beside this file and remain research-only.
 
 version: 1
 workflow_id: quickstart-momentum-review
 steps:
-  - id: discover
-    kind: factor_candidates
-    query: "commodity futures momentum carry volatility"
-    sources: [semantic_scholar, openalex, crossref, arxiv]
-    max_results: 5
-    from_year: 2015
-
-  - id: review
-    kind: factor_review_gate
-    status: accepted
-    min_count: 1
-    on_fail: stop
-
   - id: implementation
     kind: implementation_gate
+    required_modules:
+      - examples.strategies.gc_si_momentum
     required_strategy: examples.strategies.gc_si_momentum:GcSiMomentumStrategy
     on_fail: stop
 
@@ -32,7 +22,12 @@ steps:
 
   - id: optimize
     kind: optimize
-    objective_metric: sharpe_ratio
+    objective_metric: total_return
+    validation_output: ../../../runs/research/quickstart/validation/optimizer-summary.json
     parameters:
       short_window: [1, 2]
       long_window: [2, 3]
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/quickstart/reports

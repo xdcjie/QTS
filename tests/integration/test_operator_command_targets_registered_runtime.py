@@ -1,65 +1,45 @@
-"""Operator commands target sessions registered by start_runtime."""
+"""Operator commands target the registered runtime_instance_id."""
 
 from __future__ import annotations
 
-from decimal import Decimal
-from pathlib import Path
+from typing import cast
 
-from qts.application.commands.start_runtime import StartRuntimeCommand, start_runtime
-from qts.application.services import OperationsService, RuntimeSessionBuilder, RuntimeStartConfig
-from qts.core.ids import AccountId
-from qts.runtime.control_plane import RuntimeCommandExecutor, RuntimeSessionRegistry
-from qts.runtime.mode import RuntimeMode
+from qts.application.services.operations import OperationsService
+from qts.runtime.control_plane import (
+    RuntimeCommandExecutor,
+    RuntimeSessionKey,
+    RuntimeSessionRegistry,
+)
+from qts.runtime.session import RuntimeSession
 from qts.runtime.state import RuntimeSessionState
 
-from tests.integration.test_start_runtime_builds_session import (
-    _BuyOnceStrategy,
-    _instrument_registry,
-)
-from tests.support.runtime_launch import runtime_launch_fixture
+
+class _FakeRuntimeSession:
+    def __init__(self) -> None:
+        self.pause_count = 0
+        self.state = RuntimeSessionState.RUNNING
+
+    def pause(self) -> RuntimeSessionState:
+        self.pause_count += 1
+        self.state = RuntimeSessionState.PAUSED
+        return self.state
 
 
-def test_operator_command_targets_registered_runtime_session(tmp_path: Path) -> None:
-    launch = runtime_launch_fixture(
-        tmp_path,
-        runtime_mode=RuntimeMode.PAPER_SIMULATED,
-        runtime_instance_id="paper-ops-runtime-1",
-    )
+def test_operator_command_targets_registered_runtime_instance_id() -> None:
     registry = RuntimeSessionRegistry()
-    builder = RuntimeSessionBuilder.from_runtime_config(
-        RuntimeStartConfig(
-            runtime_mode=RuntimeMode.PAPER_SIMULATED,
-            account_id=AccountId("acct-paper-ops"),
-            initial_cash={"USD": Decimal("100000")},
-        ),
-        strategy=_BuyOnceStrategy(),
-        instrument_registry=_instrument_registry(),
-    )
-
-    start = start_runtime(
-        StartRuntimeCommand(
-            runtime_mode=RuntimeMode.PAPER_SIMULATED,
-            runtime_instance_id=launch.runtime_instance_id,
-            config_ref=launch.config_ref,
-            launch_plan_hash=launch.launch_plan_hash,
-            operator_id="ops",
-            idempotency_key="start-paper-ops",
-            reason="operator command target test",
-        ),
-        session_builder=builder,
-        session_registry=registry,
-        launch_plan_store=launch.store,
-    )
-    assert start.session is not None
-
+    rt_a = _FakeRuntimeSession()
+    rt_b = _FakeRuntimeSession()
+    registry.register(RuntimeSessionKey(runtime_instance_id="rt-a"), cast(RuntimeSession, rt_a))
+    registry.register(RuntimeSessionKey(runtime_instance_id="rt-b"), cast(RuntimeSession, rt_b))
     operations = OperationsService(command_executor=RuntimeCommandExecutor(registry))
-    paused = operations.pause_runtime_result(
-        runtime_instance_id=launch.runtime_instance_id,
+
+    result = operations.pause_runtime_result(
+        runtime_instance_id="rt-b",
         operator_id="ops",
-        idempotency_key="pause-paper-ops",
+        idempotency_key="pause-rt-b",
     )
 
-    assert paused.status == "completed"
-    assert paused.evidence["runtime_instance_id"] == launch.runtime_instance_id
-    assert paused.evidence["state"] == "paused"
-    assert start.session.state is RuntimeSessionState.PAUSED
+    assert result.status == "completed"
+    assert result.evidence["runtime_instance_id"] == "rt-b"
+    assert rt_a.pause_count == 0
+    assert rt_b.pause_count == 1

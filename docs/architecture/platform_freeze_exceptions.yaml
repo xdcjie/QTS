@@ -1440,12 +1440,12 @@ exceptions:
     owner: platform
     expiry: 2027-05-17
   - class_name: IbAsyncOrderExecutionTransportConfig
-    module: qts.execution.transports.ib_async_order_execution_transport
+    module: qts.experimental.ibkr.ib_async_order_execution_transport
     reason: baseline allowance
     owner: platform
     expiry: 2027-05-17
   - class_name: IbAsyncOrderExecutionTransport
-    module: qts.execution.transports.ib_async_order_execution_transport
+    module: qts.experimental.ibkr.ib_async_order_execution_transport
     reason: baseline allowance
     owner: platform
     expiry: 2027-05-17
@@ -1620,12 +1620,12 @@ exceptions:
     owner: platform
     expiry: 2027-05-17
   - class_name: IbAsyncMarketDataTransportConfig
-    module: qts.data.transports.ib_async_market_data_transport
+    module: qts.experimental.ibkr.ib_async_market_data_transport
     reason: baseline allowance
     owner: platform
     expiry: 2027-05-17
   - class_name: IbAsyncMarketDataTransport
-    module: qts.data.transports.ib_async_market_data_transport
+    module: qts.experimental.ibkr.ib_async_market_data_transport
     reason: baseline allowance
     owner: platform
     expiry: 2027-05-17

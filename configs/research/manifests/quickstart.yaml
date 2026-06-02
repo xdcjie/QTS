@@ -1,0 +1,66 @@
+schema_version: 2
+
+run:
+  id: quickstart
+  question: Does the checked-in research quickstart run through shared backtest and optimizer evidence?
+  owner: research
+  created_at: "2026-06-02T00:00:00+00:00"
+
+strategy:
+  id: gc_si_momentum
+  source_module: examples.strategies.gc_si_momentum
+  entrypoint: GcSiMomentumStrategy
+  default_config: ../../strategies/gc_si_momentum.yaml
+  hypothesis: Short-horizon GC/SI momentum can be evaluated through the canonical Research OS workflow.
+
+data:
+  dataset_id: research_futures_gc_si_1m
+  config: ../../data/historical.local.yaml
+  catalog: research_futures
+  roots: [GC, SI]
+  timeframe: 1m
+  start: "2010-06-06T22:00:00+00:00"
+  end: "2010-06-06T22:05:00+00:00"
+  calendar: CME
+
+splits:
+  windows:
+    - name: quickstart
+      role: validation
+      start: "2010-06-06"
+      end: "2010-06-07"
+
+metrics_schema:
+  id: schema_v2
+  version: 2
+  path: ../metrics/schema_v2.yaml
+
+promotion_policy:
+  id: research_only_quickstart
+  version: 1
+  path: ../../promotion/default.yaml
+
+artifacts:
+  required:
+    - artifact_graph
+    - workflow_summary
+    - research_index
+    - backtest_manifest
+    - data_quality
+    - evidence_bundle
+    - metrics
+    - optimizer_validation_summary
+    - reproducibility
+
+reproducibility:
+  require_clean_git: false
+  required_hash_groups:
+    - config_hashes
+    - data_hashes
+    - dependency_hashes
+
+parameter_grid:
+  long_window: [2, 3]
+  short_window: [1, 2]
+
+output_root: runs/research/quickstart

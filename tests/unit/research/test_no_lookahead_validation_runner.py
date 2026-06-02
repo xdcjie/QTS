@@ -5,10 +5,10 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
+from qts.core.hashing import stable_json_dumps
 from qts.research.validation import (
     FeatureTimingSpec,
     LabelPolicy,
-    NoLookaheadArtifactWriter,
     NoLookaheadValidationResult,
     NoLookaheadValidationRunner,
     NoLookaheadViolation,
@@ -148,19 +148,14 @@ class TestNoLookaheadValidationRunnerBasic:
         result2 = NoLookaheadValidationRunner(features=features).validate()
         assert result1.payload_hash == result2.payload_hash
 
-    def test_artifact_writer(self, tmp_path: object) -> None:
-        import pathlib
-
-        tmp = pathlib.Path(str(tmp_path))
+    def test_result_payload_serialization_is_deterministic(self) -> None:
         result = NoLookaheadValidationRunner().validate()
-        path = NoLookaheadArtifactWriter(tmp / "validation").write(result)
-        assert path.exists()
-        assert path.name == "no_lookahead.json"
-        import json
 
-        loaded = json.loads(path.read_text(encoding="utf-8"))
-        assert loaded["passed"] is True
-        assert "payload_hash" in loaded
+        serialized = stable_json_dumps(result.to_payload())
+
+        assert stable_json_dumps(result.to_payload()) == serialized
+        assert '"passed":true' in serialized
+        assert "payload_hash" in result.to_payload()
 
 
 # ---------------------------------------------------------------------------

@@ -181,7 +181,8 @@ PYTHONPATH=backend/src uv run python scripts/run_research.py \
 
 PYTHONPATH=backend/src uv run python scripts/run_research.py \
   --config configs/research/quickstart.yaml \
-  workflow configs/research/workflows/quickstart.yaml
+  workflow configs/research/workflows/quickstart.yaml \
+  --manifest configs/research/manifests/quickstart.yaml
 ```
 
 The `factor-tearsheet` command only consumes existing factor-evaluation JSON
@@ -268,7 +269,8 @@ The standard Research OS workflow entrypoint is:
 ```bash
 PYTHONPATH=backend/src uv run python scripts/run_research.py \
   --config <research-config> \
-  workflow <workflow-config>
+  workflow <workflow-config> \
+  --manifest <research-manifest>
 ```
 
 The checked-in quickstart workflow at `configs/research/workflows/quickstart.yaml`

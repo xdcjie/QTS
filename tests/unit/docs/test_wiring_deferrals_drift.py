@@ -9,7 +9,7 @@ must stay consistent:
 - every per-symbol rationale **table row** must point at a live code-block
   entry (no orphan rationale rows left behind after a symbol gets wired);
 - every **non-batch** code-block entry must have a per-symbol table row, and
-  every **C5a-batch** entry (the 43 surfaced by the re-export-aware caller
+  every **C5a-batch** entry (the 40 surfaced by the re-export-aware caller
   gate) is accounted for by the batch prose rather than a row.
 
 Forbidden shortcut: deleting a symbol from the code block but leaving its
@@ -88,7 +88,7 @@ def test_c5a_batch_prose_accounts_for_batch_entries() -> None:
     batch_count = sum(1 for in_batch in _code_block_symbols().values() if in_batch)
     text = _read()
     assert _C5A_BATCH_MARKER in text
-    # The prose states the batch is split into `library` (8) and `subsystem` (35).
+    # The prose states the batch is split into `library` (8) and `subsystem` (32).
     assert "**`library` (8)**" in text
-    assert "**`subsystem` (35)**" in text
-    assert batch_count == 8 + 35
+    assert "**`subsystem` (32)**" in text
+    assert batch_count == 8 + 32

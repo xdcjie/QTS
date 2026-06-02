@@ -1,11 +1,7 @@
-"""Order-execution transport implementations."""
+"""Production order-execution transport implementations."""
 
 from __future__ import annotations
 
-from qts.execution.transports.ib_async_order_execution_transport import (
-    IbAsyncOrderExecutionTransport,
-    IbAsyncOrderExecutionTransportConfig,
-)
 from qts.execution.transports.ibkr_order_ids import IbkrOrderIdAllocator
 from qts.execution.transports.ibkr_tws_callback_dispatcher import IbkrTwsCallbackDispatcher
 from qts.execution.transports.ibkr_tws_connection import IbkrTwsConnection
@@ -26,8 +22,6 @@ from qts.execution.transports.ibkr_tws_reconciliation_client import (
 )
 
 __all__ = [
-    "IbAsyncOrderExecutionTransport",
-    "IbAsyncOrderExecutionTransportConfig",
     "IbkrOrderContractSpec",
     "IbkrOrderExecutionCallbackSink",
     "IbkrOrderExecutionTransport",

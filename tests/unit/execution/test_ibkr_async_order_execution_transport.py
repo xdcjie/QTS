@@ -17,11 +17,11 @@ def test_ib_async_order_execution_transport_normalizes_fill_with_commission() ->
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.transports.ib_async_order_execution_transport import (
+    from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOrderContractSpec
+    from qts.experimental.ibkr.ib_async_order_execution_transport import (
         IbAsyncOrderExecutionTransport,
         IbAsyncOrderExecutionTransportConfig,
     )
-    from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOrderContractSpec
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
@@ -98,11 +98,11 @@ def test_ib_async_order_execution_transport_raises_broker_error() -> None:
         IbkrOrderExecutionAdapter,
         IbkrOrderExecutionConnection,
     )
-    from qts.execution.transports.ib_async_order_execution_transport import (
+    from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOrderContractSpec
+    from qts.experimental.ibkr.ib_async_order_execution_transport import (
         IbAsyncOrderExecutionTransport,
         IbAsyncOrderExecutionTransportConfig,
     )
-    from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOrderContractSpec
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")
@@ -163,11 +163,11 @@ def test_ib_async_order_execution_transport_records_submitted_order_mapping() ->
         IbkrOrderExecutionConnection,
     )
     from qts.execution.adapters.ibkr_order_map import BrokerOrderMap
-    from qts.execution.transports.ib_async_order_execution_transport import (
+    from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOrderContractSpec
+    from qts.experimental.ibkr.ib_async_order_execution_transport import (
         IbAsyncOrderExecutionTransport,
         IbAsyncOrderExecutionTransportConfig,
     )
-    from qts.execution.transports.ibkr_tws_order_execution_transport import IbkrOrderContractSpec
     from qts.registry.broker_symbol_mapping import BrokerSymbolMapping
 
     instrument_id = InstrumentId("EQUITY.US.NASDAQ.AAPL")

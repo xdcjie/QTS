@@ -13,10 +13,9 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
-from pathlib import Path
 from typing import Any
 
-from qts.core.hashing import stable_json_dumps, stable_json_hash
+from qts.core.hashing import stable_json_hash
 
 
 @dataclass(frozen=True, slots=True)
@@ -571,25 +570,6 @@ class NoLookaheadValidationRunner:
         }
 
 
-class NoLookaheadArtifactWriter:
-    """Owns deterministic no-lookahead artifact serialization."""
-
-    def __init__(self, output_dir: Path) -> None:
-        self._output_dir = output_dir
-
-    def write(self, result: NoLookaheadValidationResult) -> Path:
-        """Write a deterministic JSON artifact and return its path."""
-
-        self._output_dir.mkdir(parents=True, exist_ok=True)
-        path = self._output_dir / "no_lookahead.json"
-        payload = result.to_payload()
-        path.write_text(
-            stable_json_dumps(payload) + "\n",
-            encoding="utf-8",
-        )
-        return path
-
-
 def _bool_field(payload: Mapping[str, Any], field_name: str, *, default: bool) -> bool:
     value = payload.get(field_name, default)
     if not isinstance(value, bool):
@@ -621,7 +601,6 @@ def _format_timestamp(value: datetime) -> str:
 __all__ = [
     "FeatureTimingSpec",
     "LabelPolicy",
-    "NoLookaheadArtifactWriter",
     "NoLookaheadValidationResult",
     "NoLookaheadValidationRunner",
     "NoLookaheadViolation",

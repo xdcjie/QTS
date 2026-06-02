@@ -83,10 +83,8 @@ qts.data.live.reconnect.ReconnectPolicy  expires=2027-05-30  target=subsystem
 qts.data.sources.replay_market_data_source.SubscriptionReplayMarketDataSource  expires=2027-05-30  target=subsystem
 qts.data.stores.memory_store.InMemoryMarketDataStore  expires=2027-05-30  target=subsystem
 qts.data.stores.parquet_store.ParquetMarketDataStore  expires=2027-05-30  target=subsystem
-qts.data.transports.ib_async_market_data_transport.IbAsyncMarketDataTransport  expires=2027-05-30  target=subsystem
 qts.execution.adapters.broker_execution_adapter.BrokerExecutionAdapter  expires=2027-05-30  target=subsystem
 qts.execution.adapters.ibkr_order_execution.IbkrOrderExecutionAdapter  expires=2027-05-30  target=subsystem
-qts.execution.transports.ib_async_order_execution_transport.IbAsyncOrderExecutionTransport  expires=2027-05-30  target=subsystem
 qts.indicators.session_regime.SessionRegimeGateConfig  expires=2027-05-30  target=subsystem
 qts.indicators.session_regime.TrailingSessionRegimeGate  expires=2027-05-30  target=subsystem
 qts.observability.dashboard.OperationalDashboardSnapshot  expires=2027-05-30  target=subsystem
@@ -101,7 +99,6 @@ qts.reporting.broker_runtime.BrokerRuntimeEventReporter  expires=2027-05-30  tar
 qts.reporting.broker_runtime.BrokerRuntimeReportWriter  expires=2027-05-30  target=subsystem
 qts.research.readiness.PaperLiveReadinessDecision  expires=2027-05-30  target=subsystem
 qts.research.trade_diagnostics.PaperCandidateDiagnosticsGate  expires=2027-05-30  target=subsystem
-qts.research.validation.NoLookaheadArtifactWriter  expires=2027-05-30  target=subsystem
 qts.risk.rules.trading_session_rule.TradingSessionRule  expires=2027-05-30  target=subsystem
 qts.runtime.config.models.ConfigMigration  expires=2027-05-30  target=subsystem
 qts.runtime.config.models.TradingRuntimeConfig  expires=2027-05-30  target=subsystem
@@ -143,10 +140,58 @@ no real internal caller surfaced:
 - **`library` (8)** — Strategy SDK portfolio-construction and universe-selector
   classes exposed for user strategies. Wired by an example strategy; 1-year
   horizon.
-- **`subsystem` (35)** — components kept behind subsystem owners rather than
+- **`subsystem` (32)** — components kept behind subsystem owners rather than
   directly exposed as operator-facing production launch entrypoints. These
   entries are not production wiring exceptions; `target=production` remains
   forbidden by `CallerPresenceRule` and final-readiness.
+
+## Subsystem deferral decisions
+
+Every `target=subsystem` entry above must have an explicit final-state decision
+and owner-use proof. The decision values are:
+
+- `keep-owned`: retained as a non-operator-facing implementation detail with a
+  concrete owner and tests/docs.
+- `wire-entrypoint`: retained because a runtime/research/reporting entrypoint
+  already consumes it or must consume it.
+- `move-experimental`: retained outside production launch wiring.
+- `delete`: scheduled for deletion when the entry is no longer present in the
+  code block.
+
+| Symbol | Decision | Owner | Owner-use evidence |
+|---|---|---|---|
+| `qts.application.services.promotion_runtime_config.PromotionRuntimeConfigBuilder` | wire-entrypoint | Promotion runtime config builder | `PromotionRuntimeConfigBuilder.paper_start_command(...)` materializes `RuntimeLaunchPlan` and is covered by `tests/integration/test_promotion_to_paper_runtime_config.py`. |
+| `qts.data.feeds.replay_feed.ReplayFeed` | keep-owned | Replay data source stack | Store-backed replay library API covered by `tests/unit/data/test_market_data_store.py`; canonical flow documented in `docs/architecture/replay_data_flow.md`. |
+| `qts.data.historical.adapter.HistoricalMarketDataAdapter` | keep-owned | Historical data adapter boundary | Historical source adaptation boundary retained in `docs/architecture/replay_data_flow.md` and `docs/architecture/runtime_flow.md`. |
+| `qts.data.live.reconnect.ReconnectPolicy` | keep-owned | Live data reconnect policy | Live reconnect policy is a data-live boundary object, not an operator launch entrypoint. |
+| `qts.data.sources.replay_market_data_source.SubscriptionReplayMarketDataSource` | wire-entrypoint | Replay market-data source stack | Subscription replay source is the actor-facing replay source in `docs/architecture/replay_data_flow.md`. |
+| `qts.data.stores.memory_store.InMemoryMarketDataStore` | keep-owned | Market-data store boundary | In-memory store backs replay/feed tests and local deterministic replay. |
+| `qts.data.stores.parquet_store.ParquetMarketDataStore` | keep-owned | Market-data store boundary | Parquet store is the persisted market-data library API recorded by `docs/decision/2026-05-10_research_storage_decision.md`. |
+| `qts.execution.adapters.broker_execution_adapter.BrokerExecutionAdapter` | keep-owned | Generic broker execution adapter facade | Retained as execution-layer protocol/facade; architecture coverage in `tests/unit/architecture/test_runtime_file_layout.py`. |
+| `qts.execution.adapters.ibkr_order_execution.IbkrOrderExecutionAdapter` | wire-entrypoint | Canonical IBKR order-execution adapter | Production adapter path documented in `docs/architecture/broker_adapters.md`; covered by IBKR order execution tests. |
+| `qts.indicators.session_regime.SessionRegimeGateConfig` | keep-owned | Session regime indicator boundary | Production strategy regime gate config, retained with strategy tests under `tests/unit/strategies`. |
+| `qts.indicators.session_regime.TrailingSessionRegimeGate` | keep-owned | Session regime indicator boundary | Production strategy regime gate, retained with strategy tests under `tests/unit/strategies`. |
+| `qts.observability.dashboard.OperationalDashboardSnapshot` | keep-owned | Observability dashboard boundary | Operator dashboard DTO/evidence object retained by observability package. |
+| `qts.observability.errors.RuntimeErrorReason` | keep-owned | Observability error taxonomy | Runtime error reason value object retained by observability package. |
+| `qts.registry.back_adjusted_series.BackAdjustedContinuousSeriesBuilder` | keep-owned | Registry continuous futures analytics | Registry-owned continuous futures series utility; not a runtime launch shortcut. |
+| `qts.registry.calendar_registry.CalendarRegistry` | keep-owned | Registry calendar service | Registry-owned calendar lookup boundary required by domain calendar/session rules. |
+| `qts.registry.future_chain_registry.FutureChainRegistry` | keep-owned | Registry futures chain service | Registry-owned futures chain lookup boundary required by roll/economics rules. |
+| `qts.registry.future_roll.HighestVolumeFutureContractSelector` | keep-owned | Registry futures roll service | Alternate roll selector retained under registry ownership, not data-source-specific code. |
+| `qts.registry.option_chain_registry.OptionChainRegistry` | keep-owned | Registry option chain service | Registry-owned option chain lookup boundary for option instruments. |
+| `qts.reporting.backtest.BacktestReportWriter` | keep-owned | Backtest reporting boundary | Human report writer over machine artifact writer; documented in `docs/architecture/reporting_boundary.md`. |
+| `qts.reporting.broker_runtime.BrokerRuntimeEventReporter` | keep-owned | Broker runtime reporting boundary | Broker event report owner documented in `docs/architecture/reporting_boundary.md`. |
+| `qts.reporting.broker_runtime.BrokerRuntimeReportWriter` | keep-owned | Broker runtime reporting boundary | Broker runtime manifest/report writer covered by `tests/unit/reporting/test_reporting_contracts.py`. |
+| `qts.research.readiness.PaperLiveReadinessDecision` | keep-owned | Research readiness evidence boundary | Research readiness verdict object, not a runtime start path. |
+| `qts.research.trade_diagnostics.PaperCandidateDiagnosticsGate` | keep-owned | Research trade diagnostics boundary | Paper candidate diagnostics gate retained as research evidence validation. |
+| `qts.risk.rules.trading_session_rule.TradingSessionRule` | keep-owned | Risk rule boundary | Trading-session risk rule retained under `qts.risk`, not strategy/runtime code. |
+| `qts.runtime.config.models.ConfigMigration` | wire-entrypoint | Runtime config migration boundary | Runtime config migration is retained with `TradingRuntimeConfig` compatibility and runtime config tests. |
+| `qts.runtime.config.models.TradingRuntimeConfig` | wire-entrypoint | Runtime config model boundary | Runtime config model is consumed by launch-plan/runtime config assembly and retained for compatibility. |
+| `qts.runtime.config.paper.PaperSimulatedRuntimeConfig` | wire-entrypoint | Paper simulated runtime config boundary | Paper simulated config is retained for paper launch compatibility. |
+| `qts.runtime.partitioning.AccountBrokerMapping` | keep-owned | Runtime partitioning boundary | Multi-account/multi-broker partition config retained by runtime topology. |
+| `qts.runtime.partitioning.AccountPartitionPolicy` | keep-owned | Runtime partitioning boundary | Account partition policy retained by runtime topology. |
+| `qts.runtime.partitioning.AccountRiskConfig` | keep-owned | Runtime partitioning boundary | Account risk config retained by runtime topology. |
+| `qts.runtime.router.EventRouter` | keep-owned | Runtime router boundary | Runtime event router retained as actor/message routing boundary. |
+| `qts.runtime.state_recovery.InMemorySnapshotStore` | keep-owned | Runtime recovery boundary | In-memory snapshot store retained for local recovery tests and drills. |
 
 ## How the rule reads this file
 

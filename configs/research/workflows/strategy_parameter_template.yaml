@@ -1,0 +1,26 @@
+# Reviewed strategy-parameter workflow template. All backtests and optimizer
+# runs execute through ResearchSession / BacktestPipeline.
+
+version: 1
+workflow_id: strategy-parameter-template
+steps:
+  - id: implementation
+    kind: implementation_gate
+    required_modules:
+      - examples.strategies.reviewed_strategy
+    required_strategy: examples.strategies.reviewed_strategy:ReviewedStrategy
+
+  - id: backtest
+    kind: backtest
+    strategy_params: {}
+
+  - id: optimize
+    kind: optimize
+    objective_metric: total_return
+    validation_output: ../../../runs/research/strategy-template/validation/optimizer-summary.json
+    parameters: {}
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/strategy-template/reports
+

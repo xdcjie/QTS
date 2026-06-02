@@ -52,6 +52,11 @@ flow while order requests and execution reports stay in the execution flow.
   historical source adapter in `qts.data.historical.adapter`.
 - `IbkrMarketDataAdapter`:
   IBKR market-data adapter in `qts.data.adapters.ibkr_market_data`.
+- `IbkrTwsMarketDataTransport` / `IbkrTwsOrderExecutionTransport`:
+  canonical production IBKR TWS/Gateway transports.
+- `IbAsyncMarketDataTransport` / `IbAsyncOrderExecutionTransport`:
+  experimental validation transports under `qts.experimental.ibkr`, not
+  production runtime launch wiring.
 
 ## Ordering rule
 

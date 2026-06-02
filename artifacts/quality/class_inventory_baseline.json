@@ -1,5 +1,5 @@
 {
-  "production_class_count": 1005,
+  "production_class_count": 1015,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -597,6 +597,7 @@
     "qts.research.idea_registry.IdeaRegistry",
     "qts.research.idea_registry.TrialBudgetWarning",
     "qts.research.idea_spec.IdeaSpec",
+    "qts.research.implementation_task.FactorImplementationTaskWriter",
     "qts.research.landscape.analytics.FamilyPerformanceSummary",
     "qts.research.landscape.analytics.FitnessAnalytics",
     "qts.research.landscape.analytics.ParameterRegionSummary",
@@ -688,6 +689,7 @@
     "qts.research.research_book.ResearchBook",
     "qts.research.research_book.ResearchBookConfig",
     "qts.research.research_book.ResearchHistoryFrame",
+    "qts.research.run_index.ResearchRunIndexWriter",
     "qts.research.search.budget.TrialBudgetDecision",
     "qts.research.search.budget.TrialBudgetLedger",
     "qts.research.search.budget.TrialBudgetManager",

@@ -52,7 +52,9 @@ user-facing path that exercises them.
 
 | Field | Rule |
 | --- | --- |
-| Canonical entrypoint | `PYTHONPATH=backend/src uv run python scripts/run_research.py --config <research-config> workflow <workflow-config>`. The checked-in quickstart example is `PYTHONPATH=backend/src uv run python scripts/run_research.py --config configs/research/quickstart.yaml workflow configs/research/workflows/quickstart.yaml`. |
+| Canonical entrypoint | `PYTHONPATH=backend/src uv run python scripts/run_research.py --config <research-config> workflow <workflow-config> \
+  --manifest <research-manifest>`. The checked-in quickstart example is `PYTHONPATH=backend/src uv run python scripts/run_research.py --config configs/research/quickstart.yaml workflow configs/research/workflows/quickstart.yaml \
+  --manifest configs/research/manifests/quickstart.yaml`. |
 | Config owner | `ResearchSession` owns research session YAML. `ResearchWorkflowConfig` owns gate-based workflow YAML. Factor-spec, factor-evaluation, tearsheet, experiment-store, and research-report configs stay under `qts.research` owners. |
 | Allowed implementation owners | `qts.research`, `qts.factors`, `qts.indicators`, strategy code under reviewed strategy boundaries, `scripts/run_research.py` as a thin CLI, and `qts.backtest` only through `ResearchSession.run_backtest(...)` / `ResearchSession.optimize(...)` public paths. |
 | Allowed iteration points | Research queries, non-executable factor spec drafts/reviews, factor evaluation input snapshots, workflow gate thresholds, research-only strategy parameters, tearsheet/report contents, and optimizer/backtest steps declared in workflow YAML. |
@@ -146,7 +148,8 @@ Research workflow runs enter through the Research OS workflow command:
 ```bash
 PYTHONPATH=backend/src uv run python scripts/run_research.py \
   --config <research-config> \
-  workflow <workflow-config>
+  workflow <workflow-config> \
+  --manifest <research-manifest>
 ```
 
 Do not add, extend, or depend on VWAP ad hoc research runners under

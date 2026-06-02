@@ -62,7 +62,7 @@ checks:
 - Market-data adapters may not import execution, risk, portfolio, or runtime.
 - Order-execution adapters may not import data.
 - Provider SDK imports such as `ib_async` and `ibapi` are allowed only in
-  adapter or transport boundaries.
+  adapter, transport, or explicitly experimental IBKR validation boundaries.
 - Shared roll/session/resolution modules may not live under source-specific
   packages such as `qts.backtest` or `qts.data.historical`.
 - New stable concept construction may not be exposed as module-level public

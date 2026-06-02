@@ -25,14 +25,17 @@ from qts.research.data_quality import DataQualityArtifactWriter, DataQualityRunn
 from qts.research.engine import AutonomousResearchEngine, AutonomousResearchRun
 from qts.research.evidence_registry import EvidenceRegistry, ResearchEvidenceBundle
 from qts.research.experiment_store import ExperimentStore
+from qts.research.factor_spec import FactorSpec
 from qts.research.idea_registry import IdeaRegistry
 from qts.research.idea_spec import IdeaSpec
+from qts.research.implementation_task import FactorImplementationTaskWriter
 from qts.research.landscape import FitnessAnalytics, FitnessLandscapeStore, FitnessQuery
 from qts.research.manifest import ResearchManifestV2
 from qts.research.meta_research import MetaResearchSummary, MetaResearchSummaryWriter
 from qts.research.planner import GenerationApprovalRecord
 from qts.research.promotion_packet import PromotionPacketV2
 from qts.research.reproducibility import ReproducibilitySnapshotV2
+from qts.research.run_index import ResearchRunIndexWriter
 from qts.research.selector import CandidateSelector, SelectionPolicy
 from qts.research.system_run import ResearchDryRunRunner
 from qts.research.workflow import (
@@ -123,6 +126,23 @@ def _add_workflow_parser(subparsers: Any) -> None:
         default=None,
         help="Artifact graph output root for workflow lifecycle records",
     )
+
+
+def _add_implementation_parser(subparsers: Any) -> None:
+    parser = subparsers.add_parser(
+        "implementation",
+        help="Create reviewed factor/strategy implementation task packets",
+    )
+    implementation_subparsers = parser.add_subparsers(
+        dest="implementation_command",
+        required=True,
+    )
+    task = implementation_subparsers.add_parser(
+        "task",
+        help="Scaffold a non-executable implementation task from a FactorSpec",
+    )
+    task.add_argument("--factor-spec", type=Path, required=True)
+    task.add_argument("--output-dir", type=Path, required=True)
 
 
 def _add_evidence_parser(subparsers: Any) -> None:
@@ -495,6 +515,7 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_factor_tearsheet_parser(subparsers)
     _add_runs_parser(subparsers)
     _add_workflow_parser(subparsers)
+    _add_implementation_parser(subparsers)
     _add_evidence_parser(subparsers)
     _add_promotion_parser(subparsers)
     _add_manifest_parser(subparsers)
@@ -593,6 +614,10 @@ def _run_workflow(args: argparse.Namespace, session: ResearchSession) -> int:
         args.output.write_text(
             json.dumps(payload, sort_keys=True, indent=2) + "\n", encoding="utf-8"
         )
+        ResearchRunIndexWriter().write(
+            workflow_summary_path=args.output,
+            workflow_payload=payload,
+        )
     audit_log = None
     if args.audit_log_root is not None:
         audit_log = ResearchAuditLog(args.audit_log_root)
@@ -635,6 +660,24 @@ def _run_workflow(args: argparse.Namespace, session: ResearchSession) -> int:
         for step in result.steps:
             print(f"{step.step_id}={step.status}")
     return 0 if result.succeeded else 1
+
+
+def _run_implementation(args: argparse.Namespace) -> int:
+    if args.implementation_command == "task":
+        try:
+            factor_spec = FactorSpec.from_payload(_load_mapping(args.factor_spec))
+            result = FactorImplementationTaskWriter().write(
+                factor_spec=factor_spec,
+                output_dir=args.output_dir,
+            )
+        except (FileNotFoundError, ValueError) as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        payload = dict(result)
+        payload["factor_spec_name"] = factor_spec.name
+        print(json.dumps(payload, sort_keys=True, indent=2))
+        return 0
+    raise ValueError(f"unsupported implementation command: {args.implementation_command}")
 
 
 def _run_evidence(args: argparse.Namespace) -> int:
@@ -1895,6 +1938,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _run_landscape(args)
     if args.command == "selector":
         return _run_selector(args)
+    if args.command == "implementation":
+        return _run_implementation(args)
     session = ResearchSession.from_yaml(args.config)
     if args.command == "factor-tearsheet":
         return _record_factor_tearsheet(args, session)
