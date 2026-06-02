@@ -13,6 +13,7 @@ import qts.research.engine.autonomous_engine_orchestration as engine_orchestrati
 import yaml  # type: ignore[import-untyped]
 from qts.backtest.pipeline import BacktestPipeline
 from qts.core.ids import InstrumentId
+from qts.data.historical.csv_index import write_historical_csv_index
 from qts.research.engine.autonomous_research_engine import (
     AutonomousResearchEngine,
     AutonomousResearchRun,
@@ -96,6 +97,47 @@ def test_backtest_data_materialization_mode_controls_truncation(tmp_path: Path) 
         window=("2026-01-02T00:10:00+00:00", "2026-01-02T00:20:00+00:00"),
     )
     assert len(window_target.read_text(encoding="utf-8").splitlines()) == 11
+
+
+def test_full_backtest_data_materialization_uses_daily_index_for_window_start(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "source.csv"
+    source.write_text(
+        "\n".join(
+            ["timestamp,close"]
+            + [f"2026-01-02T00:{minute:02d}:00+00:00,{100 + minute:.1f}" for minute in range(60)]
+            + [
+                "2026-01-03T00:00:00+00:00,200.0",
+                "2026-01-03T00:01:00+00:00,201.0",
+                "2026-01-03T00:02:00+00:00,202.0",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    write_historical_csv_index(source, timestamp_column="timestamp")
+    parsed_timestamps: list[str] = []
+    original_parse_timestamp = engine_helpers._parse_timestamp
+
+    def counted_parse_timestamp(value: str) -> datetime:
+        parsed_timestamps.append(value)
+        return original_parse_timestamp(value)
+
+    monkeypatch.setattr(engine_helpers, "_parse_timestamp", counted_parse_timestamp)
+
+    target = tmp_path / "window.csv"
+    engine_helpers._materialize_backtest_csv(
+        source,
+        target,
+        symbol="SI",
+        max_rows=None,
+        window=("2026-01-03T00:01:00+00:00", "2026-01-03T00:03:00+00:00"),
+    )
+
+    assert len(target.read_text(encoding="utf-8").splitlines()) == 3
+    assert all(not timestamp.startswith("2026-01-02") for timestamp in parsed_timestamps)
 
 
 def test_full_backtest_data_materialization_reuses_shared_csv(

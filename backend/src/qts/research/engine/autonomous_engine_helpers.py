@@ -9,6 +9,7 @@ small formatting/window utilities) extracted from AutonomousResearchEngine
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
@@ -21,6 +22,7 @@ import yaml  # type: ignore[import-untyped]
 
 from qts.core.hashing import stable_json_dumps, stable_json_hash
 from qts.data.historical.chains import HistoricalChain
+from qts.data.historical.csv_index import indexed_start_offset
 from qts.registry.future_roll import (
     FirstNoticeDateFutureContractSelector,
     FutureContractCandidate,
@@ -418,19 +420,36 @@ def _materialize_backtest_csv(
     start_time = None if not parsed_windows else parsed_windows[0][0]
     end_time = None if not parsed_windows else parsed_windows[-1][1]
     with (
-        source_path.open("r", encoding="utf-8") as source,
+        source_path.open("rb") as source_raw,
         target_path.open(
             "w",
             encoding="utf-8",
         ) as target,
     ):
-        header_line = source.readline()
+        header_line = source_raw.readline()
         if not header_line:
             raise ValueError(f"data path is empty: {source_path}")
-        header = header_line.strip().split(",")
+        header_offset = source_raw.tell()
+        header = header_line.decode("utf-8").strip().split(",")
         target.write(
             "ts_event,rtype,publisher_id,instrument_id,open,high,low,close,volume,symbol\n"
         )
+        if "ts_event" in header:
+            timestamp_column = "ts_event"
+        elif "timestamp" in header:
+            timestamp_column = "timestamp"
+        else:
+            timestamp_column = None
+        if timestamp_column is not None and start_time is not None:
+            seek_offset = indexed_start_offset(
+                source_path,
+                start=start_time,
+                timestamp_column=timestamp_column,
+                header_offset=header_offset,
+            )
+            if seek_offset is not None:
+                source_raw.seek(seek_offset)
+        source = io.TextIOWrapper(source_raw, encoding="utf-8", newline="")
         emitted = 0
         seen_timestamps: set[str] = set()
         if "ts_event" in header:
