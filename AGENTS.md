@@ -60,8 +60,7 @@ Rules:
 Before final response on plan work, re-open the plan and verify the checklist
 against fresh evidence. If a required item cannot be backed by evidence, say it
 is incomplete and keep working unless blocked. For milestone-level completion,
-run `make check` unless impossible, explain skipped checks, and run
-`code-review-graph update ` after code changes.
+run `make check` unless impossible and explain skipped checks.
 
 ## 1.2 Flow-first implementation gate
 
@@ -280,41 +279,21 @@ Deletion/refactor safety:
 - Characterize existing behavior before splitting large classes or moving responsibilities.
 - Remove verified redundant placeholders only after import/reference checks and relevant tests pass.
 
-<!-- code-review-graph MCP tools -->
-## MCP Tools: code-review-graph
+## MCP Tools: codegraph
 
-**IMPORTANT: This project has a knowledge graph. ALWAYS use the
-code-review-graph MCP tools BEFORE using Grep/Glob/Read to explore
-the codebase.** The graph is faster, cheaper (fewer tokens), and gives
-you structural context (callers, dependents, test coverage) that file
-scanning cannot.
+This project uses the `codegraph` MCP knowledge graph for code exploration,
+impact analysis, and architecture questions. Prefer it before raw text search
+when looking up symbols, callers, callees, flows, or ownership boundaries.
 
-### When to use graph tools FIRST
+### When to use codegraph first
 
-- **Exploring code**: `semantic_search_nodes` or `query_graph` instead of Grep
-- **Understanding impact**: `get_impact_radius` instead of manually tracing imports
-- **Code review**: `detect_changes` + `get_review_context` instead of reading entire files
-- **Finding relationships**: `query_graph` with callers_of/callees_of/imports_of/tests_for
-- **Architecture questions**: `get_architecture_overview` + `list_communities`
+- **Task/area context**: `codegraph_context`
+- **Symbol lookup**: `codegraph_search`
+- **Several related source snippets**: `codegraph_explore`
+- **One symbol body or signature**: `codegraph_node`
+- **Flow/path tracing**: `codegraph_trace`
+- **Blast radius**: `codegraph_impact`
+- **Index health**: `codegraph_status`
 
-Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
-
-### Key Tools
-
-| Tool | Use when |
-|------|----------|
-| `detect_changes` | Reviewing code changes — gives risk-scored analysis |
-| `get_review_context` | Need source snippets for review — token-efficient |
-| `get_impact_radius` | Understanding blast radius of a change |
-| `get_affected_flows` | Finding which execution paths are impacted |
-| `query_graph` | Tracing callers, callees, imports, tests, dependencies |
-| `semantic_search_nodes` | Finding functions/classes by name or keyword |
-| `get_architecture_overview` | Understanding high-level codebase structure |
-| `refactor_tool` | Planning renames, finding dead code |
-
-### Workflow
-
-1. The graph auto-updates on file changes (via hooks).
-2. Use `detect_changes` for code review.
-3. Use `get_affected_flows` to understand impact.
-4. Use `query_graph` pattern="tests_for" to check coverage.
+Fall back to `rg` or file reads when `codegraph` does not cover the needed
+detail. The `codegraph` index refreshes automatically through its watcher.
