@@ -2,7 +2,7 @@
 
 The artifact records quality results and checked file paths for promotion
 review. DataQualityRunner owns deterministic CSV snapshot checks; canonical
-calendar/session semantics remain outside this module.
+calendar/session definitions remain owned by data-domain metadata.
 """
 
 from __future__ import annotations
@@ -17,6 +17,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+from qts.data.historical.chains import HistoricalChain
+from qts.data.sessions import RegularSessionWindow
 
 _MISSING_BAR_POLICIES = frozenset({"block", "record_only"})
 
@@ -342,10 +345,14 @@ class DataQualityRunner:
                     )
                 )
         for path_text in existing_bar_paths:
-            rows = self._read_csv_rows(Path(path_text))
+            path = Path(path_text)
+            rows = self._read_csv_rows(path)
             timestamps = self._timestamps(rows)
             duplicate_timestamps += self._duplicate_count(timestamps)
-            missing_bars += self._missing_bar_count(timestamps)
+            missing_bars += self._missing_bar_count(
+                timestamps,
+                session_window=self._session_window_for_path(path),
+            )
             stale_prices += self._stale_price_count(rows)
             if not self._session_aligned(timestamps):
                 session_alignment = False
@@ -431,10 +438,21 @@ class DataQualityRunner:
     def _duplicate_count(timestamps: Sequence[datetime]) -> int:
         return len(timestamps) - len(set(timestamps))
 
-    def _missing_bar_count(self, timestamps: Sequence[datetime]) -> int:
+    def _missing_bar_count(
+        self,
+        timestamps: Sequence[datetime],
+        *,
+        session_window: RegularSessionWindow | None = None,
+    ) -> int:
         step = self._timeframe_seconds()
         if step is None:
             return 0
+        if session_window is not None:
+            return self._missing_bar_count_for_session_window(
+                timestamps,
+                step=step,
+                session_window=session_window,
+            )
         windows = self._parsed_windows()
         if windows:
             return sum(
@@ -466,6 +484,35 @@ class DataQualityRunner:
                 missing += max((seconds // step) - 1, 0)
         return missing
 
+    def _missing_bar_count_for_session_window(
+        self,
+        timestamps: Sequence[datetime],
+        *,
+        step: int,
+        session_window: RegularSessionWindow,
+    ) -> int:
+        unique = sorted(
+            timestamp
+            for timestamp in set(timestamps)
+            if self._timestamp_in_declared_scope(timestamp)
+        )
+        missing = 0
+        previous: datetime | None = None
+        previous_session_id: str | None = None
+        for timestamp in unique:
+            session_id = session_window.session_id_for_timestamp(timestamp)
+            if session_id is None:
+                previous = None
+                previous_session_id = None
+                continue
+            if previous is not None and session_id == previous_session_id:
+                seconds = int((timestamp - previous).total_seconds())
+                if seconds > step:
+                    missing += max((seconds // step) - 1, 0)
+            previous = timestamp
+            previous_session_id = session_id
+        return missing
+
     def _missing_bar_count_for_window(
         self,
         timestamps: Sequence[datetime],
@@ -488,6 +535,36 @@ class DataQualityRunner:
             if seconds > step:
                 missing += max((seconds // step) - 1, 0)
         return missing
+
+    def _timestamp_in_declared_scope(self, timestamp: datetime) -> bool:
+        windows = self._parsed_windows()
+        if windows:
+            return any(start <= timestamp < end for start, end in windows)
+        start = None if self.start is None else self._parse_datetime(self.start)
+        end = None if self.end is None else self._parse_datetime(self.end)
+        if start is not None and timestamp < start:
+            return False
+        if end is not None and timestamp >= end:
+            return False
+        return True
+
+    @staticmethod
+    def _session_window_for_path(path: Path) -> RegularSessionWindow | None:
+        if path.suffix.lower() != ".csv":
+            return None
+        chains_dir = path.parent.parent / "chains"
+        candidates = (
+            chains_dir / f"{path.stem}.json",
+            chains_dir / f"{path.stem.upper()}.json",
+        )
+        for candidate in candidates:
+            if not candidate.exists():
+                continue
+            try:
+                return HistoricalChain.load(candidate).session_window()
+            except (OSError, ValueError, json.JSONDecodeError):
+                return None
+        return None
 
     def _stale_price_count(self, rows: Sequence[Mapping[str, str]]) -> int:
         if self.stale_price_max_repeats is None:

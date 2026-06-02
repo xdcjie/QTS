@@ -5,6 +5,32 @@ from pathlib import Path
 from qts.research.data_quality import DataQualityRunner
 
 
+def _write_gc_chain(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        """
+{
+  "root": "GC",
+  "market": "CME_FUT",
+  "currency": "USD",
+  "timezone_id": "US/Eastern",
+  "tick_size": "0.1",
+  "multiplier": "100",
+  "trading_calendar": "CMES",
+  "trading_hours": "20260104:1800-20260105:1700",
+  "contracts": [
+    {
+      "local_symbol": "GCG6",
+      "expiry": "2026-02-25T00:00:00+00:00",
+      "first_notice_day": "2026-01-30"
+    }
+  ]
+}
+""".strip(),
+        encoding="utf-8",
+    )
+
+
 def test_data_quality_runner_is_public_package_export() -> None:
     import qts.research as research
 
@@ -132,6 +158,60 @@ def test_data_quality_runner_counts_missing_bars_per_declared_window(tmp_path: P
 
     assert artifact.accepted is True
     assert artifact.missing_bars == 0
+
+
+def test_data_quality_runner_ignores_closed_periods_from_historical_chain(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "historical"
+    bars_path = root / "data" / "GC.csv"
+    bars_path.parent.mkdir(parents=True, exist_ok=True)
+    bars_path.write_text(
+        "timestamp,close\n"
+        "2026-01-02T21:59:00Z,100\n"
+        "2026-01-04T23:00:00Z,101\n"
+        "2026-01-04T23:01:00Z,102\n",
+        encoding="utf-8",
+    )
+    _write_gc_chain(root / "chains" / "GC.json")
+
+    artifact = DataQualityRunner(
+        dataset_id="dataset-001",
+        timeframe="1m",
+        start="2026-01-02T21:59:00Z",
+        end="2026-01-04T23:02:00Z",
+        calendar="CMES",
+    ).run({"dataset_files": [{"path": str(bars_path), "exists": True}]})
+
+    assert artifact.accepted is True
+    assert artifact.missing_bars == 0
+
+
+def test_data_quality_runner_counts_in_session_missing_bars_from_historical_chain(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "historical"
+    bars_path = root / "data" / "GC.csv"
+    bars_path.parent.mkdir(parents=True, exist_ok=True)
+    bars_path.write_text(
+        "timestamp,close\n"
+        "2026-01-04T23:00:00Z,100\n"
+        "2026-01-04T23:02:00Z,102\n",
+        encoding="utf-8",
+    )
+    _write_gc_chain(root / "chains" / "GC.json")
+
+    artifact = DataQualityRunner(
+        dataset_id="dataset-001",
+        timeframe="1m",
+        start="2026-01-04T23:00:00Z",
+        end="2026-01-04T23:03:00Z",
+        calendar="CMES",
+        missing_bar_policy="record_only",
+    ).run({"dataset_files": [{"path": str(bars_path), "exists": True}]})
+
+    assert artifact.accepted is True
+    assert artifact.missing_bars == 1
 
 
 def test_data_quality_runner_detects_session_alignment_and_stale_prices(
