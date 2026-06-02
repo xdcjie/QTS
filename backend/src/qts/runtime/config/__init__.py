@@ -11,6 +11,7 @@ from qts.runtime.config.models import (
     ConfigMigration,
     ConfigMigrationResult,
     RollPolicyConfig,
+    SimulatedExecutionCostModel,
     TradingRuntimeConfig,
 )
 from qts.runtime.config.paper import (
@@ -29,5 +30,6 @@ __all__ = [
     "ConfigMigrationResult",
     "PaperSimulatedRuntimeConfig",
     "RollPolicyConfig",
+    "SimulatedExecutionCostModel",
     "TradingRuntimeConfig",
 ]

@@ -13,12 +13,12 @@ import yaml  # type: ignore[import-untyped]
 from qts.core.ids import InstrumentId
 from qts.domain.execution_timing import FillPolicy
 from qts.runtime.config import (
-    BacktestCostModel,
     BacktestMarketDataReference,
     BacktestRiskConfig,
     BacktestRuntimeConfig,
     BacktestStrategyConfig,
     RollPolicyConfig,
+    SimulatedExecutionCostModel,
 )
 
 
@@ -129,7 +129,7 @@ class BacktestConfigLoader:
                 str(symbol): InstrumentId(str(instrument_id))
                 for symbol, instrument_id in instrument_ids_payload.items()
             },
-            cost_model=BacktestCostModel(
+            cost_model=SimulatedExecutionCostModel(
                 fixed_commission_per_contract=Decimal(
                     str(cost_payload.get("fixed_commission_per_contract", "0"))
                 ),

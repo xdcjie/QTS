@@ -71,6 +71,8 @@ def test_finalize_returns_run_id_and_manifest(tmp_path: Path) -> None:
             "broker_capability_model": "CUSTOM",
         },
         risk_config_hash="sha256:risk",
+        contract_economics_hash="sha256:contract-economics",
+        margin_policy_hash="sha256:margin-policy",
     )
 
     assert run_id_value == "bt-test"

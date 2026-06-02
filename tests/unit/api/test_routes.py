@@ -102,6 +102,28 @@ def test_operational_runtime_command_routes_return_command_evidence() -> None:
     assert snapshot.json()["reason_code"] == "RUNTIME_SESSION_NOT_BOUND"
 
 
+def test_operational_unbound_lifecycle_route_returns_rejected_result() -> None:
+    from fastapi.testclient import TestClient
+    from qts.api.app import create_app
+
+    client = TestClient(create_app())
+    response = client.post(
+        "/operations/runtime/pause",
+        headers=_auth_headers(
+            **{
+                "Idempotency-Key": "pause-unbound-1",
+                "X-QTS-Operator": "tester",
+                "X-QTS-Runtime-Instance-Id": "rt-unbound",
+            }
+        ),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "rejected"
+    assert response.json()["reason_code"] == "RUNTIME_SESSION_NOT_BOUND"
+    assert response.json()["evidence"]["runtime_instance_id"] == "rt-unbound"
+
+
 def test_operational_runtime_lifecycle_and_observation_routes() -> None:
     from fastapi.testclient import TestClient
     from qts.api.app import create_app
@@ -162,14 +184,19 @@ def test_operational_runtime_lifecycle_and_observation_routes() -> None:
     )
 
     assert started.status_code == 200
-    assert started.json() == {"state": "running"}
+    assert started.json()["status"] == "completed"
+    assert started.json()["evidence"]["state"] == "running"
+    assert started.json()["evidence"]["runtime_instance_id"] == "rt-test"
     assert stopped.status_code == 200
-    assert stopped.json() == {"state": "stopped"}
+    assert stopped.json()["status"] == "completed"
+    assert stopped.json()["evidence"]["state"] == "stopped"
     assert observation.status_code == 200
-    assert observation.json() == {"state": "observation"}
+    assert observation.json()["status"] == "completed"
+    assert observation.json()["evidence"]["state"] == "observation"
     assert duplicate_observation.json() == observation.json()
     assert running.status_code == 200
-    assert running.json() == {"state": "running"}
+    assert running.json()["status"] == "completed"
+    assert running.json()["evidence"]["state"] == "running"
 
 
 def test_operational_kill_switch_deactivate_route_is_idempotent() -> None:
@@ -270,6 +297,8 @@ def test_operational_routes_scope_idempotency_by_command_kind() -> None:
     )
 
     assert pause.status_code == 200
+    assert pause.json()["status"] == "completed"
+    assert pause.json()["evidence"]["state"] == "paused"
     assert reconcile.status_code == 200
     assert reconcile.json()["idempotency_key"] == "shared-command-key"
     assert reconcile.json()["evidence"]["reconciliation"] == "completed"

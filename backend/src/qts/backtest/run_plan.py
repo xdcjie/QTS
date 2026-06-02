@@ -19,12 +19,13 @@ from qts.backtest.engine_assembly import BacktestEngineAssembler
 from qts.core.ids import InstrumentId
 from qts.data.provenance import DatasetMetadata
 from qts.data.sessions import RegularSessionWindow
+from qts.domain.execution_costs import SimulatedExecutionCostModel
 from qts.domain.execution_timing import ExecutionTimingModel
 from qts.domain.market_data import Bar
 from qts.registry.future_roll import FutureRollRegistry
 from qts.registry.instrument_registry import InstrumentRegistry
 from qts.risk.risk_engine import RiskEngine
-from qts.runtime.config import BacktestCostModel, BacktestEngineConfig, BacktestRuntimeConfig
+from qts.runtime.config import BacktestEngineConfig, BacktestRuntimeConfig
 from qts.strategy_sdk import Strategy
 
 
@@ -54,7 +55,7 @@ class BacktestRunPlan:
         dataset_metadata: Iterable[DatasetMetadata] = (),
         config: dict[str, Any] | None = None,
         strategy_version: str | None = None,
-        cost_model: BacktestCostModel | None = None,
+        cost_model: SimulatedExecutionCostModel | None = None,
         contract_multipliers: Mapping[InstrumentId, Decimal] | None = None,
         future_roll_registry: FutureRollRegistry | None = None,
         warmup_bars: int = 0,
@@ -176,7 +177,7 @@ class BacktestRunPlan:
         strategy_version: str | None,
         config: dict[str, Any] | None,
         dataset_metadata: Iterable[DatasetMetadata],
-        cost_model: BacktestCostModel | None,
+        cost_model: SimulatedExecutionCostModel | None,
     ) -> BacktestEngineConfig:
         if engine_config is None:
             if initial_cash is None:
@@ -188,7 +189,7 @@ class BacktestRunPlan:
                 strategy_version=strategy_version or "",
                 config_payload=dict(config or {}),
                 dataset_metadata=tuple(dataset_metadata),
-                cost_model=cost_model or BacktestCostModel(),
+                cost_model=cost_model or SimulatedExecutionCostModel(),
             )
         elif initial_cash is not None and Decimal(str(initial_cash)) != engine_config.initial_cash:
             raise ValueError("initial_cash must match engine_config.initial_cash")

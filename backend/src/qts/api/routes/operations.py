@@ -10,12 +10,10 @@ from qts.api.mappers import (
     map_kill_switch_state_dto,
     map_operator_dashboard_status_dto,
     map_runtime_command_result_dto,
-    map_runtime_state_dto,
 )
 from qts.api.schemas.operations import (
     KillSwitchCommandSchema,
     KillSwitchResponseSchema,
-    RuntimeCommandResponseSchema,
     RuntimeCommandResultResponseSchema,
 )
 from qts.api.services import CommandIdempotencyStore
@@ -83,168 +81,168 @@ def operator_status(
     return map_operator_dashboard_status_dto(operations.operator_status())
 
 
-@router.post("/runtime/start", response_model=RuntimeCommandResponseSchema)
+@router.post("/runtime/start", response_model=RuntimeCommandResultResponseSchema)
 def start_runtime(
     operations: OperationsServiceDep,
     idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
     runtime_instance_id: Annotated[str | None, Header(alias="X-QTS-Runtime-Instance-Id")] = None,
-) -> RuntimeCommandResponseSchema:
+) -> RuntimeCommandResultResponseSchema:
     """Start runtime processing."""
 
     _require_operator(operator)
 
-    def command() -> RuntimeCommandResponseSchema:
-        """Execute start command and return updated runtime state."""
+    def command() -> RuntimeCommandResultResponseSchema:
+        """Execute start command and return auditable command result."""
         assert operator is not None
-        state = operations.start_runtime(
+        result = operations.start_runtime_result(
             operator_id=operator.strip(),
             runtime_instance_id=_require_runtime_instance_id(runtime_instance_id),
             idempotency_key=idempotency_key,
         )
-        payload = map_runtime_state_dto(state)
-        return RuntimeCommandResponseSchema(**payload)
+        payload = map_runtime_command_result_dto(result)
+        return RuntimeCommandResultResponseSchema(**payload)
 
     if idempotency_key is None:
         return command()
     return idempotency.run(idempotency_key, command, scope="runtime.start")
 
 
-@router.post("/runtime/stop", response_model=RuntimeCommandResponseSchema)
+@router.post("/runtime/stop", response_model=RuntimeCommandResultResponseSchema)
 def stop_runtime(
     operations: OperationsServiceDep,
     idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
     runtime_instance_id: Annotated[str | None, Header(alias="X-QTS-Runtime-Instance-Id")] = None,
-) -> RuntimeCommandResponseSchema:
+) -> RuntimeCommandResultResponseSchema:
     """Stop runtime processing."""
 
     _require_operator(operator)
 
-    def command() -> RuntimeCommandResponseSchema:
-        """Execute stop command and return updated runtime state."""
+    def command() -> RuntimeCommandResultResponseSchema:
+        """Execute stop command and return auditable command result."""
         assert operator is not None
-        state = operations.stop_runtime(
+        result = operations.stop_runtime_result(
             operator_id=operator.strip(),
             runtime_instance_id=_require_runtime_instance_id(runtime_instance_id),
             idempotency_key=idempotency_key,
         )
-        payload = map_runtime_state_dto(state)
-        return RuntimeCommandResponseSchema(**payload)
+        payload = map_runtime_command_result_dto(result)
+        return RuntimeCommandResultResponseSchema(**payload)
 
     if idempotency_key is None:
         return command()
     return idempotency.run(idempotency_key, command, scope="runtime.stop")
 
 
-@router.post("/runtime/pause", response_model=RuntimeCommandResponseSchema)
+@router.post("/runtime/pause", response_model=RuntimeCommandResultResponseSchema)
 def pause_runtime(
     operations: OperationsServiceDep,
     idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
     runtime_instance_id: Annotated[str | None, Header(alias="X-QTS-Runtime-Instance-Id")] = None,
-) -> RuntimeCommandResponseSchema:
+) -> RuntimeCommandResultResponseSchema:
     """Pause runtime execution for all strategies and data actors."""
 
     _require_operator(operator)
 
-    def command() -> RuntimeCommandResponseSchema:
-        """Execute pause command and return updated runtime state."""
+    def command() -> RuntimeCommandResultResponseSchema:
+        """Execute pause command and return auditable command result."""
         assert operator is not None
-        state = operations.pause_runtime(
+        result = operations.pause_runtime_result(
             operator_id=operator.strip(),
             runtime_instance_id=_require_runtime_instance_id(runtime_instance_id),
             idempotency_key=idempotency_key,
         )
-        payload = map_runtime_state_dto(state)
-        return RuntimeCommandResponseSchema(**payload)
+        payload = map_runtime_command_result_dto(result)
+        return RuntimeCommandResultResponseSchema(**payload)
 
     if idempotency_key is None:
         return command()
     return idempotency.run(idempotency_key, command, scope="runtime.pause")
 
 
-@router.post("/runtime/resume", response_model=RuntimeCommandResponseSchema)
+@router.post("/runtime/resume", response_model=RuntimeCommandResultResponseSchema)
 def resume_runtime(
     operations: OperationsServiceDep,
     idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
     runtime_instance_id: Annotated[str | None, Header(alias="X-QTS-Runtime-Instance-Id")] = None,
-) -> RuntimeCommandResponseSchema:
+) -> RuntimeCommandResultResponseSchema:
     """Resume runtime execution after an operator pause."""
 
     _require_operator(operator)
 
-    def command() -> RuntimeCommandResponseSchema:
-        """Execute resume command and return updated runtime state."""
+    def command() -> RuntimeCommandResultResponseSchema:
+        """Execute resume command and return auditable command result."""
         assert operator is not None
-        state = operations.resume_runtime(
+        result = operations.resume_runtime_result(
             operator_id=operator.strip(),
             runtime_instance_id=_require_runtime_instance_id(runtime_instance_id),
             idempotency_key=idempotency_key,
         )
-        payload = map_runtime_state_dto(state)
-        return RuntimeCommandResponseSchema(**payload)
+        payload = map_runtime_command_result_dto(result)
+        return RuntimeCommandResultResponseSchema(**payload)
 
     if idempotency_key is None:
         return command()
     return idempotency.run(idempotency_key, command, scope="runtime.resume")
 
 
-@router.post("/runtime/enter-observation", response_model=RuntimeCommandResponseSchema)
+@router.post("/runtime/enter-observation", response_model=RuntimeCommandResultResponseSchema)
 def enter_observation(
     operations: OperationsServiceDep,
     idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
     runtime_instance_id: Annotated[str | None, Header(alias="X-QTS-Runtime-Instance-Id")] = None,
-) -> RuntimeCommandResponseSchema:
+) -> RuntimeCommandResultResponseSchema:
     """Enter observation mode while keeping runtime visibility."""
 
     _require_operator(operator)
 
-    def command() -> RuntimeCommandResponseSchema:
-        """Execute enter-observation command and return updated runtime state."""
+    def command() -> RuntimeCommandResultResponseSchema:
+        """Execute enter-observation command and return auditable command result."""
         assert operator is not None
-        state = operations.enter_observation(
+        result = operations.enter_observation_result(
             operator_id=operator.strip(),
             runtime_instance_id=_require_runtime_instance_id(runtime_instance_id),
             idempotency_key=idempotency_key,
         )
-        payload = map_runtime_state_dto(state)
-        return RuntimeCommandResponseSchema(**payload)
+        payload = map_runtime_command_result_dto(result)
+        return RuntimeCommandResultResponseSchema(**payload)
 
     if idempotency_key is None:
         return command()
     return idempotency.run(idempotency_key, command, scope="runtime.enter_observation")
 
 
-@router.post("/runtime/exit-observation", response_model=RuntimeCommandResponseSchema)
+@router.post("/runtime/exit-observation", response_model=RuntimeCommandResultResponseSchema)
 def exit_observation(
     operations: OperationsServiceDep,
     idempotency: CommandIdempotencyDep,
     idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
     operator: Annotated[str | None, Header(alias="X-QTS-Operator")] = None,
     runtime_instance_id: Annotated[str | None, Header(alias="X-QTS-Runtime-Instance-Id")] = None,
-) -> RuntimeCommandResponseSchema:
+) -> RuntimeCommandResultResponseSchema:
     """Exit observation mode after operator approval."""
 
     _require_operator(operator)
 
-    def command() -> RuntimeCommandResponseSchema:
-        """Execute exit-observation command and return updated runtime state."""
+    def command() -> RuntimeCommandResultResponseSchema:
+        """Execute exit-observation command and return auditable command result."""
         assert operator is not None
-        state = operations.exit_observation(
+        result = operations.exit_observation_result(
             operator_id=operator.strip(),
             runtime_instance_id=_require_runtime_instance_id(runtime_instance_id),
             idempotency_key=idempotency_key,
         )
-        payload = map_runtime_state_dto(state)
-        return RuntimeCommandResponseSchema(**payload)
+        payload = map_runtime_command_result_dto(result)
+        return RuntimeCommandResultResponseSchema(**payload)
 
     if idempotency_key is None:
         return command()

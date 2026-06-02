@@ -90,6 +90,8 @@ class BacktestArtifactService:
         brokerage_model: str | None = None,
         execution_assumptions: dict[str, Any] | None = None,
         risk_config_hash: str | None = None,
+        contract_economics_hash: str | None = None,
+        margin_policy_hash: str | None = None,
     ) -> tuple[str, str, dict[str, Any], BacktestArtifacts]:
         """Finalize the manifest and return ``(run_id, report_hash, report, artifacts)``."""
         return self._writer.finalize(
@@ -105,6 +107,8 @@ class BacktestArtifactService:
             brokerage_model=brokerage_model,
             execution_assumptions=execution_assumptions,
             risk_config_hash=risk_config_hash,
+            contract_economics_hash=contract_economics_hash,
+            margin_policy_hash=margin_policy_hash,
         )
 
 

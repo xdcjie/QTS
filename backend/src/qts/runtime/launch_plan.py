@@ -16,6 +16,8 @@ from typing import Any, cast
 
 from qts.core.hashing import stable_json_dumps, stable_json_hash
 
+_LAUNCH_PLAN_SCHEME = "launch-plan://"
+
 
 @dataclass(frozen=True, slots=True)
 class RuntimeLaunchPlan:
@@ -57,7 +59,7 @@ class RuntimeLaunchPlan:
     def config_ref(self) -> str:
         """Return the operator-facing content-addressed config reference."""
 
-        return f"launch-plan://{self._safe_candidate_id()}/{self._hash_suffix()}"
+        return f"{_LAUNCH_PLAN_SCHEME}{self._safe_candidate_id()}/{self._hash_suffix()}"
 
     def to_payload(self) -> dict[str, Any]:
         """Return a deterministic JSON-ready launch plan payload."""
@@ -86,6 +88,26 @@ class RuntimeLaunchPlan:
         path.write_text(stable_json_dumps(self.to_payload()) + "\n", encoding="utf-8")
         return path
 
+    @classmethod
+    def from_payload(cls, payload: Mapping[str, Any]) -> RuntimeLaunchPlan:
+        """Reconstruct a launch plan from a persisted payload."""
+
+        return cls(
+            schema_version=int(payload.get("schema_version", 1)),
+            promotion_candidate_id=str(payload["promotion_candidate_id"]),
+            target_mode=str(payload["target_mode"]),
+            strategy_id=str(payload["strategy_id"]),
+            source_module=str(payload.get("source_module", "")),
+            target_module=str(payload["target_module"]),
+            idea_id=str(payload.get("idea_id", "")),
+            evidence_bundle_id=str(payload["evidence_bundle_id"]),
+            runtime=cast(Mapping[str, Any], payload.get("runtime", {})),
+            operations=cast(Mapping[str, Any], payload.get("operations", {})),
+            source_packet_hash=(
+                str(payload["source_packet_hash"]) if payload.get("source_packet_hash") else None
+            ),
+        )
+
     def _safe_candidate_id(self) -> str:
         safe = re.sub(r"[^A-Za-z0-9_.-]+", "-", self.promotion_candidate_id.strip())
         return safe.strip("-") or "candidate"
@@ -100,4 +122,88 @@ class RuntimeLaunchPlan:
         return cast(dict[str, Any], json.loads(stable_json_dumps(dict(value))))
 
 
-__all__ = ["RuntimeLaunchPlan"]
+@dataclass(frozen=True, slots=True)
+class RuntimeLaunchPlanResolution:
+    """Verified launch-plan resolution evidence used by runtime start."""
+
+    plan: RuntimeLaunchPlan
+    path: Path
+    config_ref: str
+    content_hash: str
+
+
+class RuntimeLaunchPlanStore:
+    """Content-addressed filesystem store for immutable runtime launch plans."""
+
+    def __init__(self, directory: Path) -> None:
+        self._directory = directory
+
+    @property
+    def directory(self) -> Path:
+        """Return the filesystem root used for launch-plan materialization."""
+
+        return self._directory
+
+    def write(self, plan: RuntimeLaunchPlan) -> RuntimeLaunchPlanResolution:
+        """Persist ``plan`` and return verified write evidence."""
+
+        path = plan.write_to(self._directory)
+        return RuntimeLaunchPlanResolution(
+            plan=plan,
+            path=path,
+            config_ref=plan.config_ref,
+            content_hash=plan.content_hash,
+        )
+
+    def resolve(self, config_ref: str, *, expected_hash: str) -> RuntimeLaunchPlanResolution:
+        """Resolve and verify a content-addressed launch plan.
+
+        The operator command must provide both the config reference and the
+        expected content hash.  A missing file, mismatched ref suffix, or changed
+        payload rejects the runtime start before any session can be built.
+        """
+
+        candidate_id, ref_hash = self._parse_config_ref(config_ref)
+        self._require_hash(expected_hash)
+        expected_suffix = expected_hash.removeprefix("sha256:")
+        if ref_hash != expected_suffix:
+            raise ValueError("launch plan config_ref hash does not match expected_hash")
+        path = self._directory / f"{candidate_id}-{ref_hash}.json"
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise ValueError("launch plan payload must be a JSON object")
+        plan = RuntimeLaunchPlan.from_payload(cast(dict[str, Any], payload))
+        actual_hash = plan.content_hash
+        if actual_hash != expected_hash:
+            raise ValueError("launch plan hash mismatch")
+        if plan.config_ref != config_ref:
+            raise ValueError("launch plan config_ref mismatch")
+        return RuntimeLaunchPlanResolution(
+            plan=plan,
+            path=path,
+            config_ref=config_ref,
+            content_hash=actual_hash,
+        )
+
+    @staticmethod
+    def _parse_config_ref(config_ref: str) -> tuple[str, str]:
+        if not config_ref.startswith(_LAUNCH_PLAN_SCHEME):
+            raise ValueError("config_ref must be a launch-plan:// reference")
+        remainder = config_ref.removeprefix(_LAUNCH_PLAN_SCHEME)
+        parts = remainder.split("/", 1)
+        if len(parts) != 2 or not parts[0].strip() or not parts[1].strip():
+            raise ValueError("config_ref must identify launch-plan candidate and hash")
+        RuntimeLaunchPlanStore._require_hash(f"sha256:{parts[1]}")
+        return parts[0], parts[1]
+
+    @staticmethod
+    def _require_hash(value: str) -> None:
+        if not re.fullmatch(r"sha256:[0-9a-f]{64}", value):
+            raise ValueError("launch plan hash must be a sha256:<64 hex> value")
+
+
+__all__ = [
+    "RuntimeLaunchPlan",
+    "RuntimeLaunchPlanResolution",
+    "RuntimeLaunchPlanStore",
+]

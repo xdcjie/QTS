@@ -16,7 +16,11 @@ from qts.application.commands.start_runtime import StartRuntimeCommand
 from qts.core.hashing import stable_json_hash
 from qts.research.promotion_packet import PromotionPacketV2
 from qts.runtime.broker_startup import BrokerRuntimeStartupDecision
-from qts.runtime.launch_plan import RuntimeLaunchPlan
+from qts.runtime.launch_plan import (
+    RuntimeLaunchPlan,
+    RuntimeLaunchPlanResolution,
+    RuntimeLaunchPlanStore,
+)
 from qts.runtime.mode import RuntimeMode
 
 
@@ -32,6 +36,7 @@ class PromotionRuntimeConfigBuilder:
 
     def __init__(self, *, launch_plan_dir: Path | None = None) -> None:
         self._launch_plan_dir = launch_plan_dir or Path("runs") / "promotion_launch_plans"
+        self._launch_plan_store = RuntimeLaunchPlanStore(self._launch_plan_dir)
 
     def paper_start_command(
         self,
@@ -51,10 +56,17 @@ class PromotionRuntimeConfigBuilder:
             allowed_modes=self._PAPER_MODES,
             mode_label="paper",
         )
-        config_ref = self._materialize_launch_plan(packet).config_ref
+        runtime_instance_id = self._runtime_instance_id(packet, runtime_mode=runtime_mode)
+        launch_plan = self._materialize_launch_plan(
+            packet,
+            runtime_mode=runtime_mode,
+            runtime_instance_id=runtime_instance_id,
+        )
         return StartRuntimeCommand(
             runtime_mode=runtime_mode,
-            config_ref=config_ref,
+            runtime_instance_id=runtime_instance_id,
+            config_ref=launch_plan.config_ref,
+            launch_plan_hash=launch_plan.content_hash,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
             reason=reason,
@@ -81,10 +93,17 @@ class PromotionRuntimeConfigBuilder:
         )
         if startup_decision.mode is not runtime_mode:
             raise ValueError("startup_decision mode must match promotion runtime_mode")
-        config_ref = self._materialize_launch_plan(packet).config_ref
+        runtime_instance_id = self._runtime_instance_id(packet, runtime_mode=runtime_mode)
+        launch_plan = self._materialize_launch_plan(
+            packet,
+            runtime_mode=runtime_mode,
+            runtime_instance_id=runtime_instance_id,
+        )
         return StartRuntimeCommand(
             runtime_mode=runtime_mode,
-            config_ref=config_ref,
+            runtime_instance_id=runtime_instance_id,
+            config_ref=launch_plan.config_ref,
+            launch_plan_hash=launch_plan.content_hash,
             operator_id=operator_id,
             idempotency_key=idempotency_key,
             reason=reason,
@@ -110,25 +129,46 @@ class PromotionRuntimeConfigBuilder:
             )
         return mode
 
-    def _materialize_launch_plan(self, packet: PromotionPacketV2) -> RuntimeLaunchPlan:
+    def _materialize_launch_plan(
+        self,
+        packet: PromotionPacketV2,
+        *,
+        runtime_mode: RuntimeMode,
+        runtime_instance_id: str,
+    ) -> RuntimeLaunchPlanResolution:
         """Write and return the immutable launch plan for a promotion packet."""
         target_module = packet.target_module.strip()
         if not target_module:
             raise ValueError("promotion target_module is required to build a runtime config")
+        runtime_payload = dict(packet.runtime)
+        runtime_payload["runtime_mode"] = runtime_mode.value
+        runtime_payload["runtime_instance_id"] = runtime_instance_id
         plan = RuntimeLaunchPlan(
             promotion_candidate_id=packet.promotion_candidate_id,
-            target_mode=packet.target_mode,
+            target_mode=runtime_mode.value,
             strategy_id=packet.strategy_id,
             source_module=packet.source_module,
             target_module=target_module,
             idea_id=packet.idea_id,
             evidence_bundle_id=packet.evidence_bundle_id,
-            runtime=packet.runtime,
+            runtime=runtime_payload,
             operations=packet.operations,
             source_packet_hash=stable_json_hash(packet.to_payload()),
         )
-        plan.write_to(self._launch_plan_dir)
-        return plan
+        return self._launch_plan_store.write(plan)
+
+    @staticmethod
+    def _runtime_instance_id(
+        packet: PromotionPacketV2,
+        *,
+        runtime_mode: RuntimeMode,
+    ) -> str:
+        """Return the runtime instance identity carried by the operator command."""
+
+        configured = packet.runtime.get("runtime_instance_id")
+        if isinstance(configured, str) and configured.strip():
+            return configured.strip()
+        return f"{packet.promotion_candidate_id}-{runtime_mode.value}"
 
 
 __all__ = ["PromotionRuntimeConfigBuilder"]

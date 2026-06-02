@@ -12,6 +12,7 @@ from typing import Any, ClassVar
 from qts.core.hashing import stable_json_hash
 from qts.core.ids import InstrumentId
 from qts.data.provenance import DatasetMetadata
+from qts.domain.execution_costs import BacktestCostModel, SimulatedExecutionCostModel
 from qts.domain.execution_timing import FillPolicy
 from qts.reporting.backtest import dataset_metadata_payload
 from qts.runtime.mode import (
@@ -124,46 +125,6 @@ class ConfigMigration:
 
 
 @dataclass(frozen=True, slots=True)
-class BacktestCostModel:
-    """Backtest execution fee and slippage assumptions."""
-
-    fixed_commission_per_contract: Decimal = Decimal("0")
-    slippage_bps: Decimal = Decimal("0")
-
-    def __post_init__(self) -> None:
-        """Validate and normalize decimal inputs."""
-        object.__setattr__(
-            self,
-            "fixed_commission_per_contract",
-            Decimal(str(self.fixed_commission_per_contract)),
-        )
-        object.__setattr__(self, "slippage_bps", Decimal(str(self.slippage_bps)))
-        if self.fixed_commission_per_contract < Decimal("0"):
-            raise ValueError("fixed_commission_per_contract must be non-negative")
-        if self.slippage_bps < Decimal("0"):
-            raise ValueError("slippage_bps must be non-negative")
-
-    def to_payload(self) -> dict[str, str]:
-        """Serialize cost assumptions for hashing and reporting."""
-        return {
-            "fixed_commission_per_contract": str(self.fixed_commission_per_contract),
-            "slippage_bps": str(self.slippage_bps),
-        }
-
-    @property
-    def slippage_model(self) -> str:
-        """Describe whether slippage is modeled."""
-        return "zero" if self.slippage_bps == Decimal("0") else "basis_points"
-
-    @property
-    def commission_model(self) -> str:
-        """Describe commission handling for reports."""
-        if self.fixed_commission_per_contract == Decimal("0"):
-            return "zero"
-        return "fixed_per_contract"
-
-
-@dataclass(frozen=True, slots=True)
 class BacktestEngineConfig:
     """Stable run-level inputs for constructing a backtest engine."""
 
@@ -173,7 +134,7 @@ class BacktestEngineConfig:
     strategy_version: str = ""
     config_payload: dict[str, Any] = field(default_factory=dict)
     dataset_metadata: tuple[DatasetMetadata, ...] = ()
-    cost_model: BacktestCostModel = field(default_factory=BacktestCostModel)
+    cost_model: SimulatedExecutionCostModel = field(default_factory=SimulatedExecutionCostModel)
 
     def __post_init__(self) -> None:
         """Normalize and validate constructor inputs."""
@@ -402,7 +363,7 @@ class BacktestRuntimeConfig:
     strategies: tuple[BacktestStrategyConfig, ...] = ()
     strategy_params: dict[str, Any] = field(default_factory=dict)
     instrument_ids: dict[str, InstrumentId] = field(default_factory=dict)
-    cost_model: BacktestCostModel = field(default_factory=BacktestCostModel)
+    cost_model: SimulatedExecutionCostModel = field(default_factory=SimulatedExecutionCostModel)
     risk_config: BacktestRiskConfig = field(
         default_factory=lambda: BacktestRiskConfig(max_notional=Decimal("1"))
     )
@@ -811,5 +772,6 @@ __all__ = [
     "ConfigMigration",
     "ConfigMigrationResult",
     "RollPolicyConfig",
+    "SimulatedExecutionCostModel",
     "TradingRuntimeConfig",
 ]

@@ -12,7 +12,9 @@ def test_final_readiness_runs_full_data_release_tests() -> None:
 
     assert "test-full-data:" in makefile
     assert "uv run pytest tests/integration -m full_data" in makefile
-    assert "final-readiness: readiness-check test-full-data" in makefile
+    assert "final-product-guardrails:" in makefile
+    assert "scripts/verify_final_readiness.py" in makefile
+    assert "final-readiness: final-product-guardrails readiness-check test-full-data" in makefile
 
 
 def test_full_data_pytest_marker_is_registered() -> None:

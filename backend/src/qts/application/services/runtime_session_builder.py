@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 
 from qts.core.ids import AccountId, InstrumentId
+from qts.domain.execution_costs import SimulatedExecutionCostModel
 from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
 from qts.execution.execution_adapter import ExecutionAdapter
 from qts.portfolio.account_snapshot import AccountSnapshot
@@ -22,7 +23,6 @@ from qts.registry.instrument_registry import InstrumentRegistry
 from qts.risk.risk_engine import RiskEngine
 from qts.runtime.actors.account_actor import AccountActor
 from qts.runtime.broker_startup import BrokerRuntimeStartupDecision
-from qts.runtime.config import BacktestCostModel
 from qts.runtime.dependencies import RuntimeSessionDependencies
 from qts.runtime.instrument_context import RuntimeInstrumentContext
 from qts.runtime.live_capital import LiveCapitalOrderDecision
@@ -94,7 +94,7 @@ class RuntimeSessionBuilder:
                 sum(config.initial_cash.values(), Decimal("0"))
             ),
             instrument_context=RuntimeInstrumentContext(instrument_registry=instrument_registry),
-            execution_adapter=SimulatedExecutionAdapter(cost_model=BacktestCostModel()),
+            execution_adapter=SimulatedExecutionAdapter(cost_model=SimulatedExecutionCostModel()),
             account_actor=AccountActor(
                 initial_cash=dict(config.initial_cash),
                 account_id=account_id,

@@ -37,7 +37,7 @@ class OperationsCommandRouter:
         )
         state = result.evidence.get("state")
         if not isinstance(state, str):
-            raise RuntimeError("runtime command result did not include state evidence")
+            return RuntimeStateDTO(state=result.result_status.value)
         return RuntimeStateDTO(state=state)
 
     def submit(

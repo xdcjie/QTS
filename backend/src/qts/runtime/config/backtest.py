@@ -8,6 +8,7 @@ from qts.runtime.config.models import (
     BacktestRuntimeConfig,
     BacktestStrategyConfig,
     RollPolicyConfig,
+    SimulatedExecutionCostModel,
 )
 
 __all__ = [
@@ -18,4 +19,5 @@ __all__ = [
     "BacktestRuntimeConfig",
     "BacktestStrategyConfig",
     "RollPolicyConfig",
+    "SimulatedExecutionCostModel",
 ]

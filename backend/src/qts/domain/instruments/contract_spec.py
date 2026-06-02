@@ -20,9 +20,9 @@ class ContractSpec:
 
     ``initial_margin_rate`` is a per-contract product fact: the fraction of
     notional posted as initial margin (e.g. ``Decimal("0.05")``). It is
-    ``None`` for cash instruments and for futures whose margin is not
-    configured; ``None`` means "no margin enforcement configured" and leaves
-    the pre-trade margin gate disabled for this contract.
+    ``None`` for cash instruments. Tradable futures must carry a configured
+    value; runtime/backtest margin policy fails closed when a tradable futures
+    contract reaches risk without this product fact.
     """
 
     tick_size: Decimal

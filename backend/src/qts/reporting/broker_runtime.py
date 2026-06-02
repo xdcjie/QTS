@@ -9,13 +9,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from qts.core.hashing import stable_json_default, stable_json_hash
+from qts.domain.execution_costs import SimulatedExecutionCostModel
 from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
 from qts.reporting.base import (
     PLATFORM_BASELINE_VERSION,
     RUNTIME_ARTIFACT_SCHEMA_VERSION,
     RuntimeManifest,
 )
-from qts.runtime.config import BacktestCostModel
 from qts.runtime.mode import RuntimeMode
 from qts.runtime.sinks.base import RuntimeEvent
 from qts.runtime.sinks.broker_runtime import BrokerRuntimeEventSink
@@ -206,7 +206,9 @@ class BrokerRuntimeReportWriter:
 
     @staticmethod
     def _default_simulated_execution_assumptions() -> dict[str, object]:
-        return SimulatedExecutionAdapter(BacktestCostModel()).execution_assumptions_payload()
+        return SimulatedExecutionAdapter(
+            SimulatedExecutionCostModel()
+        ).execution_assumptions_payload()
 
     @staticmethod
     def _redacted_connection_metadata(metadata: dict[str, Any]) -> dict[str, Any]:

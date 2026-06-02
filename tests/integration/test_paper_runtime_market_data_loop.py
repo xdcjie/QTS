@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 from qts.application.commands.start_runtime import StartRuntimeCommand, start_runtime
@@ -19,9 +20,12 @@ from qts.domain.instruments import AssetClass, ContractSpec, Instrument, Settlem
 from qts.domain.market_data import Bar
 from qts.domain.orders import Order, OrderFill, OrderSide
 from qts.registry.instrument_registry import InstrumentRegistry
+from qts.runtime.control_plane import RuntimeSessionRegistry
 from qts.runtime.mode import RuntimeMode
 from qts.strategy_sdk import Strategy
 from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter
+
+from tests.support.runtime_launch import runtime_launch_fixture
 
 _INSTRUMENT_ID = InstrumentId("EQUITY.US.NASDAQ.AAPL")
 
@@ -74,7 +78,7 @@ def _bar(start: datetime, *, close: Decimal) -> Bar:
     )
 
 
-def test_paper_runtime_loop_produces_fills_and_account_state() -> None:
+def test_paper_runtime_loop_produces_fills_and_account_state(tmp_path: Path) -> None:
     builder = RuntimeSessionBuilder.from_runtime_config(
         RuntimeStartConfig(
             runtime_mode=RuntimeMode.PAPER_SIMULATED,
@@ -84,15 +88,24 @@ def test_paper_runtime_loop_produces_fills_and_account_state() -> None:
         strategy=_BuyOnceStrategy(),
         instrument_registry=_instrument_registry(),
     )
+    launch = runtime_launch_fixture(
+        tmp_path,
+        runtime_mode=RuntimeMode.PAPER_SIMULATED,
+        runtime_instance_id="paper-loop-runtime-1",
+    )
     result = start_runtime(
         StartRuntimeCommand(
             runtime_mode=RuntimeMode.PAPER_SIMULATED,
-            config_ref="configs/paper_simulated.yaml",
+            runtime_instance_id=launch.runtime_instance_id,
+            config_ref=launch.config_ref,
+            launch_plan_hash=launch.launch_plan_hash,
             operator_id="ops",
             idempotency_key="paper-loop-1",
             reason="market data loop",
         ),
         session_builder=builder,
+        session_registry=RuntimeSessionRegistry(),
+        launch_plan_store=launch.store,
     )
     session = result.session
     assert session is not None

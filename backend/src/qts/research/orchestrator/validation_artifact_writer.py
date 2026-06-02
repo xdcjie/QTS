@@ -26,6 +26,9 @@ from typing import Any
 from qts.core.hashing import stable_json_dumps, stable_json_hash
 from qts.research.optimizer.result import OptimizationResult
 from qts.research.orchestrator.no_lookahead_artifact import NoLookaheadValidationArtifact
+from qts.research.orchestrator.walk_forward_validation_artifact import (
+    WalkForwardValidationArtifact,
+)
 
 
 def manifest_decimal(value: Any) -> Decimal:
@@ -151,29 +154,14 @@ class ValidationArtifactWriter:
         test_result: OptimizationResult,
         test_manifest: Mapping[str, Any],
     ) -> dict[str, Any]:
-        train = manifest_decimal(train_result.objective_value)
-        test = manifest_decimal(test_result.objective_value)
-        gap = abs(train - test)
-        allowed_gap = max(abs(train), abs(test), Decimal("1")) * Decimal("0.25")
-        accepted = test >= Decimal("0") and gap <= allowed_gap
-        return {
-            "consistent": accepted,
-            "manifest_statistics_hash": str(test_manifest.get("statistics_hash", "")),
-            "max_allowed_train_test_gap": float(allowed_gap),
-            "max_train_test_gap": float(gap),
-            "test_windows": [
-                {
-                    "accepted": accepted,
-                    "manifest_hash": str(test_manifest.get("manifest_hash", "")),
-                    "manifest_path": str(test_result.manifest_path),
-                    "name": "split-001-test",
-                    "score": float(test),
-                    "train_manifest_hash": str(train_manifest.get("manifest_hash", "")),
-                    "train_manifest_path": str(train_result.manifest_path),
-                    "train_score": float(train),
-                }
-            ],
-        }
+        return WalkForwardValidationArtifact().payload(
+            train_objective_value=train_result.objective_value,
+            train_manifest=train_manifest,
+            train_manifest_path=train_result.manifest_path,
+            test_objective_value=test_result.objective_value,
+            test_manifest=test_manifest,
+            test_manifest_path=test_result.manifest_path,
+        )
 
     def _failure_window_payload(
         self,

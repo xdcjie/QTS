@@ -117,17 +117,18 @@ Covered by `tests/anchor/test_backtest_default_fill_policy_next_bar_open.py`,
 Futures initial-margin enforcement is a per-contract product fact owned by
 `ContractSpec.initial_margin_rate`. `BacktestEngine.from_config` builds the
 `RiskEngine` through `RiskRuleRegistry` and appends `MarginRule` + a
-`MarginCalculator` only when a margin rate is resolvable from the instrument
-registry — rate-less runs behave exactly as before (no fail-closed rejection).
+`MarginCalculator` when a margin rate is resolvable from the instrument
+registry. Tradable futures are fail-closed: if a futures instrument reaches
+risk without `initial_margin_rate`, the run is rejected before orders can
+bypass margin enforcement.
 
-Deferred: the catalog/replay data path
-(`qts.data ... replay_bundle_builder`) does not yet populate
-`initial_margin_rate` from the futures-chain config, so catalog-loaded
-production backtests leave the rate `None` and do not enforce margin until a
-chain-config margin knob is added. The config-driven path is fully wired and
-exercised end-to-end by `tests/integration/test_runtime_futures_margin_enforced.py`.
-This is an isolated data-source-layer follow-up; it does not weaken the
-config-driven gate.
+The catalog/replay data path populates `initial_margin_rate` from futures-chain
+metadata through `ReplayMarketDataBundleBuilder`, and backtest manifests record
+both `contract_economics_hash` and `margin_policy_hash` so the economics used
+by replay/risk are auditable. This is covered by
+`tests/integration/test_catalog_futures_margin_enforced.py`,
+`tests/integration/test_runtime_futures_margin_enforced.py`, and
+`tests/unit/data/test_replay_market_data_source.py`.
 
 ## Forbidden Patterns
 

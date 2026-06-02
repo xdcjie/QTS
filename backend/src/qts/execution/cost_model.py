@@ -1,4 +1,4 @@
-"""Cost model configuration contracts used by runtime configuration."""
+"""Compatibility export for simulated execution cost assumptions."""
 
 from qts.domain.execution_costs import BacktestCostModel, SimulatedExecutionCostModel
 

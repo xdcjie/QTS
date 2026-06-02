@@ -1,8 +1,8 @@
 """Anchor: every wiring deferral has expires_on + target category; no past dates.
 
 Domain fact: a deferral without an expiry becomes a permanent exemption.
-Every entry must carry a clock, and the ``production`` category gets a tighter
-3-month horizon than library / framework entries.
+Every entry must carry a clock. ``target=production`` is forbidden by
+``CallerPresenceRule`` and final-readiness.
 
 Owner: ``docs/plan/wiring_deferrals.md`` (data) +
 ``qts.quality.rules.caller_presence`` (loader/enforcement).

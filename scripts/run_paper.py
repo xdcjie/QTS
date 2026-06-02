@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 
 from qts.application.commands.start_runtime import StartRuntimeCommand, start_runtime
 from qts.application.services import RuntimeSessionBuilder, RuntimeStartConfig
@@ -18,6 +19,8 @@ from qts.data.events import MarketDataSubscription
 from qts.domain.instruments import AssetClass, ContractSpec, Instrument, SettlementType
 from qts.domain.market_data import Bar
 from qts.registry.instrument_registry import InstrumentRegistry
+from qts.runtime.control_plane import RuntimeSessionRegistry
+from qts.runtime.launch_plan import RuntimeLaunchPlan, RuntimeLaunchPlanStore
 from qts.runtime.mode import RuntimeMode
 from qts.strategy_sdk import Strategy
 from qts.testing.fakes.market_data import FakeStreamingMarketDataAdapter
@@ -79,6 +82,30 @@ def _bar(start: datetime, *, close: Decimal) -> Bar:
 def main() -> None:
     """Build and run a short paper-simulated loop, reporting real fills."""
     account_id = AccountId("acct-paper-local")
+    runtime_instance_id = "paper-local-runtime"
+    launch_plan_store = RuntimeLaunchPlanStore(Path("runs") / "local_launch_plans")
+    launch_plan = launch_plan_store.write(
+        RuntimeLaunchPlan(
+            promotion_candidate_id="local-paper-demo",
+            target_mode=RuntimeMode.PAPER_SIMULATED.value,
+            strategy_id="paper-demo-strategy",
+            source_module="scripts.run_paper",
+            target_module="scripts.run_paper",
+            idea_id="local-paper-demo",
+            evidence_bundle_id="local-paper-demo-evidence",
+            runtime={
+                "runtime_mode": RuntimeMode.PAPER_SIMULATED.value,
+                "runtime_instance_id": runtime_instance_id,
+                "account_id": account_id.value,
+                "capital_limit": "100000",
+                "risk_profile_id": "local-paper-risk",
+            },
+            operations={
+                "rollback_plan": "stop local paper demo",
+                "monitoring_plan": "observe local stdout evidence",
+            },
+        )
+    )
     builder = RuntimeSessionBuilder.from_runtime_config(
         RuntimeStartConfig(
             runtime_mode=RuntimeMode.PAPER_SIMULATED,
@@ -91,12 +118,16 @@ def main() -> None:
     result = start_runtime(
         StartRuntimeCommand(
             runtime_mode="paper_simulated",
-            config_ref="configs/paper_simulated.yaml",
+            runtime_instance_id=runtime_instance_id,
+            config_ref=launch_plan.config_ref,
+            launch_plan_hash=launch_plan.content_hash,
             operator_id="paper-local",
             idempotency_key="run-paper-local",
             reason="local paper runtime start",
         ),
         session_builder=builder,
+        session_registry=RuntimeSessionRegistry(),
+        launch_plan_store=launch_plan_store,
     )
     session = result.session
     if session is None:

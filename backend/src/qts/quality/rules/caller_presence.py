@@ -226,6 +226,11 @@ class CallerPresenceRule:
                     "target=OPT-* wiring deferrals are forbidden; use a durable "
                     "owner category such as production, library, framework, or internal"
                 )
+            if entry.target == "production":
+                raise ValueError(
+                    "target=production wiring deferrals are forbidden in final-state "
+                    "architecture; add a real caller or use a non-production owner category"
+                )
             entries[entry.symbol] = entry
         return entries
 

@@ -26,6 +26,8 @@ from qts.research.audit_log import ResearchAuditLog
 from qts.research.promotion_packet import PromotionPacketV2
 from qts.runtime.broker_startup import validate_live_startup
 from qts.runtime.config import BrokerRuntimeConfig
+from qts.runtime.control_plane import RuntimeSessionKey, RuntimeSessionRegistry
+from qts.runtime.launch_plan import RuntimeLaunchPlanStore
 from qts.runtime.mode import RuntimeMode
 from qts.runtime.session import RuntimeSession
 from qts.strategy_sdk import Strategy
@@ -125,7 +127,9 @@ def test_approved_packet_runtime_config_builds_session(tmp_path: Path) -> None:
 
     assert isinstance(command, StartRuntimeCommand)
     assert command.runtime_mode is RuntimeMode.PAPER_SIMULATED
+    assert command.runtime_instance_id == f"{packet.promotion_candidate_id}-paper_simulated"
     assert command.config_ref.startswith("launch-plan://")
+    assert command.launch_plan_hash.startswith("sha256:")
     assert packet.promotion_candidate_id in command.config_ref
     launch_plans = tuple(launch_plan_dir.glob("*.json"))
     assert len(launch_plans) == 1
@@ -133,6 +137,7 @@ def test_approved_packet_runtime_config_builds_session(tmp_path: Path) -> None:
     assert plan_payload["promotion_candidate_id"] == packet.promotion_candidate_id
     assert plan_payload["target_module"] == packet.target_module
     assert plan_payload["runtime"]["runtime_mode"] == RuntimeMode.PAPER_SIMULATED.value
+    assert plan_payload["runtime"]["runtime_instance_id"] == command.runtime_instance_id
 
     builder = RuntimeSessionBuilder.from_runtime_config(
         RuntimeStartConfig(
@@ -144,11 +149,23 @@ def test_approved_packet_runtime_config_builds_session(tmp_path: Path) -> None:
         instrument_registry=_instrument_registry(),
     )
 
-    result = start_runtime(command, session_builder=builder)
+    registry = RuntimeSessionRegistry()
+    result = start_runtime(
+        command,
+        session_builder=builder,
+        session_registry=registry,
+        launch_plan_store=RuntimeLaunchPlanStore(launch_plan_dir),
+    )
 
     assert result.status == "started"
+    assert result.evidence["launch_plan_verified"] is True
     assert result.evidence["session_constructed"] is True
+    assert result.evidence["session_registered"] is True
     assert isinstance(result.session, RuntimeSession)
+    assert (
+        registry.resolve(RuntimeSessionKey(runtime_instance_id=command.runtime_instance_id))
+        is result.session
+    )
 
 
 def test_approved_live_observation_packet_builds_start_command_with_startup_decision(
@@ -177,6 +194,8 @@ def test_approved_live_observation_packet_builds_start_command_with_startup_deci
 
     assert isinstance(command, StartRuntimeCommand)
     assert command.runtime_mode is RuntimeMode.LIVE_OBSERVATION
+    assert command.runtime_instance_id == f"{packet.promotion_candidate_id}-live_observation"
     assert command.startup_decision == startup_decision
     assert command.config_ref.startswith("launch-plan://")
+    assert command.launch_plan_hash.startswith("sha256:")
     assert tuple(launch_plan_dir.glob("*.json"))

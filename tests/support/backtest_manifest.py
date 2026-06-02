@@ -19,6 +19,8 @@ def m1_manifest_kwargs() -> dict[str, Any]:
         ),
         "runtime_topology_payload": {"topology_hash": "sha256:test-topology"},
         "risk_config_hash": "sha256:test-risk",
+        "contract_economics_hash": "sha256:test-contract-economics",
+        "margin_policy_hash": "sha256:test-margin-policy",
         "execution_assumptions": {
             "fill_model_name": "immediate_market_fill",
             "fill_model_version": "1",

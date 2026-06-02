@@ -82,6 +82,8 @@ def test_backtest_report_includes_run_identity_dataset_and_cost_assumptions(
     assert result.cost_model.commission_model == "zero"
     assert result.report_hash.startswith("sha256:")
     assert stream.manifest["risk_config_hash"].startswith("sha256:")
+    assert stream.manifest["contract_economics_hash"].startswith("sha256:")
+    assert stream.manifest["margin_policy_hash"].startswith("sha256:")
     assert stream.manifest["topology_hash"].startswith("sha256:")
     assert manifest_dataset["dataset_id"] == "dataset-a"
     assert manifest_dataset["file_hash"] == "sha256:dataset-a"
@@ -133,6 +135,8 @@ def test_backtest_finalize_rejects_missing_required_m1_manifest_fields(
 
     cases = (
         "risk_config_hash",
+        "contract_economics_hash",
+        "margin_policy_hash",
         "dataset_metadata[0].file_hash",
         "execution_assumptions.fill_model_name",
     )
@@ -162,8 +166,14 @@ def test_backtest_finalize_rejects_missing_required_m1_manifest_fields(
             "broker_capability_model": {"broker_id": "custom"},
         }
         risk_config_hash: str | None = "sha256:risk"
+        contract_economics_hash: str | None = "sha256:contract-economics"
+        margin_policy_hash: str | None = "sha256:margin-policy"
         if case == "risk_config_hash":
             risk_config_hash = None
+        elif case == "contract_economics_hash":
+            contract_economics_hash = None
+        elif case == "margin_policy_hash":
+            margin_policy_hash = None
         elif case == "dataset_metadata[0].file_hash":
             dataset_metadata.pop("file_hash")
         elif case == "execution_assumptions.fill_model_name":
@@ -181,6 +191,8 @@ def test_backtest_finalize_rejects_missing_required_m1_manifest_fields(
                 strategy_version="test",
                 runtime_topology_payload={"topology_hash": "sha256:topology"},
                 risk_config_hash=risk_config_hash,
+                contract_economics_hash=contract_economics_hash,
+                margin_policy_hash=margin_policy_hash,
                 execution_assumptions=execution_assumptions,
             )
 
@@ -220,6 +232,8 @@ def test_backtest_finalize_rejects_missing_execution_assumptions_block(
             strategy_version="test",
             runtime_topology_payload={"topology_hash": "sha256:topology"},
             risk_config_hash="sha256:risk",
+            contract_economics_hash="sha256:contract-economics",
+            margin_policy_hash="sha256:margin-policy",
             execution_assumptions=None,
         )
 

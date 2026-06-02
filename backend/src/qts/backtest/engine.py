@@ -26,12 +26,13 @@ from qts.core.ids import (
 )
 from qts.data.provenance import DatasetMetadata
 from qts.data.sessions import RegularSessionWindow
+from qts.domain.execution_costs import BacktestCostModel, SimulatedExecutionCostModel
 from qts.domain.execution_timing import ExecutionTimingModel
 from qts.domain.market_data import Bar
 from qts.observability.metrics import MetricsRegistry
 from qts.registry.future_roll import FutureRollRegistry
 from qts.registry.instrument_registry import InstrumentRegistry
-from qts.runtime.config import BacktestCostModel, BacktestRuntimeConfig
+from qts.runtime.config import BacktestRuntimeConfig
 from qts.strategy_sdk import Strategy
 
 if TYPE_CHECKING:
@@ -50,7 +51,7 @@ class BacktestStreamResult:
     strategy_version: str
     config_hash: str
     dataset_metadata: tuple[DatasetMetadata, ...]
-    cost_model: BacktestCostModel
+    cost_model: SimulatedExecutionCostModel
     report_hash: str
     manifest_path: Any
     artifact_paths: dict[str, Any]
@@ -94,6 +95,9 @@ class BacktestEngine:
         )
         self._session_window_by_instrument = dict(plan.dependencies.session_window_by_instrument)
         self._risk_engine = plan.dependencies.risk_engine
+        self._margin_policy_payload = self._margin_policy_payload_from_registry(
+            plan.dependencies.instrument_registry
+        )
         collaborators = BacktestEngineAssembler().collaborators(
             engine_config=plan.engine_config,
             dependencies=plan.dependencies,
@@ -186,6 +190,8 @@ class BacktestEngine:
             default_strategy_id=StrategyId("strategy"),
         )
         runtime_topology_payload = resolved_topology.payload
+        contract_economics_payload = self._contract_economics_payload()
+        margin_policy_payload = self._margin_policy_payload
         account_id = resolved_topology.account_id
         strategy_id = resolved_topology.strategy_id
         strategy_specs = resolved_topology.strategy_specs
@@ -256,6 +262,8 @@ class BacktestEngine:
             brokerage_model=brokerage_model,
             execution_assumptions=self._execution_assumptions_payload(),
             risk_config_hash=stable_json_hash(self._config_hash_payload.get("risk_config", {})),
+            contract_economics_hash=stable_json_hash(contract_economics_payload),
+            margin_policy_hash=stable_json_hash(margin_policy_payload),
         )
         return BacktestStreamResult(
             processed_bars=processed_bar_count,
@@ -285,6 +293,55 @@ class BacktestEngine:
         assumptions = self._execution_adapter.execution_assumptions_payload()
         assumptions.update(timing_payload)
         return assumptions
+
+    def _contract_economics_payload(self) -> dict[str, Any]:
+        """Return auditable contract economics used by risk and execution."""
+
+        instruments = []
+        for instrument in self._instrument_context.instrument_registry().instruments():
+            spec = instrument.contract_spec
+            instruments.append(
+                {
+                    "instrument_id": instrument.instrument_id.value,
+                    "asset_class": instrument.asset_class.value,
+                    "tradable": instrument.tradable,
+                    "tick_size": str(spec.tick_size),
+                    "lot_size": str(spec.lot_size),
+                    "multiplier": str(spec.multiplier),
+                    "settlement": spec.settlement.value,
+                    "calendar_id": spec.calendar_id,
+                    "initial_margin_rate": (
+                        str(spec.initial_margin_rate)
+                        if spec.initial_margin_rate is not None
+                        else None
+                    ),
+                }
+            )
+        return {
+            "schema_version": 1,
+            "instruments": tuple(sorted(instruments, key=lambda item: str(item["instrument_id"]))),
+        }
+
+    @staticmethod
+    def _margin_policy_payload_from_registry(
+        instrument_registry: InstrumentRegistry | None,
+    ) -> dict[str, Any]:
+        """Return hashable margin policy evidence derived from contract specs."""
+
+        if instrument_registry is None:
+            return {"schema_version": 1, "enabled": False, "initial_margin_rates": ()}
+        rates = sorted(
+            {
+                str(instrument.contract_spec.initial_margin_rate)
+                for instrument in instrument_registry.instruments()
+                if instrument.contract_spec.initial_margin_rate is not None
+            }
+        )
+        return {
+            "schema_version": 1,
+            "enabled": bool(rates),
+            "initial_margin_rates": tuple(rates),
+        }
 
 
 __all__ = [

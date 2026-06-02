@@ -14,6 +14,36 @@ exceptions:
     reason: immutable content-addressed launch plan materialized from approved promotion packets (FTS-P1-001)
     owner: platform
     expiry: 2027-06-01
+  - class_name: RuntimeLaunchPlanResolution
+    module: qts.runtime.launch_plan
+    reason: verified runtime launch plan resolution evidence for start-runtime hash checks (QTS-FINAL-V3-P1-002)
+    owner: platform
+    expiry: 2027-06-01
+  - class_name: RuntimeLaunchPlanStore
+    module: qts.runtime.launch_plan
+    reason: content-addressed launch plan store consumed by verified runtime start (QTS-FINAL-V3-P1-002)
+    owner: platform
+    expiry: 2027-06-01
+  - class_name: SimulatedExecutionCostModel
+    module: qts.domain.execution_costs
+    reason: shared simulated execution cost model replacing backtest-named runtime cost ownership (QTS-FINAL-V3-P1-003)
+    owner: platform
+    expiry: 2027-06-01
+  - class_name: WalkForwardValidationResult
+    module: qts.research.orchestrator.walk_forward_validation_artifact
+    reason: typed walk-forward verdict evidence owner moved out of validation artifact writer (QTS-FINAL-V3-P1-001)
+    owner: research
+    expiry: 2027-06-01
+  - class_name: WalkForwardValidationArtifact
+    module: qts.research.orchestrator.walk_forward_validation_artifact
+    reason: walk-forward validation artifact owner for train/test verdict construction (QTS-FINAL-V3-P1-001)
+    owner: research
+    expiry: 2027-06-01
+  - class_name: FinalReadinessRuleSet
+    module: qts.quality.final_readiness
+    reason: product-level final-readiness repository gate for final-state architecture (QTS-FINAL-V3-P0-002)
+    owner: platform
+    expiry: 2027-06-01
   - class_name: BacktestRunPlan
     module: qts.backtest.run_plan
     reason: canonical immutable BacktestEngine input that replaces the broad constructor surface (FTS-P1-003)

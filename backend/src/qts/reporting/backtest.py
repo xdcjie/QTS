@@ -31,6 +31,8 @@ _REQUIRED_M1_MANIFEST_FIELDS = (
     "event_schema_version",
     "artifact_schema_version",
     "risk_config_hash",
+    "contract_economics_hash",
+    "margin_policy_hash",
 )
 _REQUIRED_M1_DATASET_FIELDS = (
     "dataset_id",
@@ -361,6 +363,8 @@ class BacktestArtifactWriter:
         brokerage_model: str | None = None,
         execution_assumptions: dict[str, Any] | None = None,
         risk_config_hash: str | None = None,
+        contract_economics_hash: str | None = None,
+        margin_policy_hash: str | None = None,
     ) -> tuple[str, str, dict[str, Any], BacktestArtifacts]:
         """Close artifacts, write the manifest, and return run id, hash, and paths."""
         finalized_at = datetime.now(UTC)
@@ -395,6 +399,8 @@ class BacktestArtifactWriter:
             "brokerage_model": brokerage_model,
             "execution_assumptions": normalized_execution_assumptions,
             "risk_config_hash": risk_config_hash,
+            "contract_economics_hash": contract_economics_hash,
+            "margin_policy_hash": margin_policy_hash,
             "metrics": metrics,
             "statistics": statistics_payload,
             "artifacts": {
@@ -452,6 +458,8 @@ class BacktestArtifactWriter:
             "brokerage_model": brokerage_model,
             "execution_assumptions": normalized_execution_assumptions,
             "risk_config_hash": risk_config_hash,
+            "contract_economics_hash": contract_economics_hash,
+            "margin_policy_hash": margin_policy_hash,
             "metrics": metrics,
             "statistics": statistics_payload,
             "statistics_hash": report_payload["statistics_hash"],

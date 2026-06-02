@@ -25,13 +25,14 @@ from qts.backtest.risk_policy import BacktestRiskPolicyFactory
 from qts.core.ids import BrokerId, InstrumentId
 from qts.data.provenance import DatasetMetadata
 from qts.data.sessions import RegularSessionWindow
+from qts.domain.execution_costs import SimulatedExecutionCostModel
 from qts.domain.execution_timing import ExecutionTimingModel
 from qts.domain.market_data import Bar
 from qts.execution.adapters.brokerage_capabilities import broker_capabilities_for_model
 from qts.execution.adapters.simulated_execution_adapter import SimulatedExecutionAdapter
 from qts.registry.future_roll import FutureRollRegistry
 from qts.registry.instrument_registry import InstrumentRegistry
-from qts.runtime.config import BacktestCostModel, BacktestEngineConfig, BacktestRuntimeConfig
+from qts.runtime.config import BacktestEngineConfig, BacktestRuntimeConfig
 from qts.runtime.intent_processing import TargetIntentProcessor
 
 if TYPE_CHECKING:
@@ -126,7 +127,7 @@ class BacktestEngineAssembler:
         ``optimistic_fill_waiver`` fields (default promotion-grade
         ``next_bar_open``) unless an explicit ``execution_timing`` wins.
         """
-        cost_model = BacktestCostModel(
+        cost_model = SimulatedExecutionCostModel(
             fixed_commission_per_contract=config.cost_model.fixed_commission_per_contract,
             slippage_bps=config.cost_model.slippage_bps,
         )
