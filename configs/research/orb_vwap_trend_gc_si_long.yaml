@@ -1,0 +1,12 @@
+data:
+  config: ../data/historical.local.yaml
+  catalog: research_futures
+  roots: [GC, SI]
+  timeframe: 1m
+backtest_config: ../backtest.orb_vwap_trend_gc_si_long.yaml
+store: ../../runs/research/orb_vwap_trend_gc_si_long
+output_root: ../../runs/research/orb_vwap_trend_gc_si_long/backtests
+objective_metric: sharpe_ratio
+discovery:
+  sources: [semantic_scholar, openalex, crossref, arxiv]
+  max_results: 10

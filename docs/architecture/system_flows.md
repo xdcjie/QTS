@@ -159,3 +159,66 @@ reviewed research workflow YAML under `configs/research/workflows/`. Deleted
 VWAP workflow files are not compatibility entrypoints. If a branch still
 depends on them, the dependency is a cleanup blocker, not an accepted alternate
 entrypoint.
+
+## Research Workflow and Campaign Handoff
+
+Research workflow and autonomous campaign runners are complementary evidence
+paths, not interchangeable entrypoints.
+
+`workflow` is the canonical entrypoint for hypothesis exploration and explicit
+research process control. Use it to declare the research question, manifest,
+periods, IS/OOS windows, implementation gates, backtests, optimizer steps,
+backtest matrices, ablations, diagnostics, and reports. Workflow evidence may
+rank or reject candidate parameters, but it is not final release evidence unless
+the workflow explicitly declares and satisfies the required validation gates.
+
+`campaign` is the bounded autonomous validation entrypoint for already-reviewed
+strategy families and narrowed candidate spaces. Use it after workflow evidence
+has reduced a research idea to a small set of frozen candidates or tightly
+bounded search dimensions. Campaign runs own generation budgets, trial
+selection, gauntlet validation, candidate acceptance/rejection records,
+reproducibility evidence, cost-stress checks, failure-window vetoes, release
+bundle verification, and human approval gates for additional generations.
+
+The normal research lifecycle is:
+
+1. Run `workflow` exploration with a schema-versioned manifest and declared
+   train/OOS or selection/validation periods.
+2. Use `workflow` backtest matrices, ablations, or optimizer steps to narrow
+   the idea to reviewed candidate parameters.
+3. Freeze the candidate parameters, strategy code version, data window, and
+   selection rationale in workflow artifacts before using validation or OOS
+   evidence for promotion review.
+4. Run `campaign validate` and `campaign run` only on the reviewed strategy
+   family and narrowed candidate space.
+5. Run `campaign verify` before treating campaign output as release evidence.
+6. Send accepted campaign evidence to `FLOW-PROMOTION`; research or campaign
+   success never starts paper or live runtime by itself.
+
+Handoff gates:
+
+- Workflow-to-campaign handoff must name the workflow summary, manifest hash,
+  candidate parameters, strategy code version, data window, and selection
+  basis used to choose candidates.
+- Campaign search space must not silently expand beyond workflow-approved
+  candidates or dimensions. A broader campaign is a new research workflow, not
+  a validation handoff.
+- OOS, validation, failure-window, cost-stress, or release-verify evidence must
+  not feed back into earlier parameter selection unless a new workflow record
+  declares that later evidence as a new research input.
+- Workflow optimizer results are exploration evidence until a campaign or an
+  explicitly declared workflow validation gate records acceptance criteria and
+  verification evidence.
+- Campaign results are validation evidence only; they do not promote strategy
+  code into paper/live without `FLOW-PROMOTION`.
+
+Forbidden shortcuts:
+
+- Do not use campaign runs as broad blind search when no workflow hypothesis,
+  manifest, or candidate-selection basis exists.
+- Do not use workflow-only optimizer rankings as final release evidence when
+  campaign gauntlet, reproducibility, cost-stress, or failure-window gates are
+  required.
+- Do not bypass both paths with ad hoc strategy runners, legacy VWAP scripts,
+  VWAP-specific optimizer configs, or standalone optimizer paths for reviewed
+  research evidence.

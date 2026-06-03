@@ -1,0 +1,25 @@
+market_data:
+  source: local_historical
+  config: configs/data/historical.local.yaml
+  catalog: research_futures
+roots:
+  - GC
+  - SI
+symbols:
+  - GC
+  - SI
+start: "2024-01-01T00:00:00Z"
+end: "2026-05-22T20:20:00Z"
+timeframe: 1m
+initial_cash: "1000000"
+strategy_config: configs/strategies/orb_vwap_trend_filter.yaml
+cost_model:
+  fixed_commission_per_contract: "0"
+  slippage_bps: "0"
+risk_config:
+  max_notional: "100000000"
+roll_policy:
+  enabled: true
+  method: first_notice_date
+  roll_sessions_before_first_notice: 3
+warmup_bars: 60

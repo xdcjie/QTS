@@ -1,0 +1,70 @@
+schema_version: 2
+
+run:
+  id: orb-vwap-trend-gc-si-long
+  question: Does opening-range breakout filtered by VWAP and trend remain robust on GC and SI over the 2024-2026 research window?
+  owner: research
+  created_at: "2026-06-03T00:00:00+00:00"
+
+strategy:
+  id: orb_vwap_trend_filter
+  source_module: strategies.research.orb_vwap_trend_filter
+  entrypoint: OrbVwapTrendFilterStrategy
+  default_config: ../../strategies/orb_vwap_trend_filter.yaml
+  hypothesis: Opening-range breakouts have cleaner expectancy when aligned with completed-bar VWAP slope and short-term trend, with VWAP/trend reversal exits reducing giveback.
+
+data:
+  dataset_id: research_futures_gc_si_1m_2024_2026
+  config: ../../data/historical.local.yaml
+  catalog: research_futures
+  roots: [GC, SI]
+  timeframe: 1m
+  start: "2024-01-01T00:00:00+00:00"
+  end: "2026-05-22T20:20:00+00:00"
+  calendar: CME
+
+splits:
+  windows:
+    - name: train_2024_2025
+      role: selection
+      start: "2024-01-01"
+      end: "2026-01-01"
+    - name: oos_2026
+      role: validation
+      start: "2026-01-01"
+      end: "2026-05-22"
+
+metrics_schema:
+  id: schema_v2
+  version: 2
+  path: ../metrics/schema_v2.yaml
+
+promotion_policy:
+  id: research_only
+  version: 1
+  path: ../../promotion/default.yaml
+
+artifacts:
+  required:
+    - artifact_graph
+    - workflow_summary
+    - research_index
+    - backtest_manifest
+    - data_quality
+    - evidence_bundle
+    - metrics
+    - optimizer_validation_summary
+    - reproducibility
+
+reproducibility:
+  require_clean_git: false
+  required_hash_groups:
+    - config_hashes
+    - data_hashes
+    - dependency_hashes
+
+parameter_grid:
+  symbol: [GC, SI]
+  max_holding_bars: [30, 60]
+
+output_root: runs/research/orb_vwap_trend_gc_si_long

@@ -1,0 +1,76 @@
+version: 1
+workflow_id: orb-vwap-trend-gc-si-atr-trailing-matrix
+periods:
+  train_2024_2025:
+    start: "2024-01-01T00:00:00+00:00"
+    end: "2026-01-01T00:00:00+00:00"
+    role: selection
+  oos_2026:
+    start: "2026-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.orb_vwap_trend_filter
+    required_strategy: strategies.research.orb_vwap_trend_filter:OrbVwapTrendFilterStrategy
+    on_fail: stop
+
+  - id: atr_trailing_matrix
+    kind: backtest_matrix
+    output_root: ../../../runs/research/orb_vwap_trend_gc_si_long/atr_trailing_matrix
+    summary_output: ../../../runs/research/orb_vwap_trend_gc_si_long/atr_trailing_matrix/summary.json
+    periods:
+      - train_2024_2025
+      - oos_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: gc_hold60_trail2
+        strategy_params:
+          symbol: GC
+          opening_range_minutes: 60
+          max_holding_bars: 60
+          exit_on_vwap_cross: true
+          exit_on_trend_reversal: true
+          use_trailing_stop: true
+          trailing_atr_multiple: "2.0"
+      - name: gc_hold60_or_atr_filter
+        strategy_params:
+          symbol: GC
+          opening_range_minutes: 60
+          max_holding_bars: 60
+          exit_on_vwap_cross: true
+          exit_on_trend_reversal: true
+          min_opening_range_atr: "0.5"
+          max_opening_range_atr: "3.0"
+      - name: si_hold30_trail2
+        strategy_params:
+          symbol: SI
+          opening_range_minutes: 60
+          max_holding_bars: 30
+          exit_on_vwap_cross: true
+          exit_on_trend_reversal: true
+          use_trailing_stop: true
+          trailing_atr_multiple: "2.0"
+      - name: si_hold30_or_atr_filter
+        strategy_params:
+          symbol: SI
+          opening_range_minutes: 60
+          max_holding_bars: 30
+          exit_on_vwap_cross: true
+          exit_on_trend_reversal: true
+          min_opening_range_atr: "0.5"
+          max_opening_range_atr: "3.0"
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/orb_vwap_trend_gc_si_long/reports

@@ -1,0 +1,34 @@
+version: 1
+workflow_id: orb-vwap-trend-gc-si-long-explore
+steps:
+  - id: implementation
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.orb_vwap_trend_filter
+    required_strategy: strategies.research.orb_vwap_trend_filter:OrbVwapTrendFilterStrategy
+    on_fail: stop
+
+  - id: backtest
+    kind: backtest
+    strategy_params:
+      symbol: GC
+      opening_range_minutes: 60
+      max_holding_bars: 30
+      exit_on_vwap_cross: true
+      exit_on_trend_reversal: true
+
+  - id: optimize
+    kind: optimize
+    objective_metric: sharpe_ratio
+    output_root: ../../../runs/research/orb_vwap_trend_gc_si_long/optimizer
+    validation_output: ../../../runs/research/orb_vwap_trend_gc_si_long/validation/optimizer-summary.json
+    parameters:
+      symbol: [GC, SI]
+      opening_range_minutes: [60]
+      max_holding_bars: [30, 60]
+      exit_on_vwap_cross: [true]
+      exit_on_trend_reversal: [true]
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/orb_vwap_trend_gc_si_long/reports

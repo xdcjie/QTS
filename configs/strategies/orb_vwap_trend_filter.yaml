@@ -1,0 +1,26 @@
+strategy_id: orb-vwap-trend-filter
+class_path: strategies.research.orb_vwap_trend_filter:OrbVwapTrendFilterStrategy
+account_id: backtest-account
+allocation: "1.0"
+enabled: true
+params:
+  symbol: GC
+  timeframe: 1m
+  mode: breakout
+  opening_range_minutes: 60
+  max_holding_bars: 30
+  target_quantity: "1"
+  stop_range_multiple: "0.75"
+  target_range_multiple: "1.25"
+  use_vwap_filter: true
+  vwap_slope_lookback: 10
+  trend_filter: roc
+  trend_window: 60
+  min_trend_return: "0"
+  exit_on_vwap_cross: true
+  exit_on_trend_reversal: true
+  atr_window: 14
+  min_opening_range_atr: "0"
+  max_opening_range_atr: "99"
+  use_trailing_stop: false
+  trailing_atr_multiple: "0"

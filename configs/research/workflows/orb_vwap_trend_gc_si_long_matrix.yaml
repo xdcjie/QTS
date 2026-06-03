@@ -1,0 +1,54 @@
+version: 1
+workflow_id: orb-vwap-trend-gc-si-long-matrix
+periods:
+  train_2024_2025:
+    start: "2024-01-01T00:00:00+00:00"
+    end: "2026-01-01T00:00:00+00:00"
+    role: selection
+  oos_2026:
+    start: "2026-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.orb_vwap_trend_filter
+    required_strategy: strategies.research.orb_vwap_trend_filter:OrbVwapTrendFilterStrategy
+    on_fail: stop
+
+  - id: train_oos_matrix
+    kind: backtest_matrix
+    output_root: ../../../runs/research/orb_vwap_trend_gc_si_long/matrix
+    summary_output: ../../../runs/research/orb_vwap_trend_gc_si_long/matrix/summary.json
+    periods:
+      - train_2024_2025
+      - oos_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: gc_or60_hold60_trendrev
+        strategy_params:
+          symbol: GC
+          opening_range_minutes: 60
+          max_holding_bars: 60
+          exit_on_vwap_cross: true
+          exit_on_trend_reversal: true
+      - name: si_or60_hold30_trendrev
+        strategy_params:
+          symbol: SI
+          opening_range_minutes: 60
+          max_holding_bars: 30
+          exit_on_vwap_cross: true
+          exit_on_trend_reversal: true
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/orb_vwap_trend_gc_si_long/reports
