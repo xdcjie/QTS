@@ -33,10 +33,16 @@ class BacktestPipelineJob:
     output_root: Path
     objective_metric: str = "sharpe_ratio"
     materialized_replay_cache_dir: Path | None = None
+    equity_curve_sample_interval: int = 1
 
     def __post_init__(self) -> None:
         if not self.objective_metric.strip():
             raise ValueError("objective_metric must not be empty")
+        if (
+            isinstance(self.equity_curve_sample_interval, bool)
+            or self.equity_curve_sample_interval < 1
+        ):
+            raise ValueError("equity_curve_sample_interval must be a positive integer")
         if self.materialized_replay_cache_dir is not None:
             object.__setattr__(
                 self,
@@ -64,7 +70,11 @@ class BacktestPipelineRunner:
             run_dir = job.output_root / f"run-{index:04d}"
             run_pipeline = base_pipeline.with_strategy_params(combination)
             engine, _bundle = run_pipeline.build_engine()
-            stream_result = engine.run_streaming(run_dir, compact_events=True)
+            stream_result = engine.run_streaming(
+                run_dir,
+                compact_events=True,
+                equity_curve_sample_interval=job.equity_curve_sample_interval,
+            )
             manifest_path = Path(stream_result.manifest_path)
             payload = json.loads(manifest_path.read_text(encoding="utf-8"))
             objective_value = extract_objective_from_manifest(payload, job.objective_metric)

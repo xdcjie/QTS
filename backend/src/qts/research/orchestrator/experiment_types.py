@@ -32,6 +32,7 @@ class ResearchExperimentJob:
     attempt: int = 1
     parent_job_id: str | None = None
     execution_mode: str = _BACKTEST_PIPELINE_MODE
+    equity_curve_sample_interval: int = 1
 
     def __post_init__(self) -> None:
         if not self.job_id.strip():
@@ -43,6 +44,11 @@ class ResearchExperimentJob:
         execution_mode = str(self.execution_mode).strip()
         if execution_mode not in _EXECUTION_MODES:
             raise ValueError(f"unsupported execution_mode: {self.execution_mode}")
+        if (
+            isinstance(self.equity_curve_sample_interval, bool)
+            or self.equity_curve_sample_interval < 1
+        ):
+            raise ValueError("equity_curve_sample_interval must be a positive integer")
         object.__setattr__(self, "execution_mode", execution_mode)
         object.__setattr__(self, "manifest_payload", dict(self.manifest_payload))
         object.__setattr__(self, "output_root", Path(self.output_root))
@@ -59,6 +65,7 @@ class ResearchExperimentJob:
 
         return {
             "attempt": self.attempt,
+            "equity_curve_sample_interval": self.equity_curve_sample_interval,
             "execution_mode": self.execution_mode,
             "generation_id": self.generation_id,
             "job_id": self.job_id,
@@ -86,6 +93,10 @@ class ResearchExperimentJob:
                 None if payload.get("parent_job_id") is None else str(payload["parent_job_id"])
             ),
             execution_mode=str(payload.get("execution_mode", _BACKTEST_PIPELINE_MODE)),
+            equity_curve_sample_interval=cls._int(
+                payload.get("equity_curve_sample_interval", 1),
+                "equity_curve_sample_interval",
+            ),
         )
 
     @staticmethod

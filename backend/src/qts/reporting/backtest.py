@@ -208,6 +208,7 @@ class BacktestArtifactWriter:
         *,
         run_id: RuntimeRunId | None = None,
         compact_events: bool = False,
+        equity_curve_sample_interval: int = 1,
     ) -> None:
         """Create a writer for partitioned backtest artifacts.
 
@@ -219,9 +220,15 @@ class BacktestArtifactWriter:
         All other event kinds (trading lifecycle, kill switch,
         snapshot, position_closed) are always persisted.
         """
+        if isinstance(equity_curve_sample_interval, bool) or equity_curve_sample_interval < 1:
+            raise ValueError("equity_curve_sample_interval must be a positive integer")
         self._output_dir = output_dir
         self._run_id = run_id
         self._compact_events = compact_events
+        self._equity_curve_sample_interval = equity_curve_sample_interval
+        self._equity_point_count = 0
+        self._last_equity_payload: dict[str, Any] | None = None
+        self._last_equity_written_index = 0
         self._output_dir.mkdir(parents=True, exist_ok=True)
         self._artifacts = {
             kind: _NdjsonArtifact(self._output_dir / f".{kind}.partial.ndjson")
@@ -330,7 +337,23 @@ class BacktestArtifactWriter:
         """Fold one equity point into metrics, statistics, and the artifact."""
         self._equity_metrics.update(point.equity)
         self._statistics.on_equity_point(time=point.time, equity=point.equity)
-        self._artifacts["equity_curve"].write({"time": point.time, "equity": point.equity})
+        self._equity_point_count += 1
+        payload = {"time": point.time, "equity": point.equity}
+        self._last_equity_payload = payload
+        if self._should_write_equity_point(self._equity_point_count):
+            self._write_equity_payload(payload)
+
+    def _should_write_equity_point(self, index: int) -> bool:
+        """Return whether this equity point should be persisted to the artifact."""
+        return (
+            self._equity_curve_sample_interval == 1
+            or index == 1
+            or index % self._equity_curve_sample_interval == 0
+        )
+
+    def _write_equity_payload(self, payload: dict[str, Any]) -> None:
+        self._artifacts["equity_curve"].write(payload)
+        self._last_equity_written_index = self._equity_point_count
 
     def write_holdings_snapshot(
         self,
@@ -368,6 +391,11 @@ class BacktestArtifactWriter:
     ) -> tuple[str, str, dict[str, Any], BacktestArtifacts]:
         """Close artifacts, write the manifest, and return run id, hash, and paths."""
         finalized_at = datetime.now(UTC)
+        if (
+            self._last_equity_payload is not None
+            and self._last_equity_written_index != self._equity_point_count
+        ):
+            self._write_equity_payload(self._last_equity_payload)
         statistics_payload = self._statistics.finalize(
             trading_bars=trading_bars,
         ).to_payload()
@@ -411,6 +439,10 @@ class BacktestArtifactWriter:
                 for kind in self._KINDS
             },
         }
+        if self._equity_curve_sample_interval != 1:
+            report_payload["artifact_policy"] = {
+                "equity_curve_sample_interval": self._equity_curve_sample_interval,
+            }
         report_payload["statistics_hash"] = stable_json_hash(statistics_payload)
         if runtime_topology_payload is not None:
             report_payload["runtime_topology"] = runtime_topology_payload

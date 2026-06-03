@@ -39,6 +39,7 @@ class BacktestArtifactService:
         account_id: AccountId,
         strategy_id: StrategyId | None,
         compact_events: bool = False,
+        equity_curve_sample_interval: int = 1,
         metrics: MetricsRegistry | None = None,
     ) -> None:
         """Create the writer + normalized event sink for a backtest run."""
@@ -46,6 +47,7 @@ class BacktestArtifactService:
             output_dir,
             run_id=run_id,
             compact_events=compact_events,
+            equity_curve_sample_interval=equity_curve_sample_interval,
         )
         self._sink = BacktestRuntimeEventSink(
             self._writer,

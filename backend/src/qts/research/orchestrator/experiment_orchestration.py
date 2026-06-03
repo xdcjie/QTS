@@ -468,6 +468,7 @@ def _execute_backtest_pipeline_trial(
             ),
             output_root=trial_dir / "backtest",
             objective_metric=objective_metric,
+            equity_curve_sample_interval=job.equity_curve_sample_interval,
             materialized_replay_cache_dir=(
                 None
                 if materialized_cache_dir is None

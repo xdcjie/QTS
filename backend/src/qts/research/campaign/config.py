@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Self
@@ -64,6 +64,180 @@ class ResearchCampaignObjective:
             weight = ResearchCampaignConfig.finite_number(raw_weight, field_name)
             components[name] = weight
         return dict(sorted(components.items()))
+
+
+@dataclass(frozen=True, slots=True)
+class ResearchCampaignTwoStageSelection:
+    """Optional finalist preselection policy before promotion-grade validation."""
+
+    enabled: bool = False
+    max_finalists: int = 1
+    ranking_metric: str = "quality.sharpe"
+    equity_curve_sample_interval: int = 1
+    min_profit_factor: float | None = None
+    min_total_return: float | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.enabled, bool):
+            raise ValueError("selection.two_stage.enabled must be a boolean")
+        max_finalists = ResearchCampaignBudget._positive_int(
+            self.max_finalists,
+            "selection.two_stage.max_finalists",
+        )
+        ranking_metric = ResearchCampaignConfig.required_text_value(
+            self.ranking_metric,
+            "selection.two_stage.ranking_metric",
+        )
+        for part in ranking_metric.split("."):
+            ResearchCampaignConfig.validate_safe_token(
+                part,
+                "selection.two_stage.ranking_metric",
+            )
+        equity_curve_sample_interval = ResearchCampaignBudget._positive_int(
+            self.equity_curve_sample_interval,
+            "selection.two_stage.equity_curve_sample_interval",
+        )
+        min_profit_factor = self._optional_finite(
+            self.min_profit_factor,
+            "selection.two_stage.min_profit_factor",
+        )
+        if min_profit_factor is not None and min_profit_factor <= 0:
+            raise ValueError("selection.two_stage.min_profit_factor must be greater than 0")
+        min_total_return = self._optional_finite(
+            self.min_total_return,
+            "selection.two_stage.min_total_return",
+        )
+        object.__setattr__(self, "max_finalists", max_finalists)
+        object.__setattr__(self, "ranking_metric", ranking_metric)
+        object.__setattr__(
+            self,
+            "equity_curve_sample_interval",
+            equity_curve_sample_interval,
+        )
+        object.__setattr__(self, "min_profit_factor", min_profit_factor)
+        object.__setattr__(self, "min_total_return", min_total_return)
+
+    @classmethod
+    def from_payload(cls, payload: Any) -> Self:
+        """Construct two-stage selection policy from an optional YAML payload."""
+
+        if payload is None:
+            return cls()
+        if not isinstance(payload, Mapping):
+            raise ValueError("selection.two_stage must be a mapping")
+        enabled = payload.get("enabled", False)
+        if not isinstance(enabled, bool):
+            raise ValueError("selection.two_stage.enabled must be a boolean")
+        return cls(
+            enabled=enabled,
+            max_finalists=ResearchCampaignBudget._positive_int(
+                payload.get("max_finalists", 1),
+                "selection.two_stage.max_finalists",
+            ),
+            ranking_metric=ResearchCampaignConfig.required_text_value(
+                payload.get("ranking_metric", "quality.sharpe"),
+                "selection.two_stage.ranking_metric",
+            ),
+            equity_curve_sample_interval=ResearchCampaignBudget._positive_int(
+                payload.get("equity_curve_sample_interval", 1),
+                "selection.two_stage.equity_curve_sample_interval",
+            ),
+            min_profit_factor=(
+                None
+                if payload.get("min_profit_factor") is None
+                else ResearchCampaignConfig.finite_number(
+                    payload.get("min_profit_factor"),
+                    "selection.two_stage.min_profit_factor",
+                )
+            ),
+            min_total_return=(
+                None
+                if payload.get("min_total_return") is None
+                else ResearchCampaignConfig.finite_number(
+                    payload.get("min_total_return"),
+                    "selection.two_stage.min_total_return",
+                )
+            ),
+        )
+
+    def to_payload(self) -> dict[str, Any]:
+        """Return a JSON-ready two-stage selection payload."""
+
+        payload: dict[str, Any] = {
+            "enabled": self.enabled,
+            "equity_curve_sample_interval": self.equity_curve_sample_interval,
+            "max_finalists": self.max_finalists,
+            "ranking_metric": self.ranking_metric,
+        }
+        if self.min_profit_factor is not None:
+            payload["min_profit_factor"] = self.min_profit_factor
+        if self.min_total_return is not None:
+            payload["min_total_return"] = self.min_total_return
+        return payload
+
+    @staticmethod
+    def _optional_finite(value: Any, field_name: str) -> float | None:
+        if value is None:
+            return None
+        return ResearchCampaignConfig.finite_number(value, field_name)
+
+
+@dataclass(frozen=True, slots=True)
+class ResearchCampaignSelection:
+    """Selector and validation-gauntlet configuration for a campaign."""
+
+    selector: str = "CandidateSelector"
+    gauntlet: str = "ValidationGauntlet"
+    two_stage: ResearchCampaignTwoStageSelection = field(
+        default_factory=ResearchCampaignTwoStageSelection
+    )
+
+    def __post_init__(self) -> None:
+        selector = ResearchCampaignConfig.required_text_value(
+            self.selector,
+            "selection.selector",
+        )
+        gauntlet = ResearchCampaignConfig.required_text_value(
+            self.gauntlet,
+            "selection.gauntlet",
+        )
+        ResearchCampaignConfig.validate_safe_token(selector, "selection.selector")
+        ResearchCampaignConfig.validate_safe_token(gauntlet, "selection.gauntlet")
+        object.__setattr__(self, "selector", selector)
+        object.__setattr__(self, "gauntlet", gauntlet)
+
+    @classmethod
+    def from_payload(cls, payload: Any) -> Self | None:
+        """Construct selection policy from an optional YAML payload section."""
+
+        if payload is None:
+            return None
+        if not isinstance(payload, Mapping):
+            raise ValueError("selection must be a mapping")
+        return cls(
+            selector=ResearchCampaignConfig.required_text_value(
+                payload.get("selector", "CandidateSelector"),
+                "selection.selector",
+            ),
+            gauntlet=ResearchCampaignConfig.required_text_value(
+                payload.get("gauntlet", "ValidationGauntlet"),
+                "selection.gauntlet",
+            ),
+            two_stage=ResearchCampaignTwoStageSelection.from_payload(
+                payload.get("two_stage")
+            ),
+        )
+
+    def to_payload(self) -> dict[str, Any]:
+        """Return a JSON-ready selection payload."""
+
+        payload: dict[str, Any] = {
+            "gauntlet": self.gauntlet,
+            "selector": self.selector,
+        }
+        if self.two_stage.enabled:
+            payload["two_stage"] = self.two_stage.to_payload()
+        return payload
 
 
 @dataclass(frozen=True, slots=True)
@@ -626,6 +800,7 @@ class ResearchCampaignConfig:
     constraints: tuple[ResearchCampaignConstraint, ...]
     budget: ResearchCampaignBudget
     execution: ResearchCampaignExecution
+    selection: ResearchCampaignSelection | None = None
 
     SAFE_TOKEN_CHARS = frozenset(
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-"
@@ -693,6 +868,7 @@ class ResearchCampaignConfig:
             constraints=cls.constraints_from_payload(constraints),
             budget=ResearchCampaignBudget.from_payload(budget),
             execution=ResearchCampaignExecution.from_payload(execution),
+            selection=ResearchCampaignSelection.from_payload(payload.get("selection")),
         )
 
     @property
@@ -717,6 +893,8 @@ class ResearchCampaignConfig:
             "owner": self.owner,
             "universe": self.universe.to_payload(),
         }
+        if self.selection is not None:
+            payload["selection"] = self.selection.to_payload()
         if include_hash:
             payload["campaign_hash"] = self.campaign_hash
         return payload
@@ -818,5 +996,7 @@ __all__ = [
     "ResearchCampaignExecution",
     "ResearchCampaignFamily",
     "ResearchCampaignObjective",
+    "ResearchCampaignSelection",
+    "ResearchCampaignTwoStageSelection",
     "ResearchCampaignUniverse",
 ]

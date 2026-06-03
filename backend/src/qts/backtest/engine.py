@@ -166,6 +166,7 @@ class BacktestEngine:
         *,
         metrics: MetricsRegistry | None = None,
         compact_events: bool = False,
+        equity_curve_sample_interval: int = 1,
     ) -> BacktestStreamResult:
         """Run the backtest and write streaming artifacts.
 
@@ -201,6 +202,7 @@ class BacktestEngine:
             account_id=account_id,
             strategy_id=strategy_id,
             compact_events=compact_events,
+            equity_curve_sample_interval=equity_curve_sample_interval,
             metrics=metrics,
         )
         actor_loop = BacktestActorLoop(

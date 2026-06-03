@@ -246,6 +246,7 @@ def _run_generation(
         manifest_payload=_manifest_payload(support, run, checked_paths, data_paths),
         output_root=run.output_root,
         trials=trials,
+        equity_curve_sample_interval=_exploration_equity_curve_sample_interval(run),
     )
     experiment_result = support._run_experiment_job(job, audit_log=audit_log)
     trial_evidence_rows = _trial_evidence_rows(
@@ -334,6 +335,23 @@ def _select_generation_candidates(
     trial_by_id = {str(trial["trial_id"]): trial for trial in trials}
     result_by_id = {result.trial_id: result for result in trial_results}
     row_by_id = {str(row["trial_id"]): dict(row) for row in trial_evidence_rows}
+    finalist_trial_ids, preselection_rejected_rows, preselection_payload = (
+        _preselect_generation_finalists(
+            run=run,
+            trials=trials,
+            result_by_id=result_by_id,
+            row_by_id=row_by_id,
+        )
+    )
+    rejected_rows.extend(preselection_rejected_rows)
+    _write_json(run.output_root / generation_id / "preselection.json", preselection_payload)
+    if preselection_payload.get("enabled") is True:
+        audit_log.append(
+            "two_stage_preselection_completed",
+            preselection_payload,
+            created_at=support._clock.now(offset_seconds=225),
+        )
+    finalist_trial_id_set = set(finalist_trial_ids)
 
     # Validation artifacts must exist before selection: the selector enforces
     # the promotion metrics schema, and the artifact-derived fields
@@ -352,6 +370,8 @@ def _select_generation_candidates(
     ]
     for trial in trials:
         trial_id = str(trial["trial_id"])
+        if trial_id not in finalist_trial_id_set:
+            continue
         result = result_by_id[trial_id]
         if result.status != "succeeded":
             continue
@@ -376,6 +396,7 @@ def _select_generation_candidates(
             trial_result=result_by_id[str(trial["trial_id"])],
         )
         for trial in trials
+        if str(trial["trial_id"]) in finalist_trial_id_set
     ]
     # Multiple-testing correction: the multiplicity haircut must see how many
     # configurations were tried this generation, not the default of 1 (which
@@ -385,7 +406,7 @@ def _select_generation_candidates(
     selection = CandidateSelector(support._selection_policy(run)).select(
         selector_inputs,
         metrics_schema=support._metrics_schema(),
-        trial_count=max(len(selector_inputs), 1),
+        trial_count=max(len(trials), 1),
         multiplicity_scope="generation",
     )
     selection_dir = run.output_root / generation_id / "selection"
@@ -524,6 +545,220 @@ def _select_generation_candidates(
         {"results": gauntlet_results},
     )
     return selected_rows, rejected_rows
+
+
+def _preselect_generation_finalists(
+    *,
+    run: AutonomousResearchRun,
+    trials: Sequence[Mapping[str, Any]],
+    result_by_id: Mapping[str, ResearchTrialResult],
+    row_by_id: dict[str, dict[str, Any]],
+) -> tuple[tuple[str, ...], list[dict[str, Any]], dict[str, Any]]:
+    """Return trial ids that should receive promotion-grade validation."""
+
+    two_stage = _two_stage_selection(run)
+    all_trial_ids = tuple(str(trial["trial_id"]) for trial in trials)
+    if two_stage is None:
+        return (
+            all_trial_ids,
+            [],
+            {
+                "enabled": False,
+                "finalist_trial_ids": list(all_trial_ids),
+                "ranking_metric": None,
+                "rejected_count": 0,
+                "trial_count": len(all_trial_ids),
+            },
+        )
+
+    eligible: list[dict[str, Any]] = []
+    rejected_rows: list[dict[str, Any]] = []
+    rejections: list[dict[str, Any]] = []
+    ranking_metric = str(two_stage.ranking_metric)
+    max_finalists = int(two_stage.max_finalists)
+
+    for trial_id in all_trial_ids:
+        row = row_by_id[trial_id]
+        result = result_by_id[trial_id]
+        metrics = _mapping(row.get("metrics", {}), "metrics")
+        score = _metric_number(metrics, ranking_metric)
+        reasons = list(
+            _stage_one_rejection_reasons(
+                two_stage=two_stage,
+                result=result,
+                metrics=metrics,
+                ranking_metric=ranking_metric,
+                score=score,
+            )
+        )
+        if reasons:
+            payload = {
+                "eligible": False,
+                "rank": None,
+                "ranking_metric": ranking_metric,
+                "reasons": reasons,
+                "score": score,
+                "stage": "preselection",
+            }
+            row_by_id[trial_id] = {**row, "preselection": payload}
+            rejected_rows.append(_preselection_rejected_row(row_by_id[trial_id], reasons))
+            rejections.append({"reasons": reasons, "score": score, "trial_id": trial_id})
+            continue
+        eligible.append({"score": score, "trial_id": trial_id})
+
+    ranked = sorted(
+        eligible,
+        key=lambda item: (-(float(item["score"])), str(item["trial_id"])),
+    )
+    finalist_ids: list[str] = []
+    finalists: list[dict[str, Any]] = []
+    for rank, item in enumerate(ranked, start=1):
+        trial_id = str(item["trial_id"])
+        score = float(item["score"])
+        if rank <= max_finalists:
+            payload = {
+                "eligible": True,
+                "rank": rank,
+                "ranking_metric": ranking_metric,
+                "score": score,
+                "stage": "preselection",
+            }
+            row_by_id[trial_id] = {**row_by_id[trial_id], "preselection": payload}
+            finalist_ids.append(trial_id)
+            finalists.append({"rank": rank, "score": score, "trial_id": trial_id})
+            continue
+        reasons = (f"preselection: rank {rank} exceeds max_finalists {max_finalists}",)
+        payload = {
+            "eligible": True,
+            "rank": rank,
+            "ranking_metric": ranking_metric,
+            "reasons": list(reasons),
+            "score": score,
+            "stage": "preselection",
+        }
+        row_by_id[trial_id] = {**row_by_id[trial_id], "preselection": payload}
+        rejected_rows.append(_preselection_rejected_row(row_by_id[trial_id], reasons))
+        rejections.append({"rank": rank, "reasons": list(reasons), "score": score, "trial_id": trial_id})
+
+    return (
+        tuple(finalist_ids),
+        rejected_rows,
+        {
+            "eligible_count": len(eligible),
+            "enabled": True,
+            "finalist_count": len(finalist_ids),
+            "finalists": finalists,
+            "max_finalists": max_finalists,
+            "ranking_metric": ranking_metric,
+            "rejected_count": len(rejected_rows),
+            "rejections": rejections,
+            "trial_count": len(all_trial_ids),
+        },
+    )
+
+
+def _two_stage_selection(run: AutonomousResearchRun) -> Any | None:
+    if run.campaign_config is None or run.campaign_config.selection is None:
+        return None
+    two_stage = run.campaign_config.selection.two_stage
+    return two_stage if bool(two_stage.enabled) else None
+
+
+def _exploration_equity_curve_sample_interval(run: AutonomousResearchRun) -> int:
+    two_stage = _two_stage_selection(run)
+    if two_stage is None:
+        return 1
+    return int(two_stage.equity_curve_sample_interval)
+
+
+def _stage_one_rejection_reasons(
+    *,
+    two_stage: Any,
+    result: ResearchTrialResult,
+    metrics: Mapping[str, Any],
+    ranking_metric: str,
+    score: float | None,
+) -> tuple[str, ...]:
+    reasons: list[str] = []
+    if result.status != "succeeded":
+        reasons.append(f"preselection: trial status {result.status}")
+        return tuple(reasons)
+    if score is None:
+        reasons.append(f"preselection: {ranking_metric} metric is required")
+    data_quality = _json_mapping_from_path(result.data_quality_path)
+    if not bool(data_quality.get("accepted", False)):
+        reasons.append("preselection: data_quality artifact rejected")
+    blockers = data_quality.get("blockers", ())
+    if isinstance(blockers, Sequence) and not isinstance(blockers, str):
+        for blocker in blockers:
+            if isinstance(blocker, Mapping):
+                reasons.append(
+                    f"preselection: data_quality {blocker.get('code', 'blocker')}"
+                )
+    reproducibility = _json_mapping_from_path(result.reproducibility_path)
+    repro_blockers = reproducibility.get("blockers", ())
+    if isinstance(repro_blockers, Sequence) and not isinstance(repro_blockers, str):
+        for blocker in repro_blockers:
+            reasons.append(f"preselection: reproducibility {blocker}")
+    if bool(reproducibility.get("git_dirty")):
+        reasons.append("preselection: reproducibility git working tree is dirty")
+
+    min_profit_factor = two_stage.min_profit_factor
+    if min_profit_factor is not None:
+        profit_factor = _metric_number(metrics, "quality.profit_factor")
+        if profit_factor is None:
+            reasons.append("preselection: quality.profit_factor metric is required")
+        elif profit_factor < float(min_profit_factor):
+            reasons.append(
+                "preselection: profit_factor "
+                f"{profit_factor:g} below {float(min_profit_factor):g}"
+            )
+
+    min_total_return = two_stage.min_total_return
+    if min_total_return is not None:
+        total_return = _metric_number(metrics, "performance.total_return")
+        if total_return is None:
+            reasons.append("preselection: performance.total_return metric is required")
+        elif total_return < float(min_total_return):
+            reasons.append(
+                "preselection: total_return "
+                f"{total_return:g} below {float(min_total_return):g}"
+            )
+    return tuple(reasons)
+
+
+def _preselection_rejected_row(
+    row: Mapping[str, Any],
+    reasons: Sequence[str],
+) -> dict[str, Any]:
+    return {
+        **dict(row),
+        "gauntlet_reasons": [],
+        "reasons": list(reasons),
+        "rejection_stage": "preselection",
+        "selector_reasons": [],
+    }
+
+
+def _metric_number(payload: Mapping[str, Any], path: str) -> float | None:
+    current: Any = payload
+    for part in path.split("."):
+        if not isinstance(current, Mapping):
+            return None
+        current = current.get(part)
+    if isinstance(current, bool) or current is None:
+        return None
+    try:
+        return float(current)
+    except (TypeError, ValueError):
+        return None
+
+
+def _json_mapping_from_path(path: Path) -> Mapping[str, Any]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, Mapping):
+        raise ValueError(f"artifact must be a JSON object: {path}")
+    return payload
 
 
 def _trials(
