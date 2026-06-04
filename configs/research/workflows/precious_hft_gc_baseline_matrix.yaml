@@ -1,0 +1,168 @@
+version: 1
+workflow_id: precious-hft-gc-baseline-matrix
+periods:
+  train_2024:
+    start: "2024-01-01T00:00:00+00:00"
+    end: "2025-01-01T00:00:00+00:00"
+    role: selection
+  oos_2025_2026:
+    start: "2025-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_microtrend
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_microtrend_scalper
+    required_strategy: strategies.research.precious_metal_microtrend_scalper:PreciousMetalMicrotrendScalperStrategy
+    on_fail: stop
+
+  - id: implementation_vwap_reversion
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_vwap_reversion_scalper
+    required_strategy: strategies.research.precious_metal_vwap_reversion_scalper:PreciousMetalVwapReversionScalperStrategy
+    on_fail: stop
+
+  - id: implementation_opening_range_acd
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_opening_range_acd
+    required_strategy: strategies.research.precious_metal_opening_range_acd:PreciousMetalOpeningRangeAcdStrategy
+    on_fail: stop
+
+  - id: microtrend_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_microtrend_scalper_gc.yaml
+    output_root: ../../../runs/research/precious_hft_gc/microtrend_matrix
+    summary_output: ../../../runs/research/precious_hft_gc/microtrend_matrix/summary.json
+    periods:
+      - train_2024
+      - oos_2025_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: microtrend_default
+        strategy_params:
+          fast_bars: 3
+          slow_bars: 12
+          min_volume_ratio: "1.20"
+          max_vwap_distance_bps: "40"
+          stop_atr_multiple: "1.20"
+          take_profit_atr_multiple: "1.80"
+      - name: microtrend_faster_looser
+        strategy_params:
+          fast_bars: 2
+          slow_bars: 8
+          min_volume_ratio: "1.00"
+          max_vwap_distance_bps: "60"
+          stop_atr_multiple: "1.00"
+          take_profit_atr_multiple: "1.50"
+      - name: microtrend_stricter
+        strategy_params:
+          fast_bars: 5
+          slow_bars: 20
+          min_volume_ratio: "1.50"
+          max_vwap_distance_bps: "25"
+          stop_atr_multiple: "1.50"
+          take_profit_atr_multiple: "2.40"
+
+  - id: vwap_reversion_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_vwap_reversion_gc.yaml
+    output_root: ../../../runs/research/precious_hft_gc/vwap_reversion_matrix
+    summary_output: ../../../runs/research/precious_hft_gc/vwap_reversion_matrix/summary.json
+    periods:
+      - train_2024
+      - oos_2025_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: vwap_reversion_default
+        strategy_params:
+          lookback_bars: 60
+          entry_z: "2.00"
+          exit_z: "0.35"
+          stop_z: "3.50"
+          max_trend_bps: "35"
+          min_volume_ratio: "0.80"
+      - name: vwap_reversion_active
+        strategy_params:
+          lookback_bars: 40
+          entry_z: "1.50"
+          exit_z: "0.25"
+          stop_z: "3.00"
+          max_trend_bps: "50"
+          min_volume_ratio: "0.70"
+      - name: vwap_reversion_strict
+        strategy_params:
+          lookback_bars: 90
+          entry_z: "2.50"
+          exit_z: "0.50"
+          stop_z: "4.00"
+          max_trend_bps: "25"
+          min_volume_ratio: "1.00"
+
+  - id: opening_range_acd_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_opening_range_acd_gc.yaml
+    output_root: ../../../runs/research/precious_hft_gc/opening_range_acd_matrix
+    summary_output: ../../../runs/research/precious_hft_gc/opening_range_acd_matrix/summary.json
+    periods:
+      - train_2024
+      - oos_2025_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: acd_breakout_default
+        strategy_params:
+          mode: breakout
+          opening_range_bars: 5
+          max_entry_bars: 45
+          entry_buffer_ratio: "0.10"
+          stop_range_multiple: "0.75"
+          target_range_multiple: "1.25"
+          max_holding_bars: 20
+      - name: acd_breakout_15m
+        strategy_params:
+          mode: breakout
+          opening_range_bars: 15
+          max_entry_bars: 90
+          entry_buffer_ratio: "0.05"
+          stop_range_multiple: "0.75"
+          target_range_multiple: "1.50"
+          max_holding_bars: 30
+      - name: acd_failure_15m
+        strategy_params:
+          mode: failure
+          opening_range_bars: 15
+          max_entry_bars: 90
+          entry_buffer_ratio: "0.05"
+          stop_range_multiple: "0.75"
+          target_range_multiple: "1.25"
+          max_holding_bars: 30
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/precious_hft_gc/reports

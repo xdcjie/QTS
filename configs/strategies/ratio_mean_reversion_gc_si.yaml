@@ -1,0 +1,15 @@
+strategy_id: ratio-mean-reversion-gc-si
+class_path: strategies.research.ratio_mean_reversion:RatioMeanReversionStrategy
+account_id: backtest-account
+allocation: "1.0"
+enabled: true
+params:
+  leg_a_symbol: GC
+  leg_b_symbol: SI
+  timeframe: 1d
+  lookback_bars: 40
+  entry_z: "1.75"
+  exit_z: "0.25"
+  leg_a_quantity: "1"
+  leg_b_quantity: "1"
+  min_ratio_std: "0.0001"

@@ -544,9 +544,7 @@ class DataQualityRunner:
         end = None if self.end is None else self._parse_datetime(self.end)
         if start is not None and timestamp < start:
             return False
-        if end is not None and timestamp >= end:
-            return False
-        return True
+        return not (end is not None and timestamp >= end)
 
     @staticmethod
     def _session_window_for_path(path: Path) -> RegularSessionWindow | None:

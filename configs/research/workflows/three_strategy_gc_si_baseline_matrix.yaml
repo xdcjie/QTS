@@ -1,0 +1,143 @@
+version: 1
+workflow_id: three-strategy-gc-si-baseline-matrix
+periods:
+  train_2024:
+    start: "2024-01-01T00:00:00+00:00"
+    end: "2025-01-01T00:00:00+00:00"
+    role: selection
+  oos_2025_2026:
+    start: "2025-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_vol_target_trend
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.vol_target_trend
+    required_strategy: strategies.research.vol_target_trend:VolTargetTrendStrategy
+    on_fail: stop
+
+  - id: implementation_carry_momentum_rotation
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.carry_momentum_rotation
+    required_strategy: strategies.research.carry_momentum_rotation:CarryMomentumRotationStrategy
+    on_fail: stop
+
+  - id: implementation_ratio_mean_reversion
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.ratio_mean_reversion
+    required_strategy: strategies.research.ratio_mean_reversion:RatioMeanReversionStrategy
+    on_fail: stop
+
+  - id: vol_target_trend_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.three_strategy_vol_target_trend_gc_si.yaml
+    output_root: ../../../runs/research/three_strategy_gc_si/vol_target_trend_matrix
+    summary_output: ../../../runs/research/three_strategy_gc_si/vol_target_trend_matrix/summary.json
+    periods:
+      - train_2024
+      - oos_2025_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: gc_vol_trend_21_63_126
+        strategy_params:
+          symbol: GC
+          momentum_lookback_bars: [21, 63, 126]
+          volatility_lookback_bars: 40
+          target_annual_vol: "0.12"
+          max_target_percent: "0.25"
+          min_signal_return: "0.02"
+          allow_short: true
+      - name: si_vol_trend_21_63_126
+        strategy_params:
+          symbol: SI
+          momentum_lookback_bars: [21, 63, 126]
+          volatility_lookback_bars: 40
+          target_annual_vol: "0.12"
+          max_target_percent: "0.25"
+          min_signal_return: "0.02"
+          allow_short: true
+
+  - id: carry_momentum_rotation_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.three_strategy_carry_momentum_rotation_gc_si.yaml
+    output_root: ../../../runs/research/three_strategy_gc_si/carry_momentum_rotation_matrix
+    summary_output: ../../../runs/research/three_strategy_gc_si/carry_momentum_rotation_matrix/summary.json
+    periods:
+      - train_2024
+      - oos_2025_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: carryless_momentum_21_63
+        strategy_params:
+          symbols: [GC, SI]
+          momentum_lookback_bars: [21, 63]
+          volatility_lookback_bars: 40
+          carry_zscore_weight: "0"
+          min_relative_score: "0.02"
+          target_annual_vol: "0.12"
+          max_target_percent: "0.25"
+      - name: carryless_momentum_21_63_126
+        strategy_params:
+          symbols: [GC, SI]
+          momentum_lookback_bars: [21, 63, 126]
+          volatility_lookback_bars: 40
+          carry_zscore_weight: "0"
+          min_relative_score: "0.02"
+          target_annual_vol: "0.12"
+          max_target_percent: "0.25"
+
+  - id: ratio_mean_reversion_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.three_strategy_ratio_mean_reversion_gc_si.yaml
+    output_root: ../../../runs/research/three_strategy_gc_si/ratio_mean_reversion_matrix
+    summary_output: ../../../runs/research/three_strategy_gc_si/ratio_mean_reversion_matrix/summary.json
+    periods:
+      - train_2024
+      - oos_2025_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: ratio_60_175_025_b2
+        strategy_params:
+          lookback_bars: 60
+          entry_z: "1.75"
+          exit_z: "0.25"
+          leg_a_quantity: "1"
+          leg_b_quantity: "2"
+      - name: ratio_90_200_025_b2
+        strategy_params:
+          lookback_bars: 90
+          entry_z: "2.00"
+          exit_z: "0.25"
+          leg_a_quantity: "1"
+          leg_b_quantity: "2"
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/three_strategy_gc_si/reports

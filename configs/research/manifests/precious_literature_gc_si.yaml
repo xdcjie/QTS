@@ -1,0 +1,61 @@
+schema_version: 2
+run:
+  id: precious-literature-gc-si-research-v1
+  question: Can literature-backed price-only GC/SI momentum factors clear return, Sharpe, and drawdown gates using trusted 1m historical bars?
+  owner: research
+  created_at: "2026-06-03T00:00:00+00:00"
+strategy:
+  id: precious_literature_gc_si
+  source_module: strategies.research.precious_metal_tsmom_vol
+  entrypoint: PreciousMetalTsmomVolStrategy
+  default_config: ../../strategies/precious_metal_tsmom_vol_gc_si.yaml
+  hypothesis: Time-series momentum with volatility scaling and intraday first-window momentum may capture robust GC/SI continuation without external data.
+data:
+  dataset_id: research_futures_gc_si_1m_2024_2026
+  config: ../../data/historical.local.yaml
+  catalog: research_futures
+  roots: [GC, SI]
+  timeframe: 1m
+  start: "2024-01-01T00:00:00+00:00"
+  end: "2026-05-22T20:20:00+00:00"
+  calendar: CME
+splits:
+  windows:
+    - name: train_2024
+      role: selection
+      start: "2024-01-01"
+      end: "2025-01-01"
+    - name: oos_2025_2026
+      role: validation
+      start: "2025-01-01"
+      end: "2026-05-22"
+metrics_schema:
+  id: schema_v2
+  version: 2
+  path: ../metrics/schema_v2.yaml
+promotion_policy:
+  id: research_only_precious_literature_gc_si
+  version: 1
+  path: ../../promotion/default.yaml
+artifacts:
+  required:
+    - artifact_graph
+    - workflow_summary
+    - research_index
+    - backtest_manifest
+    - data_quality
+    - evidence_bundle
+    - metrics
+    - optimizer_validation_summary
+    - reproducibility
+reproducibility:
+  require_clean_git: false
+  required_hash_groups:
+    - config_hashes
+    - data_hashes
+    - dependency_hashes
+parameter_grid:
+  strategy_family:
+    - precious_metal_tsmom_vol
+    - precious_metal_intraday_momentum
+output_root: runs/research/precious_literature_gc_si

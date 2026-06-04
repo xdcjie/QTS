@@ -1,0 +1,13 @@
+strategy_id: precious-metal-utc-window-gc-si
+class_path: strategies.research.precious_metal_utc_window:PreciousMetalUtcWindowStrategy
+account_id: backtest-account
+allocation: "1.0"
+enabled: true
+params:
+  symbols: [GC, SI]
+  timeframe: 1m
+  start_hour_utc: 20
+  duration_hours: 6
+  target_quantities:
+    GC: "1"
+    SI: "1"

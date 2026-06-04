@@ -52,3 +52,35 @@ historical_data:
                 exchange_timezone: US/Eastern
                 open_time: "18:00"
                 close_time: "17:00"
+        COT_GC:
+          asset_class: research_signal
+          bars:
+            - file: cot_gc.csv
+              timeframe: 1d
+              exchange_timezone: US/Eastern
+              timezone_policy: source_utc_publication_events
+              normalization: cftc_disaggregated_managed_money_net_pct_oi_v1
+        COT_SI:
+          asset_class: research_signal
+          bars:
+            - file: cot_si.csv
+              timeframe: 1d
+              exchange_timezone: US/Eastern
+              timezone_policy: source_utc_publication_events
+              normalization: cftc_disaggregated_managed_money_net_pct_oi_v1
+        REALYIELD10Y:
+          asset_class: research_signal
+          bars:
+            - file: realyield10y.csv
+              timeframe: 1d
+              exchange_timezone: US/Eastern
+              timezone_policy: source_utc_publication_events
+              normalization: us_treasury_10y_real_yield_pct_v1
+        VIX:
+          asset_class: research_signal
+          bars:
+            - file: vix.csv
+              timeframe: 1d
+              exchange_timezone: US/Eastern
+              timezone_policy: source_utc_publication_events
+              normalization: cboe_vix_daily_close_v1

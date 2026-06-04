@@ -627,7 +627,7 @@ def _preselect_generation_finalists(
             finalist_ids.append(trial_id)
             finalists.append({"rank": rank, "score": score, "trial_id": trial_id})
             continue
-        reasons = (f"preselection: rank {rank} exceeds max_finalists {max_finalists}",)
+        reasons = [f"preselection: rank {rank} exceeds max_finalists {max_finalists}"]
         payload = {
             "eligible": True,
             "rank": rank,
@@ -638,7 +638,9 @@ def _preselect_generation_finalists(
         }
         row_by_id[trial_id] = {**row_by_id[trial_id], "preselection": payload}
         rejected_rows.append(_preselection_rejected_row(row_by_id[trial_id], reasons))
-        rejections.append({"rank": rank, "reasons": list(reasons), "score": score, "trial_id": trial_id})
+        rejections.append(
+            {"rank": rank, "reasons": list(reasons), "score": score, "trial_id": trial_id}
+        )
 
     return (
         tuple(finalist_ids),
@@ -692,9 +694,7 @@ def _stage_one_rejection_reasons(
     if isinstance(blockers, Sequence) and not isinstance(blockers, str):
         for blocker in blockers:
             if isinstance(blocker, Mapping):
-                reasons.append(
-                    f"preselection: data_quality {blocker.get('code', 'blocker')}"
-                )
+                reasons.append(f"preselection: data_quality {blocker.get('code', 'blocker')}")
     reproducibility = _json_mapping_from_path(result.reproducibility_path)
     repro_blockers = reproducibility.get("blockers", ())
     if isinstance(repro_blockers, Sequence) and not isinstance(repro_blockers, str):
@@ -710,8 +710,7 @@ def _stage_one_rejection_reasons(
             reasons.append("preselection: quality.profit_factor metric is required")
         elif profit_factor < float(min_profit_factor):
             reasons.append(
-                "preselection: profit_factor "
-                f"{profit_factor:g} below {float(min_profit_factor):g}"
+                f"preselection: profit_factor {profit_factor:g} below {float(min_profit_factor):g}"
             )
 
     min_total_return = two_stage.min_total_return
@@ -721,8 +720,7 @@ def _stage_one_rejection_reasons(
             reasons.append("preselection: performance.total_return metric is required")
         elif total_return < float(min_total_return):
             reasons.append(
-                "preselection: total_return "
-                f"{total_return:g} below {float(min_total_return):g}"
+                f"preselection: total_return {total_return:g} below {float(min_total_return):g}"
             )
     return tuple(reasons)
 
@@ -1060,20 +1058,40 @@ def _backtest_pipeline_payload(
         parameters=parameters,
         pipeline_template=pipeline_template,
     )
-    backtest_config_path, data_quality_path = _write_backtest_config(
-        support,
-        run=run,
-        trial_id=trial_id,
-        root=root,
-        strategy_entrypoint=strategy_entrypoint,
-        strategy_params=strategy_parameter_defaults,
-    )
+    objective_metric = str(pipeline_template.get("objective_metric", "sharpe_ratio")).strip()
+    if not objective_metric:
+        raise ValueError("backtest_pipeline.objective_metric must not be empty")
     payload: dict[str, Any] = {
-        "backtest_config_path": str(backtest_config_path),
-        "data_quality_paths": [str(data_quality_path)],
-        "objective_metric": "sharpe_ratio",
+        "objective_metric": objective_metric,
         "strategy_parameter_defaults": strategy_parameter_defaults,
     }
+    materialized_cache_dir = pipeline_template.get("materialized_replay_cache_dir")
+    if materialized_cache_dir is not None:
+        payload["materialized_replay_cache_dir"] = str(materialized_cache_dir)
+    base_config_path = pipeline_template.get("base_config_path")
+    if base_config_path is None:
+        backtest_config_path, data_quality_path = _write_backtest_config(
+            support,
+            run=run,
+            trial_id=trial_id,
+            root=root,
+            strategy_entrypoint=strategy_entrypoint,
+            strategy_params=strategy_parameter_defaults,
+        )
+        payload["backtest_config_path"] = str(backtest_config_path)
+        payload["data_quality_paths"] = [str(data_quality_path)]
+    else:
+        normalized_base_config_path = str(base_config_path).strip()
+        if not normalized_base_config_path:
+            raise ValueError("backtest_pipeline.base_config_path must not be empty")
+        payload["base_config_path"] = normalized_base_config_path
+        raw_data_quality_paths = pipeline_template.get("data_quality_paths")
+        if raw_data_quality_paths is not None:
+            if not isinstance(raw_data_quality_paths, Sequence) or isinstance(
+                raw_data_quality_paths, str
+            ):
+                raise ValueError("backtest_pipeline.data_quality_paths must be a sequence")
+            payload["data_quality_paths"] = tuple(str(path) for path in raw_data_quality_paths)
     if strategy_parameter_map is not None:
         payload["strategy_parameter_map"] = strategy_parameter_map
     if strategy_parameter_names is not None:

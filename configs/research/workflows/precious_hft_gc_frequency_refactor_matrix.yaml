@@ -1,0 +1,157 @@
+version: 1
+workflow_id: precious-hft-gc-frequency-refactor-matrix
+periods:
+  train_2024:
+    start: "2024-01-01T00:00:00+00:00"
+    end: "2025-01-01T00:00:00+00:00"
+    role: selection
+  oos_2025_2026:
+    start: "2025-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_microtrend
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_microtrend_scalper
+    required_strategy: strategies.research.precious_metal_microtrend_scalper:PreciousMetalMicrotrendScalperStrategy
+    on_fail: stop
+
+  - id: implementation_vwap_reversion
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_vwap_reversion_scalper
+    required_strategy: strategies.research.precious_metal_vwap_reversion_scalper:PreciousMetalVwapReversionScalperStrategy
+    on_fail: stop
+
+  - id: microtrend_frequency_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_microtrend_scalper_gc.yaml
+    output_root: ../../../runs/research/precious_hft_gc/microtrend_frequency_matrix
+    summary_output: ../../../runs/research/precious_hft_gc/microtrend_frequency_matrix/summary.json
+    periods:
+      - train_2024
+      - oos_2025_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: microtrend_low_freq
+        strategy_params:
+          fast_bars: 5
+          slow_bars: 20
+          entry_return_threshold: "0.0005"
+          min_volume_ratio: "1.30"
+          min_vwap_distance_bps: "3"
+          max_vwap_distance_bps: "40"
+          stop_atr_multiple: "1.20"
+          take_profit_atr_multiple: "2.00"
+          max_holding_bars: 8
+          max_entries_per_session: 2
+          min_bars_between_entries: 120
+          post_exit_cooldown_bars: 60
+          max_flips_per_session: 1
+          signal_confirm_bars: 2
+          min_atr_bps: "3"
+      - name: microtrend_medium_freq
+        strategy_params:
+          fast_bars: 5
+          slow_bars: 30
+          entry_return_threshold: "0.0008"
+          min_volume_ratio: "1.50"
+          min_vwap_distance_bps: "5"
+          max_vwap_distance_bps: "30"
+          stop_atr_multiple: "1.00"
+          take_profit_atr_multiple: "2.50"
+          max_holding_bars: 8
+          max_entries_per_session: 1
+          min_bars_between_entries: 180
+          post_exit_cooldown_bars: 120
+          max_flips_per_session: 0
+          signal_confirm_bars: 3
+          min_atr_bps: "4"
+      - name: microtrend_strict_low_freq
+        strategy_params:
+          fast_bars: 8
+          slow_bars: 30
+          entry_return_threshold: "0.0010"
+          min_volume_ratio: "1.80"
+          min_vwap_distance_bps: "8"
+          max_vwap_distance_bps: "25"
+          stop_atr_multiple: "1.00"
+          take_profit_atr_multiple: "3.00"
+          max_holding_bars: 6
+          max_entries_per_session: 1
+          min_bars_between_entries: 240
+          post_exit_cooldown_bars: 180
+          max_flips_per_session: 0
+          signal_confirm_bars: 3
+          min_atr_bps: "5"
+
+  - id: vwap_reversion_frequency_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_vwap_reversion_gc.yaml
+    output_root: ../../../runs/research/precious_hft_gc/vwap_reversion_frequency_matrix
+    summary_output: ../../../runs/research/precious_hft_gc/vwap_reversion_frequency_matrix/summary.json
+    periods:
+      - train_2024
+      - oos_2025_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: vwap_reversion_low_freq
+        strategy_params:
+          lookback_bars: 90
+          entry_z: "2.50"
+          exit_z: "0.50"
+          stop_z: "4.00"
+          max_trend_bps: "30"
+          min_volume_ratio: "0.90"
+          max_holding_bars: 10
+          max_entries_per_session: 2
+          min_bars_between_entries: 120
+          post_exit_cooldown_bars: 60
+          rearm_z: "0.75"
+      - name: vwap_reversion_medium_freq
+        strategy_params:
+          lookback_bars: 120
+          entry_z: "3.00"
+          exit_z: "0.50"
+          stop_z: "4.50"
+          max_trend_bps: "20"
+          min_volume_ratio: "1.00"
+          max_holding_bars: 10
+          max_entries_per_session: 1
+          min_bars_between_entries: 180
+          post_exit_cooldown_bars: 120
+          rearm_z: "0.75"
+      - name: vwap_reversion_strict_low_freq
+        strategy_params:
+          lookback_bars: 180
+          entry_z: "3.50"
+          exit_z: "0.75"
+          stop_z: "5.00"
+          max_trend_bps: "15"
+          min_volume_ratio: "1.10"
+          max_holding_bars: 8
+          max_entries_per_session: 1
+          min_bars_between_entries: 240
+          post_exit_cooldown_bars: 180
+          rearm_z: "1.00"
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/precious_hft_gc/reports

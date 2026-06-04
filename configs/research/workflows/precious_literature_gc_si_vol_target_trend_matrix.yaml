@@ -1,0 +1,176 @@
+version: 1
+workflow_id: precious-literature-gc-si-vol-target-trend-matrix
+periods:
+  validation_2020_2023:
+    start: "2020-01-01T00:00:00+00:00"
+    end: "2024-01-01T00:00:00+00:00"
+    role: selection
+  oos_2024_2026:
+    start: "2024-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_vol_target_trend
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.vol_target_trend
+    required_strategy: strategies.research.vol_target_trend:VolTargetTrendStrategy
+    on_fail: stop
+
+  - id: gc_vol_target_trend_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_vol_target_trend_gc.yaml
+    output_root: ../../../runs/research/precious_literature_gc_si/gc_vol_target_trend_matrix
+    summary_output: ../../../runs/research/precious_literature_gc_si/gc_vol_target_trend_matrix/summary.json
+    materialized_replay_cache:
+      enabled: true
+      cache_dir: ../../../runs/research/precious_literature_gc_si/replay_cache/gc_vol_target_trend_v2
+    periods:
+      - validation_2020_2023
+      - oos_2024_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: gc_vtt_21_63_126_vol20_cap50_long
+        strategy_params:
+          symbol: GC
+          timeframe: 1d
+          momentum_lookback_bars: [21, 63, 126]
+          volatility_lookback_bars: 40
+          target_annual_vol: "0.20"
+          max_target_percent: "0.50"
+          min_signal_return: "0.02"
+          rebalance_threshold: "0.01"
+          allow_short: false
+      - name: gc_vtt_63_126_252_vol20_cap50_long
+        strategy_params:
+          symbol: GC
+          timeframe: 1d
+          momentum_lookback_bars: [63, 126, 252]
+          volatility_lookback_bars: 60
+          target_annual_vol: "0.20"
+          max_target_percent: "0.50"
+          min_signal_return: "0.03"
+          rebalance_threshold: "0.01"
+          allow_short: false
+      - name: gc_vtt_21_63_126_vol30_cap75_long
+        strategy_params:
+          symbol: GC
+          timeframe: 1d
+          momentum_lookback_bars: [21, 63, 126]
+          volatility_lookback_bars: 40
+          target_annual_vol: "0.30"
+          max_target_percent: "0.75"
+          min_signal_return: "0.02"
+          rebalance_threshold: "0.01"
+          allow_short: false
+      - name: gc_vtt_63_126_252_vol30_cap75_long
+        strategy_params:
+          symbol: GC
+          timeframe: 1d
+          momentum_lookback_bars: [63, 126, 252]
+          volatility_lookback_bars: 60
+          target_annual_vol: "0.30"
+          max_target_percent: "0.75"
+          min_signal_return: "0.03"
+          rebalance_threshold: "0.01"
+          allow_short: false
+      - name: gc_vtt_21_63_126_vol20_cap50_ls
+        strategy_params:
+          symbol: GC
+          timeframe: 1d
+          momentum_lookback_bars: [21, 63, 126]
+          volatility_lookback_bars: 40
+          target_annual_vol: "0.20"
+          max_target_percent: "0.50"
+          min_signal_return: "0.02"
+          rebalance_threshold: "0.01"
+          allow_short: true
+
+  - id: si_vol_target_trend_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_vol_target_trend_si.yaml
+    output_root: ../../../runs/research/precious_literature_gc_si/si_vol_target_trend_matrix
+    summary_output: ../../../runs/research/precious_literature_gc_si/si_vol_target_trend_matrix/summary.json
+    materialized_replay_cache:
+      enabled: true
+      cache_dir: ../../../runs/research/precious_literature_gc_si/replay_cache/si_vol_target_trend_v2
+    periods:
+      - validation_2020_2023
+      - oos_2024_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: si_vtt_21_63_126_vol20_cap50_long
+        strategy_params:
+          symbol: SI
+          timeframe: 1d
+          momentum_lookback_bars: [21, 63, 126]
+          volatility_lookback_bars: 40
+          target_annual_vol: "0.20"
+          max_target_percent: "0.50"
+          min_signal_return: "0.02"
+          rebalance_threshold: "0.01"
+          allow_short: false
+      - name: si_vtt_63_126_252_vol20_cap50_long
+        strategy_params:
+          symbol: SI
+          timeframe: 1d
+          momentum_lookback_bars: [63, 126, 252]
+          volatility_lookback_bars: 60
+          target_annual_vol: "0.20"
+          max_target_percent: "0.50"
+          min_signal_return: "0.03"
+          rebalance_threshold: "0.01"
+          allow_short: false
+      - name: si_vtt_21_63_126_vol30_cap75_long
+        strategy_params:
+          symbol: SI
+          timeframe: 1d
+          momentum_lookback_bars: [21, 63, 126]
+          volatility_lookback_bars: 40
+          target_annual_vol: "0.30"
+          max_target_percent: "0.75"
+          min_signal_return: "0.02"
+          rebalance_threshold: "0.01"
+          allow_short: false
+      - name: si_vtt_63_126_252_vol30_cap75_long
+        strategy_params:
+          symbol: SI
+          timeframe: 1d
+          momentum_lookback_bars: [63, 126, 252]
+          volatility_lookback_bars: 60
+          target_annual_vol: "0.30"
+          max_target_percent: "0.75"
+          min_signal_return: "0.03"
+          rebalance_threshold: "0.01"
+          allow_short: false
+      - name: si_vtt_21_63_126_vol20_cap50_ls
+        strategy_params:
+          symbol: SI
+          timeframe: 1d
+          momentum_lookback_bars: [21, 63, 126]
+          volatility_lookback_bars: 40
+          target_annual_vol: "0.20"
+          max_target_percent: "0.50"
+          min_signal_return: "0.02"
+          rebalance_threshold: "0.01"
+          allow_short: true
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/precious_literature_gc_si/reports

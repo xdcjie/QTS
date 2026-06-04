@@ -1,0 +1,12 @@
+data:
+  config: ../data/historical.local.yaml
+  catalog: research_futures
+  roots: [GC, SI]
+  timeframe: 1d
+backtest_config: ../backtest.three_strategy_carry_momentum_rotation_gc_si.yaml
+store: ../../runs/research/three_strategy_gc_si
+output_root: ../../runs/research/three_strategy_gc_si/backtests
+objective_metric: sharpe_ratio
+discovery:
+  sources: [semantic_scholar, openalex, crossref, arxiv]
+  max_results: 10

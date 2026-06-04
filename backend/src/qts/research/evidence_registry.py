@@ -482,7 +482,9 @@ def _collect_manifest_artifact_hashes(manifest_paths: Sequence[str]) -> dict[str
         path = Path(manifest_path)
         if not path.exists():
             continue
-        payload = _load_json_mapping(path)
+        payload = _load_json_manifest_catalog(path)
+        if payload is None:
+            continue
         raw_hashes = payload.get("artifact_hashes", {})
         if isinstance(raw_hashes, Mapping):
             artifact_hashes.update({str(key): str(value) for key, value in raw_hashes.items()})
@@ -495,7 +497,9 @@ def _collect_manifest_artifact_paths(manifest_paths: Sequence[str]) -> dict[str,
         path = Path(manifest_path)
         if not path.exists():
             continue
-        payload = _load_json_mapping(path)
+        payload = _load_json_manifest_catalog(path)
+        if payload is None:
+            continue
         raw_paths = payload.get("artifact_paths_by_hash", {})
         if isinstance(raw_paths, Mapping):
             for artifact_hash, artifact_path in raw_paths.items():
@@ -506,6 +510,12 @@ def _collect_manifest_artifact_paths(manifest_paths: Sequence[str]) -> dict[str,
                     resolved_path = path.parent / resolved_path
                 artifact_paths[str(resolved_path)] = str(artifact_hash)
     return artifact_paths
+
+
+def _load_json_manifest_catalog(path: Path) -> dict[str, Any] | None:
+    if path.suffix.lower() != ".json":
+        return None
+    return _load_json_mapping(path)
 
 
 def _hash_existing_paths(paths: Sequence[str]) -> dict[str, str]:

@@ -1,0 +1,77 @@
+version: 1
+workflow_id: precious-literature-gc-utc-window-lowvol-matrix
+periods:
+  validation_2020_2023:
+    start: "2020-01-01T00:00:00+00:00"
+    end: "2024-01-01T00:00:00+00:00"
+    role: validation
+  oos_2024_2026:
+    start: "2024-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_utc_window
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_utc_window
+    required_strategy: strategies.research.precious_metal_utc_window:PreciousMetalUtcWindowStrategy
+    on_fail: stop
+
+  - id: gc_utc_window_lowvol_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_utc_window_gc.yaml
+    output_root: ../../../runs/research/precious_literature_gc_si/gc_utc_window_lowvol_matrix
+    summary_output: ../../../runs/research/precious_literature_gc_si/gc_utc_window_lowvol_matrix/summary.json
+    periods:
+      - validation_2020_2023
+      - oos_2024_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: gc_utc18_8h_rv60_lt_00035
+        strategy_params:
+          symbols: [GC]
+          start_hour_utc: 18
+          duration_hours: 8
+          target_quantities:
+            GC: "1"
+          realized_vol_lookback_bars: 60
+          max_realized_vol: "0.00035"
+      - name: gc_utc19_6h_rv60_lt_00023
+        strategy_params:
+          symbols: [GC]
+          start_hour_utc: 19
+          duration_hours: 6
+          target_quantities:
+            GC: "1"
+          realized_vol_lookback_bars: 60
+          max_realized_vol: "0.00023"
+      - name: gc_utc20_6h_rv60_lt_00035
+        strategy_params:
+          symbols: [GC]
+          start_hour_utc: 20
+          duration_hours: 6
+          target_quantities:
+            GC: "1"
+          realized_vol_lookback_bars: 60
+          max_realized_vol: "0.00035"
+      - name: gc_utc20_6h_rv480_lt_000406
+        strategy_params:
+          symbols: [GC]
+          start_hour_utc: 20
+          duration_hours: 6
+          target_quantities:
+            GC: "1"
+          realized_vol_lookback_bars: 480
+          max_realized_vol: "0.000406"
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/precious_literature_gc_si/reports

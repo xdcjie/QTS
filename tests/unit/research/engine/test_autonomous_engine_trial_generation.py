@@ -244,6 +244,52 @@ def test_backtest_pipeline_template_maps_research_parameters_to_strategy_config(
     assert "strategy_parameter_map" not in payload
 
 
+def test_backtest_pipeline_template_can_reuse_base_config_path(tmp_path: Path) -> None:
+    campaign_path = write_campaign(tmp_path, families=("momentum",))
+    run = AutonomousResearchRun.from_yaml(
+        campaign_path,
+        data_paths=write_data_paths(tmp_path),
+        output_root=tmp_path / "run",
+    )
+    engine = AutonomousResearchEngine(repo_root=Path.cwd())
+
+    payload = engine_orchestration._backtest_pipeline_payload(
+        engine._support,
+        run=run,
+        trial_id="generation-000-trial-000",
+        root="GC",
+        parameters={
+            "root": "GC",
+            "cot_lookback_bars": 20,
+            "entry_z": "0.75",
+        },
+        strategy_entrypoint=(
+            "strategies.research.precious_metal_cot_positioning:PreciousMetalCotPositioningStrategy"
+        ),
+        manifest_patch={
+            "backtest_pipeline": {
+                "base_config_path": "configs/backtest.precious_metal_vix_risk_gc.yaml",
+                "data_quality_paths": ["historical/data/vix.csv"],
+                "strategy_parameter_defaults": {
+                    "allow_short": False,
+                    "cot_symbol": "VIX",
+                    "positioning_direction": "follow",
+                    "signal_mode": "change",
+                    "target_quantity": "1",
+                    "trade_symbol": "GC",
+                },
+                "strategy_parameter_names": ["cot_lookback_bars", "entry_z"],
+            }
+        },
+    )
+
+    assert payload["base_config_path"] == "configs/backtest.precious_metal_vix_risk_gc.yaml"
+    assert "backtest_config_path" not in payload
+    assert payload["data_quality_paths"] == ("historical/data/vix.csv",)
+    assert payload["strategy_parameter_defaults"]["cot_symbol"] == "VIX"
+    assert payload["strategy_parameter_names"] == ("cot_lookback_bars", "entry_z")
+
+
 def test_generated_trials_use_template_backtest_pipeline_mapping(tmp_path: Path) -> None:
     campaign_path = write_campaign(
         tmp_path,

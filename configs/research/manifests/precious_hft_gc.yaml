@@ -1,0 +1,62 @@
+schema_version: 2
+run:
+  id: precious-hft-gc-research-v1
+  question: Can completed-bar precious-metal scalping rules produce robust GC 1m evidence through QTS research workflows?
+  owner: research
+  created_at: "2026-06-03T00:00:00+00:00"
+strategy:
+  id: precious_hft_gc_scalpers
+  source_module: strategies.research.precious_metal_microtrend_scalper
+  entrypoint: PreciousMetalMicrotrendScalperStrategy
+  default_config: ../../strategies/precious_metal_microtrend_scalper_gc.yaml
+  hypothesis: Completed-bar GC 1m microtrend, VWAP reversion, and opening-range rules may capture short-horizon dislocations after realistic costs.
+data:
+  dataset_id: research_futures_gc_1m_2024_2026
+  config: ../../data/historical.local.yaml
+  catalog: research_futures
+  roots: [GC]
+  timeframe: 1m
+  start: "2024-01-01T00:00:00+00:00"
+  end: "2026-05-22T20:20:00+00:00"
+  calendar: CME
+splits:
+  windows:
+    - name: train_2024
+      role: selection
+      start: "2024-01-01"
+      end: "2025-01-01"
+    - name: oos_2025_2026
+      role: validation
+      start: "2025-01-01"
+      end: "2026-05-22"
+metrics_schema:
+  id: schema_v2
+  version: 2
+  path: ../metrics/schema_v2.yaml
+promotion_policy:
+  id: research_only_precious_hft_gc
+  version: 1
+  path: ../../promotion/default.yaml
+artifacts:
+  required:
+    - artifact_graph
+    - workflow_summary
+    - research_index
+    - backtest_manifest
+    - data_quality
+    - evidence_bundle
+    - metrics
+    - optimizer_validation_summary
+    - reproducibility
+reproducibility:
+  require_clean_git: false
+  required_hash_groups:
+    - config_hashes
+    - data_hashes
+    - dependency_hashes
+parameter_grid:
+  strategy_family:
+    - precious_metal_microtrend_scalper
+    - precious_metal_vwap_reversion_scalper
+    - precious_metal_opening_range_acd
+output_root: runs/research/precious_hft_gc

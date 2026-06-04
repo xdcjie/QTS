@@ -41,6 +41,14 @@ under `configs/research/workflows/`.
 | `configs/backtest.vwap_factor_research_si_15m_long_is.yaml` | SI 15m IS backtest variant |
 | `configs/backtest.vwap_factor_research_si_5m_long_is.yaml` | SI 5m IS backtest variant |
 | `configs/backtest.vwap_factor_research_si_long_is.yaml` | SI IS backtest variant |
+| `strategies/research/orb_vwap_trend_filter.py` | Research-only ORB + VWAP + trend filter strategy |
+| `configs/strategies/orb_vwap_trend_filter.yaml` | Research-only ORB + VWAP + trend strategy config |
+| `configs/backtest.orb_vwap_trend_gc_si_long.yaml` | Research backtest config for GC/SI long ORB + VWAP + trend |
+| `configs/research/orb_vwap_trend_gc_si_long.yaml` | Research session config for ORB + VWAP + trend |
+| `configs/research/manifests/orb_vwap_trend_gc_si_long.yaml` | Research manifest for ORB + VWAP + trend |
+| `configs/research/workflows/orb_vwap_trend_gc_si_atr_trailing_matrix.yaml` | Reviewed workflow for ATR trailing ORB + VWAP + trend matrix |
+| `configs/research/workflows/orb_vwap_trend_gc_si_long_explore.yaml` | Reviewed workflow for exploratory ORB + VWAP + trend research |
+| `configs/research/workflows/orb_vwap_trend_gc_si_long_matrix.yaml` | Reviewed workflow for ORB + VWAP + trend matrix research |
 
 ### C. Campaign / search templates — allowed (canonical)
 

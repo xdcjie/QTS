@@ -1,0 +1,28 @@
+strategy_id: precious-metal-microtrend-scalper-gc
+class_path: strategies.research.precious_metal_microtrend_scalper:PreciousMetalMicrotrendScalperStrategy
+account_id: backtest-account
+allocation: "1.0"
+enabled: true
+params:
+  symbol: GC
+  timeframe: 1m
+  fast_bars: 3
+  slow_bars: 12
+  vwap_lookback_bars: 30
+  volume_lookback_bars: 20
+  atr_lookback_bars: 14
+  entry_return_threshold: "0.0002"
+  min_volume_ratio: "1.20"
+  max_vwap_distance_bps: "40"
+  target_quantity: "1"
+  stop_atr_multiple: "1.20"
+  take_profit_atr_multiple: "1.80"
+  max_holding_bars: 12
+  max_entries_per_session: 2
+  min_bars_between_entries: 120
+  post_exit_cooldown_bars: 60
+  max_flips_per_session: 1
+  signal_confirm_bars: 2
+  min_atr_bps: "3"
+  min_vwap_distance_bps: "2"
+  allow_short: true

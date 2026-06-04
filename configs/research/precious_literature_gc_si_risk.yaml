@@ -1,0 +1,14 @@
+data:
+  config: ../data/historical.local.yaml
+  catalog: research_futures
+  roots: [GC, SI, VIX]
+  timeframe: 1d
+  instrument_ids:
+    VIX: RESEARCH_SIGNAL.CBOE.VIX
+backtest_config: ../backtest.precious_metal_vix_risk_gc.yaml
+store: ../../runs/research/precious_literature_gc_si_risk
+output_root: ../../runs/research/precious_literature_gc_si_risk/backtests
+objective_metric: sharpe_ratio
+discovery:
+  sources: [cboe, semantic_scholar, openalex, crossref, arxiv]
+  max_results: 10

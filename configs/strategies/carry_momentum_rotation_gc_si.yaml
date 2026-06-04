@@ -1,0 +1,18 @@
+strategy_id: carry-momentum-rotation-gc-si
+class_path: strategies.research.carry_momentum_rotation:CarryMomentumRotationStrategy
+account_id: backtest-account
+allocation: "1.0"
+enabled: true
+params:
+  symbols: [GC, SI]
+  timeframe: 1d
+  momentum_lookback_bars: [21, 63, 126]
+  volatility_lookback_bars: 40
+  carry_zscore_lookback_bars: 60
+  carry_zscore_weight: "0"
+  min_score: "0"
+  min_relative_score: "0.02"
+  target_annual_vol: "0.12"
+  max_target_percent: "0.25"
+  rebalance_threshold: "0.01"
+  history_buffer_bars: 20

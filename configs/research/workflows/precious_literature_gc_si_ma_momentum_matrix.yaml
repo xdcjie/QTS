@@ -1,0 +1,61 @@
+version: 1
+workflow_id: precious-literature-gc-si-ma-momentum-matrix
+periods:
+  train_2024:
+    start: "2024-01-01T00:00:00+00:00"
+    end: "2025-01-01T00:00:00+00:00"
+    role: selection
+  oos_2025_2026:
+    start: "2025-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_gc_si_momentum
+    kind: implementation_gate
+    required_modules:
+      - examples.strategies.gc_si_momentum
+    required_strategy: examples.strategies.gc_si_momentum:GcSiMomentumStrategy
+    on_fail: stop
+
+  - id: ma_momentum_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.gc_si_momentum_research.yaml
+    output_root: ../../../runs/research/precious_literature_gc_si/ma_momentum_matrix
+    summary_output: ../../../runs/research/precious_literature_gc_si/ma_momentum_matrix/summary.json
+    periods:
+      - train_2024
+      - oos_2025_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: si_ma_11_48
+        strategy_params:
+          symbols: [SI]
+          short_window: 11
+          long_window: 48
+      - name: si_ma_8_34
+        strategy_params:
+          symbols: [SI]
+          short_window: 8
+          long_window: 34
+      - name: si_ma_13_55
+        strategy_params:
+          symbols: [SI]
+          short_window: 13
+          long_window: 55
+      - name: gc_ma_11_48
+        strategy_params:
+          symbols: [GC]
+          short_window: 11
+          long_window: 48
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/precious_literature_gc_si/reports

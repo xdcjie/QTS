@@ -223,9 +223,7 @@ class ResearchCampaignSelection:
                 payload.get("gauntlet", "ValidationGauntlet"),
                 "selection.gauntlet",
             ),
-            two_stage=ResearchCampaignTwoStageSelection.from_payload(
-                payload.get("two_stage")
-            ),
+            two_stage=ResearchCampaignTwoStageSelection.from_payload(payload.get("two_stage")),
         )
 
     def to_payload(self) -> dict[str, Any]:

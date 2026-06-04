@@ -1,0 +1,104 @@
+version: 1
+workflow_id: precious-literature-gc-si-abnormal-return-matrix
+periods:
+  validation_2020_2023:
+    start: "2020-01-01T00:00:00+00:00"
+    end: "2024-01-01T00:00:00+00:00"
+    role: selection
+  oos_2024_2026:
+    start: "2024-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_abnormal_return
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_abnormal_return
+    required_strategy: strategies.research.precious_metal_abnormal_return:PreciousMetalAbnormalReturnStrategy
+    on_fail: stop
+
+  - id: abnormal_return_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_abnormal_return_gc_si.yaml
+    output_root: ../../../runs/research/precious_literature_gc_si/abnormal_return_matrix
+    summary_output: ../../../runs/research/precious_literature_gc_si/abnormal_return_matrix/summary.json
+    materialized_replay_cache:
+      enabled: true
+      cache_dir: ../../../runs/research/precious_literature_gc_si/replay_cache/abnormal_return
+    periods:
+      - validation_2020_2023
+      - oos_2024_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: gc_abn_mom_z125_h1_long
+        strategy_params:
+          symbols: [GC]
+          timeframe: 1d
+          lookback_bars: 60
+          entry_z: "1.25"
+          mode: momentum
+          holding_bars: 1
+          target_quantity: "1"
+          allow_short: false
+      - name: gc_abn_mom_z150_h3_long
+        strategy_params:
+          symbols: [GC]
+          timeframe: 1d
+          lookback_bars: 60
+          entry_z: "1.50"
+          mode: momentum
+          holding_bars: 3
+          target_quantity: "1"
+          allow_short: false
+      - name: gc_abn_rev_z150_h3_ls
+        strategy_params:
+          symbols: [GC]
+          timeframe: 1d
+          lookback_bars: 60
+          entry_z: "1.50"
+          mode: reversal
+          holding_bars: 3
+          target_quantity: "1"
+          allow_short: true
+      - name: si_abn_mom_z125_h1_long
+        strategy_params:
+          symbols: [SI]
+          timeframe: 1d
+          lookback_bars: 60
+          entry_z: "1.25"
+          mode: momentum
+          holding_bars: 1
+          target_quantity: "1"
+          allow_short: false
+      - name: si_abn_mom_z150_h3_long
+        strategy_params:
+          symbols: [SI]
+          timeframe: 1d
+          lookback_bars: 60
+          entry_z: "1.50"
+          mode: momentum
+          holding_bars: 3
+          target_quantity: "1"
+          allow_short: false
+      - name: si_abn_rev_z150_h3_ls
+        strategy_params:
+          symbols: [SI]
+          timeframe: 1d
+          lookback_bars: 60
+          entry_z: "1.50"
+          mode: reversal
+          holding_bars: 3
+          target_quantity: "1"
+          allow_short: true
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/precious_literature_gc_si/reports

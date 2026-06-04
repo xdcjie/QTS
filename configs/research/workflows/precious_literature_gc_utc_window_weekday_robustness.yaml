@@ -1,0 +1,62 @@
+version: 1
+workflow_id: precious-literature-gc-utc-window-weekday-robustness
+periods:
+  validation_2020_2023:
+    start: "2020-01-01T00:00:00+00:00"
+    end: "2024-01-01T00:00:00+00:00"
+    role: selection
+  oos_2024_2026:
+    start: "2024-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_utc_window
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_utc_window
+    required_strategy: strategies.research.precious_metal_utc_window:PreciousMetalUtcWindowStrategy
+    on_fail: stop
+
+  - id: gc_utc_window_weekday_robustness
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_utc_window_gc.yaml
+    output_root: ../../../runs/research/precious_literature_gc_si/gc_utc_window_weekday_robustness
+    summary_output: ../../../runs/research/precious_literature_gc_si/gc_utc_window_weekday_robustness/summary.json
+    materialized_replay_cache:
+      enabled: true
+      cache_dir: ../../../runs/research/precious_literature_gc_si/replay_cache/gc_utc_goal
+    periods:
+      - validation_2020_2023
+      - oos_2024_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: gc_utc20_6h_tue_wed
+        strategy_params:
+          symbols: [GC]
+          timeframe: 1m
+          start_hour_utc: 20
+          duration_hours: 6
+          target_quantities:
+            GC: "1"
+          allowed_weekdays: [1, 2]
+      - name: gc_utc20_6h_mon_tue_wed
+        strategy_params:
+          symbols: [GC]
+          timeframe: 1m
+          start_hour_utc: 20
+          duration_hours: 6
+          target_quantities:
+            GC: "1"
+          allowed_weekdays: [0, 1, 2]
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/precious_literature_gc_si/reports

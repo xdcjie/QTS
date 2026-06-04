@@ -1,0 +1,25 @@
+strategy_id: precious-metal-vwap-reversion-gc
+class_path: strategies.research.precious_metal_vwap_reversion_scalper:PreciousMetalVwapReversionScalperStrategy
+account_id: backtest-account
+allocation: "1.0"
+enabled: true
+params:
+  symbol: GC
+  timeframe: 1m
+  lookback_bars: 60
+  trend_lookback_bars: 20
+  volume_lookback_bars: 20
+  atr_lookback_bars: 14
+  entry_z: "2.00"
+  exit_z: "0.35"
+  stop_z: "3.50"
+  max_trend_bps: "35"
+  min_volume_ratio: "0.80"
+  target_quantity: "1"
+  stop_atr_multiple: "1.50"
+  max_holding_bars: 15
+  max_entries_per_session: 2
+  min_bars_between_entries: 120
+  post_exit_cooldown_bars: 60
+  rearm_z: "0.75"
+  allow_short: true

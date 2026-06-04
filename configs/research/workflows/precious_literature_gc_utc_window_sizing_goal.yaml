@@ -1,0 +1,76 @@
+version: 1
+workflow_id: precious-literature-gc-utc-window-sizing-goal
+periods:
+  train_2024:
+    start: "2024-01-01T00:00:00+00:00"
+    end: "2025-01-01T00:00:00+00:00"
+    role: selection
+  oos_2025_2026:
+    start: "2025-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_utc_window
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_utc_window
+    required_strategy: strategies.research.precious_metal_utc_window:PreciousMetalUtcWindowStrategy
+    on_fail: stop
+
+  - id: gc_utc_window_sizing_goal
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_utc_window_gc.yaml
+    output_root: ../../../runs/research/precious_literature_gc_si/gc_utc_window_sizing_goal
+    summary_output: ../../../runs/research/precious_literature_gc_si/gc_utc_window_sizing_goal/summary.json
+    materialized_replay_cache:
+      enabled: true
+      cache_dir: ../../../runs/research/precious_literature_gc_si/replay_cache/gc_utc_goal
+    periods:
+      - train_2024
+      - oos_2025_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: gc_utc20_6h_q050
+        strategy_params:
+          symbols: [GC]
+          timeframe: 1m
+          start_hour_utc: 20
+          duration_hours: 6
+          target_quantities:
+            GC: "0.50"
+      - name: gc_utc20_6h_q060
+        strategy_params:
+          symbols: [GC]
+          timeframe: 1m
+          start_hour_utc: 20
+          duration_hours: 6
+          target_quantities:
+            GC: "0.60"
+      - name: gc_utc20_6h_q075
+        strategy_params:
+          symbols: [GC]
+          timeframe: 1m
+          start_hour_utc: 20
+          duration_hours: 6
+          target_quantities:
+            GC: "0.75"
+      - name: gc_utc20_6h_q080
+        strategy_params:
+          symbols: [GC]
+          timeframe: 1m
+          start_hour_utc: 20
+          duration_hours: 6
+          target_quantities:
+            GC: "0.80"
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/precious_literature_gc_si/reports

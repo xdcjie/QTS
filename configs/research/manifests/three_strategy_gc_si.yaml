@@ -1,0 +1,72 @@
+schema_version: 2
+
+run:
+  id: three-strategy-gc-si-research
+  question: Can volatility-targeted trend, momentum rotation, and GC/SI ratio mean reversion produce robust commodity futures evidence on the trusted GC/SI historical source?
+  owner: research
+  created_at: "2026-06-03T00:00:00+00:00"
+
+strategy:
+  id: three_strategy_gc_si
+  source_module: strategies.research.carry_momentum_rotation
+  entrypoint: CarryMomentumRotationStrategy
+  default_config: ../../strategies/carry_momentum_rotation_gc_si.yaml
+  hypothesis: Medium-horizon daily commodity signals may provide more stable risk-adjusted returns than short intraday breakout strategies on GC/SI.
+
+data:
+  dataset_id: research_futures_gc_si_1d_from_1m_2024_2026
+  config: ../../data/historical.local.yaml
+  catalog: research_futures
+  roots: [GC, SI]
+  timeframe: 1d
+  start: "2024-01-01T00:00:00+00:00"
+  end: "2026-05-22T20:20:00+00:00"
+  calendar: CME
+
+splits:
+  windows:
+    - name: train_2024
+      role: selection
+      start: "2024-01-01"
+      end: "2025-01-01"
+    - name: oos_2025_2026
+      role: validation
+      start: "2025-01-01"
+      end: "2026-05-22"
+
+metrics_schema:
+  id: schema_v2
+  version: 2
+  path: ../metrics/schema_v2.yaml
+
+promotion_policy:
+  id: research_only_three_strategy_gc_si
+  version: 1
+  path: ../../promotion/default.yaml
+
+artifacts:
+  required:
+    - artifact_graph
+    - workflow_summary
+    - research_index
+    - backtest_manifest
+    - data_quality
+    - evidence_bundle
+    - metrics
+    - optimizer_validation_summary
+    - reproducibility
+
+reproducibility:
+  require_clean_git: false
+  required_hash_groups:
+    - config_hashes
+    - data_hashes
+    - dependency_hashes
+
+parameter_grid:
+  strategy_family:
+    - vol_target_trend
+    - carry_momentum_rotation
+    - ratio_mean_reversion
+
+output_root: runs/research/three_strategy_gc_si

@@ -1,0 +1,22 @@
+strategy_id: precious-metal-intraday-momentum-gc-si
+class_path: strategies.research.precious_metal_intraday_momentum:PreciousMetalIntradayMomentumStrategy
+account_id: backtest-account
+allocation: "1.0"
+enabled: true
+params:
+  symbols: [GC, SI]
+  timeframe: 1m
+  mode: momentum
+  first_window_bars: 30
+  entry_start_bar: 1320
+  entry_end_bar: 1350
+  force_exit_bar: 1376
+  min_abs_first_return: "0.0006"
+  min_first_range_bps: "5"
+  target_quantity: "1"
+  atr_lookback_bars: 30
+  stop_atr_multiple: "1.50"
+  take_profit_atr_multiple: "2.50"
+  max_holding_bars: 90
+  allow_short: true
+  history_buffer_bars: 5

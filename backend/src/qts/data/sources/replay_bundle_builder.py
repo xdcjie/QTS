@@ -96,10 +96,7 @@ class ReplayMarketDataBundleBuilder:
     def _roll_registry(self) -> FutureRollRegistry | None:
         if not self._config.roll_policy.enabled:
             return None
-        timeframe = Timeframe.parse(self._config.timeframe)
-        return FutureRollRegistry(
-            retain_history=len(self._config.roots) > 1 or timeframe.alignment is AlignmentMode.CLOCK
-        )
+        return FutureRollRegistry(retain_history=True)
 
     def _stream_configured_bars(
         self,
@@ -119,7 +116,9 @@ class ReplayMarketDataBundleBuilder:
         streams: list[tuple[int, Iterator[Bar]]] = []
         for root_index, root in enumerate(self._config.roots):
             dataset = catalog.datasets[root]
-            rolling_root = self._config.roll_policy.enabled and root in requested
+            rolling_root = (
+                self._config.roll_policy.enabled and root in requested and dataset.chain is not None
+            )
             continuous_id: InstrumentId | None = None
             contract_selector = None
             if rolling_root:

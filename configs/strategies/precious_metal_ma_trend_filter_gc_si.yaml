@@ -1,0 +1,18 @@
+strategy_id: precious-metal-ma-trend-filter-gc-si
+class_path: strategies.research.precious_metal_ma_trend_filter:PreciousMetalMaTrendFilterStrategy
+account_id: backtest-account
+allocation: "1.0"
+enabled: true
+params:
+  symbols: [GC]
+  timeframe: 1m
+  short_window: 60
+  long_window: 240
+  decision_interval_bars: 30
+  entry_spread_bps: "4"
+  exit_spread_bps: "0"
+  target_quantity: "1"
+  min_holding_bars: 120
+  max_holding_bars: 20000
+  cooldown_bars: 120
+  history_buffer_bars: 5

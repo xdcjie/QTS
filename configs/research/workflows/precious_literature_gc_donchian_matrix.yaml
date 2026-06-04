@@ -1,0 +1,83 @@
+version: 1
+workflow_id: precious-literature-gc-donchian-matrix
+periods:
+  train_2024:
+    start: "2024-01-01T00:00:00+00:00"
+    end: "2025-01-01T00:00:00+00:00"
+    role: selection
+  oos_2025_2026:
+    start: "2025-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_donchian_atr
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_donchian_atr_breakout
+    required_strategy: strategies.research.precious_metal_donchian_atr_breakout:PreciousMetalDonchianAtrBreakoutStrategy
+    on_fail: stop
+
+  - id: donchian_atr_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_donchian_atr_breakout_gc.yaml
+    output_root: ../../../runs/research/precious_literature_gc_si/donchian_atr_matrix
+    summary_output: ../../../runs/research/precious_literature_gc_si/donchian_atr_matrix/summary.json
+    periods:
+      - train_2024
+      - oos_2025_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: gc_donchian_1d_atr_trail
+        strategy_params:
+          symbols: [GC]
+          entry_lookback_bars: 1380
+          exit_lookback_bars: 480
+          atr_lookback_bars: 120
+          decision_interval_bars: 60
+          breakout_buffer_bps: "2"
+          min_atr_bps: "4"
+          max_atr_bps: "80"
+          target_quantity: "1"
+          initial_stop_atr_multiple: "2.50"
+          trailing_stop_atr_multiple: "3.50"
+          max_holding_bars: 10000
+      - name: gc_donchian_3d_atr_trail
+        strategy_params:
+          symbols: [GC]
+          entry_lookback_bars: 4140
+          exit_lookback_bars: 1380
+          atr_lookback_bars: 180
+          decision_interval_bars: 120
+          breakout_buffer_bps: "2"
+          min_atr_bps: "5"
+          max_atr_bps: "80"
+          target_quantity: "1"
+          initial_stop_atr_multiple: "3.00"
+          trailing_stop_atr_multiple: "4.00"
+          max_holding_bars: 20000
+      - name: gc_donchian_10d_atr_trail
+        strategy_params:
+          symbols: [GC]
+          entry_lookback_bars: 13800
+          exit_lookback_bars: 4140
+          atr_lookback_bars: 240
+          decision_interval_bars: 240
+          breakout_buffer_bps: "1"
+          min_atr_bps: "5"
+          max_atr_bps: "100"
+          target_quantity: "1"
+          initial_stop_atr_multiple: "3.50"
+          trailing_stop_atr_multiple: "5.00"
+          max_holding_bars: 40000
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/precious_literature_gc_si/reports

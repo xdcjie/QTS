@@ -1,5 +1,5 @@
 {
-  "production_class_count": 1015,
+  "production_class_count": 1017,
   "production_classes": [
     "qts.api.schemas.backtest_schema.BacktestRequestSchema",
     "qts.api.schemas.backtest_schema.BacktestRunResultSchema",
@@ -528,6 +528,8 @@
     "qts.research.campaign.config.ResearchCampaignExecution",
     "qts.research.campaign.config.ResearchCampaignFamily",
     "qts.research.campaign.config.ResearchCampaignObjective",
+    "qts.research.campaign.config.ResearchCampaignSelection",
+    "qts.research.campaign.config.ResearchCampaignTwoStageSelection",
     "qts.research.campaign.config.ResearchCampaignUniverse",
     "qts.research.data_quality.DataQualityArtifact",
     "qts.research.data_quality.DataQualityArtifactWriter",

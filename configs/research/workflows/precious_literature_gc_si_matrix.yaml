@@ -1,0 +1,151 @@
+version: 1
+workflow_id: precious-literature-gc-si-matrix
+periods:
+  train_2024:
+    start: "2024-01-01T00:00:00+00:00"
+    end: "2025-01-01T00:00:00+00:00"
+    role: selection
+  oos_2025_2026:
+    start: "2025-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_tsmom_vol
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_tsmom_vol
+    required_strategy: strategies.research.precious_metal_tsmom_vol:PreciousMetalTsmomVolStrategy
+    on_fail: stop
+
+  - id: implementation_intraday_momentum
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_intraday_momentum
+    required_strategy: strategies.research.precious_metal_intraday_momentum:PreciousMetalIntradayMomentumStrategy
+    on_fail: stop
+
+  - id: tsmom_vol_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_tsmom_vol_gc_si.yaml
+    output_root: ../../../runs/research/precious_literature_gc_si/tsmom_vol_matrix
+    summary_output: ../../../runs/research/precious_literature_gc_si/tsmom_vol_matrix/summary.json
+    periods:
+      - train_2024
+      - oos_2025_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: tsmom_intraday_6h_1d
+        strategy_params:
+          symbols: [GC]
+          momentum_lookback_bars: [360, 1380, 4140]
+          volatility_lookback_bars: 1380
+          rebalance_interval_bars: 60
+          min_abs_score: "0.0015"
+          full_signal_score: "0.0150"
+          target_annual_vol: "0.35"
+          max_target_percent: "0.85"
+          max_total_abs_target: "2"
+          target_quantity: "1"
+          rebalance_threshold: "0.02"
+          allow_short: false
+      - name: tsmom_slow_1d_10d
+        strategy_params:
+          symbols: [GC]
+          momentum_lookback_bars: [1380, 4140, 13800]
+          volatility_lookback_bars: 4140
+          rebalance_interval_bars: 240
+          min_abs_score: "0.0030"
+          full_signal_score: "0.0300"
+          target_annual_vol: "0.40"
+          max_target_percent: "1.00"
+          max_total_abs_target: "2"
+          target_quantity: "1"
+          rebalance_threshold: "0.03"
+          allow_short: false
+      - name: tsmom_long_only_bull_filter
+        strategy_params:
+          symbols: [GC]
+          momentum_lookback_bars: [1380, 4140, 13800]
+          volatility_lookback_bars: 4140
+          rebalance_interval_bars: 240
+          min_abs_score: "0.0020"
+          full_signal_score: "0.0200"
+          target_annual_vol: "0.50"
+          max_target_percent: "1.00"
+          max_total_abs_target: "2"
+          target_quantity: "1"
+          rebalance_threshold: "0.03"
+          allow_short: false
+
+  - id: intraday_momentum_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_intraday_momentum_gc_si.yaml
+    output_root: ../../../runs/research/precious_literature_gc_si/intraday_momentum_matrix
+    summary_output: ../../../runs/research/precious_literature_gc_si/intraday_momentum_matrix/summary.json
+    periods:
+      - train_2024
+      - oos_2025_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: intraday_30m_into_close
+        strategy_params:
+          mode: momentum
+          first_window_bars: 30
+          entry_start_bar: 1320
+          entry_end_bar: 1350
+          force_exit_bar: 1376
+          min_abs_first_return: "0.0006"
+          min_first_range_bps: "5"
+          target_quantity: "1"
+          stop_atr_multiple: "1.50"
+          take_profit_atr_multiple: "2.50"
+          max_holding_bars: 90
+          allow_short: false
+      - name: intraday_60m_into_close
+        strategy_params:
+          mode: momentum
+          first_window_bars: 60
+          entry_start_bar: 1290
+          entry_end_bar: 1320
+          force_exit_bar: 1376
+          min_abs_first_return: "0.0008"
+          min_first_range_bps: "8"
+          target_quantity: "1"
+          stop_atr_multiple: "1.50"
+          take_profit_atr_multiple: "3.00"
+          max_holding_bars: 120
+          allow_short: false
+      - name: intraday_30m_reversal_stress
+        strategy_params:
+          mode: reversal
+          first_window_bars: 30
+          entry_start_bar: 1320
+          entry_end_bar: 1350
+          force_exit_bar: 1376
+          min_abs_first_return: "0.0010"
+          min_first_range_bps: "10"
+          target_quantity: "1"
+          stop_atr_multiple: "1.25"
+          take_profit_atr_multiple: "2.00"
+          max_holding_bars: 90
+          allow_short: false
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/precious_literature_gc_si/reports

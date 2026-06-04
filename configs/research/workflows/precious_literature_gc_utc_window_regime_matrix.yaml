@@ -1,0 +1,101 @@
+version: 1
+workflow_id: precious-literature-gc-utc-window-regime-matrix
+periods:
+  validation_2020_2023:
+    start: "2020-01-01T00:00:00+00:00"
+    end: "2024-01-01T00:00:00+00:00"
+    role: validation
+  oos_2024_2026:
+    start: "2024-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_utc_window
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_utc_window
+    required_strategy: strategies.research.precious_metal_utc_window:PreciousMetalUtcWindowStrategy
+    on_fail: stop
+
+  - id: gc_utc_window_regime_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_utc_window_gc.yaml
+    output_root: ../../../runs/research/precious_literature_gc_si/gc_utc_window_regime_matrix
+    summary_output: ../../../runs/research/precious_literature_gc_si/gc_utc_window_regime_matrix/summary.json
+    periods:
+      - validation_2020_2023
+      - oos_2024_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: gc_utc20_6h_regime_5d_gt0
+        strategy_params:
+          symbols: [GC]
+          start_hour_utc: 20
+          duration_hours: 6
+          target_quantities:
+            GC: "1"
+          regime_timeframe: 1m
+          regime_lookback_bars: 4140
+          min_regime_return: "0"
+      - name: gc_utc20_6h_regime_10d_gt0
+        strategy_params:
+          symbols: [GC]
+          start_hour_utc: 20
+          duration_hours: 6
+          target_quantities:
+            GC: "1"
+          regime_timeframe: 1m
+          regime_lookback_bars: 6900
+          min_regime_return: "0"
+      - name: gc_utc20_6h_regime_20d_gt0
+        strategy_params:
+          symbols: [GC]
+          start_hour_utc: 20
+          duration_hours: 6
+          target_quantities:
+            GC: "1"
+          regime_timeframe: 1m
+          regime_lookback_bars: 13800
+          min_regime_return: "0"
+      - name: gc_utc20_6h_regime_10d_gt1pct
+        strategy_params:
+          symbols: [GC]
+          start_hour_utc: 20
+          duration_hours: 6
+          target_quantities:
+            GC: "1"
+          regime_timeframe: 1m
+          regime_lookback_bars: 6900
+          min_regime_return: "0.01"
+      - name: gc_utc18_8h_regime_10d_gt0
+        strategy_params:
+          symbols: [GC]
+          start_hour_utc: 18
+          duration_hours: 8
+          target_quantities:
+            GC: "1"
+          regime_timeframe: 1m
+          regime_lookback_bars: 6900
+          min_regime_return: "0"
+      - name: gc_utc18_8h_regime_20d_gt0
+        strategy_params:
+          symbols: [GC]
+          start_hour_utc: 18
+          duration_hours: 8
+          target_quantities:
+            GC: "1"
+          regime_timeframe: 1m
+          regime_lookback_bars: 13800
+          min_regime_return: "0"
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/precious_literature_gc_si/reports

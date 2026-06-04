@@ -1,0 +1,12 @@
+data:
+  config: ../data/historical.local.yaml
+  catalog: research_futures
+  roots: [GC]
+  timeframe: 1m
+backtest_config: ../backtest.precious_metal_microtrend_scalper_gc.yaml
+store: ../../runs/research/precious_hft_gc
+output_root: ../../runs/research/precious_hft_gc/backtests
+objective_metric: sharpe_ratio
+discovery:
+  sources: [semantic_scholar, openalex, crossref, arxiv]
+  max_results: 10

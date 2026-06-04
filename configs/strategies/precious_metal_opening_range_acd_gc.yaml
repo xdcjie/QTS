@@ -1,0 +1,19 @@
+strategy_id: precious-metal-opening-range-acd-gc
+class_path: strategies.research.precious_metal_opening_range_acd:PreciousMetalOpeningRangeAcdStrategy
+account_id: backtest-account
+allocation: "1.0"
+enabled: true
+params:
+  symbol: GC
+  timeframe: 1m
+  mode: breakout
+  opening_range_bars: 5
+  max_entry_bars: 45
+  target_quantity: "1"
+  entry_buffer_ratio: "0.10"
+  stop_range_multiple: "0.75"
+  target_range_multiple: "1.25"
+  max_holding_bars: 20
+  max_entries_per_session: 1
+  min_range_width: "0"
+  allow_short: true

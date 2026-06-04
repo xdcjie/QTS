@@ -1,0 +1,148 @@
+version: 1
+workflow_id: precious-literature-gc-utc-window-goal-refine
+periods:
+  train_2024:
+    start: "2024-01-01T00:00:00+00:00"
+    end: "2025-01-01T00:00:00+00:00"
+    role: selection
+  oos_2025_2026:
+    start: "2025-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_utc_window
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_utc_window
+    required_strategy: strategies.research.precious_metal_utc_window:PreciousMetalUtcWindowStrategy
+    on_fail: stop
+
+  - id: gc_utc_window_goal_refine
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_utc_window_gc.yaml
+    output_root: ../../../runs/research/precious_literature_gc_si/gc_utc_window_goal_refine
+    summary_output: ../../../runs/research/precious_literature_gc_si/gc_utc_window_goal_refine/summary.json
+    materialized_replay_cache:
+      enabled: true
+      cache_dir: ../../../runs/research/precious_literature_gc_si/replay_cache/gc_utc_goal
+    periods:
+      - train_2024
+      - oos_2025_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: gc_utc19_4h
+        strategy_params:
+          symbols: [GC]
+          timeframe: 1m
+          start_hour_utc: 19
+          duration_hours: 4
+          target_quantities:
+            GC: "1"
+      - name: gc_utc19_5h
+        strategy_params:
+          symbols: [GC]
+          timeframe: 1m
+          start_hour_utc: 19
+          duration_hours: 5
+          target_quantities:
+            GC: "1"
+      - name: gc_utc19_6h
+        strategy_params:
+          symbols: [GC]
+          timeframe: 1m
+          start_hour_utc: 19
+          duration_hours: 6
+          target_quantities:
+            GC: "1"
+      - name: gc_utc20_4h
+        strategy_params:
+          symbols: [GC]
+          timeframe: 1m
+          start_hour_utc: 20
+          duration_hours: 4
+          target_quantities:
+            GC: "1"
+      - name: gc_utc20_5h
+        strategy_params:
+          symbols: [GC]
+          timeframe: 1m
+          start_hour_utc: 20
+          duration_hours: 5
+          target_quantities:
+            GC: "1"
+      - name: gc_utc20_6h
+        strategy_params:
+          symbols: [GC]
+          timeframe: 1m
+          start_hour_utc: 20
+          duration_hours: 6
+          target_quantities:
+            GC: "1"
+      - name: gc_utc21_4h
+        strategy_params:
+          symbols: [GC]
+          timeframe: 1m
+          start_hour_utc: 21
+          duration_hours: 4
+          target_quantities:
+            GC: "1"
+      - name: gc_utc21_5h
+        strategy_params:
+          symbols: [GC]
+          timeframe: 1m
+          start_hour_utc: 21
+          duration_hours: 5
+          target_quantities:
+            GC: "1"
+      - name: gc_utc20_6h_atr60_stop25
+        strategy_params:
+          symbols: [GC]
+          timeframe: 1m
+          start_hour_utc: 20
+          duration_hours: 6
+          target_quantities:
+            GC: "1"
+          atr_lookback_bars: 60
+          stop_atr_multiple: "2.50"
+      - name: gc_utc20_6h_atr60_trail35
+        strategy_params:
+          symbols: [GC]
+          timeframe: 1m
+          start_hour_utc: 20
+          duration_hours: 6
+          target_quantities:
+            GC: "1"
+          atr_lookback_bars: 60
+          trailing_atr_multiple: "3.50"
+      - name: gc_utc20_6h_atr120_trail40
+        strategy_params:
+          symbols: [GC]
+          timeframe: 1m
+          start_hour_utc: 20
+          duration_hours: 6
+          target_quantities:
+            GC: "1"
+          atr_lookback_bars: 120
+          trailing_atr_multiple: "4.00"
+      - name: gc_utc20_5h_atr60_trail35
+        strategy_params:
+          symbols: [GC]
+          timeframe: 1m
+          start_hour_utc: 20
+          duration_hours: 5
+          target_quantities:
+            GC: "1"
+          atr_lookback_bars: 60
+          trailing_atr_multiple: "3.50"
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/precious_literature_gc_si/reports

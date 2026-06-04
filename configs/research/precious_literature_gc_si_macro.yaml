@@ -1,0 +1,16 @@
+data:
+  config: ../data/historical.local.yaml
+  catalog: research_futures
+  roots: [GC, SI, REALYIELD10Y, COT_GC, COT_SI]
+  timeframe: 1d
+  instrument_ids:
+    REALYIELD10Y: RESEARCH_SIGNAL.UST.REALYIELD10Y
+    COT_GC: RESEARCH_SIGNAL.CFTC.COT_GC
+    COT_SI: RESEARCH_SIGNAL.CFTC.COT_SI
+backtest_config: ../backtest.precious_metal_real_yield_gc.yaml
+store: ../../runs/research/precious_literature_gc_si_macro
+output_root: ../../runs/research/precious_literature_gc_si_macro/backtests
+objective_metric: sharpe_ratio
+discovery:
+  sources: [us_treasury, semantic_scholar, openalex, crossref, arxiv]
+  max_results: 10

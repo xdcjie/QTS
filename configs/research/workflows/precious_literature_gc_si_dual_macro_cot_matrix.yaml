@@ -1,0 +1,240 @@
+version: 1
+workflow_id: precious-literature-gc-si-dual-macro-cot-matrix
+periods:
+  validation_2020_2023:
+    start: "2020-01-01T00:00:00+00:00"
+    end: "2024-01-01T00:00:00+00:00"
+    role: selection
+  oos_2024_2026:
+    start: "2024-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_dual_signal
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_dual_signal
+    required_strategy: strategies.research.precious_metal_dual_signal:PreciousMetalDualSignalStrategy
+    on_fail: stop
+
+  - id: gc_dual_macro_cot_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_dual_signal_gc.yaml
+    output_root: ../../../runs/research/precious_literature_gc_si_macro/gc_dual_macro_cot_matrix
+    summary_output: ../../../runs/research/precious_literature_gc_si_macro/gc_dual_macro_cot_matrix/summary.json
+    materialized_replay_cache:
+      enabled: true
+      cache_dir: ../../../runs/research/precious_literature_gc_si_macro/replay_cache/gc_dual
+    periods:
+      - validation_2020_2023
+      - oos_2024_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: gc_ry_change_cot_change_26_z075_long
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: REALYIELD10Y
+          secondary_symbol: COT_GC
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: fade
+          secondary_direction: follow
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 26
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.75"
+          allow_short: false
+      - name: gc_ry_change_cot_level_26_z075_long
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: REALYIELD10Y
+          secondary_symbol: COT_GC
+          primary_signal_mode: change
+          secondary_signal_mode: level
+          primary_direction: fade
+          secondary_direction: follow
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 26
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.75"
+          allow_short: false
+      - name: gc_ry_change_cot_change_52_z075_long
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: REALYIELD10Y
+          secondary_symbol: COT_GC
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: fade
+          secondary_direction: follow
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 52
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.75"
+          allow_short: false
+      - name: gc_ry_change_cot_change_26_z075_trend20_long
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: REALYIELD10Y
+          secondary_symbol: COT_GC
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: fade
+          secondary_direction: follow
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 26
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.75"
+          trend_lookback_bars: 20
+          allow_short: false
+
+  - id: si_dual_macro_cot_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_dual_signal_si.yaml
+    output_root: ../../../runs/research/precious_literature_gc_si_macro/si_dual_macro_cot_matrix
+    summary_output: ../../../runs/research/precious_literature_gc_si_macro/si_dual_macro_cot_matrix/summary.json
+    materialized_replay_cache:
+      enabled: true
+      cache_dir: ../../../runs/research/precious_literature_gc_si_macro/replay_cache/si_dual
+    periods:
+      - validation_2020_2023
+      - oos_2024_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: si_ry_change_cot_change_26_z075_long
+        strategy_params:
+          trade_symbol: SI
+          primary_symbol: REALYIELD10Y
+          secondary_symbol: COT_SI
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: fade
+          secondary_direction: follow
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 26
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.75"
+          allow_short: false
+      - name: si_ry_change_cot_level_26_z075_long
+        strategy_params:
+          trade_symbol: SI
+          primary_symbol: REALYIELD10Y
+          secondary_symbol: COT_SI
+          primary_signal_mode: change
+          secondary_signal_mode: level
+          primary_direction: fade
+          secondary_direction: fade
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 26
+          primary_entry_z: "0.75"
+          secondary_entry_z: "1.25"
+          allow_short: false
+      - name: si_ry_change_cot_level_26_z075_trend20_long
+        strategy_params:
+          trade_symbol: SI
+          primary_symbol: REALYIELD10Y
+          secondary_symbol: COT_SI
+          primary_signal_mode: change
+          secondary_signal_mode: level
+          primary_direction: fade
+          secondary_direction: fade
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 26
+          primary_entry_z: "0.75"
+          secondary_entry_z: "1.25"
+          trend_lookback_bars: 20
+          allow_short: false
+      - name: si_ry_change_cot_level_26_z075_trend60_long
+        strategy_params:
+          trade_symbol: SI
+          primary_symbol: REALYIELD10Y
+          secondary_symbol: COT_SI
+          primary_signal_mode: change
+          secondary_signal_mode: level
+          primary_direction: fade
+          secondary_direction: fade
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 26
+          primary_entry_z: "0.75"
+          secondary_entry_z: "1.25"
+          trend_lookback_bars: 60
+          allow_short: false
+      - name: si_ry_change_cot_level_52_z075_trend20_long
+        strategy_params:
+          trade_symbol: SI
+          primary_symbol: REALYIELD10Y
+          secondary_symbol: COT_SI
+          primary_signal_mode: change
+          secondary_signal_mode: level
+          primary_direction: fade
+          secondary_direction: fade
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 52
+          primary_entry_z: "0.75"
+          secondary_entry_z: "1.25"
+          trend_lookback_bars: 20
+          allow_short: false
+      - name: si_ry_change_cot_level_26_z100_trend20_long
+        strategy_params:
+          trade_symbol: SI
+          primary_symbol: REALYIELD10Y
+          secondary_symbol: COT_SI
+          primary_signal_mode: change
+          secondary_signal_mode: level
+          primary_direction: fade
+          secondary_direction: fade
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 26
+          primary_entry_z: "1.00"
+          secondary_entry_z: "1.25"
+          trend_lookback_bars: 20
+          allow_short: false
+      - name: si_ry_change_cot_change_26_z050_long
+        strategy_params:
+          trade_symbol: SI
+          primary_symbol: REALYIELD10Y
+          secondary_symbol: COT_SI
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: fade
+          secondary_direction: follow
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 26
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.50"
+          allow_short: false
+      - name: si_ry_change_cot_change_26_z075_trend20_long
+        strategy_params:
+          trade_symbol: SI
+          primary_symbol: REALYIELD10Y
+          secondary_symbol: COT_SI
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: fade
+          secondary_direction: follow
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 26
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.75"
+          trend_lookback_bars: 20
+          allow_short: false
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/precious_literature_gc_si_macro/reports

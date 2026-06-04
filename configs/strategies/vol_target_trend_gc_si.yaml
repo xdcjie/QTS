@@ -1,0 +1,15 @@
+strategy_id: vol-target-trend-gc-si
+class_path: strategies.research.vol_target_trend:VolTargetTrendStrategy
+account_id: backtest-account
+allocation: "1.0"
+enabled: true
+params:
+  symbol: GC
+  timeframe: 1d
+  momentum_lookback_bars: [21, 63, 126]
+  volatility_lookback_bars: 40
+  target_annual_vol: "0.12"
+  max_target_percent: "0.25"
+  min_signal_return: "0.02"
+  rebalance_threshold: "0.01"
+  allow_short: true

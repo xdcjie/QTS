@@ -1,0 +1,18 @@
+strategy_id: precious-metal-vix-risk-gc
+class_path: strategies.research.precious_metal_cot_positioning:PreciousMetalCotPositioningStrategy
+account_id: backtest-account
+allocation: "1.0"
+enabled: true
+params:
+  trade_symbol: GC
+  cot_symbol: VIX
+  timeframe: 1d
+  cot_lookback_bars: 60
+  signal_mode: change
+  positioning_direction: follow
+  entry_z: "0.75"
+  exit_z: "0.10"
+  target_quantity: "1"
+  min_signal_std: "0.0001"
+  allow_short: false
+  history_buffer_bars: 2

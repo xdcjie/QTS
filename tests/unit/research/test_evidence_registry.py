@@ -90,6 +90,28 @@ def test_evidence_bundle_created_from_workflow_summary(tmp_path: Path) -> None:
     assert (registry.root_dir / f"evidence-bundle-{bundle.evidence_bundle_id}.json").exists()
 
 
+def test_evidence_bundle_accepts_yaml_research_manifest_without_artifact_catalog(
+    tmp_path: Path,
+) -> None:
+    manifest_path = tmp_path / "research-manifest.yaml"
+    manifest_path.write_text(
+        "schema_version: 2\nresearch_id: fixture\nstrategy:\n  id: fixture-strategy\n",
+        encoding="utf-8",
+    )
+    report_path = tmp_path / "workflow-report.md"
+    report_path.write_text("# Report\n", encoding="utf-8")
+    summary_path = _write_workflow_summary(tmp_path, manifest_path, report_path)
+    registry = EvidenceRegistry(tmp_path / "evidence")
+
+    bundle = registry.create_from_workflow_summary(summary_path)
+
+    assert bundle.manifest_paths == (str(manifest_path),)
+    assert bundle.manifest_hashes == {
+        str(manifest_path): f"sha256:{hashlib.sha256(manifest_path.read_bytes()).hexdigest()}"
+    }
+    assert registry.verify(bundle.evidence_bundle_id).accepted
+
+
 def test_evidence_bundle_preserves_existing_repo_relative_summary_paths(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

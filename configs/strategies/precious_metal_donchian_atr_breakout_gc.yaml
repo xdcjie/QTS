@@ -1,0 +1,20 @@
+strategy_id: precious-metal-donchian-atr-breakout-gc
+class_path: strategies.research.precious_metal_donchian_atr_breakout:PreciousMetalDonchianAtrBreakoutStrategy
+account_id: backtest-account
+allocation: "1.0"
+enabled: true
+params:
+  symbols: [GC]
+  timeframe: 1m
+  entry_lookback_bars: 4140
+  exit_lookback_bars: 1380
+  atr_lookback_bars: 120
+  decision_interval_bars: 60
+  breakout_buffer_bps: "2"
+  min_atr_bps: "4"
+  max_atr_bps: "80"
+  target_quantity: "1"
+  initial_stop_atr_multiple: "3.00"
+  trailing_stop_atr_multiple: "4.00"
+  max_holding_bars: 20000
+  history_buffer_bars: 20

@@ -194,9 +194,7 @@ def test_data_quality_runner_counts_in_session_missing_bars_from_historical_chai
     bars_path = root / "data" / "GC.csv"
     bars_path.parent.mkdir(parents=True, exist_ok=True)
     bars_path.write_text(
-        "timestamp,close\n"
-        "2026-01-04T23:00:00Z,100\n"
-        "2026-01-04T23:02:00Z,102\n",
+        "timestamp,close\n2026-01-04T23:00:00Z,100\n2026-01-04T23:02:00Z,102\n",
         encoding="utf-8",
     )
     _write_gc_chain(root / "chains" / "GC.json")

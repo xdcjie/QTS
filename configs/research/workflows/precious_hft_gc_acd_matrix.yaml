@@ -1,0 +1,68 @@
+version: 1
+workflow_id: precious-hft-gc-acd-matrix
+periods:
+  train_2024:
+    start: "2024-01-01T00:00:00+00:00"
+    end: "2025-01-01T00:00:00+00:00"
+    role: selection
+  oos_2025_2026:
+    start: "2025-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_opening_range_acd
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_opening_range_acd
+    required_strategy: strategies.research.precious_metal_opening_range_acd:PreciousMetalOpeningRangeAcdStrategy
+    on_fail: stop
+
+  - id: opening_range_acd_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_opening_range_acd_gc.yaml
+    output_root: ../../../runs/research/precious_hft_gc/opening_range_acd_matrix
+    summary_output: ../../../runs/research/precious_hft_gc/opening_range_acd_matrix/summary.json
+    periods:
+      - train_2024
+      - oos_2025_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: acd_breakout_default
+        strategy_params:
+          mode: breakout
+          opening_range_bars: 5
+          max_entry_bars: 45
+          entry_buffer_ratio: "0.10"
+          stop_range_multiple: "0.75"
+          target_range_multiple: "1.25"
+          max_holding_bars: 20
+      - name: acd_breakout_15m
+        strategy_params:
+          mode: breakout
+          opening_range_bars: 15
+          max_entry_bars: 90
+          entry_buffer_ratio: "0.05"
+          stop_range_multiple: "0.75"
+          target_range_multiple: "1.50"
+          max_holding_bars: 30
+      - name: acd_failure_15m
+        strategy_params:
+          mode: failure
+          opening_range_bars: 15
+          max_entry_bars: 90
+          entry_buffer_ratio: "0.05"
+          stop_range_multiple: "0.75"
+          target_range_multiple: "1.25"
+          max_holding_bars: 30
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/precious_hft_gc/reports

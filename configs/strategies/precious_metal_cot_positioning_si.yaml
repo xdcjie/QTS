@@ -1,0 +1,18 @@
+strategy_id: precious-metal-cot-positioning-si
+class_path: strategies.research.precious_metal_cot_positioning:PreciousMetalCotPositioningStrategy
+account_id: backtest-account
+allocation: "1.0"
+enabled: true
+params:
+  trade_symbol: SI
+  cot_symbol: COT_SI
+  timeframe: 1d
+  cot_lookback_bars: 52
+  signal_mode: level
+  positioning_direction: fade
+  entry_z: "1.25"
+  exit_z: "0.25"
+  target_quantity: "1"
+  min_signal_std: "0.0001"
+  allow_short: true
+  history_buffer_bars: 2

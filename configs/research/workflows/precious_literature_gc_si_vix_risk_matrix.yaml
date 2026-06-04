@@ -1,0 +1,162 @@
+version: 1
+workflow_id: precious-literature-gc-si-vix-risk-matrix
+periods:
+  validation_2020_2023:
+    start: "2020-01-01T00:00:00+00:00"
+    end: "2024-01-01T00:00:00+00:00"
+    role: selection
+  oos_2024_2026:
+    start: "2024-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_signal_zscore
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_cot_positioning
+    required_strategy: strategies.research.precious_metal_cot_positioning:PreciousMetalCotPositioningStrategy
+    on_fail: stop
+
+  - id: gc_vix_risk_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_vix_risk_gc.yaml
+    output_root: ../../../runs/research/precious_literature_gc_si_risk/gc_vix_risk_matrix
+    summary_output: ../../../runs/research/precious_literature_gc_si_risk/gc_vix_risk_matrix/summary.json
+    materialized_replay_cache:
+      enabled: true
+      cache_dir: ../../../runs/research/precious_literature_gc_si_risk/replay_cache/gc
+    periods:
+      - validation_2020_2023
+      - oos_2024_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: gc_vix_change_follow_20_z075_long
+        strategy_params:
+          trade_symbol: GC
+          cot_symbol: VIX
+          timeframe: 1d
+          cot_lookback_bars: 20
+          signal_mode: change
+          positioning_direction: follow
+          entry_z: "0.75"
+          exit_z: "0.10"
+          target_quantity: "1"
+          allow_short: false
+      - name: gc_vix_change_follow_60_z075_long
+        strategy_params:
+          trade_symbol: GC
+          cot_symbol: VIX
+          timeframe: 1d
+          cot_lookback_bars: 60
+          signal_mode: change
+          positioning_direction: follow
+          entry_z: "0.75"
+          exit_z: "0.10"
+          target_quantity: "1"
+          allow_short: false
+      - name: gc_vix_level_follow_60_z125_long
+        strategy_params:
+          trade_symbol: GC
+          cot_symbol: VIX
+          timeframe: 1d
+          cot_lookback_bars: 60
+          signal_mode: level
+          positioning_direction: follow
+          entry_z: "1.25"
+          exit_z: "0.25"
+          target_quantity: "1"
+          allow_short: false
+      - name: gc_vix_level_fade_60_z125_long
+        strategy_params:
+          trade_symbol: GC
+          cot_symbol: VIX
+          timeframe: 1d
+          cot_lookback_bars: 60
+          signal_mode: level
+          positioning_direction: fade
+          entry_z: "1.25"
+          exit_z: "0.25"
+          target_quantity: "1"
+          allow_short: false
+
+  - id: si_vix_risk_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_vix_risk_si.yaml
+    output_root: ../../../runs/research/precious_literature_gc_si_risk/si_vix_risk_matrix
+    summary_output: ../../../runs/research/precious_literature_gc_si_risk/si_vix_risk_matrix/summary.json
+    materialized_replay_cache:
+      enabled: true
+      cache_dir: ../../../runs/research/precious_literature_gc_si_risk/replay_cache/si
+    periods:
+      - validation_2020_2023
+      - oos_2024_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: si_vix_change_fade_20_z075_ls
+        strategy_params:
+          trade_symbol: SI
+          cot_symbol: VIX
+          timeframe: 1d
+          cot_lookback_bars: 20
+          signal_mode: change
+          positioning_direction: fade
+          entry_z: "0.75"
+          exit_z: "0.10"
+          target_quantity: "1"
+          allow_short: true
+      - name: si_vix_change_fade_60_z075_ls
+        strategy_params:
+          trade_symbol: SI
+          cot_symbol: VIX
+          timeframe: 1d
+          cot_lookback_bars: 60
+          signal_mode: change
+          positioning_direction: fade
+          entry_z: "0.75"
+          exit_z: "0.10"
+          target_quantity: "1"
+          allow_short: true
+      - name: si_vix_level_fade_60_z125_ls
+        strategy_params:
+          trade_symbol: SI
+          cot_symbol: VIX
+          timeframe: 1d
+          cot_lookback_bars: 60
+          signal_mode: level
+          positioning_direction: fade
+          entry_z: "1.25"
+          exit_z: "0.25"
+          target_quantity: "1"
+          allow_short: true
+      - name: si_vix_level_follow_60_z125_long
+        strategy_params:
+          trade_symbol: SI
+          cot_symbol: VIX
+          timeframe: 1d
+          cot_lookback_bars: 60
+          signal_mode: level
+          positioning_direction: follow
+          entry_z: "1.25"
+          exit_z: "0.25"
+          target_quantity: "1"
+          allow_short: false
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/precious_literature_gc_si_risk/reports

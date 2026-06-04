@@ -1,0 +1,15 @@
+data:
+  config: ../data/historical.local.yaml
+  catalog: research_futures
+  roots: [GC, SI, COT_GC, COT_SI]
+  timeframe: 1d
+  instrument_ids:
+    COT_GC: RESEARCH_SIGNAL.CFTC.COT_GC
+    COT_SI: RESEARCH_SIGNAL.CFTC.COT_SI
+backtest_config: ../backtest.precious_metal_cot_positioning_gc.yaml
+store: ../../runs/research/precious_literature_gc_si_cot
+output_root: ../../runs/research/precious_literature_gc_si_cot/backtests
+objective_metric: sharpe_ratio
+discovery:
+  sources: [cftc, semantic_scholar, openalex, crossref, arxiv]
+  max_results: 10

@@ -1,0 +1,12 @@
+data:
+  config: ../data/historical.local.yaml
+  catalog: research_futures
+  roots: [GC, SI]
+  timeframe: 1m
+backtest_config: ../backtest.precious_metal_tsmom_vol_gc_si.yaml
+store: ../../runs/research/precious_literature_gc_si
+output_root: ../../runs/research/precious_literature_gc_si/backtests
+objective_metric: sharpe_ratio
+discovery:
+  sources: [semantic_scholar, openalex, crossref, arxiv]
+  max_results: 10
