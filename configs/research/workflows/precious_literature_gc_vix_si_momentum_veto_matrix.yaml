@@ -1,0 +1,90 @@
+version: 1
+workflow_id: precious-literature-gc-vix-si-momentum-veto-matrix
+periods:
+  validation_2020_2023:
+    start: "2020-01-01"
+    end: "2024-01-01"
+    role: selection
+  oos_2024_2026:
+    start: "2024-01-01"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_dual_signal
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_dual_signal
+    required_strategy: strategies.research.precious_metal_dual_signal:PreciousMetalDualSignalStrategy
+  - id: gc_vix_si_momentum_veto_matrix
+    kind: backtest_matrix
+    backtest_config: ../../../configs/backtest.precious_metal_dual_vix_si_gc.yaml
+    output_root: ../../../runs/research/precious_literature_gc_si_risk/gc_vix_si_momentum_veto_matrix
+    periods: [validation_2020_2023, oos_2024_2026]
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - win_rate
+      - expectancy
+      - total_trades
+      - time_in_market
+    candidates:
+      - name: gc_vix_si_veto_p40_pe075_s20_se025
+        strategy_params:
+          primary_lookback_bars: 40
+          primary_entry_z: "0.75"
+          secondary_lookback_bars: 20
+          secondary_entry_z: "0.25"
+          secondary_policy: veto
+      - name: gc_vix_si_veto_p40_pe075_s20_se050
+        strategy_params:
+          primary_lookback_bars: 40
+          primary_entry_z: "0.75"
+          secondary_lookback_bars: 20
+          secondary_entry_z: "0.50"
+          secondary_policy: veto
+      - name: gc_vix_si_veto_p40_pe075_s60_se025
+        strategy_params:
+          primary_lookback_bars: 40
+          primary_entry_z: "0.75"
+          secondary_lookback_bars: 60
+          secondary_entry_z: "0.25"
+          secondary_policy: veto
+      - name: gc_vix_si_veto_p40_pe075_s60_se050
+        strategy_params:
+          primary_lookback_bars: 40
+          primary_entry_z: "0.75"
+          secondary_lookback_bars: 60
+          secondary_entry_z: "0.50"
+          secondary_policy: veto
+      - name: gc_vix_si_veto_p60_pe075_s20_se025
+        strategy_params:
+          primary_lookback_bars: 60
+          primary_entry_z: "0.75"
+          secondary_lookback_bars: 20
+          secondary_entry_z: "0.25"
+          secondary_policy: veto
+      - name: gc_vix_si_veto_p60_pe075_s20_se050
+        strategy_params:
+          primary_lookback_bars: 60
+          primary_entry_z: "0.75"
+          secondary_lookback_bars: 20
+          secondary_entry_z: "0.50"
+          secondary_policy: veto
+      - name: gc_vix_si_veto_p60_pe075_s60_se025
+        strategy_params:
+          primary_lookback_bars: 60
+          primary_entry_z: "0.75"
+          secondary_lookback_bars: 60
+          secondary_entry_z: "0.25"
+          secondary_policy: veto
+      - name: gc_vix_si_veto_p60_pe075_s60_se050
+        strategy_params:
+          primary_lookback_bars: 60
+          primary_entry_z: "0.75"
+          secondary_lookback_bars: 60
+          secondary_entry_z: "0.50"
+          secondary_policy: veto
+  - id: report
+    kind: research_report

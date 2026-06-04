@@ -25,6 +25,7 @@ class PreciousMetalDualSignalStrategy(Strategy):
         secondary_signal_mode: str = "change",
         primary_direction: str = "fade",
         secondary_direction: str = "follow",
+        secondary_policy: str = "confirm",
         primary_entry_z: Decimal = Decimal("0.75"),
         secondary_entry_z: Decimal = Decimal("0.75"),
         target_quantity: Decimal = Decimal("1"),
@@ -49,6 +50,7 @@ class PreciousMetalDualSignalStrategy(Strategy):
         self._secondary_signal_mode = _mode(secondary_signal_mode, "secondary_signal_mode")
         self._primary_direction = _direction(primary_direction, "primary_direction")
         self._secondary_direction = _direction(secondary_direction, "secondary_direction")
+        self._secondary_policy = _secondary_policy(secondary_policy)
         if trend_lookback_bars < 0:
             raise ValueError("trend_lookback_bars must be non-negative")
         if history_buffer_bars < 0:
@@ -147,7 +149,7 @@ class PreciousMetalDualSignalStrategy(Strategy):
             direction=self._secondary_direction,
             entry_z=self._secondary_entry_z,
         )
-        next_side = primary_side if primary_side != 0 and primary_side == secondary_side else 0
+        next_side = self._combined_side(primary_side, secondary_side)
         if next_side < 0 and not self._allow_short:
             next_side = 0
         next_side = self._apply_trend_filter(ctx, next_side)
@@ -188,6 +190,15 @@ class PreciousMetalDualSignalStrategy(Strategy):
         if z_score <= -entry_z:
             return 1
         return 0
+
+    def _combined_side(self, primary_side: int, secondary_side: int) -> int:
+        if self._secondary_policy == "confirm":
+            return primary_side if primary_side != 0 and primary_side == secondary_side else 0
+        if primary_side == 0:
+            return 0
+        if secondary_side == -primary_side:
+            return 0
+        return primary_side
 
     @staticmethod
     def _required_history(signal_mode: str, lookback: int) -> int:
@@ -264,6 +275,13 @@ def _direction(value: str, name: str) -> str:
     normalized = str(value).strip().lower()
     if normalized not in {"follow", "fade"}:
         raise ValueError(f"{name} must be 'follow' or 'fade'")
+    return normalized
+
+
+def _secondary_policy(value: str) -> str:
+    normalized = str(value).strip().lower()
+    if normalized not in {"confirm", "veto"}:
+        raise ValueError("secondary_policy must be 'confirm' or 'veto'")
     return normalized
 
 

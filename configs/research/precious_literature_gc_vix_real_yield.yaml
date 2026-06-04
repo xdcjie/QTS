@@ -1,0 +1,15 @@
+data:
+  config: ../data/historical.local.yaml
+  catalog: research_futures
+  roots: [GC, VIX, REALYIELD10Y]
+  timeframe: 1d
+  instrument_ids:
+    VIX: RESEARCH_SIGNAL.CBOE.VIX
+    REALYIELD10Y: RESEARCH_SIGNAL.UST.REALYIELD10Y
+backtest_config: ../backtest.precious_metal_dual_vix_real_yield_gc.yaml
+store: ../../runs/research/precious_literature_gc_vix_real_yield
+output_root: ../../runs/research/precious_literature_gc_vix_real_yield/backtests
+objective_metric: sharpe_ratio
+discovery:
+  sources: [us_treasury, semantic_scholar, openalex, crossref, arxiv]
+  max_results: 10

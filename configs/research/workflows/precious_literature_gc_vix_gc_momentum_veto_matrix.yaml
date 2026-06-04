@@ -1,0 +1,178 @@
+version: 1
+workflow_id: precious-literature-gc-vix-gc-momentum-veto-matrix
+periods:
+  validation_2020_2023:
+    start: "2020-01-01"
+    end: "2024-01-01"
+    role: selection
+  oos_2024_2026:
+    start: "2024-01-01"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_dual_signal
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_dual_signal
+    required_strategy: strategies.research.precious_metal_dual_signal:PreciousMetalDualSignalStrategy
+  - id: gc_vix_gc_momentum_veto_matrix
+    kind: backtest_matrix
+    backtest_config: ../../../configs/backtest.precious_metal_dual_vix_real_yield_gc.yaml
+    output_root: ../../../runs/research/precious_literature_gc_vix_real_yield/gc_vix_gc_momentum_veto_matrix
+    periods: [validation_2020_2023, oos_2024_2026]
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - win_rate
+      - expectancy
+      - total_trades
+      - time_in_market
+    candidates:
+      - name: gc_vix_gc_veto_p40_pe075_s20_se025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          primary_signal_mode: change
+          primary_direction: follow
+          primary_lookback_bars: 40
+          primary_entry_z: "0.75"
+          secondary_symbol: GC
+          secondary_signal_mode: change
+          secondary_direction: follow
+          secondary_policy: veto
+          secondary_lookback_bars: 20
+          secondary_entry_z: "0.25"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          target_quantity: "1"
+      - name: gc_vix_gc_veto_p40_pe075_s20_se050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          primary_signal_mode: change
+          primary_direction: follow
+          primary_lookback_bars: 40
+          primary_entry_z: "0.75"
+          secondary_symbol: GC
+          secondary_signal_mode: change
+          secondary_direction: follow
+          secondary_policy: veto
+          secondary_lookback_bars: 20
+          secondary_entry_z: "0.50"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          target_quantity: "1"
+      - name: gc_vix_gc_veto_p40_pe075_s60_se025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          primary_signal_mode: change
+          primary_direction: follow
+          primary_lookback_bars: 40
+          primary_entry_z: "0.75"
+          secondary_symbol: GC
+          secondary_signal_mode: change
+          secondary_direction: follow
+          secondary_policy: veto
+          secondary_lookback_bars: 60
+          secondary_entry_z: "0.25"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          target_quantity: "1"
+      - name: gc_vix_gc_veto_p40_pe075_s60_se050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          primary_signal_mode: change
+          primary_direction: follow
+          primary_lookback_bars: 40
+          primary_entry_z: "0.75"
+          secondary_symbol: GC
+          secondary_signal_mode: change
+          secondary_direction: follow
+          secondary_policy: veto
+          secondary_lookback_bars: 60
+          secondary_entry_z: "0.50"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          target_quantity: "1"
+      - name: gc_vix_gc_veto_p60_pe075_s20_se025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          primary_signal_mode: change
+          primary_direction: follow
+          primary_lookback_bars: 60
+          primary_entry_z: "0.75"
+          secondary_symbol: GC
+          secondary_signal_mode: change
+          secondary_direction: follow
+          secondary_policy: veto
+          secondary_lookback_bars: 20
+          secondary_entry_z: "0.25"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          target_quantity: "1"
+      - name: gc_vix_gc_veto_p60_pe075_s20_se050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          primary_signal_mode: change
+          primary_direction: follow
+          primary_lookback_bars: 60
+          primary_entry_z: "0.75"
+          secondary_symbol: GC
+          secondary_signal_mode: change
+          secondary_direction: follow
+          secondary_policy: veto
+          secondary_lookback_bars: 20
+          secondary_entry_z: "0.50"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          target_quantity: "1"
+      - name: gc_vix_gc_veto_p60_pe075_s60_se025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          primary_signal_mode: change
+          primary_direction: follow
+          primary_lookback_bars: 60
+          primary_entry_z: "0.75"
+          secondary_symbol: GC
+          secondary_signal_mode: change
+          secondary_direction: follow
+          secondary_policy: veto
+          secondary_lookback_bars: 60
+          secondary_entry_z: "0.25"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          target_quantity: "1"
+      - name: gc_vix_gc_veto_p60_pe075_s60_se050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          primary_signal_mode: change
+          primary_direction: follow
+          primary_lookback_bars: 60
+          primary_entry_z: "0.75"
+          secondary_symbol: GC
+          secondary_signal_mode: change
+          secondary_direction: follow
+          secondary_policy: veto
+          secondary_lookback_bars: 60
+          secondary_entry_z: "0.50"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          target_quantity: "1"
+  - id: report
+    kind: research_report

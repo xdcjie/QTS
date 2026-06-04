@@ -27,6 +27,8 @@ class PreciousMetalCotPositioningStrategy(Strategy):
         min_signal_std: Decimal = Decimal("0.0001"),
         trend_lookback_bars: int = 0,
         min_trend_return: Decimal = Decimal("0"),
+        return_vol_lookback_bars: int = 0,
+        max_return_volatility: Decimal = Decimal("0"),
         allow_short: bool = True,
         history_buffer_bars: int = 2,
     ) -> None:
@@ -50,6 +52,8 @@ class PreciousMetalCotPositioningStrategy(Strategy):
             raise ValueError("history_buffer_bars must be non-negative")
         if trend_lookback_bars < 0:
             raise ValueError("trend_lookback_bars must be non-negative")
+        if return_vol_lookback_bars < 0:
+            raise ValueError("return_vol_lookback_bars must be non-negative")
 
         self._trade_symbol = normalized_trade_symbol
         self._cot_symbol = normalized_cot_symbol
@@ -63,6 +67,8 @@ class PreciousMetalCotPositioningStrategy(Strategy):
         self._min_signal_std = _decimal(min_signal_std)
         self._trend_lookback_bars = trend_lookback_bars
         self._min_trend_return = _decimal(min_trend_return)
+        self._return_vol_lookback_bars = return_vol_lookback_bars
+        self._max_return_volatility = _decimal(max_return_volatility)
         self._allow_short = allow_short
         self._history_buffer_bars = history_buffer_bars
         for name, value in {
@@ -71,6 +77,7 @@ class PreciousMetalCotPositioningStrategy(Strategy):
             "target_quantity": self._target_quantity,
             "min_signal_std": self._min_signal_std,
             "min_trend_return": self._min_trend_return,
+            "max_return_volatility": self._max_return_volatility,
         }.items():
             if value < Decimal("0"):
                 raise ValueError(f"{name} must be non-negative")
@@ -82,6 +89,13 @@ class PreciousMetalCotPositioningStrategy(Strategy):
             raise ValueError("target_quantity must be non-zero")
         if self._min_signal_std == Decimal("0"):
             raise ValueError("min_signal_std must be positive")
+        if (
+            self._max_return_volatility > Decimal("0")
+            and self._return_vol_lookback_bars < 2
+        ):
+            raise ValueError(
+                "return_vol_lookback_bars must be at least 2 when max_return_volatility is set"
+            )
 
         self._trade_asset: AssetRef | None = None
         self._cot_asset: AssetRef | None = None
@@ -97,10 +111,15 @@ class PreciousMetalCotPositioningStrategy(Strategy):
     def initialize(self, ctx: StrategyContext) -> None:
         self._trade_asset = _asset_for_symbol(ctx, self._trade_symbol)
         self._cot_asset = _asset_for_symbol(ctx, self._cot_symbol)
+        trade_warmup = max(
+            1,
+            self._trend_lookback_bars + 1,
+            self._return_vol_lookback_bars + 1,
+        )
         ctx.subscribe(
             self._trade_asset,
             timeframe=self._timeframe,
-            warmup=max(1, self._trend_lookback_bars + 1) + self._history_buffer_bars,
+            warmup=trade_warmup + self._history_buffer_bars,
         )
         ctx.subscribe(
             self._cot_asset,
@@ -130,6 +149,7 @@ class PreciousMetalCotPositioningStrategy(Strategy):
             return
         next_side = self._next_side(z_score)
         next_side = self._apply_trend_filter(ctx, next_side)
+        next_side = self._apply_return_volatility_filter(ctx, next_side)
         if next_side == self._current_side:
             return
         if next_side == 0:
@@ -210,6 +230,34 @@ class PreciousMetalCotPositioningStrategy(Strategy):
         if side > 0 and trend_return < self._min_trend_return:
             return 0
         if side < 0 and trend_return > -self._min_trend_return:
+            return 0
+        return side
+
+    def _apply_return_volatility_filter(self, ctx: StrategyContext, side: int) -> int:
+        if (
+            side == 0
+            or self._return_vol_lookback_bars == 0
+            or self._max_return_volatility == Decimal("0")
+        ):
+            return side
+        if self._trade_asset is None:
+            raise RuntimeError("strategy must be initialized before volatility filtering")
+        history = ctx.data.history(
+            self._trade_asset,
+            bars=self._return_vol_lookback_bars + 1,
+            timeframe=self._timeframe,
+        )
+        if len(history) < self._return_vol_lookback_bars + 1:
+            return 0
+        returns: list[Decimal] = []
+        for previous, current in itertools.pairwise(history):
+            if previous.close <= Decimal("0"):
+                return 0
+            returns.append((current.close - previous.close) / previous.close)
+        mean = sum(returns, Decimal("0")) / Decimal(len(returns))
+        variance = sum((value - mean) ** 2 for value in returns) / Decimal(len(returns))
+        volatility = variance.sqrt()
+        if volatility > self._max_return_volatility:
             return 0
         return side
 

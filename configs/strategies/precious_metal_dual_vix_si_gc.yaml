@@ -1,0 +1,23 @@
+strategy_id: precious-metal-dual-vix-si-gc
+class_path: strategies.research.precious_metal_dual_signal:PreciousMetalDualSignalStrategy
+account_id: backtest-account
+allocation: "1.0"
+enabled: true
+params:
+  trade_symbol: GC
+  primary_symbol: VIX
+  secondary_symbol: SI
+  timeframe: 1d
+  primary_lookback_bars: 60
+  secondary_lookback_bars: 60
+  primary_signal_mode: change
+  secondary_signal_mode: change
+  primary_direction: follow
+  secondary_direction: follow
+  secondary_policy: veto
+  primary_entry_z: "0.75"
+  secondary_entry_z: "0.50"
+  target_quantity: "1"
+  min_signal_std: "0.0001"
+  allow_short: false
+  history_buffer_bars: 2

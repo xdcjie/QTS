@@ -1,0 +1,16 @@
+parameters:
+  - name: root
+    parameter_type: categorical
+    values: [GC]
+  - name: cot_lookback_bars
+    parameter_type: categorical
+    values: [60]
+  - name: entry_z
+    parameter_type: categorical
+    values: ["0.75"]
+  - name: exit_z
+    parameter_type: categorical
+    values: ["0.10"]
+  - name: trend_lookback_bars
+    parameter_type: categorical
+    values: [0]

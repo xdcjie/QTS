@@ -1,0 +1,48 @@
+template_id: gc_vix_risk_robust_template
+family: vix_risk
+strategy_entrypoint: strategies.research.precious_metal_cot_positioning:PreciousMetalCotPositioningStrategy
+allowed_imports:
+  - qts.strategy_sdk
+risk_assumptions:
+  max_position_notional: 1000000
+execution_assumptions:
+  slippage_bps: 1
+backtest_pipeline:
+  base_config_path: configs/backtest.precious_metal_vix_risk_gc.yaml
+  objective_metric: sharpe_ratio
+  data_quality_paths:
+    - historical/data/vix.csv
+  materialized_replay_cache_dir: runs/research/precious_literature_gc_si_risk/gc_vix_risk_robust_validation/replay_cache
+  strategy_parameter_defaults:
+    trade_symbol: GC
+    cot_symbol: VIX
+    timeframe: 1d
+    signal_mode: change
+    positioning_direction: follow
+    target_quantity: "1"
+    min_signal_std: "0.0001"
+    min_trend_return: "0"
+    allow_short: false
+    history_buffer_bars: 2
+  strategy_parameter_names:
+    - cot_lookback_bars
+    - entry_z
+    - exit_z
+    - trend_lookback_bars
+factor_definition:
+  factor_id: gc_vix_change_risk_factor_60
+  family: volatility
+  inputs:
+    - root: GC
+      field: close
+    - root: VIX
+      field: close
+  transforms:
+    - type: returns
+      lookback: 1
+    - type: rolling_zscore
+      lookback: 60
+  label_policy:
+    horizon_bars: 1
+    visible_after: bar_close
+    no_lookahead: true

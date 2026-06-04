@@ -1,0 +1,1178 @@
+version: 1
+workflow_id: precious-literature-gc-vix-real-yield-dual-loose-matrix
+periods:
+  validation_2020_2023:
+    start: "2020-01-01T00:00:00+00:00"
+    end: "2024-01-01T00:00:00+00:00"
+    role: selection
+  oos_2024_2026:
+    start: "2024-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_dual_signal
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_dual_signal
+    required_strategy: strategies.research.precious_metal_dual_signal:PreciousMetalDualSignalStrategy
+    on_fail: stop
+
+  - id: gc_vix_real_yield_dual_loose_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_dual_vix_real_yield_gc.yaml
+    output_root: ../../../runs/research/precious_literature_gc_vix_real_yield/gc_dual_loose_matrix
+    summary_output: ../../../runs/research/precious_literature_gc_vix_real_yield/gc_dual_loose_matrix/summary.json
+    materialized_replay_cache:
+      enabled: true
+      cache_dir: ../../../runs/research/precious_literature_gc_vix_real_yield/replay_cache/gc
+    periods:
+      - validation_2020_2023
+      - oos_2024_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: gc_vix_ry_dual_loose_v20_r20_ve050_re025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 20
+          secondary_lookback_bars: 20
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.25"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v20_r20_ve050_re035
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 20
+          secondary_lookback_bars: 20
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.35"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v20_r20_ve050_re050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 20
+          secondary_lookback_bars: 20
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.50"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v20_r20_ve075_re025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 20
+          secondary_lookback_bars: 20
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.25"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v20_r20_ve075_re035
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 20
+          secondary_lookback_bars: 20
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.35"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v20_r20_ve075_re050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 20
+          secondary_lookback_bars: 20
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.50"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v20_r40_ve050_re025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 20
+          secondary_lookback_bars: 40
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.25"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v20_r40_ve050_re035
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 20
+          secondary_lookback_bars: 40
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.35"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v20_r40_ve050_re050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 20
+          secondary_lookback_bars: 40
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.50"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v20_r40_ve075_re025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 20
+          secondary_lookback_bars: 40
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.25"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v20_r40_ve075_re035
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 20
+          secondary_lookback_bars: 40
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.35"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v20_r40_ve075_re050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 20
+          secondary_lookback_bars: 40
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.50"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v20_r60_ve050_re025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 20
+          secondary_lookback_bars: 60
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.25"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v20_r60_ve050_re035
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 20
+          secondary_lookback_bars: 60
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.35"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v20_r60_ve050_re050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 20
+          secondary_lookback_bars: 60
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.50"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v20_r60_ve075_re025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 20
+          secondary_lookback_bars: 60
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.25"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v20_r60_ve075_re035
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 20
+          secondary_lookback_bars: 60
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.35"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v20_r60_ve075_re050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 20
+          secondary_lookback_bars: 60
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.50"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v40_r20_ve050_re025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 40
+          secondary_lookback_bars: 20
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.25"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v40_r20_ve050_re035
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 40
+          secondary_lookback_bars: 20
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.35"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v40_r20_ve050_re050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 40
+          secondary_lookback_bars: 20
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.50"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v40_r20_ve075_re025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 40
+          secondary_lookback_bars: 20
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.25"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v40_r20_ve075_re035
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 40
+          secondary_lookback_bars: 20
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.35"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v40_r20_ve075_re050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 40
+          secondary_lookback_bars: 20
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.50"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v40_r40_ve050_re025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 40
+          secondary_lookback_bars: 40
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.25"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v40_r40_ve050_re035
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 40
+          secondary_lookback_bars: 40
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.35"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v40_r40_ve050_re050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 40
+          secondary_lookback_bars: 40
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.50"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v40_r40_ve075_re025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 40
+          secondary_lookback_bars: 40
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.25"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v40_r40_ve075_re035
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 40
+          secondary_lookback_bars: 40
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.35"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v40_r40_ve075_re050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 40
+          secondary_lookback_bars: 40
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.50"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v40_r60_ve050_re025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 40
+          secondary_lookback_bars: 60
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.25"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v40_r60_ve050_re035
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 40
+          secondary_lookback_bars: 60
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.35"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v40_r60_ve050_re050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 40
+          secondary_lookback_bars: 60
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.50"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v40_r60_ve075_re025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 40
+          secondary_lookback_bars: 60
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.25"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v40_r60_ve075_re035
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 40
+          secondary_lookback_bars: 60
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.35"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v40_r60_ve075_re050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 40
+          secondary_lookback_bars: 60
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.50"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v60_r20_ve050_re025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 20
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.25"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v60_r20_ve050_re035
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 20
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.35"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v60_r20_ve050_re050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 20
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.50"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v60_r20_ve075_re025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 20
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.25"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v60_r20_ve075_re035
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 20
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.35"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v60_r20_ve075_re050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 20
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.50"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v60_r40_ve050_re025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 40
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.25"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v60_r40_ve050_re035
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 40
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.35"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v60_r40_ve050_re050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 40
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.50"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v60_r40_ve075_re025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 40
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.25"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v60_r40_ve075_re035
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 40
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.35"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v60_r40_ve075_re050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 40
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.50"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v60_r60_ve050_re025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 60
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.25"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v60_r60_ve050_re035
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 60
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.35"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v60_r60_ve050_re050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 60
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.50"
+          secondary_entry_z: "0.50"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v60_r60_ve075_re025
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 60
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.25"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v60_r60_ve075_re035
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 60
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.35"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+      - name: gc_vix_ry_dual_loose_v60_r60_ve075_re050
+        strategy_params:
+          trade_symbol: GC
+          primary_symbol: VIX
+          secondary_symbol: REALYIELD10Y
+          timeframe: 1d
+          primary_lookback_bars: 60
+          secondary_lookback_bars: 60
+          primary_signal_mode: change
+          secondary_signal_mode: change
+          primary_direction: follow
+          secondary_direction: fade
+          secondary_policy: veto
+          primary_entry_z: "0.75"
+          secondary_entry_z: "0.50"
+          target_quantity: "1"
+          min_signal_std: "0.0001"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          allow_short: false
+          history_buffer_bars: 2
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/precious_literature_gc_vix_real_yield/reports

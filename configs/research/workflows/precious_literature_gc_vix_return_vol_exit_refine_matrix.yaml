@@ -1,0 +1,88 @@
+version: 1
+workflow_id: precious-literature-gc-vix-return-vol-exit-refine-matrix
+periods:
+  validation_2020_2023:
+    start: "2020-01-01"
+    end: "2024-01-01"
+    role: selection
+  oos_2024_2026:
+    start: "2024-01-01"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_vix_risk
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_cot_positioning
+    required_strategy: strategies.research.precious_metal_cot_positioning:PreciousMetalCotPositioningStrategy
+  - id: gc_vix_return_vol_exit_refine_matrix
+    kind: backtest_matrix
+    backtest_config: ../../../configs/backtest.precious_metal_vix_risk_gc.yaml
+    output_root: ../../../runs/research/precious_literature_gc_si_risk/gc_vix_return_vol_exit_refine_matrix
+    periods: [validation_2020_2023, oos_2024_2026]
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - win_rate
+      - expectancy
+      - total_trades
+      - time_in_market
+    candidates:
+      - name: gc_vix_retvol_l60_e075_x025_vlb60_mv0016
+        strategy_params:
+          cot_lookback_bars: 60
+          entry_z: "0.75"
+          exit_z: "0.25"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          return_vol_lookback_bars: 60
+          max_return_volatility: "0.016"
+      - name: gc_vix_retvol_l60_e075_x025_vlb60_mv0018
+        strategy_params:
+          cot_lookback_bars: 60
+          entry_z: "0.75"
+          exit_z: "0.25"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          return_vol_lookback_bars: 60
+          max_return_volatility: "0.018"
+      - name: gc_vix_retvol_l60_e075_x050_vlb60_mv0016
+        strategy_params:
+          cot_lookback_bars: 60
+          entry_z: "0.75"
+          exit_z: "0.50"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          return_vol_lookback_bars: 60
+          max_return_volatility: "0.016"
+      - name: gc_vix_retvol_l60_e075_x050_vlb60_mv0018
+        strategy_params:
+          cot_lookback_bars: 60
+          entry_z: "0.75"
+          exit_z: "0.50"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          return_vol_lookback_bars: 60
+          max_return_volatility: "0.018"
+      - name: gc_vix_retvol_l20_e100_x050_vlb60_mv0016
+        strategy_params:
+          cot_lookback_bars: 20
+          entry_z: "1.00"
+          exit_z: "0.50"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          return_vol_lookback_bars: 60
+          max_return_volatility: "0.016"
+      - name: gc_vix_retvol_l20_e100_x050_vlb60_mv0018
+        strategy_params:
+          cot_lookback_bars: 20
+          entry_z: "1.00"
+          exit_z: "0.50"
+          trend_lookback_bars: 0
+          min_trend_return: "0"
+          return_vol_lookback_bars: 60
+          max_return_volatility: "0.018"
+  - id: report
+    kind: research_report
