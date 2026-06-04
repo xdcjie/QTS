@@ -58,6 +58,16 @@ def optimize_step(
     objective_metric = step.payload.get("objective_metric")
     if objective_metric is not None:
         kwargs["objective_metric"] = str(objective_metric)
+    raw_equity_curve_sample_interval = step.payload.get("equity_curve_sample_interval")
+    equity_curve_sample_interval = 1
+    runtime_kwargs: dict[str, Any] = {}
+    if raw_equity_curve_sample_interval is not None:
+        equity_curve_sample_interval = _positive_int(
+            raw_equity_curve_sample_interval,
+            "equity_curve_sample_interval",
+        )
+        runtime_kwargs["equity_curve_sample_interval"] = equity_curve_sample_interval
+        kwargs["equity_curve_sample_interval"] = equity_curve_sample_interval
     output_root = step.payload.get("output_root")
     if output_root is not None:
         kwargs["output_root"] = config.resolve_path(str(output_root))
@@ -104,6 +114,7 @@ def optimize_step(
             ),
             plan=plan,
             materialized_replay_cache_dir=materialized_cache_dir,
+            **runtime_kwargs,
         )
         walk_forward_summary_payload = walk_forward_summary.to_payload()
         robustness_policy = _walk_forward_robustness_policy(walk_forward_payload.get("robustness"))
@@ -154,6 +165,7 @@ def optimize_step(
                 report_only=True,
             ),
             materialized_replay_cache_dir=materialized_cache_dir,
+            **runtime_kwargs,
         )
         failure_veto_summary_payload = failure_veto_summary.to_payload()
         raw_failure_veto_output = failure_veto_payload.get("summary_output")
@@ -190,6 +202,9 @@ def optimize_step(
             "objective_value": str(result.objective_value),
             "parameters": dict(result.parameters),
         }
+        runtime = _optimizer_result_runtime(result)
+        if runtime:
+            ranked_result["runtime"] = runtime
         if capital_metric_config is not None:
             ranked_result["capital_metrics"] = derive_capital_metrics(
                 result,
@@ -199,6 +214,7 @@ def optimize_step(
     outputs: dict[str, Any] = {
         "ranked_results": ranked_results,
         "run_count": len(results),
+        "equity_curve_sample_interval": equity_curve_sample_interval,
         "validation_output": (
             None if validation_output_path is None else str(validation_output_path)
         ),
@@ -235,6 +251,30 @@ def optimize_step(
         message=message,
         outputs=outputs,
     )
+
+
+def _optimizer_result_runtime(result: Any) -> dict[str, Any]:
+    runtime: dict[str, Any] = {}
+    if result.processed_bars is not None:
+        runtime["processed_bars"] = result.processed_bars
+    if result.trading_bars is not None:
+        runtime["trading_bars"] = result.trading_bars
+    if result.elapsed_seconds is not None:
+        runtime["elapsed_seconds"] = str(result.elapsed_seconds)
+    if result.bars_per_second is not None:
+        runtime["bars_per_second"] = str(result.bars_per_second)
+    if result.equity_curve_sample_interval is not None:
+        runtime["equity_curve_sample_interval"] = result.equity_curve_sample_interval
+    return runtime
+
+
+def _positive_int(value: Any, field_name: str) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{field_name} must be a positive integer")
+    parsed = optional_int(value)
+    if parsed is None or parsed < 1:
+        raise ValueError(f"{field_name} must be a positive integer")
+    return parsed
 
 
 def _failure_veto_constraints(

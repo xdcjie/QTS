@@ -162,6 +162,7 @@ class BacktestOptimizationService:
     def optimize(
         self,
         *,
+        equity_curve_sample_interval: int = 1,
         parameters: Mapping[str, Sequence[Any]],
         objective_metric: str | None = None,
         output_root: Path | None = None,
@@ -176,6 +177,7 @@ class BacktestOptimizationService:
                 output_root=output_root or self._output_root / "optimizer",
                 objective_metric=objective_metric or self._objective_metric,
                 materialized_replay_cache_dir=materialized_replay_cache_dir,
+                equity_curve_sample_interval=equity_curve_sample_interval,
             )
         )
 
@@ -184,6 +186,7 @@ class BacktestOptimizationService:
         *,
         candidate_parameters: Sequence[Mapping[str, Any]],
         plan: WalkForwardPlan,
+        equity_curve_sample_interval: int = 1,
         constraints: Iterable[OptimizationConstraint] = (),
         capital_metric_config: Mapping[str, Any] | None = None,
         objective_metric: str | None = None,
@@ -199,6 +202,7 @@ class BacktestOptimizationService:
                 output_root=output_root or self._output_root / "walk-forward",
                 plan=plan,
                 materialized_replay_cache_dir=materialized_replay_cache_dir,
+                equity_curve_sample_interval=equity_curve_sample_interval,
             )
         )
         return WalkForwardValidationSummary.from_results(
@@ -214,6 +218,7 @@ class BacktestOptimizationService:
         *,
         candidate_parameters: Sequence[Mapping[str, Any]],
         windows: Sequence[FailureWindow],
+        equity_curve_sample_interval: int = 1,
         report_only_windows: Sequence[FailureWindow] = (),
         constraints: Iterable[OptimizationConstraint] = (),
         capital_metric_config: Mapping[str, Any] | None = None,
@@ -231,6 +236,7 @@ class BacktestOptimizationService:
                 windows=tuple(windows),
                 report_only_windows=tuple(report_only_windows),
                 materialized_replay_cache_dir=materialized_replay_cache_dir,
+                equity_curve_sample_interval=equity_curve_sample_interval,
             )
         )
         return FailureWindowVetoSummary.from_results(

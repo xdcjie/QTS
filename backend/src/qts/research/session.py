@@ -335,6 +335,7 @@ class ResearchSession:
     def optimize(
         self,
         *,
+        equity_curve_sample_interval: int = 1,
         parameters: Mapping[str, Sequence[Any]],
         objective_metric: str | None = None,
         output_root: Path | None = None,
@@ -342,6 +343,7 @@ class ResearchSession:
     ) -> tuple[OptimizationResult, ...]:
         """Run a parameter sweep through ``BacktestPipelineRunner``."""
         return self._backtest_optimization.optimize(
+            equity_curve_sample_interval=equity_curve_sample_interval,
             parameters=parameters,
             objective_metric=objective_metric,
             output_root=output_root,
@@ -353,6 +355,7 @@ class ResearchSession:
         *,
         candidate_parameters: Sequence[Mapping[str, Any]],
         plan: WalkForwardPlan,
+        equity_curve_sample_interval: int = 1,
         constraints: Iterable[OptimizationConstraint] = (),
         capital_metric_config: Mapping[str, Any] | None = None,
         objective_metric: str | None = None,
@@ -363,6 +366,7 @@ class ResearchSession:
         return self._backtest_optimization.validate_optimizer_walk_forward(
             candidate_parameters=candidate_parameters,
             plan=plan,
+            equity_curve_sample_interval=equity_curve_sample_interval,
             constraints=constraints,
             capital_metric_config=capital_metric_config,
             objective_metric=objective_metric,
@@ -375,6 +379,7 @@ class ResearchSession:
         *,
         candidate_parameters: Sequence[Mapping[str, Any]],
         windows: Sequence[FailureWindow],
+        equity_curve_sample_interval: int = 1,
         report_only_windows: Sequence[FailureWindow] = (),
         constraints: Iterable[OptimizationConstraint] = (),
         capital_metric_config: Mapping[str, Any] | None = None,
@@ -386,6 +391,7 @@ class ResearchSession:
         return self._backtest_optimization.validate_optimizer_failure_window_veto(
             candidate_parameters=candidate_parameters,
             windows=windows,
+            equity_curve_sample_interval=equity_curve_sample_interval,
             report_only_windows=report_only_windows,
             constraints=constraints,
             capital_metric_config=capital_metric_config,

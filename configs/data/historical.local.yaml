@@ -5,8 +5,8 @@ historical_data:
       root_dir: historical
       bars_dir: data
       chains_dir: chains
-      bars_file_template: "{root_lower}.csv"
-      chain_file_template: "{root}.json"
+      bars_file_template: '{root_lower}.csv'
+      chain_file_template: '{root}.json'
       defaults:
         schema: databento_ohlcv
         exchange_timezone: US/Eastern
@@ -31,56 +31,84 @@ historical_data:
           exchange: CME
           chain_file: GC.json
           bars:
-            - file: gc.csv
-              timeframe: 1m
+          - file: GC/1m.csv
+            timeframe: 1m
+          - file: GC/5m.csv
+            timeframe: 5m
+          - file: GC/10m.csv
+            timeframe: 10m
+          - file: GC/15m.csv
+            timeframe: 15m
+          - file: GC/30m.csv
+            timeframe: 30m
+          - file: GC/1h.csv
+            timeframe: 1h
+          - file: GC/4h.csv
+            timeframe: 4h
+          - file: GC/1d.csv
+            timeframe: 1d
         SI:
           asset_class: future
           exchange: CME
           chain_file: SI.json
           bars:
-            - file: si.csv
-              timeframe: 1m
+          - file: SI/1m.csv
+            timeframe: 1m
+          - file: SI/5m.csv
+            timeframe: 5m
+          - file: SI/10m.csv
+            timeframe: 10m
+          - file: SI/15m.csv
+            timeframe: 15m
+          - file: SI/30m.csv
+            timeframe: 30m
+          - file: SI/1h.csv
+            timeframe: 1h
+          - file: SI/4h.csv
+            timeframe: 4h
+          - file: SI/1d.csv
+            timeframe: 1d
         CARRY:
           asset_class: research_signal
           bars:
-            - file: carry.csv
-              timeframe: 1d
+          - file: carry.csv
+            timeframe: 1d
+            exchange_timezone: US/Eastern
+            timezone_policy: source_utc_exchange_sessions
+            normalization: calendar_spread_carry_signal_v1
+            session_window:
               exchange_timezone: US/Eastern
-              timezone_policy: source_utc_exchange_sessions
-              normalization: calendar_spread_carry_signal_v1
-              session_window:
-                exchange_timezone: US/Eastern
-                open_time: "18:00"
-                close_time: "17:00"
+              open_time: '18:00'
+              close_time: '17:00'
         COT_GC:
           asset_class: research_signal
           bars:
-            - file: cot_gc.csv
-              timeframe: 1d
-              exchange_timezone: US/Eastern
-              timezone_policy: source_utc_publication_events
-              normalization: cftc_disaggregated_managed_money_net_pct_oi_v1
+          - file: cot_gc.csv
+            timeframe: 1d
+            exchange_timezone: US/Eastern
+            timezone_policy: source_utc_publication_events
+            normalization: cftc_disaggregated_managed_money_net_pct_oi_v1
         COT_SI:
           asset_class: research_signal
           bars:
-            - file: cot_si.csv
-              timeframe: 1d
-              exchange_timezone: US/Eastern
-              timezone_policy: source_utc_publication_events
-              normalization: cftc_disaggregated_managed_money_net_pct_oi_v1
+          - file: cot_si.csv
+            timeframe: 1d
+            exchange_timezone: US/Eastern
+            timezone_policy: source_utc_publication_events
+            normalization: cftc_disaggregated_managed_money_net_pct_oi_v1
         REALYIELD10Y:
           asset_class: research_signal
           bars:
-            - file: realyield10y.csv
-              timeframe: 1d
-              exchange_timezone: US/Eastern
-              timezone_policy: source_utc_publication_events
-              normalization: us_treasury_10y_real_yield_pct_v1
+          - file: realyield10y.csv
+            timeframe: 1d
+            exchange_timezone: US/Eastern
+            timezone_policy: source_utc_publication_events
+            normalization: us_treasury_10y_real_yield_pct_v1
         VIX:
           asset_class: research_signal
           bars:
-            - file: vix.csv
-              timeframe: 1d
-              exchange_timezone: US/Eastern
-              timezone_policy: source_utc_publication_events
-              normalization: cboe_vix_daily_close_v1
+          - file: vix.csv
+            timeframe: 1d
+            exchange_timezone: US/Eastern
+            timezone_policy: source_utc_publication_events
+            normalization: cboe_vix_daily_close_v1

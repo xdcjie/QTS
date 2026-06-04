@@ -10,8 +10,11 @@ backtest/optimizer parity.
 from __future__ import annotations
 
 import json
+import sys
 from dataclasses import dataclass
+from decimal import Decimal
 from pathlib import Path
+from time import monotonic
 
 from qts.backtest.pipeline import BacktestPipeline
 from qts.research.optimizer.parameter_space import ParameterGrid
@@ -66,14 +69,30 @@ class BacktestPipelineRunner:
             )
         base_pipeline.catalog()  # warm the cached catalog before the loop
         results: list[OptimizationResult] = []
+        total_runs = job.parameter_grid.size()
+        sweep_started_at = monotonic()
         for index, combination in enumerate(job.parameter_grid):
             run_dir = job.output_root / f"run-{index:04d}"
             run_pipeline = base_pipeline.with_strategy_params(combination)
             engine, _bundle = run_pipeline.build_engine()
+            started_at = monotonic()
             stream_result = engine.run_streaming(
                 run_dir,
                 compact_events=True,
                 equity_curve_sample_interval=job.equity_curve_sample_interval,
+            )
+            elapsed_seconds = Decimal(str(round(monotonic() - started_at, 6)))
+            bars_per_second = _bars_per_second(
+                processed_bars=stream_result.processed_bars,
+                elapsed_seconds=elapsed_seconds,
+            )
+            _write_optimizer_progress(
+                completed_runs=index + 1,
+                total_runs=total_runs,
+                sweep_started_at=sweep_started_at,
+                processed_bars=stream_result.processed_bars,
+                elapsed_seconds=elapsed_seconds,
+                bars_per_second=bars_per_second,
             )
             manifest_path = Path(stream_result.manifest_path)
             payload = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -84,9 +103,55 @@ class BacktestPipelineRunner:
                     manifest_path=manifest_path,
                     manifest_hash=str(payload.get("manifest_hash", "")),
                     objective_value=objective_value,
+                    processed_bars=stream_result.processed_bars,
+                    trading_bars=stream_result.trading_bars,
+                    elapsed_seconds=elapsed_seconds,
+                    bars_per_second=bars_per_second,
+                    equity_curve_sample_interval=job.equity_curve_sample_interval,
                 )
             )
         return tuple(sorted(results, key=lambda r: r.objective_value, reverse=True))
+
+
+def _bars_per_second(*, processed_bars: int, elapsed_seconds: Decimal) -> Decimal:
+    if elapsed_seconds <= 0:
+        return Decimal("0")
+    return Decimal(processed_bars) / elapsed_seconds
+
+
+def _write_optimizer_progress(
+    *,
+    completed_runs: int,
+    total_runs: int,
+    sweep_started_at: float,
+    processed_bars: int,
+    elapsed_seconds: Decimal,
+    bars_per_second: Decimal,
+) -> None:
+    sweep_elapsed = monotonic() - sweep_started_at
+    avg_run_seconds = sweep_elapsed / completed_runs if completed_runs else 0.0
+    eta_seconds = avg_run_seconds * max(total_runs - completed_runs, 0)
+    print(
+        "optimizer "
+        f"trial={completed_runs}/{total_runs} "
+        f"processed_bars={processed_bars:,} "
+        f"elapsed={_format_seconds(float(elapsed_seconds))} "
+        f"bars_per_second={float(bars_per_second):,.0f} "
+        f"sweep_elapsed={_format_seconds(sweep_elapsed)} "
+        f"eta={_format_seconds(eta_seconds)}",
+        file=sys.stderr,
+    )
+
+
+def _format_seconds(seconds: float) -> str:
+    rounded = int(max(seconds, 0.0))
+    if rounded < 60:
+        return f"{rounded}s"
+    minutes, seconds_part = divmod(rounded, 60)
+    if minutes < 60:
+        return f"{minutes}m{seconds_part:02d}s"
+    hours, minutes_part = divmod(minutes, 60)
+    return f"{hours}h{minutes_part:02d}m"
 
 
 __all__ = ["BacktestPipelineJob", "BacktestPipelineRunner"]

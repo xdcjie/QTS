@@ -99,7 +99,25 @@ class OptimizerValidationSummary:
         }
         if capital_metrics:
             evidence["capital_metrics"] = capital_metrics
+        runtime = OptimizerValidationSummary._result_runtime(result)
+        if runtime:
+            evidence["runtime"] = runtime
         return evidence
+
+    @staticmethod
+    def _result_runtime(result: OptimizationResult) -> dict[str, Any]:
+        runtime: dict[str, Any] = {}
+        if result.processed_bars is not None:
+            runtime["processed_bars"] = result.processed_bars
+        if result.trading_bars is not None:
+            runtime["trading_bars"] = result.trading_bars
+        if result.elapsed_seconds is not None:
+            runtime["elapsed_seconds"] = str(result.elapsed_seconds)
+        if result.bars_per_second is not None:
+            runtime["bars_per_second"] = str(result.bars_per_second)
+        if result.equity_curve_sample_interval is not None:
+            runtime["equity_curve_sample_interval"] = result.equity_curve_sample_interval
+        return runtime
 
     @staticmethod
     def _json_safe_parameters(parameters: dict[str, Any]) -> dict[str, Any]:

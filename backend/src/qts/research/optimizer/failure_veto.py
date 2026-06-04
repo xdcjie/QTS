@@ -5,11 +5,13 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import sys
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time
 from decimal import Decimal
 from pathlib import Path
+from time import monotonic
 from typing import Any
 
 from qts.backtest.pipeline import BacktestPipeline
@@ -58,6 +60,7 @@ class FailureWindowVetoJob:
     windows: tuple[FailureWindow, ...]
     report_only_windows: tuple[FailureWindow, ...] = ()
     materialized_replay_cache_dir: Path | None = None
+    equity_curve_sample_interval: int = 1
 
     def __init__(
         self,
@@ -69,6 +72,7 @@ class FailureWindowVetoJob:
         windows: Iterable[FailureWindow],
         report_only_windows: Iterable[FailureWindow] = (),
         materialized_replay_cache_dir: Path | None = None,
+        equity_curve_sample_interval: int = 1,
     ) -> None:
         candidates = tuple(dict(parameters) for parameters in candidate_parameters)
         if not candidates:
@@ -114,6 +118,14 @@ class FailureWindowVetoJob:
             "materialized_replay_cache_dir",
             None if materialized_replay_cache_dir is None else Path(materialized_replay_cache_dir),
         )
+        object.__setattr__(
+            self,
+            "equity_curve_sample_interval",
+            _positive_int(
+                equity_curve_sample_interval,
+                "equity_curve_sample_interval",
+            ),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -142,7 +154,11 @@ class FailureWindowVetoRunner:
             )
         base_pipeline.catalog()
         results: list[FailureWindowVetoResult] = []
-        for window in (*job.windows, *job.report_only_windows):
+        windows = (*job.windows, *job.report_only_windows)
+        total_runs = len(windows) * len(job.candidate_parameters)
+        completed_runs = 0
+        validation_started_at = monotonic()
+        for window in windows:
             window_pipeline = base_pipeline.with_date_range(
                 start=_date_boundary(window.start),
                 end=_date_boundary(window.end),
@@ -152,7 +168,27 @@ class FailureWindowVetoRunner:
                 run_dir = job.output_root / window.name / window_kind / f"run-{index:04d}"
                 run_pipeline = window_pipeline.with_strategy_params(parameters)
                 engine, _bundle = run_pipeline.build_engine()
-                stream_result = engine.run_streaming(run_dir, compact_events=True)
+                started_at = monotonic()
+                stream_result = engine.run_streaming(
+                    run_dir,
+                    compact_events=True,
+                    equity_curve_sample_interval=job.equity_curve_sample_interval,
+                )
+                elapsed_seconds = Decimal(str(round(monotonic() - started_at, 6)))
+                completed_runs += 1
+                bars_per_second = _bars_per_second(
+                    processed_bars=stream_result.processed_bars,
+                    elapsed_seconds=elapsed_seconds,
+                )
+                _write_validation_progress(
+                    label="failure-window",
+                    completed_runs=completed_runs,
+                    total_runs=total_runs,
+                    validation_started_at=validation_started_at,
+                    processed_bars=stream_result.processed_bars,
+                    elapsed_seconds=elapsed_seconds,
+                    bars_per_second=bars_per_second,
+                )
                 manifest_path = Path(stream_result.manifest_path)
                 payload = _read_manifest(manifest_path)
                 results.append(
@@ -171,10 +207,67 @@ class FailureWindowVetoRunner:
                                 payload,
                                 job.objective_metric,
                             ),
+                            processed_bars=stream_result.processed_bars,
+                            trading_bars=stream_result.trading_bars,
+                            elapsed_seconds=elapsed_seconds,
+                            bars_per_second=bars_per_second,
+                            equity_curve_sample_interval=(
+                                job.equity_curve_sample_interval
+                            ),
                         ),
                     )
                 )
         return tuple(results)
+
+
+def _positive_int(value: Any, field_name: str) -> int:
+    if isinstance(value, bool):
+        raise ValueError(f"{field_name} must be a positive integer")
+    parsed = int(value)
+    if parsed < 1:
+        raise ValueError(f"{field_name} must be a positive integer")
+    return parsed
+
+
+def _bars_per_second(*, processed_bars: int, elapsed_seconds: Decimal) -> Decimal:
+    if elapsed_seconds <= 0:
+        return Decimal("0")
+    return Decimal(processed_bars) / elapsed_seconds
+
+
+def _write_validation_progress(
+    *,
+    label: str,
+    completed_runs: int,
+    total_runs: int,
+    validation_started_at: float,
+    processed_bars: int,
+    elapsed_seconds: Decimal,
+    bars_per_second: Decimal,
+) -> None:
+    validation_elapsed = monotonic() - validation_started_at
+    avg_run_seconds = validation_elapsed / completed_runs if completed_runs else 0.0
+    eta_seconds = avg_run_seconds * max(total_runs - completed_runs, 0)
+    print(
+        f"{label} trial={completed_runs}/{total_runs} "
+        f"processed_bars={processed_bars:,} "
+        f"elapsed={_format_seconds(float(elapsed_seconds))} "
+        f"bars_per_second={float(bars_per_second):,.0f} "
+        f"stage_elapsed={_format_seconds(validation_elapsed)} "
+        f"eta={_format_seconds(eta_seconds)}",
+        file=sys.stderr,
+    )
+
+
+def _format_seconds(seconds: float) -> str:
+    rounded = int(max(seconds, 0.0))
+    if rounded < 60:
+        return f"{rounded}s"
+    minutes, seconds_part = divmod(rounded, 60)
+    if minutes < 60:
+        return f"{minutes}m{seconds_part:02d}s"
+    hours, minutes_part = divmod(minutes, 60)
+    return f"{hours}h{minutes_part:02d}m"
 
 
 @dataclass(frozen=True, slots=True)

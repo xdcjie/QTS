@@ -20,6 +20,7 @@ _SUPPORTED_CLOCK_DURATIONS = {
     "2m": timedelta(minutes=2),
     "3m": timedelta(minutes=3),
     "5m": timedelta(minutes=5),
+    "10m": timedelta(minutes=10),
     "15m": timedelta(minutes=15),
     "30m": timedelta(minutes=30),
     "1h": timedelta(hours=1),
