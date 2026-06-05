@@ -287,7 +287,7 @@ class HistoricalCatalogLoadConfig:
         return cls(
             roots=roots,
             instrument_ids=instrument_ids or {},
-            requested_timeframe=requested_timeframe,
+            requested_timeframe=requested_timeframe or "1m",
             data_config_path=config_path,
             catalog_name=catalog,
         )

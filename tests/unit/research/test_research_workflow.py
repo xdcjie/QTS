@@ -2766,12 +2766,22 @@ class _FakeSession:
                 manifest_path=Path("runs/optimizer/run-0000/manifest.json"),
                 manifest_hash="abc123",
                 objective_value=Decimal("1.2"),
+                processed_bars=None,
+                trading_bars=None,
+                elapsed_seconds=None,
+                bars_per_second=None,
+                equity_curve_sample_interval=None,
             ),
             SimpleNamespace(
                 parameters={"entry_bar": 2, "quantity": "3"},
                 manifest_path=Path("runs/optimizer/run-0001/manifest.json"),
                 manifest_hash="def456",
                 objective_value=Decimal("0.9"),
+                processed_bars=None,
+                trading_bars=None,
+                elapsed_seconds=None,
+                bars_per_second=None,
+                equity_curve_sample_interval=None,
             ),
         )
 

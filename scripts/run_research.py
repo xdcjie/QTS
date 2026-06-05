@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from collections.abc import Mapping, Sequence
@@ -125,6 +126,29 @@ def _add_workflow_parser(subparsers: Any) -> None:
         type=Path,
         default=None,
         help="Artifact graph output root for workflow lifecycle records",
+    )
+    parser.add_argument(
+        "--engine-parity-evidence",
+        type=Path,
+        default=None,
+        help=(
+            "Optional engine-parity gate JSON evidence; workflow fails when provided "
+            "evidence is unclean"
+        ),
+    )
+    parser.add_argument(
+        "--rust-shadow-evidence",
+        dest="engine_parity_evidence",
+        type=Path,
+        default=None,
+        help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        "--engine-shadow-evidence",
+        dest="engine_parity_evidence",
+        type=Path,
+        default=None,
+        help=argparse.SUPPRESS,
     )
 
 
@@ -415,6 +439,26 @@ def _add_campaign_parser(subparsers: Any) -> None:
         help="Verify an autonomous research campaign release bundle",
     )
     verify.add_argument("--output-root", type=Path, required=True)
+    verify.add_argument(
+        "--engine-parity-evidence",
+        type=Path,
+        default=None,
+        help="Optional engine-parity gate JSON evidence; release verify fails when unclean",
+    )
+    verify.add_argument(
+        "--rust-shadow-evidence",
+        dest="engine_parity_evidence",
+        type=Path,
+        default=None,
+        help=argparse.SUPPRESS,
+    )
+    verify.add_argument(
+        "--engine-shadow-evidence",
+        dest="engine_parity_evidence",
+        type=Path,
+        default=None,
+        help=argparse.SUPPRESS,
+    )
 
     approval = campaign_subparsers.add_parser(
         "approve-next-generation",
@@ -605,10 +649,24 @@ def _run_workflow(args: argparse.Namespace, session: ResearchSession) -> int:
         print(str(exc), file=sys.stderr)
         return 2
     payload = result.to_payload()
+    engine_parity_criterion = None
+    if args.engine_parity_evidence is not None:
+        try:
+            engine_parity_criterion = engine_parity_evidence_criterion(args.engine_parity_evidence)
+        except (FileNotFoundError, ValueError) as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        payload["engine_parity_evidence"] = engine_parity_criterion
+        if not engine_parity_criterion["accepted"]:
+            payload["status"] = "failed"
+            payload["engine_parity_blocked"] = True
     payload["manifest_hash"] = manifest.manifest_hash
     payload["manifest_path"] = str(args.manifest)
     payload["schema_version"] = manifest.schema_version
     workflow_summary_hash = stable_json_hash(payload)
+    workflow_accepted = result.succeeded and (
+        engine_parity_criterion is None or engine_parity_criterion["accepted"]
+    )
     if args.output is not None:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(
@@ -624,7 +682,7 @@ def _run_workflow(args: argparse.Namespace, session: ResearchSession) -> int:
         audit_log.append(
             "research_run_completed",
             {
-                "accepted": result.succeeded,
+                "accepted": workflow_accepted,
                 "manifest_hash": manifest.manifest_hash,
                 "manifest_path": str(args.manifest),
                 "status": result.status,
@@ -659,7 +717,7 @@ def _run_workflow(args: argparse.Namespace, session: ResearchSession) -> int:
         print(f"status={result.status}")
         for step in result.steps:
             print(f"{step.step_id}={step.status}")
-    return 0 if result.succeeded else 1
+    return 0 if workflow_accepted else 1
 
 
 def _run_implementation(args: argparse.Namespace) -> int:
@@ -1134,7 +1192,10 @@ def _run_campaign(args: argparse.Namespace) -> int:
         return 0 if summary_path.exists() else 1
 
     if args.campaign_command == "verify":
-        payload = _verify_campaign_release_bundle(args.output_root)
+        payload = _verify_campaign_release_bundle(
+            args.output_root,
+            engine_parity_evidence=args.engine_parity_evidence,
+        )
         print(json.dumps(payload, sort_keys=True, indent=2))
         return 0 if payload["accepted"] else 1
 
@@ -1271,9 +1332,15 @@ def _run_campaign(args: argparse.Namespace) -> int:
     raise ValueError(f"unsupported campaign command: {args.campaign_command}")
 
 
-def _verify_campaign_release_bundle(output_root: Path) -> dict[str, Any]:
+def _verify_campaign_release_bundle(
+    output_root: Path,
+    *,
+    engine_parity_evidence: Path | None = None,
+    legacy_engine_shadow_evidence: Path | None = None,
+) -> dict[str, Any]:
     output_root = Path(output_root)
     criteria: dict[str, dict[str, Any]] = {}
+    engine_evidence_path = engine_parity_evidence or legacy_engine_shadow_evidence
 
     state_path = output_root / "campaign_state.json"
     state = _load_json_mapping(state_path) if state_path.exists() else {}
@@ -1369,6 +1436,9 @@ def _verify_campaign_release_bundle(output_root: Path) -> dict[str, Any]:
         "path": str(report_path),
     }
 
+    if engine_evidence_path is not None:
+        criteria["engine_parity_evidence"] = engine_parity_evidence_criterion(engine_evidence_path)
+
     accepted = all(item["accepted"] for item in criteria.values())
     payload = {
         "accepted": accepted,
@@ -1382,6 +1452,133 @@ def _verify_campaign_release_bundle(output_root: Path) -> dict[str, Any]:
         encoding="utf-8",
     )
     return payload
+
+
+def engine_parity_evidence_criterion(path: Path) -> dict[str, Any]:
+    payload = _load_json_mapping(path)
+    checked = payload.get("checked")
+    diff_artifacts = payload.get("diff_artifacts")
+    candidate_replaces_reference = payload.get(
+        "candidate_replaces_reference",
+        payload.get("rust_replaces_python"),
+    )
+    reasons: list[str] = []
+    if payload.get("status") != "ok":
+        reasons.append(f"engine parity status is not ok: {payload.get('status')}")
+    if candidate_replaces_reference is not False:
+        reasons.append("engine parity evidence must declare candidate_replaces_reference=false")
+    if payload.get("engine_id") != "rust":
+        reasons.append("engine parity evidence must declare engine_id=rust")
+    if payload.get("reference_engine") != "python":
+        reasons.append("engine parity evidence must declare reference_engine=python")
+    if payload.get("engine_mode") != "shadow":
+        reasons.append("engine parity evidence must declare engine_mode=shadow")
+    if not isinstance(checked, list) or not checked:
+        reasons.append("engine parity evidence missing non-empty checked list")
+    diff_artifact_summaries: list[dict[str, Any]] = []
+    if not isinstance(diff_artifacts, list) or not diff_artifacts:
+        reasons.append("engine parity evidence missing non-empty diff_artifacts list")
+    else:
+        diff_artifact_summaries = _engine_parity_diff_artifact_summaries(diff_artifacts)
+        reasons.extend(
+            reason for summary in diff_artifact_summaries for reason in summary.get("reasons", [])
+        )
+        required_phases = {
+            "phase2_replay_sequence_diff",
+            "phase3_engine_backtest_diff",
+            "phase3_continuous_future_roll_diff",
+        }
+        observed_phases = {
+            str(summary.get("phase"))
+            for summary in diff_artifact_summaries
+            if isinstance(summary.get("phase"), str)
+        }
+        missing_phases = sorted(required_phases - observed_phases)
+        if missing_phases:
+            reasons.append(f"engine parity evidence missing diff phases: {missing_phases}")
+    return {
+        "accepted": not reasons,
+        "candidate_replaces_reference": candidate_replaces_reference,
+        "checked": checked if isinstance(checked, list) else [],
+        "diff_artifacts": diff_artifact_summaries,
+        "engine_id": payload.get("engine_id"),
+        "engine_mode": payload.get("engine_mode"),
+        "path": str(path),
+        "reference_engine": payload.get("reference_engine"),
+        "reasons": reasons,
+        "status": payload.get("status"),
+    }
+
+
+def _engine_parity_diff_artifact_summaries(
+    rows: Sequence[Any],
+) -> list[dict[str, Any]]:
+    summaries: list[dict[str, Any]] = []
+    for index, row in enumerate(rows):
+        reasons: list[str] = []
+        if not isinstance(row, Mapping):
+            summaries.append(
+                {
+                    "accepted": False,
+                    "index": index,
+                    "reasons": [f"diff_artifacts[{index}] is not an object"],
+                }
+            )
+            continue
+        phase = row.get("phase")
+        path_value = row.get("path")
+        expected_hash = row.get("sha256")
+        status = row.get("status")
+        if status != "clean":
+            reasons.append(f"engine parity diff artifact status is not clean: {status}")
+        if not isinstance(path_value, str) or not path_value:
+            reasons.append("engine parity diff artifact missing path")
+            path = None
+        else:
+            path = Path(path_value)
+        if not isinstance(expected_hash, str) or not expected_hash.startswith("sha256:"):
+            reasons.append("engine parity diff artifact missing sha256")
+        if path is not None:
+            if not path.exists():
+                reasons.append(f"engine parity diff artifact missing file: {path}")
+            elif isinstance(expected_hash, str):
+                actual_hash = f"sha256:{hashlib.sha256(path.read_bytes()).hexdigest()}"
+                if actual_hash != expected_hash:
+                    reasons.append(
+                        "engine parity diff artifact hash mismatch: "
+                        f"expected={expected_hash} actual={actual_hash}"
+                    )
+                try:
+                    artifact_payload = _load_json_mapping(path)
+                except (FileNotFoundError, ValueError) as exc:
+                    reasons.append(str(exc))
+                else:
+                    if artifact_payload.get("status") != "clean":
+                        reasons.append(
+                            "engine parity diff artifact payload status is not clean: "
+                            f"{artifact_payload.get('status')}"
+                        )
+                    if artifact_payload.get("phase") != phase:
+                        reasons.append("engine parity diff artifact phase mismatch")
+                    if artifact_payload.get("reference_engine") != "python":
+                        reasons.append("engine parity diff artifact reference_engine is not python")
+                    if artifact_payload.get("candidate_engine") != "rust":
+                        reasons.append("engine parity diff artifact candidate_engine is not rust")
+                    differences = artifact_payload.get("differences")
+                    if differences != []:
+                        reasons.append("engine parity diff artifact differences are not empty")
+        summaries.append(
+            {
+                "accepted": not reasons,
+                "index": index,
+                "path": path_value,
+                "phase": phase,
+                "reasons": reasons,
+                "sha256": expected_hash,
+                "status": status,
+            }
+        )
+    return summaries
 
 
 def _selected_candidate_packet_reasons(rows: Sequence[Mapping[str, Any]]) -> list[str]:

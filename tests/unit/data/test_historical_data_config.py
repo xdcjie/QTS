@@ -157,11 +157,11 @@ historical_data:
 def test_project_historical_data_example_resolves_gc_si_paths() -> None:
     config = HistoricalMarketDataConfig.from_yaml(Path("configs/data/historical.local.yaml"))
 
-    gc = config.resolve_dataset("research_futures", "GC")
-    si = config.resolve_dataset("research_futures", "SI")
-    assert gc.csv_path == Path("historical/data/gc.csv")
+    gc = config.resolve_dataset("research_futures", "GC", requested_timeframe="1m")
+    si = config.resolve_dataset("research_futures", "SI", requested_timeframe="1m")
+    assert gc.csv_path == Path("historical/data/GC/1m.csv")
     assert gc.chain_path == Path("historical/chains/GC.json")
-    assert si.csv_path == Path("historical/data/si.csv")
+    assert si.csv_path == Path("historical/data/SI/1m.csv")
     assert si.chain_path == Path("historical/chains/SI.json")
     assert gc.source_timeframe == "1m"
 

@@ -1,0 +1,86 @@
+version: 1
+workflow_id: precious-goal-gc-si-hft-switch-cost-stress-2026
+periods:
+  oos_2026:
+    start: "2026-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_switch
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_microtrend_acd_switch
+    required_strategy: strategies.research.precious_metal_microtrend_acd_switch:PreciousMetalMicrotrendAcdSwitchStrategy
+    on_fail: stop
+
+  - id: switch_cost_stress_matrix
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_microtrend_acd_switch_si_cost_stress.yaml
+    output_root: ../../../runs/research/precious_goal_gc_si_hft_switch_cost_stress/switch_matrix
+    summary_output: ../../../runs/research/precious_goal_gc_si_hft_switch_cost_stress/switch_matrix/summary.json
+    periods:
+      - oos_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: si_switch_micro3m_acd5m_baseline_cost2x
+        strategy_params:
+          symbol: SI
+          timeframe: 3m
+          micro_fast_bars: 3
+          micro_slow_bars: 12
+          micro_entry_return_threshold: "0.00035"
+          micro_min_volume_ratio: "1.10"
+          micro_min_vwap_distance_bps: "3"
+          micro_max_vwap_distance_bps: "60"
+          micro_min_atr_bps: "3"
+          micro_stop_atr_multiple: "1.20"
+          micro_take_profit_atr_multiple: "2.20"
+          micro_max_holding_bars: 8
+          micro_max_entries_per_session: 2
+          micro_min_bars_between_entries: 120
+          micro_post_exit_cooldown_bars: 60
+          acd_opening_range_bars: 3
+          acd_max_entry_bars: 18
+          acd_entry_buffer_ratio: "0.05"
+          acd_stop_range_multiple: "0.75"
+          acd_target_range_multiple: "1.75"
+          acd_max_holding_bars: 12
+          target_quantity: "1"
+          allow_short: true
+      - name: si_switch_micro3m_acd_more_trades_cost2x
+        strategy_params:
+          symbol: SI
+          timeframe: 3m
+          micro_fast_bars: 3
+          micro_slow_bars: 12
+          micro_entry_return_threshold: "0.00035"
+          micro_min_volume_ratio: "1.10"
+          micro_min_vwap_distance_bps: "3"
+          micro_max_vwap_distance_bps: "60"
+          micro_min_atr_bps: "3"
+          micro_stop_atr_multiple: "1.20"
+          micro_take_profit_atr_multiple: "2.20"
+          micro_max_holding_bars: 8
+          micro_max_entries_per_session: 2
+          micro_min_bars_between_entries: 120
+          micro_post_exit_cooldown_bars: 60
+          acd_opening_range_bars: 3
+          acd_max_entry_bars: 24
+          acd_entry_buffer_ratio: "0.03"
+          acd_stop_range_multiple: "0.70"
+          acd_target_range_multiple: "1.50"
+          acd_max_holding_bars: 14
+          target_quantity: "1"
+          allow_short: true
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/precious_goal_gc_si_hft_switch_cost_stress/reports

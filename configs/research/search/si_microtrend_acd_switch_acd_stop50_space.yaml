@@ -1,0 +1,25 @@
+parameters:
+  - name: symbol
+    parameter_type: categorical
+    values: [SI]
+  - name: timeframe
+    parameter_type: categorical
+    values: [3m]
+  - name: micro_entry_return_threshold
+    parameter_type: categorical
+    values: ["0.00050"]
+  - name: micro_min_volume_ratio
+    parameter_type: categorical
+    values: ["1.25"]
+  - name: micro_max_vwap_distance_bps
+    parameter_type: categorical
+    values: ["60"]
+  - name: micro_max_entries_per_session
+    parameter_type: categorical
+    values: [1]
+  - name: micro_min_bars_between_entries
+    parameter_type: categorical
+    values: [180]
+  - name: acd_stop_range_multiple
+    parameter_type: categorical
+    values: ["0.50"]

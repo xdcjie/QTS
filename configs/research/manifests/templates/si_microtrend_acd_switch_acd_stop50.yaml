@@ -1,0 +1,66 @@
+template_id: si_microtrend_acd_switch_acd_stop50_template
+family: microtrend_acd_switch
+description: SI 3m intraday microtrend plus ACD fallback with long/short enabled and tightened ACD stop.
+strategy_entrypoint: strategies.research.precious_metal_microtrend_acd_switch:PreciousMetalMicrotrendAcdSwitchStrategy
+allowed_imports:
+  - qts.domain.market_data
+  - qts.strategy_sdk
+risk_assumptions:
+  max_position_notional: 1000000
+  max_contracts: 1
+execution_assumptions:
+  slippage_bps: 1.0
+  fixed_commission_per_contract: 2.5
+backtest_pipeline:
+  base_config_path: configs/backtest.precious_metal_microtrend_acd_switch_si.yaml
+  objective_metric: sharpe_ratio
+  materialized_replay_cache_dir: runs/research/si_microtrend_acd_switch_acd_stop50_campaign/replay_cache
+  strategy_parameter_defaults:
+    symbol: SI
+    timeframe: 3m
+    micro_fast_bars: 3
+    micro_slow_bars: 12
+    micro_entry_return_threshold: "0.00050"
+    micro_min_volume_ratio: "1.25"
+    micro_min_vwap_distance_bps: "5"
+    micro_max_vwap_distance_bps: "60"
+    micro_min_atr_bps: "4"
+    micro_stop_atr_multiple: "1.20"
+    micro_take_profit_atr_multiple: "2.20"
+    micro_max_holding_bars: 8
+    micro_max_entries_per_session: 1
+    micro_min_bars_between_entries: 180
+    micro_post_exit_cooldown_bars: 120
+    micro_require_acd_opening_range: false
+    micro_min_opening_range_bps: "0"
+    acd_opening_range_bars: 3
+    acd_max_entry_bars: 18
+    acd_entry_buffer_ratio: "0.05"
+    acd_stop_range_multiple: "0.50"
+    acd_target_range_multiple: "1.75"
+    acd_max_holding_bars: 12
+    target_quantity: 1
+    allow_short: true
+  strategy_parameter_names:
+    - symbol
+    - timeframe
+    - micro_entry_return_threshold
+    - micro_min_volume_ratio
+    - micro_max_vwap_distance_bps
+    - micro_max_entries_per_session
+    - micro_min_bars_between_entries
+    - acd_stop_range_multiple
+factor_definition:
+  factor_id: momentum_si_microtrend_acd_stop50_signal
+  family: momentum
+  inputs:
+    - root: SI
+      field: close
+  transforms:
+    - type: returns
+      lookback: 3
+  label_policy:
+    horizon_bars: 8
+    visible_after: bar_close
+    no_lookahead: true
+  source_idea_id: si_microtrend_acd_switch_acd_stop50_validation_v2

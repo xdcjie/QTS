@@ -1,0 +1,175 @@
+version: 1
+workflow_id: precious-goal-gc-si-hft-regime-filter-validation
+periods:
+  train_2024_2025:
+    start: "2024-01-01T00:00:00+00:00"
+    end: "2026-01-01T00:00:00+00:00"
+    role: selection
+  oos_2026:
+    start: "2026-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_orb_vwap_trend
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.orb_vwap_trend_filter
+    required_strategy: strategies.research.orb_vwap_trend_filter:OrbVwapTrendFilterStrategy
+    on_fail: stop
+
+  - id: implementation_microtrend
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_microtrend_scalper
+    required_strategy: strategies.research.precious_metal_microtrend_scalper:PreciousMetalMicrotrendScalperStrategy
+    on_fail: stop
+
+  - id: orb_vwap_trend_regime_filters
+    kind: backtest_matrix
+    backtest_config: ../../backtest.orb_vwap_trend_gc_si_costed.yaml
+    output_root: ../../../runs/research/precious_goal_gc_si_hft_regime/orb_vwap_trend
+    summary_output: ../../../runs/research/precious_goal_gc_si_hft_regime/orb_vwap_trend/summary.json
+    periods:
+      - train_2024_2025
+      - oos_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: gc_orb_vwap_5m_60m_trend_atr
+        strategy_params:
+          symbol: GC
+          timeframe: 5m
+          opening_range_minutes: 60
+          max_holding_bars: 18
+          target_quantity: "1"
+          trend_filter: roc
+          trend_window: 60
+          min_trend_return: "0.0010"
+          min_opening_range_atr: "0.5"
+          max_opening_range_atr: "3.0"
+          exit_on_vwap_cross: true
+          exit_on_trend_reversal: true
+          use_trailing_stop: true
+          trailing_atr_multiple: "2.0"
+      - name: gc_orb_vwap_5m_30m_trend_atr
+        strategy_params:
+          symbol: GC
+          timeframe: 5m
+          opening_range_minutes: 30
+          max_holding_bars: 18
+          target_quantity: "1"
+          trend_filter: roc
+          trend_window: 60
+          min_trend_return: "0.0010"
+          min_opening_range_atr: "0.5"
+          max_opening_range_atr: "3.0"
+          exit_on_vwap_cross: true
+          exit_on_trend_reversal: true
+          use_trailing_stop: true
+          trailing_atr_multiple: "2.0"
+      - name: gc_orb_vwap_5m_60m_strong_trend
+        strategy_params:
+          symbol: GC
+          timeframe: 5m
+          opening_range_minutes: 60
+          max_holding_bars: 12
+          target_quantity: "1"
+          trend_filter: roc
+          trend_window: 120
+          min_trend_return: "0.0020"
+          min_opening_range_atr: "0.75"
+          max_opening_range_atr: "2.5"
+          exit_on_vwap_cross: true
+          exit_on_trend_reversal: true
+          use_trailing_stop: true
+          trailing_atr_multiple: "1.8"
+
+  - id: microtrend_quality_filters
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_microtrend_scalper_gc_si.yaml
+    output_root: ../../../runs/research/precious_goal_gc_si_hft_regime/microtrend
+    summary_output: ../../../runs/research/precious_goal_gc_si_hft_regime/microtrend/summary.json
+    periods:
+      - train_2024_2025
+      - oos_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: si_microtrend_3m_strict_quality
+        strategy_params:
+          symbol: SI
+          timeframe: 3m
+          fast_bars: 4
+          slow_bars: 16
+          entry_return_threshold: "0.00045"
+          min_volume_ratio: "1.30"
+          min_vwap_distance_bps: "5"
+          max_vwap_distance_bps: "45"
+          stop_atr_multiple: "1.00"
+          take_profit_atr_multiple: "2.50"
+          max_holding_bars: 6
+          max_entries_per_session: 1
+          min_bars_between_entries: 180
+          post_exit_cooldown_bars: 120
+          max_flips_per_session: 0
+          signal_confirm_bars: 3
+          min_atr_bps: "5"
+          allow_short: true
+      - name: si_microtrend_3m_high_atr_quality
+        strategy_params:
+          symbol: SI
+          timeframe: 3m
+          fast_bars: 3
+          slow_bars: 12
+          entry_return_threshold: "0.00040"
+          min_volume_ratio: "1.20"
+          min_vwap_distance_bps: "4"
+          max_vwap_distance_bps: "55"
+          stop_atr_multiple: "1.00"
+          take_profit_atr_multiple: "2.40"
+          max_holding_bars: 7
+          max_entries_per_session: 1
+          min_bars_between_entries: 180
+          post_exit_cooldown_bars: 120
+          max_flips_per_session: 0
+          signal_confirm_bars: 3
+          min_atr_bps: "8"
+          allow_short: true
+      - name: si_microtrend_5m_strict_quality
+        strategy_params:
+          symbol: SI
+          timeframe: 5m
+          fast_bars: 4
+          slow_bars: 16
+          entry_return_threshold: "0.00055"
+          min_volume_ratio: "1.20"
+          min_vwap_distance_bps: "4"
+          max_vwap_distance_bps: "60"
+          stop_atr_multiple: "1.00"
+          take_profit_atr_multiple: "2.50"
+          max_holding_bars: 5
+          max_entries_per_session: 1
+          min_bars_between_entries: 120
+          post_exit_cooldown_bars: 90
+          max_flips_per_session: 0
+          signal_confirm_bars: 2
+          min_atr_bps: "8"
+          allow_short: true
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/precious_goal_gc_si_hft_regime/reports

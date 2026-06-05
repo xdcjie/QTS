@@ -1,0 +1,28 @@
+parameters:
+  - name: symbol
+    parameter_type: categorical
+    values: [SI]
+  - name: timeframe
+    parameter_type: categorical
+    values: [3m]
+  - name: micro_entry_return_threshold
+    parameter_type: categorical
+    values: ["0.00035"]
+  - name: micro_min_volume_ratio
+    parameter_type: categorical
+    values: ["1.10"]
+  - name: micro_max_entries_per_session
+    parameter_type: categorical
+    values: [2]
+  - name: micro_min_bars_between_entries
+    parameter_type: categorical
+    values: [120]
+  - name: acd_max_entry_bars
+    parameter_type: categorical
+    values: [18, 24]
+  - name: acd_entry_buffer_ratio
+    parameter_type: categorical
+    values: ["0.05", "0.03"]
+  - name: acd_target_range_multiple
+    parameter_type: categorical
+    values: ["1.75", "1.50"]

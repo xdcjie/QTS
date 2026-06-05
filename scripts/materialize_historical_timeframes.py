@@ -32,7 +32,6 @@ from time import monotonic
 from typing import Any
 
 import yaml
-
 from qts.core.ids import InstrumentId
 from qts.data.bars.aggregator import BarAggregator
 from qts.data.bars.timeframe import AlignmentMode, Timeframe
@@ -41,7 +40,6 @@ from qts.data.historical.csv_dataset import iter_historical_bars
 from qts.data.historical.csv_format import EXPECTED_HISTORICAL_COLUMNS
 from qts.data.historical.csv_index import write_historical_csv_index
 from qts.domain.market_data import Bar
-
 
 DEFAULT_ROOTS = ("GC", "SI")
 DEFAULT_TIMEFRAMES = ("1m", "5m", "10m", "15m", "30m", "1h", "4h", "1d")
@@ -283,14 +281,10 @@ def materialize_root(
     root_output_dir = output_dir / root
     root_output_dir.mkdir(parents=True, exist_ok=True)
     chain = HistoricalChain.load(chain_path)
-    output_paths = {
-        timeframe: root_output_dir / f"{timeframe}.csv" for timeframe in timeframes
-    }
+    output_paths = {timeframe: root_output_dir / f"{timeframe}.csv" for timeframe in timeframes}
     for output_path in output_paths.values():
         if output_path.exists() and not overwrite:
-            raise FileExistsError(
-                f"output exists: {output_path}; pass --overwrite to replace it"
-            )
+            raise FileExistsError(f"output exists: {output_path}; pass --overwrite to replace it")
 
     completed_outputs: dict[str, Path] = {}
     source_row_count = (
@@ -318,13 +312,9 @@ def materialize_root(
         _write_derived_timeframes_single_scan(
             root=root,
             source_path=source_path,
-            output_paths={
-                timeframe: output_paths[timeframe] for timeframe in derived_timeframes
-            },
+            output_paths={timeframe: output_paths[timeframe] for timeframe in derived_timeframes},
             chain=chain,
-            target_timeframes=tuple(
-                Timeframe.parse(timeframe) for timeframe in derived_timeframes
-            ),
+            target_timeframes=tuple(Timeframe.parse(timeframe) for timeframe in derived_timeframes),
             source_row_count=source_row_count,
             reporter=reporter,
         )
@@ -379,9 +369,7 @@ def _write_historical_index(
     started_at = monotonic()
     reporter.event(f"{label}: writing index")
     write_historical_csv_index(path)
-    reporter.event(
-        f"{label}: index done elapsed={_format_duration(monotonic() - started_at)}"
-    )
+    reporter.event(f"{label}: index done elapsed={_format_duration(monotonic() - started_at)}")
 
 
 def _write_derived_timeframes_single_scan(
@@ -452,9 +440,7 @@ def _write_derived_timeframes_single_scan(
                         exchange_timezone=chain.timezone,
                     )
                 for completed in completed_bars:
-                    writers[timeframe_value].writerow(
-                        _bar_csv_row(root=root, bar=completed)
-                    )
+                    writers[timeframe_value].writerow(_bar_csv_row(root=root, bar=completed))
                     written_rows[timeframe_value] += 1
             reporter.bar(
                 f"{root} multi-aggregate",
@@ -481,9 +467,7 @@ def _write_derived_timeframes_single_scan(
                 continue
             for aggregator in clock_aggregators[timeframe_value].values():
                 for completed in aggregator.finish().completed:
-                    writers[timeframe_value].writerow(
-                        _bar_csv_row(root=root, bar=completed)
-                    )
+                    writers[timeframe_value].writerow(_bar_csv_row(root=root, bar=completed))
                     written_rows[timeframe_value] += 1
 
     reporter.bar(
@@ -923,9 +907,7 @@ def _validate_timeframes(timeframes: Sequence[str]) -> None:
     if len(set(timeframes)) != len(timeframes):
         raise ValueError("timeframes must be unique")
     if SOURCE_TIMEFRAME not in timeframes:
-        raise ValueError(
-            "timeframes must include 1m so per-root directories are complete"
-        )
+        raise ValueError("timeframes must include 1m so per-root directories are complete")
 
 
 if __name__ == "__main__":

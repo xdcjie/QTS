@@ -1,0 +1,36 @@
+strategy_id: precious-metal-microtrend-acd-switch-si
+class_path: strategies.research.precious_metal_microtrend_acd_switch:PreciousMetalMicrotrendAcdSwitchStrategy
+account_id: backtest-account
+allocation: "1.0"
+enabled: true
+params:
+  symbol: SI
+  timeframe: 3m
+  micro_fast_bars: 3
+  micro_slow_bars: 12
+  micro_vwap_lookback_bars: 30
+  micro_volume_lookback_bars: 20
+  micro_atr_lookback_bars: 14
+  micro_entry_return_threshold: "0.00035"
+  micro_min_volume_ratio: "1.10"
+  micro_min_vwap_distance_bps: "3"
+  micro_max_vwap_distance_bps: "60"
+  micro_signal_confirm_bars: 1
+  micro_min_atr_bps: "3"
+  micro_stop_atr_multiple: "1.20"
+  micro_take_profit_atr_multiple: "2.20"
+  micro_max_holding_bars: 8
+  micro_max_entries_per_session: 2
+  micro_min_bars_between_entries: 120
+  micro_post_exit_cooldown_bars: 60
+  acd_mode: breakout
+  acd_opening_range_bars: 3
+  acd_max_entry_bars: 18
+  acd_entry_buffer_ratio: "0.05"
+  acd_stop_range_multiple: "0.75"
+  acd_target_range_multiple: "1.75"
+  acd_max_holding_bars: 12
+  acd_max_entries_per_session: 1
+  target_quantity: "1"
+  allow_short: true
+  history_buffer_bars: 5

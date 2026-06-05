@@ -49,6 +49,11 @@ under `configs/research/workflows/`.
 | `configs/research/workflows/orb_vwap_trend_gc_si_atr_trailing_matrix.yaml` | Reviewed workflow for ATR trailing ORB + VWAP + trend matrix |
 | `configs/research/workflows/orb_vwap_trend_gc_si_long_explore.yaml` | Reviewed workflow for exploratory ORB + VWAP + trend research |
 | `configs/research/workflows/orb_vwap_trend_gc_si_long_matrix.yaml` | Reviewed workflow for ORB + VWAP + trend matrix research |
+| `configs/research/workflows/orb_vwap_trend_gc_target3_single.yaml` | Reviewed workflow for GC target-3 ORB + VWAP + trend research |
+| `strategies/research/precious_metal_vwap_reversion_scalper.py` | Research-only precious-metal VWAP reversion scalper |
+| `configs/strategies/precious_metal_vwap_reversion_gc.yaml` | GC research strategy config for precious-metal VWAP reversion |
+| `configs/backtest.precious_metal_vwap_reversion_gc.yaml` | GC research backtest config for precious-metal VWAP reversion |
+| `configs/research/workflows/precious_hft_gc_vwap_acd_matrix.yaml` | Reviewed workflow for precious-metal GC VWAP + ACD matrix research |
 
 ### C. Campaign / search templates — allowed (canonical)
 

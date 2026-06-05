@@ -136,7 +136,13 @@ def test_backtest_walk_forward_validation_runner_reruns_candidates_per_window(
         def __init__(self, pipeline: FakeBacktestPipeline) -> None:
             self._pipeline = pipeline
 
-        def run_streaming(self, output_dir: Path, *, compact_events: bool) -> SimpleNamespace:
+        def run_streaming(
+            self,
+            output_dir: Path,
+            *,
+            compact_events: bool,
+            equity_curve_sample_interval: int = 1,
+        ) -> SimpleNamespace:
             output_dir.mkdir(parents=True)
             manifest_path = output_dir / "manifest.json"
             objective = Decimal(str(self._pipeline.params["alpha"])) + Decimal(
@@ -165,7 +171,11 @@ def test_backtest_walk_forward_validation_runner_reruns_candidates_per_window(
                     "start": self._pipeline.start,
                 }
             )
-            return SimpleNamespace(manifest_path=manifest_path)
+            return SimpleNamespace(
+                manifest_path=manifest_path,
+                processed_bars=5,
+                trading_bars=5,
+            )
 
     class FakeBacktestPipeline:
         def __init__(

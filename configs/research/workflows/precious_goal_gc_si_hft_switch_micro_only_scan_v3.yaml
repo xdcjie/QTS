@@ -1,0 +1,81 @@
+version: 1
+workflow_id: precious_goal_gc_si_hft_switch_micro_only_scan_v3
+periods:
+  train_2024_2025:
+    role: selection
+    start: "2024-01-01T00:00:00Z"
+    end: "2026-01-01T00:00:00Z"
+  oos_2026_ytd:
+    role: validation
+    start: "2026-01-01T00:00:00Z"
+    end: "2026-05-22T23:59:00Z"
+steps:
+  - id: micro_only_matrix_v3
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_microtrend_acd_switch_si.yaml
+    output_root: ../../../runs/research/precious_goal_gc_si_hft_switch_micro_only_scan_v3/micro_only_matrix
+    summary_output: ../../../runs/research/precious_goal_gc_si_hft_switch_micro_only_scan_v3/micro_only_matrix/summary.json
+    materialized_replay_cache_dir: ../../../runs/research/precious_goal_gc_si_hft_switch_micro_only_scan_v3/replay_cache
+    periods:
+      - train_2024_2025
+      - oos_2026_ytd
+    metrics:
+      - total_return
+      - compounding_annual_return
+      - sharpe_ratio
+      - max_drawdown
+      - total_trades
+      - profit_factor
+    base_strategy_params:
+      symbol: SI
+      timeframe: 3m
+      micro_fast_bars: 3
+      micro_slow_bars: 12
+      micro_entry_return_threshold: "0.00050"
+      micro_min_volume_ratio: "1.25"
+      micro_min_vwap_distance_bps: "5"
+      micro_max_vwap_distance_bps: "45"
+      micro_min_atr_bps: "4"
+      micro_stop_atr_multiple: "1.20"
+      micro_take_profit_atr_multiple: "2.20"
+      micro_max_holding_bars: 8
+      micro_max_entries_per_session: 1
+      micro_min_bars_between_entries: 180
+      micro_post_exit_cooldown_bars: 120
+      micro_require_acd_opening_range: false
+      micro_min_opening_range_bps: "0"
+      acd_opening_range_bars: 3
+      acd_max_entry_bars: 18
+      acd_entry_buffer_ratio: "10.0"
+      acd_stop_range_multiple: "0.75"
+      acd_target_range_multiple: "1.75"
+      acd_max_holding_bars: 12
+      target_quantity: 1
+      allow_short: true
+    candidates:
+      - name: micro_only_v2
+        strategy_params: {}
+      - name: micro_only_entries2
+        strategy_params:
+          micro_entry_return_threshold: "0.00050"
+          micro_min_volume_ratio: "1.25"
+          micro_max_entries_per_session: 2
+          micro_min_bars_between_entries: 120
+      - name: micro_only_original_speed
+        strategy_params:
+          micro_entry_return_threshold: "0.00035"
+          micro_min_volume_ratio: "1.10"
+          micro_max_entries_per_session: 2
+          micro_min_bars_between_entries: 120
+          micro_post_exit_cooldown_bars: 60
+      - name: micro_only_wider_vwap
+        strategy_params:
+          micro_max_vwap_distance_bps: "60"
+      - name: micro_only_tp28_stop10
+        strategy_params:
+          micro_stop_atr_multiple: "1.00"
+          micro_take_profit_atr_multiple: "2.80"
+      - name: micro_only_tp30_hold10
+        strategy_params:
+          micro_take_profit_atr_multiple: "3.00"
+          micro_max_holding_bars: 10

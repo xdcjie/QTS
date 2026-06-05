@@ -1,0 +1,23 @@
+[package]
+name = "qts-replay"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "qts_replay"
+path = "src/lib.rs"
+
+[dependencies]
+chrono = { workspace = true }
+chrono-tz = { workspace = true }
+csv = { workspace = true }
+qts-calendar = { path = "../calendar" }
+qts-data = { path = "../data" }
+qts-domain = { path = "../domain" }
+rust_decimal = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[lints]
+workspace = true

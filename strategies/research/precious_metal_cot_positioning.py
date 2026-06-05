@@ -89,10 +89,7 @@ class PreciousMetalCotPositioningStrategy(Strategy):
             raise ValueError("target_quantity must be non-zero")
         if self._min_signal_std == Decimal("0"):
             raise ValueError("min_signal_std must be positive")
-        if (
-            self._max_return_volatility > Decimal("0")
-            and self._return_vol_lookback_bars < 2
-        ):
+        if self._max_return_volatility > Decimal("0") and self._return_vol_lookback_bars < 2:
             raise ValueError(
                 "return_vol_lookback_bars must be at least 2 when max_return_volatility is set"
             )

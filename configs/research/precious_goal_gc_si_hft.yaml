@@ -1,0 +1,12 @@
+data:
+  config: ../data/historical.local.yaml
+  catalog: research_futures
+  roots: [GC, SI]
+  timeframe: 1m
+backtest_config: ../backtest.orb_vwap_trend_gc_si_costed.yaml
+store: ../../runs/research/precious_goal_gc_si_hft
+output_root: ../../runs/research/precious_goal_gc_si_hft/backtests
+objective_metric: sharpe_ratio
+discovery:
+  sources: [semantic_scholar, openalex, crossref, arxiv]
+  max_results: 10

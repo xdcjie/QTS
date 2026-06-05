@@ -1,0 +1,17 @@
+[package]
+name = "qts-domain"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+name = "qts_domain"
+path = "src/lib.rs"
+
+[dependencies]
+chrono = { workspace = true }
+rust_decimal = { workspace = true }
+thiserror = { workspace = true }
+
+[lints]
+workspace = true

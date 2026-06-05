@@ -198,6 +198,51 @@ steps:
     assert {node.node_type for node in graph.nodes} == {"manifest", "workflow_run"}
 
 
+def test_run_research_workflow_rejects_unclean_engine_parity_evidence(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    research_config = _write_research_config(tmp_path)
+    workflow_path = tmp_path / "workflow.yaml"
+    workflow_path.write_text(
+        """
+version: 1
+workflow_id: cli-workflow
+steps:
+  - id: report
+    kind: research_report
+    output_root: reports
+""",
+        encoding="utf-8",
+    )
+    evidence_path = _write_engine_parity_evidence(tmp_path, status="failed")
+    summary_path = tmp_path / "workflow_summary.json"
+
+    exit_code = run_research.main(
+        [
+            "--config",
+            str(research_config),
+            "workflow",
+            str(workflow_path),
+            "--manifest",
+            "configs/research/manifests/gc_si_smoke_v2.yaml",
+            "--output",
+            str(summary_path),
+            "--engine-parity-evidence",
+            str(evidence_path),
+        ]
+    )
+
+    assert exit_code == 1
+    stdout_payload = json.loads(capsys.readouterr().out)
+    summary_payload = json.loads(summary_path.read_text(encoding="utf-8"))
+    assert stdout_payload == summary_payload
+    assert summary_payload["status"] == "failed"
+    assert summary_payload["engine_parity_blocked"] is True
+    assert summary_payload["engine_parity_evidence"]["accepted"] is False
+    assert summary_payload["engine_parity_evidence"]["path"] == str(evidence_path)
+
+
 def test_run_research_workflow_rejects_graph_without_audit_log(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -756,6 +801,62 @@ def _write_workflow_summary(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return summary_path
+
+
+def _write_engine_parity_evidence(tmp_path: Path, *, status: str = "ok") -> Path:
+    path = tmp_path / f"engine-parity-{status}.json"
+    diff_artifacts = _write_engine_parity_diff_artifacts(tmp_path)
+    path.write_text(
+        json.dumps(
+            {
+                "checked": ["phase1", "phase2", "phase3", "phase4"],
+                "candidate_replaces_reference": False,
+                "diff_artifacts": diff_artifacts,
+                "engine_id": "rust",
+                "engine_mode": "shadow",
+                "reference_engine": "python",
+                "status": status,
+            },
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
+def _write_engine_parity_diff_artifacts(tmp_path: Path) -> list[dict[str, object]]:
+    artifacts: list[dict[str, object]] = []
+    for phase in (
+        "phase2_replay_sequence_diff",
+        "phase3_engine_backtest_diff",
+        "phase3_continuous_future_roll_diff",
+    ):
+        path = tmp_path / f"{phase}.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "artifact_type": "python_rust_parity_diff",
+                    "candidate_engine": "rust",
+                    "differences": [],
+                    "phase": phase,
+                    "reference_engine": "python",
+                    "status": "clean",
+                },
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        artifacts.append(
+            {
+                "phase": phase,
+                "path": str(path),
+                "sha256": f"sha256:{sha256(path.read_bytes()).hexdigest()}",
+                "status": "clean",
+            }
+        )
+    return artifacts
 
 
 def _write_research_config(tmp_path: Path) -> Path:

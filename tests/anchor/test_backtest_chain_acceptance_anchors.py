@@ -231,6 +231,6 @@ def test_backtest_artifact_contract_contains_auditable_inputs_outputs_and_hashes
     assert manifest["processed_bars"] == len(captured.equity_curve)
     assert len(captured.orders) == len(captured.fills) == len(captured.trade_ledger)
     assert {item["source"] for item in manifest["dataset_metadata"]} == {
-        "historical/data/gc.csv",
-        "historical/data/si.csv",
+        "historical/data/GC/1m.csv",
+        "historical/data/SI/1m.csv",
     }

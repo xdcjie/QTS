@@ -1,0 +1,23 @@
+[package]
+name = "qts-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "qts-rs"
+path = "src/main.rs"
+
+[dependencies]
+chrono = { workspace = true }
+chrono-tz = { workspace = true }
+qts-backtest = { path = "../backtest" }
+qts-data = { path = "../data" }
+qts-domain = { path = "../domain" }
+qts-python = { path = "../python" }
+qts-replay = { path = "../replay" }
+rust_decimal = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

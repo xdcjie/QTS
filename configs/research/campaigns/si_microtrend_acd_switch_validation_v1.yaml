@@ -1,0 +1,41 @@
+campaign_id: si_microtrend_acd_switch_validation_v1
+version: 1
+owner: research
+created_at: "2026-06-04T00:00:00Z"
+objective:
+  primary: sharpe_ratio
+  components:
+    return: 0.35
+    sharpe: 0.45
+    drawdown: -0.15
+    cost_sensitivity: -0.05
+universe:
+  asset_class: futures
+  calendar: COMEX
+  roots: [SI]
+  timeframe: 3m
+  dataset_id: research_futures_si_3m_2026_microtrend_acd_switch
+data:
+  mode: full
+  start: "2026-01-01T00:00:00Z"
+  end: "2026-05-22T23:59:00Z"
+execution:
+  data_mode: full
+  default_mode: backtest_pipeline
+  metrics_source: backtest_artifacts
+families:
+  - id: si_microtrend_acd_switch
+    template: microtrend_acd_switch
+    manifest_template: configs/research/manifests/templates/si_microtrend_acd_switch.yaml
+    search_space: configs/research/search/si_microtrend_acd_switch_frozen_space.yaml
+constraints:
+  max_drawdown: 0.08
+  min_oos_trade_count: 100
+  min_profit_factor: 1.15
+budget:
+  max_generations: 1
+  max_trials_per_generation: 8
+  max_total_trials: 8
+  max_family_trials: 8
+  compute_budget_limit: 8
+  wall_clock_limit_minutes: 60

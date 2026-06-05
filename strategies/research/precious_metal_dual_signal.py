@@ -40,11 +40,11 @@ class PreciousMetalDualSignalStrategy(Strategy):
         self._secondary_symbol = _symbol(secondary_symbol, "secondary_symbol")
         if not str(timeframe).strip():
             raise ValueError("timeframe must not be empty")
-        for name, value in {
+        for name, bar_count in {
             "primary_lookback_bars": primary_lookback_bars,
             "secondary_lookback_bars": secondary_lookback_bars,
         }.items():
-            if value < 3:
+            if bar_count < 3:
                 raise ValueError(f"{name} must be at least 3")
         self._primary_signal_mode = _mode(primary_signal_mode, "primary_signal_mode")
         self._secondary_signal_mode = _mode(secondary_signal_mode, "secondary_signal_mode")
@@ -67,14 +67,14 @@ class PreciousMetalDualSignalStrategy(Strategy):
         self._min_trend_return = _decimal(min_trend_return)
         self._allow_short = allow_short
         self._history_buffer_bars = history_buffer_bars
-        for name, value in {
+        for name, threshold in {
             "primary_entry_z": self._primary_entry_z,
             "secondary_entry_z": self._secondary_entry_z,
             "target_quantity": self._target_quantity,
             "min_signal_std": self._min_signal_std,
             "min_trend_return": self._min_trend_return,
         }.items():
-            if value < Decimal("0"):
+            if threshold < Decimal("0"):
                 raise ValueError(f"{name} must be non-negative")
         if self._primary_entry_z == Decimal("0"):
             raise ValueError("primary_entry_z must be positive")
@@ -172,7 +172,10 @@ class PreciousMetalDualSignalStrategy(Strategy):
         entry_z: Decimal,
     ) -> int:
         required = self._required_history(signal_mode, lookback)
-        history = ctx.data.history(asset, bars=required, timeframe=self._timeframe)
+        data = ctx.data
+        if data is None:
+            return 0
+        history = data.history(asset, bars=required, timeframe=self._timeframe)
         if len(history) < required:
             return 0
         values = self._signal_values(history, lookback=lookback, signal_mode=signal_mode)
@@ -231,7 +234,10 @@ class PreciousMetalDualSignalStrategy(Strategy):
             return side
         if self._trade_asset is None:
             raise RuntimeError("strategy must be initialized before trend filtering")
-        history = ctx.data.history(
+        data = ctx.data
+        if data is None:
+            return 0
+        history = data.history(
             self._trade_asset,
             bars=self._trend_lookback_bars + 1,
             timeframe=self._timeframe,

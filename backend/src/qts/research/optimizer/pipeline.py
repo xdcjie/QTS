@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from pathlib import Path
 from time import monotonic
+from typing import Any
 
 from qts.backtest.pipeline import BacktestPipeline
 from qts.research.optimizer.parameter_space import ParameterGrid
@@ -76,9 +77,9 @@ class BacktestPipelineRunner:
             run_pipeline = base_pipeline.with_strategy_params(combination)
             engine, _bundle = run_pipeline.build_engine()
             started_at = monotonic()
-            stream_result = engine.run_streaming(
+            stream_result = run_streaming_backtest(
+                engine,
                 run_dir,
-                compact_events=True,
                 equity_curve_sample_interval=job.equity_curve_sample_interval,
             )
             elapsed_seconds = Decimal(str(round(monotonic() - started_at, 6)))
@@ -113,6 +114,21 @@ class BacktestPipelineRunner:
         return tuple(sorted(results, key=lambda r: r.objective_value, reverse=True))
 
 
+def run_streaming_backtest(
+    engine: Any,
+    output_dir: Path,
+    *,
+    equity_curve_sample_interval: int,
+) -> Any:
+    if equity_curve_sample_interval == 1:
+        return engine.run_streaming(output_dir, compact_events=True)
+    return engine.run_streaming(
+        output_dir,
+        compact_events=True,
+        equity_curve_sample_interval=equity_curve_sample_interval,
+    )
+
+
 def _bars_per_second(*, processed_bars: int, elapsed_seconds: Decimal) -> Decimal:
     if elapsed_seconds <= 0:
         return Decimal("0")
@@ -131,7 +147,7 @@ def _write_optimizer_progress(
     sweep_elapsed = monotonic() - sweep_started_at
     avg_run_seconds = sweep_elapsed / completed_runs if completed_runs else 0.0
     eta_seconds = avg_run_seconds * max(total_runs - completed_runs, 0)
-    print(
+    print(  # noqa: T201 - interactive optimizer progress is written to stderr.
         "optimizer "
         f"trial={completed_runs}/{total_runs} "
         f"processed_bars={processed_bars:,} "

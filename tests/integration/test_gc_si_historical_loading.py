@@ -39,7 +39,7 @@ def test_historical_catalog_load_uses_requested_roots_without_counting_rows() ->
 
     assert catalog.roots == ("GC", "SI")
     assert catalog.datasets["GC"].chain_path == Path("historical/chains/GC.json")
-    assert catalog.datasets["GC"].csv_path == Path("historical/data/gc.csv")
+    assert catalog.datasets["GC"].csv_path == Path("historical/data/GC/1m.csv")
     assert catalog.datasets["GC"].dataset.row_count is None
     assert catalog.datasets["GC"].dataset.root == "GC"
     assert catalog.datasets["SI"].chain is not None

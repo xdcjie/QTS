@@ -28,7 +28,7 @@ def test_research_book_history_uses_configured_historical_catalog() -> None:
     assert all(bar.start_time >= datetime(2010, 6, 6, 22, 0, tzinfo=UTC) for bar in frame)
     assert all(bar.start_time < datetime(2010, 6, 6, 22, 5, tzinfo=UTC) for bar in frame)
     assert all(str(bar.instrument_id).startswith("FUTURE.CME.GC.") for bar in frame)
-    assert book.dataset_ids == ("GC:1m:historical/data/gc.csv",)
+    assert book.dataset_ids == ("GC:1m:historical/data/GC/1m.csv",)
 
 
 def test_research_book_aggregates_source_timeframe_before_returning_requested_timeframe() -> None:

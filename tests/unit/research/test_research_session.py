@@ -169,7 +169,11 @@ def test_research_session_run_backtest_uses_override_config_path(
     class FakeEngine:
         def run_streaming(self, output_dir: Path, *, compact_events: bool) -> object:
             calls.append({"compact_events": compact_events, "output_dir": output_dir})
-            return SimpleNamespace(manifest_path=tmp_path / "manifest.json")
+            return SimpleNamespace(
+                manifest_path=tmp_path / "manifest.json",
+                processed_bars=5,
+                trading_bars=5,
+            )
 
     class FakePipeline:
         def __init__(self, path: Path) -> None:
@@ -215,7 +219,11 @@ def test_research_session_run_backtest_delegates_date_range(
     class FakeEngine:
         def run_streaming(self, output_dir: Path, *, compact_events: bool) -> object:
             calls.append({"compact_events": compact_events, "output_dir": output_dir})
-            return SimpleNamespace(manifest_path=tmp_path / "manifest.json")
+            return SimpleNamespace(
+                manifest_path=tmp_path / "manifest.json",
+                processed_bars=5,
+                trading_bars=5,
+            )
 
     class FakePipeline:
         @classmethod
@@ -293,6 +301,11 @@ def test_research_session_delegates_walk_forward_validation_to_backtest_runner(
                         manifest_path=manifest_path,
                         manifest_hash="wf",
                         objective_value=Decimal("1"),
+                        processed_bars=None,
+                        trading_bars=None,
+                        elapsed_seconds=None,
+                        bars_per_second=None,
+                        equity_curve_sample_interval=None,
                     ),
                 ),
             )

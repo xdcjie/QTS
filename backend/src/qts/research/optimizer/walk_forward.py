@@ -13,6 +13,7 @@ from typing import Any
 
 from qts.backtest.pipeline import BacktestPipeline
 from qts.research.optimizer.constraints import OptimizationConstraint
+from qts.research.optimizer.pipeline import run_streaming_backtest
 from qts.research.optimizer.result import OptimizationResult
 from qts.research.optimizer.runner import extract_objective_from_manifest
 
@@ -161,9 +162,9 @@ class BacktestWalkForwardValidationRunner:
                     run_pipeline = window_pipeline.with_strategy_params(parameters)
                     engine, _bundle = run_pipeline.build_engine()
                     started_at = monotonic()
-                    stream_result = engine.run_streaming(
+                    stream_result = run_streaming_backtest(
+                        engine,
                         run_dir,
-                        compact_events=True,
                         equity_curve_sample_interval=job.equity_curve_sample_interval,
                     )
                     elapsed_seconds = Decimal(str(round(monotonic() - started_at, 6)))
@@ -201,9 +202,7 @@ class BacktestWalkForwardValidationRunner:
                                 trading_bars=stream_result.trading_bars,
                                 elapsed_seconds=elapsed_seconds,
                                 bars_per_second=bars_per_second,
-                                equity_curve_sample_interval=(
-                                    job.equity_curve_sample_interval
-                                ),
+                                equity_curve_sample_interval=(job.equity_curve_sample_interval),
                             ),
                         )
                     )
@@ -238,7 +237,7 @@ def _write_validation_progress(
     validation_elapsed = monotonic() - validation_started_at
     avg_run_seconds = validation_elapsed / completed_runs if completed_runs else 0.0
     eta_seconds = avg_run_seconds * max(total_runs - completed_runs, 0)
-    print(
+    print(  # noqa: T201 - interactive optimizer progress is written to stderr.
         f"{label} trial={completed_runs}/{total_runs} "
         f"processed_bars={processed_bars:,} "
         f"elapsed={_format_seconds(float(elapsed_seconds))} "

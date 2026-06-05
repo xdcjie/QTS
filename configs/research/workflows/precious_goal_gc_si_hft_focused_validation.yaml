@@ -1,0 +1,204 @@
+version: 1
+workflow_id: precious-goal-gc-si-hft-focused-validation
+periods:
+  train_2024_2025:
+    start: "2024-01-01T00:00:00+00:00"
+    end: "2026-01-01T00:00:00+00:00"
+    role: selection
+  oos_2026:
+    start: "2026-01-01T00:00:00+00:00"
+    end: "2026-05-22T20:20:00+00:00"
+    role: validation
+steps:
+  - id: implementation_orb_vwap_trend
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.orb_vwap_trend_filter
+    required_strategy: strategies.research.orb_vwap_trend_filter:OrbVwapTrendFilterStrategy
+    on_fail: stop
+
+  - id: implementation_microtrend
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_microtrend_scalper
+    required_strategy: strategies.research.precious_metal_microtrend_scalper:PreciousMetalMicrotrendScalperStrategy
+    on_fail: stop
+
+  - id: implementation_opening_range_acd
+    kind: implementation_gate
+    required_modules:
+      - strategies.research.precious_metal_opening_range_acd
+    required_strategy: strategies.research.precious_metal_opening_range_acd:PreciousMetalOpeningRangeAcdStrategy
+    on_fail: stop
+
+  - id: focused_orb_vwap_trend
+    kind: backtest_matrix
+    backtest_config: ../../backtest.orb_vwap_trend_gc_si_costed.yaml
+    output_root: ../../../runs/research/precious_goal_gc_si_hft_focused/orb_vwap_trend
+    summary_output: ../../../runs/research/precious_goal_gc_si_hft_focused/orb_vwap_trend/summary.json
+    periods:
+      - train_2024_2025
+      - oos_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: gc_orb_vwap_5m_60m_trail
+        strategy_params:
+          symbol: GC
+          timeframe: 5m
+          opening_range_minutes: 60
+          max_holding_bars: 18
+          target_quantity: "1"
+          exit_on_vwap_cross: true
+          exit_on_trend_reversal: true
+          use_trailing_stop: true
+          trailing_atr_multiple: "2.0"
+      - name: gc_orb_vwap_5m_30m_trail_fast
+        strategy_params:
+          symbol: GC
+          timeframe: 5m
+          opening_range_minutes: 30
+          max_holding_bars: 18
+          target_quantity: "1"
+          exit_on_vwap_cross: true
+          exit_on_trend_reversal: true
+          use_trailing_stop: true
+          trailing_atr_multiple: "2.0"
+      - name: gc_orb_vwap_3m_60m_trail
+        strategy_params:
+          symbol: GC
+          timeframe: 3m
+          opening_range_minutes: 60
+          max_holding_bars: 25
+          target_quantity: "1"
+          exit_on_vwap_cross: true
+          exit_on_trend_reversal: true
+          use_trailing_stop: true
+          trailing_atr_multiple: "2.0"
+
+  - id: focused_microtrend
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_microtrend_scalper_gc_si.yaml
+    output_root: ../../../runs/research/precious_goal_gc_si_hft_focused/microtrend
+    summary_output: ../../../runs/research/precious_goal_gc_si_hft_focused/microtrend/summary.json
+    periods:
+      - train_2024_2025
+      - oos_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: si_microtrend_3m_fast
+        strategy_params:
+          symbol: SI
+          timeframe: 3m
+          fast_bars: 3
+          slow_bars: 12
+          entry_return_threshold: "0.00035"
+          min_volume_ratio: "1.10"
+          min_vwap_distance_bps: "3"
+          max_vwap_distance_bps: "60"
+          stop_atr_multiple: "1.20"
+          take_profit_atr_multiple: "2.20"
+          max_holding_bars: 8
+          allow_short: true
+      - name: si_microtrend_3m_more_trades
+        strategy_params:
+          symbol: SI
+          timeframe: 3m
+          fast_bars: 3
+          slow_bars: 12
+          entry_return_threshold: "0.00030"
+          min_volume_ratio: "1.00"
+          min_vwap_distance_bps: "2"
+          max_vwap_distance_bps: "65"
+          stop_atr_multiple: "1.10"
+          take_profit_atr_multiple: "2.00"
+          max_holding_bars: 10
+          allow_short: true
+      - name: si_microtrend_5m_balanced
+        strategy_params:
+          symbol: SI
+          timeframe: 5m
+          fast_bars: 3
+          slow_bars: 10
+          entry_return_threshold: "0.00040"
+          min_volume_ratio: "1.00"
+          min_vwap_distance_bps: "2"
+          max_vwap_distance_bps: "70"
+          stop_atr_multiple: "1.20"
+          take_profit_atr_multiple: "2.20"
+          max_holding_bars: 7
+          allow_short: true
+
+  - id: focused_opening_range_acd
+    kind: backtest_matrix
+    backtest_config: ../../backtest.precious_metal_opening_range_acd_gc_si.yaml
+    output_root: ../../../runs/research/precious_goal_gc_si_hft_focused/opening_range_acd
+    summary_output: ../../../runs/research/precious_goal_gc_si_hft_focused/opening_range_acd/summary.json
+    periods:
+      - train_2024_2025
+      - oos_2026
+    metrics:
+      - total_return
+      - sharpe_ratio
+      - max_drawdown
+      - profit_factor
+      - total_trades
+      - win_rate
+      - expectancy
+      - time_in_market
+    candidates:
+      - name: si_acd_breakout_5m_3bar
+        strategy_params:
+          symbol: SI
+          timeframe: 5m
+          mode: breakout
+          opening_range_bars: 3
+          max_entry_bars: 18
+          entry_buffer_ratio: "0.05"
+          stop_range_multiple: "0.75"
+          target_range_multiple: "1.75"
+          max_holding_bars: 12
+          allow_short: true
+      - name: si_acd_breakout_5m_more_trades
+        strategy_params:
+          symbol: SI
+          timeframe: 5m
+          mode: breakout
+          opening_range_bars: 3
+          max_entry_bars: 24
+          entry_buffer_ratio: "0.03"
+          stop_range_multiple: "0.70"
+          target_range_multiple: "1.50"
+          max_holding_bars: 14
+          allow_short: true
+      - name: gc_acd_breakout_5m_3bar
+        strategy_params:
+          symbol: GC
+          timeframe: 5m
+          mode: breakout
+          opening_range_bars: 3
+          max_entry_bars: 18
+          entry_buffer_ratio: "0.05"
+          stop_range_multiple: "0.75"
+          target_range_multiple: "1.50"
+          max_holding_bars: 12
+          allow_short: true
+
+  - id: report
+    kind: research_report
+    output_root: ../../../runs/research/precious_goal_gc_si_hft_focused/reports
